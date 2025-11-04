@@ -60,6 +60,8 @@ class Content {
     return title;
   }
 
+  String? get genre => genres?.isNotEmpty == true ? genres!.first : null;
+
   String get ratingDisplay => rating != null ? rating!.toStringAsFixed(1) : 'N/A';
 
   factory Content.fromMap(Map<String, dynamic> map) {

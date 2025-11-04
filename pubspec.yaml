@@ -28,11 +28,52 @@ dependencies:
   flutter_svg: ^2.0.12
   animations: ^2.0.11
   cached_network_image: ^3.4.1
+  
+  # Google Drive Integration (FREE - uses user's storage)
+  googleapis: ^13.2.0
+  googleapis_auth: ^1.6.0
+  google_sign_in: ^6.2.2
+  
+  # On-Device AI Upscaling (FREE - no cloud costs)
+  tflite_flutter: ^0.11.0
+  image: ^4.3.0
+  
+  # Subtitles & Multiple Audio Tracks
+  subtitle_wrapper_package: ^2.0.2
+  
+  # Picture-in-Picture (Android native implementation)
+  # Will use platform channels for Android PiP
+  
+  # On-Device Transcription & Translation (FREE - no cloud costs)
+  # Using speech_to_text (already installed) + tflite for on-device transcription
+  translator: ^1.0.0  # Google Translate API (free tier)
+  flutter_tts: ^4.2.0  # Text-to-speech for translated audio
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
+
+  # Assets for AI Upscaling
+  assets:
+    - assets/models/
+    - assets/images/
+    - assets/images/logo.png
+    - assets/images/logo_icon.png
+
+# App Icon Configuration
+flutter_launcher_icons:
+  android: true
+  web: true
+  image_path: "assets/images/logo_icon.png"
+  adaptive_icon_background: "#1a1a2e"
+  adaptive_icon_foreground: "assets/images/logo_icon.png"
+  web:
+    generate: true
+    image_path: "assets/images/logo_icon.png"
+    background_color: "#1a1a2e"
+    theme_color: "#0f3460"

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 
 class AppShell extends StatefulWidget {
@@ -12,7 +13,6 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   bool _isSidebarCollapsed = false;
-  int _selectedIndex = 0;
 
   final List<NavigationItem> _navigationItems = [
     NavigationItem(
@@ -64,17 +64,19 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    final currentRoute = GoRouterState.of(context).uri.path;
+    
     return Scaffold(
       body: Row(
         children: [
           // Sidebar
-          _buildSidebar(),
+          _buildSidebar(currentRoute),
           
           // Main content
           Expanded(
             child: Column(
               children: [
-                _buildAppBar(),
+                _buildAppBar(context),
                 Expanded(child: widget.child),
               ],
             ),
@@ -84,7 +86,7 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
-  Widget _buildSidebar() {
+  Widget _buildSidebar(String currentRoute) {
     final width = _isSidebarCollapsed 
         ? AppSizes.sidebarCollapsedWidth 
         : AppSizes.sidebarWidth;
@@ -95,29 +97,75 @@ class _AppShellState extends State<AppShell> {
       color: AppTheme.sidebarBackground,
       child: Column(
         children: [
-          // Logo
+          // RISA Logo
           Container(
             height: AppSizes.appBarHeight,
             padding: EdgeInsets.all(AppSizes.md),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.play_circle_filled,
-                  color: AppTheme.primaryBlue,
-                  size: _isSidebarCollapsed ? 32 : 36,
-                ),
-                if (!_isSidebarCollapsed) ...[
-                  SizedBox(width: AppSizes.sm),
-                  Text(
-                    'STREAM HUB',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
+            child: _isSidebarCollapsed
+                ? Center(
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Color(0xFF2E3192), Color(0xFF00BCD4)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.play_arrow, color: Colors.white, size: 24),
                     ),
+                  )
+                : Image.asset(
+                    'assets/images/logo.png',
+                    height: 45,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      // Fallback to text if logo not found
+                      return Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [Color(0xFF2E3192), Color(0xFF00BCD4)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(Icons.play_arrow, color: Colors.white, size: 24),
+                          ),
+                          SizedBox(width: 12),
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'RISA',
+                                style: TextStyle(
+                                  color: AppTheme.textPrimary,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                              Text(
+                                'IPTV Player',
+                                style: TextStyle(
+                                  color: AppTheme.textSecondary,
+                                  fontSize: 11,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    },
                   ),
-                ],
-              ],
-            ),
           ),
           
           Divider(color: AppTheme.divider, height: 1),
@@ -129,17 +177,13 @@ class _AppShellState extends State<AppShell> {
               itemCount: _navigationItems.length,
               itemBuilder: (context, index) {
                 final item = _navigationItems[index];
-                final isSelected = index == _selectedIndex;
+                final isSelected = currentRoute == item.route;
                 
                 return _buildNavigationItem(
                   item: item,
                   isSelected: isSelected,
                   onTap: () {
-                    setState(() {
-                      _selectedIndex = index;
-                    });
-                    // Navigate using go_router
-                    // context.go(item.route);
+                    context.go(item.route);
                   },
                 );
               },
@@ -155,7 +199,31 @@ class _AppShellState extends State<AppShell> {
             ),
             isSelected: false,
             onTap: () {
-              // Handle logout
+              // Show logout confirmation
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  backgroundColor: AppTheme.cardBackground,
+                  title: Text('Logout'),
+                  content: Text('Are you sure you want to logout?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        // Handle logout
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.accentRed,
+                      ),
+                      child: Text('Logout'),
+                    ),
+                  ],
+                ),
+              );
             },
           ),
         ],
@@ -203,7 +271,13 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
-  Widget _buildAppBar() {
+  Widget _buildAppBar(BuildContext context) {
+    final now = DateTime.now();
+    final time = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    final days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+    final months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    final date = '${days[now.weekday - 1]}, ${months[now.month - 1]} ${now.day}';
+    
     return Container(
       height: AppSizes.appBarHeight,
       padding: EdgeInsets.symmetric(horizontal: AppSizes.lg),
@@ -215,12 +289,65 @@ class _AppShellState extends State<AppShell> {
       ),
       child: Row(
         children: [
+          // RISA Logo
+          Image.asset(
+            'assets/images/logo.png',
+            height: 40,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) {
+              // Fallback to text if logo not found
+              return Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF2E3192), Color(0xFF00BCD4)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.play_arrow, color: Colors.white, size: 24),
+                  ),
+                  SizedBox(width: 12),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'RISA',
+                        style: TextStyle(
+                          color: AppTheme.textPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      Text(
+                        'IPTV Player',
+                        style: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 11,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
+          
           Expanded(child: Container()), // Spacer
           
           // Search button
           IconButton(
             icon: Icon(Icons.search, color: AppTheme.textPrimary),
-            onPressed: () {},
+            onPressed: () {
+              context.go('/search');
+            },
           ),
           
           SizedBox(width: AppSizes.sm),
@@ -228,7 +355,9 @@ class _AppShellState extends State<AppShell> {
           // Settings button
           IconButton(
             icon: Icon(Icons.settings, color: AppTheme.textPrimary),
-            onPressed: () {},
+            onPressed: () {
+              context.go('/settings');
+            },
           ),
           
           SizedBox(width: AppSizes.sm),
@@ -239,11 +368,11 @@ class _AppShellState extends State<AppShell> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '10:09 AM',
+                time,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               Text(
-                'WED, NOV 29',
+                date,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],

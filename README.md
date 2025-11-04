@@ -2,6 +2,46 @@
 
 A modern IPTV streaming player application built with Flutter/Dart.
 
+## ⚠️ LEGAL DISCLAIMER & TERMS OF USE
+
+**IMPORTANT - READ CAREFULLY BEFORE USING THIS SOFTWARE**
+
+This IPTV player application is provided as a media player tool for **LEGAL CONTENT ONLY**. By using this software, you agree to the following terms:
+
+### Prohibited Uses
+- ❌ **DO NOT** use this app to access pirated, copyrighted, or illegally distributed content
+- ❌ **DO NOT** use this app to stream content without proper authorization or licensing
+- ❌ **DO NOT** use this app to circumvent geo-restrictions or DRM protections
+- ❌ **DO NOT** use this app for any purpose that violates local, state, national, or international laws
+
+### Intended Use
+- ✅ Personal IPTV services you have legally subscribed to
+- ✅ Content you own or have legal rights to access
+- ✅ Public domain or creative commons content
+- ✅ Your own self-hosted media streams
+- ✅ Legal IPTV provider services with proper licensing
+
+### User Responsibility
+**YOU are solely responsible for:**
+- Ensuring you have legal rights to access any content through this app
+- Complying with all applicable laws and regulations in your jurisdiction
+- Any consequences arising from illegal use of this software
+- Verifying the legitimacy of your IPTV service provider
+
+### Developer Liability
+The developers and contributors of this project:
+- Do NOT provide, host, or distribute any content
+- Do NOT endorse or support piracy or copyright infringement
+- Are NOT responsible for how users choose to use this software
+- Assume NO liability for illegal use of this application
+- Will cooperate with law enforcement regarding illegal activities
+
+**By using this application, you acknowledge that you have read, understood, and agree to comply with all applicable laws and regulations. The developers reserve the right to refuse service or support to anyone using this software for illegal purposes.**
+
+If you do not agree with these terms, do not use this software.
+
+---
+
 ## Features
 
 - 📺 Live TV streaming with M3U playlist support
