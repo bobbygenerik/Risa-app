@@ -84,6 +84,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
   Future<void> _initializePlayer() async {
     try {
+      print('VideoPlayer: Initializing player for: ${widget.videoUrl}');
+      
       // Initialize video player
       _videoPlayerController = VideoPlayerController.networkUrl(
         Uri.parse(widget.videoUrl),
@@ -91,18 +93,21 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           mixWithOthers: false,
           allowBackgroundPlayback: false,
         ),
+        httpHeaders: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Referer': widget.videoUrl,
+        },
       );
 
+      print('VideoPlayer: Awaiting initialization...');
       await _videoPlayerController.initialize();
+      print('VideoPlayer: Initialized successfully');
 
-      // Initialize subtitle controller if subtitles are available
-      if (widget.subtitleOptions != null && widget.subtitleOptions!.isNotEmpty) {
-        _subtitleController = SubtitleController(
-          subtitleUrl: widget.subtitleOptions![0].url,
-          subtitleType: SubtitleType.srt,
-        );
-      }
+      // Skip subtitle controller initialization - causes UnimplementedError
+      // Only initialize if subtitles are explicitly provided and needed
+      _subtitleController = null;
 
+      print('VideoPlayer: Creating Chewie controller...');
       // Initialize Chewie with TV-optimized controls
       _chewieController = ChewieController(
         videoPlayerController: _videoPlayerController,
@@ -153,13 +158,21 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         },
       );
 
+      print('VideoPlayer: Chewie controller created');
+      print('VideoPlayer: Duration: ${_videoPlayerController.value.duration}');
+      print('VideoPlayer: Size: ${_videoPlayerController.value.size}');
+
       setState(() {
         _isInitialized = true;
       });
-    } catch (e) {
+      
+      print('VideoPlayer: Player initialized and ready');
+    } catch (e, stackTrace) {
+      print('VideoPlayer: Error initializing player: $e');
+      print('VideoPlayer: Stack trace: $stackTrace');
       setState(() {
         _hasError = true;
-        _errorMessage = e.toString();
+        _errorMessage = 'Failed to initialize video player:\n\n$e\n\nURL: ${widget.videoUrl}';
       });
     }
   }
