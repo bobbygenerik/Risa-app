@@ -5,7 +5,12 @@ class Channel {
   final String? logoUrl;
   final String? groupTitle;
   final String? tvgId;
+  final int? channelNumber;
   final Map<String, String>? attributes;
+  final bool? isHD;
+  final bool? isFavorite;
+  final String? language;
+  final String? country;
 
   Channel({
     required this.id,
@@ -14,7 +19,12 @@ class Channel {
     this.logoUrl,
     this.groupTitle,
     this.tvgId,
+    this.channelNumber,
     this.attributes,
+    this.isHD,
+    this.isFavorite,
+    this.language,
+    this.country,
   });
 
   factory Channel.fromMap(Map<String, dynamic> map) {
@@ -25,9 +35,14 @@ class Channel {
       logoUrl: map['logoUrl'],
       groupTitle: map['groupTitle'],
       tvgId: map['tvgId'],
+      channelNumber: map['channelNumber'],
       attributes: map['attributes'] != null 
           ? Map<String, String>.from(map['attributes']) 
           : null,
+      isHD: map['isHD'],
+      isFavorite: map['isFavorite'],
+      language: map['language'],
+      country: map['country'],
     );
   }
 
@@ -39,8 +54,43 @@ class Channel {
       'logoUrl': logoUrl,
       'groupTitle': groupTitle,
       'tvgId': tvgId,
+      'channelNumber': channelNumber,
       'attributes': attributes,
+      'isHD': isHD,
+      'isFavorite': isFavorite,
+      'language': language,
+      'country': country,
     };
+  }
+
+  Channel copyWith({
+    String? id,
+    String? name,
+    String? url,
+    String? logoUrl,
+    String? groupTitle,
+    String? tvgId,
+    int? channelNumber,
+    Map<String, String>? attributes,
+    bool? isHD,
+    bool? isFavorite,
+    String? language,
+    String? country,
+  }) {
+    return Channel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      url: url ?? this.url,
+      logoUrl: logoUrl ?? this.logoUrl,
+      groupTitle: groupTitle ?? this.groupTitle,
+      tvgId: tvgId ?? this.tvgId,
+      channelNumber: channelNumber ?? this.channelNumber,
+      attributes: attributes ?? this.attributes,
+      isHD: isHD ?? this.isHD,
+      isFavorite: isFavorite ?? this.isFavorite,
+      language: language ?? this.language,
+      country: country ?? this.country,
+    );
   }
 
   @override
