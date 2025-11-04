@@ -4,9 +4,17 @@ import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:math' as math;
 
-class SeriesScreen extends StatelessWidget {
+class SeriesScreen extends StatefulWidget {
   const SeriesScreen({super.key});
+
+  @override
+  State<SeriesScreen> createState() => _SeriesScreenState();
+}
+
+class _SeriesScreenState extends State<SeriesScreen> {
+  int _featuredIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -19,25 +27,361 @@ class SeriesScreen extends StatelessWidget {
           return _buildEmptyState(context);
         }
 
+        // Get unique series for featured section
+        final seriesMap = <String, Content>{};
+        for (final show in (recentSeries.isNotEmpty ? recentSeries : series)) {
+          if (!seriesMap.containsKey(show.title)) {
+            seriesMap[show.title] = show;
+          }
+          if (seriesMap.length >= 5) break;
+        }
+        final featuredSeries = seriesMap.values.toList();
+
         return SingleChildScrollView(
-          padding: EdgeInsets.all(AppSizes.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Recently Added Series
-              if (recentSeries.isNotEmpty) ...[
-                _buildSectionHeader(context, 'Recently Added Series'),
-                SizedBox(height: AppSizes.md),
-                _buildSeriesRow(context, recentSeries),
-                SizedBox(height: AppSizes.xl),
-              ],
+              // Featured Hero Section (Netflix/Disney+ style)
+              _buildFeaturedHero(context, featuredSeries),
 
-              // All Series by Genre
-              ..._buildGenreSections(context, series),
+              SizedBox(height: AppSizes.xl),
+
+              // Content Rows
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppSizes.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Recently Added Series
+                    if (recentSeries.isNotEmpty) ...[
+                      _buildSectionHeader(context, 'Recently Added Series'),
+                      SizedBox(height: AppSizes.md),
+                      _buildSeriesRow(context, recentSeries),
+                      SizedBox(height: AppSizes.xl),
+                    ],
+
+                    // All Series by Genre
+                    ..._buildGenreSections(context, series),
+                  ],
+                ),
+              ),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildFeaturedHero(BuildContext context, List<Content> featuredSeries) {
+    if (featuredSeries.isEmpty) return SizedBox.shrink();
+
+    final featured = featuredSeries[_featuredIndex % featuredSeries.length];
+    final screenWidth = MediaQuery.of(context).size.width;
+    final heroHeight = math.min(screenWidth * 0.5, 600.0);
+
+    return Container(
+      height: heroHeight,
+      child: Stack(
+        children: [
+          // Background Image with Gradient
+          Positioned.fill(
+            child: Stack(
+              children: [
+                // Image
+                if (featured.imageUrl != null)
+                  Image.network(
+                    featured.imageUrl!,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              AppTheme.primaryBlue.withOpacity(0.3),
+                              AppTheme.darkBackground,
+                            ],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
+                        ),
+                      );
+                    },
+                  )
+                else
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppTheme.primaryBlue.withOpacity(0.3),
+                          AppTheme.darkBackground,
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                    ),
+                  ),
+                
+                // Dark gradient overlay (bottom to top)
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.3),
+                          AppTheme.darkBackground.withOpacity(0.9),
+                          AppTheme.darkBackground,
+                        ],
+                        stops: [0.0, 0.5, 0.85, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Content Overlay
+          Positioned(
+            left: AppSizes.xl * 2,
+            right: AppSizes.xl * 2,
+            bottom: AppSizes.xl * 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Title
+                Text(
+                  featured.title,
+                  style: TextStyle(
+                    fontSize: 42,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    shadows: [
+                      Shadow(
+                        offset: Offset(2, 2),
+                        blurRadius: 8,
+                        color: Colors.black.withOpacity(0.8),
+                      ),
+                    ],
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                
+                SizedBox(height: AppSizes.sm),
+                
+                // Metadata
+                Row(
+                  children: [
+                    if (featured.year != null)
+                      Text(
+                        '${featured.year}',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white.withOpacity(0.9),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    if (featured.year != null && featured.rating != null)
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Container(
+                          width: 4,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.6),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    if (featured.rating != null)
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.star,
+                            color: AppTheme.accentOrange,
+                            size: 18,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            featured.ratingDisplay,
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.white.withOpacity(0.9),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    if (featured.seasonNumber != null && featured.episodeNumber != null)
+                      Padding(
+                        padding: EdgeInsets.only(left: 12),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryBlue,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'S${featured.seasonNumber} E${featured.episodeNumber}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    if (featured.genres != null && featured.genres!.isNotEmpty) ...[
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Container(
+                          width: 4,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.6),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        featured.genres!.take(2).join(', '),
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white.withOpacity(0.9),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                
+                SizedBox(height: AppSizes.lg),
+                
+                // Action Buttons
+                Row(
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        context.push('/content/${featured.id}', extra: featured);
+                      },
+                      icon: Icon(Icons.play_arrow, size: 28),
+                      label: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                        child: Text(
+                          'Play',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: AppSizes.md),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        context.push('/content/${featured.id}', extra: featured);
+                      },
+                      icon: Icon(Icons.info_outline, size: 24),
+                      label: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                        child: Text(
+                          'More Info',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: BorderSide(color: Colors.white.withOpacity(0.7), width: 2),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Indicator Dots (if multiple featured series)
+          if (featuredSeries.length > 1)
+            Positioned(
+              bottom: AppSizes.md,
+              right: AppSizes.xl,
+              child: Row(
+                children: List.generate(featuredSeries.length, (index) {
+                  return Container(
+                    margin: EdgeInsets.symmetric(horizontal: 4),
+                    width: index == _featuredIndex % featuredSeries.length ? 24 : 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: index == _featuredIndex % featuredSeries.length
+                          ? Colors.white
+                          : Colors.white.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  );
+                }),
+              ),
+            ),
+
+          // Navigation Arrows
+          if (featuredSeries.length > 1) ...[
+            Positioned(
+              left: AppSizes.lg,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _featuredIndex = (_featuredIndex - 1 + featuredSeries.length) % featuredSeries.length;
+                    });
+                  },
+                  icon: Icon(Icons.chevron_left, size: 48),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.black.withOpacity(0.5),
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              right: AppSizes.lg,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _featuredIndex = (_featuredIndex + 1) % featuredSeries.length;
+                    });
+                  },
+                  icon: Icon(Icons.chevron_right, size: 48),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.black.withOpacity(0.5),
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 

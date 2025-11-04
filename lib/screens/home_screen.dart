@@ -17,6 +17,22 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   @override
+  void initState() {
+    super.initState();
+    // Auto-load playlist when home screen is first shown
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final channelProvider = Provider.of<ChannelProvider>(
+        context,
+        listen: false,
+      );
+      if (!channelProvider.hasLoadedPlaylist && !channelProvider.isLoading) {
+        print('HomeScreen: Triggering auto-load playlist');
+        channelProvider.autoLoadPlaylist();
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Consumer2<ChannelProvider, ContentProvider>(
       builder: (context, channelProvider, contentProvider, child) {

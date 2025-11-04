@@ -52,10 +52,10 @@ class CategoryScreen extends StatelessWidget {
                     ? _buildEmptyState()
                     : GridView.builder(
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4,
+                          crossAxisCount: 6, // Increased from 4 to 6 for smaller cards
                           crossAxisSpacing: AppSizes.md,
                           mainAxisSpacing: AppSizes.md,
-                          childAspectRatio: 0.75,
+                          childAspectRatio: 0.85, // Adjusted ratio for better proportions
                         ),
                         itemCount: channels.length,
                         itemBuilder: (context, index) {
@@ -128,14 +128,19 @@ class CategoryScreen extends StatelessWidget {
                         borderRadius: BorderRadius.vertical(
                           top: Radius.circular(AppSizes.radiusMd),
                         ),
-                        child: Image.network(
-                          channel.logoUrl!,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          height: double.infinity,
-                          errorBuilder: (context, error, stackTrace) {
-                            return _buildChannelPlaceholder(channel.name);
-                          },
+                        child: Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(AppSizes.sm),
+                            child: Image.network(
+                              channel.logoUrl!,
+                              fit: BoxFit.contain, // Changed from cover to contain
+                              width: double.infinity,
+                              height: double.infinity,
+                              errorBuilder: (context, error, stackTrace) {
+                                return _buildChannelPlaceholder(channel.name);
+                              },
+                            ),
+                          ),
                         ),
                       )
                     else
@@ -143,22 +148,22 @@ class CategoryScreen extends StatelessWidget {
 
                     // Live badge
                     Positioned(
-                      top: 8,
-                      left: 8,
+                      top: 4,
+                      left: 4,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                          horizontal: 6,
+                          vertical: 2,
                         ),
                         decoration: BoxDecoration(
                           color: AppTheme.accentRed,
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(3),
                         ),
                         child: const Text(
                           'LIVE',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 10,
+                            fontSize: 8,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -167,12 +172,12 @@ class CategoryScreen extends StatelessWidget {
 
                     // Favorite button
                     Positioned(
-                      top: 8,
-                      right: 8,
+                      top: 4,
+                      right: 4,
                       child: IconButton(
                         icon: Icon(
                           isFavorite ? Icons.favorite : Icons.favorite_border,
-                          size: 20,
+                          size: 16,
                           color: isFavorite ? AppTheme.accentRed : Colors.white,
                         ),
                         onPressed: () {
@@ -193,14 +198,15 @@ class CategoryScreen extends StatelessWidget {
 
             // Channel Info
             Padding(
-              padding: EdgeInsets.all(AppSizes.sm),
+              padding: EdgeInsets.all(AppSizes.xs),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     channel.name,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       fontWeight: FontWeight.w600,
+                      fontSize: 11,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,

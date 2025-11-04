@@ -253,7 +253,8 @@ class _EPGScreenState extends State<EPGScreen> {
                 : () async {
                     // Refresh EPG data
                     final prefs = await SharedPreferences.getInstance();
-                    final epgUrl = prefs.getString('epg_url');
+                    final epgUrl = prefs.getString('epg_url') ?? 
+                                   prefs.getString('custom_epg_url');
 
                     if (epgUrl != null && epgUrl.isNotEmpty) {
                       await epgService.refresh(epgUrl);
@@ -274,7 +275,7 @@ class _EPGScreenState extends State<EPGScreen> {
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Configure EPG URL in Settings first'),
+                          content: Text('Configure EPG URL in Settings → General first'),
                           action: SnackBarAction(
                             label: 'SETTINGS',
                             onPressed: () => context.go('/settings'),

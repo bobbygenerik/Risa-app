@@ -59,8 +59,30 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _initialize() async {
+    await _clearOldPlaylists(); // Clear any stored playlists from old builds
     await _checkDisclaimer();
     await _checkAndLoadPlaylist();
+  }
+
+  Future<void> _clearOldPlaylists() async {
+    final prefs = await SharedPreferences.getInstance();
+    // Check if this is a new install or updated version
+    final lastVersion = prefs.getString('app_version');
+    const currentVersion = '2.0.1'; // Increment this when you want to clear old data
+    
+    if (lastVersion != currentVersion) {
+      // Clear old playlist data
+      await prefs.remove('playlist_type');
+      await prefs.remove('m3u_url');
+      await prefs.remove('xtream_server');
+      await prefs.remove('xtream_username');
+      await prefs.remove('xtream_password');
+      
+      // Save new version
+      await prefs.setString('app_version', currentVersion);
+      
+      print('Cleared old playlist data - new version: $currentVersion');
+    }
   }
 
   Future<void> _checkDisclaimer() async {
@@ -73,7 +95,9 @@ class _MyAppState extends State<MyApp> {
 
     if (!accepted) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showDisclaimer();
+        if (mounted) {
+          _showDisclaimer();
+        }
       });
     }
   }
@@ -117,6 +141,9 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _showDisclaimer() async {
+    // Make sure we have a valid context
+    if (!mounted) return;
+    
     final result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,

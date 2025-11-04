@@ -633,15 +633,22 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
       return;
     }
 
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => EnhancedVideoPlayerScreen(
-          videoUrl: _currentChannel!.url,
-          title: _currentChannel!.name,
-          subtitle: _currentProgram?.title,
-          isLive: true,
+    try {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => EnhancedVideoPlayerScreen(
+            videoUrl: _currentChannel!.url,
+            title: _currentChannel!.name,
+            subtitle: _currentProgram?.title,
+            isLive: true,
+          ),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      print('Error initializing mini player: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error opening player: $e')),
+      );
+    }
   }
 }

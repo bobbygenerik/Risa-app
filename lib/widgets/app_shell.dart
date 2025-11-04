@@ -41,8 +41,11 @@ class _AppShellState extends State<AppShell> {
 
   void _updateTime() {
     final now = DateTime.now();
+    // Convert to 12-hour format
+    final hour = now.hour == 0 ? 12 : (now.hour > 12 ? now.hour - 12 : now.hour);
+    final period = now.hour >= 12 ? 'PM' : 'AM';
     _currentTime =
-        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+        '${hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} $period';
     final days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
     final months = [
       'JAN',
@@ -109,10 +112,11 @@ class _AppShellState extends State<AppShell> {
       color: AppTheme.sidebarBackground,
       child: Column(
         children: [
-          // RISA Logo
+          // RISA Logo in sidebar
           Container(
-            height: AppSizes.appBarHeight,
-            padding: EdgeInsets.all(AppSizes.sm),
+            height: AppSizes.appBarHeight * 1.5, // 105px
+            width: double.infinity,
+            padding: EdgeInsets.all(8), // Just enough to not touch edges
             child: _isSidebarCollapsed
                 ? Center(
                     child: Container(
@@ -134,56 +138,28 @@ class _AppShellState extends State<AppShell> {
                     ),
                   )
                 : Image.asset(
-                    'assets/images/logo.png',
-                    width: double.infinity,
-                    height: double.infinity,
-                    fit: BoxFit.contain,
+                    'assets/images/RISA-logo.png',
+                    fit: BoxFit.contain, // Scale to fit while maintaining aspect ratio
                     errorBuilder: (context, error, stackTrace) {
-                      // Fallback to text if logo not found
-                      return Row(
-                        children: [
-                          Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [Color(0xFF2E3192), Color(0xFF00BCD4)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(8),
+                      // Fallback to gradient icon if logo not found
+                      return Center(
+                        child: Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Color(0xFF2E3192), Color(0xFF00BCD4)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
-                            child: Icon(
-                              Icons.play_arrow,
-                              color: Colors.white,
-                              size: 30,
-                            ),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          SizedBox(width: 16),
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'RISA',
-                                style: TextStyle(
-                                  color: AppTheme.textPrimary,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.5,
-                                ),
-                              ),
-                              Text(
-                                'IPTV Player',
-                                style: TextStyle(
-                                  color: AppTheme.textSecondary,
-                                  fontSize: 13,
-                                  letterSpacing: 0.8,
-                                ),
-                              ),
-                            ],
+                          child: Icon(
+                            Icons.play_arrow,
+                            color: Colors.white,
+                            size: 30,
                           ),
-                        ],
+                        ),
                       );
                     },
                   ),

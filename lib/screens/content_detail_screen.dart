@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/models/content.dart';
 
@@ -163,8 +164,19 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                     // Play button
                     ElevatedButton.icon(
                       onPressed: () {
-                        // Navigate to player
-                        Navigator.pushNamed(context, '/player');
+                        // Navigate to VLC player with content details
+                        if (widget.content.videoUrl != null) {
+                          context.push('/vlc-player', extra: {
+                            'videoUrl': widget.content.videoUrl,
+                            'title': widget.content.title,
+                            'subtitle': widget.content.year?.toString(),
+                            'isLive': false,
+                          });
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Video URL not available')),
+                          );
+                        }
                       },
                       icon: Icon(Icons.play_arrow),
                       label: Text('Play'),

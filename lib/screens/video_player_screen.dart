@@ -52,6 +52,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   Future<void> _initializePlayer() async {
     try {
+      print('VideoPlayer: Initializing player for: ${widget.videoUrl}');
+      
       // Initialize video player
       _videoPlayerController = VideoPlayerController.networkUrl(
         Uri.parse(widget.videoUrl),
@@ -59,9 +61,43 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           mixWithOthers: false,
           allowBackgroundPlayback: false,
         ),
+        httpHeaders: {
+          'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
+          'Referer': widget.videoUrl.contains('http') ? Uri.parse(widget.videoUrl).origin : '',
+        },
       );
+      
+      // Add listener to monitor playback state
+      _videoPlayerController.addListener(() {
+        if (_videoPlayerController.value.hasError) {
+          print('VideoPlayer: Playback error detected: ${_videoPlayerController.value.errorDescription}');
+          if (mounted) {
+            setState(() {
+              _hasError = true;
+              _errorMessage = 'Playback error: ${_videoPlayerController.value.errorDescription}';
+            });
+          }
+        }
+        if (_videoPlayerController.value.isPlaying) {
+          print('VideoPlayer: Stream is playing');
+        }
+        if (_videoPlayerController.value.isBuffering) {
+          print('VideoPlayer: Stream is buffering');
+        }
+      });
 
+      print('VideoPlayer: Waiting for initialization...');
       await _videoPlayerController.initialize();
+      print('VideoPlayer: Initialization complete');
+
+      // Check if video is valid
+      if (_videoPlayerController.value.hasError) {
+        throw Exception('Video player error: ${_videoPlayerController.value.errorDescription}');
+      }
+
+      print('VideoPlayer: Duration: ${_videoPlayerController.value.duration}');
+      print('VideoPlayer: Size: ${_videoPlayerController.value.size}');
+      print('VideoPlayer: isInitialized: ${_videoPlayerController.value.isInitialized}');
 
       // Initialize Chewie with TV-optimized controls
       _chewieController = ChewieController(
@@ -118,10 +154,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       if (aiService.isModelLoaded) {
         aiService.setEnabled(true);
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('VideoPlayer: Error initializing player: $e');
+      print('VideoPlayer: Stack trace: $stackTrace');
       setState(() {
         _hasError = true;
-        _errorMessage = e.toString();
+        _errorMessage = 'Failed to load stream:\n\n$e\n\nURL: ${widget.videoUrl}';
       });
     }
   }
@@ -204,10 +242,77 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 ),
               ),
 
-            // Loading indicator
+            // Loading indicator with logo and channel info
             if (!_isInitialized && !_hasError)
-              const Center(
-                child: CircularProgressIndicator(),
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.all(48.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // App logo instead of generic icon
+                      Image.asset(
+                        'assets/images/RISA-logo.png',
+                        height: 120,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          // Fallback to gradient icon if logo not found
+                          return Container(
+                            width: 100,
+                            height: 100,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [Color(0xFF2E3192), Color(0xFF00BCD4)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Icon(
+                              Icons.play_arrow,
+                              color: Colors.white,
+                              size: 60,
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 32),
+                      // Channel name
+                      Text(
+                        widget.title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (widget.subtitle != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          widget.subtitle!,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 16,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                      const SizedBox(height: 32),
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Loading stream...',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
 
             // Error view

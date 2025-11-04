@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
+import 'package:iptv_player/models/saved_playlist.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:convert';
 
 /// Playlist login screen - allows users to choose between M3U URL or Xtream Codes
 class PlaylistLoginScreen extends StatefulWidget {
@@ -32,19 +34,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadSavedCredentials();
-  }
-
-  Future<void> _loadSavedCredentials() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _m3uUrlController.text = prefs.getString('m3u_url') ?? '';
-      _xtreamServerController.text = prefs.getString('xtream_server') ?? '';
-      _xtreamUsernameController.text =
-          prefs.getString('xtream_username') ?? '';
-      _xtreamPasswordController.text =
-          prefs.getString('xtream_password') ?? '';
-    });
+    // Don't load saved credentials - fields should be empty when opening this screen
   }
 
   @override
@@ -73,23 +63,62 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
       );
       await channelProvider.loadPlaylistFromUrl(url);
 
-      // Save credentials
+      final channelCount = channelProvider.channels.length;
+      final movieCount = channelProvider.movies.length;
+      final seriesCount = channelProvider.series.length;
+
+      // Save credentials for auto-load on next startup
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('m3u_url', url);
       await prefs.setString('playlist_type', 'm3u');
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Playlist loaded! ${channelProvider.channels.length} channels found.',
+        if (channelCount == 0 && movieCount == 0 && seriesCount == 0) {
+          // No content found - show detailed error with option to view content
+          final hasContent = channelProvider.lastM3UContent != null;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                hasContent
+                    ? '⚠️ 0 channels found!\n\nThe URL responded but contained no valid channels.\nTap below to see what was received.'
+                    : '⚠️ 0 channels found!\n\nThe URL responded but no content was captured.\nCheck your M3U URL format.',
+              ),
+              backgroundColor: AppTheme.accentRed,
+              duration: Duration(seconds: 10),
+              action: hasContent
+                  ? SnackBarAction(
+                      label: 'View Content',
+                      textColor: Colors.white,
+                      onPressed: () {
+                        _showM3UPreview(channelProvider.lastM3UContent!);
+                      },
+                    )
+                  : null,
             ),
-            backgroundColor: AppTheme.accentGreen,
-          ),
-        );
+          );
+        } else {
+          // Success - show what was found
+          final parts = <String>[];
+          if (channelCount > 0) parts.add('$channelCount channels');
+          if (movieCount > 0) parts.add('$movieCount movies');
+          if (seriesCount > 0) parts.add('$seriesCount series');
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('✓ Loaded: ${parts.join(", ")}'),
+              backgroundColor: AppTheme.accentGreen,
+              duration: Duration(seconds: 4),
+            ),
+          );
 
-        // Navigate to home
-        context.go('/');
+          // Clear the M3U URL field after successful login
+          setState(() {
+            _m3uUrlController.clear();
+          });
+
+          // Navigate to home only if we found content
+          context.go('/');
+        }
       }
     } catch (e) {
       _showError('Failed to load playlist: ${e.toString()}');
@@ -124,7 +153,11 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
       );
       await channelProvider.loadPlaylistFromUrl(url);
 
-      // Save credentials
+      final channelCount = channelProvider.channels.length;
+      final movieCount = channelProvider.movies.length;
+      final seriesCount = channelProvider.series.length;
+
+      // Save credentials for auto-load on next startup
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('xtream_server', server);
       await prefs.setString('xtream_username', username);
@@ -132,17 +165,56 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
       await prefs.setString('playlist_type', 'xtream');
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Xtream playlist loaded! ${channelProvider.channels.length} channels found.',
+        if (channelCount == 0 && movieCount == 0 && seriesCount == 0) {
+          // No content found - show detailed error with option to view content
+          final hasContent = channelProvider.lastM3UContent != null && 
+                            channelProvider.lastM3UContent!.isNotEmpty;
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                hasContent
+                    ? '⚠️ 0 channels found!\n\nCheck your Xtream credentials.\nTap below to view server response.'
+                    : '⚠️ 0 channels found!\n\nCheck your Xtream credentials.\nNo response data available.',
+              ),
+              backgroundColor: AppTheme.accentRed,
+              duration: Duration(seconds: 8),
+              action: hasContent
+                  ? SnackBarAction(
+                      label: 'View Response',
+                      textColor: Colors.white,
+                      onPressed: () {
+                        _showM3UPreview(channelProvider.lastM3UContent!);
+                      },
+                    )
+                  : null,
             ),
-            backgroundColor: AppTheme.accentGreen,
-          ),
-        );
+          );
+        } else {
+          // Success - show what was found
+          final parts = <String>[];
+          if (channelCount > 0) parts.add('$channelCount channels');
+          if (movieCount > 0) parts.add('$movieCount movies');
+          if (seriesCount > 0) parts.add('$seriesCount series');
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('✓ Loaded: ${parts.join(", ")}'),
+              backgroundColor: AppTheme.accentGreen,
+              duration: Duration(seconds: 4),
+            ),
+          );
 
-        // Navigate to home
-        context.go('/');
+          // Clear the Xtream credential fields after successful login
+          setState(() {
+            _xtreamServerController.clear();
+            _xtreamUsernameController.clear();
+            _xtreamPasswordController.clear();
+          });
+
+          // Navigate to home only if we found content
+          context.go('/');
+        }
       }
     } catch (e) {
       _showError('Failed to load Xtream playlist: ${e.toString()}');
@@ -159,9 +231,109 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
         SnackBar(
           content: Text(message),
           backgroundColor: AppTheme.accentRed,
+          duration: Duration(seconds: 6),
         ),
       );
     }
+  }
+
+  void _showM3UPreview(String content) {
+    // Analyze the content
+    final lines = content.split('\n');
+    final firstLine = lines.isNotEmpty ? lines[0].trim() : '';
+    final hasM3UHeader = firstLine.toUpperCase().contains('#EXTM3U');
+    final extinfCount = lines.where((l) => l.trim().startsWith('#EXTINF:')).length;
+    final urlCount = lines.where((l) => 
+      !l.trim().startsWith('#') && 
+      l.trim().isNotEmpty && 
+      (l.contains('http') || l.contains('://'))).length;
+    
+    // Show first 25 lines
+    final preview = lines.take(25).join('\n');
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.cardBackground,
+        title: Text('M3U Content Analysis'),
+        content: Container(
+          width: double.maxFinite,
+          constraints: BoxConstraints(maxHeight: 500),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Diagnostics
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: hasM3UHeader 
+                        ? AppTheme.accentGreen.withOpacity(0.2)
+                        : AppTheme.accentRed.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '📊 Diagnostics:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryBlue,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Text('✓ Total lines: ${lines.length}'),
+                      Text(hasM3UHeader 
+                          ? '✓ Valid M3U header found' 
+                          : '✗ Missing #EXTM3U header'),
+                      Text('✓ Found $extinfCount #EXTINF entries'),
+                      Text('✓ Found $urlCount stream URLs'),
+                      SizedBox(height: 8),
+                      if (extinfCount == 0)
+                        Text(
+                          '⚠ No #EXTINF entries found! This may not be a valid M3U format.',
+                          style: TextStyle(color: AppTheme.accentOrange),
+                        ),
+                      if (urlCount == 0)
+                        Text(
+                          '⚠ No URLs found! Channels need stream URLs.',
+                          style: TextStyle(color: AppTheme.accentOrange),
+                        ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 16),
+                Divider(),
+                SizedBox(height: 8),
+                Text(
+                  'First 25 lines:',
+                  style: TextStyle(
+                    color: AppTheme.primaryBlue,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 8),
+                SelectableText(
+                  preview,
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 11,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -179,104 +351,134 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
           ),
         ),
         child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.all(AppSizes.xl),
-              child: Container(
-                constraints: const BoxConstraints(maxWidth: 600),
-                decoration: BoxDecoration(
-                  color: AppTheme.cardBackground,
-                  borderRadius: BorderRadius.circular(AppSizes.radiusXl),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: Padding(
-                  padding: EdgeInsets.all(AppSizes.xl),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Logo/Title
-                      Icon(
-                        Icons.live_tv,
-                        size: 80,
-                        color: AppTheme.primaryBlue,
-                      ),
-                      SizedBox(height: AppSizes.md),
-                      Text(
-                        'RISA IPTV Player',
-                        style: Theme.of(context).textTheme.headlineMedium
-                            ?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryBlue,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Calculate sizes based on available height
+              final availableHeight = constraints.maxHeight;
+              final logoHeight = availableHeight * 0.25; // 25% of screen
+              final formHeight = availableHeight * 0.45; // 45% for forms
+              
+              return Stack(
+                children: [
+                  Center(
+                    child: SingleChildScrollView(
+                      physics: const NeverScrollableScrollPhysics(), // Disable scrolling
+                      padding: EdgeInsets.all(AppSizes.xl),
+                      child: Container(
+                        constraints: BoxConstraints(
+                          maxWidth: 600,
+                          maxHeight: availableHeight - (AppSizes.xl * 2),
                         ),
-                      ),
-                      SizedBox(height: AppSizes.sm),
-                      Text(
-                        'Load your playlist to get started',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                      SizedBox(height: AppSizes.xl),
-
-                      // Tab selector
-                      Container(
                         decoration: BoxDecoration(
-                          color: AppTheme.highlight,
-                          borderRadius: BorderRadius.circular(
-                            AppSizes.radiusLg,
-                          ),
-                        ),
-                        child: TabBar(
-                          controller: _tabController,
-                          indicator: BoxDecoration(
-                            color: AppTheme.primaryBlue,
-                            borderRadius: BorderRadius.circular(
-                              AppSizes.radiusLg,
+                          color: AppTheme.cardBackground,
+                          borderRadius: BorderRadius.circular(AppSizes.radiusXl),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.3),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
                             ),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.all(AppSizes.lg),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Logo - Use actual logo image with reduced padding (2x bigger)
+                              SizedBox(height: AppSizes.sm),
+                              Image.asset(
+                                'assets/images/RISA-logo.png',
+                                height: logoHeight.clamp(240.0, 560.0), // 2x bigger: was 120-280, now 240-560
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) {
+                                  // Fallback to icon if logo not found
+                                  return Icon(
+                                    Icons.live_tv,
+                                    size: (logoHeight * 0.7).clamp(160.0, 400.0), // 2x bigger
+                                    color: AppTheme.primaryBlue,
+                                  );
+                                },
+                              ),
+                              SizedBox(height: AppSizes.md),
+                              SizedBox(height: AppSizes.md),
+                              Text(
+                                'Load your playlist to get started',
+                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                              SizedBox(height: AppSizes.lg),
+
+                              // Tab selector
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: AppTheme.highlight,
+                                  borderRadius: BorderRadius.circular(
+                                    AppSizes.radiusLg,
+                                  ),
+                                ),
+                                child: TabBar(
+                                  controller: _tabController,
+                                  indicator: BoxDecoration(
+                                    color: AppTheme.primaryBlue,
+                                    borderRadius: BorderRadius.circular(
+                                      AppSizes.radiusLg,
+                                    ),
+                                  ),
+                                  labelColor: Colors.white,
+                                  unselectedLabelColor: AppTheme.textSecondary,
+                                  tabs: const [
+                                    Tab(text: 'M3U URL'),
+                                    Tab(text: 'Xtream Codes'),
+                                  ],
+                                ),
+                              ),
+
+                              SizedBox(height: AppSizes.lg),
+
+                              // Tab content
+                              Flexible(
+                                child: SizedBox(
+                                  height: formHeight.clamp(250.0, 350.0),
+                                  child: TabBarView(
+                                    controller: _tabController,
+                                    children: [
+                                      _buildM3UForm(),
+                                      _buildXtreamForm(),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                              if (_isLoading) ...[
+                                SizedBox(height: AppSizes.md),
+                                const CircularProgressIndicator(),
+                                SizedBox(height: AppSizes.sm),
+                                Text(
+                                  'Loading playlist...',
+                                  style: TextStyle(color: AppTheme.textSecondary),
+                                ),
+                              ],
+                            ],
                           ),
-                          labelColor: Colors.white,
-                          unselectedLabelColor: AppTheme.textSecondary,
-                          tabs: const [
-                            Tab(text: 'M3U URL'),
-                            Tab(text: 'Xtream Codes'),
-                          ],
                         ),
                       ),
-
-                      SizedBox(height: AppSizes.xl),
-
-                      // Tab content
-                      SizedBox(
-                        height: 350,
-                        child: TabBarView(
-                          controller: _tabController,
-                          children: [
-                            _buildM3UForm(),
-                            _buildXtreamForm(),
-                          ],
-                        ),
-                      ),
-
-                      if (_isLoading) ...[
-                        SizedBox(height: AppSizes.lg),
-                        const CircularProgressIndicator(),
-                        SizedBox(height: AppSizes.md),
-                        Text(
-                          'Loading playlist...',
-                          style: TextStyle(color: AppTheme.textSecondary),
-                        ),
-                      ],
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            ),
+                  // Back button in top-left
+                  Positioned(
+                    top: AppSizes.md,
+                    left: AppSizes.md,
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: () => context.pop(),
+                      tooltip: 'Back',
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),

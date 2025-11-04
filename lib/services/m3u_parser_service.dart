@@ -2,13 +2,52 @@ import '../models/channel.dart';
 import '../models/content.dart';
 
 class M3UParserService {
+  String? _epgUrl; // Store EPG URL from M3U header
+  
+  /// Gets the EPG URL extracted from the last parsed M3U
+  String? get epgUrl => _epgUrl;
+  
   /// Parses M3U playlist content and returns a list of channels
   List<Channel> parseM3U(String content) {
     final List<Channel> channels = [];
-    final lines = content.split('\n');
+    final rawLines = content.split('\n');
+    
+    _epgUrl = null; // Reset EPG URL
+    
+    print('M3UParser: Parsing ${rawLines.length} raw lines');
+    print('M3UParser: First line: ${rawLines.isNotEmpty ? rawLines[0] : "EMPTY"}');
+    
+    // Check for EPG URL in M3U header (x-tvg-url attribute)
+    if (rawLines.isNotEmpty && rawLines[0].contains('x-tvg-url=')) {
+      final firstLine = rawLines[0];
+      final urlMatch = RegExp(r'x-tvg-url="([^"]+)"').firstMatch(firstLine);
+      if (urlMatch != null) {
+        _epgUrl = urlMatch.group(1);
+        print('M3UParser: Found EPG URL: $_epgUrl');
+      }
+    }
+
+    // First, reassemble wrapped lines (lines that don't start with # or http)
+    final List<String> lines = [];
+    for (int i = 0; i < rawLines.length; i++) {
+      final line = rawLines[i].trimRight(); // Keep leading spaces for detection
+      
+      if (line.isEmpty) continue;
+      
+      // If line starts with # or http, it's a new line
+      if (line.startsWith('#') || line.startsWith('http')) {
+        lines.add(line.trim());
+      } else if (lines.isNotEmpty) {
+        // This is a continuation of the previous line (wrapped text)
+        lines[lines.length - 1] += line.trim();
+      }
+    }
+    
+    print('M3UParser: Reassembled into ${lines.length} logical lines');
 
     String? currentInfo;
     Map<String, String> currentAttributes = {};
+    int channelCount = 0;
 
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i].trim();
@@ -19,6 +58,9 @@ class M3UParserService {
         // Parse channel info
         currentInfo = line.substring(8); // Remove '#EXTINF:'
         currentAttributes = _parseAttributes(currentInfo);
+        if (channelCount < 3) {
+          print('M3UParser: Found EXTINF: ${currentInfo.length > 100 ? currentInfo.substring(0, 100) + "..." : currentInfo}');
+        }
       } else if (!line.startsWith('#') && currentInfo != null) {
         // This is a stream URL
         final channelName = _extractChannelName(currentInfo);
@@ -33,11 +75,16 @@ class M3UParserService {
         );
 
         channels.add(channel);
+        channelCount++;
+        if (channelCount <= 3) {
+          print('M3UParser: Added channel #$channelCount: $channelName');
+        }
         currentInfo = null;
         currentAttributes = {};
       }
     }
-
+    
+    print('M3UParser: Total channels parsed: ${channels.length}');
     return channels;
   }
 

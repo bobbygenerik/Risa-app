@@ -178,7 +178,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       {'title': 'Account', 'icon': Icons.person_outline},
       {'title': 'Playback', 'icon': Icons.play_circle_outline},
       {'title': 'Cloud & AI', 'icon': Icons.cloud_outlined},
-      {'title': 'EPG & Recordings', 'icon': Icons.tv_outlined},
+      {'title': 'Recordings', 'icon': Icons.fiber_manual_record},
       {'title': 'Parental Controls', 'icon': Icons.shield_outlined},
       {'title': 'Appearance', 'icon': Icons.palette_outlined},
     ];
@@ -795,10 +795,152 @@ class _SettingsScreenState extends State<SettingsScreen>
     };
   }
 
+  Widget _buildEPGSourceSection() {
+    return FutureBuilder<Map<String, String?>>(
+      future: SharedPreferences.getInstance().then((prefs) => {
+        'epg_url': prefs.getString('epg_url'),
+        'custom_epg_url': prefs.getString('custom_epg_url'),
+        'playlist_type': prefs.getString('playlist_type'),
+        'm3u_url': prefs.getString('m3u_url'),
+        'xtream_server': prefs.getString('xtream_server'),
+      }),
+      builder: (context, snapshot) {
+        final epgUrl = snapshot.data?['epg_url'];
+        final customEpgUrl = snapshot.data?['custom_epg_url'];
+        final playlistType = snapshot.data?['playlist_type'];
+        final m3uUrl = snapshot.data?['m3u_url'];
+        final xtreamServer = snapshot.data?['xtream_server'];
+        
+        // Determine provider name
+        String providerName = 'No Playlist Loaded';
+        if (playlistType == 'm3u' && m3uUrl != null) {
+          try {
+            final uri = Uri.parse(m3uUrl);
+            providerName = uri.host;
+          } catch (e) {
+            providerName = 'M3U Playlist';
+          }
+        } else if (playlistType == 'xtream' && xtreamServer != null) {
+          try {
+            final uri = Uri.parse(xtreamServer);
+            providerName = uri.host;
+          } catch (e) {
+            providerName = 'Xtream Codes';
+          }
+        }
+        
+        final TextEditingController customEpgController = 
+            TextEditingController(text: customEpgUrl ?? '');
+
+        return _buildSectionCard(
+          title: 'EPG (Electronic Program Guide)',
+          subtitle: 'Configure TV guide information',
+          children: [
+            // Show current provider
+            ListTile(
+              title: Text('Current Provider'),
+              subtitle: Text(providerName),
+              leading: Icon(Icons.tv, color: AppTheme.primaryBlue),
+            ),
+            if (epgUrl != null) ...[
+              ListTile(
+                title: Text('Auto-detected EPG URL'),
+                subtitle: Text(
+                  epgUrl,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12),
+                ),
+                leading: Icon(Icons.check_circle, color: Colors.green),
+              ),
+            ],
+            SizedBox(height: AppSizes.md),
+            // Manual EPG URL input
+            Text(
+              'Custom EPG URL (Optional)',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            SizedBox(height: AppSizes.sm),
+            TextField(
+              controller: customEpgController,
+              decoration: InputDecoration(
+                hintText: 'Enter custom EPG URL if provider doesn\'t include one',
+                prefixIcon: Icon(Icons.link),
+                border: OutlineInputBorder(),
+                filled: true,
+                fillColor: AppTheme.cardBackground,
+                suffixIcon: IconButton(
+                  icon: Icon(Icons.save),
+                  onPressed: () async {
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setString('custom_epg_url', customEpgController.text);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Custom EPG URL saved')),
+                      );
+                      setState(() {}); // Refresh to show saved URL
+                    }
+                  },
+                  tooltip: 'Save EPG URL',
+                ),
+              ),
+              onSubmitted: (value) async {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setString('custom_epg_url', value);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Custom EPG URL saved')),
+                  );
+                  setState(() {}); // Refresh to show saved URL
+                }
+              },
+            ),
+            SizedBox(height: AppSizes.sm),
+            Text(
+              'Custom EPG URL will be used if no EPG is auto-detected from your playlist',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppTheme.textSecondary,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+            SizedBox(height: AppSizes.md),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      // TODO: Implement EPG refresh
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Refreshing EPG data...')),
+                      );
+                    },
+                    icon: Icon(Icons.refresh),
+                    label: Text('Refresh EPG'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryBlue,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildGeneralSettings() {
     return _buildSettingsSection(
       title: 'General',
       children: [
+        // Saved Playlists Management
+        _buildSavedPlaylistsSection(),
+        
+        SizedBox(height: AppSizes.xl),
+        Divider(thickness: 2),
+        SizedBox(height: AppSizes.xl),
+        
         // M3U & Xtream Codes Section
         _buildSectionCard(
           title: 'Playlist Sources',
@@ -1017,6 +1159,9 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
           ],
         ),
+        
+        // EPG Settings Section
+        _buildEPGSourceSection(),
 
         // Real-Debrid Integration (Free API)
         _buildSectionCard(
@@ -2368,6 +2513,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Widget _buildEPGSettings() {
+    // This method is now just for recordings
     return FutureBuilder<String?>(
       future: SharedPreferences.getInstance().then(
         (prefs) => prefs.getString('recording_storage_path'),
@@ -2376,25 +2522,8 @@ class _SettingsScreenState extends State<SettingsScreen>
         final recordingPath = snapshot.data ?? '';
 
         return _buildSettingsSection(
-          title: 'EPG & Recordings',
+          title: 'Recordings',
           children: [
-            _buildSectionCard(
-              title: 'EPG Source',
-              children: [
-                _buildDropdown('EPG Provider', 'Provider 1', [
-                  'Provider 1',
-                  'Provider 2',
-                  'Custom URL',
-                ], (value) {}),
-                _buildSwitchTile('Auto-update EPG', true),
-                _buildDropdown('Update Interval', 'Daily', [
-                  'Hourly',
-                  'Every 6 hours',
-                  'Daily',
-                  'Weekly',
-                ], (value) {}),
-              ],
-            ),
             _buildSectionCard(
               title: 'Recording Storage',
               subtitle: 'Configure where recordings are saved',
@@ -2643,6 +2772,244 @@ class _SettingsScreenState extends State<SettingsScreen>
           ...children,
         ],
       ),
+    );
+  }
+
+  Widget _buildSavedPlaylistsSection() {
+    return FutureBuilder<Map<String, String?>>(
+      future: () async {
+        final prefs = await SharedPreferences.getInstance();
+        return {
+          'type': prefs.getString('playlist_type'),
+          'm3u_url': prefs.getString('m3u_url'),
+          'xtream_server': prefs.getString('xtream_server'),
+          'xtream_username': prefs.getString('xtream_username'),
+        };
+      }(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return Card(
+            margin: EdgeInsets.only(bottom: AppSizes.lg),
+            child: Padding(
+              padding: EdgeInsets.all(AppSizes.lg),
+              child: Text('Loading saved playlists...'),
+            ),
+          );
+        }
+
+        final data = snapshot.data!;
+        final hasPlaylist = data['type'] != null;
+
+        return Card(
+          margin: EdgeInsets.only(bottom: AppSizes.lg),
+          child: Padding(
+            padding: EdgeInsets.all(AppSizes.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.playlist_play, color: AppTheme.primaryBlue),
+                    SizedBox(width: AppSizes.sm),
+                    Text(
+                      'Saved Playlists',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ],
+                ),
+                SizedBox(height: AppSizes.sm),
+                Text(
+                  'Manage your saved playlist credentials',
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: AppTheme.textSecondary),
+                ),
+                SizedBox(height: AppSizes.lg),
+
+                if (!hasPlaylist)
+                  Container(
+                    padding: EdgeInsets.all(AppSizes.md),
+                    decoration: BoxDecoration(
+                      color: AppTheme.cardBackground,
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                      border: Border.all(color: AppTheme.divider),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, color: AppTheme.textSecondary),
+                        SizedBox(width: AppSizes.md),
+                        Expanded(
+                          child: Text(
+                            'No saved playlist found. Use the Playlist Login screen to add a playlist.',
+                            style: TextStyle(color: AppTheme.textSecondary),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Container(
+                    padding: EdgeInsets.all(AppSizes.md),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryBlue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                      border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryBlue,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                data['type'] == 'm3u' ? 'M3U URL' : 'Xtream Codes',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            Spacer(),
+                            Icon(Icons.check_circle, color: AppTheme.accentGreen, size: 20),
+                            SizedBox(width: 4),
+                            Text(
+                              'Active',
+                              style: TextStyle(
+                                color: AppTheme.accentGreen,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: AppSizes.md),
+                        if (data['type'] == 'm3u') ...[
+                          _buildInfoRow('URL', data['m3u_url'] ?? 'N/A'),
+                        ] else if (data['type'] == 'xtream') ...[
+                          _buildInfoRow('Server', data['xtream_server'] ?? 'N/A'),
+                          SizedBox(height: AppSizes.xs),
+                          _buildInfoRow('Username', data['xtream_username'] ?? 'N/A'),
+                        ],
+                        SizedBox(height: AppSizes.md),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () async {
+                                  // Confirm deletion
+                                  final confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      backgroundColor: AppTheme.cardBackground,
+                                      title: Text('Delete Saved Playlist?'),
+                                      content: Text(
+                                        'This will remove the saved credentials. You can add a new playlist anytime from the Playlist Login screen.',
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context, false),
+                                          child: Text('Cancel'),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: () => Navigator.pop(context, true),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: AppTheme.accentRed,
+                                          ),
+                                          child: Text('Delete'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+
+                                  if (confirm == true) {
+                                    final prefs = await SharedPreferences.getInstance();
+                                    await prefs.remove('playlist_type');
+                                    await prefs.remove('m3u_url');
+                                    await prefs.remove('xtream_server');
+                                    await prefs.remove('xtream_username');
+                                    await prefs.remove('xtream_password');
+
+                                    if (mounted) {
+                                      setState(() {}); // Refresh the UI
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Playlist credentials deleted'),
+                                          backgroundColor: AppTheme.accentGreen,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                                icon: Icon(Icons.delete_outline),
+                                label: Text('Delete Playlist'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppTheme.accentRed,
+                                  side: BorderSide(color: AppTheme.accentRed),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: AppSizes.sm),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  context.go('/settings/playlist-login');
+                                },
+                                icon: Icon(Icons.add),
+                                label: Text('Change Playlist'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primaryBlue,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 80,
+          child: Text(
+            label,
+            style: TextStyle(
+              color: AppTheme.textSecondary,
+              fontSize: 13,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              color: AppTheme.textPrimary,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 
@@ -2924,29 +3291,6 @@ class _SettingsScreenState extends State<SettingsScreen>
           return 'Unknown';
       }
     }
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: AppSizes.sm),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
-          ),
-          Text(
-            value,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
-          ),
-        ],
-      ),
-    );
   }
 
   String _formatDateTime(DateTime dateTime) {

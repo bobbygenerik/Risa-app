@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/channel.dart';
@@ -15,6 +16,7 @@ class ChannelProvider with ChangeNotifier {
   String? _errorMessage;
   ContentProvider? _contentProvider;
   bool _hasLoadedPlaylist = false;
+  String? _lastM3UContent; // Store last content for debugging
 
   final M3UParserService _parserService = M3UParserService();
 
@@ -30,6 +32,7 @@ class ChannelProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get hasLoadedPlaylist => _hasLoadedPlaylist;
+  String? get lastM3UContent => _lastM3UContent; // Expose for debugging
 
   /// Auto-load saved playlist on startup
   Future<void> autoLoadPlaylist() async {
@@ -38,6 +41,31 @@ class ChannelProvider with ChangeNotifier {
     print('ChannelProvider: Auto-loading playlist...');
     final prefs = await SharedPreferences.getInstance();
     final playlistType = prefs.getString('playlist_type');
+    
+    // First, try to load from cache
+    final cachedPlaylist = prefs.getString('cached_playlist');
+    final cacheTimestamp = prefs.getInt('cache_timestamp');
+    final cacheAge = cacheTimestamp != null 
+        ? DateTime.now().millisecondsSinceEpoch - cacheTimestamp 
+        : null;
+    
+    // If cache is less than 6 hours old (21600000 ms), use it
+    if (cachedPlaylist != null && cacheAge != null && cacheAge < 21600000) {
+      print('ChannelProvider: Loading from cache (${(cacheAge / 60000).round()} minutes old)');
+      try {
+        loadPlaylistFromString(cachedPlaylist);
+        _hasLoadedPlaylist = true;
+        print('ChannelProvider: Cache loaded successfully with ${_channels.length} channels');
+        
+        // Load from network in background to update cache
+        _refreshCacheInBackground(prefs, playlistType);
+        return;
+      } catch (e) {
+        print('ChannelProvider: Cache load failed: $e, loading from network');
+      }
+    } else {
+      print('ChannelProvider: Cache expired or not found, loading from network');
+    }
     
     print('ChannelProvider: Playlist type: $playlistType');
     if (playlistType == null) {
@@ -76,46 +104,164 @@ class ChannelProvider with ChangeNotifier {
       print('ChannelProvider: Auto-load playlist failed: $e');
     }
   }
+  
+  /// Refresh cache in background without blocking UI
+  Future<void> _refreshCacheInBackground(SharedPreferences prefs, String? playlistType) async {
+    print('ChannelProvider: Refreshing cache in background...');
+    try {
+      String? playlistUrl;
+      
+      if (playlistType == 'm3u') {
+        playlistUrl = prefs.getString('m3u_url');
+      } else if (playlistType == 'xtream') {
+        final server = prefs.getString('xtream_server');
+        final username = prefs.getString('xtream_username');
+        final password = prefs.getString('xtream_password');
+        if (server != null && username != null && password != null) {
+          playlistUrl =
+              '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
+        }
+      }
+      
+      if (playlistUrl != null && playlistUrl.isNotEmpty) {
+        // Download without showing loading state
+        final client = http.Client();
+        try {
+          final response = await client.get(
+            Uri.parse(playlistUrl),
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
+              'Accept': '*/*',
+            },
+          ).timeout(Duration(seconds: 90));
+          
+          if (response.statusCode == 200) {
+            await prefs.setString('cached_playlist', response.body);
+            await prefs.setInt('cache_timestamp', DateTime.now().millisecondsSinceEpoch);
+            print('ChannelProvider: Cache updated successfully');
+          }
+        } finally {
+          client.close();
+        }
+      }
+    } catch (e) {
+      print('ChannelProvider: Background cache refresh failed: $e');
+    }
+  }
 
   /// Load channels from M3U URL
   Future<void> loadPlaylistFromUrl(String url) async {
     _isLoading = true;
     _errorMessage = null;
+    _lastM3UContent = null; // Clear old content
     notifyListeners();
 
     try {
       print('ChannelProvider: Loading playlist from URL: $url');
-      final response = await http.get(Uri.parse(url));
+      print('ChannelProvider: Starting download with 90 second timeout...');
+      
+      // Allow insecure connections for IPTV providers with SSL issues
+      HttpOverrides.global = _MyHttpOverrides();
+      
+      // Create client with proper timeout and error handling
+      final client = http.Client();
+      try {
+        final response = await client.get(
+          Uri.parse(url),
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
+            'Accept': '*/*',
+            'Accept-Encoding': 'gzip, deflate',
+          },
+        ).timeout(
+          Duration(seconds: 90), // Increased to 90 seconds for large playlists
+          onTimeout: () {
+            print('ChannelProvider: Request timed out after 90 seconds');
+            throw Exception('Connection timeout - server took too long to respond (90s limit)');
+          },
+        );
 
-      print('ChannelProvider: Response status: ${response.statusCode}');
-      if (response.statusCode == 200) {
-        print('ChannelProvider: Parsing M3U content (${response.body.length} bytes)');
-        _channels = _parserService.parseM3U(response.body);
-        print('ChannelProvider: Parsed ${_channels.length} channels');
+        print('ChannelProvider: Response received - status: ${response.statusCode}');
+        print('ChannelProvider: Content-Type: ${response.headers['content-type']}');
+        
+        // ALWAYS store response body for debugging, even if empty
+        _lastM3UContent = response.body;
+        print('ChannelProvider: Captured ${response.body.length} bytes of response data');
+        
+        if (response.statusCode == 200) {
+          print('ChannelProvider: Parsing M3U content (${response.body.length} bytes)');
+          _channels = _parserService.parseM3U(response.body);
+          print('ChannelProvider: Parsed ${_channels.length} channels');
+          
+          // Cache the playlist for faster loading next time
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('cached_playlist', response.body);
+          await prefs.setInt('cache_timestamp', DateTime.now().millisecondsSinceEpoch);
+          print('ChannelProvider: Playlist cached successfully');
+          
+          // Save EPG URL if found in M3U header
+          if (_parserService.epgUrl != null) {
+            print('ChannelProvider: Saving EPG URL: ${_parserService.epgUrl}');
+            await prefs.setString('epg_url', _parserService.epgUrl!);
+          }
 
-        // Also parse VOD content (movies and series)
-        final vodContent = _parserService.parseVOD(response.body);
-        _movies = vodContent['movies'] ?? [];
-        _series = vodContent['series'] ?? [];
-        print('ChannelProvider: Parsed ${_movies.length} movies, ${_series.length} series');
+          // Also parse VOD content (movies and series)
+          final vodContent = _parserService.parseVOD(response.body);
+          _movies = vodContent['movies'] ?? [];
+          _series = vodContent['series'] ?? [];
+          print('ChannelProvider: Parsed ${_movies.length} movies, ${_series.length} series');
 
-        // Sync VOD content to ContentProvider
-        if (_contentProvider != null) {
-          _contentProvider!.loadMovies(_movies);
-          _contentProvider!.loadSeries(_series);
+          // Sync VOD content to ContentProvider
+          if (_contentProvider != null) {
+            _contentProvider!.loadMovies(_movies);
+            _contentProvider!.loadSeries(_series);
+          }
+
+          _isLoading = false;
+          _hasLoadedPlaylist = true;
+          notifyListeners();
+        } else {
+          // Non-200 response - content is already stored above for debugging
+          print('ChannelProvider: Non-200 response, content captured for debugging');
+          throw Exception('HTTP ${response.statusCode}: Failed to load playlist');
         }
-
-        _isLoading = false;
-        _hasLoadedPlaylist = true;
-        notifyListeners();
-      } else {
-        throw Exception('Failed to load playlist: ${response.statusCode}');
+      } finally {
+        client.close();
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('ChannelProvider: Error loading playlist: $e');
-      _errorMessage = e.toString();
+      print('ChannelProvider: Stack trace: $stackTrace');
+      
+      // Provide more helpful error messages
+      if (e.toString().contains('HandshakeException') || 
+          e.toString().contains('WRONG_VERSION_NUMBER')) {
+        _errorMessage = 'SSL/TLS Error: Server security configuration issue.\n\n'
+            'This usually means:\n'
+            '• The server URL should use HTTPS (not HTTP)\n'
+            '• Or the server has SSL certificate problems\n\n'
+            'Try changing http:// to https:// in your URL.';
+      } else if (e.toString().contains('SocketException')) {
+        final socketError = e.toString();
+        _errorMessage = 'Connection Error: Unable to reach server.\n\n'
+            'Details: $socketError\n\n'
+            'Check your internet connection and server URL.';
+      } else if (e.toString().contains('timeout')) {
+        _errorMessage = 'Timeout Error: Playlist took too long to download (90 second limit).\n\n'
+            'This could mean:\n'
+            '• The playlist is very large\n'
+            '• Your internet connection is slow\n'
+            '• The server is overloaded\n\n'
+            'Try again in a few moments.';
+      } else if (e.toString().contains('FormatException')) {
+        _errorMessage = 'Invalid URL: The playlist URL format is incorrect.\n\n'
+            'Make sure your URL starts with http:// or https://';
+      } else {
+        _errorMessage = 'Error loading playlist:\n\n$e';
+      }
+      
       _isLoading = false;
       notifyListeners();
+      rethrow; // Re-throw so UI can handle it
     }
   }
 
@@ -188,5 +334,18 @@ class ChannelProvider with ChangeNotifier {
     return _channels
         .where((channel) => channel.groupTitle == category)
         .toList();
+  }
+}
+
+// SSL bypass for IPTV providers with certificate issues
+class _MyHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback = (X509Certificate cert, String host, int port) {
+        // Allow all certificates - WARNING: Only use for IPTV providers you trust!
+        print('SSL: Accepting certificate for $host:$port');
+        return true;
+      };
   }
 }
