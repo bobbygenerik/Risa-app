@@ -9,6 +9,7 @@ class Program {
   final String? category;
   final bool? isLive;
   final bool? canRecord;
+  final String? catchupUrl; // URL for catch-up TV playback
 
   Program({
     required this.id,
@@ -21,15 +22,30 @@ class Program {
     this.category,
     this.isLive,
     this.canRecord,
+    this.catchupUrl,
   });
 
   Duration get duration => endTime.difference(startTime);
-  
+
   bool get isCurrentlyPlaying {
     final now = DateTime.now();
     return now.isAfter(startTime) && now.isBefore(endTime);
   }
-  
+
+  bool get isPastProgram {
+    final now = DateTime.now();
+    return now.isAfter(endTime);
+  }
+
+  bool get isFutureProgram {
+    final now = DateTime.now();
+    return now.isBefore(startTime);
+  }
+
+  bool get hasCatchup {
+    return catchupUrl != null && catchupUrl!.isNotEmpty && isPastProgram;
+  }
+
   double get progressPercentage {
     if (!isCurrentlyPlaying) return 0.0;
     final now = DateTime.now();
@@ -50,6 +66,7 @@ class Program {
       category: map['category'],
       isLive: map['isLive'],
       canRecord: map['canRecord'],
+      catchupUrl: map['catchupUrl'],
     );
   }
 
@@ -65,6 +82,7 @@ class Program {
       'category': category,
       'isLive': isLive,
       'canRecord': canRecord,
+      'catchupUrl': catchupUrl,
     };
   }
 

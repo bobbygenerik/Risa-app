@@ -12,6 +12,7 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
+  flutter_vlc_player: ^7.4.4
   video_player: ^2.9.2
   chewie: ^1.8.5
   http: ^1.2.2
@@ -28,6 +29,7 @@ dependencies:
   flutter_svg: ^2.0.12
   animations: ^2.0.11
   cached_network_image: ^3.4.1
+  file_picker: ^8.1.6
   
   # Google Drive Integration (FREE - uses user's storage)
   googleapis: ^13.2.0
@@ -44,10 +46,12 @@ dependencies:
   # Picture-in-Picture (Android native implementation)
   # Will use platform channels for Android PiP
   
-  # On-Device Transcription & Translation (FREE - no cloud costs)
-  # Using speech_to_text (already installed) + tflite for on-device transcription
-  translator: ^1.0.0  # Google Translate API (free tier)
-  flutter_tts: ^4.2.0  # Text-to-speech for translated audio
+  # On-Device Transcription & Translation
+  # NOTE: speech_to_text uses platform APIs (requires internet, may incur costs)
+  # For TRUE on-device: manually add vosk_flutter (requires downgrading dependencies)
+  flutter_tts: ^4.2.0  # Text-to-speech for translated audio  
+  google_mlkit_translation: ^0.11.0  # On-device translation (auto-downloads language packs) - TRUE OFFLINE
+  record: ^6.0.0  # Audio recording for transcription
 
 dev_dependencies:
   flutter_test:
@@ -68,7 +72,6 @@ flutter:
 # App Icon Configuration
 flutter_launcher_icons:
   android: true
-  web: true
   image_path: "assets/images/logo_icon.png"
   adaptive_icon_background: "#1a1a2e"
   adaptive_icon_foreground: "assets/images/logo_icon.png"

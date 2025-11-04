@@ -4,7 +4,7 @@ import 'package:iptv_player/utils/app_theme.dart';
 
 class AppShell extends StatefulWidget {
   final Widget child;
-  
+
   const AppShell({super.key, required this.child});
 
   @override
@@ -13,65 +13,77 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   bool _isSidebarCollapsed = false;
+  late String _currentTime;
+  late String _currentDate;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateTime();
+    // Update time every second
+    Future.delayed(Duration.zero, () {
+      if (mounted) {
+        _startTimeUpdater();
+      }
+    });
+  }
+
+  void _startTimeUpdater() {
+    Future.delayed(const Duration(seconds: 1), () {
+      if (mounted) {
+        setState(() {
+          _updateTime();
+        });
+        _startTimeUpdater();
+      }
+    });
+  }
+
+  void _updateTime() {
+    final now = DateTime.now();
+    _currentTime =
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    final days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+    final months = [
+      'JAN',
+      'FEB',
+      'MAR',
+      'APR',
+      'MAY',
+      'JUN',
+      'JUL',
+      'AUG',
+      'SEP',
+      'OCT',
+      'NOV',
+      'DEC',
+    ];
+    _currentDate =
+        '${days[now.weekday - 1]}, ${months[now.month - 1]} ${now.day}';
+  }
 
   final List<NavigationItem> _navigationItems = [
-    NavigationItem(
-      icon: Icons.search,
-      label: 'Search',
-      route: '/search',
-    ),
-    NavigationItem(
-      icon: Icons.live_tv,
-      label: 'LIVE TV',
-      route: '/',
-    ),
-    NavigationItem(
-      icon: Icons.movie,
-      label: 'Movies',
-      route: '/movies',
-    ),
-    NavigationItem(
-      icon: Icons.tv,
-      label: 'Series',
-      route: '/series',
-    ),
-    NavigationItem(
-      icon: Icons.restore,
-      label: 'Catch-up TV',
-      route: '/catchup',
-    ),
-    NavigationItem(
-      icon: Icons.favorite,
-      label: 'Favorites',
-      route: '/favorites',
-    ),
-    NavigationItem(
-      icon: Icons.grid_view,
-      label: 'EPG',
-      route: '/epg',
-    ),
+    NavigationItem(icon: Icons.live_tv, label: 'LIVE TV', route: '/'),
+    NavigationItem(icon: Icons.movie, label: 'Movies', route: '/movies'),
+    NavigationItem(icon: Icons.tv, label: 'Series', route: '/series'),
+    NavigationItem(icon: Icons.grid_view, label: 'EPG', route: '/epg'),
     NavigationItem(
       icon: Icons.record_voice_over,
       label: 'Recordings',
       route: '/recordings',
-    ),
-    NavigationItem(
-      icon: Icons.settings,
-      label: 'Settings',
-      route: '/settings',
     ),
   ];
 
   @override
   Widget build(BuildContext context) {
     final currentRoute = GoRouterState.of(context).uri.path;
-    
+
     return Scaffold(
       body: Row(
         children: [
           // Sidebar
           _buildSidebar(currentRoute),
-          
+
           // Main content
           Expanded(
             child: Column(
@@ -87,8 +99,8 @@ class _AppShellState extends State<AppShell> {
   }
 
   Widget _buildSidebar(String currentRoute) {
-    final width = _isSidebarCollapsed 
-        ? AppSizes.sidebarCollapsedWidth 
+    final width = _isSidebarCollapsed
+        ? AppSizes.sidebarCollapsedWidth
         : AppSizes.sidebarWidth;
 
     return AnimatedContainer(
@@ -100,12 +112,12 @@ class _AppShellState extends State<AppShell> {
           // RISA Logo
           Container(
             height: AppSizes.appBarHeight,
-            padding: EdgeInsets.all(AppSizes.md),
+            padding: EdgeInsets.all(AppSizes.sm),
             child: _isSidebarCollapsed
                 ? Center(
                     child: Container(
-                      width: 40,
-                      height: 40,
+                      width: 50,
+                      height: 50,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [Color(0xFF2E3192), Color(0xFF00BCD4)],
@@ -114,20 +126,25 @@ class _AppShellState extends State<AppShell> {
                         ),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(Icons.play_arrow, color: Colors.white, size: 24),
+                      child: Icon(
+                        Icons.play_arrow,
+                        color: Colors.white,
+                        size: 30,
+                      ),
                     ),
                   )
                 : Image.asset(
                     'assets/images/logo.png',
-                    height: 45,
+                    width: double.infinity,
+                    height: double.infinity,
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) {
                       // Fallback to text if logo not found
                       return Row(
                         children: [
                           Container(
-                            width: 40,
-                            height: 40,
+                            width: 50,
+                            height: 50,
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: [Color(0xFF2E3192), Color(0xFF00BCD4)],
@@ -136,9 +153,13 @@ class _AppShellState extends State<AppShell> {
                               ),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Icon(Icons.play_arrow, color: Colors.white, size: 24),
+                            child: Icon(
+                              Icons.play_arrow,
+                              color: Colors.white,
+                              size: 30,
+                            ),
                           ),
-                          SizedBox(width: 12),
+                          SizedBox(width: 16),
                           Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -147,17 +168,17 @@ class _AppShellState extends State<AppShell> {
                                 'RISA',
                                 style: TextStyle(
                                   color: AppTheme.textPrimary,
-                                  fontSize: 18,
+                                  fontSize: 22,
                                   fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.2,
+                                  letterSpacing: 1.5,
                                 ),
                               ),
                               Text(
                                 'IPTV Player',
                                 style: TextStyle(
                                   color: AppTheme.textSecondary,
-                                  fontSize: 11,
-                                  letterSpacing: 0.5,
+                                  fontSize: 13,
+                                  letterSpacing: 0.8,
                                 ),
                               ),
                             ],
@@ -167,9 +188,9 @@ class _AppShellState extends State<AppShell> {
                     },
                   ),
           ),
-          
+
           Divider(color: AppTheme.divider, height: 1),
-          
+
           // Navigation Items
           Expanded(
             child: ListView.builder(
@@ -178,7 +199,7 @@ class _AppShellState extends State<AppShell> {
               itemBuilder: (context, index) {
                 final item = _navigationItems[index];
                 final isSelected = currentRoute == item.route;
-                
+
                 return _buildNavigationItem(
                   item: item,
                   isSelected: isSelected,
@@ -189,23 +210,23 @@ class _AppShellState extends State<AppShell> {
               },
             ),
           ),
-          
-          // Logout
+
+          // Exit
           _buildNavigationItem(
             item: NavigationItem(
-              icon: Icons.logout,
-              label: 'Logout/Exit',
-              route: '/logout',
+              icon: Icons.exit_to_app,
+              label: 'Exit',
+              route: '/exit',
             ),
             isSelected: false,
             onTap: () {
-              // Show logout confirmation
+              // Show exit confirmation
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
                   backgroundColor: AppTheme.cardBackground,
-                  title: Text('Logout'),
-                  content: Text('Are you sure you want to logout?'),
+                  title: Text('Exit'),
+                  content: Text('Are you sure you want to exit the app?'),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
@@ -214,12 +235,13 @@ class _AppShellState extends State<AppShell> {
                     ElevatedButton(
                       onPressed: () {
                         Navigator.pop(context);
-                        // Handle logout
+                        // Exit the app
+                        // SystemNavigator.pop() would be used here in production
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.accentRed,
                       ),
-                      child: Text('Logout'),
+                      child: Text('Exit'),
                     ),
                   ],
                 ),
@@ -237,10 +259,7 @@ class _AppShellState extends State<AppShell> {
     required VoidCallback onTap,
   }) {
     return Container(
-      margin: EdgeInsets.symmetric(
-        horizontal: AppSizes.sm,
-        vertical: 2,
-      ),
+      margin: EdgeInsets.symmetric(horizontal: AppSizes.sm, vertical: 2),
       decoration: BoxDecoration(
         color: isSelected ? AppTheme.primaryBlue : Colors.transparent,
         borderRadius: BorderRadius.circular(AppSizes.radiusMd),
@@ -252,8 +271,8 @@ class _AppShellState extends State<AppShell> {
           color: isSelected ? Colors.white : AppTheme.textSecondary,
           size: AppSizes.iconMd,
         ),
-        title: _isSidebarCollapsed 
-            ? null 
+        title: _isSidebarCollapsed
+            ? null
             : Text(
                 item.label,
                 style: TextStyle(
@@ -272,76 +291,16 @@ class _AppShellState extends State<AppShell> {
   }
 
   Widget _buildAppBar(BuildContext context) {
-    final now = DateTime.now();
-    final time = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-    final days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
-    final months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-    final date = '${days[now.weekday - 1]}, ${months[now.month - 1]} ${now.day}';
-    
     return Container(
       height: AppSizes.appBarHeight,
       padding: EdgeInsets.symmetric(horizontal: AppSizes.lg),
       decoration: BoxDecoration(
         color: AppTheme.darkBackground,
-        border: Border(
-          bottom: BorderSide(color: AppTheme.divider),
-        ),
+        border: Border(bottom: BorderSide(color: AppTheme.divider)),
       ),
       child: Row(
         children: [
-          // RISA Logo
-          Image.asset(
-            'assets/images/logo.png',
-            height: 40,
-            fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) {
-              // Fallback to text if logo not found
-              return Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Color(0xFF2E3192), Color(0xFF00BCD4)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(Icons.play_arrow, color: Colors.white, size: 24),
-                  ),
-                  SizedBox(width: 12),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'RISA',
-                        style: TextStyle(
-                          color: AppTheme.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                      Text(
-                        'IPTV Player',
-                        style: TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 11,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              );
-            },
-          ),
-          
           Expanded(child: Container()), // Spacer
-          
           // Search button
           IconButton(
             icon: Icon(Icons.search, color: AppTheme.textPrimary),
@@ -349,9 +308,9 @@ class _AppShellState extends State<AppShell> {
               context.go('/search');
             },
           ),
-          
+
           SizedBox(width: AppSizes.sm),
-          
+
           // Settings button
           IconButton(
             icon: Icon(Icons.settings, color: AppTheme.textPrimary),
@@ -359,35 +318,20 @@ class _AppShellState extends State<AppShell> {
               context.go('/settings');
             },
           ),
-          
-          SizedBox(width: AppSizes.sm),
-          
-          // Time and date
+
+          SizedBox(width: AppSizes.md),
+
+          // Time and date (updates in real-time)
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                time,
+                _currentTime,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
-              Text(
-                date,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
+              Text(_currentDate, style: Theme.of(context).textTheme.bodySmall),
             ],
-          ),
-          
-          SizedBox(width: AppSizes.md),
-          
-          // User avatar
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: AppTheme.cardBackground,
-            child: Icon(
-              Icons.person,
-              color: AppTheme.textSecondary,
-            ),
           ),
         ],
       ),

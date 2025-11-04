@@ -11,6 +11,8 @@ class Channel {
   final bool? isFavorite;
   final String? language;
   final String? country;
+  final bool? isHidden; // For hiding channels in EPG
+  final int? sortOrder; // For custom channel ordering
 
   Channel({
     required this.id,
@@ -25,6 +27,8 @@ class Channel {
     this.isFavorite,
     this.language,
     this.country,
+    this.isHidden,
+    this.sortOrder,
   });
 
   factory Channel.fromMap(Map<String, dynamic> map) {
@@ -36,13 +40,15 @@ class Channel {
       groupTitle: map['groupTitle'],
       tvgId: map['tvgId'],
       channelNumber: map['channelNumber'],
-      attributes: map['attributes'] != null 
-          ? Map<String, String>.from(map['attributes']) 
+      attributes: map['attributes'] != null
+          ? Map<String, String>.from(map['attributes'])
           : null,
       isHD: map['isHD'],
       isFavorite: map['isFavorite'],
       language: map['language'],
       country: map['country'],
+      isHidden: map['isHidden'],
+      sortOrder: map['sortOrder'],
     );
   }
 
@@ -60,6 +66,8 @@ class Channel {
       'isFavorite': isFavorite,
       'language': language,
       'country': country,
+      'isHidden': isHidden,
+      'sortOrder': sortOrder,
     };
   }
 
@@ -76,6 +84,8 @@ class Channel {
     bool? isFavorite,
     String? language,
     String? country,
+    bool? isHidden,
+    int? sortOrder,
   }) {
     return Channel(
       id: id ?? this.id,
@@ -90,6 +100,8 @@ class Channel {
       isFavorite: isFavorite ?? this.isFavorite,
       language: language ?? this.language,
       country: country ?? this.country,
+      isHidden: isHidden ?? this.isHidden,
+      sortOrder: sortOrder ?? this.sortOrder,
     );
   }
 

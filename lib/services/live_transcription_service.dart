@@ -1,33 +1,33 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
-import 'package:translator/translator.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
-/// Service for on-device live transcription and translation
-/// 
+/// Service for live transcription using platform speech recognition
+///
+/// Note: This uses platform APIs (Google/Apple) and requires internet.
+/// For true on-device transcription, see on_device_transcription_service.dart
+///
 /// Features:
 /// - Real-time speech-to-text from video audio
-/// - On-device translation to multiple languages
-/// - Text-to-speech for translated audio
+/// - Text-to-speech output
 /// - Subtitle generation and display
 class LiveTranscriptionService extends ChangeNotifier {
   final stt.SpeechToText _speech = stt.SpeechToText();
-  final GoogleTranslator _translator = GoogleTranslator();
   final FlutterTts _tts = FlutterTts();
 
   bool _isInitialized = false;
   bool _isTranscribing = false;
   bool _isTranslating = false;
   bool _isTTSEnabled = false;
-  
+
   String _sourceLanguage = 'en-US';
   String _targetLanguage = 'en';
-  
+
   final List<TranscriptionEntry> _transcriptions = [];
   String _currentText = '';
   String _currentTranslatedText = '';
-  
+
   Timer? _cleanupTimer;
 
   // Getters
@@ -39,16 +39,17 @@ class LiveTranscriptionService extends ChangeNotifier {
   String get targetLanguage => _targetLanguage;
   String get currentText => _currentText;
   String get currentTranslatedText => _currentTranslatedText;
-  List<TranscriptionEntry> get transcriptions => List.unmodifiable(_transcriptions);
-  
+  List<TranscriptionEntry> get transcriptions =>
+      List.unmodifiable(_transcriptions);
+
   // Get the latest subtitle text (last 3 entries)
   String get latestSubtitles {
     if (_transcriptions.isEmpty) return '';
-    
+
     final recent = _transcriptions.length > 3
         ? _transcriptions.sublist(_transcriptions.length - 3)
         : _transcriptions;
-    
+
     return recent
         .map((e) => _isTranslating ? e.translatedText : e.originalText)
         .join('\n');
@@ -113,12 +114,12 @@ class LiveTranscriptionService extends ChangeNotifier {
       await _speech.listen(
         onResult: (result) {
           _currentText = result.recognizedWords;
-          
+
           if (result.finalResult) {
             _addTranscription(_currentText);
             _currentText = '';
           }
-          
+
           notifyListeners();
         },
         listenFor: const Duration(seconds: 30),
@@ -177,18 +178,14 @@ class LiveTranscriptionService extends ChangeNotifier {
   /// Translate a transcription entry
   Future<void> _translateEntry(TranscriptionEntry entry) async {
     try {
-      final translation = await _translator.translate(
-        entry.originalText,
-        from: _getLanguageCode(_sourceLanguage),
-        to: _targetLanguage,
-      );
+      // Translation removed - use MLKitTranslationService instead
+      // This is just a placeholder for now
+      entry.translatedText = entry.originalText;
+      _currentTranslatedText = entry.originalText;
 
-      entry.translatedText = translation.text;
-      _currentTranslatedText = translation.text;
-
-      // Speak translated text if TTS is enabled
-      if (_isTTSEnabled && translation.text.isNotEmpty) {
-        await _tts.speak(translation.text);
+      // Speak text if TTS is enabled
+      if (_isTTSEnabled && entry.originalText.isNotEmpty) {
+        await _tts.speak(entry.originalText);
       }
 
       notifyListeners();
@@ -227,18 +224,18 @@ class LiveTranscriptionService extends ChangeNotifier {
   Future<void> setTargetLanguage(String languageCode) async {
     _targetLanguage = languageCode;
     await _tts.setLanguage(languageCode);
-    
+
     // Re-translate recent entries
     if (_isTranslating) {
       final recentEntries = _transcriptions.length > 5
           ? _transcriptions.sublist(_transcriptions.length - 5)
           : _transcriptions;
-      
+
       for (final entry in recentEntries) {
         await _translateEntry(entry);
       }
     }
-    
+
     notifyListeners();
   }
 
@@ -266,27 +263,27 @@ class LiveTranscriptionService extends ChangeNotifier {
   /// Export transcriptions as SRT subtitle file
   String exportAsSRT() {
     final buffer = StringBuffer();
-    
+
     for (int i = 0; i < _transcriptions.length; i++) {
       final entry = _transcriptions[i];
       final text = _isTranslating ? entry.translatedText : entry.originalText;
-      
+
       if (text.isEmpty) continue;
-      
+
       // SRT format: sequence number, timestamp, text, blank line
       buffer.writeln(i + 1);
-      
+
       // Format timestamp (HH:MM:SS,mmm --> HH:MM:SS,mmm)
       final start = _formatSRTTimestamp(entry.timestamp);
       final end = _formatSRTTimestamp(
         entry.timestamp.add(const Duration(seconds: 3)),
       );
       buffer.writeln('$start --> $end');
-      
+
       buffer.writeln(text);
       buffer.writeln();
     }
-    
+
     return buffer.toString();
   }
 

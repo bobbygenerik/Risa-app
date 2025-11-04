@@ -3,9 +3,13 @@ import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/screens/enhanced_video_player_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:iptv_player/providers/channel_provider.dart';
 
 class MiniPlayerScreen extends StatefulWidget {
-  const MiniPlayerScreen({super.key});
+  final Channel? channel;
+
+  const MiniPlayerScreen({super.key, this.channel});
 
   @override
   State<MiniPlayerScreen> createState() => _MiniPlayerScreenState();
@@ -28,10 +32,22 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
   @override
   void initState() {
     super.initState();
-    final channels = _getMockChannels();
-    if (channels.isNotEmpty) {
-      _currentChannel = channels.first;
-      _currentProgram = _getMockCurrentProgram(channels.first);
+
+    // Use provided channel or default to first available
+    if (widget.channel != null) {
+      _currentChannel = widget.channel;
+    } else {
+      final channelProvider = Provider.of<ChannelProvider>(
+        context,
+        listen: false,
+      );
+      if (channelProvider.channels.isNotEmpty) {
+        _currentChannel = channelProvider.channels.first;
+      }
+    }
+
+    if (_currentChannel != null) {
+      _currentProgram = _getMockCurrentProgram(_currentChannel!);
     }
   }
 
@@ -42,14 +58,14 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
         // Channel list sidebar
         _buildChannelList(),
         VerticalDivider(width: 1, color: AppTheme.divider),
-        
+
         // Player and info
         Expanded(
           child: Column(
             children: [
               // Mini player
               Expanded(child: _buildMiniPlayer()),
-              
+
               // Now playing info
               _buildNowPlayingInfo(),
             ],
@@ -60,100 +76,114 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
   }
 
   Widget _buildChannelList() {
-    final channels = _showFavorites 
-        ? _getMockChannels().where((c) => c.isFavorite == true).toList()
-        : _getFilteredChannels();
-    
-    return Container(
-      width: 300,
-      color: AppTheme.sidebarBackground,
-      child: Column(
-        children: [
-          // Header with favorites toggle
-          Container(
-            padding: EdgeInsets.all(AppSizes.md),
-            child: Column(
-              children: [
-                Row(
+    return Consumer<ChannelProvider>(
+      builder: (context, channelProvider, child) {
+        List<Channel> channels;
+
+        if (_showFavorites) {
+          channels = channelProvider.favoriteChannels;
+        } else if (_selectedCategory != 'All Channels') {
+          channels = channelProvider.filterByCategory(_selectedCategory);
+        } else {
+          channels = channelProvider.channels;
+        }
+
+        return Container(
+          width: 300,
+          color: AppTheme.sidebarBackground,
+          child: Column(
+            children: [
+              // Header with favorites toggle
+              Container(
+                padding: EdgeInsets.all(AppSizes.md),
+                child: Column(
                   children: [
-                    Icon(
-                      _showFavorites ? Icons.favorite : Icons.favorite_border,
-                      color: _showFavorites ? AppTheme.accentRed : AppTheme.textSecondary,
+                    Row(
+                      children: [
+                        Icon(
+                          _showFavorites
+                              ? Icons.favorite
+                              : Icons.favorite_border,
+                          color: _showFavorites
+                              ? AppTheme.accentRed
+                              : AppTheme.textSecondary,
+                        ),
+                        SizedBox(width: AppSizes.sm),
+                        Text(
+                          'Favorites',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        Spacer(),
+                        Switch(
+                          value: _showFavorites,
+                          onChanged: (value) {
+                            setState(() {
+                              _showFavorites = value;
+                            });
+                          },
+                        ),
+                      ],
                     ),
-                    SizedBox(width: AppSizes.sm),
-                    Text(
-                      'Favorites',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    Spacer(),
-                    Switch(
-                      value: _showFavorites,
-                      onChanged: (value) {
-                        setState(() {
-                          _showFavorites = value;
-                        });
-                      },
-                    ),
+                    SizedBox(height: AppSizes.md),
+                    // Category filter
+                    if (!_showFavorites)
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.symmetric(horizontal: AppSizes.md),
+                        decoration: BoxDecoration(
+                          color: AppTheme.cardBackground,
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusMd,
+                          ),
+                        ),
+                        child: DropdownButton<String>(
+                          value: _selectedCategory,
+                          isExpanded: true,
+                          underline: Container(),
+                          icon: Icon(Icons.arrow_drop_down),
+                          items: _categories.map((category) {
+                            return DropdownMenuItem<String>(
+                              value: category,
+                              child: Text(category),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedCategory = value!;
+                            });
+                          },
+                        ),
+                      ),
                   ],
                 ),
-                SizedBox(height: AppSizes.md),
-                // Category filter
-                if (!_showFavorites)
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.symmetric(horizontal: AppSizes.md),
-                    decoration: BoxDecoration(
-                      color: AppTheme.cardBackground,
-                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                    ),
-                    child: DropdownButton<String>(
-                      value: _selectedCategory,
-                      isExpanded: true,
-                      underline: Container(),
-                      icon: Icon(Icons.arrow_drop_down),
-                      items: _categories.map((category) {
-                        return DropdownMenuItem<String>(
-                          value: category,
-                          child: Text(category),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedCategory = value!;
-                        });
-                      },
-                    ),
-                  ),
-              ],
-            ),
+              ),
+              Divider(height: 1, color: AppTheme.divider),
+
+              // Channel list
+              Expanded(
+                child: ListView.builder(
+                  itemCount: channels.length,
+                  itemBuilder: (context, index) {
+                    final channel = channels[index];
+                    return _buildChannelItem(channel);
+                  },
+                ),
+              ),
+            ],
           ),
-          Divider(height: 1, color: AppTheme.divider),
-          
-          // Channel list
-          Expanded(
-            child: ListView.builder(
-              itemCount: channels.length,
-              itemBuilder: (context, index) {
-                final channel = channels[index];
-                return _buildChannelItem(channel);
-              },
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _buildChannelItem(Channel channel) {
     final isCurrentChannel = _currentChannel?.id == channel.id;
     final program = _getMockCurrentProgram(channel);
-    
+
     return Container(
       decoration: BoxDecoration(
         color: isCurrentChannel ? AppTheme.primaryBlue.withOpacity(0.2) : null,
-        border: Border(
-          bottom: BorderSide(color: AppTheme.divider, width: 0.5),
-        ),
+        border: Border(bottom: BorderSide(color: AppTheme.divider, width: 0.5)),
       ),
       child: Material(
         color: Colors.transparent,
@@ -191,15 +221,24 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
                           top: 4,
                           right: 4,
                           child: Container(
-                            padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: AppTheme.accentRed,
-                              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                              borderRadius: BorderRadius.circular(
+                                AppSizes.radiusSm,
+                              ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.fiber_manual_record, size: 6, color: Colors.white),
+                                Icon(
+                                  Icons.fiber_manual_record,
+                                  size: 6,
+                                  color: Colors.white,
+                                ),
                                 SizedBox(width: 2),
                                 Text(
                                   'LIVE',
@@ -216,9 +255,9 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
                     ],
                   ),
                 ),
-                
+
                 SizedBox(width: AppSizes.md),
-                
+
                 // Channel info
                 Expanded(
                   child: Column(
@@ -234,7 +273,9 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
                               ),
                               decoration: BoxDecoration(
                                 color: AppTheme.primaryBlue,
-                                borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                                borderRadius: BorderRadius.circular(
+                                  AppSizes.radiusSm,
+                                ),
                               ),
                               child: Text(
                                 '${channel.channelNumber}',
@@ -248,9 +289,8 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
                           Expanded(
                             child: Text(
                               channel.name,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(fontWeight: FontWeight.w600),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -307,9 +347,9 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
                     SizedBox(height: AppSizes.md),
                     Text(
                       _currentChannel?.name ?? 'Select a channel',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.titleLarge?.copyWith(color: Colors.white),
                     ),
                     SizedBox(height: AppSizes.sm),
                     Text(
@@ -323,7 +363,7 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
               ),
             ),
           ),
-          
+
           // Controls overlay (hidden by default)
           Positioned.fill(
             child: Container(
@@ -342,7 +382,7 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
               ),
             ),
           ),
-          
+
           // Top controls
           Positioned(
             top: 0,
@@ -369,7 +409,7 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
               ),
             ),
           ),
-          
+
           // Bottom controls
           Positioned(
             bottom: 0,
@@ -381,7 +421,11 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   IconButton(
-                    icon: Icon(Icons.skip_previous, color: Colors.white, size: 32),
+                    icon: Icon(
+                      Icons.skip_previous,
+                      color: Colors.white,
+                      size: 32,
+                    ),
                     onPressed: () {
                       // Previous channel
                     },
@@ -411,26 +455,24 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
     if (_currentChannel == null || _currentProgram == null) {
       return Container();
     }
-    
+
     return Container(
       padding: EdgeInsets.all(AppSizes.lg),
       decoration: BoxDecoration(
         color: AppTheme.cardBackground,
-        border: Border(
-          top: BorderSide(color: AppTheme.divider),
-        ),
+        border: Border(top: BorderSide(color: AppTheme.divider)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Now Playing',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: AppTheme.textSecondary,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: AppTheme.textSecondary),
           ),
           SizedBox(height: AppSizes.md),
-          
+
           Row(
             children: [
               // Channel logo
@@ -441,15 +483,11 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
                   color: AppTheme.darkBackground,
                   borderRadius: BorderRadius.circular(AppSizes.radiusSm),
                 ),
-                child: Icon(
-                  Icons.tv,
-                  color: AppTheme.primaryBlue,
-                  size: 32,
-                ),
+                child: Icon(Icons.tv, color: AppTheme.primaryBlue, size: 32),
               ),
-              
+
               SizedBox(width: AppSizes.md),
-              
+
               // Program info
               Expanded(
                 child: Column(
@@ -469,7 +507,7 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
                   ],
                 ),
               ),
-              
+
               // Action buttons
               IconButton(
                 icon: Icon(Icons.grid_view),
@@ -480,11 +518,11 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
               ),
               IconButton(
                 icon: Icon(
-                  _currentChannel!.isFavorite == true 
-                      ? Icons.favorite 
+                  _currentChannel!.isFavorite == true
+                      ? Icons.favorite
                       : Icons.favorite_border,
-                  color: _currentChannel!.isFavorite == true 
-                      ? AppTheme.accentRed 
+                  color: _currentChannel!.isFavorite == true
+                      ? AppTheme.accentRed
                       : null,
                 ),
                 onPressed: () {
@@ -514,18 +552,50 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
       return Channel(
         id: 'channel_$index',
         name: [
-          'ESPN', 'BBC One', 'Discovery', 'CNN', 'Cartoon Network',
-          'Fox News', 'HBO', 'NBC', 'CBS', 'ABC',
-          'MTV', 'Comedy Central', 'Nickelodeon', 'Sky Sports', 'Eurosport',
-          'National Geographic', 'History Channel', 'Food Network', 'HGTV', 'TLC'
+          'ESPN',
+          'BBC One',
+          'Discovery',
+          'CNN',
+          'Cartoon Network',
+          'Fox News',
+          'HBO',
+          'NBC',
+          'CBS',
+          'ABC',
+          'MTV',
+          'Comedy Central',
+          'Nickelodeon',
+          'Sky Sports',
+          'Eurosport',
+          'National Geographic',
+          'History Channel',
+          'Food Network',
+          'HGTV',
+          'TLC',
         ][index],
         url: 'http://example.com/channel$index',
         channelNumber: 701 + index,
         groupTitle: [
-          'Sports', 'UK', 'Documentary', 'News', 'Kids',
-          'News', 'Entertainment', 'US', 'US', 'US',
-          'Entertainment', 'Entertainment', 'Kids', 'Sports', 'Sports',
-          'Documentary', 'Documentary', 'Lifestyle', 'Lifestyle', 'Lifestyle'
+          'Sports',
+          'UK',
+          'Documentary',
+          'News',
+          'Kids',
+          'News',
+          'Entertainment',
+          'US',
+          'US',
+          'US',
+          'Entertainment',
+          'Entertainment',
+          'Kids',
+          'Sports',
+          'Sports',
+          'Documentary',
+          'Documentary',
+          'Lifestyle',
+          'Lifestyle',
+          'Lifestyle',
         ][index],
         isFavorite: index % 3 == 0, // Every 3rd channel is favorite
       );
@@ -545,11 +615,11 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
     return Program(
       id: 'program_${channel.id}',
       channelId: channel.id,
-      title: channel.groupTitle == 'Sports' 
+      title: channel.groupTitle == 'Sports'
           ? 'Live Sports'
           : channel.groupTitle == 'News'
-              ? 'Breaking News'
-              : 'Current Program',
+          ? 'Breaking News'
+          : 'Current Program',
       startTime: now.subtract(Duration(minutes: 30)),
       endTime: now.add(Duration(minutes: 30)),
     );

@@ -4,11 +4,8 @@ import 'package:iptv_player/models/content.dart';
 
 class ContentDetailScreen extends StatefulWidget {
   final Content content;
-  
-  const ContentDetailScreen({
-    super.key,
-    required this.content,
-  });
+
+  const ContentDetailScreen({super.key, required this.content});
 
   @override
   State<ContentDetailScreen> createState() => _ContentDetailScreenState();
@@ -42,9 +39,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
         Container(
           height: 600,
           width: double.infinity,
-          decoration: BoxDecoration(
-            color: AppTheme.cardBackground,
-          ),
+          decoration: BoxDecoration(color: AppTheme.cardBackground),
           child: Stack(
             children: [
               // Placeholder image with gradient overlay
@@ -72,7 +67,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
             ],
           ),
         ),
-        
+
         // Top navigation
         Positioned(
           top: 0,
@@ -84,10 +79,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withOpacity(0.7),
-                  Colors.transparent,
-                ],
+                colors: [Colors.black.withOpacity(0.7), Colors.transparent],
               ),
             ),
             child: Row(
@@ -97,15 +89,11 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                   onPressed: () => Navigator.pop(context),
                 ),
                 Spacer(),
-                IconButton(
-                  icon: Icon(Icons.search, color: Colors.white),
-                  onPressed: () {},
-                ),
               ],
             ),
           ),
         ),
-        
+
         // Content info overlay
         Positioned(
           bottom: 0,
@@ -131,9 +119,9 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                     ],
                   ),
                 ),
-                
+
                 SizedBox(height: AppSizes.md),
-                
+
                 // Metadata
                 Row(
                   children: [
@@ -166,15 +154,18 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                     ),
                   ],
                 ),
-                
+
                 SizedBox(height: AppSizes.xl),
-                
+
                 // Action buttons
                 Row(
                   children: [
                     // Play button
                     ElevatedButton.icon(
-                      onPressed: () {},
+                      onPressed: () {
+                        // Navigate to player
+                        Navigator.pushNamed(context, '/player');
+                      },
                       icon: Icon(Icons.play_arrow),
                       label: Text('Play'),
                       style: ElevatedButton.styleFrom(
@@ -184,14 +175,13 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                           horizontal: AppSizes.xl,
                           vertical: AppSizes.md,
                         ),
-                        textStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        textStyle: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
                       ),
                     ),
-                    
+
                     SizedBox(width: AppSizes.md),
-                    
+
                     // My List button
                     OutlinedButton.icon(
                       onPressed: () {
@@ -210,9 +200,9 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                         ),
                       ),
                     ),
-                    
+
                     SizedBox(width: AppSizes.md),
-                    
+
                     // Download button
                     OutlinedButton.icon(
                       onPressed: () {
@@ -220,7 +210,9 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                           _isDownloaded = !_isDownloaded;
                         });
                       },
-                      icon: Icon(_isDownloaded ? Icons.download_done : Icons.download),
+                      icon: Icon(
+                        _isDownloaded ? Icons.download_done : Icons.download,
+                      ),
                       label: Text(_isDownloaded ? 'Downloaded' : 'Download'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white,
@@ -244,10 +236,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
   Widget _buildMetadataChip(String text) {
     return Container(
       margin: EdgeInsets.only(right: AppSizes.sm),
-      padding: EdgeInsets.symmetric(
-        horizontal: AppSizes.sm,
-        vertical: 4,
-      ),
+      padding: EdgeInsets.symmetric(horizontal: AppSizes.sm, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.5),
         borderRadius: BorderRadius.circular(AppSizes.radiusSm),
@@ -279,18 +268,18 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
           ),
-          
+
           SizedBox(height: AppSizes.xl),
-          
+
           // Additional info
           _buildInfoRow('Cast', _getMockCast()),
           SizedBox(height: AppSizes.md),
           _buildInfoRow('Director', _getMockDirector()),
           SizedBox(height: AppSizes.md),
           _buildInfoRow('Genres', widget.content.genre ?? 'Action, Sci-Fi'),
-          
+
           SizedBox(height: AppSizes.xl),
-          
+
           // Tags
           Wrap(
             spacing: AppSizes.sm,
@@ -314,16 +303,13 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
           width: 100,
           child: Text(
             label,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppTheme.textTertiary,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppTheme.textTertiary),
           ),
         ),
         Expanded(
-          child: Text(
-            value,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
+          child: Text(value, style: Theme.of(context).textTheme.bodyMedium),
         ),
       ],
     );
@@ -341,9 +327,9 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
       ),
       child: Text(
         text,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: AppTheme.textSecondary,
-        ),
+        style: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
       ),
     );
   }
@@ -352,7 +338,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
     if (widget.content.type != ContentType.series) {
       return Container();
     }
-    
+
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: AppSizes.xxl),
       child: Column(
@@ -360,29 +346,23 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
         children: [
           Divider(color: AppTheme.divider),
           SizedBox(height: AppSizes.xl),
-          
+
           Row(
             children: [
-              Text(
-                'Episodes',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              Text('Episodes', style: Theme.of(context).textTheme.titleLarge),
               Spacer(),
               DropdownButton<String>(
                 value: 'Season 1',
                 items: ['Season 1', 'Season 2', 'Season 3'].map((season) {
-                  return DropdownMenuItem(
-                    value: season,
-                    child: Text(season),
-                  );
+                  return DropdownMenuItem(value: season, child: Text(season));
                 }).toList(),
                 onChanged: (value) {},
               ),
             ],
           ),
-          
+
           SizedBox(height: AppSizes.lg),
-          
+
           // Episode list
           ListView.builder(
             shrinkWrap: true,
@@ -392,7 +372,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
               return _buildEpisodeItem(index + 1);
             },
           ),
-          
+
           SizedBox(height: AppSizes.xl),
         ],
       ),
@@ -434,18 +414,15 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                   ),
                   child: Text(
                     '42m',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.white,
-                    ),
+                    style: TextStyle(fontSize: 10, color: Colors.white),
                   ),
                 ),
               ),
             ],
           ),
-          
+
           SizedBox(width: AppSizes.md),
-          
+
           // Episode info
           Expanded(
             child: Column(
@@ -482,12 +459,6 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
               ],
             ),
           ),
-          
-          // Download icon
-          IconButton(
-            icon: Icon(Icons.download_outlined),
-            onPressed: () {},
-          ),
         ],
       ),
     );
@@ -501,14 +472,11 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
         children: [
           Divider(color: AppTheme.divider),
           SizedBox(height: AppSizes.xl),
-          
-          Text(
-            'More Like This',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          
+
+          Text('More Like This', style: Theme.of(context).textTheme.titleLarge),
+
           SizedBox(height: AppSizes.lg),
-          
+
           GridView.builder(
             shrinkWrap: true,
             physics: NeverScrollableScrollPhysics(),
@@ -556,9 +524,9 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
         ),
         Text(
           '2024',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: AppTheme.textSecondary,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
         ),
       ],
     );
