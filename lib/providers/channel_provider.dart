@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/channel.dart';
 import '../models/content.dart';
 import '../services/m3u_parser_service.dart';
+import '../services/xtream_codes_service.dart';
 import 'package:http/http.dart' as http;
 import 'content_provider.dart';
 
@@ -205,17 +206,8 @@ class ChannelProvider with ChangeNotifier {
             await prefs.setString('epg_url', _parserService.epgUrl!);
           }
 
-          // Also parse VOD content (movies and series)
-          final vodContent = _parserService.parseVOD(response.body);
-          _movies = vodContent['movies'] ?? [];
-          _series = vodContent['series'] ?? [];
-          print('ChannelProvider: Parsed ${_movies.length} movies, ${_series.length} series');
-
-          // Sync VOD content to ContentProvider
-          if (_contentProvider != null) {
-            _contentProvider!.loadMovies(_movies);
-            _contentProvider!.loadSeries(_series);
-          }
+          // Load VOD content using Xtream Codes API if available
+          await _loadXtreamVOD(url);
 
           _isLoading = false;
           _hasLoadedPlaylist = true;
@@ -304,6 +296,50 @@ class ChannelProvider with ChangeNotifier {
     if (!_favoriteChannels.contains(channel)) {
       _favoriteChannels.add(channel);
       notifyListeners();
+    }
+  }
+
+  /// Load VOD content using Xtream Codes API
+  Future<void> _loadXtreamVOD(String m3uUrl) async {
+    try {
+      // Extract server, username, password from M3U URL
+      // Format: http://server/get.php?username=X&password=Y&type=m3u_plus&output=ts
+      final uri = Uri.parse(m3uUrl);
+      final serverUrl = '${uri.scheme}://${uri.host}${uri.port != 80 && uri.port != 443 ? ':${uri.port}' : ''}';
+      final username = uri.queryParameters['username'];
+      final password = uri.queryParameters['password'];
+
+      if (username == null || password == null) {
+        print('ChannelProvider: Cannot load VOD - missing credentials in URL');
+        return;
+      }
+
+      print('ChannelProvider: Loading VOD from Xtream Codes API...');
+      final xtreamService = XtreamCodesService(
+        serverUrl: serverUrl,
+        username: username,
+        password: password,
+      );
+
+      // Load movies and series in parallel
+      final results = await Future.wait([
+        xtreamService.getAllMovies(),
+        xtreamService.getAllSeries(),
+      ]);
+
+      _movies = results[0];
+      _series = results[1];
+
+      print('ChannelProvider: Loaded ${_movies.length} movies, ${_series.length} series from Xtream API');
+
+      // Sync VOD content to ContentProvider
+      if (_contentProvider != null) {
+        _contentProvider!.loadMovies(_movies);
+        _contentProvider!.loadSeries(_series);
+      }
+    } catch (e) {
+      print('ChannelProvider: Error loading Xtream VOD: $e');
+      // Don't fail the whole playlist load if VOD fails
     }
   }
 
