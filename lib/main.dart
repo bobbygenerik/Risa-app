@@ -93,8 +93,9 @@ class _MyAppState extends State<MyApp> {
       _disclaimerAccepted = accepted;
     });
 
-    // Don't show disclaimer automatically - causes Navigator null error
-    // User will see it when they actually start using the app
+    // Disclaimer disabled temporarily - causes Navigator null error
+    // TODO: Show disclaimer after user navigates to a screen
+    /*
     if (!accepted) {
       // Schedule disclaimer to show after first navigation is complete
       Future.delayed(const Duration(seconds: 2), () {
@@ -107,6 +108,7 @@ class _MyAppState extends State<MyApp> {
         }
       });
     }
+    */
   }
 
   Future<void> _checkAndLoadPlaylist() async {
