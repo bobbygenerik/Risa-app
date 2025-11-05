@@ -25,6 +25,7 @@ import 'package:iptv_player/screens/recordings_screen.dart';
 import 'package:iptv_player/screens/ai_models_screen.dart';
 import 'package:iptv_player/screens/mini_player_screen.dart';
 import 'package:iptv_player/screens/multi_view_screen.dart';
+import 'package:iptv_player/screens/enhanced_video_player_screen.dart';
 import 'package:iptv_player/screens/vlc_enhanced_player_screen.dart';
 import 'package:iptv_player/screens/content_detail_screen.dart';
 import 'package:iptv_player/screens/search_screen.dart';
@@ -303,12 +304,12 @@ final _router = GoRouter(
           path: '/vlc-player',
           builder: (context, state) {
             final params = state.extra as Map<String, dynamic>?;
-            return VlcEnhancedPlayerScreen(
+            // Use EnhancedVideoPlayerScreen instead of VLC (VLC has platform issues on Linux)
+            return EnhancedVideoPlayerScreen(
               videoUrl: params?['videoUrl'] ?? '',
               title: params?['title'] ?? 'Video',
               subtitle: params?['subtitle'],
               isLive: params?['isLive'] ?? false,
-              channelId: params?['channelId'],
             );
           },
         ),
