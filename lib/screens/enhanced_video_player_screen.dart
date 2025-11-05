@@ -308,10 +308,12 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   void _loadSubtitle(SubtitleOption option) {
-    _subtitleController = SubtitleController(
-      subtitleUrl: option.url,
-      subtitleType: _getSubtitleType(option.format),
-    );
+    // Disabled - SubtitleController causes UnimplementedError
+    // _subtitleController = SubtitleController(
+    //   subtitleUrl: option.url,
+    //   subtitleType: _getSubtitleType(option.format),
+    // );
+    print('VideoPlayer: Subtitle loading disabled to prevent UnimplementedError');
     setState(() {});
   }
 

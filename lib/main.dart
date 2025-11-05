@@ -95,9 +95,12 @@ class _MyAppState extends State<MyApp> {
 
     if (!accepted) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _showDisclaimer();
-        }
+        // Add a small delay to ensure context is ready
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            _showDisclaimer();
+          }
+        });
       });
     }
   }
