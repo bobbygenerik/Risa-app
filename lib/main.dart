@@ -317,15 +317,21 @@ final _router = GoRouter(
     GoRoute(
       path: '/content/:id',
       builder: (context, state) {
-        final content = Content(
-          id: state.pathParameters['id'] ?? '1',
-          title: 'Dune',
-          type: ContentType.movie,
-          genres: ['Sci-Fi', 'Action'],
-          year: 2021,
-          duration: '155',
+        // Get content from extra parameter passed via navigation
+        final content = state.extra as Content?;
+        
+        if (content != null) {
+          return ContentDetailScreen(content: content);
+        }
+        
+        // Fallback if no content provided
+        return ContentDetailScreen(
+          content: Content(
+            id: state.pathParameters['id'] ?? '1',
+            title: 'Content Not Found',
+            type: ContentType.movie,
+          ),
         );
-        return ContentDetailScreen(content: content);
       },
     ),
   ],
