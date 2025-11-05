@@ -5,7 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'package:provider/provider.dart';
-import 'package:subtitle_wrapper_package/subtitle_wrapper_package.dart';
+// Disabled - causes UnimplementedError
+// import 'package:subtitle_wrapper_package/subtitle_wrapper_package.dart';
 import 'package:iptv_player/services/ai_upscaling_service.dart';
 import 'package:iptv_player/services/live_transcription_service.dart';
 import 'package:iptv_player/utils/app_theme.dart';
@@ -42,7 +43,8 @@ class EnhancedVideoPlayerScreen extends StatefulWidget {
 class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   late VideoPlayerController _videoPlayerController;
   ChewieController? _chewieController;
-  SubtitleController? _subtitleController;
+  // Subtitle support disabled - causes UnimplementedError
+  // SubtitleController? _subtitleController;
   
   bool _isInitialized = false;
   bool _hasError = false;
@@ -105,7 +107,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
       // Skip subtitle controller initialization - causes UnimplementedError
       // Only initialize if subtitles are explicitly provided and needed
-      _subtitleController = null;
+      // _subtitleController = null;
 
       print('VideoPlayer: Creating Chewie controller...');
       // Initialize Chewie with TV-optimized controls
@@ -317,17 +319,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     setState(() {});
   }
 
-  SubtitleType _getSubtitleType(String format) {
-    switch (format.toLowerCase()) {
-      case 'srt':
-        return SubtitleType.srt;
-      case 'vtt':
-      case 'webvtt':
-        return SubtitleType.webvtt;
-      default:
-        return SubtitleType.srt;
-    }
-  }
+  // Removed _getSubtitleType - subtitle support disabled
 
   Future<void> _toggleLiveTranscription() async {
     final transcriptionService = Provider.of<LiveTranscriptionService>(context, listen: false);
@@ -408,9 +400,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                 child: _buildVideoPlayer(),
               ),
 
-              // Subtitle Overlay
-              if (_selectedSubtitleIndex >= 0 && _subtitleController != null)
-                _buildSubtitleOverlay(),
+              // Subtitle Overlay - disabled
+              // if (_selectedSubtitleIndex >= 0 && _subtitleController != null)
+              //   _buildSubtitleOverlay(),
 
               // Live Transcription Overlay
               if (_liveTranscriptionEnabled)

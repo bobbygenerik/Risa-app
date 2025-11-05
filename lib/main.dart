@@ -93,14 +93,18 @@ class _MyAppState extends State<MyApp> {
       _disclaimerAccepted = accepted;
     });
 
+    // Don't show disclaimer automatically - causes Navigator null error
+    // User will see it when they actually start using the app
     if (!accepted) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        // Add a small delay to ensure context is ready
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (mounted) {
+      // Schedule disclaimer to show after first navigation is complete
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          try {
             _showDisclaimer();
+          } catch (e) {
+            print('Failed to show disclaimer: $e');
           }
-        });
+        }
       });
     }
   }
