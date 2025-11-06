@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/models/content.dart';
+import 'package:iptv_player/widgets/brand_button.dart';
 
 class ContentDetailScreen extends StatefulWidget {
   final Content content;
@@ -162,7 +163,9 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                 Row(
                   children: [
                     // Play button
-                    ElevatedButton.icon(
+                    BrandPrimaryButton(
+                      icon: Icons.play_arrow,
+                      label: 'Play',
                       onPressed: () {
                         // Navigate to VLC player with content details
                         if (widget.content.videoUrl != null) {
@@ -178,18 +181,6 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                           );
                         }
                       },
-                      icon: Icon(Icons.play_arrow),
-                      label: Text('Play'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryBlue,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: AppSizes.xl,
-                          vertical: AppSizes.md,
-                        ),
-                        textStyle: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w600),
-                      ),
                     ),
 
                     SizedBox(width: AppSizes.md),

@@ -4,6 +4,7 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:go_router/go_router.dart';
+import 'package:iptv_player/widgets/brand_button.dart';
 
 class FavoritesScreen extends StatelessWidget {
   const FavoritesScreen({super.key});
@@ -79,18 +80,15 @@ class FavoritesScreen extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           SizedBox(height: AppSizes.xl),
-          ElevatedButton.icon(
+          BrandPrimaryButton(
+            icon: Icons.home,
+            label: 'Browse Channels',
             onPressed: () {
               context.go('/');
             },
-            icon: Icon(Icons.home),
-            label: Text('Browse Channels'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryBlue,
-              padding: EdgeInsets.symmetric(
-                horizontal: AppSizes.xl,
-                vertical: AppSizes.md,
-              ),
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSizes.xl,
+              vertical: AppSizes.md,
             ),
           ),
         ],

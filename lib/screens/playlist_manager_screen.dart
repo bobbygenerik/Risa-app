@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:iptv_player/models/saved_playlist.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:go_router/go_router.dart';
 
 class PlaylistManagerScreen extends StatefulWidget {
@@ -248,15 +249,12 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
             ),
           ),
           SizedBox(height: AppSizes.xl),
-          ElevatedButton.icon(
-            onPressed: () => context.go('/settings/playlist-login'),
-            icon: Icon(Icons.add),
-            label: Text('Add Playlist'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryBlue,
+            BrandPrimaryButton(
+              icon: Icons.add,
+              label: 'Add Playlist',
+              onPressed: () => context.go('/settings/playlist-login'),
               padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
             ),
-          ),
         ],
       ),
     );
@@ -279,7 +277,9 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: isActive ? AppTheme.primaryBlue : AppTheme.secondaryBlue,
+                color: isActive
+                    ? AppTheme.primaryBlue
+                    : AppTheme.primaryBlue.withOpacity(0.35),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(

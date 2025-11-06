@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/utils/app_theme.dart';
@@ -16,9 +17,13 @@ class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<Channel> _searchResults = [];
   bool _isSearching = false;
+  // Prevent soft keyboard on mere focus; enable only on select/tap
+  final FocusNode _searchFieldFocusNode = FocusNode(debugLabel: 'SearchField');
+  bool _searchEditable = false;
 
   @override
   void dispose() {
+    _searchFieldFocusNode.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -62,11 +67,32 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
           SizedBox(height: AppSizes.lg),
 
-          // Search Bar
-          TextField(
-            controller: _searchController,
-            autofocus: true,
-            decoration: InputDecoration(
+          // Search Bar (TV friendly: open keyboard only on select)
+          Focus(
+            focusNode: _searchFieldFocusNode,
+            onFocusChange: (hasFocus) {
+              if (!hasFocus && _searchEditable) {
+                // When leaving the field, return to read-only to prevent auto keyboard next time
+                setState(() => _searchEditable = false);
+              }
+            },
+            onKey: (node, event) {
+              if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+              final key = event.logicalKey;
+              if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
+                // Enable editing and show keyboard
+                setState(() => _searchEditable = true);
+                // Request focus again to ensure the editable state takes effect
+                Future.microtask(() => _searchFieldFocusNode.requestFocus());
+                return KeyEventResult.handled;
+              }
+              return KeyEventResult.ignored;
+            },
+            child: TextField(
+              controller: _searchController,
+              autofocus: false,
+              readOnly: !_searchEditable,
+              decoration: InputDecoration(
               hintText: 'Search for channels...',
               prefixIcon: Icon(Icons.search),
               suffixIcon: _searchController.text.isNotEmpty
@@ -83,8 +109,15 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
               filled: true,
               fillColor: AppTheme.cardBackground,
+              ),
+              onTap: () {
+                // If tapped (e.g., mouse/trackpad), enable editing
+                if (!_searchEditable) {
+                  setState(() => _searchEditable = true);
+                }
+              },
+              onChanged: _performSearch,
             ),
-            onChanged: _performSearch,
           ),
           SizedBox(height: AppSizes.xl),
 

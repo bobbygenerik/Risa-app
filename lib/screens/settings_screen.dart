@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:iptv_player/services/live_transcription_service.dart';
 import 'package:iptv_player/services/google_drive_sync_service.dart';
@@ -49,6 +50,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool _hardwarePostProcessing = true;
   String _decoderType = 'Auto';
   String _renderingEngine = 'Auto';
+  // ignore: unused_field
   bool _defaultAudioTrack = true;
   double _videoBufferSize = 50;
   String _videoQuality = 'Auto';
@@ -69,14 +71,21 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   // Other Settings
   String _selectedLanguage = 'English';
+  // ignore: unused_field
   String _chromecastDevice = 'Chromecast';
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 7, vsync: this);
+    // Prepare focus nodes for the sidebar menu so external callers can request focus
+    for (int i = 0; i < 7; i++) {
+      _menuFocusNodes.add(FocusNode(debugLabel: 'SettingsMenu$i'));
+    }
     _loadSettings();
   }
+
+  final List<FocusNode> _menuFocusNodes = [];
 
   // Load settings from SharedPreferences
   Future<void> _loadSettings() async {
@@ -123,6 +132,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   // Save individual setting
+  // ignore: unused_element
   Future<void> _saveSetting(String key, dynamic value) async {
     final prefs = await SharedPreferences.getInstance();
     if (value is String) {
@@ -136,6 +146,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   @override
   void dispose() {
+    for (var n in _menuFocusNodes) n.dispose();
     _tabController.dispose();
     _m3uUrlController.dispose();
     _xtreamServerController.dispose();
@@ -203,31 +214,103 @@ class _SettingsScreenState extends State<SettingsScreen>
               itemCount: menuItems.length,
               itemBuilder: (context, index) {
                 final item = menuItems[index];
-                return ListTile(
-                  leading: Icon(
-                    item['icon'] as IconData,
-                    color: _tabController.index == index
-                        ? AppTheme.primaryBlue
-                        : AppTheme.textSecondary,
-                  ),
-                  title: Text(
-                    item['title'] as String,
-                    style: TextStyle(
-                      color: _tabController.index == index
-                          ? AppTheme.primaryBlue
-                          : AppTheme.textPrimary,
-                      fontWeight: _tabController.index == index
-                          ? FontWeight.w600
-                          : FontWeight.normal,
-                    ),
-                  ),
-                  selected: _tabController.index == index,
-                  selectedTileColor: AppTheme.primaryBlue.withOpacity(0.1),
+                final bool isSelected = _tabController.index == index;
+                return GestureDetector(
+                  behavior: HitTestBehavior.opaque,
                   onTap: () {
                     setState(() {
                       _tabController.index = index;
                     });
                   },
+                  child: Focus(
+                    focusNode: _menuFocusNodes[index],
+                    onKey: (node, event) {
+                      if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+                      final key = event.logicalKey;
+                      if (key == LogicalKeyboardKey.arrowDown) {
+                        final next = (index + 1) % menuItems.length;
+                        _menuFocusNodes[next].requestFocus();
+                        _tabController.index = next;
+                        return KeyEventResult.handled;
+                      } else if (key == LogicalKeyboardKey.arrowUp) {
+                        final prev = (index - 1) < 0 ? menuItems.length - 1 : index - 1;
+                        _menuFocusNodes[prev].requestFocus();
+                        _tabController.index = prev;
+                        return KeyEventResult.handled;
+                      } else if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
+                        setState(() => _tabController.index = index);
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    onFocusChange: (_) => setState(() {}),
+                    child: Builder(
+                      builder: (context) {
+                        final bool isFocused = Focus.of(context).hasFocus;
+                        final Color iconColor = isFocused
+                            ? Colors.white
+                            : (isSelected
+                                ? AppTheme.primaryBlue
+                                : AppTheme.textSecondary);
+                        final Color textColor = isFocused
+                            ? Colors.white
+                            : (isSelected
+                                ? AppTheme.primaryBlue
+                                : AppTheme.textPrimary);
+                        return AnimatedScale(
+                          scale: isFocused ? 1.02 : 1.0,
+                          duration: AppDurations.fast,
+                          curve: Curves.easeOut,
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: AppSizes.md,
+                              vertical: 12,
+                            ),
+                            child: Row(
+                              children: [
+                                // Left selected indicator with fade-in
+                                AnimatedOpacity(
+                                  opacity: isSelected ? 1.0 : 0.0,
+                                  duration: AppDurations.fast,
+                                  child: AnimatedContainer(
+                                    duration: AppDurations.fast,
+                                    width: isSelected ? (isFocused ? 3 : 2) : 0,
+                                    height: 20,
+                                    decoration: isSelected
+                                        ? const BoxDecoration(
+                                            gradient: LinearGradient(
+                                              begin: Alignment.topCenter,
+                                              end: Alignment.bottomCenter,
+                                              colors: [
+                                                AppTheme.primaryBlue,
+                                                AppTheme.accentPink,
+                                              ],
+                                            ),
+                                          )
+                                        : null,
+                                  ),
+                                ),
+                                if (isSelected) SizedBox(width: AppSizes.sm),
+                                Icon(item['icon'] as IconData, color: iconColor),
+                                SizedBox(width: AppSizes.md),
+                                Expanded(
+                                  child: Text(
+                                    item['title'] as String,
+                                    style: TextStyle(
+                                      color: textColor,
+                                      fontWeight: (isFocused || isSelected)
+                                          ? FontWeight.w600
+                                          : FontWeight.normal,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 );
               },
             ),
@@ -235,6 +318,15 @@ class _SettingsScreenState extends State<SettingsScreen>
         ],
       ),
     );
+  }
+
+  // Allow AppShell to request focus into this screen's sidebar
+  void requestFirstSidebarFocus() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_menuFocusNodes.isNotEmpty) {
+        _menuFocusNodes[_tabController.index.clamp(0, _menuFocusNodes.length - 1)].requestFocus();
+      }
+    });
   }
 
   Widget _buildAccountSettings() {
@@ -1491,13 +1583,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                       'Portuguese',
                     ],
                     (value) async {
+                      if (value == null) return;
                       setState(() {
-                        _preferredSubtitleLanguage = value!;
+                        _preferredSubtitleLanguage = value;
                       });
                       final prefs = await SharedPreferences.getInstance();
-                      await prefs.setString('subtitle_language', value!);
+                      await prefs.setString('subtitle_language', value);
                       openSubtitlesService.setPreferredLanguage(
-                        _getLanguageCode(value!),
+                        _getLanguageCode(value),
                       );
                     },
                   ),
@@ -1710,12 +1803,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                     _aiQuality,
                     ['Fast', 'Balanced', 'Quality'],
                     (value) async {
+                      if (value == null) return;
                       setState(() {
-                        _aiQuality = value!;
+                        _aiQuality = value;
                       });
                       final prefs = await SharedPreferences.getInstance();
-                      await prefs.setString('ai_quality', value!);
-                      aiService.setQualityPreset(value!);
+                      await prefs.setString('ai_quality', value);
+                      aiService.setQualityPreset(value);
                     },
                   ),
                   Padding(
@@ -3314,7 +3408,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
       // Try to get storage space info (this is platform-specific)
       // On Android, this may not work for all paths
-      final stat = await dir.stat();
+  await dir.stat();
       return '✓ Location accessible';
     } catch (e) {
       return '⚠ Unable to access: ${e.toString()}';

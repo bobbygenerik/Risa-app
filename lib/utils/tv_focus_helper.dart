@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:iptv_player/utils/app_theme.dart';
 
 /// TV Focus Helper for Android TV D-pad navigation
 /// Provides utilities for managing focus and handling remote control input
@@ -34,18 +35,11 @@ class TVFocusHelper {
       child: Builder(
         builder: (context) {
           final isFocused = Focus.of(context).hasFocus;
-          return AnimatedContainer(
+          return AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 200),
-            transform: Matrix4.identity()
-              ..scale(isFocused ? 1.05 : 1.0),
-            decoration: BoxDecoration(
-              border: isFocused
-                  ? Border.all(
-                      color: focusColor ?? Colors.white,
-                      width: 3,
-                    )
-                  : null,
-              borderRadius: BorderRadius.circular(8),
+            style: TextStyle(
+              color: isFocused ? AppTheme.primaryBlue : null,
+              fontWeight: isFocused ? FontWeight.bold : FontWeight.normal,
             ),
             child: child,
           );

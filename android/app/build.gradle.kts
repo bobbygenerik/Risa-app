@@ -31,25 +31,28 @@ android {
     }
 
     buildTypes {
-        debug {
-            isMinifyEnabled = false
-            isShrinkResources = false
-        }
-        profile {
-            isMinifyEnabled = false
-            isShrinkResources = false
-        }
-        release {
+        getByName("release") {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
-            isMinifyEnabled = false
-            isShrinkResources = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+
+            // Ensure R8 uses our ProGuard rules (keep TensorFlow Lite classes, etc.)
+            isMinifyEnabled = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // Include TensorFlow Lite GPU delegate to satisfy tflite_flutter GPU usage
+    implementation("org.tensorflow:tensorflow-lite-gpu:2.14.0")
+    // Include Play Core to satisfy deferred components references from Flutter embedding
+    implementation("com.google.android.play:core:1.10.3")
 }

@@ -12,9 +12,9 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
-  flutter_vlc_player: ^7.4.4
-  video_player: ^2.9.2
-  chewie: ^1.8.5
+  # Video players
+  video_player: ^2.9.2  # Android, iOS, Web support
+  chewie: ^1.8.5  # Video player UI
   http: ^1.2.2
   dio: ^5.7.0
   provider: ^6.1.2
@@ -40,8 +40,8 @@ dependencies:
   tflite_flutter: ^0.11.0
   image: ^4.3.0
   
-  # Subtitles & Multiple Audio Tracks
-  subtitle_wrapper_package: ^2.0.2
+  # Subtitles & Multiple Audio Tracks - REMOVED subtitle_wrapper_package (causes UnimplementedError on Linux)
+  # subtitle_wrapper_package: ^2.0.2  # DISABLED - use native video_player subtitles instead
   
   # Picture-in-Picture (Android native implementation)
   # Will use platform channels for Android PiP
@@ -66,17 +66,15 @@ flutter:
   assets:
     - assets/models/
     - assets/images/
-    - assets/images/RISA-logo.png
-    - assets/images/logo_icon.png
 
 # App Icon Configuration
 flutter_launcher_icons:
   android: true
-  image_path: "assets/images/logo_icon.png"
-  adaptive_icon_background: "#1a1a2e"
-  adaptive_icon_foreground: "assets/images/logo_icon.png"
+  image_path: "assets/images/croppedlogo2.png"  # Use transparent logo; background stays white via adaptive
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/croppedlogo2.png"
   web:
     generate: true
-    image_path: "assets/images/logo_icon.png"
-    background_color: "#1a1a2e"
-    theme_color: "#0f3460"
+    image_path: "assets/images/croppedlogo2.png"
+    background_color: "#FFFFFF"
+    theme_color: "#C8C6D3"

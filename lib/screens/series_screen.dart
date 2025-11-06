@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:math' as math;
 
@@ -15,6 +16,14 @@ class SeriesScreen extends StatefulWidget {
 
 class _SeriesScreenState extends State<SeriesScreen> {
   int _featuredIndex = 0;
+  final FocusNode _firstContentFocusNode = FocusNode();
+
+  // Call this from navigation shell to focus first content item
+  void requestFirstContentFocus() {
+    if (_firstContentFocusNode.canRequestFocus) {
+      _firstContentFocusNode.requestFocus();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -264,52 +273,22 @@ class _SeriesScreenState extends State<SeriesScreen> {
                 // Action Buttons
                 Row(
                   children: [
-                    ElevatedButton.icon(
+                    BrandPrimaryButton(
+                      icon: Icons.play_arrow,
+                      label: 'Play',
                       onPressed: () {
                         context.push('/content/${featured.id}', extra: featured);
                       },
-                      icon: Icon(Icons.play_arrow, size: 28),
-                      label: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                        child: Text(
-                          'Play',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
+                      padding: EdgeInsets.symmetric(vertical: 12, horizontal: 20),
                     ),
                     SizedBox(width: AppSizes.md),
-                    OutlinedButton.icon(
+                    BrandSecondaryButton(
+                      icon: Icons.info_outline,
+                      label: 'More Info',
                       onPressed: () {
                         context.push('/content/${featured.id}', extra: featured);
                       },
-                      icon: Icon(Icons.info_outline, size: 24),
-                      label: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                        child: Text(
-                          'More Info',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        side: BorderSide(color: Colors.white.withOpacity(0.7), width: 2),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
+                      padding: EdgeInsets.symmetric(vertical: 12, horizontal: 20),
                     ),
                   ],
                 ),
@@ -446,6 +425,12 @@ class _SeriesScreenState extends State<SeriesScreen> {
         itemBuilder: (context, index) {
           final seriesTitle = seriesMap.keys.elementAt(index);
           final episodes = seriesMap[seriesTitle]!;
+          if (index == 0) {
+            return Focus(
+              focusNode: _firstContentFocusNode,
+              child: _buildSeriesCard(context, seriesTitle, episodes),
+            );
+          }
           return _buildSeriesCard(context, seriesTitle, episodes);
         },
       ),

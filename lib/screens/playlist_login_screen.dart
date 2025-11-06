@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
-import 'package:iptv_player/models/saved_playlist.dart';
+// import 'package:iptv_player/models/saved_playlist.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:go_router/go_router.dart';
-import 'dart:convert';
+// import 'dart:convert';
 
 /// Playlist login screen - allows users to choose between M3U URL or Xtream Codes
 class PlaylistLoginScreen extends StatefulWidget {
@@ -353,30 +354,30 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
         child: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
-              // Calculate sizes based on available height
-              final availableHeight = constraints.maxHeight;
-              final logoHeight = availableHeight * 0.25; // 25% of screen
-              final formHeight = availableHeight * 0.45; // 45% for forms
+              // Android TV optimized layout
+              final isTV = constraints.maxWidth > 800;
+              final logoHeight = isTV ? 72.0 : 80.0;
               
               return Stack(
                 children: [
                   Center(
                     child: SingleChildScrollView(
-                      physics: const NeverScrollableScrollPhysics(), // Disable scrolling
-                      padding: EdgeInsets.all(AppSizes.xl),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isTV ? AppSizes.lg : AppSizes.xl,
+                        vertical: AppSizes.lg,
+                      ),
                       child: Container(
                         constraints: BoxConstraints(
-                          maxWidth: 600,
-                          maxHeight: availableHeight - (AppSizes.xl * 2),
+                          maxWidth: isTV ? 620 : 600,
                         ),
                         decoration: BoxDecoration(
                           color: AppTheme.cardBackground,
                           borderRadius: BorderRadius.circular(AppSizes.radiusXl),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.3),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
+                              color: Colors.black.withOpacity(0.25),
+                              blurRadius: 16,
+                              offset: const Offset(0, 8),
                             ),
                           ],
                         ),
@@ -385,28 +386,28 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              // Logo - Use actual logo image with reduced padding (2x bigger)
+                              // Logo - Use new app logo
                               SizedBox(height: AppSizes.sm),
                               Image.asset(
-                                'assets/images/RISA-logo.png',
-                                height: logoHeight.clamp(240.0, 560.0), // 2x bigger: was 120-280, now 240-560
+                                'assets/images/croppedlogo2.png',
+                                height: logoHeight,
                                 fit: BoxFit.contain,
                                 errorBuilder: (context, error, stackTrace) {
                                   // Fallback to icon if logo not found
                                   return Icon(
                                     Icons.live_tv,
-                                    size: (logoHeight * 0.7).clamp(160.0, 400.0), // 2x bigger
+                                    size: logoHeight * 0.8,
                                     color: AppTheme.primaryBlue,
                                   );
                                 },
                               ),
-                              SizedBox(height: AppSizes.md),
                               SizedBox(height: AppSizes.md),
                               Text(
                                 'Load your playlist to get started',
                                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                   color: AppTheme.textSecondary,
                                 ),
+                                textAlign: TextAlign.center,
                               ),
                               SizedBox(height: AppSizes.lg),
 
@@ -437,17 +438,18 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
 
                               SizedBox(height: AppSizes.lg),
 
-                              // Tab content
-                              Flexible(
-                                child: SizedBox(
-                                  height: formHeight.clamp(250.0, 350.0),
-                                  child: TabBarView(
-                                    controller: _tabController,
-                                    children: [
-                                      _buildM3UForm(),
-                                      _buildXtreamForm(),
-                                    ],
-                                  ),
+                              // Tab content - Remove Flexible, just use fixed constraints
+                              ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minHeight: 280,
+                                  maxHeight: 400,
+                                ),
+                                child: TabBarView(
+                                  controller: _tabController,
+                                  children: [
+                                    _buildM3UForm(),
+                                    _buildXtreamForm(),
+                                  ],
                                 ),
                               ),
 
@@ -536,18 +538,13 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
           ),
         ),
         const Spacer(),
-        ElevatedButton.icon(
-          onPressed: _isLoading ? null : _loadM3UPlaylist,
-          icon: const Icon(Icons.download),
-          label: const Text('Load Playlist'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.primaryBlue,
+          BrandPrimaryButton(
+            expand: true,
+            icon: Icons.download,
+            label: 'Load Playlist',
+            onPressed: _isLoading ? (){} : _loadM3UPlaylist,
             padding: EdgeInsets.symmetric(vertical: AppSizes.md),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-            ),
           ),
-        ),
       ],
     );
   }
@@ -614,18 +611,13 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
           ],
         ),
         const Spacer(),
-        ElevatedButton.icon(
-          onPressed: _isLoading ? null : _loadXtreamPlaylist,
-          icon: const Icon(Icons.download),
-          label: const Text('Load Playlist'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.primaryBlue,
+          BrandPrimaryButton(
+            expand: true,
+            icon: Icons.download,
+            label: 'Load Playlist',
+            onPressed: _isLoading ? (){} : _loadXtreamPlaylist,
             padding: EdgeInsets.symmetric(vertical: AppSizes.md),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-            ),
           ),
-        ),
       ],
     );
   }

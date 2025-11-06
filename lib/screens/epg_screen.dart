@@ -27,6 +27,14 @@ class _EPGScreenState extends State<EPGScreen> {
 
   final ScrollController _horizontalScrollController = ScrollController();
   final ScrollController _verticalScrollController = ScrollController();
+  final FocusNode _firstContentFocusNode = FocusNode();
+
+  // Call this from navigation shell to focus first content item
+  void requestFirstContentFocus() {
+    if (_firstContentFocusNode.canRequestFocus) {
+      _firstContentFocusNode.requestFocus();
+    }
+  }
 
   @override
   void dispose() {
@@ -336,45 +344,72 @@ class _EPGScreenState extends State<EPGScreen> {
     required bool isSelected,
     required VoidCallback onTap,
   }) {
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: AppSizes.md,
-          vertical: AppSizes.sm,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primaryBlue.withOpacity(0.2) : null,
-          border: Border(
-            left: BorderSide(
-              color: isSelected ? AppTheme.primaryBlue : Colors.transparent,
-              width: 3,
-            ),
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.folder,
-              size: 18,
-              color: isSelected ? AppTheme.primaryBlue : AppTheme.textSecondary,
-            ),
-            SizedBox(width: AppSizes.sm),
-            Expanded(
-              child: Text(
-                name,
-                style: TextStyle(
-                  color: isSelected
-                      ? AppTheme.textPrimary
-                      : AppTheme.textSecondary,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+      behavior: HitTestBehavior.opaque,
+      child: Focus(
+        onFocusChange: (_) => setState(() {}),
+        child: Builder(builder: (context) {
+          final bool isFocused = Focus.of(context).hasFocus;
+          final Color iconColor = isFocused
+              ? Colors.white
+              : (isSelected ? AppTheme.primaryBlue : AppTheme.textSecondary);
+          final Color textColor = isFocused
+              ? Colors.white
+              : (isSelected ? AppTheme.primaryBlue : AppTheme.textSecondary);
+          return AnimatedScale(
+            scale: isFocused ? 1.02 : 1.0,
+            duration: AppDurations.fast,
+            curve: Curves.easeOut,
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: AppSizes.md,
+                vertical: AppSizes.sm,
+              ),
+              child: Row(
+                children: [
+                  // Left selected indicator bar with fade-in
+                  AnimatedOpacity(
+                    opacity: isSelected ? 1.0 : 0.0,
+                    duration: AppDurations.fast,
+                    child: AnimatedContainer(
+                      duration: AppDurations.fast,
+                      width: isSelected ? (isFocused ? 3 : 2) : 0,
+                      height: 18,
+                      decoration: isSelected
+                          ? const BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  AppTheme.primaryBlue,
+                                  AppTheme.accentPink,
+                                ],
+                              ),
+                            )
+                          : null,
+                    ),
+                  ),
+                  if (isSelected) SizedBox(width: AppSizes.sm),
+                  Icon(Icons.folder, size: 18, color: iconColor),
+                  SizedBox(width: AppSizes.sm),
+                  Expanded(
+                    child: Text(
+                      name,
+                      style: TextStyle(
+                        color: textColor,
+                        fontWeight:
+                            (isFocused || isSelected) ? FontWeight.bold : FontWeight.normal,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          );
+        }),
       ),
     );
   }
@@ -663,6 +698,12 @@ class _EPGScreenState extends State<EPGScreen> {
               itemCount: channels.length,
               itemBuilder: (context, index) {
                 final channel = channels[index];
+                if (index == 0) {
+                  return Focus(
+                    focusNode: _firstContentFocusNode,
+                    child: _buildChannelItem(channel),
+                  );
+                }
                 return _buildChannelItem(channel);
               },
             ),

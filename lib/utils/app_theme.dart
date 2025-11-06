@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // Brand Colors
-  static const Color primaryBlue = Color(0xFF00A8E8);
+  // Brand Colors (updated to match croppedlogo2.jpg dominant blue)
+  // Using deep blue from logo palette
+  static const Color primaryBlue = Color(0xFF2E3192);
   static const Color darkBackground = Color(0xFF0F0F0F);
   static const Color cardBackground = Color(0xFF1A1A1A);
   static const Color sidebarBackground = Color(0xFF141414);
@@ -14,11 +15,22 @@ class AppTheme {
   static const Color accentOrange = Color(0xFFFF6B35);
   static const Color accentGreen = Color(0xFF4CAF50);
   static const Color accentRed = Color(0xFFE53935);
+  // Brand secondary from logo tail (pinkish/reddish)
+  static const Color accentPink = Color(0xFFE61E6E);
+  static const LinearGradient brandGradient = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [primaryBlue, accentPink],
+  );
   
   // UI Element Colors
   static const Color divider = Color(0xFF2A2A2A);
   static const Color highlight = Color(0xFF2D2D2D);
   static const Color focusBorder = Color(0xFF00A8E8);
+  
+  // Android TV Focus Colors
+  static const Color tvFocusHighlight = Color(0xFF2E3192);
+  static const Color tvFocusGlow = Color(0x402E3192);
   
   static ThemeData get darkTheme {
     return ThemeData(
@@ -26,6 +38,7 @@ class AppTheme {
       brightness: Brightness.dark,
       scaffoldBackgroundColor: darkBackground,
       primaryColor: primaryBlue,
+      visualDensity: VisualDensity.compact,
       
       colorScheme: const ColorScheme.dark(
         primary: primaryBlue,
@@ -113,6 +126,20 @@ class AppTheme {
             borderRadius: BorderRadius.circular(8),
           ),
           elevation: 0,
+        ).copyWith(
+          // Android TV focus support
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.focused)) {
+              return Colors.white.withOpacity(0.2);
+            }
+            return null;
+          }),
+          side: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.focused)) {
+              return BorderSide(color: tvFocusHighlight, width: 3);
+            }
+            return null;
+          }),
         ),
       ),
       
@@ -146,6 +173,20 @@ class AppTheme {
         inactiveTrackColor: highlight,
         thumbColor: textPrimary,
         overlayColor: Color(0x2900A8E8),
+      ),
+      
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: highlight,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: tvFocusHighlight, width: 3),
+        ),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
     );
   }

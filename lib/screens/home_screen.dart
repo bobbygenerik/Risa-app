@@ -7,6 +7,7 @@ import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/widgets/preview_player_widget.dart';
 import 'package:go_router/go_router.dart';
+import 'package:iptv_player/widgets/brand_button.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,6 +17,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final FocusNode _firstContentFocusNode = FocusNode();
+
   @override
   void initState() {
     super.initState();
@@ -30,6 +33,13 @@ class _HomeScreenState extends State<HomeScreen> {
         channelProvider.autoLoadPlaylist();
       }
     });
+  }
+
+  // Call this from navigation shell to focus first content item
+  void requestFirstContentFocus() {
+    if (_firstContentFocusNode.canRequestFocus) {
+      _firstContentFocusNode.requestFocus();
+    }
   }
 
   @override
@@ -127,38 +137,19 @@ class _HomeScreenState extends State<HomeScreen> {
               textAlign: TextAlign.center,
             ),
             SizedBox(height: AppSizes.xl),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () {
-                    context.go('/playlist-login');
-                  },
-                  icon: Icon(Icons.playlist_add),
-                  label: Text('Load Playlist'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryBlue,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppSizes.xl,
-                      vertical: AppSizes.md,
-                    ),
-                  ),
+            Focus(
+              focusNode: _firstContentFocusNode,
+              child: BrandPrimaryButton(
+                icon: Icons.playlist_add,
+                label: 'Load Playlist',
+                onPressed: () {
+                  context.go('/playlist-login');
+                },
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSizes.xl,
+                  vertical: AppSizes.md,
                 ),
-                SizedBox(width: AppSizes.md),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    context.go('/settings');
-                  },
-                  icon: Icon(Icons.settings),
-                  label: Text('Settings'),
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppSizes.xl,
-                      vertical: AppSizes.md,
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ],
         ),
@@ -195,6 +186,12 @@ class _HomeScreenState extends State<HomeScreen> {
         itemCount: channels.length,
         itemBuilder: (context, index) {
           final channel = channels[index];
+          if (index == 0) {
+            return Focus(
+              focusNode: _firstContentFocusNode,
+              child: _buildChannelCard(channel),
+            );
+          }
           return _buildChannelCard(channel);
         },
       ),
@@ -208,18 +205,44 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     final isFavorite = channelProvider.isFavorite(channel);
 
-    return Container(
-      width: 280,
-      margin: EdgeInsets.only(right: AppSizes.md),
-      child: InkWell(
-        onTap: () {
-          // Navigate to player with channel data
-          context.push('/player', extra: channel);
-        },
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-          child: Stack(
-            children: [
+    return Focus(
+      onFocusChange: (_) => setState(() {}),
+      child: Builder(
+        builder: (context) {
+          final bool isFocused = Focus.of(context).hasFocus;
+          return AnimatedScale(
+            scale: isFocused ? 1.05 : 1.0,
+            duration: AppDurations.fast,
+            curve: Curves.easeOut,
+            child: AnimatedContainer(
+              duration: AppDurations.fast,
+              width: 280,
+              margin: EdgeInsets.only(right: AppSizes.md),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                border: isFocused
+                    ? Border.all(color: Colors.white, width: 3)
+                    : null,
+                boxShadow: isFocused
+                    ? [
+                        BoxShadow(
+                          color: AppTheme.primaryBlue.withOpacity(0.5),
+                          blurRadius: 20,
+                          spreadRadius: 2,
+                        ),
+                      ]
+                    : [],
+              ),
+              child: InkWell(
+                onTap: () {
+                  // Navigate to player with channel data
+                  context.push('/player', extra: channel);
+                },
+                borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                  child: Stack(
+                    children: [
               // Background
               Container(
                 color: AppTheme.cardBackground,
@@ -344,8 +367,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ],
-          ),
-        ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -565,6 +592,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildHighlightsRow(List<Channel> channels) {
     return SizedBox(
       height: 160,
@@ -678,6 +706,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildSeriesRow(List<Content> series) {
     return SizedBox(
       height: 220,

@@ -241,6 +241,23 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                   child: Chewie(controller: _chewieController!),
                 ),
               ),
+            // Slim gradient buffering indicator at bottom
+            if (_isInitialized && !_hasError && _videoPlayerController.value.isBuffering)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  height: 3,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [AppTheme.primaryBlue, AppTheme.accentPink],
+                    ),
+                  ),
+                ),
+              ),
 
             // Loading indicator with logo and channel info
             if (!_isInitialized && !_hasError)
@@ -251,31 +268,32 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // App logo instead of generic icon
-                      Image.asset(
-                        'assets/images/RISA-logo.png',
-                        height: 120,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          // Fallback to gradient icon if logo not found
-                          return Container(
-                            width: 100,
-                            height: 100,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [Color(0xFF2E3192), Color(0xFF00BCD4)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Icon(
-                              Icons.play_arrow,
-                              color: Colors.white,
-                              size: 60,
-                            ),
-                          );
-                        },
-                      ),
+                                // App logo (new branding)
+                                Image.asset(
+                                  'assets/images/croppedlogo2.png',
+                                  height: 120,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    // Fallback to gradient icon if logo not found
+                                    return Container(
+                                      width: 100,
+                                      height: 100,
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [Color(0xFF2E3192), Color(0xFF00BCD4)],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: Icon(
+                                        Icons.play_arrow,
+                                        color: Colors.white,
+                                        size: 60,
+                                      ),
+                                    );
+                                  },
+                                ),
                       const SizedBox(height: 32),
                       // Channel name
                       Text(
@@ -418,7 +436,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.red,
+                                color: AppTheme.accentPink,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: const Text(

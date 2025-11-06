@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/services/ai_model_manager.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/widgets/brand_button.dart';
+
 
 class AIModelsScreen extends StatelessWidget {
   const AIModelsScreen({super.key});
@@ -268,14 +270,12 @@ class AIModelsScreen extends StatelessWidget {
                 if (status == ModelDownloadStatus.notDownloaded ||
                     status == ModelDownloadStatus.error)
                   Expanded(
-                    child: ElevatedButton.icon(
+                    child: BrandPrimaryButton(
+                      expand: true,
+                      icon: Icons.download,
+                      label: 'Download',
                       onPressed: () => modelManager.downloadModel(model),
-                      icon: const Icon(Icons.download, size: 18),
-                      label: const Text('Download'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryBlue,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
 
@@ -318,14 +318,12 @@ class AIModelsScreen extends StatelessWidget {
 
                 if (status == ModelDownloadStatus.corrupted)
                   Expanded(
-                    child: ElevatedButton.icon(
+                    child: BrandPrimaryButton(
+                      expand: true,
+                      icon: Icons.refresh,
+                      label: 'Re-download',
                       onPressed: () => modelManager.downloadModel(model),
-                      icon: const Icon(Icons.refresh, size: 18),
-                      label: const Text('Re-download'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
               ],

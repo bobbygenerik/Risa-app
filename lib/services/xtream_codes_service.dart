@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:iptv_player/models/content.dart';
 
@@ -7,12 +8,52 @@ class XtreamCodesService {
   final String serverUrl;
   final String username;
   final String password;
+  late http.Client _client;
 
   XtreamCodesService({
     required this.serverUrl,
     required this.username,
     required this.password,
-  });
+  }) {
+    // Create HTTP client that accepts all certificates (for providers with SSL issues)
+    _client = http.Client();
+  }
+
+  /// Create HTTP client with custom certificate validation
+  static HttpClient _createHttpClient() {
+    final client = HttpClient();
+    client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+    return client;
+  }
+
+  /// Make HTTP request with SSL bypass
+  Future<http.Response> _makeRequest(String url) async {
+    try {
+      // Try with standard client first
+      final response = await _client.get(Uri.parse(url)).timeout(Duration(seconds: 10));
+      return response;
+    } catch (e) {
+      // If SSL error, try with custom client that bypasses cert validation
+      print('XtreamCodes: Standard request failed, trying with SSL bypass: $e');
+      
+      final httpClient = _createHttpClient();
+      try {
+        final request = await httpClient.getUrl(Uri.parse(url));
+        final response = await request.close();
+        
+        final body = await response.transform(utf8.decoder).join();
+        return http.Response(body, response.statusCode, headers: {
+          'content-type': response.headers.contentType?.toString() ?? 'application/json',
+        });
+      } finally {
+        httpClient.close();
+      }
+    }
+  }
+
+  void dispose() {
+    _client.close();
+  }
 
   /// Get base API URL
   String get _apiUrl => '$serverUrl/player_api.php';
@@ -21,7 +62,7 @@ class XtreamCodesService {
   Future<List<Map<String, dynamic>>> getVodCategories() async {
     try {
       final url = '$_apiUrl?username=$username&password=$password&action=get_vod_categories';
-      final response = await http.get(Uri.parse(url));
+      final response = await _makeRequest(url);
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -38,7 +79,7 @@ class XtreamCodesService {
   Future<List<Map<String, dynamic>>> getSeriesCategories() async {
     try {
       final url = '$_apiUrl?username=$username&password=$password&action=get_series_categories';
-      final response = await http.get(Uri.parse(url));
+      final response = await _makeRequest(url);
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -55,7 +96,7 @@ class XtreamCodesService {
   Future<List<Content>> getMoviesByCategory(String categoryId) async {
     try {
       final url = '$_apiUrl?username=$username&password=$password&action=get_vod_streams&category_id=$categoryId';
-      final response = await http.get(Uri.parse(url));
+      final response = await _makeRequest(url);
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -99,7 +140,7 @@ class XtreamCodesService {
   Future<List<Content>> getSeriesByCategory(String categoryId) async {
     try {
       final url = '$_apiUrl?username=$username&password=$password&action=get_series&category_id=$categoryId';
-      final response = await http.get(Uri.parse(url));
+      final response = await _makeRequest(url);
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -143,7 +184,7 @@ class XtreamCodesService {
   Future<Map<String, dynamic>?> getMovieInfo(String streamId) async {
     try {
       final url = '$_apiUrl?username=$username&password=$password&action=get_vod_info&vod_id=$streamId';
-      final response = await http.get(Uri.parse(url));
+      final response = await _makeRequest(url);
 
       if (response.statusCode == 200) {
         return json.decode(response.body);
@@ -159,7 +200,7 @@ class XtreamCodesService {
   Future<Map<String, dynamic>?> getSeriesInfo(String seriesId) async {
     try {
       final url = '$_apiUrl?username=$username&password=$password&action=get_series_info&series_id=$seriesId';
-      final response = await http.get(Uri.parse(url));
+      final response = await _makeRequest(url);
 
       if (response.statusCode == 200) {
         return json.decode(response.body);

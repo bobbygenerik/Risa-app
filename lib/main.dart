@@ -24,15 +24,15 @@ import 'package:iptv_player/screens/edit_profile_screen.dart';
 import 'package:iptv_player/screens/recordings_screen.dart';
 import 'package:iptv_player/screens/ai_models_screen.dart';
 import 'package:iptv_player/screens/mini_player_screen.dart';
-import 'package:iptv_player/screens/multi_view_screen.dart';
-import 'package:iptv_player/screens/enhanced_video_player_screen.dart';
-import 'package:iptv_player/screens/vlc_enhanced_player_screen.dart';
+// import 'package:iptv_player/screens/multi_view_screen.dart';  // Disabled - uses VLC
+import 'package:iptv_player/screens/enhanced_video_player_screen.dart';  // Android/iOS/Web player
 import 'package:iptv_player/screens/content_detail_screen.dart';
 import 'package:iptv_player/screens/search_screen.dart';
 import 'package:iptv_player/screens/category_screen.dart';
 import 'package:iptv_player/screens/movies_screen.dart';
 import 'package:iptv_player/screens/series_screen.dart';
 import 'package:iptv_player/screens/playlist_login_screen.dart';
+import 'package:iptv_player/screens/help_about_screen.dart';
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/models/channel.dart';
 
@@ -231,6 +231,14 @@ class _MyAppState extends State<MyApp> {
         debugShowCheckedModeBanner: false,
         theme: AppTheme.darkTheme,
         routerConfig: _router,
+        // Ensure app fills the screen on TV (remove global scale-down)
+        builder: (context, child) {
+          final media = MediaQuery.of(context);
+          return MediaQuery(
+            data: media.copyWith(textScaleFactor: 0.95),
+            child: child!,
+          );
+        },
       ),
     );
   }
@@ -275,6 +283,10 @@ final _router = GoRouter(
           builder: (context, state) => const RecordingsScreen(),
         ),
         GoRoute(
+          path: '/help',
+          builder: (context, state) => const HelpAboutScreen(),
+        ),
+        GoRoute(
           path: '/settings',
           builder: (context, state) => const SettingsScreen(),
         ),
@@ -293,18 +305,19 @@ final _router = GoRouter(
             return MiniPlayerScreen(channel: channel);
           },
         ),
-        GoRoute(
-          path: '/multi-view',
-          builder: (context, state) {
-            final channels = state.extra as List<Channel>?;
-            return MultiViewScreen(channels: channels ?? []);
-          },
-        ),
+        // Multi-view disabled - uses VLC which isn't supported
+        // GoRoute(
+        //   path: '/multi-view',
+        //   builder: (context, state) {
+        //     final channels = state.extra as List<Channel>?;
+        //     return MultiViewScreen(channels: channels ?? []);
+        //   },
+        // ),
         GoRoute(
           path: '/vlc-player',
           builder: (context, state) {
             final params = state.extra as Map<String, dynamic>?;
-            // Use EnhancedVideoPlayerScreen instead of VLC (VLC has platform issues on Linux)
+            // Use EnhancedVideoPlayerScreen (video_player + chewie)
             return EnhancedVideoPlayerScreen(
               videoUrl: params?['videoUrl'] ?? '',
               title: params?['title'] ?? 'Video',

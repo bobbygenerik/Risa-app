@@ -34,6 +34,9 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     "Debug" "Profile" "Release")
 endif()
 
+# Enable media_kit libraries BEFORE loading plugins
+set(MEDIA_KIT_LIBS_AVAILABLE ON CACHE BOOL "package:media_kit libraries are available." FORCE)
+
 # Compilation settings that should be applied to most targets.
 #
 # Be cautious about adding new options here, as plugins use this function by
