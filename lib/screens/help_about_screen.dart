@@ -92,7 +92,11 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
       onKey: (node, event) {
         if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
         final key = event.logicalKey;
-        if (key == LogicalKeyboardKey.arrowRight && index < 2) {
+        if (key == LogicalKeyboardKey.arrowUp) {
+          // Pressing UP from any tab should go to top bar
+          FocusScope.of(context).previousFocus();
+          return KeyEventResult.handled;
+        } else if (key == LogicalKeyboardKey.arrowRight && index < 2) {
           setState(() {
             _selectedTab = index + 1;
             _tabFocusNodes[index + 1].requestFocus();
@@ -122,12 +126,12 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
               gradient: isSelected ? AppTheme.brandGradient : null,
               color: isSelected ? null : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
-              border: isFocused ? Border.all(color: Colors.white, width: 2) : null,
+              border: isFocused ? Border.all(color: AppTheme.primaryBlue, width: 2) : null,
             ),
             child: Text(
               label,
               style: TextStyle(
-                color: Colors.white,
+                color: AppTheme.textPrimary,
                 fontWeight: (isSelected || isFocused) ? FontWeight.bold : FontWeight.normal,
                 fontSize: 16,
               ),
@@ -213,7 +217,7 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
                 height: 120,
                 padding: EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppTheme.textPrimary,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Image.asset(

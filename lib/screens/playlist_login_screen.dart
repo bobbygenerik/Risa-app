@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
@@ -21,6 +22,18 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
   late TabController _tabController;
   bool _isLoading = false;
 
+  // Editable state for text fields (prevent auto-keyboard on Android TV)
+  bool _m3uUrlEditable = false;
+  bool _xtreamServerEditable = false;
+  bool _xtreamUsernameEditable = false;
+  bool _xtreamPasswordEditable = false;
+
+  // Focus nodes for text fields
+  final FocusNode _m3uUrlFocusNode = FocusNode();
+  final FocusNode _xtreamServerFocusNode = FocusNode();
+  final FocusNode _xtreamUsernameFocusNode = FocusNode();
+  final FocusNode _xtreamPasswordFocusNode = FocusNode();
+
   // M3U Controllers
   final TextEditingController _m3uUrlController = TextEditingController();
 
@@ -42,9 +55,13 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
   void dispose() {
     _tabController.dispose();
     _m3uUrlController.dispose();
+    _m3uUrlFocusNode.dispose();
     _xtreamServerController.dispose();
+    _xtreamServerFocusNode.dispose();
     _xtreamUsernameController.dispose();
+    _xtreamUsernameFocusNode.dispose();
     _xtreamPasswordController.dispose();
+    _xtreamPasswordFocusNode.dispose();
     super.dispose();
   }
 
@@ -89,7 +106,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
               action: hasContent
                   ? SnackBarAction(
                       label: 'View Content',
-                      textColor: Colors.white,
+                      textColor: AppTheme.textPrimary,
                       onPressed: () {
                         _showM3UPreview(channelProvider.lastM3UContent!);
                       },
@@ -183,7 +200,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
               action: hasContent
                   ? SnackBarAction(
                       label: 'View Response',
-                      textColor: Colors.white,
+                      textColor: AppTheme.textPrimary,
                       onPressed: () {
                         _showM3UPreview(channelProvider.lastM3UContent!);
                       },
@@ -356,7 +373,6 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
             builder: (context, constraints) {
               // Android TV optimized layout
               final isTV = constraints.maxWidth > 800;
-              final logoHeight = isTV ? 72.0 : 80.0;
               
               return Stack(
                 children: [
@@ -368,7 +384,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                       ),
                       child: Container(
                         constraints: BoxConstraints(
-                          maxWidth: isTV ? 620 : 600,
+                          maxWidth: isTV ? 580 : 500, // Reduced width
                         ),
                         decoration: BoxDecoration(
                           color: AppTheme.cardBackground,
@@ -382,34 +398,34 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                           ],
                         ),
                         child: Padding(
-                          padding: EdgeInsets.all(AppSizes.lg),
+                          padding: EdgeInsets.all(AppSizes.sm), // Reduced padding
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               // Logo - Use new app logo
-                              SizedBox(height: AppSizes.sm),
+                              SizedBox(height: AppSizes.xs),
                               Image.asset(
                                 'assets/images/croppedlogo2.png',
-                                height: logoHeight,
+                                height: isTV ? 48.0 : 56.0, // Reduced height
                                 fit: BoxFit.contain,
                                 errorBuilder: (context, error, stackTrace) {
                                   // Fallback to icon if logo not found
                                   return Icon(
                                     Icons.live_tv,
-                                    size: logoHeight * 0.8,
+                                    size: isTV ? 40.0 : 44.0,
                                     color: AppTheme.primaryBlue,
                                   );
                                 },
                               ),
-                              SizedBox(height: AppSizes.md),
+                              SizedBox(height: AppSizes.xs),
                               Text(
                                 'Load your playlist to get started',
-                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   color: AppTheme.textSecondary,
                                 ),
                                 textAlign: TextAlign.center,
                               ),
-                              SizedBox(height: AppSizes.lg),
+                              SizedBox(height: AppSizes.sm),
 
                               // Tab selector
                               Container(
@@ -427,7 +443,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                                       AppSizes.radiusLg,
                                     ),
                                   ),
-                                  labelColor: Colors.white,
+                                  labelColor: AppTheme.textPrimary,
                                   unselectedLabelColor: AppTheme.textSecondary,
                                   tabs: const [
                                     Tab(text: 'M3U URL'),
@@ -436,13 +452,13 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                                 ),
                               ),
 
-                              SizedBox(height: AppSizes.lg),
+                              SizedBox(height: AppSizes.sm),
 
-                              // Tab content - Remove Flexible, just use fixed constraints
+                              // Tab content - Reduced constraints for better visibility
                               ConstrainedBox(
                                 constraints: BoxConstraints(
-                                  minHeight: 280,
-                                  maxHeight: 400,
+                                  minHeight: 220, // Reduced height
+                                  maxHeight: 280, // Reduced height
                                 ),
                                 child: TabBarView(
                                   controller: _tabController,
@@ -454,9 +470,9 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                               ),
 
                               if (_isLoading) ...[
-                                SizedBox(height: AppSizes.md),
-                                const CircularProgressIndicator(),
                                 SizedBox(height: AppSizes.sm),
+                                const CircularProgressIndicator(),
+                                SizedBox(height: AppSizes.xs),
                                 Text(
                                   'Loading playlist...',
                                   style: TextStyle(color: AppTheme.textSecondary),
@@ -473,7 +489,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                     top: AppSizes.md,
                     left: AppSizes.md,
                     child: IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      icon: const Icon(Icons.arrow_back, color: AppTheme.textPrimary),
                       onPressed: () => context.pop(),
                       tooltip: 'Back',
                     ),
@@ -495,24 +511,69 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
           'Enter M3U Playlist URL',
           style: Theme.of(context).textTheme.titleMedium,
         ),
-        SizedBox(height: AppSizes.md),
-        TextField(
-          controller: _m3uUrlController,
-          decoration: InputDecoration(
-            hintText: 'http://example.com/playlist.m3u',
-            prefixIcon: const Icon(Icons.link),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-            ),
-            filled: true,
-            fillColor: AppTheme.highlight,
+        SizedBox(height: AppSizes.sm),
+        Focus(
+          focusNode: _m3uUrlFocusNode,
+          onFocusChange: (hasFocus) {
+            if (!hasFocus && _m3uUrlEditable) {
+              setState(() => _m3uUrlEditable = false);
+            } else {
+              setState(() {}); // Trigger rebuild for focus indicator
+            }
+          },
+          onKey: (node, event) {
+            if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+            final key = event.logicalKey;
+            if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
+              setState(() => _m3uUrlEditable = true);
+              Future.microtask(() => _m3uUrlFocusNode.requestFocus());
+              return KeyEventResult.handled;
+            }
+            return KeyEventResult.ignored;
+          },
+          child: Builder(
+            builder: (context) {
+              final bool isFocused = Focus.of(context).hasFocus;
+              return AnimatedContainer(
+                duration: AppDurations.fast,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                  border: isFocused
+                      ? Border.all(color: AppTheme.primaryBlue, width: 3)
+                      : null,
+                  boxShadow: isFocused
+                      ? [
+                          BoxShadow(
+                            color: AppTheme.primaryBlue.withOpacity(0.4),
+                            blurRadius: 12,
+                            spreadRadius: 2,
+                          ),
+                        ]
+                      : null,
+                ),
+                child: TextField(
+                  controller: _m3uUrlController,
+                  autofocus: false,
+                  readOnly: !_m3uUrlEditable,
+                  decoration: InputDecoration(
+                    hintText: 'http://example.com/playlist.m3u',
+                    prefixIcon: const Icon(Icons.link),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    ),
+                    filled: true,
+                    fillColor: AppTheme.highlight,
+                  ),
+                  keyboardType: TextInputType.url,
+                  enabled: !_isLoading,
+                ),
+              );
+            },
           ),
-          keyboardType: TextInputType.url,
-          enabled: !_isLoading,
         ),
-        SizedBox(height: AppSizes.md),
+        SizedBox(height: AppSizes.sm),
         Container(
-          padding: EdgeInsets.all(AppSizes.md),
+          padding: EdgeInsets.all(AppSizes.sm),
           decoration: BoxDecoration(
             color: AppTheme.primaryBlue.withOpacity(0.1),
             borderRadius: BorderRadius.circular(AppSizes.radiusMd),
@@ -524,14 +585,14 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
             children: [
               Icon(
                 Icons.info_outline,
-                size: 20,
+                size: 18,
                 color: AppTheme.primaryBlue,
               ),
               SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'Paste the URL to your M3U playlist file',
-                  style: TextStyle(fontSize: 12),
+                  style: TextStyle(fontSize: 11),
                 ),
               ),
             ],
@@ -543,7 +604,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
             icon: Icons.download,
             label: 'Load Playlist',
             onPressed: _isLoading ? (){} : _loadM3UPlaylist,
-            padding: EdgeInsets.symmetric(vertical: AppSizes.md),
+            padding: EdgeInsets.symmetric(vertical: AppSizes.sm),
           ),
       ],
     );
@@ -557,55 +618,191 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
           'Xtream Codes Login',
           style: Theme.of(context).textTheme.titleMedium,
         ),
-        SizedBox(height: AppSizes.md),
-        TextField(
-          controller: _xtreamServerController,
-          decoration: InputDecoration(
-            labelText: 'Server URL',
-            hintText: 'http://example.com:8080',
-            prefixIcon: const Icon(Icons.dns),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-            ),
-            filled: true,
-            fillColor: AppTheme.highlight,
+        SizedBox(height: AppSizes.sm),
+        Focus(
+          focusNode: _xtreamServerFocusNode,
+          onFocusChange: (hasFocus) {
+            if (!hasFocus && _xtreamServerEditable) {
+              setState(() => _xtreamServerEditable = false);
+            } else {
+              setState(() {}); // Trigger rebuild for focus indicator
+            }
+          },
+          onKey: (node, event) {
+            if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+            final key = event.logicalKey;
+            if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
+              setState(() => _xtreamServerEditable = true);
+              Future.microtask(() => _xtreamServerFocusNode.requestFocus());
+              return KeyEventResult.handled;
+            }
+            return KeyEventResult.ignored;
+          },
+          child: Builder(
+            builder: (context) {
+              final bool isFocused = Focus.of(context).hasFocus;
+              return AnimatedContainer(
+                duration: AppDurations.fast,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                  border: isFocused
+                      ? Border.all(color: AppTheme.primaryBlue, width: 3)
+                      : null,
+                  boxShadow: isFocused
+                      ? [
+                          BoxShadow(
+                            color: AppTheme.primaryBlue.withOpacity(0.4),
+                            blurRadius: 12,
+                            spreadRadius: 2,
+                          ),
+                        ]
+                      : null,
+                ),
+                child: TextField(
+                  controller: _xtreamServerController,
+                  autofocus: false,
+                  readOnly: !_xtreamServerEditable,
+                  decoration: InputDecoration(
+                    labelText: 'Server URL',
+                    hintText: 'http://example.com:8080',
+                    helperText: 'Enter server, username, password and click Load',
+                    prefixIcon: const Icon(Icons.dns),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    ),
+                    filled: true,
+                    fillColor: AppTheme.highlight,
+                  ),
+                  keyboardType: TextInputType.url,
+                  enabled: !_isLoading,
+                ),
+              );
+            },
           ),
-          keyboardType: TextInputType.url,
-          enabled: !_isLoading,
         ),
-        SizedBox(height: AppSizes.md),
+        SizedBox(height: AppSizes.sm),
         Row(
           children: [
             Expanded(
-              child: TextField(
-                controller: _xtreamUsernameController,
-                decoration: InputDecoration(
-                  labelText: 'Username',
-                  prefixIcon: const Icon(Icons.person),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                  ),
-                  filled: true,
-                  fillColor: AppTheme.highlight,
+              child: Focus(
+                focusNode: _xtreamUsernameFocusNode,
+                onFocusChange: (hasFocus) {
+                  if (!hasFocus && _xtreamUsernameEditable) {
+                    setState(() => _xtreamUsernameEditable = false);
+                  } else {
+                    setState(() {}); // Trigger rebuild for focus indicator
+                  }
+                },
+                onKey: (node, event) {
+                  if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+                  final key = event.logicalKey;
+                  if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
+                    setState(() => _xtreamUsernameEditable = true);
+                    Future.microtask(() => _xtreamUsernameFocusNode.requestFocus());
+                    return KeyEventResult.handled;
+                  }
+                  return KeyEventResult.ignored;
+                },
+                child: Builder(
+                  builder: (context) {
+                    final bool isFocused = Focus.of(context).hasFocus;
+                    return AnimatedContainer(
+                      duration: AppDurations.fast,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        border: isFocused
+                            ? Border.all(color: AppTheme.primaryBlue, width: 3)
+                            : null,
+                        boxShadow: isFocused
+                            ? [
+                                BoxShadow(
+                                  color: AppTheme.primaryBlue.withOpacity(0.4),
+                                  blurRadius: 12,
+                                  spreadRadius: 2,
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: TextField(
+                        controller: _xtreamUsernameController,
+                        autofocus: false,
+                        readOnly: !_xtreamUsernameEditable,
+                        decoration: InputDecoration(
+                          labelText: 'Username',
+                          prefixIcon: const Icon(Icons.person),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                          ),
+                          filled: true,
+                          fillColor: AppTheme.highlight,
+                        ),
+                        enabled: !_isLoading,
+                      ),
+                    );
+                  },
                 ),
-                enabled: !_isLoading,
               ),
             ),
-            SizedBox(width: AppSizes.md),
+            SizedBox(width: AppSizes.sm),
             Expanded(
-              child: TextField(
-                controller: _xtreamPasswordController,
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: 'Password',
-                  prefixIcon: const Icon(Icons.lock),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                  ),
-                  filled: true,
-                  fillColor: AppTheme.highlight,
+              child: Focus(
+                focusNode: _xtreamPasswordFocusNode,
+                onFocusChange: (hasFocus) {
+                  if (!hasFocus && _xtreamPasswordEditable) {
+                    setState(() => _xtreamPasswordEditable = false);
+                  } else {
+                    setState(() {}); // Trigger rebuild for focus indicator
+                  }
+                },
+                onKey: (node, event) {
+                  if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+                  final key = event.logicalKey;
+                  if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
+                    setState(() => _xtreamPasswordEditable = true);
+                    Future.microtask(() => _xtreamPasswordFocusNode.requestFocus());
+                    return KeyEventResult.handled;
+                  }
+                  return KeyEventResult.ignored;
+                },
+                child: Builder(
+                  builder: (context) {
+                    final bool isFocused = Focus.of(context).hasFocus;
+                    return AnimatedContainer(
+                      duration: AppDurations.fast,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        border: isFocused
+                            ? Border.all(color: AppTheme.primaryBlue, width: 3)
+                            : null,
+                        boxShadow: isFocused
+                            ? [
+                                BoxShadow(
+                                  color: AppTheme.primaryBlue.withOpacity(0.4),
+                                  blurRadius: 12,
+                                  spreadRadius: 2,
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: TextField(
+                        controller: _xtreamPasswordController,
+                        autofocus: false,
+                        readOnly: !_xtreamPasswordEditable,
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          prefixIcon: const Icon(Icons.lock),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                          ),
+                          filled: true,
+                          fillColor: AppTheme.highlight,
+                        ),
+                        enabled: !_isLoading,
+                      ),
+                    );
+                  },
                 ),
-                enabled: !_isLoading,
               ),
             ),
           ],
@@ -616,7 +813,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
             icon: Icons.download,
             label: 'Load Playlist',
             onPressed: _isLoading ? (){} : _loadXtreamPlaylist,
-            padding: EdgeInsets.symmetric(vertical: AppSizes.md),
+            padding: EdgeInsets.symmetric(vertical: AppSizes.sm),
           ),
       ],
     );

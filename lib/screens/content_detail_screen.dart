@@ -87,7 +87,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
             child: Row(
               children: [
                 IconButton(
-                  icon: Icon(Icons.arrow_back, color: Colors.white),
+                  icon: Icon(Icons.arrow_back, color: AppTheme.textPrimary),
                   onPressed: () => Navigator.pop(context),
                 ),
                 Spacer(),
@@ -142,7 +142,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.white, width: 2),
+                        border: Border.all(color: AppTheme.textPrimary, width: 2),
                         borderRadius: BorderRadius.circular(AppSizes.radiusSm),
                       ),
                       child: Text(
@@ -150,7 +150,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: AppTheme.textPrimary,
                         ),
                       ),
                     ),
@@ -195,8 +195,8 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                       icon: Icon(_isInMyList ? Icons.check : Icons.add),
                       label: Text('My List'),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        side: BorderSide(color: Colors.white.withOpacity(0.5)),
+                        foregroundColor: AppTheme.textPrimary,
+                        side: BorderSide(color: AppTheme.textPrimary.withOpacity(0.5)),
                         padding: EdgeInsets.symmetric(
                           horizontal: AppSizes.lg,
                           vertical: AppSizes.md,
@@ -218,8 +218,8 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                       ),
                       label: Text(_isDownloaded ? 'Downloaded' : 'Download'),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        side: BorderSide(color: Colors.white.withOpacity(0.5)),
+                        foregroundColor: AppTheme.textPrimary,
+                        side: BorderSide(color: AppTheme.textPrimary.withOpacity(0.5)),
                         padding: EdgeInsets.symmetric(
                           horizontal: AppSizes.lg,
                           vertical: AppSizes.md,
@@ -249,7 +249,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: Colors.white,
+          color: AppTheme.textPrimary,
         ),
       ),
     );

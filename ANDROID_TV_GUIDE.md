@@ -34,7 +34,7 @@ Stream Hub is now fully optimized for Android TV with D-pad navigation, leanback
 
 ### 4. Focus Management
 - ✅ `TVFocusHelper` utility class
-- ✅ Animated focus borders (scales 1.05x when focused)
+- ✅ Animated focus borders (scales 1.08x when focused)
 - ✅ Autofocus support
 - ✅ TV-sized text and icons (1.5x larger)
 - ✅ Grid layout optimized for TV viewing
@@ -206,7 +206,7 @@ flutter run -d emulator-5554
 ### Focus Indicators
 
 - **Border**: 3px white border when focused
-- **Scale**: 1.05x zoom animation (200ms)
+- **Scale**: 1.08x zoom animation (200ms)
 - **Color**: Customizable per component
 
 ---

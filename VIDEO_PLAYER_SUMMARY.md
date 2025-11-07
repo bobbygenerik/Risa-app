@@ -53,7 +53,7 @@
 
 - ✅ **Focus Visual Indicators**
   - 3px white border when focused
-  - 1.05x scale animation (200ms)
+  - 1.08x scale animation (200ms)
   - Customizable focus colors
 
 - ✅ **BuildContext Extensions**

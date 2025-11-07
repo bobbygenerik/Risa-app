@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
@@ -17,10 +18,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   String? _profileImagePath;
   bool _isLoading = false;
 
+  // Editable states for text fields (prevent auto-keyboard on Android TV)
+  bool _nameEditable = false;
+  bool _emailEditable = false;
+
+  // Focus nodes for text fields
+  final FocusNode _nameFocusNode = FocusNode();
+  final FocusNode _emailFocusNode = FocusNode();
+
   @override
   void initState() {
     super.initState();
     _loadProfileData();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _nameFocusNode.dispose();
+    _emailController.dispose();
+    _emailFocusNode.dispose();
+    super.dispose();
   }
 
   Future<void> _loadProfileData() async {
@@ -104,13 +122,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   @override
-  void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.darkBackground,
@@ -186,7 +197,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               child: IconButton(
                                 icon: const Icon(
                                   Icons.camera_alt,
-                                  color: Colors.white,
+                                  color: AppTheme.textPrimary,
                                   size: 20,
                                 ),
                                 onPressed: _pickProfileImage,
@@ -226,16 +237,36 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                TextField(
-                  controller: _nameController,
-                  decoration: InputDecoration(
-                    hintText: 'Enter your name',
-                    prefixIcon: const Icon(Icons.person_outline),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                Focus(
+                  focusNode: _nameFocusNode,
+                  onFocusChange: (hasFocus) {
+                    if (!hasFocus && _nameEditable) {
+                      setState(() => _nameEditable = false);
+                    }
+                  },
+                  onKey: (node, event) {
+                    if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+                    final key = event.logicalKey;
+                    if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
+                      setState(() => _nameEditable = true);
+                      Future.microtask(() => _nameFocusNode.requestFocus());
+                      return KeyEventResult.handled;
+                    }
+                    return KeyEventResult.ignored;
+                  },
+                  child: TextField(
+                    controller: _nameController,
+                    autofocus: false,
+                    readOnly: !_nameEditable,
+                    decoration: InputDecoration(
+                      hintText: 'Enter your name',
+                      prefixIcon: const Icon(Icons.person_outline),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: AppTheme.cardBackground,
                     ),
-                    filled: true,
-                    fillColor: AppTheme.cardBackground,
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -248,17 +279,37 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                TextField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: InputDecoration(
-                    hintText: 'Enter your email',
-                    prefixIcon: const Icon(Icons.email_outlined),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                Focus(
+                  focusNode: _emailFocusNode,
+                  onFocusChange: (hasFocus) {
+                    if (!hasFocus && _emailEditable) {
+                      setState(() => _emailEditable = false);
+                    }
+                  },
+                  onKey: (node, event) {
+                    if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+                    final key = event.logicalKey;
+                    if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
+                      setState(() => _emailEditable = true);
+                      Future.microtask(() => _emailFocusNode.requestFocus());
+                      return KeyEventResult.handled;
+                    }
+                    return KeyEventResult.ignored;
+                  },
+                  child: TextField(
+                    controller: _emailController,
+                    autofocus: false,
+                    readOnly: !_emailEditable,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: InputDecoration(
+                      hintText: 'Enter your email',
+                      prefixIcon: const Icon(Icons.email_outlined),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: AppTheme.cardBackground,
                     ),
-                    filled: true,
-                    fillColor: AppTheme.cardBackground,
                   ),
                 ),
                 const SizedBox(height: 40),
@@ -279,7 +330,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: AppTheme.textPrimary,
                           ),
                         )
                       : const Text(

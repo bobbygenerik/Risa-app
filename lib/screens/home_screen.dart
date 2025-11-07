@@ -5,7 +5,6 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/content.dart';
-import 'package:iptv_player/widgets/preview_player_widget.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 
@@ -211,7 +210,7 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context) {
           final bool isFocused = Focus.of(context).hasFocus;
           return AnimatedScale(
-            scale: isFocused ? 1.05 : 1.0,
+            scale: isFocused ? 1.08 : 1.0,
             duration: AppDurations.fast,
             curve: Curves.easeOut,
             child: AnimatedContainer(
@@ -221,14 +220,14 @@ class _HomeScreenState extends State<HomeScreen> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(AppSizes.radiusLg),
                 border: isFocused
-                    ? Border.all(color: Colors.white, width: 3)
-                    : null,
+                    ? Border.all(color: AppTheme.primaryBlue, width: 4)
+                    : Border.all(color: Colors.transparent, width: 4),
                 boxShadow: isFocused
                     ? [
                         BoxShadow(
-                          color: AppTheme.primaryBlue.withOpacity(0.5),
-                          blurRadius: 20,
-                          spreadRadius: 2,
+                          color: AppTheme.primaryBlue.withOpacity(0.6),
+                          blurRadius: 24,
+                          spreadRadius: 4,
                         ),
                       ]
                     : [],
@@ -494,16 +493,49 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildContinueWatchingCard(Content content) {
-    // Card content without preview wrapper
-    final cardContent = Container(
-      width: 350,
-      height: 200,
-      child: Stack(
-        children: [
-          // Thumbnail
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-            child: Container(
+    return Focus(
+      onFocusChange: (_) => setState(() {}),
+      child: Builder(
+        builder: (context) {
+          final bool isFocused = Focus.of(context).hasFocus;
+          // Card content without preview wrapper
+          return AnimatedScale(
+            scale: isFocused ? 1.08 : 1.0,
+            duration: AppDurations.fast,
+            curve: Curves.easeOut,
+            child: AnimatedContainer(
+              duration: AppDurations.fast,
+              width: 350,
+              height: 200,
+              margin: EdgeInsets.only(right: AppSizes.md),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                border: isFocused
+                    ? Border.all(color: AppTheme.primaryBlue, width: 4)
+                    : Border.all(color: Colors.transparent, width: 4),
+                boxShadow: isFocused
+                    ? [
+                        BoxShadow(
+                          color: AppTheme.primaryBlue.withOpacity(0.6),
+                          blurRadius: 24,
+                          spreadRadius: 4,
+                        ),
+                      ]
+                    : [],
+              ),
+              child: InkWell(
+                onTap: () {
+                  // Navigate to content detail or player
+                  if (content.videoUrl != null) {
+                    context.push('/content/${content.id}');
+                  }
+                },
+                child: Stack(
+                  children: [
+                    // Thumbnail
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                      child: Container(
               color: AppTheme.cardBackground,
               width: double.infinity,
               height: double.infinity,
@@ -518,76 +550,62 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                     )
                   : _buildContentPlaceholder(content.title),
-            ),
-          ),
+                      ),
+                    ),
 
-          // Gradient overlay
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+                    // Gradient overlay
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Content info
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      child: Padding(
+                        padding: EdgeInsets.all(AppSizes.md),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              content.displayTitle,
+                              style: Theme.of(context).textTheme.titleMedium,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            SizedBox(height: AppSizes.xs),
+                            // Progress bar
+                            LinearProgressIndicator(
+                              value: content.watchProgress ?? 0.0,
+                              backgroundColor: AppTheme.highlight,
+                              color: AppTheme.primaryBlue,
+                              minHeight: 4,
+                            ),
+                            SizedBox(height: AppSizes.xs),
+                            Text(
+                              '${((content.watchProgress ?? 0) * 100).toInt()}% complete',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          ),
-
-          // Content info
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Padding(
-              padding: EdgeInsets.all(AppSizes.md),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    content.displayTitle,
-                    style: Theme.of(context).textTheme.titleMedium,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  SizedBox(height: AppSizes.xs),
-                  // Progress bar
-                  LinearProgressIndicator(
-                    value: content.watchProgress ?? 0.0,
-                    backgroundColor: Colors.grey[700],
-                    color: AppTheme.primaryBlue,
-                    minHeight: 4,
-                  ),
-                  SizedBox(height: AppSizes.xs),
-                  Text(
-                    '${((content.watchProgress ?? 0) * 100).toInt()}% complete',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    // Wrap with preview player if video URL is available
-    return Container(
-      margin: EdgeInsets.only(right: AppSizes.md),
-      child: InkWell(
-        onTap: () {
-          // Navigate to content detail or player
-          if (content.videoUrl != null) {
-            context.push('/content/${content.id}');
-          }
+          );
         },
-        child: content.videoUrl != null
-            ? PreviewPlayerWidget(
-                videoUrl: content.videoUrl!,
-                child: cardContent,
-              )
-            : cardContent,
       ),
     );
   }

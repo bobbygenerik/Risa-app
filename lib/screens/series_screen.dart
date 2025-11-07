@@ -444,16 +444,41 @@ class _SeriesScreenState extends State<SeriesScreen> {
   ) {
     final firstEpisode = episodes.first;
 
-    return Container(
-      width: 140,
-      margin: EdgeInsets.only(right: AppSizes.md),
-      child: InkWell(
-        onTap: () {
-          context.push('/content/${firstEpisode.id}', extra: firstEpisode);
-        },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return Focus(
+      onFocusChange: (_) => setState(() {}),
+      child: Builder(
+        builder: (context) {
+          final bool isFocused = Focus.of(context).hasFocus;
+          return AnimatedScale(
+            scale: isFocused ? 1.08 : 1.0,
+            duration: AppDurations.fast,
+            curve: Curves.easeOut,
+            child: AnimatedContainer(
+              duration: AppDurations.fast,
+              width: 140,
+              margin: EdgeInsets.only(right: AppSizes.md),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                border: isFocused
+                    ? Border.all(color: AppTheme.primaryBlue, width: 3)
+                    : Border.all(color: Colors.transparent, width: 3),
+                boxShadow: isFocused
+                    ? [
+                        BoxShadow(
+                          color: AppTheme.primaryBlue.withOpacity(0.6),
+                          blurRadius: 20,
+                          spreadRadius: 3,
+                        ),
+                      ]
+                    : [],
+              ),
+              child: InkWell(
+                onTap: () {
+                  context.push('/content/${firstEpisode.id}', extra: firstEpisode);
+                },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
             // Series Poster
             Expanded(
               child: ClipRRect(
@@ -520,7 +545,11 @@ class _SeriesScreenState extends State<SeriesScreen> {
                 ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
               ),
           ],
-        ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

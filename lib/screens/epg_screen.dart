@@ -647,7 +647,7 @@ class _EPGScreenState extends State<EPGScreen> {
               SizedBox(height: 4),
               LinearProgressIndicator(
                 value: currentProgram.progressPercentage,
-                backgroundColor: Colors.grey[700],
+                backgroundColor: AppTheme.highlight,
                 color: AppTheme.primaryBlue,
                 minHeight: 3,
               ),
@@ -1022,8 +1022,8 @@ class _EPGScreenState extends State<EPGScreen> {
                 if (isLive)
                   LinearProgressIndicator(
                     value: program.progressPercentage,
-                    backgroundColor: Colors.white.withOpacity(0.3),
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    backgroundColor: AppTheme.textPrimary.withOpacity(0.3),
+                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.textPrimary),
                     minHeight: 2,
                   ),
               ],

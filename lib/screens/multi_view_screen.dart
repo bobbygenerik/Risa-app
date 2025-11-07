@@ -362,7 +362,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                     children: [
                       const Icon(
                         Icons.error_outline,
-                        color: Colors.red,
+                        color: AppTheme.accentRed,
                         size: 48,
                       ),
                       const SizedBox(height: 16),

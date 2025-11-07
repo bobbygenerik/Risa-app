@@ -7,7 +7,7 @@ class AppTheme {
   static const Color darkBackground = Color(0xFF0F0F0F);
   static const Color cardBackground = Color(0xFF1A1A1A);
   static const Color sidebarBackground = Color(0xFF141414);
-  static const Color textPrimary = Color(0xFFFFFFFF);
+  static const Color textPrimary = Color(0xFFE8E8E8); // Softer off-white for better theme cohesion
   static const Color textSecondary = Color(0xFFB3B3B3);
   static const Color textTertiary = Color(0xFF808080);
   
@@ -84,35 +84,40 @@ class AppTheme {
           color: textPrimary,
         ),
         headlineMedium: TextStyle(
-          fontSize: 24,
+          fontSize: 22,
           fontWeight: FontWeight.w600,
           color: textPrimary,
         ),
         headlineSmall: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-          color: textPrimary,
-        ),
-        titleLarge: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: textPrimary,
         ),
-        titleMedium: TextStyle(
+        titleLarge: TextStyle(
           fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: textPrimary,
+        ),
+        titleMedium: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+          color: textPrimary,
+        ),
+        titleSmall: TextStyle(
+          fontSize: 14,
           fontWeight: FontWeight.w500,
           color: textPrimary,
         ),
         bodyLarge: TextStyle(
-          fontSize: 16,
+          fontSize: 14,
           color: textPrimary,
         ),
         bodyMedium: TextStyle(
-          fontSize: 14,
+          fontSize: 13,
           color: textSecondary,
         ),
         bodySmall: TextStyle(
-          fontSize: 12,
+          fontSize: 11,
           color: textTertiary,
         ),
       ),
@@ -193,35 +198,35 @@ class AppTheme {
 }
 
 class AppSizes {
-  // Spacing
-  static const double xs = 4.0;
-  static const double sm = 8.0;
-  static const double md = 16.0;
-  static const double lg = 24.0;
-  static const double xl = 32.0;
-  static const double xxl = 48.0;
+  // Spacing scale (optimized for TV 10-foot interface - more compact)
+  static const double xs = 3.0;
+  static const double sm = 6.0;
+  static const double md = 10.0;  // Further reduced for TV
+  static const double lg = 14.0;  // Further reduced for TV
+  static const double xl = 18.0;  // Further reduced for TV
+  static const double xxl = 28.0; // Further reduced for TV
   
   // Border Radius
   static const double radiusSm = 4.0;
-  static const double radiusMd = 8.0;
-  static const double radiusLg = 12.0;
-  static const double radiusXl = 16.0;
+  static const double radiusMd = 6.0;
+  static const double radiusLg = 8.0;
+  static const double radiusXl = 12.0;
   static const double radiusFull = 9999.0;
   
   // Component Sizes
-  static const double sidebarWidth = 220.0;
-  static const double sidebarCollapsedWidth = 80.0;
-  static const double appBarHeight = 70.0;
-  static const double cardHeight = 160.0;
-  static const double cardWidth = 120.0;
-  static const double cardLandscapeHeight = 180.0;
-  static const double cardLandscapeWidth = 300.0;
+  static const double sidebarWidth = 200.0;  // Slightly narrower
+  static const double sidebarCollapsedWidth = 70.0;
+  static const double appBarHeight = 60.0;  // Reduced height
+  static const double cardHeight = 140.0;
+  static const double cardWidth = 110.0;
+  static const double cardLandscapeHeight = 160.0;
+  static const double cardLandscapeWidth = 280.0;
   
   // Icon Sizes
-  static const double iconSm = 16.0;
-  static const double iconMd = 24.0;
-  static const double iconLg = 32.0;
-  static const double iconXl = 48.0;
+  static const double iconSm = 14.0;
+  static const double iconMd = 20.0;
+  static const double iconLg = 28.0;
+  static const double iconXl = 42.0;
 }
 
 class AppDurations {

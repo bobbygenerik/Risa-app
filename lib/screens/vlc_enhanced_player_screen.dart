@@ -459,7 +459,7 @@ class _VlcEnhancedPlayerScreenState extends State<VlcEnhancedPlayerScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to start transcription: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppTheme.accentRed,
           ),
         );
       }
@@ -570,7 +570,7 @@ class _VlcEnhancedPlayerScreenState extends State<VlcEnhancedPlayerScreen> {
                       const Icon(
                         Icons.error_outline,
                         size: 64,
-                        color: Colors.red,
+                        color: AppTheme.accentRed,
                       ),
                       const SizedBox(height: 24),
                       Text(
@@ -715,7 +715,7 @@ class _VlcEnhancedPlayerScreenState extends State<VlcEnhancedPlayerScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.red,
+                color: AppTheme.accentRed,
                 borderRadius: BorderRadius.circular(4),
               ),
               child: const Text(

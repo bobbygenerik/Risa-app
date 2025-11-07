@@ -393,16 +393,16 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
               child: Row(
                 children: [
                   IconButton(
-                    icon: Icon(Icons.arrow_back, color: Colors.white),
+                    icon: Icon(Icons.arrow_back, color: AppTheme.textPrimary),
                     onPressed: () {},
                   ),
                   Spacer(),
                   IconButton(
-                    icon: Icon(Icons.cast, color: Colors.white),
+                    icon: Icon(Icons.cast, color: AppTheme.textPrimary),
                     onPressed: () {},
                   ),
                   IconButton(
-                    icon: Icon(Icons.settings, color: Colors.white),
+                    icon: Icon(Icons.settings, color: AppTheme.textPrimary),
                     onPressed: () {},
                   ),
                 ],
@@ -423,7 +423,7 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
                   IconButton(
                     icon: Icon(
                       Icons.skip_previous,
-                      color: Colors.white,
+                      color: AppTheme.textPrimary,
                       size: 32,
                     ),
                     onPressed: () {
@@ -432,12 +432,12 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
                   ),
                   SizedBox(width: AppSizes.xl),
                   IconButton(
-                    icon: Icon(Icons.play_arrow, color: Colors.white, size: 48),
+                    icon: Icon(Icons.play_arrow, color: AppTheme.textPrimary, size: 48),
                     onPressed: () {},
                   ),
                   SizedBox(width: AppSizes.xl),
                   IconButton(
-                    icon: Icon(Icons.skip_next, color: Colors.white, size: 32),
+                    icon: Icon(Icons.skip_next, color: AppTheme.textPrimary, size: 32),
                     onPressed: () {
                       // Next channel
                     },

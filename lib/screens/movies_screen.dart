@@ -405,16 +405,41 @@ class _MoviesScreenState extends State<MoviesScreen> {
   }
 
   Widget _buildMovieCard(BuildContext context, Content movie) {
-    return Container(
-      width: 140,
-      margin: EdgeInsets.only(right: AppSizes.md),
-      child: InkWell(
-        onTap: () {
-          context.push('/content/${movie.id}', extra: movie);
-        },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return Focus(
+      onFocusChange: (_) => setState(() {}),
+      child: Builder(
+        builder: (context) {
+          final bool isFocused = Focus.of(context).hasFocus;
+          return AnimatedScale(
+            scale: isFocused ? 1.08 : 1.0,
+            duration: AppDurations.fast,
+            curve: Curves.easeOut,
+            child: AnimatedContainer(
+              duration: AppDurations.fast,
+              width: 140,
+              margin: EdgeInsets.only(right: AppSizes.md),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                border: isFocused
+                    ? Border.all(color: AppTheme.primaryBlue, width: 3)
+                    : Border.all(color: Colors.transparent, width: 3),
+                boxShadow: isFocused
+                    ? [
+                        BoxShadow(
+                          color: AppTheme.primaryBlue.withOpacity(0.6),
+                          blurRadius: 20,
+                          spreadRadius: 3,
+                        ),
+                      ]
+                    : [],
+              ),
+              child: InkWell(
+                onTap: () {
+                  context.push('/content/${movie.id}', extra: movie);
+                },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
             // Movie Poster
             Expanded(
               child: ClipRRect(
@@ -444,7 +469,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
                         right: 0,
                         child: LinearProgressIndicator(
                           value: movie.watchProgress!,
-                          backgroundColor: Colors.grey[800],
+                          backgroundColor: AppTheme.highlight,
                           color: AppTheme.primaryBlue,
                           minHeight: 4,
                         ),
@@ -473,7 +498,11 @@ class _MoviesScreenState extends State<MoviesScreen> {
                 ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
               ),
           ],
-        ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

@@ -133,7 +133,8 @@ class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin
 
   // Helper: Try to focus a screen's secondary menu first; fall back to main content; else next traversal
   void _requestFirstSecondaryOrContentFocus(String route) {
-    Future.microtask(() {
+    // Small delay to ensure content is fully rendered before requesting focus
+    Future.delayed(Duration(milliseconds: 50), () {
       bool handled = false;
       try {
         final contentState = _getContentScreenState(route);
@@ -220,12 +221,10 @@ class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin
       _moveFocus(-1);
       return KeyEventResult.handled;
     } else if (key == LogicalKeyboardKey.arrowRight) {
-      // Move focus into main content area (prefer secondary menu if present)
+      // Move focus into main content area.
+      // Use a microtask to ensure the focus request happens after the current event loop.
       Future.microtask(() {
         _contentScopeNode.requestFocus();
-        final route = _navigationItems[_currentFocusIndex.clamp(0, _navigationItems.length - 1)].route;
-        // Try secondary menu first, then main content; finally fall back to traversal
-        _requestFirstSecondaryOrContentFocus(route);
       });
       return KeyEventResult.handled;
     } else if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
@@ -276,16 +275,9 @@ class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin
         }
       }
       return KeyEventResult.handled;
-    } else if (key == LogicalKeyboardKey.arrowUp) {
-      // Move focus to top bar (search)
-      _searchButtonFocusNode.requestFocus();
-      return KeyEventResult.handled;
-    } else if (key == LogicalKeyboardKey.arrowRight) {
-      // Fallback: If content didn't handle RIGHT, move focus to top bar (Search)
-      // Because this Focus is an ancestor, this only fires when no child consumed the key.
-      _searchButtonFocusNode.requestFocus();
-      return KeyEventResult.handled;
     }
+    // Let UP/DOWN arrows pass through to allow content scrolling
+    // Content screens can handle their own UP navigation to top bar if needed
     return KeyEventResult.ignored;
   }
 
@@ -293,6 +285,14 @@ class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin
     setState(() {
       final len = _navFocusNodes.length;
       if (len == 0) return;
+      
+      // Special case: pressing UP from the topmost item should go to top bar
+      if (direction < 0 && _currentFocusIndex == 0) {
+        _searchButtonFocusNode.requestFocus();
+        print('🎯 Focus moved to top bar (search button)');
+        return;
+      }
+      
       _currentFocusIndex += direction;
       if (_currentFocusIndex >= len) {
         _currentFocusIndex = 0; // Wrap to first
@@ -350,15 +350,22 @@ class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin
             // Sidebar
             _buildSidebar(currentRoute),
 
+            // Vertical divider
+            VerticalDivider(
+              width: 2,
+              thickness: 2,
+              color: AppTheme.highlight.withOpacity(0.15),
+            ),
+
             // Main content
             Expanded(
-              child: Focus(
-                focusNode: _contentScopeNode,
-                onKey: _handleContentKey,
-                child: Column(
-                  children: [
-                    _buildAppBar(context, currentRoute),
-                    Expanded(
+              child: Column(
+                children: [
+                  _buildAppBar(context, currentRoute),
+                  Expanded(
+                    child: Focus(
+                      focusNode: _contentScopeNode,
+                      onKey: _handleContentKey,
                       child: AnimatedSwitcher(
                         duration: Duration(milliseconds: 250),
                         switchInCurve: Curves.easeOut,
@@ -375,8 +382,8 @@ class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin
                         child: widget.child,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -406,82 +413,90 @@ class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin
         color: AppTheme.sidebarBackground,
         child: Column(
           children: [
-          // App logo above sidebar (smaller, contained within fixed space)
-          Container(
-            height: AppSizes.appBarHeight, // Match top bar height for perfect alignment
-            width: double.infinity,
-            padding: EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-            child: _isSidebarCollapsed
-                ? Center(
-                    child: ScaleTransition(
-                      scale: _logoScaleAnimation,
-                      // Keep the container space the same but increase the logo image itself
-                      child: SizedBox(
-                        width: 64,
-                        height: 64,
-                        child: FittedBox(
-                          fit: BoxFit.contain,
-                          child: Image.asset('assets/images/croppedlogo2.png'),
-                        ),
-                      ),
+            // App logo and divider container
+            Container(
+              height: AppSizes.appBarHeight, // Match top bar height for perfect alignment
+              width: double.infinity,
+              child: Stack(
+                children: [
+                  // Logo
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 6.0),  // Reduced
+                      child: _isSidebarCollapsed
+                          ? ScaleTransition(
+                              scale: _logoScaleAnimation,
+                              child: SizedBox(
+                                width: 54,  // Reduced from 64
+                                height: 54,  // Reduced from 64
+                                child: FittedBox(
+                                  fit: BoxFit.contain,
+                                  child: Image.asset('assets/images/croppedlogo2.png'),
+                                ),
+                              ),
+                            )
+                          : ScaleTransition(
+                              scale: _logoScaleAnimation,
+                              child: SizedBox.expand(
+                                child: FittedBox(
+                                  fit: BoxFit.contain,
+                                  child: Image.asset('assets/images/croppedlogo2.png'),
+                                ),
+                              ),
+                            ),
                     ),
-                  )
-                : ScaleTransition(
-                    scale: _logoScaleAnimation,
-                    child: SizedBox.expand(
-                      child: FittedBox(
-                        fit: BoxFit.contain,
-                        child: Image.asset(
-                          'assets/images/croppedlogo2.png',
-                        ),
+                  ),
+                  // Solid pink line at bottom
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: AnimatedOpacity(
+                      opacity: _isSidebarCollapsed ? 0.0 : 1.0,
+                      duration: AppDurations.fast,
+                      child: Container(
+                        height: 2,
+                        color: AppTheme.accentPink,
                       ),
                     ),
                   ),
-          ),
-
-          // Slightly nudge the divider up so it visually lines up with the app bar's bottom line
-          Transform.translate(
-            offset: Offset(0, -2),
-            child: Divider(
-              color: AppTheme.divider,
-              height: 1,
-              thickness: 1,
+                ],
+              ),
             ),
-          ),
 
-          // Navigation Items
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.symmetric(vertical: AppSizes.sm),
-              children: [
-                for (int i = 0; i < _navigationItems.length; i++)
-                  _buildNavigationItem(
-                    index: i,
-                    item: _navigationItems[i],
-                    isSelected: currentRoute == _navigationItems[i].route,
-                    focusNode: _navFocusNodes[i],
-                    onTap: () {
-                      context.go(_navigationItems[i].route);
-                    },
-                  ),
-              ],
+            // Navigation Items
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.only(top: AppSizes.sm, bottom: AppSizes.sm),  // Prevent first item clipping on focus
+                children: [
+                  for (int i = 0; i < _navigationItems.length; i++)
+                    _buildNavigationItem(
+                      index: i,
+                      item: _navigationItems[i],
+                      isSelected: currentRoute == _navigationItems[i].route,
+                      focusNode: _navFocusNodes[i],
+                      onTap: () {
+                        context.go(_navigationItems[i].route);
+                      },
+                    ),
+                ],
+              ),
             ),
-          ),
 
-          // Exit
-          _buildNavigationItem(
-            item: NavigationItem(
-              icon: Icons.exit_to_app,
-              label: 'Exit',
-              route: '/exit',
+            // Exit
+            _buildNavigationItem(
+              item: NavigationItem(
+                icon: Icons.exit_to_app,
+                label: 'Exit',
+                route: '/exit',
+              ),
+              index: 6,
+              isSelected: false,
+              focusNode: _navFocusNodes[6],
+              onTap: _showExitDialog,
             ),
-            index: 6,
-            isSelected: false,
-            focusNode: _navFocusNodes[6],
-            onTap: _showExitDialog,
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
@@ -493,49 +508,7 @@ class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin
     required VoidCallback onTap,
     required FocusNode focusNode,
   }) {
-    // Sidebar: only show blue text for selected (not focused) item, no highlight box or background
     final bool isFocused = focusNode.hasFocus;
-    final bool showBlue = !isFocused && isSelected;
-
-    // Build the main content widget for this nav item (either centered icon when collapsed,
-    // or icon + label when expanded). Using a single widget simplifies collection logic.
-    final Widget contentWidget = _isSidebarCollapsed
-        ? Expanded(
-            child: Center(
-              child: Icon(
-                item.icon,
-                color: Colors.white,
-                size: AppSizes.iconMd + (isFocused ? 4 : 0),
-              ),
-            ),
-          )
-        : Row(
-            children: [
-              Icon(
-                item.icon,
-                color: isFocused
-                    ? Colors.white
-                    : (showBlue ? AppTheme.primaryBlue : Colors.white),
-                size: AppSizes.iconMd + (isFocused ? 4 : 0),
-              ),
-              SizedBox(width: AppSizes.md),
-              Expanded(
-                child: Text(
-                  item.label,
-                  style: TextStyle(
-                    color: isFocused
-                        ? Colors.white
-                        : (showBlue ? AppTheme.primaryBlue : Colors.white),
-                    fontWeight: (isFocused || isSelected)
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                    fontSize: 17,
-                    letterSpacing: showBlue ? 0.5 : 0,
-                  ),
-                ),
-              ),
-            ],
-          );
 
     return GestureDetector(
       onTap: onTap,
@@ -550,43 +523,50 @@ class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin
           }
         },
         child: AnimatedScale(
-          scale: isFocused ? 1.12 : 1.0,
+          scale: isFocused ? 1.08 : 1.0,  // Reduced from 1.12
           duration: AppDurations.fast,
           curve: Curves.easeOut,
           child: AnimatedContainer(
             duration: AppDurations.fast,
-            // No surrounding box or border for sidebar items per request
             decoration: BoxDecoration(),
             child: Padding(
               padding: EdgeInsets.symmetric(
-                horizontal: AppSizes.md,
-                vertical: 16,
+                horizontal: AppSizes.lg,  // Adjusted
+                vertical: 12,  // Reduced from 18
               ),
               child: Row(
                 children: [
-                  // Selected indicator: thin vertical brand bar with fade-in
-                  AnimatedOpacity(
-                    opacity: isSelected ? 1.0 : 0.0,
-                    duration: AppDurations.fast,
-                    child: AnimatedContainer(
-                      duration: AppDurations.fast,
-                      width: isSelected ? (isFocused ? 4 : 2) : 0,
-                      height: 24,
-                      decoration: isSelected
-                          ? const BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [AppTheme.primaryBlue, AppTheme.accentPink],
-                              ),
-                            )
-                          : null,
-                    ),
+                  Icon(
+                    item.icon,
+                    color: isFocused ? AppTheme.primaryBlue : AppTheme.textPrimary,
+                    size: AppSizes.iconMd + (isFocused ? 3 : 0),  // Reduced from 4
                   ),
-                  if (isSelected) SizedBox(width: AppSizes.sm),
-
-                  // Insert the pre-built content widget (either single centered icon or icon+label)
-                  contentWidget,
+                  if (!_isSidebarCollapsed) ...[
+                    SizedBox(width: AppSizes.sm),  // Reduced from md
+                    Expanded(
+                      child: Text(
+                        item.label,
+                        style: TextStyle(
+                          color: isFocused ? AppTheme.primaryBlue : AppTheme.textPrimary,
+                          fontWeight: (isFocused || isSelected)
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          fontSize: 15,  // Reduced from 17
+                          letterSpacing: isFocused ? 0.3 : 0,  // Reduced from 0.5
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (isSelected)
+                    Container(
+                      width: 3,
+                      height: 20,
+                      margin: const EdgeInsets.only(left: 10),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentPink,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -639,12 +619,14 @@ class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin
                         }
                         return KeyEventResult.ignored;
                       },
+                      onFocusChange: (_) => setState(() {}),
                       child: Builder(
                         builder: (context) {
                           final isFocused = Focus.of(context).hasFocus;
                           return IconButton(
                             icon: Icon(
                               Icons.search,
+                              size: 24,  // Reduced from default
                               color: isFocused ? AppTheme.primaryBlue : AppTheme.textPrimary,
                             ),
                             onPressed: () {
@@ -671,7 +653,13 @@ class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin
                           _searchButtonFocusNode.requestFocus();
                           return KeyEventResult.handled;
                         } else if (key == LogicalKeyboardKey.arrowDown) {
-                          _contentScopeNode.requestFocus();
+                          // If on settings screen, focus its sidebar, otherwise focus main content
+                          final currentRoute = GoRouterState.of(context).uri.path;
+                          if (currentRoute.startsWith('/settings')) {
+                             _requestFirstSecondaryOrContentFocus('/settings');
+                          } else {
+                            _contentScopeNode.requestFocus();
+                          }
                           return KeyEventResult.handled;
                         } else if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
                           context.go('/settings');
@@ -679,17 +667,17 @@ class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin
                         }
                         return KeyEventResult.ignored;
                       },
+                      onFocusChange: (_) => setState(() {}),
                       child: Builder(
                         builder: (context) {
-                          final isFocused = Focus.of(context).hasFocus;
+                          final bool isFocused = Focus.of(context).hasFocus;
                           return IconButton(
                             icon: Icon(
                               Icons.settings,
                               color: isFocused ? AppTheme.primaryBlue : AppTheme.textPrimary,
+                              size: 24,  // Reduced from 28
                             ),
-                            onPressed: () {
-                              context.go('/settings');
-                            },
+                            onPressed: () => context.go('/settings'),
                           );
                         },
                       ),
@@ -714,16 +702,13 @@ class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin
               ),
             ),
           ),
-          // Brand gradient accent line at bottom
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
             child: Container(
               height: 2,
-              decoration: const BoxDecoration(
-                gradient: AppTheme.brandGradient,
-              ),
+              color: AppTheme.accentPink,
             ),
           ),
         ],
