@@ -120,11 +120,11 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         allowMuting: true,
         showControls: true,
         showControlsOnInitialize: true,
-        materialProgressColors: ChewieProgressColors(
-          playedColor: AppTheme.primaryBlue,
-          handleColor: AppTheme.primaryBlue,
-          backgroundColor: Colors.grey,
-          bufferedColor: Colors.grey.withOpacity(0.5),
+        progressColors: ChewieProgressColors(
+          playedColor: AppTheme.accentPink,
+          handleColor: AppTheme.accentPink,
+          backgroundColor: AppTheme.textSecondary,
+          bufferedColor: AppTheme.textSecondary.withOpacity(0.5),
         ),
         placeholder: Container(
           color: Colors.black,
@@ -137,7 +137,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error, color: Colors.red, size: 48),
+                const Icon(Icons.error, color: AppTheme.accentRed, size: 48),
                 const SizedBox(height: 16),
                 Text(
                   'Playback Error',
@@ -432,7 +432,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            const Icon(Icons.error_outline, size: 64, color: AppTheme.accentRed),
             const SizedBox(height: 16),
             const Text(
               'Playback Error',
@@ -637,7 +637,7 @@ Widget _buildSubtitleOverlay() {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.red,
+                  color: AppTheme.accentRed,
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: const Text(

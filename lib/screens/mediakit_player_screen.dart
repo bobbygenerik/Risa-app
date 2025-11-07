@@ -255,7 +255,7 @@ class _MediaKitPlayerScreenState extends State<MediaKitPlayerScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.error, color: Colors.red, size: 64),
+                        const Icon(Icons.error, color: AppTheme.accentRed, size: 64),
                         const SizedBox(height: 24),
                         Text(
                           'Playback Error',
@@ -440,7 +440,7 @@ class _MediaKitPlayerScreenState extends State<MediaKitPlayerScreen> {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.red,
+                          color: AppTheme.accentRed,
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: const Row(

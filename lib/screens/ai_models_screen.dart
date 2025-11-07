@@ -134,7 +134,7 @@ class AIModelsScreen extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: Colors.orange.withOpacity(0.1),
+            color: AppTheme.accentOrange.withOpacity(0.1),
             borderRadius: BorderRadius.circular(6),
           ),
           child: Row(
@@ -142,13 +142,13 @@ class AIModelsScreen extends StatelessWidget {
               const Icon(
                 Icons.lightbulb_outline,
                 size: 16,
-                color: Colors.orange,
+                color: AppTheme.accentOrange,
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   hint,
-                  style: const TextStyle(fontSize: 12, color: Colors.orange),
+                  style: const TextStyle(fontSize: 12, color: AppTheme.accentOrange),
                 ),
               ),
             ],
@@ -286,8 +286,8 @@ class AIModelsScreen extends StatelessWidget {
                       icon: const Icon(Icons.check_circle, size: 18),
                       label: const Text('Downloaded'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green.withOpacity(0.2),
-                        foregroundColor: Colors.green,
+                        backgroundColor: AppTheme.accentGreen.withOpacity(0.2),
+                        foregroundColor: AppTheme.accentGreen,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                     ),
@@ -341,7 +341,7 @@ class AIModelsScreen extends StatelessWidget {
 
     switch (status) {
       case ModelDownloadStatus.downloaded:
-        color = Colors.green;
+        color = AppTheme.accentGreen;
         icon = Icons.check_circle;
         label = 'Ready';
         break;
@@ -351,7 +351,7 @@ class AIModelsScreen extends StatelessWidget {
         label = 'Downloading';
         break;
       case ModelDownloadStatus.corrupted:
-        color = Colors.orange;
+        color = AppTheme.accentOrange;
         icon = Icons.warning;
         label = 'Corrupted';
         break;

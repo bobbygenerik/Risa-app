@@ -109,11 +109,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         allowMuting: true,
         showControls: true,
         showControlsOnInitialize: true,
-        materialProgressColors: ChewieProgressColors(
-          playedColor: AppTheme.primaryBlue,
-          handleColor: AppTheme.primaryBlue,
-          backgroundColor: Colors.grey,
-          bufferedColor: Colors.grey.withOpacity(0.5),
+        progressColors: ChewieProgressColors(
+          playedColor: AppTheme.accentPink,
+          handleColor: AppTheme.accentPink,
+          backgroundColor: AppTheme.textSecondary,
+          bufferedColor: AppTheme.textSecondary.withOpacity(0.5),
         ),
         placeholder: Container(
           color: Colors.black,
@@ -126,7 +126,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error, color: Colors.red, size: 48),
+                const Icon(Icons.error, color: AppTheme.accentRed, size: 48),
                 const SizedBox(height: 16),
                 Text(
                   'Playback Error',
@@ -280,7 +280,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                                       height: 100,
                                       decoration: BoxDecoration(
                                         gradient: LinearGradient(
-                                          colors: [Color(0xFF2E3192), Color(0xFF00BCD4)],
+                                          colors: [Color(0xFF2E3192), AppTheme.accentPink],
                                           begin: Alignment.topLeft,
                                           end: Alignment.bottomRight,
                                         ),
@@ -341,7 +341,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                      const Icon(Icons.error_outline, size: 64, color: AppTheme.accentRed),
                       const SizedBox(height: 24),
                       Text(
                         'Failed to load video',
