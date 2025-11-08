@@ -87,9 +87,16 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
 
   Widget _buildTab(String label, int index) {
     final isSelected = _selectedTab == index;
-    return Focus(
-      focusNode: _tabFocusNodes[index],
-      onKey: (node, event) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedTab = index;
+        });
+        _tabFocusNodes[index].requestFocus();
+      },
+      child: Focus(
+        focusNode: _tabFocusNodes[index],
+        onKey: (node, event) {
         if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
         final key = event.logicalKey;
         if (key == LogicalKeyboardKey.arrowUp) {
@@ -136,10 +143,11 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
                 fontSize: 16,
               ),
             ),
-          );
-        },
-      ),
-    );
+          ); // AnimatedContainer closes
+        }, // builder function closes
+      ), // Builder widget closes
+    ), // Focus widget closes
+  ); // GestureDetector closes and return statement ends
   }
 
   Widget _buildTabContent() {

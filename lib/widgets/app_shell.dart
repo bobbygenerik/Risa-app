@@ -134,13 +134,21 @@ class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin
   // Helper: Try to focus a screen's secondary menu first; fall back to main content; else next traversal
   void _requestFirstSecondaryOrContentFocus(String route) {
     // Small delay to ensure content is fully rendered before requesting focus
-    Future.delayed(Duration(milliseconds: 50), () {
+    Future.delayed(Duration(milliseconds: 150), () {
       bool handled = false;
       try {
         final contentState = _getContentScreenState(route);
         if (contentState != null && contentState.mounted) {
           final dyn = contentState as dynamic;
-          // Try common method names for secondary menu focus, each guarded by try/catch
+          // Try common method names for focus in order of priority
+          // 1. Settings screen - focus its sidebar
+          if (!handled && route.startsWith('/settings')) {
+            try {
+              dyn.requestFirstSidebarFocus();
+              handled = true;
+            } catch (_) {}
+          }
+          // 2. Screens with secondary menus (tabs/categories)
           if (!handled) {
             try {
               dyn.requestFirstSecondaryFocus();
@@ -159,6 +167,7 @@ class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin
               handled = true;
             } catch (_) {}
           }
+          // 3. Main content area (buttons, cards, etc.)
           if (!handled) {
             try {
               dyn.requestFirstContentFocus();
@@ -166,12 +175,16 @@ class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin
             } catch (_) {}
           }
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('⚠️ Error focusing content: $e');
+      }
       if (!handled) {
         // Fallback: attempt to move to the next focusable within content area
         try {
           FocusScope.of(context).nextFocus();
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('⚠️ nextFocus() failed: $e');
+        }
       }
     });
   }
@@ -207,6 +220,10 @@ class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin
       case '/epg':
         return state.runtimeType.toString().contains('EPGScreen');
       default:
+        // Handle routes that start with certain paths
+        if (route.startsWith('/settings')) {
+          return state.runtimeType.toString().contains('SettingsScreen');
+        }
         return false;
     }
   }
@@ -221,10 +238,11 @@ class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin
       _moveFocus(-1);
       return KeyEventResult.handled;
     } else if (key == LogicalKeyboardKey.arrowRight) {
-      // Move focus into main content area.
-      // Use a microtask to ensure the focus request happens after the current event loop.
+      // Move focus into main content area, trying to focus first interactive element
+      final currentRoute = GoRouterState.of(context).uri.path;
       Future.microtask(() {
-        _contentScopeNode.requestFocus();
+        // Try to focus first content item in the screen
+        _requestFirstSecondaryOrContentFocus(currentRoute);
       });
       return KeyEventResult.handled;
     } else if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
@@ -262,17 +280,17 @@ class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin
             }
           } catch (_) {}
           // Fallback to main sidebar
-          _sidebarScopeNode.requestFocus();
           if (_navFocusNodes.isNotEmpty) {
             _navFocusNodes[_currentFocusIndex.clamp(0, _navFocusNodes.length - 1)].requestFocus();
           }
         });
       } else {
         // Return focus to main sidebar, keep current index
-        _sidebarScopeNode.requestFocus();
-        if (_navFocusNodes.isNotEmpty) {
-          _navFocusNodes[_currentFocusIndex.clamp(0, _navFocusNodes.length - 1)].requestFocus();
-        }
+        Future.microtask(() {
+          if (_navFocusNodes.isNotEmpty) {
+            _navFocusNodes[_currentFocusIndex.clamp(0, _navFocusNodes.length - 1)].requestFocus();
+          }
+        });
       }
       return KeyEventResult.handled;
     }
@@ -446,10 +464,10 @@ class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin
                             ),
                     ),
                   ),
-                  // Solid pink line at bottom
+                  // Solid pink line at bottom - extends to cover the divider gap
                   Positioned(
                     left: 0,
-                    right: 0,
+                    right: -2, // Extend 2px to the right to cover the 2px divider
                     bottom: 0,
                     child: AnimatedOpacity(
                       opacity: _isSidebarCollapsed ? 0.0 : 1.0,
@@ -577,23 +595,22 @@ class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin
   }
 
   Widget _buildAppBar(BuildContext context, String currentRoute) {
-    return Container(
-      height: AppSizes.appBarHeight,
-      decoration: BoxDecoration(
-        color: AppTheme.darkBackground,
-      ),
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSizes.lg),
-              child: Row(
-                children: [
-                  // Dynamic breadcrumb showing current context
-                  _buildBreadcrumb(currentRoute),
-                  Expanded(child: Container()), // Spacer
-                  // Search button (top bar: blue icon on focus only)
-                  Tooltip(
+    return Stack(
+      children: [
+        // Main AppBar container
+        Container(
+          height: AppSizes.appBarHeight,
+          decoration: BoxDecoration(
+            color: AppTheme.darkBackground,
+          ),
+          padding: EdgeInsets.symmetric(horizontal: AppSizes.lg),
+          child: Row(
+            children: [
+              // Dynamic breadcrumb showing current context
+              _buildBreadcrumb(currentRoute),
+              Expanded(child: Container()), // Spacer
+              // Search button (top bar: blue icon on focus only)
+              Tooltip(
                     message: 'Search',
                     waitDuration: Duration(milliseconds: 400),
                     child: Focus(
@@ -653,10 +670,21 @@ class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin
                           _searchButtonFocusNode.requestFocus();
                           return KeyEventResult.handled;
                         } else if (key == LogicalKeyboardKey.arrowDown) {
-                          // If on settings screen, focus its sidebar, otherwise focus main content
+                          // Focus content area
                           final currentRoute = GoRouterState.of(context).uri.path;
                           if (currentRoute.startsWith('/settings')) {
-                             _requestFirstSecondaryOrContentFocus('/settings');
+                            // For settings, focus the first input field in the current tab
+                            Future.delayed(Duration(milliseconds: 100), () {
+                              try {
+                                final contentState = _getContentScreenState('/settings');
+                                if (contentState != null && contentState.mounted) {
+                                  final dyn = contentState as dynamic;
+                                  dyn.requestFirstContentFocus();
+                                }
+                              } catch (_) {
+                                _contentScopeNode.requestFocus();
+                              }
+                            });
                           } else {
                             _contentScopeNode.requestFocus();
                           }
@@ -701,18 +729,17 @@ class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin
                 ],
               ),
             ),
+        // Pink line at bottom of top bar - extends left to meet sidebar line
+        Positioned(
+          left: -2, // Extend 2px to the left to cover the divider gap
+          right: 0,
+          bottom: 0,
+          child: Container(
+            height: 2,
+            color: AppTheme.accentPink,
           ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              height: 2,
-              color: AppTheme.accentPink,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:image/image.dart' as img;
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:http/http.dart' as http;
 
 /// On-Device AI Upscaling Service
 /// Uses TensorFlow Lite for real-time video upscaling (FREE - no cloud costs)
@@ -12,11 +15,17 @@ class AIUpscalingService extends ChangeNotifier {
   String _quality = 'Balanced'; // Fast, Balanced, Quality
   bool _isGPUAvailable = false;
   bool _isModelLoaded = false;
+  bool _isDownloading = false;
+  double _downloadProgress = 0.0;
   
   // Model information
-  static const String _modelPath = 'assets/models/esrgan_x2.tflite';
+  static const String _modelAssetPath = 'assets/models/esrgan_x2.tflite';
+  static const String _modelFileName = 'esrgan_x2.tflite';
   static const int _inputSize = 64; // Input tile size
   static const int _outputScale = 2; // 2x upscaling
+  
+  // Hugging Face model URL
+  static const String _modelUrl = 'https://huggingface.co/philz1337x/upscaler/resolve/main/ESRGAN_SRx2_DF2KOST_official-ff704c30.pth.tflite';
   
   bool get isInitialized => _isInitialized;
   bool get isEnabled => _isEnabled;
@@ -24,12 +33,29 @@ class AIUpscalingService extends ChangeNotifier {
   bool get gpuAvailable => _checkGPUAvailability();
   bool get isGPUAvailable => _isGPUAvailable;
   bool get isModelLoaded => _isModelLoaded;
+  bool get isDownloading => _isDownloading;
+  double get downloadProgress => _downloadProgress;
 
   /// Initialize the AI upscaling model
   Future<bool> initialize() async {
     if (_isInitialized) return true;
 
     try {
+      // First check if downloaded model exists
+      final appDir = await getApplicationDocumentsDirectory();
+      final downloadedModelPath = '${appDir.path}/$_modelFileName';
+      final downloadedModel = File(downloadedModelPath);
+      
+      String modelPath;
+      if (await downloadedModel.exists()) {
+        modelPath = downloadedModelPath;
+        debugPrint('AI Upscaling: Using downloaded model');
+      } else {
+        // Try to load from assets
+        modelPath = _modelAssetPath;
+        debugPrint('AI Upscaling: Attempting to load from assets');
+      }
+      
       // Load TFLite model
       final options = InterpreterOptions();
       
@@ -44,10 +70,17 @@ class AIUpscalingService extends ChangeNotifier {
         debugPrint('AI Upscaling: CPU mode with 4 threads');
       }
 
-      _interpreter = await Interpreter.fromAsset(
-        _modelPath,
-        options: options,
-      );
+      if (await downloadedModel.exists()) {
+        _interpreter = await Interpreter.fromFile(
+          downloadedModel,
+          options: options,
+        );
+      } else {
+        _interpreter = await Interpreter.fromAsset(
+          modelPath,
+          options: options,
+        );
+      }
       
       _isInitialized = true;
       _isModelLoaded = true;
@@ -56,11 +89,65 @@ class AIUpscalingService extends ChangeNotifier {
       return true;
     } catch (e) {
       debugPrint('AI Upscaling initialization error: $e');
-      debugPrint('Model not found at $_modelPath - AI upscaling will be disabled');
+      debugPrint('Model not found - use downloadModel() to download it');
       _isInitialized = false;
       _isModelLoaded = false;
       notifyListeners();
       return false;
+    }
+  }
+
+  /// Download the AI upscaling model from Hugging Face
+  Future<bool> downloadModel() async {
+    if (_isDownloading) return false;
+
+    _isDownloading = true;
+    _downloadProgress = 0.0;
+    notifyListeners();
+
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final modelPath = '${appDir.path}/$_modelFileName';
+      
+      debugPrint('Downloading AI model from: $_modelUrl');
+      
+      final request = http.Request('GET', Uri.parse(_modelUrl));
+      final response = await request.send();
+      
+      if (response.statusCode != 200) {
+        throw Exception('Failed to download model: ${response.statusCode}');
+      }
+      
+      final contentLength = response.contentLength ?? 0;
+      final file = File(modelPath);
+      final sink = file.openWrite();
+      
+      var received = 0;
+      await for (final chunk in response.stream) {
+        received += chunk.length;
+        sink.add(chunk);
+        
+        if (contentLength > 0) {
+          _downloadProgress = received / contentLength;
+          notifyListeners();
+        }
+      }
+      
+      await sink.close();
+      
+      debugPrint('AI model downloaded successfully to: $modelPath');
+      
+      // Initialize with the downloaded model
+      await initialize();
+      
+      return true;
+    } catch (e) {
+      debugPrint('Error downloading AI model: $e');
+      return false;
+    } finally {
+      _isDownloading = false;
+      _downloadProgress = 0.0;
+      notifyListeners();
     }
   }
 

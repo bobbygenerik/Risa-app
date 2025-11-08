@@ -28,7 +28,6 @@ class _HomeScreenState extends State<HomeScreen> {
         listen: false,
       );
       if (!channelProvider.hasLoadedPlaylist && !channelProvider.isLoading) {
-        print('HomeScreen: Triggering auto-load playlist');
         channelProvider.autoLoadPlaylist();
       }
     });
@@ -38,6 +37,11 @@ class _HomeScreenState extends State<HomeScreen> {
   void requestFirstContentFocus() {
     if (_firstContentFocusNode.canRequestFocus) {
       _firstContentFocusNode.requestFocus();
+    } else {
+      // Force focus anyway
+      Future.microtask(() {
+        _firstContentFocusNode.requestFocus();
+      });
     }
   }
 
@@ -138,11 +142,13 @@ class _HomeScreenState extends State<HomeScreen> {
             SizedBox(height: AppSizes.xl),
             Focus(
               focusNode: _firstContentFocusNode,
+              autofocus: true,
               child: BrandPrimaryButton(
                 icon: Icons.playlist_add,
                 label: 'Load Playlist',
                 onPressed: () {
-                  context.go('/playlist-login');
+                  // Navigate to Settings > General tab where playlist input is
+                  context.go('/settings');
                 },
                 padding: EdgeInsets.symmetric(
                   horizontal: AppSizes.xl,
@@ -188,6 +194,7 @@ class _HomeScreenState extends State<HomeScreen> {
           if (index == 0) {
             return Focus(
               focusNode: _firstContentFocusNode,
+              autofocus: true,
               child: _buildChannelCard(channel),
             );
           }

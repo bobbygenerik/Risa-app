@@ -132,16 +132,37 @@ class AppTheme {
           ),
           elevation: 0,
         ).copyWith(
-          // Android TV focus support
+          // Android TV focus support - pink border on focus
           overlayColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.focused)) {
-              return Colors.white.withOpacity(0.2);
+              return accentPink.withOpacity(0.2);
             }
             return null;
           }),
           side: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.focused)) {
-              return BorderSide(color: tvFocusHighlight, width: 3);
+              return BorderSide(color: accentPink, width: 3);
+            }
+            return null;
+          }),
+        ),
+      ),
+      
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: primaryBlue,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ).copyWith(
+          // Pink border on focus
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.focused)) {
+              return accentPink.withOpacity(0.1);
+            }
+            return null;
+          }),
+          side: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.focused)) {
+              return BorderSide(color: accentPink, width: 3);
             }
             return null;
           }),

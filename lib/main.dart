@@ -20,6 +20,7 @@ import 'package:iptv_player/widgets/legal_disclaimer_dialog.dart';
 import 'package:iptv_player/screens/home_screen.dart';
 import 'package:iptv_player/screens/epg_screen.dart';
 import 'package:iptv_player/screens/settings_screen.dart';
+import 'package:iptv_player/screens/playlist_editor_screen.dart';
 import 'package:iptv_player/screens/edit_profile_screen.dart';
 import 'package:iptv_player/screens/recordings_screen.dart';
 import 'package:iptv_player/screens/ai_models_screen.dart';
@@ -289,6 +290,10 @@ final _router = GoRouter(
         GoRoute(
           path: '/settings',
           builder: (context, state) => const SettingsScreen(),
+        ),
+        GoRoute(
+          path: '/playlist-editor',
+          builder: (context, state) => const PlaylistEditorScreen(),
         ),
         GoRoute(
           path: '/edit-profile',

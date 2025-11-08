@@ -51,6 +51,9 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool _openSubtitlesUsernameEditable = false;
   bool _openSubtitlesPasswordEditable = false;
 
+  // Playlist input method selection (0 = M3U, 1 = Xtream)
+  int _playlistInputMethod = 0;
+
   // Focus nodes for text fields
   final FocusNode _m3uUrlFocusNode = FocusNode();
   final FocusNode _xtreamServerFocusNode = FocusNode();
@@ -65,19 +68,12 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool _hardwareAcceleration = true;
   bool _hardwareDecoding = true;
   bool _hardwarePostProcessing = true;
-  bool _autoFrameRate = true;
   String _decoderType = 'Auto';
   String _renderingEngine = 'Auto';
+  // ignore: unused_field
+  bool _defaultAudioTrack = true;
   double _videoBufferSize = 50;
   String _videoQuality = 'Auto';
-  
-  // Audio Settings
-  String _audioDecoderType = 'Auto';
-  bool _audioPassthrough = false;
-  bool _audioBoost = false;
-  String _preferredAudioLanguage = 'Default';
-  bool _normalizeAudio = false;
-  int _audioChannels = 0; // 0 = Auto, 2 = Stereo, 6 = 5.1, 8 = 7.1
 
   // Real-Debrid Settings
   bool _realDebridEnabled = false;
@@ -133,7 +129,6 @@ class _SettingsScreenState extends State<SettingsScreen>
       _hardwareDecoding = prefs.getBool('hardware_decoding') ?? true;
       _hardwarePostProcessing =
           prefs.getBool('hardware_postprocessing') ?? true;
-      _autoFrameRate = prefs.getBool('auto_frame_rate') ?? true;
       _realDebridEnabled = prefs.getBool('realdebrid_enabled') ?? false;
       _realDebridForCatchup = prefs.getBool('realdebrid_catchup') ?? true;
       _realDebridForVOD = prefs.getBool('realdebrid_vod') ?? true;
@@ -150,14 +145,6 @@ class _SettingsScreenState extends State<SettingsScreen>
           prefs.getString('subtitle_language') ?? 'English';
       _selectedLanguage = prefs.getString('app_language') ?? 'English';
       _chromecastDevice = prefs.getString('chromecast_device') ?? 'Chromecast';
-      
-      // Audio settings
-      _audioDecoderType = prefs.getString('audio_decoder_type') ?? 'Auto';
-      _preferredAudioLanguage = prefs.getString('preferred_audio_language') ?? 'Default';
-      _audioPassthrough = prefs.getBool('audio_passthrough') ?? false;
-      _audioBoost = prefs.getBool('audio_boost') ?? false;
-      _normalizeAudio = prefs.getBool('normalize_audio') ?? false;
-      _audioChannels = prefs.getInt('audio_channels') ?? 0;
 
       // Double settings
       _videoBufferSize = prefs.getDouble('video_buffer_size') ?? 50;
@@ -202,6 +189,11 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget build(BuildContext context) {
     return Row(
       children: [
+        // Visual separator between main sidebar and settings sidebar
+        Container(
+          width: 1,
+          color: AppTheme.divider.withOpacity(0.5),
+        ),
         _buildSidebarMenu(),
         VerticalDivider(width: 1, color: AppTheme.divider),
         Expanded(
@@ -226,7 +218,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 _buildAccountSettings(),
                 _buildPlaybackSettings(),
                 _buildCloudAndAISettings(),
-                _buildRecordingsSettings(),
+                _buildEPGSettings(),
               ],
             ),
           ),
@@ -241,12 +233,13 @@ class _SettingsScreenState extends State<SettingsScreen>
       {'title': 'Account', 'icon': Icons.person_outline},
       {'title': 'Playback', 'icon': Icons.play_circle_outline},
       {'title': 'Cloud & AI', 'icon': Icons.cloud_outlined},
-      {'title': 'Recordings', 'icon': Icons.fiber_manual_record},
+      {'title': 'EPG & Recordings', 'icon': Icons.live_tv_outlined},
     ];
 
     return Container(
       width: 200,  // Reduced from 250
-      color: AppTheme.sidebarBackground,
+      // Slightly different shade to distinguish from main sidebar
+      color: Color(0xFF1A1A1A),  // Lighter than main sidebar (0xFF141414)
       child: Column(
         children: [
           // Settings header matching main sidebar height
@@ -301,24 +294,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                         setState(() => _tabController.index = prev);
                         return KeyEventResult.handled;
                       } else if (key == LogicalKeyboardKey.arrowRight) {
-                        // Move focus to the content area
-                        // Request focus on the first focusable element based on current tab
-                        Future.microtask(() {
-                          switch (_tabController.index) {
-                            case 0: // General
-                              _m3uUrlFocusNode.requestFocus();
-                              break;
-                            case 1: // Account
-                              _realDebridApiKeyFocusNode.requestFocus();
-                              break;
-                            case 2: // Playback
-                            case 3: // Cloud & AI
-                            case 4: // Recordings
-                              // For other tabs, use default focus traversal
-                              FocusScope.of(context).nextFocus();
-                              break;
-                          }
-                        });
+                        // Move to content area - NOT down to next tab
+                        print('🔧 Settings sidebar RIGHT: Navigating to content');
+                        // Use unfocus to release from this widget, then let the content scope grab focus
+                        node.unfocus();
                         return KeyEventResult.handled;
                       } else if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
                         setState(() => _tabController.index = index);
@@ -398,27 +377,6 @@ class _SettingsScreenState extends State<SettingsScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_menuFocusNodes.isNotEmpty) {
         _menuFocusNodes[_tabController.index.clamp(0, _menuFocusNodes.length - 1)].requestFocus();
-      }
-    });
-  }
-
-  void requestFirstContentFocus() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Focus the first input field based on current tab
-      switch (_tabController.index) {
-        case 0: // General
-          _m3uUrlFocusNode.requestFocus();
-          break;
-        case 1: // Account
-          _realDebridApiKeyFocusNode.requestFocus();
-          break;
-        case 2: // Playback
-        case 3: // Cloud & AI
-        case 4: // Recordings
-        default:
-          // For tabs without specific focus nodes, just request focus on content scope
-          FocusScope.of(context).nextFocus();
-          break;
       }
     });
   }
@@ -686,8 +644,6 @@ class _SettingsScreenState extends State<SettingsScreen>
             _buildSwitchTile('Hardware Acceleration', _hardwareAcceleration),
             _buildSwitchTile('Hardware Decoding', _hardwareDecoding),
             _buildSwitchTile('Hardware Post-Processing', _hardwarePostProcessing),
-            _buildSwitchTile('Auto Frame Rate Matching', _autoFrameRate,
-              subtitle: 'Match display refresh rate to video frame rate for smoother playback'),
             _buildDropdown(
               'Decoder Type',
               _decoderType,
@@ -708,58 +664,6 @@ class _SettingsScreenState extends State<SettingsScreen>
                 }
               },
             ),
-          ],
-        ),
-        _buildSectionCard(
-          title: 'Audio Settings',
-          children: [
-            _buildDropdown(
-              'Audio Decoder',
-              _audioDecoderType,
-              ['Auto', 'MediaCodec', 'FFmpeg', 'OpenSL ES'],
-              (value) async {
-                if (value != null) {
-                  setState(() => _audioDecoderType = value);
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setString('audio_decoder_type', value);
-                }
-              },
-            ),
-            _buildDropdown(
-              'Audio Channels',
-              _audioChannels == 0 ? 'Auto' : _audioChannels == 2 ? 'Stereo' : _audioChannels == 6 ? '5.1 Surround' : '7.1 Surround',
-              ['Auto', 'Stereo', '5.1 Surround', '7.1 Surround'],
-              (value) async {
-                if (value != null) {
-                  int channels = 0;
-                  if (value == 'Stereo') channels = 2;
-                  else if (value == '5.1 Surround') channels = 6;
-                  else if (value == '7.1 Surround') channels = 8;
-                  
-                  setState(() => _audioChannels = channels);
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setInt('audio_channels', channels);
-                }
-              },
-            ),
-            _buildDropdown(
-              'Preferred Audio Language',
-              _preferredAudioLanguage,
-              ['Default', 'English', 'Spanish', 'French', 'German', 'Italian', 'Portuguese', 'Russian', 'Chinese', 'Japanese', 'Korean', 'Arabic'],
-              (value) async {
-                if (value != null) {
-                  setState(() => _preferredAudioLanguage = value);
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setString('preferred_audio_language', value);
-                }
-              },
-            ),
-            _buildAudioSwitchTile('Audio Passthrough', _audioPassthrough,
-              subtitle: 'Send audio directly to receiver without decoding (for surround sound systems)'),
-            _buildAudioSwitchTile('Audio Boost', _audioBoost,
-              subtitle: 'Increase audio volume for quiet content'),
-            _buildAudioSwitchTile('Normalize Audio', _normalizeAudio,
-              subtitle: 'Automatically adjust volume levels for consistent playback'),
           ],
         ),
         _buildSectionCard(
@@ -805,44 +709,20 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Widget _buildEPGSourceSection() {
-    return FutureBuilder<Map<String, dynamic>>(
-      future: () async {
-        final prefs = await SharedPreferences.getInstance();
-        return {
-          'epg_url': prefs.getString('epg_url'),
-          'custom_epg_url': prefs.getString('custom_epg_url'),
-          'playlist_type': prefs.getString('playlist_type'),
-          'm3u_url': prefs.getString('m3u_url'),
-          'xtream_server': prefs.getString('xtream_server'),
-          'epg_update_interval': prefs.getInt('epg_update_interval') ?? 12,
-          'epg_past_days': prefs.getInt('epg_past_days') ?? 1,
-          'store_descriptions': prefs.getBool('store_program_descriptions') ?? true,
-          'show_channel_logos': prefs.getBool('show_channel_logos') ?? true,
-          'show_program_images': prefs.getBool('show_program_images') ?? true,
-        };
-      }(),
+    return FutureBuilder<Map<String, String?>>(
+      future: SharedPreferences.getInstance().then((prefs) => {
+        'epg_url': prefs.getString('epg_url'),
+        'custom_epg_url': prefs.getString('custom_epg_url'),
+        'playlist_type': prefs.getString('playlist_type'),
+        'm3u_url': prefs.getString('m3u_url'),
+        'xtream_server': prefs.getString('xtream_server'),
+      }),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return Card(
-            margin: EdgeInsets.only(bottom: AppSizes.lg),
-            child: Padding(
-              padding: EdgeInsets.all(AppSizes.lg),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-          );
-        }
-
-        final data = snapshot.data!;
-        final epgUrl = data['epg_url'] as String?;
-        final customEpgUrl = data['custom_epg_url'] as String?;
-        final playlistType = data['playlist_type'] as String?;
-        final m3uUrl = data['m3u_url'] as String?;
-        final xtreamServer = data['xtream_server'] as String?;
-        final epgUpdateInterval = data['epg_update_interval'] as int;
-        final epgPastDays = data['epg_past_days'] as int;
-        final storeDescriptions = data['store_descriptions'] as bool;
-        final showChannelLogos = data['show_channel_logos'] as bool;
-        final showProgramImages = data['show_program_images'] as bool;
+        final epgUrl = snapshot.data?['epg_url'];
+        final customEpgUrl = snapshot.data?['custom_epg_url'];
+        final playlistType = snapshot.data?['playlist_type'];
+        final m3uUrl = snapshot.data?['m3u_url'];
+        final xtreamServer = snapshot.data?['xtream_server'];
         
         // Determine provider name
         String providerName = 'No Playlist Loaded';
@@ -867,88 +747,31 @@ class _SettingsScreenState extends State<SettingsScreen>
 
         return _buildSectionCard(
           title: 'EPG (Electronic Program Guide)',
-          subtitle: 'Configure TV guide information and display settings',
+          subtitle: 'Configure TV guide information',
           children: [
-            // === 1. EPG SOURCES ===
-            Text(
-              'EPG Sources',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppTheme.primaryBlue,
-              ),
+            // Show current provider
+            ListTile(
+              title: Text('Current Provider'),
+              subtitle: Text(providerName),
+              leading: Icon(Icons.tv, color: AppTheme.primaryBlue),
             ),
+            if (epgUrl != null) ...[
+              ListTile(
+                title: Text('Auto-detected EPG URL'),
+                subtitle: Text(
+                  epgUrl,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12),
+                ),
+                leading: Icon(Icons.check_circle, color: AppTheme.accentGreen),
+              ),
+            ],
             SizedBox(height: AppSizes.md),
-            
-            // Current Provider Info
-            Container(
-              padding: EdgeInsets.all(AppSizes.md),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryBlue.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.3)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.tv, color: AppTheme.primaryBlue, size: 20),
-                      SizedBox(width: 8),
-                      Text(
-                        'Current Provider',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    providerName,
-                    style: TextStyle(
-                      color: AppTheme.textSecondary,
-                      fontSize: 13,
-                    ),
-                  ),
-                  if (epgUrl != null) ...[
-                    SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Icon(Icons.check_circle, color: AppTheme.accentGreen, size: 16),
-                        SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            'Auto-detected EPG',
-                            style: TextStyle(
-                              color: AppTheme.accentGreen,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      epgUrl,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            
-            SizedBox(height: AppSizes.lg),
-            
-            // Custom EPG URL Input
+            // Manual EPG URL input
             Text(
-              'Custom EPG URL',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              'Custom EPG URL (Optional)',
+              style: Theme.of(context).textTheme.titleSmall,
             ),
             SizedBox(height: AppSizes.sm),
             Focus(
@@ -957,294 +780,62 @@ class _SettingsScreenState extends State<SettingsScreen>
                 controller: customEpgController,
                 autofocus: false,
                 decoration: InputDecoration(
-                  hintText: 'http://example.com/epg.xml.gz',
+                  hintText: 'Enter custom EPG URL if provider doesn\'t include one',
                   prefixIcon: Icon(Icons.link),
+                  border: OutlineInputBorder(),
                   filled: true,
-                  fillColor: AppTheme.highlight,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: AppTheme.primaryBlue, width: 3),
-                  ),
+                  fillColor: AppTheme.cardBackground,
                   suffixIcon: IconButton(
-                    icon: Icon(Icons.save),
-                    onPressed: () async {
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setString('custom_epg_url', customEpgController.text);
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Custom EPG URL saved'),
-                            backgroundColor: AppTheme.accentGreen,
-                          ),
-                        );
-                        setState(() {}); // Refresh to show saved URL
-                      }
-                    },
-                    tooltip: 'Save EPG URL',
-                  ),
+                  icon: Icon(Icons.save),
+                  onPressed: () async {
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setString('custom_epg_url', customEpgController.text);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Custom EPG URL saved')),
+                      );
+                      setState(() {}); // Refresh to show saved URL
+                    }
+                  },
+                  tooltip: 'Save EPG URL',
                 ),
-                onSubmitted: (value) async {
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setString('custom_epg_url', value);
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Custom EPG URL saved'),
-                        backgroundColor: AppTheme.accentGreen,
-                      ),
-                    );
-                    setState(() {}); // Refresh to show saved URL
-                  }
-                },
               ),
+              onSubmitted: (value) async {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setString('custom_epg_url', value);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Custom EPG URL saved')),
+                  );
+                  setState(() {}); // Refresh to show saved URL
+                }
+              },
             ),
-            SizedBox(height: AppSizes.xs),
+            ),
+            SizedBox(height: AppSizes.sm),
             Text(
-              'Override auto-detected EPG or provide EPG for playlists without one',
+              'Custom EPG URL will be used if no EPG is auto-detected from your playlist',
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 12,
                 color: AppTheme.textSecondary,
                 fontStyle: FontStyle.italic,
               ),
             ),
-            
             SizedBox(height: AppSizes.md),
-            Divider(),
-            SizedBox(height: AppSizes.lg),
-            
-            // === 3. UPDATE SETTINGS ===
-            Text(
-              'Update Settings',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppTheme.primaryBlue,
-              ),
-            ),
-            SizedBox(height: AppSizes.md),
-            
-            // Update Interval
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.update, color: AppTheme.primaryBlue),
-              title: Text('Auto-Update Interval'),
-              subtitle: Text('Update EPG data every $epgUpdateInterval hours'),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.remove_circle_outline),
-                    onPressed: epgUpdateInterval > 1 ? () async {
-                      final newValue = epgUpdateInterval - 1;
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setInt('epg_update_interval', newValue);
-                      setState(() {});
-                    } : null,
-                  ),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryBlue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '$epgUpdateInterval',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.add_circle_outline),
-                    onPressed: epgUpdateInterval < 48 ? () async {
-                      final newValue = epgUpdateInterval + 1;
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setInt('epg_update_interval', newValue);
-                      setState(() {});
-                    } : null,
-                  ),
-                ],
-              ),
-            ),
-            
-            
-            SizedBox(height: AppSizes.md),
-            Divider(),
-            SizedBox(height: AppSizes.lg),
-            
-            // === 2. DATA MANAGEMENT ===
-            Text(
-              'Data Management',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppTheme.primaryBlue,
-              ),
-            ),
-            SizedBox(height: AppSizes.md),
-            
-            // 2. Past Days to Keep
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.history, color: AppTheme.primaryBlue),
-              title: Text('Past Days to Keep'),
-              subtitle: Text('Keep EPG data for the past $epgPastDays days'),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.remove_circle_outline),
-                    onPressed: epgPastDays > 0 ? () async {
-                      final newValue = epgPastDays - 1;
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setInt('epg_past_days', newValue);
-                      setState(() {});
-                    } : null,
-                  ),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryBlue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '$epgPastDays',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.add_circle_outline),
-                    onPressed: epgPastDays < 30 ? () async {
-                      final newValue = epgPastDays + 1;
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setInt('epg_past_days', newValue);
-                      setState(() {});
-                    } : null,
-                  ),
-                ],
-              ),
-            ),
-            
-            // 3. STORE PROGRAM DESCRIPTIONS TOGGLE
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text('Store Program Descriptions'),
-              subtitle: Text('Save detailed program information (uses more storage)'),
-              value: storeDescriptions,
-              onChanged: (value) async {
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setBool('store_program_descriptions', value);
-                setState(() {});
-              },
-            ),
-            
-            SizedBox(height: AppSizes.md),
-            Divider(),
-            SizedBox(height: AppSizes.lg),
-            
-            // === 7. DISPLAY OPTIONS ===
-            Text(
-              'Display Options',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppTheme.primaryBlue,
-              ),
-            ),
-            SizedBox(height: AppSizes.sm),
-            
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text('Show Channel Logos'),
-              subtitle: Text('Display channel logos in EPG grid'),
-              value: showChannelLogos,
-              onChanged: (value) async {
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setBool('show_channel_logos', value);
-                setState(() {});
-              },
-            ),
-            
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text('Show Program Images'),
-              subtitle: Text('Display program thumbnails and posters'),
-              value: showProgramImages,
-              onChanged: (value) async {
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setBool('show_program_images', value);
-                setState(() {});
-              },
-            ),
-            
-            SizedBox(height: AppSizes.lg),
-            
-            // Update EPG & Clear EPG Buttons
             Row(
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () {
+                      // TODO: Implement EPG refresh
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Updating EPG data...'),
-                          backgroundColor: AppTheme.primaryBlue,
-                        ),
+                        SnackBar(content: Text('Refreshing EPG data...')),
                       );
                     },
                     icon: Icon(Icons.refresh),
-                    label: Text('Update EPG'),
+                    label: Text('Refresh EPG'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryBlue,
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
-                SizedBox(width: AppSizes.md),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      // Show confirmation dialog
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: Text('Clear EPG Data'),
-                          content: Text('Are you sure you want to clear all EPG data? This cannot be undone.'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: Text('Cancel'),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, true),
-                              child: Text('Clear', style: TextStyle(color: Colors.red)),
-                            ),
-                          ],
-                        ),
-                      );
-                      
-                      if (confirm == true) {
-                        // TODO: Implement EPG data clearing
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('EPG data cleared'),
-                              backgroundColor: AppTheme.accentGreen,
-                            ),
-                          );
-                        }
-                      }
-                    },
-                    icon: Icon(Icons.delete_sweep),
-                    label: Text('Clear EPG'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.shade700,
-                      padding: EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
                 ),
@@ -1260,129 +851,390 @@ class _SettingsScreenState extends State<SettingsScreen>
     return _buildSettingsSection(
       title: 'General',
       children: [
-        // M3U & Xtream Codes Section
+        // M3U & Xtream Codes Section with Tab Selector
         _buildSectionCard(
           title: 'Playlist Sources',
-          subtitle: 'Use M3U URL OR Xtream Codes (choose one)',
+          subtitle: 'Choose your playlist input method',
           children: [
-            Text(
-              'Option 1: M3U Playlist URL',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: AppSizes.sm),
-            _buildTVTextField(
-              controller: _m3uUrlController,
-              focusNode: _m3uUrlFocusNode,
-              isEditable: _m3uUrlEditable,
-              onEditableChanged: (value) => setState(() => _m3uUrlEditable = value),
-              hintText: 'http://example.com/playlist.m3u',
-              helperText: 'Enter M3U URL and click Load',
-              prefixIcon: Icons.link,
-            ),
-            SizedBox(height: AppSizes.sm),
-            ElevatedButton.icon(
-              onPressed: () async {
-                // Load M3U playlist from URL
-                final url = _m3uUrlController.text.trim();
-                if (url.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Please enter a valid M3U URL')),
-                  );
-                  return;
-                }
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Loading playlist from URL...')),
-                );
-
-                try {
-                  final provider = Provider.of<ChannelProvider>(
-                    context,
-                    listen: false,
-                  );
-                  await provider.loadPlaylistFromUrl(url);
-
-                  // Save credentials
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setString('m3u_url', url);
-                  await prefs.setString('playlist_type', 'm3u');
-
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Playlist loaded successfully! ${provider.channels.length} channels found.',
+            // Tab selector for M3U vs Xtream
+            Row(
+              children: [
+                Expanded(
+                  child: Focus(
+                    onKey: (node, event) {
+                      if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+                      if (event.logicalKey == LogicalKeyboardKey.select || 
+                          event.logicalKey == LogicalKeyboardKey.enter) {
+                        setState(() => _playlistInputMethod = 0);
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child: GestureDetector(
+                      onTap: () => setState(() => _playlistInputMethod = 0),
+                      child: AnimatedContainer(
+                        duration: Duration(milliseconds: 200),
+                        padding: EdgeInsets.symmetric(vertical: AppSizes.md, horizontal: AppSizes.sm),
+                        decoration: BoxDecoration(
+                          color: _playlistInputMethod == 0 
+                              ? AppTheme.primaryBlue 
+                              : AppTheme.cardBackground,
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(AppSizes.radiusMd),
+                            bottomLeft: Radius.circular(AppSizes.radiusMd),
+                          ),
+                          border: Border.all(
+                            color: _playlistInputMethod == 0 
+                                ? AppTheme.primaryBlue 
+                                : AppTheme.divider,
+                            width: 2,
+                          ),
                         ),
-                        backgroundColor: AppTheme.accentGreen,
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Failed to load playlist: ${e.toString()}',
+                        child: Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.link,
+                                color: _playlistInputMethod == 0 
+                                    ? Colors.white 
+                                    : AppTheme.textSecondary,
+                                size: 20,
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'M3U URL',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: _playlistInputMethod == 0 
+                                      ? Colors.white 
+                                      : AppTheme.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        backgroundColor: AppTheme.accentRed,
                       ),
-                    );
-                  }
-                }
-              },
-              icon: Icon(Icons.download),
-              label: Text('Load M3U Playlist'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryBlue,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Focus(
+                    onKey: (node, event) {
+                      if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+                      if (event.logicalKey == LogicalKeyboardKey.select || 
+                          event.logicalKey == LogicalKeyboardKey.enter) {
+                        setState(() => _playlistInputMethod = 1);
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child: GestureDetector(
+                      onTap: () => setState(() => _playlistInputMethod = 1),
+                      child: AnimatedContainer(
+                        duration: Duration(milliseconds: 200),
+                        padding: EdgeInsets.symmetric(vertical: AppSizes.md, horizontal: AppSizes.sm),
+                        decoration: BoxDecoration(
+                          color: _playlistInputMethod == 1 
+                              ? AppTheme.primaryBlue 
+                              : AppTheme.cardBackground,
+                          borderRadius: BorderRadius.only(
+                            topRight: Radius.circular(AppSizes.radiusMd),
+                            bottomRight: Radius.circular(AppSizes.radiusMd),
+                          ),
+                          border: Border.all(
+                            color: _playlistInputMethod == 1 
+                                ? AppTheme.primaryBlue 
+                                : AppTheme.divider,
+                            width: 2,
+                          ),
+                        ),
+                        child: Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.dns,
+                                color: _playlistInputMethod == 1 
+                                    ? Colors.white 
+                                    : AppTheme.textSecondary,
+                                size: 20,
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Xtream Codes',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: _playlistInputMethod == 1 
+                                      ? Colors.white 
+                                      : AppTheme.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            
+            SizedBox(height: AppSizes.lg),
+            
+            // M3U Content
+            if (_playlistInputMethod == 0) ...[
+              _buildTVFriendlyTextField(
+                controller: _m3uUrlController,
+                focusNode: _m3uUrlFocusNode,
+                isEditable: _m3uUrlEditable,
+                onEditableChange: (value) => setState(() => _m3uUrlEditable = value),
+                label: 'M3U Playlist URL',
+                hint: 'http://example.com/playlist.m3u',
+                icon: Icons.link,
+              ),
+              SizedBox(height: AppSizes.md),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: _loadM3UPlaylist,
+                    icon: Icon(Icons.download),
+                    label: Text('Load M3U Playlist'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryBlue,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: AppSizes.lg,
+                        vertical: AppSizes.md,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            
+            // Xtream Codes Content
+            if (_playlistInputMethod == 1) ...[
+              _buildTVFriendlyTextField(
+                controller: _xtreamServerController,
+                focusNode: _xtreamServerFocusNode,
+                isEditable: _xtreamServerEditable,
+                onEditableChange: (value) => setState(() => _xtreamServerEditable = value),
+                label: 'Server URL',
+                hint: 'http://example.com:8080',
+                icon: Icons.dns,
+              ),
+              SizedBox(height: AppSizes.md),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildTVFriendlyTextField(
+                      controller: _xtreamUsernameController,
+                      focusNode: _xtreamUsernameFocusNode,
+                      isEditable: _xtreamUsernameEditable,
+                      onEditableChange: (value) => setState(() => _xtreamUsernameEditable = value),
+                      label: 'Username',
+                      hint: 'Your username',
+                      icon: Icons.person,
+                    ),
+                  ),
+                  SizedBox(width: AppSizes.md),
+                  Expanded(
+                    child: _buildTVFriendlyTextField(
+                      controller: _xtreamPasswordController,
+                      focusNode: _xtreamPasswordFocusNode,
+                      isEditable: _xtreamPasswordEditable,
+                      onEditableChange: (value) => setState(() => _xtreamPasswordEditable = value),
+                      label: 'Password',
+                      hint: 'Your password',
+                      icon: Icons.lock,
+                      obscureText: true,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: AppSizes.md),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton.icon(
+                    onPressed: () {
+                      _xtreamServerController.clear();
+                      _xtreamUsernameController.clear();
+                      _xtreamPasswordController.clear();
+                    },
+                    icon: Icon(Icons.clear),
+                    label: Text('Clear All'),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: _loadXtreamPlaylist,
+                    icon: Icon(Icons.download),
+                    label: Text('Load Playlist'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryBlue,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: AppSizes.lg,
+                        vertical: AppSizes.md,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            
+            // Helper text
+            SizedBox(height: AppSizes.md),
+            Container(
+              padding: EdgeInsets.all(AppSizes.md),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryBlue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: AppTheme.primaryBlue),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Press ENTER to edit fields. Press BACK/ESC to finish editing.',
+                      style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                    ),
+                  ),
+                ],
               ),
             ),
-            SizedBox(height: AppSizes.lg),
+          ],
+        ),
+      ],
+    );
+  }
 
-            Divider(),
-            SizedBox(height: AppSizes.lg),
+  Widget _buildEPGSettings() {
+    // This method is now just for recordings
+    return FutureBuilder<String?>(
+      future: SharedPreferences.getInstance().then(
+        (prefs) => prefs.getString('recording_storage_path'),
+      ),
+      builder: (context, snapshot) {
+        final recordingPath = snapshot.data ?? '';
 
-            Text(
-              'Option 2: Xtream Codes API',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+        return _buildSettingsSection(
+          title: 'Recordings',
+          children: [
+            _buildSectionCard(
+              title: 'Storage Location',
+              subtitle: 'Configure where recordings are saved',
+              children: [
+                ListTile(
+                  leading: Icon(Icons.folder, color: AppTheme.primaryBlue),
+                  title: Text('Recording Directory'),
+                  subtitle: Text(
+                    recordingPath.isEmpty ? 'Not configured' : recordingPath,
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ),
+              ],
             ),
-            SizedBox(height: AppSizes.sm),
-            _buildTVTextField(
-              controller: _xtreamServerController,
+          ],
+        );
+      },
+    );
+  }
+
+  // Helper: TV-friendly text field with proper keyboard handling
+  Widget _buildTVFriendlyTextField({
               focusNode: _xtreamServerFocusNode,
-              isEditable: _xtreamServerEditable,
-              onEditableChanged: (value) => setState(() => _xtreamServerEditable = value),
-              labelText: 'Server URL',
-              hintText: 'http://example.com:8080',
-              helperText: 'Enter server, username, password and click Load',
-              prefixIcon: Icons.dns,
+              onFocusChange: (hasFocus) {
+                if (!hasFocus && _xtreamServerEditable) {
+                  setState(() => _xtreamServerEditable = false);
+                }
+              },
+              onKey: (node, event) {
+                if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+                final key = event.logicalKey;
+                if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
+                  setState(() => _xtreamServerEditable = true);
+                  Future.microtask(() => _xtreamServerFocusNode.requestFocus());
+                  return KeyEventResult.handled;
+                }
+                return KeyEventResult.ignored;
+              },
+              child: TextField(
+                controller: _xtreamServerController,
+                autofocus: false,
+                readOnly: !_xtreamServerEditable,
+                decoration: InputDecoration(
+                  labelText: 'Server URL',
+                  hintText: 'http://example.com:8080',
+                  helperText: 'Enter server, username, password and click Load',
+                  prefixIcon: Icon(Icons.dns),
+                  border: OutlineInputBorder(),
+                ),
+              ),
             ),
             SizedBox(height: AppSizes.md),
             Row(
               children: [
                 Expanded(
-                  child: _buildTVTextField(
-                    controller: _xtreamUsernameController,
+                  child: Focus(
                     focusNode: _xtreamUsernameFocusNode,
-                    isEditable: _xtreamUsernameEditable,
-                    onEditableChanged: (value) => setState(() => _xtreamUsernameEditable = value),
-                    labelText: 'Username',
-                    prefixIcon: Icons.person,
+                    onFocusChange: (hasFocus) {
+                      if (!hasFocus && _xtreamUsernameEditable) {
+                        setState(() => _xtreamUsernameEditable = false);
+                      }
+                    },
+                    onKey: (node, event) {
+                      if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+                      final key = event.logicalKey;
+                      if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
+                        setState(() => _xtreamUsernameEditable = true);
+                        Future.microtask(() => _xtreamUsernameFocusNode.requestFocus());
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child: TextField(
+                      controller: _xtreamUsernameController,
+                      autofocus: false,
+                      readOnly: !_xtreamUsernameEditable,
+                      decoration: InputDecoration(
+                        labelText: 'Username',
+                        prefixIcon: Icon(Icons.person),
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
                   ),
                 ),
                 SizedBox(width: AppSizes.md),
                 Expanded(
-                  child: _buildTVTextField(
-                    controller: _xtreamPasswordController,
+                  child: Focus(
                     focusNode: _xtreamPasswordFocusNode,
-                    isEditable: _xtreamPasswordEditable,
-                    onEditableChanged: (value) => setState(() => _xtreamPasswordEditable = value),
-                    labelText: 'Password',
-                    prefixIcon: Icons.lock,
-                    obscureText: true,
+                    onFocusChange: (hasFocus) {
+                      if (!hasFocus && _xtreamPasswordEditable) {
+                        setState(() => _xtreamPasswordEditable = false);
+                      }
+                    },
+                    onKey: (node, event) {
+                      if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+                      final key = event.logicalKey;
+                      if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
+                        setState(() => _xtreamPasswordEditable = true);
+                        Future.microtask(() => _xtreamPasswordFocusNode.requestFocus());
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child: TextField(
+                      controller: _xtreamPasswordController,
+                      autofocus: false,
+                      readOnly: !_xtreamPasswordEditable,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        prefixIcon: Icon(Icons.lock),
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -1819,12 +1671,6 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
           ],
         ),
-        
-        // Saved Playlists Section
-        _buildSavedPlaylistsSection(),
-        
-        // EPG Source Section
-        _buildEPGSourceSection(),
       ],
     );
   }
@@ -2007,40 +1853,38 @@ class _SettingsScreenState extends State<SettingsScreen>
                 ),
                 if (_openSubtitlesEnabled) ...[
                   const SizedBox(height: 16),
-                  _buildTVTextField(
+                  TextField(
                     controller: _openSubtitlesUsernameController,
-                    focusNode: _openSubtitlesUsernameFocusNode,
-                    isEditable: _openSubtitlesUsernameEditable,
-                    onEditableChanged: (value) {
-                      setState(() => _openSubtitlesUsernameEditable = value);
-                      if (!value) {
-                        subtitleService.setCredentials(
-                          _openSubtitlesUsernameController.text,
-                          _openSubtitlesPasswordController.text,
-                        );
-                      }
+                    autofocus: false,
+                    decoration: const InputDecoration(
+                      labelText: 'Username',
+                      prefixIcon: Icon(Icons.person),
+                      border: OutlineInputBorder(),
+                      helperText: 'Create free account at opensubtitles.com',
+                    ),
+                    onChanged: (value) {
+                      subtitleService.setCredentials(
+                        value,
+                        _openSubtitlesPasswordController.text,
+                      );
                     },
-                    labelText: 'Username',
-                    helperText: 'Create free account at opensubtitles.com',
-                    prefixIcon: Icons.person,
                   ),
                   const SizedBox(height: 16),
-                  _buildTVTextField(
+                  TextField(
                     controller: _openSubtitlesPasswordController,
-                    focusNode: _openSubtitlesPasswordFocusNode,
-                    isEditable: _openSubtitlesPasswordEditable,
-                    onEditableChanged: (value) {
-                      setState(() => _openSubtitlesPasswordEditable = value);
-                      if (!value) {
-                        subtitleService.setCredentials(
-                          _openSubtitlesUsernameController.text,
-                          _openSubtitlesPasswordController.text,
-                        );
-                      }
-                    },
-                    labelText: 'Password',
-                    prefixIcon: Icons.lock,
+                    autofocus: false,
                     obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Password',
+                      prefixIcon: Icon(Icons.lock),
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) {
+                      subtitleService.setCredentials(
+                        _openSubtitlesUsernameController.text,
+                        value,
+                      );
+                    },
                   ),
                   const SizedBox(height: 16),
                   SwitchListTile(
@@ -2106,20 +1950,19 @@ class _SettingsScreenState extends State<SettingsScreen>
                 ),
                 if (_realDebridEnabled) ...[
                   const SizedBox(height: 16),
-                  _buildTVTextField(
+                  TextField(
                     controller: _realDebridApiKeyController,
-                    focusNode: _realDebridApiKeyFocusNode,
-                    isEditable: _realDebridApiKeyEditable,
-                    onEditableChanged: (value) {
-                      setState(() => _realDebridApiKeyEditable = value);
-                      if (!value) {
-                        rdService.setApiKey(_realDebridApiKeyController.text);
-                      }
+                    autofocus: false,
+                    decoration: const InputDecoration(
+                      labelText: 'API Key',
+                      hintText: 'Enter your Real-Debrid API key',
+                      prefixIcon: Icon(Icons.vpn_key),
+                      border: OutlineInputBorder(),
+                      helperText: 'Get API key from real-debrid.com/apitoken',
+                    ),
+                    onChanged: (value) {
+                      rdService.setApiKey(value);
                     },
-                    labelText: 'API Key',
-                    hintText: 'Enter your Real-Debrid API key',
-                    helperText: 'Get API key from real-debrid.com/apitoken',
-                    prefixIcon: Icons.vpn_key,
                   ),
                   const SizedBox(height: 16),
                   CheckboxListTile(
@@ -2492,8 +2335,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildRecordingsSettings() {
-    // Recordings-only tab
+  Widget _buildEPGSettings() {
+    // This method is now just for recordings
     return FutureBuilder<String?>(
       future: SharedPreferences.getInstance().then(
         (prefs) => prefs.getString('recording_storage_path'),
@@ -2694,7 +2537,6 @@ class _SettingsScreenState extends State<SettingsScreen>
         final prefs = await SharedPreferences.getInstance();
         return {
           'type': prefs.getString('playlist_type'),
-          'name': prefs.getString('playlist_name'),
           'm3u_url': prefs.getString('m3u_url'),
           'xtream_server': prefs.getString('xtream_server'),
           'xtream_username': prefs.getString('xtream_username'),
@@ -2713,7 +2555,6 @@ class _SettingsScreenState extends State<SettingsScreen>
 
         final data = snapshot.data!;
         final hasPlaylist = data['type'] != null;
-        final playlistName = data['name'] ?? 'My Playlist';
 
         return Card(
           margin: EdgeInsets.only(bottom: AppSizes.lg),
@@ -2756,7 +2597,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         SizedBox(width: AppSizes.md),
                         Expanded(
                           child: Text(
-                            'No saved playlist found. Use the fields above to add a playlist.',
+                            'No saved playlist found. Use the Playlist Login screen to add a playlist.',
                             style: TextStyle(color: AppTheme.textSecondary),
                           ),
                         ),
@@ -2764,97 +2605,130 @@ class _SettingsScreenState extends State<SettingsScreen>
                     ),
                   )
                 else
-                  Focus(
-                    onKey: (node, event) {
-                      if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
-                      if (event.logicalKey == LogicalKeyboardKey.select || 
-                          event.logicalKey == LogicalKeyboardKey.enter) {
-                        context.go('/playlist-editor');
-                        return KeyEventResult.handled;
-                      }
-                      return KeyEventResult.ignored;
-                    },
-                    child: GestureDetector(
-                      onTap: () => context.go('/playlist-editor'),
-                      child: Container(
-                        padding: EdgeInsets.all(AppSizes.md),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryBlue.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                          border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.3)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                  Container(
+                    padding: EdgeInsets.all(AppSizes.md),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryBlue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                      border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            Row(
-                              children: [
-                                Icon(Icons.playlist_play, color: AppTheme.primaryBlue, size: 24),
-                                SizedBox(width: AppSizes.sm),
-                                Expanded(
-                                  child: Text(
-                                    playlistName,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.primaryBlue,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    data['type'] == 'm3u' ? 'M3U' : 'Xtream',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(width: AppSizes.sm),
-                                Icon(Icons.chevron_right, color: AppTheme.textSecondary),
-                              ],
-                            ),
-                            SizedBox(height: AppSizes.md),
-                            if (data['type'] == 'm3u') ...[
-                              _buildInfoRow('URL', data['m3u_url'] ?? 'N/A'),
-                            ] else if (data['type'] == 'xtream') ...[
-                              _buildInfoRow('Server', data['xtream_server'] ?? 'N/A'),
-                              SizedBox(height: AppSizes.xs),
-                              _buildInfoRow('Username', data['xtream_username'] ?? 'N/A'),
-                            ],
-                            SizedBox(height: AppSizes.md),
                             Container(
-                              padding: EdgeInsets.all(AppSizes.sm),
-                              decoration: BoxDecoration(
-                                color: AppTheme.cardBackground,
-                                borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
                               ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.edit, size: 14, color: AppTheme.textSecondary),
-                                  SizedBox(width: 6),
-                                  Text(
-                                    'Tap to edit playlist settings',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: AppTheme.textSecondary,
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
-                                ],
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryBlue,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                data['type'] == 'm3u' ? 'M3U URL' : 'Xtream Codes',
+                                style: TextStyle(
+                                  color: AppTheme.textPrimary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            Spacer(),
+                            Icon(Icons.check_circle, color: AppTheme.accentGreen, size: 20),
+                            SizedBox(width: 4),
+                            Text(
+                              'Active',
+                              style: TextStyle(
+                                color: AppTheme.accentGreen,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
                         ),
-                      ),
+                        SizedBox(height: AppSizes.md),
+                        if (data['type'] == 'm3u') ...[
+                          _buildInfoRow('URL', data['m3u_url'] ?? 'N/A'),
+                        ] else if (data['type'] == 'xtream') ...[
+                          _buildInfoRow('Server', data['xtream_server'] ?? 'N/A'),
+                          SizedBox(height: AppSizes.xs),
+                          _buildInfoRow('Username', data['xtream_username'] ?? 'N/A'),
+                        ],
+                        SizedBox(height: AppSizes.md),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () async {
+                                  // Confirm deletion
+                                  final confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      backgroundColor: AppTheme.cardBackground,
+                                      title: Text('Delete Saved Playlist?'),
+                                      content: Text(
+                                        'This will remove the saved credentials. You can add a new playlist anytime from the Playlist Login screen.',
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context, false),
+                                          child: Text('Cancel'),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: () => Navigator.pop(context, true),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: AppTheme.accentRed,
+                                          ),
+                                          child: Text('Delete'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+
+                                  if (confirm == true) {
+                                    final prefs = await SharedPreferences.getInstance();
+                                    await prefs.remove('playlist_type');
+                                    await prefs.remove('m3u_url');
+                                    await prefs.remove('xtream_server');
+                                    await prefs.remove('xtream_username');
+                                    await prefs.remove('xtream_password');
+
+                                    if (mounted) {
+                                      setState(() {}); // Refresh the UI
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Playlist credentials deleted'),
+                                          backgroundColor: AppTheme.accentGreen,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                                icon: Icon(Icons.delete_outline),
+                                label: Text('Delete Playlist'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppTheme.accentRed,
+                                  side: BorderSide(color: AppTheme.accentRed),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: AppSizes.sm),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  context.go('/settings/playlist-login');
+                                },
+                                icon: Icon(Icons.add),
+                                label: Text('Change Playlist'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primaryBlue,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
               ],
@@ -2933,56 +2807,16 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildSwitchTile(String title, bool value, {String? subtitle}) {
+  Widget _buildSwitchTile(String title, bool value) {
     return SwitchListTile(
       title: Text(title),
-      subtitle: subtitle != null ? Text(subtitle, style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)) : null,
       value: value,
-      onChanged: (newValue) async {
+      onChanged: (newValue) {
         setState(() {
           if (title == 'Auto-play Next Episode') {
             _autoPlayNextEpisode = newValue;
-          } else if (title == 'Auto Frame Rate Matching') {
-            _autoFrameRate = newValue;
           }
         });
-        
-        // Save to SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
-        if (title == 'Auto-play Next Episode') {
-          await prefs.setBool('auto_play_next', newValue);
-        } else if (title == 'Auto Frame Rate Matching') {
-          await prefs.setBool('auto_frame_rate', newValue);
-        }
-      },
-    );
-  }
-
-  Widget _buildAudioSwitchTile(String title, bool value, {String? subtitle}) {
-    return SwitchListTile(
-      title: Text(title),
-      subtitle: subtitle != null ? Text(subtitle, style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)) : null,
-      value: value,
-      onChanged: (newValue) async {
-        setState(() {
-          if (title == 'Audio Passthrough') {
-            _audioPassthrough = newValue;
-          } else if (title == 'Audio Boost') {
-            _audioBoost = newValue;
-          } else if (title == 'Normalize Audio') {
-            _normalizeAudio = newValue;
-          }
-        });
-        
-        // Save to SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
-        if (title == 'Audio Passthrough') {
-          await prefs.setBool('audio_passthrough', newValue);
-        } else if (title == 'Audio Boost') {
-          await prefs.setBool('audio_boost', newValue);
-        } else if (title == 'Normalize Audio') {
-          await prefs.setBool('normalize_audio', newValue);
-        }
       },
     );
   }
@@ -3015,76 +2849,6 @@ class _SettingsScreenState extends State<SettingsScreen>
             onChanged: onChanged,
           ),
         ],
-      ),
-    );
-  }
-
-  // TV-friendly TextField widget with consistent blue focus border and keyboard support
-  Widget _buildTVTextField({
-    required TextEditingController controller,
-    required FocusNode focusNode,
-    required bool isEditable,
-    required Function(bool) onEditableChanged,
-    String? hintText,
-    String? helperText,
-    String? labelText,
-    IconData? prefixIcon,
-    TextInputType? keyboardType,
-    bool obscureText = false,
-    int? maxLines = 1,
-  }) {
-    return Focus(
-      focusNode: focusNode,
-      onFocusChange: (hasFocus) {
-        if (!hasFocus && isEditable) {
-          onEditableChanged(false);
-        }
-      },
-      onKey: (node, event) {
-        if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
-        final key = event.logicalKey;
-        // On SELECT/ENTER, enable editing and show keyboard
-        if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
-          if (!isEditable) {
-            onEditableChanged(true);
-            // Request focus again after enabling editing to trigger keyboard
-            Future.delayed(Duration(milliseconds: 50), () {
-              focusNode.requestFocus();
-            });
-          }
-          return KeyEventResult.handled;
-        }
-        return KeyEventResult.ignored;
-      },
-      child: TextField(
-        controller: controller,
-        focusNode: focusNode,
-        autofocus: false,
-        readOnly: !isEditable,
-        obscureText: obscureText,
-        keyboardType: keyboardType,
-        maxLines: obscureText ? 1 : maxLines,
-        decoration: InputDecoration(
-          hintText: hintText,
-          helperText: helperText,
-          labelText: labelText,
-          prefixIcon: prefixIcon != null ? Icon(prefixIcon) : null,
-          filled: true,
-          fillColor: AppTheme.highlight,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: AppTheme.primaryBlue, width: 3),
-          ),
-          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        ),
       ),
     );
   }
@@ -3264,6 +3028,181 @@ class _SettingsScreenState extends State<SettingsScreen>
         return 'pt';
       default:
         return 'en';
+    }
+  }
+
+  // Helper: TV-friendly text field with proper keyboard handling
+  Widget _buildTVFriendlyTextField({
+    required TextEditingController controller,
+    required FocusNode focusNode,
+    required bool isEditable,
+    required Function(bool) onEditableChange,
+    required String label,
+    String? hint,
+    required IconData icon,
+    bool obscureText = false,
+  }) {
+    return Focus(
+      focusNode: focusNode,
+      onFocusChange: (hasFocus) {
+        if (!hasFocus && isEditable) {
+          onEditableChange(false);
+        }
+      },
+      onKey: (node, event) {
+        if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+        final key = event.logicalKey;
+        
+        // ENTER/SELECT to start editing
+        if (!isEditable && (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter)) {
+          onEditableChange(true);
+          return KeyEventResult.handled;
+        }
+        
+        // BACK/ESC to stop editing (prevents crash)
+        if (isEditable && (key == LogicalKeyboardKey.escape || key == LogicalKeyboardKey.goBack)) {
+          onEditableChange(false);
+          focusNode.requestFocus(); // Keep focus on field, just exit edit mode
+          return KeyEventResult.handled;
+        }
+        
+        return KeyEventResult.ignored;
+      },
+      child: Builder(
+        builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
+          return Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+              border: Border.all(
+                color: isFocused ? AppTheme.primaryBlue : AppTheme.divider,
+                width: isFocused ? 2 : 1,
+              ),
+              color: isEditable ? AppTheme.cardBackground : Colors.transparent,
+            ),
+            child: TextField(
+              controller: controller,
+              readOnly: !isEditable,
+              obscureText: obscureText,
+              autofocus: false,
+              style: TextStyle(color: AppTheme.textPrimary),
+              decoration: InputDecoration(
+                labelText: label,
+                hintText: hint,
+                prefixIcon: Icon(
+                  icon,
+                  color: isFocused ? AppTheme.primaryBlue : AppTheme.textSecondary,
+                ),
+                suffixIcon: isEditable 
+                    ? Icon(Icons.edit, color: AppTheme.accentOrange, size: 16) 
+                    : (isFocused ? Icon(Icons.keyboard, color: AppTheme.primaryBlue, size: 16) : null),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: AppSizes.md,
+                  vertical: AppSizes.md,
+                ),
+                labelStyle: TextStyle(
+                  color: isFocused ? AppTheme.primaryBlue : AppTheme.textSecondary,
+                ),
+                hintStyle: TextStyle(
+                  color: AppTheme.textSecondary.withOpacity(0.5),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // Helper: Load M3U playlist
+  Future<void> _loadM3UPlaylist() async {
+    final url = _m3uUrlController.text.trim();
+    if (url.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please enter a valid M3U URL')),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Loading playlist from URL...')),
+    );
+
+    try {
+      final provider = Provider.of<ChannelProvider>(context, listen: false);
+      await provider.loadPlaylistFromUrl(url);
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('m3u_url', url);
+      await prefs.setString('playlist_type', 'm3u');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Playlist loaded! ${provider.channels.length} channels found.'),
+            backgroundColor: AppTheme.accentGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load playlist: ${e.toString()}'),
+            backgroundColor: AppTheme.accentRed,
+          ),
+        );
+      }
+    }
+  }
+
+  // Helper: Load Xtream playlist
+  Future<void> _loadXtreamPlaylist() async {
+    final server = _xtreamServerController.text.trim();
+    final username = _xtreamUsernameController.text.trim();
+    final password = _xtreamPasswordController.text.trim();
+
+    if (server.isEmpty || username.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please fill in all Xtream Codes fields')),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Loading Xtream Codes playlist...')),
+    );
+
+    final url = '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
+
+    try {
+      final provider = Provider.of<ChannelProvider>(context, listen: false);
+      await provider.loadPlaylistFromUrl(url);
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('xtream_server', server);
+      await prefs.setString('xtream_username', username);
+      await prefs.setString('xtream_password', password);
+      await prefs.setString('playlist_type', 'xtream');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Playlist loaded! ${provider.channels.length} channels found.'),
+            backgroundColor: AppTheme.accentGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load playlist: ${e.toString()}'),
+            backgroundColor: AppTheme.accentRed,
+          ),
+        );
+      }
     }
   }
 

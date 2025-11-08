@@ -120,12 +120,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         allowMuting: true,
         showControls: true,
         showControlsOnInitialize: true,
-        progressColors: ChewieProgressColors(
-          playedColor: AppTheme.accentPink,
-          handleColor: AppTheme.accentPink,
-          backgroundColor: AppTheme.textSecondary,
-          bufferedColor: AppTheme.textSecondary.withOpacity(0.5),
-        ),
         placeholder: Container(
           color: Colors.black,
           child: const Center(

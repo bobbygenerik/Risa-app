@@ -1,0 +1,580 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
+import '../providers/channel_provider.dart';
+import '../utils/app_theme.dart';
+
+class PlaylistEditorScreen extends StatefulWidget {
+  const PlaylistEditorScreen({super.key});
+
+  @override
+  State<PlaylistEditorScreen> createState() => _PlaylistEditorScreenState();
+}
+
+class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
+  final TextEditingController _playlistNameController = TextEditingController();
+  final TextEditingController _m3uUrlController = TextEditingController();
+  final TextEditingController _xtreamServerController = TextEditingController();
+  final TextEditingController _xtreamUsernameController = TextEditingController();
+  final TextEditingController _xtreamPasswordController = TextEditingController();
+  final TextEditingController _epgUrlController = TextEditingController();
+  
+  final FocusNode _playlistNameFocusNode = FocusNode();
+  final FocusNode _m3uUrlFocusNode = FocusNode();
+  final FocusNode _xtreamServerFocusNode = FocusNode();
+  final FocusNode _xtreamUsernameFocusNode = FocusNode();
+  final FocusNode _xtreamPasswordFocusNode = FocusNode();
+  final FocusNode _epgUrlFocusNode = FocusNode();
+  final FocusNode _updateFrequencyFocusNode = FocusNode();
+  
+  bool _playlistNameEditable = false;
+  bool _m3uUrlEditable = false;
+  bool _xtreamServerEditable = false;
+  bool _xtreamUsernameEditable = false;
+  bool _xtreamPasswordEditable = false;
+  bool _epgUrlEditable = false;
+  
+  String _playlistType = 'm3u';
+  int _updateFrequencyHours = 24; // Default: update every 24 hours
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlaylistData();
+  }
+
+  @override
+  void dispose() {
+    _playlistNameController.dispose();
+    _m3uUrlController.dispose();
+    _xtreamServerController.dispose();
+    _xtreamUsernameController.dispose();
+    _xtreamPasswordController.dispose();
+    _epgUrlController.dispose();
+    _playlistNameFocusNode.dispose();
+    _m3uUrlFocusNode.dispose();
+    _xtreamServerFocusNode.dispose();
+    _xtreamUsernameFocusNode.dispose();
+    _xtreamPasswordFocusNode.dispose();
+    _epgUrlFocusNode.dispose();
+    _updateFrequencyFocusNode.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadPlaylistData() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _playlistType = prefs.getString('playlist_type') ?? 'm3u';
+      _playlistNameController.text = prefs.getString('playlist_name') ?? 'My Playlist';
+      _m3uUrlController.text = prefs.getString('m3u_url') ?? '';
+      _xtreamServerController.text = prefs.getString('xtream_server') ?? '';
+      _xtreamUsernameController.text = prefs.getString('xtream_username') ?? '';
+      _xtreamPasswordController.text = prefs.getString('xtream_password') ?? '';
+      _epgUrlController.text = prefs.getString('epg_url') ?? '';
+      _updateFrequencyHours = prefs.getInt('playlist_update_frequency') ?? 24;
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _saveSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('playlist_name', _playlistNameController.text);
+    await prefs.setString('epg_url', _epgUrlController.text);
+    await prefs.setInt('playlist_update_frequency', _updateFrequencyHours);
+    
+    if (_playlistType == 'm3u') {
+      await prefs.setString('m3u_url', _m3uUrlController.text);
+    } else {
+      await prefs.setString('xtream_server', _xtreamServerController.text);
+      await prefs.setString('xtream_username', _xtreamUsernameController.text);
+      await prefs.setString('xtream_password', _xtreamPasswordController.text);
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Settings saved successfully'),
+          backgroundColor: AppTheme.accentGreen,
+        ),
+      );
+    }
+  }
+
+  Future<void> _updatePlaylist() async {
+    try {
+      final provider = Provider.of<ChannelProvider>(context, listen: false);
+      
+      if (_playlistType == 'm3u') {
+        final url = _m3uUrlController.text.trim();
+        if (url.isEmpty) {
+          throw Exception('M3U URL is empty');
+        }
+        await provider.loadPlaylistFromUrl(url);
+      } else {
+        final server = _xtreamServerController.text.trim();
+        final username = _xtreamUsernameController.text.trim();
+        final password = _xtreamPasswordController.text.trim();
+        
+        if (server.isEmpty || username.isEmpty) {
+          throw Exception('Server URL and username are required');
+        }
+        
+        final url = '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
+        await provider.loadPlaylistFromUrl(url);
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Playlist updated! ${provider.channels.length} channels found.'),
+            backgroundColor: AppTheme.accentGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update playlist: ${e.toString()}'),
+            backgroundColor: AppTheme.accentRed,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _deletePlaylist() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.cardBackground,
+        title: const Text('Delete Playlist?'),
+        content: const Text(
+          'This will remove all saved playlist data and credentials. This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.accentRed,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('playlist_type');
+      await prefs.remove('playlist_name');
+      await prefs.remove('m3u_url');
+      await prefs.remove('xtream_server');
+      await prefs.remove('xtream_username');
+      await prefs.remove('xtream_password');
+      await prefs.remove('epg_url');
+      await prefs.remove('playlist_update_frequency');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Playlist deleted'),
+            backgroundColor: AppTheme.accentGreen,
+          ),
+        );
+        context.pop();
+      }
+    }
+  }
+
+  Widget _buildTVFriendlyTextField({
+    required TextEditingController controller,
+    required FocusNode focusNode,
+    required bool isEditable,
+    required Function(bool) onEditableChange,
+    required String label,
+    required String hint,
+    required IconData icon,
+    bool obscureText = false,
+  }) {
+    return Focus(
+      focusNode: focusNode,
+      onFocusChange: (hasFocus) {
+        if (!hasFocus && isEditable) {
+          onEditableChange(false);
+        }
+      },
+      onKey: (node, event) {
+        if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+        final key = event.logicalKey;
+        if ((key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) && !isEditable) {
+          onEditableChange(true);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            focusNode.requestFocus();
+          });
+          return KeyEventResult.handled;
+        }
+        if (key == LogicalKeyboardKey.escape && isEditable) {
+          onEditableChange(false);
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: GestureDetector(
+        onTap: () {
+          onEditableChange(true);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            focusNode.requestFocus();
+          });
+        },
+        child: TextField(
+          controller: controller,
+          readOnly: !isEditable,
+          obscureText: obscureText,
+          decoration: InputDecoration(
+            labelText: label,
+            hintText: hint,
+            prefixIcon: Icon(icon),
+            filled: true,
+            fillColor: isEditable 
+                ? AppTheme.primaryBlue.withOpacity(0.1) 
+                : AppTheme.cardBackground,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: AppTheme.primaryBlue, width: 3),
+            ),
+            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: AppTheme.darkBackground,
+        body: Center(
+          child: CircularProgressIndicator(color: AppTheme.primaryBlue),
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: AppTheme.darkBackground,
+      appBar: AppBar(
+        backgroundColor: AppTheme.cardBackground,
+        title: const Text('Edit Playlist'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: ElevatedButton.icon(
+              onPressed: _saveSettings,
+              icon: const Icon(Icons.save),
+              label: const Text('Save'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryBlue,
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSizes.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Playlist Name
+            _buildSectionCard(
+              title: 'Playlist Name',
+              subtitle: 'Give your playlist a custom name',
+              children: [
+                _buildTVFriendlyTextField(
+                  controller: _playlistNameController,
+                  focusNode: _playlistNameFocusNode,
+                  isEditable: _playlistNameEditable,
+                  onEditableChange: (value) => setState(() => _playlistNameEditable = value),
+                  label: 'Playlist Name',
+                  hint: 'e.g., My IPTV Channels',
+                  icon: Icons.label,
+                ),
+              ],
+            ),
+
+            const SizedBox(height: AppSizes.lg),
+
+            // Playlist Source
+            _buildSectionCard(
+              title: 'Playlist Source',
+              subtitle: _playlistType == 'm3u' ? 'M3U URL Configuration' : 'Xtream Codes Configuration',
+              children: [
+                if (_playlistType == 'm3u') ...[
+                  _buildTVFriendlyTextField(
+                    controller: _m3uUrlController,
+                    focusNode: _m3uUrlFocusNode,
+                    isEditable: _m3uUrlEditable,
+                    onEditableChange: (value) => setState(() => _m3uUrlEditable = value),
+                    label: 'M3U Playlist URL',
+                    hint: 'http://example.com/playlist.m3u',
+                    icon: Icons.link,
+                  ),
+                ] else ...[
+                  _buildTVFriendlyTextField(
+                    controller: _xtreamServerController,
+                    focusNode: _xtreamServerFocusNode,
+                    isEditable: _xtreamServerEditable,
+                    onEditableChange: (value) => setState(() => _xtreamServerEditable = value),
+                    label: 'Server URL',
+                    hint: 'http://example.com:8080',
+                    icon: Icons.dns,
+                  ),
+                  const SizedBox(height: AppSizes.md),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildTVFriendlyTextField(
+                          controller: _xtreamUsernameController,
+                          focusNode: _xtreamUsernameFocusNode,
+                          isEditable: _xtreamUsernameEditable,
+                          onEditableChange: (value) => setState(() => _xtreamUsernameEditable = value),
+                          label: 'Username',
+                          hint: 'Your username',
+                          icon: Icons.person,
+                        ),
+                      ),
+                      const SizedBox(width: AppSizes.md),
+                      Expanded(
+                        child: _buildTVFriendlyTextField(
+                          controller: _xtreamPasswordController,
+                          focusNode: _xtreamPasswordFocusNode,
+                          isEditable: _xtreamPasswordEditable,
+                          onEditableChange: (value) => setState(() => _xtreamPasswordEditable = value),
+                          label: 'Password',
+                          hint: 'Your password',
+                          icon: Icons.lock,
+                          obscureText: true,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+
+            const SizedBox(height: AppSizes.lg),
+
+            // EPG Source
+            _buildSectionCard(
+              title: 'EPG Source',
+              subtitle: 'Electronic Program Guide URL',
+              children: [
+                _buildTVFriendlyTextField(
+                  controller: _epgUrlController,
+                  focusNode: _epgUrlFocusNode,
+                  isEditable: _epgUrlEditable,
+                  onEditableChange: (value) => setState(() => _epgUrlEditable = value),
+                  label: 'EPG URL (Optional)',
+                  hint: 'http://example.com/epg.xml',
+                  icon: Icons.calendar_today,
+                ),
+              ],
+            ),
+
+            const SizedBox(height: AppSizes.lg),
+
+            // Update Frequency
+            _buildSectionCard(
+              title: 'Auto-Update Frequency',
+              subtitle: 'How often to refresh the playlist automatically',
+              children: [
+                Focus(
+                  focusNode: _updateFrequencyFocusNode,
+                  onKey: (node, event) {
+                    if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+                    if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                      setState(() {
+                        if (_updateFrequencyHours > 1) _updateFrequencyHours--;
+                      });
+                      return KeyEventResult.handled;
+                    } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                      setState(() {
+                        if (_updateFrequencyHours < 168) _updateFrequencyHours++;
+                      });
+                      return KeyEventResult.handled;
+                    }
+                    return KeyEventResult.ignored;
+                  },
+                  child: ListTile(
+                    leading: const Icon(Icons.refresh, color: AppTheme.primaryBlue),
+                    title: const Text('Update every'),
+                    subtitle: Text('$_updateFrequencyHours hours'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.remove),
+                          onPressed: () {
+                            if (_updateFrequencyHours > 1) {
+                              setState(() => _updateFrequencyHours--);
+                            }
+                          },
+                        ),
+                        Text(
+                          '$_updateFrequencyHours',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.add),
+                          onPressed: () {
+                            if (_updateFrequencyHours < 168) {
+                              setState(() => _updateFrequencyHours++);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSizes.sm),
+                Container(
+                  padding: const EdgeInsets.all(AppSizes.md),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryBlue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline, size: 16, color: AppTheme.primaryBlue),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Playlist will automatically refresh every $_updateFrequencyHours ${_updateFrequencyHours == 1 ? "hour" : "hours"}',
+                          style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: AppSizes.xl),
+
+            // Action Buttons
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _deletePlaylist,
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Delete Playlist'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.accentRed,
+                      side: const BorderSide(color: AppTheme.accentRed),
+                      padding: const EdgeInsets.all(AppSizes.md),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSizes.md),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _updatePlaylist,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Update Playlist Now'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryBlue,
+                      padding: const EdgeInsets.all(AppSizes.md),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: AppSizes.md),
+
+            Container(
+              padding: const EdgeInsets.all(AppSizes.md),
+              decoration: BoxDecoration(
+                color: AppTheme.cardBackground,
+                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                border: Border.all(color: AppTheme.divider),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, color: AppTheme.textSecondary),
+                  SizedBox(width: AppSizes.md),
+                  Expanded(
+                    child: Text(
+                      'Press ENTER on text fields to edit them. Press ESC to finish editing. Don\'t forget to save your changes!',
+                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionCard({
+    required String title,
+    String? subtitle,
+    required List<Widget> children,
+  }) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: AppSizes.md),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSizes.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            if (subtitle != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+            ],
+            const SizedBox(height: AppSizes.md),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+}

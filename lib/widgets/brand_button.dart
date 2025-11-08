@@ -70,19 +70,11 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
 
     final content = Stack(
       children: [
-        // Gradient border on focus
+        // Solid pink border on focus
         AnimatedContainer(
           duration: AppDurations.fast,
           decoration: BoxDecoration(
-            gradient: _focused
-                ? const LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: [AppTheme.primaryBlue, AppTheme.accentPink],
-                  )
-                : const LinearGradient(
-                    colors: [Colors.transparent, Colors.transparent],
-                  ),
+            color: _focused ? AppTheme.accentPink : Colors.transparent,
             borderRadius: BorderRadius.circular(widget.borderRadius),
           ),
           child: Padding(
