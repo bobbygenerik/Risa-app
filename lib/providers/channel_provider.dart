@@ -42,14 +42,28 @@ class ChannelProvider with ChangeNotifier {
     print('ChannelProvider: Auto-loading playlist...');
     final prefs = await SharedPreferences.getInstance();
     final playlistType = prefs.getString('playlist_type');
-    
+
+    if (playlistType == null) {
+      print('ChannelProvider: No saved playlist found');
+      if (_channels.isNotEmpty || _movies.isNotEmpty || _series.isNotEmpty) {
+        _channels = [];
+        _movies = [];
+        _series = [];
+        notifyListeners();
+      }
+      // Ensure stale cache does not resurrect old playlists when none are saved
+      await prefs.remove('cached_playlist');
+      await prefs.remove('cache_timestamp');
+      return; // No saved playlist
+    }
+
     // First, try to load from cache
     final cachedPlaylist = prefs.getString('cached_playlist');
     final cacheTimestamp = prefs.getInt('cache_timestamp');
-    final cacheAge = cacheTimestamp != null 
-        ? DateTime.now().millisecondsSinceEpoch - cacheTimestamp 
+    final cacheAge = cacheTimestamp != null
+        ? DateTime.now().millisecondsSinceEpoch - cacheTimestamp
         : null;
-    
+
     // If cache is less than 6 hours old (21600000 ms), use it
     if (cachedPlaylist != null && cacheAge != null && cacheAge < 21600000) {
       print('ChannelProvider: Loading from cache (${(cacheAge / 60000).round()} minutes old)');
@@ -57,7 +71,7 @@ class ChannelProvider with ChangeNotifier {
         loadPlaylistFromString(cachedPlaylist);
         _hasLoadedPlaylist = true;
         print('ChannelProvider: Cache loaded successfully with ${_channels.length} channels');
-        
+
         // Load from network in background to update cache
         _refreshCacheInBackground(prefs, playlistType);
         return;
@@ -67,12 +81,8 @@ class ChannelProvider with ChangeNotifier {
     } else {
       print('ChannelProvider: Cache expired or not found, loading from network');
     }
-    
+
     print('ChannelProvider: Playlist type: $playlistType');
-    if (playlistType == null) {
-      print('ChannelProvider: No saved playlist found');
-      return; // No saved playlist
-    }
     
     try {
       String? playlistUrl;

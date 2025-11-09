@@ -541,7 +541,33 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ),
                     ),
                     SizedBox(height: AppSizes.sm),
-                    if (!syncService.isSignedIn) ...[
+                    if (!syncService.isSupported) ...[
+                      Center(
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.desktop_access_disabled,
+                              size: 36,
+                              color: AppTheme.textSecondary,
+                            ),
+                            SizedBox(height: AppSizes.sm),
+                            Text(
+                              'Google Drive sync is unavailable on this platform.',
+                              textAlign: TextAlign.center,
+                            ),
+                            SizedBox(height: AppSizes.sm),
+                            Text(
+                              'Use an Android or iOS device to enable cloud sync.',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(color: AppTheme.textSecondary),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else if (!syncService.isSignedIn) ...[
                       Center(
                         child: Column(
                           children: [

@@ -1,55 +1,138 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
+import 'package:iptv_player/providers/channel_provider.dart';
+import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 
-// Simple shimmer widget for loading/empty states
-class _Shimmer extends StatefulWidget {
-  final double width;
-  final double height;
-  const _Shimmer({Key? key, required this.width, required this.height}) : super(key: key);
+class GoogleTVHomeScreen extends StatefulWidget {
+  const GoogleTVHomeScreen({super.key});
 
   @override
-  State<_Shimmer> createState() => _ShimmerState();
+  State<GoogleTVHomeScreen> createState() => _GoogleTVHomeScreenState();
 }
 
-class _ShimmerState extends State<_Shimmer> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+class _GoogleTVHomeScreenState extends State<GoogleTVHomeScreen> {
+  final FocusNode _primaryCtaFocusNode = FocusNode(
+    debugLabel: 'HomeCtaPrimary',
+  );
+  final FocusNode _secondaryCtaFocusNode = FocusNode(
+    debugLabel: 'HomeCtaSecondary',
+  );
+  final FocusNode _firstLiveCardFocusNode = FocusNode(
+    debugLabel: 'HomeFirstLiveCard',
+  );
 
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat();
-  }
+  bool _requestedContentFocus = false;
 
   @override
   void dispose() {
-    _controller.dispose();
+    _primaryCtaFocusNode.dispose();
+    _secondaryCtaFocusNode.dispose();
+    _firstLiveCardFocusNode.dispose();
     super.dispose();
+  }
+
+  /// Called by [AppShell] to focus the first interactive widget on screen.
+  void requestFirstContentFocus() {
+    if (!mounted) return;
+    final provider = context.read<ChannelProvider>();
+    if (_shouldShowPlaylistGate(provider)) {
+      if (_primaryCtaFocusNode.canRequestFocus) {
+        _primaryCtaFocusNode.requestFocus();
+      }
+      return;
+    }
+
+    if (_firstLiveCardFocusNode.canRequestFocus) {
+      _firstLiveCardFocusNode.requestFocus();
+    }
+  }
+
+  bool _shouldShowPlaylistGate(ChannelProvider provider) {
+    if (provider.isLoading && provider.channels.isNotEmpty) {
+      return false;
+    }
+    if (provider.channels.isNotEmpty) {
+      return false;
+    }
+    return !provider.hasLoadedPlaylist || provider.channels.isEmpty;
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Container(
-          width: widget.width,
-          height: widget.height,
-          decoration: BoxDecoration(
-            borderRadius: const BorderRadius.all(Radius.circular(16)),
-            gradient: LinearGradient(
-              begin: Alignment(-1.0, -0.3),
-              end: Alignment(2.0, 0.3),
-              colors: [
-                Colors.grey[800]!,
-                Colors.grey[700]!,
-                Colors.grey[800]!,
-              ],
-              stops: [
-                0.1 + 0.6 * _controller.value,
-                0.3 + 0.6 * _controller.value,
-                0.8 + 0.6 * _controller.value,
+    return Consumer2<ChannelProvider, ContentProvider>(
+      builder: (context, channelProvider, contentProvider, _) {
+        // Gate the standard home layout until the user has a playlist ready.
+        final bool showGate = _shouldShowPlaylistGate(channelProvider);
+        final bool isLoading =
+            channelProvider.isLoading && channelProvider.channels.isEmpty;
+
+        if (showGate) {
+          _requestedContentFocus = false;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            if (_primaryCtaFocusNode.canRequestFocus) {
+              _primaryCtaFocusNode.requestFocus();
+            }
+          });
+        } else if (!_requestedContentFocus) {
+          _requestedContentFocus = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            if (_firstLiveCardFocusNode.canRequestFocus) {
+              _firstLiveCardFocusNode.requestFocus();
+            }
+          });
+        }
+
+        final liveChannels = channelProvider.channels
+            .map((channel) => channel.name)
+            .where((name) => name.isNotEmpty)
+            .toList();
+        final movieTitles = contentProvider.movies
+            .map((content) => content.title)
+            .where((title) => title.isNotEmpty)
+            .toList();
+        final continueWatchingTitles = contentProvider.continueWatching
+            .map((content) => content.title)
+            .where((title) => title.isNotEmpty)
+            .toList();
+
+        return Scaffold(
+          backgroundColor: AppTheme.darkBackground,
+          body: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildTopBar(),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    child: showGate
+                        ? _PlaylistGate(
+                            key: const ValueKey('playlist-gate'),
+                            isLoading: isLoading,
+                            errorMessage: channelProvider.errorMessage,
+                            onOpenSettings: () => context.go('/settings'),
+                            onOpenPlaylist: () => context.go('/playlist-login'),
+                            onRetry: channelProvider.autoLoadPlaylist,
+                            primaryFocusNode: _primaryCtaFocusNode,
+                            secondaryFocusNode: _secondaryCtaFocusNode,
+                          )
+                        : _HomeContent(
+                            key: const ValueKey('home-content'),
+                            liveChannels: liveChannels,
+                            movieTitles: movieTitles,
+                            continueWatching: continueWatchingTitles,
+                            firstCardFocusNode: _firstLiveCardFocusNode,
+                          ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -57,588 +140,266 @@ class _ShimmerState extends State<_Shimmer> with SingleTickerProviderStateMixin 
       },
     );
   }
-}
-// --- Focusable Carousel (restored) ---
-class _FocusableCarousel extends StatefulWidget {
-  final String title;
-  final List<String> items;
-  final Widget Function(String, {bool autofocus}) cardBuilder;
-  final bool isFirst;
-  const _FocusableCarousel({required this.title, required this.items, required this.cardBuilder, this.isFirst = false});
 
-  @override
-  State<_FocusableCarousel> createState() => _FocusableCarouselState();
-}
-
-class _FocusableCarouselState extends State<_FocusableCarousel> {
-  bool _focused = false;
-  final _rowFocusNode = FocusNode();
-
-  @override
-  void dispose() {
-    _rowFocusNode.dispose();
-    super.dispose();
-  }
-
-  void _onFocusChange(bool focused) {
-    setState(() {
-      _focused = focused;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isEmpty = widget.items.isEmpty;
-    return FocusableActionDetector(
-      focusNode: _rowFocusNode,
-      onFocusChange: _onFocusChange,
-      autofocus: false,
-      shortcuts: <LogicalKeySet, Intent>{
-        LogicalKeySet(LogicalKeyboardKey.arrowUp): DirectionalFocusIntent(TraversalDirection.up),
-        LogicalKeySet(LogicalKeyboardKey.arrowDown): DirectionalFocusIntent(TraversalDirection.down),
-      },
-      actions: <Type, Action<Intent>>{
-        DirectionalFocusIntent: CallbackAction<DirectionalFocusIntent>(
-          onInvoke: (intent) {
-            if (intent.direction == TraversalDirection.up) {
-              FocusScope.of(context).previousFocus();
-            } else if (intent.direction == TraversalDirection.down) {
-              FocusScope.of(context).nextFocus();
-            }
-            return null;
-          },
-        ),
-      },
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 300),
-        opacity: _focused ? 1.0 : 0.92,
-        child: AnimatedScale(
-          duration: const Duration(milliseconds: 250),
-          scale: _focused ? 1.02 : 1.0,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                child: Text(
-                  widget.title,
-                  style: TextStyle(
-                    color: _focused ? AppTheme.primaryBlue : Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w600,
-                    shadows: _focused
-                        ? [
-                            Shadow(
-                              color: AppTheme.primaryBlue.withOpacity(0.4),
-                              blurRadius: 8,
-                            ),
-                          ]
-                        : [],
-                  ),
-                ),
-              ),
-              SizedBox(
-                height: 220,
-                child: isEmpty
-                    ? ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        itemCount: 5,
-                        separatorBuilder: (_, __) => const SizedBox(width: 16),
-                        itemBuilder: (context, index) => const _Shimmer(width: 140, height: 220),
-                      )
-                    : ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        itemCount: widget.items.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 16),
-                        itemBuilder: (context, index) {
-                          final bool autofocus = widget.isFirst && index == 0;
-                          return widget.cardBuilder(widget.items[index], autofocus: autofocus);
-                        },
-                      ),
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
-      ),
+  Widget _buildTopBar() {
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      child: _TopBar(),
     );
   }
 }
 
-class GoogleTVHomeScreen extends StatefulWidget {
-  const GoogleTVHomeScreen({Key? key}) : super(key: key);
+class _HomeContent extends StatelessWidget {
+  const _HomeContent({
+    super.key,
+    required this.liveChannels,
+    required this.movieTitles,
+    required this.continueWatching,
+    required this.firstCardFocusNode,
+  });
 
-  @override
-  State<GoogleTVHomeScreen> createState() => _GoogleTVHomeScreenState();
-}
-
-class _GoogleTVHomeScreenState extends State<GoogleTVHomeScreen> {
-  // Example carousel data
-  final List<String> liveTV = List.generate(10, (i) => 'Channel ${i + 1}');
-  final List<String> movies = List.generate(10, (i) => 'Movie ${i + 1}');
-  final List<String> continueWatching = List.generate(5, (i) => 'Show ${i + 1}');
+  final List<String> liveChannels;
+  final List<String> movieTitles;
+  final List<String> continueWatching;
+  final FocusNode firstCardFocusNode;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: ListView(
-              padding: const EdgeInsets.only(top: 120, bottom: 32),
-              children: [
-                _HeroBanner(
-                  title: 'Tonight: Championship Finals',
-                  subtitle: 'Live · Channel 5',
-                  description:
-                      'Catch the ultimate showdown with AI-enhanced clarity, multi-language commentary, and instant replays.',
-                  primaryLabel: 'Watch Now',
-                  secondaryLabel: 'More Info',
-                  onPrimaryPressed: () => context.go('/movies'),
-                  onSecondaryPressed: () => context.go('/series'),
-                ),
-                const SizedBox(height: 32),
-                _buildCarousel('Live TV', liveTV),
-                _buildCarousel('Movies', movies),
-                _buildCarousel('Continue Watching', continueWatching),
-              ],
-            ),
-          ),
-          const _FloatingTopBar(),
-        ],
-      ),
+    return ListView(
+      padding: const EdgeInsets.symmetric(vertical: 24),
+      children: [
+        _buildCarousel(
+          title: 'Live TV',
+          items: liveChannels,
+          isFirst: true,
+          firstItemFocusNode: firstCardFocusNode,
+        ),
+        _buildCarousel(title: 'Movies', items: movieTitles),
+        _buildCarousel(
+          title: 'Continue Watching',
+          items: continueWatching,
+          emptyFallbackCount: 3,
+        ),
+      ],
     );
   }
 
-  Widget _buildCarousel(String title, List<String> items, {bool isFirst = false}) {
+  Widget _buildCarousel({
+    required String title,
+    required List<String> items,
+    bool isFirst = false,
+    FocusNode? firstItemFocusNode,
+    int emptyFallbackCount = 5,
+  }) {
     return _FocusableCarousel(
       title: title,
       items: items,
-      cardBuilder: (label, {bool autofocus = false}) => _buildCard(label, autofocus: autofocus),
+      emptyFallbackCount: emptyFallbackCount,
       isFirst: isFirst,
+      firstItemFocusNode: firstItemFocusNode,
+      cardBuilder: (label, {bool autofocus = false, FocusNode? focusNode}) =>
+          _FocusableCard(
+            label: label,
+            autofocus: autofocus,
+            focusNode: focusNode,
+          ),
     );
   }
-
-  Widget _buildCard(String label, {bool autofocus = false}) {
-    return _FocusableCard(label: label, autofocus: autofocus);
-  }
 }
 
-class _HeroBanner extends StatefulWidget {
-  const _HeroBanner({
-    required this.title,
-    required this.subtitle,
-    required this.description,
-    required this.primaryLabel,
-    required this.secondaryLabel,
-    required this.onPrimaryPressed,
-    required this.onSecondaryPressed,
+class _PlaylistGate extends StatelessWidget {
+  const _PlaylistGate({
+    super.key,
+    required this.isLoading,
+    required this.errorMessage,
+    required this.onOpenSettings,
+    required this.onOpenPlaylist,
+    required this.onRetry,
+    required this.primaryFocusNode,
+    required this.secondaryFocusNode,
   });
 
-  final String title;
-  final String subtitle;
-  final String description;
-  final String primaryLabel;
-  final String secondaryLabel;
-  final VoidCallback onPrimaryPressed;
-  final VoidCallback onSecondaryPressed;
-
-  @override
-  State<_HeroBanner> createState() => _HeroBannerState();
-}
-
-class _HeroBannerState extends State<_HeroBanner> {
-  late final FocusNode _primaryFocusNode;
-  late final FocusNode _secondaryFocusNode;
-  bool _primaryFocused = false;
-  bool _secondaryFocused = false;
-
-  bool get _hasFocus => _primaryFocused || _secondaryFocused;
-
-  @override
-  void initState() {
-    super.initState();
-    _primaryFocusNode = FocusNode(debugLabel: 'hero-primary');
-    _secondaryFocusNode = FocusNode(debugLabel: 'hero-secondary');
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _primaryFocusNode.requestFocus();
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _primaryFocusNode.dispose();
-    _secondaryFocusNode.dispose();
-    super.dispose();
-  }
-
-  void _handlePrimaryFocus(bool focused) {
-    setState(() {
-      _primaryFocused = focused;
-    });
-  }
-
-  void _handleSecondaryFocus(bool focused) {
-    setState(() {
-      _secondaryFocused = focused;
-    });
-  }
+  final bool isLoading;
+  final String? errorMessage;
+  final VoidCallback onOpenSettings;
+  final VoidCallback onOpenPlaylist;
+  final Future<void> Function() onRetry;
+  final FocusNode primaryFocusNode;
+  final FocusNode secondaryFocusNode;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 280),
-        curve: Curves.easeOutCubic,
-        height: 280,
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(32),
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF1F2437),
-              Color(0xFF10121C),
-            ],
-          ),
-          boxShadow: _hasFocus
-              ? [
-                  BoxShadow(
-                    color: AppTheme.primaryBlue.withOpacity(0.55),
-                    blurRadius: 26,
-                    offset: const Offset(0, 18),
-                  ),
-                ]
-              : [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.45),
-                    blurRadius: 24,
-                    offset: const Offset(0, 18),
-                  ),
-                ],
-        ),
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(32),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Colors.black.withOpacity(0.55),
-                      Colors.black.withOpacity(0.2),
-                    ],
-                  ),
+    final textTheme = Theme.of(context).textTheme;
+
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppTheme.cardBackground.withOpacity(0.95),
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.25)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.45),
+                  blurRadius: 32,
+                  offset: const Offset(0, 18),
                 ),
-              ),
+              ],
             ),
-            Padding(
-              padding: const EdgeInsets.all(32),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryBlue.withOpacity(0.85),
-                      borderRadius: BorderRadius.circular(16),
+                  Icon(Icons.live_tv, size: 64, color: AppTheme.primaryBlue),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Load a Playlist to Continue',
+                    style: textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.3,
                     ),
-                    child: Text(
-                      widget.subtitle,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.4,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Add an M3U or Xtream playlist in Settings to unlock Live TV, movies, and recommendations.',
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.textSecondary,
+                      height: 1.4,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  if (errorMessage != null && errorMessage!.isNotEmpty) ...[
+                    const SizedBox(height: 18),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentRed.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: AppTheme.accentRed.withOpacity(0.4),
+                        ),
+                      ),
+                      child: Text(
+                        errorMessage!,
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.accentRed,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    widget.title,
-                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.4,
-                        ),
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    widget.description,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.white.withOpacity(0.82),
-                          height: 1.4,
-                        ),
-                  ),
+                  ],
                   const SizedBox(height: 28),
-                  Row(
-                    children: [
-                      _HeroPrimaryButton(
-                        focusNode: _primaryFocusNode,
-                        label: widget.primaryLabel,
-                        onPressed: widget.onPrimaryPressed,
-                        onFocusChange: _handlePrimaryFocus,
-                        highlighted: _primaryFocused,
-                        autofocus: true,
+                  if (isLoading) ...[
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 18),
+                    Text(
+                      'Fetching your last playlist... hold tight',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: AppTheme.textSecondary,
                       ),
-                      const SizedBox(width: 18),
-                      _HeroSecondaryButton(
-                        focusNode: _secondaryFocusNode,
-                        label: widget.secondaryLabel,
-                        onPressed: widget.onSecondaryPressed,
-                        onFocusChange: _handleSecondaryFocus,
-                        highlighted: _secondaryFocused,
+                    ),
+                  ] else ...[
+                    FocusTraversalGroup(
+                      policy: OrderedTraversalPolicy(),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _CtaButton(
+                            focusNode: primaryFocusNode,
+                            label: 'Go to Settings',
+                            icon: Icons.settings,
+                            onPressed: onOpenSettings,
+                            autofocus: true,
+                          ),
+                          const SizedBox(width: 16),
+                          _CtaButton(
+                            focusNode: secondaryFocusNode,
+                            label: 'Load Playlist',
+                            icon: Icons.playlist_add,
+                            onPressed: onOpenPlaylist,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 18),
+                    TextButton.icon(
+                      onPressed: () {
+                        onRetry();
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Retry Auto-Load'),
+                    ),
+                  ],
                 ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _HeroPrimaryButton extends StatelessWidget {
-  const _HeroPrimaryButton({
+class _CtaButton extends StatefulWidget {
+  const _CtaButton({
     required this.focusNode,
     required this.label,
+    required this.icon,
     required this.onPressed,
-    required this.onFocusChange,
-    required this.highlighted,
     this.autofocus = false,
   });
 
   final FocusNode focusNode;
   final String label;
+  final IconData icon;
   final VoidCallback onPressed;
-  final ValueChanged<bool> onFocusChange;
-  final bool highlighted;
   final bool autofocus;
 
   @override
-  Widget build(BuildContext context) {
-    return FocusableActionDetector(
-      focusNode: focusNode,
-      autofocus: autofocus,
-      onFocusChange: onFocusChange,
-      shortcuts: <LogicalKeySet, Intent>{
-        LogicalKeySet(LogicalKeyboardKey.enter): ActivateIntent(),
-        LogicalKeySet(LogicalKeyboardKey.select): ActivateIntent(),
-        LogicalKeySet(LogicalKeyboardKey.space): ActivateIntent(),
-        LogicalKeySet(LogicalKeyboardKey.arrowUp): DirectionalFocusIntent(TraversalDirection.up),
-        LogicalKeySet(LogicalKeyboardKey.arrowDown): DirectionalFocusIntent(TraversalDirection.down),
-        LogicalKeySet(LogicalKeyboardKey.arrowRight): DirectionalFocusIntent(TraversalDirection.right),
-      },
-      actions: <Type, Action<Intent>>{
-        ActivateIntent: CallbackAction<ActivateIntent>(
-          onInvoke: (intent) {
-            onPressed();
-            return null;
-          },
-        ),
-        DirectionalFocusIntent: CallbackAction<DirectionalFocusIntent>(
-          onInvoke: (intent) {
-            if (intent.direction == TraversalDirection.up) {
-              FocusScope.of(context).previousFocus();
-            } else if (intent.direction == TraversalDirection.down) {
-              FocusScope.of(context).nextFocus();
-            } else if (intent.direction == TraversalDirection.right) {
-              FocusScope.of(context).nextFocus();
-            }
-            return null;
-          },
-        ),
-      },
-      child: _HeroButtonFrame(
-        highlighted: highlighted,
-        background: AppTheme.primaryBlue,
-        foreground: Colors.white,
-        label: label,
-        icon: Icons.play_arrow_rounded,
-      ),
-    );
-  }
+  State<_CtaButton> createState() => _CtaButtonState();
 }
 
-class _HeroSecondaryButton extends StatelessWidget {
-  const _HeroSecondaryButton({
-    required this.focusNode,
-    required this.label,
-    required this.onPressed,
-    required this.onFocusChange,
-    required this.highlighted,
-  });
-
-  final FocusNode focusNode;
-  final String label;
-  final VoidCallback onPressed;
-  final ValueChanged<bool> onFocusChange;
-  final bool highlighted;
+class _CtaButtonState extends State<_CtaButton> {
+  bool _isFocused = false;
 
   @override
   Widget build(BuildContext context) {
     return FocusableActionDetector(
-      focusNode: focusNode,
-      onFocusChange: onFocusChange,
+      focusNode: widget.focusNode,
+      autofocus: widget.autofocus,
+      onFocusChange: (hasFocus) {
+        if (_isFocused != hasFocus) {
+          setState(() => _isFocused = hasFocus);
+        }
+      },
       shortcuts: <LogicalKeySet, Intent>{
         LogicalKeySet(LogicalKeyboardKey.enter): ActivateIntent(),
         LogicalKeySet(LogicalKeyboardKey.select): ActivateIntent(),
         LogicalKeySet(LogicalKeyboardKey.space): ActivateIntent(),
-        LogicalKeySet(LogicalKeyboardKey.arrowUp): DirectionalFocusIntent(TraversalDirection.up),
-        LogicalKeySet(LogicalKeyboardKey.arrowDown): DirectionalFocusIntent(TraversalDirection.down),
-        LogicalKeySet(LogicalKeyboardKey.arrowLeft): DirectionalFocusIntent(TraversalDirection.left),
-        LogicalKeySet(LogicalKeyboardKey.arrowRight): DirectionalFocusIntent(TraversalDirection.right),
       },
       actions: <Type, Action<Intent>>{
         ActivateIntent: CallbackAction<ActivateIntent>(
           onInvoke: (intent) {
-            onPressed();
-            return null;
-          },
-        ),
-        DirectionalFocusIntent: CallbackAction<DirectionalFocusIntent>(
-          onInvoke: (intent) {
-            if (intent.direction == TraversalDirection.up) {
-              FocusScope.of(context).previousFocus();
-            } else if (intent.direction == TraversalDirection.down || intent.direction == TraversalDirection.right) {
-              FocusScope.of(context).nextFocus();
-            } else if (intent.direction == TraversalDirection.left) {
-              FocusScope.of(context).previousFocus();
-            }
+            widget.onPressed();
             return null;
           },
         ),
       },
-      child: _HeroButtonFrame(
-        highlighted: highlighted,
-        background: Colors.transparent,
-        foreground: Colors.white,
-        label: label,
-        icon: Icons.info_outline,
-        borderColor: Colors.white.withOpacity(0.35),
-      ),
-    );
-  }
-}
-
-class _HeroButtonFrame extends StatelessWidget {
-  const _HeroButtonFrame({
-    required this.highlighted,
-    required this.background,
-    required this.foreground,
-    required this.label,
-    required this.icon,
-    this.borderColor,
-  });
-
-  final bool highlighted;
-  final Color background;
-  final Color foreground;
-  final String label;
-  final IconData icon;
-  final Color? borderColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOutCubic,
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-      decoration: BoxDecoration(
-        color: highlighted
-            ? (background == Colors.transparent
-                ? Colors.white.withOpacity(0.12)
-                : background)
-            : (background == Colors.transparent
-                ? Colors.white.withOpacity(0.05)
-                : background.withOpacity(0.85)),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: highlighted
+      child: FilledButton.icon(
+        style: FilledButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          backgroundColor: _isFocused
               ? AppTheme.primaryBlue
-              : (borderColor ?? Colors.transparent),
-          width: highlighted ? 3 : 2,
+              : AppTheme.primaryBlue.withOpacity(0.85),
         ),
-        boxShadow: highlighted
-            ? [
-                BoxShadow(
-                  color: AppTheme.primaryBlue.withOpacity(0.55),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
-                ),
-              ]
-            : [],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            color: highlighted
-                ? (background == Colors.transparent ? AppTheme.primaryBlue : Colors.black)
-                : foreground,
-            size: 28,
-          ),
-          const SizedBox(width: 10),
-          Text(
-            label,
-            style: TextStyle(
-              color: highlighted
-                  ? (background == Colors.transparent ? AppTheme.primaryBlue : Colors.black)
-                  : foreground,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.3,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FloatingTopBar extends StatelessWidget {
-  const _FloatingTopBar();
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.topCenter,
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.6),
-              borderRadius: BorderRadius.circular(36),
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.45),
-                  blurRadius: 18,
-                  offset: const Offset(0, 12),
-                ),
-              ],
-            ),
-            child: const _TopBar(),
-          ),
-        ),
+        onPressed: widget.onPressed,
+        icon: Icon(widget.icon),
+        label: Text(widget.label),
       ),
     );
   }
@@ -652,7 +413,11 @@ class _TopBar extends StatefulWidget {
 }
 
 class _TopBarState extends State<_TopBar> {
-  final List<FocusNode> _iconFocusNodes = [FocusNode(), FocusNode(), FocusNode()];
+  final List<FocusNode> _iconFocusNodes = [
+    FocusNode(),
+    FocusNode(),
+    FocusNode(),
+  ];
   int _focusedIndex = -1;
 
   @override
@@ -665,7 +430,9 @@ class _TopBarState extends State<_TopBar> {
 
   void _onFocusChange(int index, bool focused) {
     setState(() {
-      _focusedIndex = focused ? index : (_focusedIndex == index ? -1 : _focusedIndex);
+      _focusedIndex = focused
+          ? index
+          : (_focusedIndex == index ? -1 : _focusedIndex);
     });
   }
 
@@ -688,7 +455,9 @@ class _TopBarState extends State<_TopBar> {
           icon: Icons.search,
           tooltip: 'Search',
           onPressed: () {
-            context.go('/search');
+            if (mounted) {
+              context.go('/search');
+            }
           },
         ),
         const SizedBox(width: 16),
@@ -697,7 +466,9 @@ class _TopBarState extends State<_TopBar> {
           icon: Icons.settings,
           tooltip: 'Settings',
           onPressed: () {
-            context.go('/settings');
+            if (mounted) {
+              context.go('/settings');
+            }
           },
         ),
         const SizedBox(width: 16),
@@ -706,22 +477,35 @@ class _TopBarState extends State<_TopBar> {
           icon: Icons.person,
           tooltip: 'Profile',
           onPressed: () {
-            context.go('/edit-profile');
+            if (mounted) {
+              context.go('/edit-profile');
+            }
           },
         ),
       ],
     );
   }
 
-  Widget _buildFocusableIcon({required int index, required IconData icon, required String tooltip, required VoidCallback onPressed}) {
+  Widget _buildFocusableIcon({
+    required int index,
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onPressed,
+  }) {
     return FocusableActionDetector(
       focusNode: _iconFocusNodes[index],
       onFocusChange: (focused) => _onFocusChange(index, focused),
       autofocus: false,
       shortcuts: <LogicalKeySet, Intent>{
-        LogicalKeySet(LogicalKeyboardKey.arrowLeft): DirectionalFocusIntent(TraversalDirection.left),
-        LogicalKeySet(LogicalKeyboardKey.arrowRight): DirectionalFocusIntent(TraversalDirection.right),
-        LogicalKeySet(LogicalKeyboardKey.arrowDown): DirectionalFocusIntent(TraversalDirection.down),
+        LogicalKeySet(LogicalKeyboardKey.arrowLeft): DirectionalFocusIntent(
+          TraversalDirection.left,
+        ),
+        LogicalKeySet(LogicalKeyboardKey.arrowRight): DirectionalFocusIntent(
+          TraversalDirection.right,
+        ),
+        LogicalKeySet(LogicalKeyboardKey.arrowDown): DirectionalFocusIntent(
+          TraversalDirection.down,
+        ),
         LogicalKeySet(LogicalKeyboardKey.enter): ActivateIntent(),
         LogicalKeySet(LogicalKeyboardKey.select): ActivateIntent(),
         LogicalKeySet(LogicalKeyboardKey.space): ActivateIntent(),
@@ -731,7 +515,8 @@ class _TopBarState extends State<_TopBar> {
           onInvoke: (intent) {
             if (intent.direction == TraversalDirection.left && index > 0) {
               _iconFocusNodes[index - 1].requestFocus();
-            } else if (intent.direction == TraversalDirection.right && index < _iconFocusNodes.length - 1) {
+            } else if (intent.direction == TraversalDirection.right &&
+                index < _iconFocusNodes.length - 1) {
               _iconFocusNodes[index + 1].requestFocus();
             } else if (intent.direction == TraversalDirection.down) {
               FocusScope.of(context).nextFocus();
@@ -754,7 +539,9 @@ class _TopBarState extends State<_TopBar> {
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: _focusedIndex == index ? AppTheme.primaryBlue.withOpacity(0.22) : Colors.transparent,
+            color: _focusedIndex == index
+                ? AppTheme.primaryBlue.withOpacity(0.22)
+                : Colors.transparent,
             boxShadow: _focusedIndex == index
                 ? [
                     BoxShadow(
@@ -778,17 +565,18 @@ class _TopBarState extends State<_TopBar> {
     );
   }
 
-
-
   // _buildCard is now only used as a closure with autofocus param in _buildCarousel
-
-
 }
 
 class _FocusableCard extends StatefulWidget {
   final String label;
   final bool autofocus;
-  const _FocusableCard({required this.label, this.autofocus = false});
+  final FocusNode? focusNode;
+  const _FocusableCard({
+    required this.label,
+    this.autofocus = false,
+    this.focusNode,
+  });
 
   @override
   State<_FocusableCard> createState() => _FocusableCardState();
@@ -806,11 +594,16 @@ class _FocusableCardState extends State<_FocusableCard> {
   @override
   Widget build(BuildContext context) {
     return FocusableActionDetector(
+      focusNode: widget.focusNode,
       onFocusChange: _onFocusChange,
       autofocus: widget.autofocus,
       shortcuts: <LogicalKeySet, Intent>{
-        LogicalKeySet(LogicalKeyboardKey.arrowLeft): DirectionalFocusIntent(TraversalDirection.left),
-        LogicalKeySet(LogicalKeyboardKey.arrowRight): DirectionalFocusIntent(TraversalDirection.right),
+        LogicalKeySet(LogicalKeyboardKey.arrowLeft): DirectionalFocusIntent(
+          TraversalDirection.left,
+        ),
+        LogicalKeySet(LogicalKeyboardKey.arrowRight): DirectionalFocusIntent(
+          TraversalDirection.right,
+        ),
         LogicalKeySet(LogicalKeyboardKey.enter): ActivateIntent(),
         LogicalKeySet(LogicalKeyboardKey.select): ActivateIntent(),
         LogicalKeySet(LogicalKeyboardKey.space): ActivateIntent(),
@@ -824,7 +617,7 @@ class _FocusableCardState extends State<_FocusableCard> {
         ),
         ActivateIntent: CallbackAction<ActivateIntent>(
           onInvoke: (intent) {
-            context.go('/content/${Uri.encodeComponent(widget.label)}');
+            context.push('/content/${Uri.encodeComponent(widget.label)}');
             return null;
           },
         ),
@@ -835,7 +628,9 @@ class _FocusableCardState extends State<_FocusableCard> {
         width: _focused ? 160 : 140,
         height: 220,
         margin: const EdgeInsets.symmetric(vertical: 4),
-        transform: _focused ? (Matrix4.identity()..scale(1.12)) : Matrix4.identity(),
+        transform: _focused
+            ? (Matrix4.identity()..scale(1.12))
+            : Matrix4.identity(),
         decoration: BoxDecoration(
           color: AppTheme.cardBackground.withOpacity(0.88),
           borderRadius: BorderRadius.circular(18),
@@ -882,6 +677,199 @@ class _FocusableCardState extends State<_FocusableCard> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _FocusableCarousel extends StatefulWidget {
+  const _FocusableCarousel({
+    required this.title,
+    required this.items,
+    required this.cardBuilder,
+    this.isFirst = false,
+    this.firstItemFocusNode,
+    this.emptyFallbackCount = 5,
+  });
+
+  final String title;
+  final List<String> items;
+  final Widget Function(String item, {bool autofocus, FocusNode? focusNode})
+  cardBuilder;
+  final bool isFirst;
+  final FocusNode? firstItemFocusNode;
+  final int emptyFallbackCount;
+
+  @override
+  State<_FocusableCarousel> createState() => _FocusableCarouselState();
+}
+
+class _FocusableCarouselState extends State<_FocusableCarousel> {
+  bool _focused = false;
+  final FocusNode _rowFocusNode = FocusNode(debugLabel: 'CarouselRow');
+
+  @override
+  void dispose() {
+    _rowFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _onFocusChange(bool focused) {
+    if (_focused != focused) {
+      setState(() {
+        _focused = focused;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasContent = widget.items.isNotEmpty;
+    final itemCount = hasContent
+        ? widget.items.length
+        : widget.emptyFallbackCount;
+
+    return FocusableActionDetector(
+      focusNode: _rowFocusNode,
+      onFocusChange: _onFocusChange,
+      shortcuts: <LogicalKeySet, Intent>{
+        LogicalKeySet(LogicalKeyboardKey.arrowUp): DirectionalFocusIntent(
+          TraversalDirection.up,
+        ),
+        LogicalKeySet(LogicalKeyboardKey.arrowDown): DirectionalFocusIntent(
+          TraversalDirection.down,
+        ),
+      },
+      actions: <Type, Action<Intent>>{
+        DirectionalFocusIntent: CallbackAction<DirectionalFocusIntent>(
+          onInvoke: (intent) {
+            if (intent.direction == TraversalDirection.up) {
+              FocusScope.of(context).previousFocus();
+            } else if (intent.direction == TraversalDirection.down) {
+              FocusScope.of(context).nextFocus();
+            }
+            return null;
+          },
+        ),
+      },
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 240),
+        opacity: _focused ? 1.0 : 0.92,
+        child: AnimatedScale(
+          duration: const Duration(milliseconds: 220),
+          scale: _focused ? 1.02 : 1.0,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 8,
+                ),
+                child: Text(
+                  widget.title,
+                  style: TextStyle(
+                    color: _focused ? AppTheme.primaryBlue : Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    shadows: _focused
+                        ? [
+                            Shadow(
+                              color: AppTheme.primaryBlue.withOpacity(0.4),
+                              blurRadius: 8,
+                            ),
+                          ]
+                        : [],
+                  ),
+                ),
+              ),
+              SizedBox(
+                height: 220,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  itemCount: itemCount,
+                  separatorBuilder: (_, __) => const SizedBox(width: 16),
+                  itemBuilder: (context, index) {
+                    if (!hasContent) {
+                      return const _Shimmer(width: 140, height: 220);
+                    }
+
+                    final item = widget.items[index];
+                    final bool autofocus = widget.isFirst && index == 0;
+                    final focusNode = widget.isFirst && index == 0
+                        ? widget.firstItemFocusNode
+                        : null;
+
+                    return widget.cardBuilder(
+                      item,
+                      autofocus: autofocus,
+                      focusNode: focusNode,
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Shimmer extends StatefulWidget {
+  const _Shimmer({required this.width, required this.height});
+
+  final double width;
+  final double height;
+
+  @override
+  State<_Shimmer> createState() => _ShimmerState();
+}
+
+class _ShimmerState extends State<_Shimmer>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final value = _controller.value;
+        return Container(
+          width: widget.width,
+          height: widget.height,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              begin: const Alignment(-1.0, -0.3),
+              end: const Alignment(2.0, 0.3),
+              colors: [Colors.grey[850]!, Colors.grey[700]!, Colors.grey[850]!],
+              stops: [
+                (0.1 + 0.6 * value).clamp(0.0, 1.0),
+                (0.3 + 0.6 * value).clamp(0.0, 1.0),
+                (0.8 + 0.6 * value).clamp(0.0, 1.0),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -25,6 +25,14 @@ class MLKitTranslationService extends ChangeNotifier {
   final OnDeviceTranslatorModelManager _modelManager =
       OnDeviceTranslatorModelManager();
 
+  bool get _isSupportedPlatform {
+    if (kIsWeb) {
+      return false;
+    }
+    return defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
+  }
+
   // Getters
   bool get isInitialized => _isInitialized;
   bool get isEnabled => _isEnabled;
@@ -35,6 +43,13 @@ class MLKitTranslationService extends ChangeNotifier {
 
   /// Initialize the translation service
   Future<bool> initialize() async {
+    if (!_isSupportedPlatform) {
+      debugPrint('ML Kit translation is not supported on this platform.');
+      _isInitialized = false;
+      _isEnabled = false;
+      notifyListeners();
+      return false;
+    }
     if (_isInitialized) return true;
 
     try {
@@ -76,6 +91,10 @@ class MLKitTranslationService extends ChangeNotifier {
       return text;
     }
 
+    if (!_isSupportedPlatform) {
+      return text;
+    }
+
     if (_sourceLanguage == _targetLanguage) {
       return text;
     }
@@ -99,6 +118,9 @@ class MLKitTranslationService extends ChangeNotifier {
 
   /// Ensure both language models are downloaded
   Future<bool> _ensureModelsDownloaded() async {
+    if (!_isSupportedPlatform) {
+      return false;
+    }
     try {
       final sourceDownloaded = await _modelManager.isModelDownloaded(
         _sourceLanguage.bcpCode,
@@ -116,6 +138,10 @@ class MLKitTranslationService extends ChangeNotifier {
 
   /// Download language models
   Future<bool> downloadLanguageModels() async {
+    if (!_isSupportedPlatform) {
+      debugPrint('Model download skipped: unsupported platform.');
+      return false;
+    }
     if (_isDownloading) return false;
 
     _isDownloading = true;
@@ -163,6 +189,9 @@ class MLKitTranslationService extends ChangeNotifier {
 
   /// Delete language model to free space
   Future<void> deleteLanguageModel(String languageCode) async {
+    if (!_isSupportedPlatform) {
+      return;
+    }
     try {
       await _modelManager.deleteModel(languageCode);
       debugPrint('Deleted model: $languageCode');
@@ -174,6 +203,9 @@ class MLKitTranslationService extends ChangeNotifier {
 
   /// Get list of downloaded models
   Future<List<String>> getDownloadedModels() async {
+    if (!_isSupportedPlatform) {
+      return [];
+    }
     try {
       // ML Kit doesn't provide a direct API to list downloaded models
       // We'd need to track this manually or check each language individually
@@ -205,6 +237,9 @@ class MLKitTranslationService extends ChangeNotifier {
 
   /// Check if specific language model is downloaded
   Future<bool> isLanguageModelDownloaded(String languageCode) async {
+    if (!_isSupportedPlatform) {
+      return false;
+    }
     try {
       return await _modelManager.isModelDownloaded(languageCode);
     } catch (e) {
@@ -215,7 +250,7 @@ class MLKitTranslationService extends ChangeNotifier {
 
   /// Enable/disable translation
   void setEnabled(bool enabled) {
-    _isEnabled = enabled && _isInitialized;
+    _isEnabled = enabled && _isInitialized && _isSupportedPlatform;
     notifyListeners();
   }
 
@@ -239,6 +274,9 @@ class MLKitTranslationService extends ChangeNotifier {
 
   /// Update translator with new language pair
   Future<void> _updateTranslator() async {
+    if (!_isSupportedPlatform) {
+      return;
+    }
     try {
       await _translator?.close();
       _translator = OnDeviceTranslator(

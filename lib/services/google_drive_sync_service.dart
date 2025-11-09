@@ -22,6 +22,14 @@ class GoogleDriveSyncService extends ChangeNotifier {
     ],
   );
 
+  bool get _isSupportedPlatform {
+    if (kIsWeb) {
+      return false;
+    }
+    return defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
+  }
+
   bool get isSignedIn => _isSignedIn;
   bool get isSyncing => _isSyncing;
   DateTime? get lastSyncTime => _lastSyncTime;
@@ -29,9 +37,14 @@ class GoogleDriveSyncService extends ChangeNotifier {
   String? get userName => _currentUser?.displayName;
   int? get storageLimit => _storageLimit;
   int? get storageUsed => _storageUsed;
+  bool get isSupported => _isSupportedPlatform;
 
   /// Initialize and check sign-in status
   Future<void> initialize() async {
+    if (!_isSupportedPlatform) {
+      debugPrint('Google Drive sync is not supported on this platform.');
+      return;
+    }
     try {
       _currentUser = await _googleSignIn.signInSilently();
       if (_currentUser != null) {
@@ -46,6 +59,10 @@ class GoogleDriveSyncService extends ChangeNotifier {
 
   /// Sign in to Google account
   Future<bool> signIn() async {
+    if (!_isSupportedPlatform) {
+      debugPrint('Google Drive sign-in attempted on unsupported platform.');
+      return false;
+    }
     try {
       _currentUser = await _googleSignIn.signIn();
       if (_currentUser == null) {
@@ -64,6 +81,13 @@ class GoogleDriveSyncService extends ChangeNotifier {
 
   /// Sign out from Google account
   Future<void> signOut() async {
+    if (!_isSupportedPlatform) {
+      _currentUser = null;
+      _driveApi = null;
+      _isSignedIn = false;
+      notifyListeners();
+      return;
+    }
     await _googleSignIn.signOut();
     _currentUser = null;
     _driveApi = null;
@@ -73,6 +97,9 @@ class GoogleDriveSyncService extends ChangeNotifier {
 
   /// Initialize Drive API
   Future<void> _initializeDriveApi() async {
+    if (!_isSupportedPlatform) {
+      return;
+    }
     final authHeaders = await _currentUser!.authHeaders;
     final authenticateClient = GoogleAuthClient(authHeaders);
     _driveApi = drive.DriveApi(authenticateClient);
@@ -85,6 +112,10 @@ class GoogleDriveSyncService extends ChangeNotifier {
     Map<String, dynamic>? watchHistory,
     Map<String, dynamic>? settings,
   }) async {
+    if (!_isSupportedPlatform) {
+      debugPrint('Sync skipped: unsupported platform.');
+      return false;
+    }
     if (!_isSignedIn || _driveApi == null) {
       return false;
     }
@@ -124,6 +155,10 @@ class GoogleDriveSyncService extends ChangeNotifier {
 
   /// Restore app data from Google Drive
   Future<Map<String, dynamic>?> restoreFromCloud() async {
+    if (!_isSupportedPlatform) {
+      debugPrint('Restore skipped: unsupported platform.');
+      return null;
+    }
     if (!_isSignedIn || _driveApi == null) {
       return null;
     }
@@ -244,6 +279,9 @@ class GoogleDriveSyncService extends ChangeNotifier {
 
   /// Get Drive storage usage
   Future<Map<String, dynamic>> getStorageInfo() async {
+    if (!_isSupportedPlatform) {
+      return {};
+    }
     if (!_isSignedIn || _driveApi == null) {
       return {};
     }

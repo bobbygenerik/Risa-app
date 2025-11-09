@@ -404,8 +404,11 @@ class _MyAppState extends State<MyApp> {
           return;
         }
         final stillMissingProfile =
-            Provider.of<ProfileProvider>(context, listen: false).activeProfile ==
-                null;
+            Provider.of<ProfileProvider>(
+              context,
+              listen: false,
+            ).activeProfile ==
+            null;
         _profileDialogScheduled = false;
         if (stillMissingProfile) {
           setState(() {});
@@ -438,8 +441,10 @@ class _MyAppState extends State<MyApp> {
       return;
     }
 
-  _creatingDefaultProfile = true;
-  debugPrint('ProfileProvider empty; creating default profile for auto-setup');
+    _creatingDefaultProfile = true;
+    debugPrint(
+      'ProfileProvider empty; creating default profile for auto-setup',
+    );
     scheduleMicrotask(() async {
       if (!mounted) {
         _creatingDefaultProfile = false;
@@ -448,9 +453,13 @@ class _MyAppState extends State<MyApp> {
 
       try {
         final id = DateTime.now().millisecondsSinceEpoch.toString();
-        final profile = UserProfile(id: id, name: 'Default Profile', avatarUrl: '');
-  await provider.addProfile(profile);
-  debugPrint('Default profile created: ${profile.id}');
+        final profile = UserProfile(
+          id: id,
+          name: 'Default Profile',
+          avatarUrl: '',
+        );
+        await provider.addProfile(profile);
+        debugPrint('Default profile created: ${profile.id}');
       } catch (error, stack) {
         debugPrint('Failed to create default profile: $error');
         debugPrint('$stack');
@@ -548,7 +557,7 @@ final _router = GoRouter(
     GoRoute(path: '/', redirect: (context, state) => '/home'),
     ShellRoute(
       builder: (context, state, child) {
-        return AppShell(child: child, routerState: state);
+        return AppShell(child: child);
       },
       routes: [
         GoRoute(
