@@ -22,6 +22,14 @@ class AppTheme {
     end: Alignment.centerRight,
     colors: [primaryBlue, accentPink],
   );
+
+  // Common opacity variants
+  static Color primaryBlueOpacity(double opacity) => primaryBlue.withOpacity(opacity);
+  static Color accentOrangeOpacity(double opacity) => accentOrange.withOpacity(opacity);
+  static Color accentGreenOpacity(double opacity) => accentGreen.withOpacity(opacity);
+  static Color accentPinkOpacity(double opacity) => accentPink.withOpacity(opacity);
+  static Color textPrimaryOpacity(double opacity) => textPrimary.withOpacity(opacity);
+  static Color darkBackgroundOpacity(double opacity) => darkBackground.withOpacity(opacity);
   
   // UI Element Colors
   static const Color divider = Color(0xFF2A2A2A);

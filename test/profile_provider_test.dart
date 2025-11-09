@@ -1,11 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iptv_player/models/profile_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('ProfileProvider', () {
     late ProfileProvider provider;
 
     setUp(() {
+      SharedPreferences.setMockInitialValues({});
       provider = ProfileProvider();
     });
 

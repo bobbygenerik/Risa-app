@@ -84,7 +84,7 @@ class FavoritesScreen extends StatelessWidget {
             icon: Icons.home,
             label: 'Browse Channels',
             onPressed: () {
-              context.go('/');
+              context.go('/home');
             },
             padding: EdgeInsets.symmetric(
               horizontal: AppSizes.xl,

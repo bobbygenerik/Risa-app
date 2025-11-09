@@ -28,16 +28,16 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
 
   Future<void> _loadPlaylists() async {
     setState(() => _isLoading = true);
-    
+
     final prefs = await SharedPreferences.getInstance();
     final playlistsJson = prefs.getString('saved_playlists');
     final activeId = prefs.getString('active_playlist_id');
-    
+
     if (playlistsJson != null) {
       final List<dynamic> decoded = jsonDecode(playlistsJson);
       _playlists = decoded.map((json) => SavedPlaylist.fromJson(json)).toList();
     }
-    
+
     setState(() {
       _activePlaylistId = activeId;
       _isLoading = false;
@@ -104,14 +104,17 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final channelProvider = Provider.of<ChannelProvider>(context, listen: false);
+      final channelProvider = Provider.of<ChannelProvider>(
+        context,
+        listen: false,
+      );
       await channelProvider.loadPlaylistFromUrl(playlist.url);
 
       // Save as active playlist
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('active_playlist_id', playlist.id);
       await prefs.setString('playlist_type', playlist.type);
-      
+
       if (playlist.type == 'm3u') {
         await prefs.setString('m3u_url', playlist.url);
       } else if (playlist.type == 'xtream') {
@@ -128,11 +131,13 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✓ Loaded "${playlist.name}" - ${channelProvider.channels.length} channels'),
+            content: Text(
+              '✓ Loaded "${playlist.name}" - ${channelProvider.channels.length} channels',
+            ),
             backgroundColor: AppTheme.accentGreen,
           ),
         );
-        context.go('/');
+        context.go('/home');
       }
     } catch (e) {
       setState(() => _isLoading = false);
@@ -225,8 +230,8 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
           : _playlists.isEmpty
-              ? _buildEmptyState()
-              : _buildPlaylistList(),
+          ? _buildEmptyState()
+          : _buildPlaylistList(),
     );
   }
 
@@ -235,7 +240,11 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.playlist_play, size: 80, color: AppTheme.primaryBlue.withOpacity(0.5)),
+          Icon(
+            Icons.playlist_play,
+            size: 80,
+            color: AppTheme.primaryBlue.withOpacity(0.5),
+          ),
           SizedBox(height: AppSizes.lg),
           Text(
             'No Saved Playlists',
@@ -244,17 +253,17 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
           SizedBox(height: AppSizes.sm),
           Text(
             'Add a playlist to get started',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppTheme.textSecondary,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
           ),
           SizedBox(height: AppSizes.xl),
-            BrandPrimaryButton(
-              icon: Icons.add,
-              label: 'Add Playlist',
-              onPressed: () => context.go('/settings/playlist-login'),
-              padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-            ),
+          BrandPrimaryButton(
+            icon: Icons.add,
+            label: 'Add Playlist',
+            onPressed: () => context.go('/settings/playlist-login'),
+            padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          ),
         ],
       ),
     );
@@ -293,10 +302,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
                 Expanded(
                   child: Text(
                     playlist.name,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ),
                 if (isActive)
@@ -328,7 +334,10 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
                 if (playlist.type == 'xtream' && playlist.server != null)
                   Text(
                     playlist.server!,
-                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 11,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

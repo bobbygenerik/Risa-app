@@ -42,10 +42,7 @@ class ProfileProvider extends ChangeNotifier {
       _profiles = [];
     }
     final activeId = prefs.getString(_activeProfileKey);
-    _activeProfile = _profiles.firstWhere(
-      (p) => p.id == activeId,
-      orElse: () => _profiles.isNotEmpty ? _profiles.first : null,
-    );
+    _activeProfile = _findProfile(activeId) ?? (_profiles.isNotEmpty ? _profiles.first : null);
     notifyListeners();
   }
 
@@ -68,9 +65,20 @@ class ProfileProvider extends ChangeNotifier {
   }
 
   Future<void> setActiveProfile(String? id) async {
-    _activeProfile = _profiles.firstWhere((p) => p.id == id, orElse: () => null);
-    await _saveActiveProfileId(id);
+    _activeProfile = _findProfile(id);
+    await _saveActiveProfileId(_activeProfile?.id);
     notifyListeners();
+  }
+
+  UserProfile? _findProfile(String? id) {
+    if (id == null) {
+      return _profiles.isNotEmpty ? _profiles.first : null;
+    }
+    try {
+      return _profiles.firstWhere((p) => p.id == id);
+    } catch (_) {
+      return _profiles.isNotEmpty ? _profiles.first : null;
+    }
   }
 
   Future<void> _saveProfiles() async {

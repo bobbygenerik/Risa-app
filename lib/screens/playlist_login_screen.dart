@@ -120,7 +120,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
           if (channelCount > 0) parts.add('$channelCount channels');
           if (movieCount > 0) parts.add('$movieCount movies');
           if (seriesCount > 0) parts.add('$seriesCount series');
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('✓ Loaded: ${parts.join(", ")}'),
@@ -135,7 +135,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
           });
 
           // Navigate to home only if we found content
-          context.go('/');
+          context.go('/home');
         }
       }
     } catch (e) {
@@ -185,9 +185,10 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
       if (mounted) {
         if (channelCount == 0 && movieCount == 0 && seriesCount == 0) {
           // No content found - show detailed error with option to view content
-          final hasContent = channelProvider.lastM3UContent != null && 
-                            channelProvider.lastM3UContent!.isNotEmpty;
-          
+          final hasContent =
+              channelProvider.lastM3UContent != null &&
+              channelProvider.lastM3UContent!.isNotEmpty;
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -214,7 +215,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
           if (channelCount > 0) parts.add('$channelCount channels');
           if (movieCount > 0) parts.add('$movieCount movies');
           if (seriesCount > 0) parts.add('$seriesCount series');
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('✓ Loaded: ${parts.join(", ")}'),
@@ -231,7 +232,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
           });
 
           // Navigate to home only if we found content
-          context.go('/');
+          context.go('/home');
         }
       }
     } catch (e) {
@@ -260,15 +261,21 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
     final lines = content.split('\n');
     final firstLine = lines.isNotEmpty ? lines[0].trim() : '';
     final hasM3UHeader = firstLine.toUpperCase().contains('#EXTM3U');
-    final extinfCount = lines.where((l) => l.trim().startsWith('#EXTINF:')).length;
-    final urlCount = lines.where((l) => 
-      !l.trim().startsWith('#') && 
-      l.trim().isNotEmpty && 
-      (l.contains('http') || l.contains('://'))).length;
-    
+    final extinfCount = lines
+        .where((l) => l.trim().startsWith('#EXTINF:'))
+        .length;
+    final urlCount = lines
+        .where(
+          (l) =>
+              !l.trim().startsWith('#') &&
+              l.trim().isNotEmpty &&
+              (l.contains('http') || l.contains('://')),
+        )
+        .length;
+
     // Show first 25 lines
     final preview = lines.take(25).join('\n');
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -285,7 +292,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                 Container(
                   padding: EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: hasM3UHeader 
+                    color: hasM3UHeader
                         ? AppTheme.accentGreen.withOpacity(0.2)
                         : AppTheme.accentRed.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(8),
@@ -302,9 +309,11 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                       ),
                       SizedBox(height: 8),
                       Text('✓ Total lines: ${lines.length}'),
-                      Text(hasM3UHeader 
-                          ? '✓ Valid M3U header found' 
-                          : '✗ Missing #EXTM3U header'),
+                      Text(
+                        hasM3UHeader
+                            ? '✓ Valid M3U header found'
+                            : '✗ Missing #EXTM3U header',
+                      ),
                       Text('✓ Found $extinfCount #EXTINF entries'),
                       Text('✓ Found $urlCount stream URLs'),
                       SizedBox(height: 8),
@@ -373,7 +382,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
             builder: (context, constraints) {
               // Android TV optimized layout
               final isTV = constraints.maxWidth > 800;
-              
+
               return Stack(
                 children: [
                   Center(
@@ -388,7 +397,9 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                         ),
                         decoration: BoxDecoration(
                           color: AppTheme.cardBackground,
-                          borderRadius: BorderRadius.circular(AppSizes.radiusXl),
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusXl,
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.25),
@@ -398,7 +409,9 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                           ],
                         ),
                         child: Padding(
-                          padding: EdgeInsets.all(AppSizes.sm), // Reduced padding
+                          padding: EdgeInsets.all(
+                            AppSizes.sm,
+                          ), // Reduced padding
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -420,9 +433,8 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                               SizedBox(height: AppSizes.xs),
                               Text(
                                 'Load your playlist to get started',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: AppTheme.textSecondary,
-                                ),
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(color: AppTheme.textSecondary),
                                 textAlign: TextAlign.center,
                               ),
                               SizedBox(height: AppSizes.sm),
@@ -475,7 +487,9 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                                 SizedBox(height: AppSizes.xs),
                                 Text(
                                   'Loading playlist...',
-                                  style: TextStyle(color: AppTheme.textSecondary),
+                                  style: TextStyle(
+                                    color: AppTheme.textSecondary,
+                                  ),
                                 ),
                               ],
                             ],
@@ -489,7 +503,10 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                     top: AppSizes.md,
                     left: AppSizes.md,
                     child: IconButton(
-                      icon: const Icon(Icons.arrow_back, color: AppTheme.textPrimary),
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: AppTheme.textPrimary,
+                      ),
                       onPressed: () => context.pop(),
                       tooltip: 'Back',
                     ),
@@ -524,7 +541,8 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
           onKey: (node, event) {
             if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
             final key = event.logicalKey;
-            if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
+            if (key == LogicalKeyboardKey.select ||
+                key == LogicalKeyboardKey.enter) {
               setState(() => _m3uUrlEditable = true);
               Future.microtask(() => _m3uUrlFocusNode.requestFocus());
               return KeyEventResult.handled;
@@ -577,17 +595,11 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
           decoration: BoxDecoration(
             color: AppTheme.primaryBlue.withOpacity(0.1),
             borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-            border: Border.all(
-              color: AppTheme.primaryBlue.withOpacity(0.3),
-            ),
+            border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.3)),
           ),
           child: Row(
             children: [
-              Icon(
-                Icons.info_outline,
-                size: 18,
-                color: AppTheme.primaryBlue,
-              ),
+              Icon(Icons.info_outline, size: 18, color: AppTheme.primaryBlue),
               SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -599,13 +611,13 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
           ),
         ),
         const Spacer(),
-          BrandPrimaryButton(
-            expand: true,
-            icon: Icons.download,
-            label: 'Load Playlist',
-            onPressed: _isLoading ? (){} : _loadM3UPlaylist,
-            padding: EdgeInsets.symmetric(vertical: AppSizes.sm),
-          ),
+        BrandPrimaryButton(
+          expand: true,
+          icon: Icons.download,
+          label: 'Load Playlist',
+          onPressed: _isLoading ? () {} : _loadM3UPlaylist,
+          padding: EdgeInsets.symmetric(vertical: AppSizes.sm),
+        ),
       ],
     );
   }
@@ -631,7 +643,8 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
           onKey: (node, event) {
             if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
             final key = event.logicalKey;
-            if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
+            if (key == LogicalKeyboardKey.select ||
+                key == LogicalKeyboardKey.enter) {
               setState(() => _xtreamServerEditable = true);
               Future.microtask(() => _xtreamServerFocusNode.requestFocus());
               return KeyEventResult.handled;
@@ -665,7 +678,8 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                   decoration: InputDecoration(
                     labelText: 'Server URL',
                     hintText: 'http://example.com:8080',
-                    helperText: 'Enter server, username, password and click Load',
+                    helperText:
+                        'Enter server, username, password and click Load',
                     prefixIcon: const Icon(Icons.dns),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppSizes.radiusMd),
@@ -696,9 +710,12 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                 onKey: (node, event) {
                   if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
                   final key = event.logicalKey;
-                  if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
+                  if (key == LogicalKeyboardKey.select ||
+                      key == LogicalKeyboardKey.enter) {
                     setState(() => _xtreamUsernameEditable = true);
-                    Future.microtask(() => _xtreamUsernameFocusNode.requestFocus());
+                    Future.microtask(
+                      () => _xtreamUsernameFocusNode.requestFocus(),
+                    );
                     return KeyEventResult.handled;
                   }
                   return KeyEventResult.ignored;
@@ -731,7 +748,9 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                           labelText: 'Username',
                           prefixIcon: const Icon(Icons.person),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                            borderRadius: BorderRadius.circular(
+                              AppSizes.radiusMd,
+                            ),
                           ),
                           filled: true,
                           fillColor: AppTheme.highlight,
@@ -757,9 +776,12 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                 onKey: (node, event) {
                   if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
                   final key = event.logicalKey;
-                  if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
+                  if (key == LogicalKeyboardKey.select ||
+                      key == LogicalKeyboardKey.enter) {
                     setState(() => _xtreamPasswordEditable = true);
-                    Future.microtask(() => _xtreamPasswordFocusNode.requestFocus());
+                    Future.microtask(
+                      () => _xtreamPasswordFocusNode.requestFocus(),
+                    );
                     return KeyEventResult.handled;
                   }
                   return KeyEventResult.ignored;
@@ -793,7 +815,9 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                           labelText: 'Password',
                           prefixIcon: const Icon(Icons.lock),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                            borderRadius: BorderRadius.circular(
+                              AppSizes.radiusMd,
+                            ),
                           ),
                           filled: true,
                           fillColor: AppTheme.highlight,
@@ -808,13 +832,13 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
           ],
         ),
         const Spacer(),
-          BrandPrimaryButton(
-            expand: true,
-            icon: Icons.download,
-            label: 'Load Playlist',
-            onPressed: _isLoading ? (){} : _loadXtreamPlaylist,
-            padding: EdgeInsets.symmetric(vertical: AppSizes.sm),
-          ),
+        BrandPrimaryButton(
+          expand: true,
+          icon: Icons.download,
+          label: 'Load Playlist',
+          onPressed: _isLoading ? () {} : _loadXtreamPlaylist,
+          padding: EdgeInsets.symmetric(vertical: AppSizes.sm),
+        ),
       ],
     );
   }

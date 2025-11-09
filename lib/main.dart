@@ -18,7 +18,6 @@ import 'package:iptv_player/services/opensubtitles_service.dart';
 import 'package:iptv_player/services/real_debrid_service.dart';
 import 'package:iptv_player/widgets/app_shell.dart';
 import 'package:iptv_player/widgets/legal_disclaimer_dialog.dart';
-import 'package:iptv_player/screens/home_screen.dart';
 import 'package:iptv_player/screens/epg_screen.dart';
 import 'package:iptv_player/screens/settings_screen.dart';
 import 'package:iptv_player/screens/playlist_editor_screen.dart';
@@ -28,7 +27,7 @@ import 'package:iptv_player/screens/ai_models_screen.dart';
 import 'package:iptv_player/screens/mini_player_screen.dart';
 import 'package:iptv_player/screens/google_tv_home_screen.dart';
 // import 'package:iptv_player/screens/multi_view_screen.dart';  // Disabled - uses VLC
-import 'package:iptv_player/screens/enhanced_video_player_screen.dart';  // Android/iOS/Web player
+import 'package:iptv_player/screens/enhanced_video_player_screen.dart'; // Android/iOS/Web player
 import 'package:iptv_player/screens/content_detail_screen.dart';
 import 'package:iptv_player/screens/search_screen.dart';
 import 'package:iptv_player/screens/category_screen.dart';
@@ -42,19 +41,26 @@ import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/profile_provider.dart';
 import 'package:iptv_player/services/background_task_manager.dart';
 
+final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
-    Zone.current.handleUncaughtError(details.exception, details.stack ?? StackTrace.current);
+    Zone.current.handleUncaughtError(
+      details.exception,
+      details.stack ?? StackTrace.current,
+    );
   };
-  runZonedGuarded(() {
-    runApp(const MyApp());
-  }, (error, stack) {
-    // Optionally log error to a service
-    _ErrorHandler.reportError(error, stack);
-  });
+  runZonedGuarded(
+    () {
+      runApp(const MyApp());
+    },
+    (error, stack) {
+      // Optionally log error to a service
+      _ErrorHandler.reportError(error, stack);
+    },
+  );
 }
 
 /// Global error handler for reporting and displaying errors
@@ -62,6 +68,8 @@ class _ErrorHandler {
   static final _errorNotifier = ValueNotifier<_AppError?>(null);
 
   static void reportError(Object error, StackTrace stack) {
+    debugPrint('Unhandled app error: $error');
+    debugPrint(stack.toString());
     _errorNotifier.value = _AppError(error, stack);
     // TODO: Optionally send error to analytics/crash service
   }
@@ -71,7 +79,10 @@ class _ErrorHandler {
       valueListenable: _errorNotifier,
       builder: (context, appError, _) {
         if (appError != null) {
-          return _GlobalErrorScreen(error: appError, onDismiss: () => _errorNotifier.value = null);
+          return _GlobalErrorScreen(
+            error: appError,
+            onDismiss: () => _errorNotifier.value = null,
+          );
         }
         return child;
       },
@@ -105,11 +116,16 @@ class _GlobalErrorScreen extends StatelessWidget {
               children: [
                 Icon(Icons.error_outline, color: Colors.redAccent, size: 80),
                 const SizedBox(height: 24),
-                Text('Something went wrong', style: Theme.of(context).textTheme.headlineMedium),
+                Text(
+                  'Something went wrong',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
                 const SizedBox(height: 16),
                 Text(
                   error.error.toString(),
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.redAccent),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyLarge?.copyWith(color: Colors.redAccent),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
@@ -134,33 +150,37 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  // ignore: unused_field
   bool _disclaimerAccepted = false;
   bool _loading = true;
+  // ignore: unused_field
   bool _hasPlaylist = false;
   bool _profileReady = false;
+  bool _profileDialogScheduled = false;
+  bool _creatingDefaultProfile = false;
 
   @override
-
   void initState() {
     super.initState();
     _initialize();
   }
 
   Future<void> _initialize() async {
-    await _clearOldPlaylists(); // Clear any stored playlists from old builds
-    await _checkDisclaimer();
-    await _checkAndLoadPlaylist();
-    // Wait for profile provider to load
-    final profileProvider = ProfileProvider();
-    await profileProvider.loadProfiles();
-    if (profileProvider.activeProfile == null) {
-      // Will show profile selection dialog in build
-      setState(() {
-        _profileReady = false;
-      });
-    } else {
+    try {
+      await _clearOldPlaylists();
+      await _checkDisclaimer();
+      await _checkAndLoadPlaylist();
+
+      final profileProvider = ProfileProvider();
+      await profileProvider.loadProfiles();
+    } catch (error, stack) {
+      debugPrint('Initialization error: $error');
+      debugPrint('$stack');
+    } finally {
+      if (!mounted) return;
       setState(() {
         _profileReady = true;
+        _loading = false;
       });
     }
   }
@@ -169,8 +189,9 @@ class _MyAppState extends State<MyApp> {
     final prefs = await SharedPreferences.getInstance();
     // Check if this is a new install or updated version
     final lastVersion = prefs.getString('app_version');
-    const currentVersion = '2.0.1'; // Increment this when you want to clear old data
-    
+    const currentVersion =
+        '2.0.1'; // Increment this when you want to clear old data
+
     if (lastVersion != currentVersion) {
       // Clear old playlist data
       await prefs.remove('playlist_type');
@@ -178,10 +199,10 @@ class _MyAppState extends State<MyApp> {
       await prefs.remove('xtream_server');
       await prefs.remove('xtream_username');
       await prefs.remove('xtream_password');
-      
+
       // Save new version
       await prefs.setString('app_version', currentVersion);
-      
+
       print('Cleared old playlist data - new version: $currentVersion');
     }
   }
@@ -215,45 +236,43 @@ class _MyAppState extends State<MyApp> {
   Future<void> _checkAndLoadPlaylist() async {
     final prefs = await SharedPreferences.getInstance();
     final playlistType = prefs.getString('playlist_type');
-    
+
     if (playlistType != null) {
       // Try to auto-load the saved playlist
       try {
         String? playlistUrl;
-        
+
         if (playlistType == 'm3u') {
           playlistUrl = prefs.getString('m3u_url');
         } else if (playlistType == 'xtream') {
           final server = prefs.getString('xtream_server');
           final username = prefs.getString('xtream_username');
           final password = prefs.getString('xtream_password');
-          
+
           if (server != null && username != null && password != null) {
             playlistUrl =
                 '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
           }
         }
-        
+
         if (playlistUrl != null && playlistUrl.isNotEmpty) {
           // Will be loaded by ChannelProvider after it's created
           setState(() {
             _hasPlaylist = true;
           });
         }
-      } catch (e) {
-        debugPrint('Error checking playlist: $e');
+      } catch (error, stack) {
+        debugPrint('Failed to auto-load playlist: $error');
+        debugPrint('$stack');
       }
     }
-    
-    setState(() {
-      _loading = false;
-    });
   }
 
+  // ignore: unused_element
   Future<void> _showDisclaimer() async {
     // Make sure we have a valid context
     if (!mounted) return;
-    
+
     final result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -274,7 +293,6 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-
     if (_loading || !_profileReady) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -287,7 +305,9 @@ class _MyAppState extends State<MyApp> {
       MultiProvider(
         providers: [
           ChangeNotifierProvider(create: (_) => ProfileProvider()),
-          ChangeNotifierProvider(create: (_) => ContentProvider()..initialize()),
+          ChangeNotifierProvider(
+            create: (_) => ContentProvider()..initialize(),
+          ),
           ChangeNotifierProxyProvider<ContentProvider, ChannelProvider>(
             create: (context) {
               final provider = ChannelProvider();
@@ -334,10 +354,6 @@ class _MyAppState extends State<MyApp> {
             // Start background tasks for EPG and playlist sync
             BackgroundTaskManager.start(context);
             final profileProvider = Provider.of<ProfileProvider>(context);
-            if (profileProvider.activeProfile == null) {
-              // Show profile selection dialog
-              Future.microtask(() => _showProfileDialog(context));
-            }
             return MaterialApp.router(
               title: 'RISA IPTV Player',
               debugShowCheckedModeBanner: false,
@@ -345,9 +361,11 @@ class _MyAppState extends State<MyApp> {
               routerConfig: _router,
               builder: (context, child) {
                 final media = MediaQuery.of(context);
+                final resolvedChild = child ?? const SizedBox.shrink();
+                _maybePromptForProfile(context, profileProvider);
                 return MediaQuery(
                   data: media.copyWith(textScaleFactor: 0.95),
-                  child: child!,
+                  child: resolvedChild,
                 );
               },
             );
@@ -355,22 +373,101 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
     );
+  }
 
+  void _maybePromptForProfile(
+    BuildContext context,
+    ProfileProvider profileProvider,
+  ) {
+    final shouldPrompt = profileProvider.activeProfile == null;
+    if (!shouldPrompt) {
+      _profileDialogScheduled = false;
+      return;
+    }
+
+    if (profileProvider.profiles.isEmpty) {
+      _ensureDefaultProfile(context);
+      return;
+    }
+
+    if (_profileDialogScheduled) {
+      return;
+    }
+
+    _profileDialogScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      try {
+        await _showProfileDialog(context);
+      } finally {
+        if (!mounted) {
+          return;
+        }
+        final stillMissingProfile =
+            Provider.of<ProfileProvider>(context, listen: false).activeProfile ==
+                null;
+        _profileDialogScheduled = false;
+        if (stillMissingProfile) {
+          setState(() {});
+        }
+      }
+    });
   }
 
   Future<void> _showProfileDialog(BuildContext context) async {
+    final navigatorContext = _rootNavigatorKey.currentContext;
+    if (navigatorContext == null) {
+      _profileDialogScheduled = false;
+      return;
+    }
+
     await showDialog(
-      context: context,
+      context: navigatorContext,
       barrierDismissible: false,
       builder: (context) => _ProfileSelectionDialog(),
     );
   }
 
+  void _ensureDefaultProfile(BuildContext context) {
+    if (_creatingDefaultProfile) {
+      return;
+    }
+
+    final provider = Provider.of<ProfileProvider>(context, listen: false);
+    if (provider.profiles.isNotEmpty) {
+      return;
+    }
+
+  _creatingDefaultProfile = true;
+  debugPrint('ProfileProvider empty; creating default profile for auto-setup');
+    scheduleMicrotask(() async {
+      if (!mounted) {
+        _creatingDefaultProfile = false;
+        return;
+      }
+
+      try {
+        final id = DateTime.now().millisecondsSinceEpoch.toString();
+        final profile = UserProfile(id: id, name: 'Default Profile', avatarUrl: '');
+  await provider.addProfile(profile);
+  debugPrint('Default profile created: ${profile.id}');
+      } catch (error, stack) {
+        debugPrint('Failed to create default profile: $error');
+        debugPrint('$stack');
+      } finally {
+        if (mounted) {
+          setState(() {});
+        }
+        _creatingDefaultProfile = false;
+      }
+    });
+  }
 }
 
 class _ProfileSelectionDialog extends StatefulWidget {
   @override
-  State<_ProfileSelectionDialog> createState() => _ProfileSelectionDialogState();
+  State<_ProfileSelectionDialog> createState() =>
+      _ProfileSelectionDialogState();
 }
 
 class _ProfileSelectionDialogState extends State<_ProfileSelectionDialog> {
@@ -394,18 +491,22 @@ class _ProfileSelectionDialogState extends State<_ProfileSelectionDialog> {
           : Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                ...provider.profiles.map((p) => ListTile(
-                      leading: CircleAvatar(child: Text(p.name[0])),
-                      title: Text(p.name),
-                      onTap: () {
-                        provider.setActiveProfile(p.id);
-                        Navigator.of(context).pop();
-                      },
-                    )),
+                ...provider.profiles.map(
+                  (p) => ListTile(
+                    leading: CircleAvatar(child: Text(p.name[0])),
+                    title: Text(p.name),
+                    onTap: () {
+                      provider.setActiveProfile(p.id);
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                ),
                 const Divider(),
                 TextField(
                   controller: _nameController,
-                  decoration: const InputDecoration(labelText: 'New Profile Name'),
+                  decoration: const InputDecoration(
+                    labelText: 'New Profile Name',
+                  ),
                 ),
               ],
             ),
@@ -427,14 +528,14 @@ class _ProfileSelectionDialogState extends State<_ProfileSelectionDialog> {
     );
   }
 }
-}
 
 // Deep linking: GoRouter will handle incoming URIs (e.g., myapp://content/123 or https://risa.app/content/123)
 final _router = GoRouter(
+  navigatorKey: _rootNavigatorKey,
   // To test deep links on Android:
   // adb shell am start -a android.intent.action.VIEW -d "risa://content/123"
   // Or for web: open https://risa.app/content/123
-  initialLocation: '/',
+  initialLocation: '/home',
   debugLogDiagnostics: true,
   routes: [
     GoRoute(
@@ -444,45 +545,33 @@ final _router = GoRouter(
         child: const PlaylistLoginScreen(),
       ),
     ),
-    GoRoute(
-      path: '/',
-      pageBuilder: (context, state) => _fadeSlidePage(
-        key: state.pageKey,
-        child: const GoogleTVHomeScreen(),
-      ),
-    ),
+    GoRoute(path: '/', redirect: (context, state) => '/home'),
     ShellRoute(
       builder: (context, state, child) {
-        return AppShell(child: child);
+        return AppShell(child: child, routerState: state);
       },
       routes: [
         GoRoute(
           path: '/home',
           pageBuilder: (context, state) => _fadeSlidePage(
             key: state.pageKey,
-            child: const HomeScreen(),
+            child: const GoogleTVHomeScreen(),
           ),
         ),
         GoRoute(
           path: '/search',
-          pageBuilder: (context, state) => _fadeSlidePage(
-            key: state.pageKey,
-            child: const SearchScreen(),
-          ),
+          pageBuilder: (context, state) =>
+              _fadeSlidePage(key: state.pageKey, child: const SearchScreen()),
         ),
         GoRoute(
           path: '/movies',
-          pageBuilder: (context, state) => _fadeSlidePage(
-            key: state.pageKey,
-            child: const MoviesScreen(),
-          ),
+          pageBuilder: (context, state) =>
+              _fadeSlidePage(key: state.pageKey, child: const MoviesScreen()),
         ),
         GoRoute(
           path: '/series',
-          pageBuilder: (context, state) => _fadeSlidePage(
-            key: state.pageKey,
-            child: const SeriesScreen(),
-          ),
+          pageBuilder: (context, state) =>
+              _fadeSlidePage(key: state.pageKey, child: const SeriesScreen()),
         ),
         GoRoute(
           path: '/category/:name',
@@ -496,10 +585,8 @@ final _router = GoRouter(
         ),
         GoRoute(
           path: '/epg',
-          pageBuilder: (context, state) => _fadeSlidePage(
-            key: state.pageKey,
-            child: const EPGScreen(),
-          ),
+          pageBuilder: (context, state) =>
+              _fadeSlidePage(key: state.pageKey, child: const EPGScreen()),
         ),
         GoRoute(
           path: '/recordings',
@@ -517,10 +604,8 @@ final _router = GoRouter(
         ),
         GoRoute(
           path: '/settings',
-          pageBuilder: (context, state) => _fadeSlidePage(
-            key: state.pageKey,
-            child: const SettingsScreen(),
-          ),
+          pageBuilder: (context, state) =>
+              _fadeSlidePage(key: state.pageKey, child: const SettingsScreen()),
         ),
         GoRoute(
           path: '/playlist-editor',
@@ -538,10 +623,8 @@ final _router = GoRouter(
         ),
         GoRoute(
           path: '/ai-models',
-          pageBuilder: (context, state) => _fadeSlidePage(
-            key: state.pageKey,
-            child: const AIModelsScreen(),
-          ),
+          pageBuilder: (context, state) =>
+              _fadeSlidePage(key: state.pageKey, child: const AIModelsScreen()),
         ),
         GoRoute(
           path: '/player',
@@ -599,14 +682,19 @@ final _router = GoRouter(
   ],
 );
 
-CustomTransitionPage _fadeSlidePage({required LocalKey key, required Widget child}) {
+CustomTransitionPage _fadeSlidePage({
+  required LocalKey key,
+  required Widget child,
+}) {
   return CustomTransitionPage(
     key: key,
     child: child,
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
       final fade = CurvedAnimation(parent: animation, curve: Curves.easeInOut);
-      final slide = Tween<Offset>(begin: const Offset(0.08, 0), end: Offset.zero)
-          .animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic));
+      final slide = Tween<Offset>(
+        begin: const Offset(0.08, 0),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic));
       return FadeTransition(
         opacity: fade,
         child: SlideTransition(position: slide, child: child),

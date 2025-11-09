@@ -7,8 +7,9 @@ import 'package:iptv_player/utils/app_theme.dart';
 
 class AppShell extends StatefulWidget {
   final Widget child;
+  final GoRouterState routerState;
 
-  const AppShell({super.key, required this.child});
+  const AppShell({super.key, required this.child, required this.routerState});
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -115,7 +116,7 @@ class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin
 
   void _syncFocusWithRoute() {
     if (!mounted) return;
-    final route = GoRouterState.of(context).uri.path;
+  final route = widget.routerState.uri.path;
     _lastKnownRoute = route;
     final index = _getNavIndexForRoute(route) ?? 0;
     _currentTopNavIndex = index;
@@ -334,7 +335,7 @@ class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
-    final currentRoute = GoRouterState.of(context).uri.path;
+  final currentRoute = widget.routerState.uri.path;
     _handleRouteChange(currentRoute);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(

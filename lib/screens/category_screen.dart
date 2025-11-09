@@ -26,7 +26,7 @@ class CategoryScreen extends StatelessWidget {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.arrow_back),
-                    onPressed: () => context.go('/'),
+                    onPressed: () => context.go('/home'),
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -52,10 +52,12 @@ class CategoryScreen extends StatelessWidget {
                     ? _buildEmptyState()
                     : GridView.builder(
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 6, // Increased from 4 to 6 for smaller cards
+                          crossAxisCount:
+                              6, // Increased from 4 to 6 for smaller cards
                           crossAxisSpacing: AppSizes.md,
                           mainAxisSpacing: AppSizes.md,
-                          childAspectRatio: 0.85, // Adjusted ratio for better proportions
+                          childAspectRatio:
+                              0.85, // Adjusted ratio for better proportions
                         ),
                         itemCount: channels.length,
                         itemBuilder: (context, index) {
@@ -133,7 +135,8 @@ class CategoryScreen extends StatelessWidget {
                             padding: EdgeInsets.all(AppSizes.sm),
                             child: Image.network(
                               channel.logoUrl!,
-                              fit: BoxFit.contain, // Changed from cover to contain
+                              fit: BoxFit
+                                  .contain, // Changed from cover to contain
                               width: double.infinity,
                               height: double.infinity,
                               errorBuilder: (context, error, stackTrace) {
