@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -13,578 +15,591 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin {
-  bool _isSidebarCollapsed = false;
-  late String _currentTime;
-  late String _currentDate;
+  static const List<_PrimaryNavItem> _primaryNavItems = [
+    _PrimaryNavItem(label: 'Live TV', route: '/home'),
+    _PrimaryNavItem(label: 'Movies', route: '/movies'),
+    _PrimaryNavItem(label: 'Series', route: '/series'),
+    _PrimaryNavItem(label: 'Search', route: '/search'),
+  ];
+
+  static const List<_OverflowMenuItem> _overflowMenuItems = [
+    _OverflowMenuItem(label: 'Guide', icon: Icons.calendar_month_rounded, route: '/epg'),
+    _OverflowMenuItem(label: 'Recordings', icon: Icons.playlist_play_rounded, route: '/recordings'),
+    _OverflowMenuItem(label: 'Settings', icon: Icons.settings_rounded, route: '/settings'),
+    _OverflowMenuItem(label: 'Exit App', icon: Icons.power_settings_new_rounded, isExit: true),
+  ];
+
+  late final List<FocusNode> _topNavFocusNodes;
+  late final List<FocusNode> _overflowMenuItemFocusNodes;
+
+  final FocusNode _contentScopeNode = FocusNode(debugLabel: 'ContentScope');
+  final FocusNode _overflowButtonFocusNode = FocusNode(debugLabel: 'OverflowButton');
+  final FocusNode _overflowMenuKeyboardNode = FocusNode(debugLabel: 'OverflowMenuKeyboard');
+
   late AnimationController _logoAnimationController;
   late Animation<double> _logoScaleAnimation;
-  
-  // Focus management for TV navigation
-  final List<FocusNode> _navFocusNodes = [];
-  int _currentFocusIndex = 0;
-  final FocusNode _sidebarScopeNode = FocusNode(debugLabel: 'SidebarScope');
-  final FocusNode _contentScopeNode = FocusNode(debugLabel: 'ContentScope');
-  // Top bar
-  final FocusNode _searchButtonFocusNode = FocusNode(debugLabel: 'SearchBtn');
-  final FocusNode _settingsButtonFocusNode = FocusNode(debugLabel: 'SettingsBtn');
+  Timer? _clockTimer;
+
+  String _currentTime = '';
+  String _currentDate = '';
+  String _lastKnownRoute = '';
+
+  bool _isOverflowMenuOpen = false;
+  int _currentTopNavIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _updateTime();
-    
-    // Initialize logo animation
-    _logoAnimationController = AnimationController(
-      duration: Duration(milliseconds: 2000),
-      vsync: this,
-    )..repeat(reverse: true);
-    
-    _logoScaleAnimation = Tween<double>(begin: 0.98, end: 1.02).animate(
-      CurvedAnimation(
-        parent: _logoAnimationController,
-        curve: Curves.easeInOut,
-      ),
+    _initializeAnimations();
+    _initializeClock();
+
+    _topNavFocusNodes = List.generate(
+      _primaryNavItems.length,
+      (index) => FocusNode(debugLabel: 'TopNav$index'),
     );
-    
-    // Create focus nodes for each nav item (6 main + 1 exit)
-    for (int i = 0; i < 7; i++) {
-      _navFocusNodes.add(FocusNode(debugLabel: 'Nav$i'));
-    }
-    
-    // Update time every second
-    Future.delayed(Duration.zero, () {
-      if (mounted) {
-        _startTimeUpdater();
-        // Request focus on first item after build
-        Future.delayed(Duration(milliseconds: 100), () {
-          if (mounted && _navFocusNodes.isNotEmpty) {
-            _navFocusNodes[0].requestFocus();
-            setState(() => _currentFocusIndex = 0);
-          }
-        });
-      }
-    });
+    _overflowMenuItemFocusNodes = List.generate(
+      _overflowMenuItems.length,
+      (index) => FocusNode(debugLabel: 'OverflowItem$index'),
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncFocusWithRoute());
   }
 
   @override
   void dispose() {
     _logoAnimationController.dispose();
-    for (var node in _navFocusNodes) {
+    _clockTimer?.cancel();
+
+    for (final node in _topNavFocusNodes) {
       node.dispose();
     }
-    _sidebarScopeNode.dispose();
+    for (final node in _overflowMenuItemFocusNodes) {
+      node.dispose();
+    }
+
     _contentScopeNode.dispose();
-    _searchButtonFocusNode.dispose();
-    _settingsButtonFocusNode.dispose();
+    _overflowButtonFocusNode.dispose();
+    _overflowMenuKeyboardNode.dispose();
     super.dispose();
   }
 
-  void _startTimeUpdater() {
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) {
-        setState(() {
-          _updateTime();
-        });
-        _startTimeUpdater();
-      }
+  void _initializeAnimations() {
+    _logoAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..repeat(reverse: true);
+
+    _logoScaleAnimation = Tween<double>(begin: 0.97, end: 1.03).animate(
+      CurvedAnimation(parent: _logoAnimationController, curve: Curves.easeInOut),
+    );
+  }
+
+  void _initializeClock() {
+    _updateClockStrings();
+    _clockTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (!mounted) return;
+      setState(_updateClockStrings);
     });
   }
 
-  void _updateTime() {
+  void _updateClockStrings() {
     final now = DateTime.now();
-    // Convert to 12-hour format
     final hour = now.hour == 0 ? 12 : (now.hour > 12 ? now.hour - 12 : now.hour);
     final period = now.hour >= 12 ? 'PM' : 'AM';
-    _currentTime =
-        '${hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} $period';
-    final days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
-    final months = [
-      'JAN',
-      'FEB',
-      'MAR',
-      'APR',
-      'MAY',
-      'JUN',
-      'JUL',
-      'AUG',
-      'SEP',
-      'OCT',
-      'NOV',
-      'DEC',
-    ];
-    _currentDate =
-        '${days[now.weekday - 1]}, ${months[now.month - 1]} ${now.day}';
+    _currentTime = '${hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} $period';
+
+    const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    _currentDate = '${days[now.weekday - 1]}, ${months[now.month - 1]} ${now.day.toString().padLeft(2, '0')}';
   }
 
-  final List<NavigationItem> _navigationItems = [
-    NavigationItem(icon: Icons.live_tv, label: 'LIVE TV', route: '/'),
-    NavigationItem(icon: Icons.movie, label: 'Movies', route: '/movies'),
-    NavigationItem(icon: Icons.tv, label: 'Series', route: '/series'),
-    NavigationItem(icon: Icons.grid_view, label: 'EPG', route: '/epg'),
-    NavigationItem(
-      icon: Icons.video_library,
-      label: 'Recordings',
-      route: '/recordings',
-    ),
-    NavigationItem(icon: Icons.help_outline, label: 'Help', route: '/help'),
-  ];
-
-  // (removed older helper _requestFirstContentItemFocus; superseded by _requestFirstSecondaryOrContentFocus)
-
-  // Helper: Try to focus a screen's secondary menu first; fall back to main content; else next traversal
-  void _requestFirstSecondaryOrContentFocus(String route) {
-    // Small delay to ensure content is fully rendered before requesting focus
-    Future.delayed(Duration(milliseconds: 150), () {
-      bool handled = false;
-      try {
-        final contentState = _getContentScreenState(route);
-        if (contentState != null && contentState.mounted) {
-          final dyn = contentState as dynamic;
-          // Try common method names for focus in order of priority
-          // 1. Settings screen - focus its sidebar
-          if (!handled && route.startsWith('/settings')) {
-            try {
-              dyn.requestFirstSidebarFocus();
-              handled = true;
-            } catch (_) {}
-          }
-          // 2. Screens with secondary menus (tabs/categories)
-          if (!handled) {
-            try {
-              dyn.requestFirstSecondaryFocus();
-              handled = true;
-            } catch (_) {}
-          }
-          if (!handled) {
-            try {
-              dyn.requestFirstSecondaryMenuFocus();
-              handled = true;
-            } catch (_) {}
-          }
-          if (!handled) {
-            try {
-              dyn.requestFirstTabsFocus();
-              handled = true;
-            } catch (_) {}
-          }
-          // 3. Main content area (buttons, cards, etc.)
-          if (!handled) {
-            try {
-              dyn.requestFirstContentFocus();
-              handled = true;
-            } catch (_) {}
-          }
-        }
-      } catch (e) {
-        debugPrint('⚠️ Error focusing content: $e');
-      }
-      if (!handled) {
-        // Fallback: attempt to move to the next focusable within content area
-        try {
-          FocusScope.of(context).nextFocus();
-        } catch (e) {
-          debugPrint('⚠️ nextFocus() failed: $e');
-        }
-      }
-    });
-  }
-
-  // Placeholder kept for readability; actual invocation is guarded by try/catch above.
-
-  State? _getContentScreenState(String route) {
-    // This is a helper to get the State object for the current main content screen
-    // You may want to refine this if you use custom keys or global keys for each screen
-    // For now, we use context.visitChildElements to find the first StatefulElement
-    State? foundState;
-    void visitor(Element element) {
-      if (element is StatefulElement) {
-        final state = element.state;
-        if (_isMainContentScreenState(state, route)) {
-          foundState = state;
-        }
-      }
-      element.visitChildElements(visitor);
-    }
-    context.visitChildElements(visitor);
-    return foundState;
-  }
-
-  bool _isMainContentScreenState(State state, String route) {
-    switch (route) {
-      case '/':
-        return state.runtimeType.toString().contains('HomeScreen');
-      case '/movies':
-        return state.runtimeType.toString().contains('MoviesScreen');
-      case '/series':
-        return state.runtimeType.toString().contains('SeriesScreen');
-      case '/epg':
-        return state.runtimeType.toString().contains('EPGScreen');
-      default:
-        // Handle routes that start with certain paths
-        if (route.startsWith('/settings')) {
-          return state.runtimeType.toString().contains('SettingsScreen');
-        }
-        return false;
+  void _syncFocusWithRoute() {
+    if (!mounted) return;
+    final route = GoRouterState.of(context).uri.path;
+    _lastKnownRoute = route;
+    final index = _getNavIndexForRoute(route) ?? 0;
+    _currentTopNavIndex = index;
+    if (_topNavFocusNodes[index].canRequestFocus) {
+      _topNavFocusNodes[index].requestFocus();
     }
   }
 
-  KeyEventResult _handleSidebarKey(FocusNode node, RawKeyEvent event) {
-    if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
-    final key = event.logicalKey;
-    if (key == LogicalKeyboardKey.arrowDown) {
-      _moveFocus(1);
-      return KeyEventResult.handled;
-    } else if (key == LogicalKeyboardKey.arrowUp) {
-      _moveFocus(-1);
-      return KeyEventResult.handled;
-    } else if (key == LogicalKeyboardKey.arrowRight) {
-      // Move focus into main content area, trying to focus first interactive element
-      final currentRoute = GoRouterState.of(context).uri.path;
-      Future.microtask(() {
-        // Try to focus first content item in the screen
-        _requestFirstSecondaryOrContentFocus(currentRoute);
+  void _handleRouteChange(String currentRoute) {
+    if (currentRoute == _lastKnownRoute) return;
+    _lastKnownRoute = currentRoute;
+    final navIndex = _getNavIndexForRoute(currentRoute);
+    if (navIndex != null) {
+      _currentTopNavIndex = navIndex;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _topNavFocusNodes[navIndex].requestFocus();
       });
-      return KeyEventResult.handled;
-    } else if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
-      if (_currentFocusIndex < _navigationItems.length) {
-        final route = _navigationItems[_currentFocusIndex].route;
-        context.go(route);
-        // Keep focus on the selected sidebar item (do not jump elsewhere)
-        Future.microtask(() {
-          if (_navFocusNodes.isNotEmpty) {
-            _navFocusNodes[_currentFocusIndex].requestFocus();
-          }
-        });
-      } else {
-        _showExitDialog();
-      }
-      return KeyEventResult.handled;
+    } else {
+      _closeOverflowMenu(returnFocus: false);
     }
-    return KeyEventResult.ignored;
   }
 
-  KeyEventResult _handleContentKey(FocusNode node, RawKeyEvent event) {
-    if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
-    final key = event.logicalKey;
-    if (key == LogicalKeyboardKey.arrowLeft) {
-      // If we are on a nested screen with its own sidebar (e.g., Settings), prefer focusing that sidebar
-      final currentRoute = GoRouterState.of(context).uri.path;
-      if (currentRoute.startsWith('/settings')) {
-        // Try to find the Settings screen state and request its sidebar focus
-        Future.microtask(() {
-          final settingsState = _getContentScreenState('/settings');
-          try {
-            if (settingsState != null) {
-              (settingsState as dynamic).requestFirstSidebarFocus();
-              return;
-            }
-          } catch (_) {}
-          // Fallback to main sidebar
-          if (_navFocusNodes.isNotEmpty) {
-            _navFocusNodes[_currentFocusIndex.clamp(0, _navFocusNodes.length - 1)].requestFocus();
-          }
-        });
-      } else {
-        // Return focus to main sidebar, keep current index
-        Future.microtask(() {
-          if (_navFocusNodes.isNotEmpty) {
-            _navFocusNodes[_currentFocusIndex.clamp(0, _navFocusNodes.length - 1)].requestFocus();
-          }
-        });
+  int? _getNavIndexForRoute(String route) {
+    final normalized = _normalizedRoute(route);
+    for (var i = 0; i < _primaryNavItems.length; i++) {
+      if (_primaryNavItems[i].route == normalized) {
+        return i;
       }
-      return KeyEventResult.handled;
     }
-    // Let UP/DOWN arrows pass through to allow content scrolling
-    // Content screens can handle their own UP navigation to top bar if needed
-    return KeyEventResult.ignored;
+    return null;
   }
 
-  void _moveFocus(int direction) {
-    setState(() {
-      final len = _navFocusNodes.length;
-      if (len == 0) return;
-      
-      // Special case: pressing UP from the topmost item should go to top bar
-      if (direction < 0 && _currentFocusIndex == 0) {
-        _searchButtonFocusNode.requestFocus();
-        print('🎯 Focus moved to top bar (search button)');
-        return;
+  String _normalizedRoute(String route) {
+    if (route.isEmpty) return '/home';
+    final uri = Uri.parse(route);
+    if (uri.pathSegments.isEmpty) {
+      return '/home';
+    }
+    return '/${uri.pathSegments.first}';
+  }
+
+  void _onNavSelected(int index) {
+    final item = _primaryNavItems[index];
+    final current = GoRouterState.of(context).uri.path;
+    if (_normalizedRoute(current) != item.route) {
+      context.go(item.route);
+    }
+    _focusContentArea();
+  }
+
+  void _focusContentArea() {
+    Future.delayed(const Duration(milliseconds: 120), () {
+      if (!mounted) return;
+      if (_contentScopeNode.canRequestFocus) {
+        _contentScopeNode.requestFocus();
       }
-      
-      _currentFocusIndex += direction;
-      if (_currentFocusIndex >= len) {
-        _currentFocusIndex = 0; // Wrap to first
-      } else if (_currentFocusIndex < 0) {
-        _currentFocusIndex = len - 1; // Wrap to last
-      }
-      _navFocusNodes[_currentFocusIndex].requestFocus();
-      print('🎯 Focus moved to index $_currentFocusIndex');
     });
   }
 
-  void _showExitDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.cardBackground,
-        title: const Text('Exit'),
-        content: const Text('Are you sure you want to exit the app?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              SystemNavigator.pop();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.accentRed,
-            ),
-            child: const Text('Exit'),
-          ),
-        ],
-      ),
-    );
+  void _openOverflowMenu() {
+    if (_isOverflowMenuOpen) return;
+    setState(() => _isOverflowMenuOpen = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _overflowMenuKeyboardNode.requestFocus();
+      if (_overflowMenuItemFocusNodes.isNotEmpty) {
+        _overflowMenuItemFocusNodes.first.requestFocus();
+      }
+    });
+  }
+
+  void _closeOverflowMenu({bool returnFocus = true}) {
+    if (!_isOverflowMenuOpen) return;
+    setState(() => _isOverflowMenuOpen = false);
+    if (returnFocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (_overflowButtonFocusNode.canRequestFocus) {
+          _overflowButtonFocusNode.requestFocus();
+        }
+      });
+    }
+  }
+
+  void _onOverflowItemSelected(_OverflowMenuItem item) {
+    if (item.isExit) {
+      SystemNavigator.pop();
+      return;
+    }
+
+    if (item.route != null) {
+      context.go(item.route!);
+      _focusContentArea();
+    }
+    _closeOverflowMenu(returnFocus: false);
+  }
+
+  KeyEventResult _handleGlobalKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+    final key = event.logicalKey;
+    if (_isOverflowMenuOpen && (key == LogicalKeyboardKey.goBack || key == LogicalKeyboardKey.escape)) {
+      _closeOverflowMenu();
+      return KeyEventResult.handled;
+    }
+
+    if (!_isOverflowMenuOpen && key == LogicalKeyboardKey.contextMenu) {
+      _openOverflowMenu();
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  KeyEventResult _handleTopNavKeyEvent(FocusNode node, KeyEvent event, int index) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.select ||
+        key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.space) {
+      _onNavSelected(index);
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.arrowDown) {
+      _focusContentArea();
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.arrowRight && index == _primaryNavItems.length - 1) {
+      _overflowButtonFocusNode.requestFocus();
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.arrowLeft && index == 0) {
+      _topNavFocusNodes.last.requestFocus();
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  KeyEventResult _handleOverflowButtonKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.select ||
+        key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.space) {
+      if (_isOverflowMenuOpen) {
+        _closeOverflowMenu(returnFocus: true);
+      } else {
+        _openOverflowMenu();
+      }
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.arrowLeft) {
+      _topNavFocusNodes.last.requestFocus();
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.arrowDown && _isOverflowMenuOpen) {
+      if (_overflowMenuItemFocusNodes.isNotEmpty) {
+        _overflowMenuItemFocusNodes.first.requestFocus();
+      }
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  KeyEventResult _handleOverflowMenuKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.goBack ||
+        key == LogicalKeyboardKey.escape ||
+        key == LogicalKeyboardKey.arrowLeft) {
+      _closeOverflowMenu();
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.arrowUp) {
+      final currentIndex = _overflowMenuItemFocusNodes.indexWhere((node) => node.hasPrimaryFocus);
+      if (currentIndex <= 0) {
+        _overflowButtonFocusNode.requestFocus();
+        return KeyEventResult.handled;
+      }
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  KeyEventResult _handleOverflowMenuItemKeyEvent(
+    FocusNode node,
+    KeyEvent event,
+    _OverflowMenuItem item,
+  ) {
+    if (event is! KeyDownEvent) {
+      return KeyEventResult.ignored;
+    }
+
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.select ||
+        key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.space) {
+      _onOverflowItemSelected(item);
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
   }
 
   @override
   Widget build(BuildContext context) {
     final currentRoute = GoRouterState.of(context).uri.path;
+    _handleRouteChange(currentRoute);
 
-    return PopScope(
-      canPop: false, // Prevent back button from exiting app
-      onPopInvoked: (didPop) {
-        if (didPop) return;
-        // On back button, go to home instead of exiting
-        if (currentRoute != '/') {
-          context.go('/');
-        }
-      },
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light.copyWith(statusBarColor: Colors.transparent),
       child: Scaffold(
-        body: Row(
-          children: [
-            // Sidebar
-            _buildSidebar(currentRoute),
-
-            // Vertical divider
-            VerticalDivider(
-              width: 2,
-              thickness: 2,
-              color: AppTheme.highlight.withOpacity(0.15),
-            ),
-
-            // Main content
-            Expanded(
-              child: Column(
-                children: [
-                  _buildAppBar(context, currentRoute),
-                  Expanded(
-                    child: Focus(
-                      focusNode: _contentScopeNode,
-                      onKey: _handleContentKey,
-                      child: AnimatedSwitcher(
-                        duration: Duration(milliseconds: 250),
-                        switchInCurve: Curves.easeOut,
-                        switchOutCurve: Curves.easeIn,
-                        transitionBuilder: (child, animation) {
-                          return FadeTransition(
-                            opacity: animation,
-                            child: ScaleTransition(
-                              scale: Tween<double>(begin: 0.98, end: 1.0).animate(animation),
-                              child: child,
-                            ),
-                          );
-                        },
-                        child: widget.child,
-                      ),
-                    ),
+        backgroundColor: AppTheme.darkBackground,
+        body: Focus(
+          autofocus: true,
+          onKeyEvent: _handleGlobalKeyEvent,
+          child: Stack(
+            children: [
+              _buildBackgroundGradient(),
+              _buildContentArea(),
+              _buildFloatingTopBar(),
+              if (_isOverflowMenuOpen) ...[
+                Positioned.fill(
+                  child: GestureDetector(
+                    onTap: () => _closeOverflowMenu(returnFocus: false),
+                    behavior: HitTestBehavior.translucent,
+                    child: const SizedBox(),
                   ),
-                ],
-              ),
-            ),
+                ),
+                _buildOverflowMenu(),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBackgroundGradient() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            AppTheme.darkBackground,
+            AppTheme.darkBackground,
+            AppTheme.darkBackground.withOpacity(0.85),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSidebar(String currentRoute) {
-    final width = _isSidebarCollapsed
-        ? AppSizes.sidebarCollapsedWidth
-        : AppSizes.sidebarWidth;
-
-    return Focus(
-      focusNode: _sidebarScopeNode,
-      onKey: _handleSidebarKey,
-      onFocusChange: (hasFocus) {
-        // Auto expand when focused, auto collapse when focus leaves
-        setState(() {
-          _isSidebarCollapsed = !hasFocus;
-        });
-      },
-      child: AnimatedContainer(
-        duration: Duration(milliseconds: 350),
-        curve: Curves.easeInOut,
-        width: width,
-        color: AppTheme.sidebarBackground,
-        child: Column(
-          children: [
-            // App logo and divider container
-            Container(
-              height: AppSizes.appBarHeight, // Match top bar height for perfect alignment
-              width: double.infinity,
-              child: Stack(
-                children: [
-                  // Logo
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 6.0),  // Reduced
-                      child: _isSidebarCollapsed
-                          ? ScaleTransition(
-                              scale: _logoScaleAnimation,
-                              child: SizedBox(
-                                width: 54,  // Reduced from 64
-                                height: 54,  // Reduced from 64
-                                child: FittedBox(
-                                  fit: BoxFit.contain,
-                                  child: Image.asset('assets/images/croppedlogo2.png'),
-                                ),
-                              ),
-                            )
-                          : ScaleTransition(
-                              scale: _logoScaleAnimation,
-                              child: SizedBox.expand(
-                                child: FittedBox(
-                                  fit: BoxFit.contain,
-                                  child: Image.asset('assets/images/croppedlogo2.png'),
-                                ),
-                              ),
-                            ),
-                    ),
-                  ),
-                  // Solid pink line at bottom - extends to cover the divider gap
-                  Positioned(
-                    left: 0,
-                    right: -2, // Extend 2px to the right to cover the 2px divider
-                    bottom: 0,
-                    child: AnimatedOpacity(
-                      opacity: _isSidebarCollapsed ? 0.0 : 1.0,
-                      duration: AppDurations.fast,
-                      child: Container(
-                        height: 2,
-                        color: AppTheme.accentPink,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Navigation Items
-            Expanded(
-              child: ListView(
-                padding: EdgeInsets.only(top: AppSizes.sm, bottom: AppSizes.sm),  // Prevent first item clipping on focus
-                children: [
-                  for (int i = 0; i < _navigationItems.length; i++)
-                    _buildNavigationItem(
-                      index: i,
-                      item: _navigationItems[i],
-                      isSelected: currentRoute == _navigationItems[i].route,
-                      focusNode: _navFocusNodes[i],
-                      onTap: () {
-                        context.go(_navigationItems[i].route);
-                      },
-                    ),
-                ],
-              ),
-            ),
-
-            // Exit
-            _buildNavigationItem(
-              item: NavigationItem(
-                icon: Icons.exit_to_app,
-                label: 'Exit',
-                route: '/exit',
-              ),
-              index: 6,
-              isSelected: false,
-              focusNode: _navFocusNodes[6],
-              onTap: _showExitDialog,
-            ),
-          ],
+  Widget _buildContentArea() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 130, left: 48, right: 48, bottom: 32),
+      child: FocusTraversalGroup(
+        policy: WidgetOrderTraversalPolicy(),
+        child: Focus(
+          focusNode: _contentScopeNode,
+          child: widget.child,
         ),
       ),
     );
   }
 
-  Widget _buildNavigationItem({
-    required int index,
-    required NavigationItem item,
-    required bool isSelected,
-    required VoidCallback onTap,
-    required FocusNode focusNode,
-  }) {
-    final bool isFocused = focusNode.hasFocus;
+  Widget _buildFloatingTopBar() {
+    return Align(
+      alignment: Alignment.topCenter,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 32),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+          decoration: BoxDecoration(
+            color: AppTheme.cardBackground.withOpacity(0.92),
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(color: AppTheme.primaryBlueOpacity(0.35)),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.primaryBlue.withOpacity(0.25),
+                blurRadius: 24,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildAnimatedLogo(),
+              const SizedBox(width: 18),
+              _buildPrimaryNavigation(),
+              const SizedBox(width: 24),
+              _buildClock(),
+              const SizedBox(width: 20),
+              _buildOverflowButton(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-    return GestureDetector(
-      onTap: onTap,
+  Widget _buildAnimatedLogo() {
+    return ScaleTransition(
+      scale: _logoScaleAnimation,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.asset(
+              'assets/images/croppedlogo2.png',
+              width: 42,
+              height: 42,
+              fit: BoxFit.cover,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            'IPTV Player',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPrimaryNavigation() {
+    return FocusTraversalGroup(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < _primaryNavItems.length; i++)
+            _buildNavItem(i, _primaryNavItems[i]),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavItem(int index, _PrimaryNavItem item) {
+    final isActive = _currentTopNavIndex == index && !_isOverflowMenuOpen;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
       child: Focus(
-        focusNode: focusNode,
-        onKey: _handleSidebarKey,
+        focusNode: _topNavFocusNodes[index],
         onFocusChange: (hasFocus) {
-          if (hasFocus) {
-            setState(() => _currentFocusIndex = index);
-          } else {
-            setState(() {});
+          if (hasFocus && mounted) {
+            setState(() => _currentTopNavIndex = index);
           }
         },
-        child: AnimatedScale(
-          scale: isFocused ? 1.08 : 1.0,  // Reduced from 1.12
-          duration: AppDurations.fast,
-          curve: Curves.easeOut,
+        onKeyEvent: (node, event) => _handleTopNavKeyEvent(node, event, index),
+        child: GestureDetector(
+          onTap: () => _onNavSelected(index),
+          behavior: HitTestBehavior.translucent,
           child: AnimatedContainer(
             duration: AppDurations.fast,
-            decoration: BoxDecoration(),
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppSizes.lg,  // Adjusted
-                vertical: 12,  // Reduced from 18
+            curve: Curves.easeInOut,
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            decoration: BoxDecoration(
+              color: isActive ? AppTheme.primaryBlueOpacity(0.2) : Colors.transparent,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: _topNavFocusNodes[index].hasFocus
+                    ? AppTheme.accentPink
+                    : Colors.transparent,
+                width: 2,
               ),
-              child: Row(
-                children: [
-                  Icon(
-                    item.icon,
-                    color: isFocused ? AppTheme.primaryBlue : AppTheme.textPrimary,
-                    size: AppSizes.iconMd + (isFocused ? 3 : 0),  // Reduced from 4
+            ),
+            child: Text(
+              item.label,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: isActive ? AppTheme.textPrimary : AppTheme.textSecondary,
+                    fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
                   ),
-                  if (!_isSidebarCollapsed) ...[
-                    SizedBox(width: AppSizes.sm),  // Reduced from md
-                    Expanded(
-                      child: Text(
-                        item.label,
-                        style: TextStyle(
-                          color: isFocused ? AppTheme.primaryBlue : AppTheme.textPrimary,
-                          fontWeight: (isFocused || isSelected)
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          fontSize: 15,  // Reduced from 17
-                          letterSpacing: isFocused ? 0.3 : 0,  // Reduced from 0.5
-                        ),
-                      ),
-                    ),
-                  ],
-                  if (isSelected)
-                    Container(
-                      width: 3,
-                      height: 20,
-                      margin: const EdgeInsets.only(left: 10),
-                      decoration: BoxDecoration(
-                        color: AppTheme.accentPink,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClock() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          _currentTime,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 2),
+        Text(
+          _currentDate,
+          style: Theme.of(context)
+              .textTheme
+              .bodySmall
+              ?.copyWith(color: AppTheme.textSecondary),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOverflowButton() {
+    return Focus(
+      focusNode: _overflowButtonFocusNode,
+      onKeyEvent: _handleOverflowButtonKeyEvent,
+      child: GestureDetector(
+        onTap: () {
+          if (_isOverflowMenuOpen) {
+            _closeOverflowMenu();
+          } else {
+            _openOverflowMenu();
+          }
+        },
+        child: AnimatedContainer(
+          duration: AppDurations.fast,
+          curve: Curves.easeInOut,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: _overflowButtonFocusNode.hasFocus
+                ? AppTheme.primaryBlueOpacity(0.18)
+                : AppTheme.cardBackground.withOpacity(0.75),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: _overflowButtonFocusNode.hasFocus
+                  ? AppTheme.accentPink
+                  : Colors.transparent,
+              width: 2,
+            ),
+          ),
+          child: Icon(
+            Icons.apps_rounded,
+            color: _isOverflowMenuOpen ? AppTheme.textPrimary : AppTheme.textSecondary,
+            size: AppSizes.iconLg,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOverflowMenu() {
+    return Align(
+      alignment: Alignment.topRight,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 110, right: 48),
+        child: Material(
+          color: Colors.transparent,
+          child: Focus(
+            focusNode: _overflowMenuKeyboardNode,
+            onKeyEvent: _handleOverflowMenuKeyEvent,
+            child: Container(
+              width: 300,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: AppTheme.cardBackground.withOpacity(0.96),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppTheme.primaryBlueOpacity(0.35)),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primaryBlue.withOpacity(0.25),
+                    blurRadius: 28,
+                    offset: const Offset(0, 18),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (var i = 0; i < _overflowMenuItems.length; i++)
+                    _buildOverflowMenuItem(i, _overflowMenuItems[i]),
                 ],
               ),
             ),
@@ -594,253 +609,81 @@ class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin
     );
   }
 
-  Widget _buildAppBar(BuildContext context, String currentRoute) {
-    return Stack(
-      children: [
-        // Main AppBar container
-        Container(
-          height: AppSizes.appBarHeight,
+  Widget _buildOverflowMenuItem(int index, _OverflowMenuItem item) {
+    return Focus(
+      focusNode: _overflowMenuItemFocusNodes[index],
+      onKeyEvent: (node, event) => _handleOverflowMenuItemKeyEvent(node, event, item),
+      child: GestureDetector(
+        onTap: () => _onOverflowItemSelected(item),
+        behavior: HitTestBehavior.translucent,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: AppTheme.darkBackground,
+            borderRadius: BorderRadius.circular(18),
+            color: _overflowMenuItemFocusNodes[index].hasFocus
+                ? AppTheme.primaryBlueOpacity(0.22)
+                : Colors.transparent,
+            border: Border.all(
+              color: _overflowMenuItemFocusNodes[index].hasFocus
+                  ? AppTheme.accentPink
+                  : Colors.transparent,
+              width: 2,
+            ),
           ),
-          padding: EdgeInsets.symmetric(horizontal: AppSizes.lg),
           child: Row(
             children: [
-              // Dynamic breadcrumb showing current context
-              _buildBreadcrumb(currentRoute),
-              Expanded(child: Container()), // Spacer
-              // Search button (top bar: blue icon on focus only)
-              Tooltip(
-                    message: 'Search',
-                    waitDuration: Duration(milliseconds: 400),
-                    child: Focus(
-                      focusNode: _searchButtonFocusNode,
-                      onKey: (node, event) {
-                        if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
-                        final key = event.logicalKey;
-                        if (key == LogicalKeyboardKey.arrowRight) {
-                          _settingsButtonFocusNode.requestFocus();
-                          return KeyEventResult.handled;
-                        } else if (key == LogicalKeyboardKey.arrowDown) {
-                          _contentScopeNode.requestFocus();
-                          return KeyEventResult.handled;
-                        } else if (key == LogicalKeyboardKey.arrowLeft) {
-                          _sidebarScopeNode.requestFocus();
-                          if (_navFocusNodes.isNotEmpty) {
-                            _navFocusNodes[_currentFocusIndex].requestFocus();
-                          }
-                          return KeyEventResult.handled;
-                        } else if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
-                          context.go('/search');
-                          return KeyEventResult.handled;
-                        }
-                        return KeyEventResult.ignored;
-                      },
-                      onFocusChange: (_) => setState(() {}),
-                      child: Builder(
-                        builder: (context) {
-                          final isFocused = Focus.of(context).hasFocus;
-                          return IconButton(
-                            icon: Icon(
-                              Icons.search,
-                              size: 24,  // Reduced from default
-                              color: isFocused ? AppTheme.primaryBlue : AppTheme.textPrimary,
-                            ),
-                            onPressed: () {
-                              context.go('/search');
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-
-                  SizedBox(width: AppSizes.sm),
-
-                  // Settings button (top bar: blue icon on focus only)
-                  Tooltip(
-                    message: 'Settings',
-                    waitDuration: Duration(milliseconds: 400),
-                    child: Focus(
-                      focusNode: _settingsButtonFocusNode,
-                      onKey: (node, event) {
-                        if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
-                        final key = event.logicalKey;
-                        if (key == LogicalKeyboardKey.arrowLeft) {
-                          _searchButtonFocusNode.requestFocus();
-                          return KeyEventResult.handled;
-                        } else if (key == LogicalKeyboardKey.arrowDown) {
-                          // Focus content area
-                          final currentRoute = GoRouterState.of(context).uri.path;
-                          if (currentRoute.startsWith('/settings')) {
-                            // For settings, focus the first input field in the current tab
-                            Future.delayed(Duration(milliseconds: 100), () {
-                              try {
-                                final contentState = _getContentScreenState('/settings');
-                                if (contentState != null && contentState.mounted) {
-                                  final dyn = contentState as dynamic;
-                                  dyn.requestFirstContentFocus();
-                                }
-                              } catch (_) {
-                                _contentScopeNode.requestFocus();
-                              }
-                            });
-                          } else {
-                            _contentScopeNode.requestFocus();
-                          }
-                          return KeyEventResult.handled;
-                        } else if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
-                          context.go('/settings');
-                          return KeyEventResult.handled;
-                        }
-                        return KeyEventResult.ignored;
-                      },
-                      onFocusChange: (_) => setState(() {}),
-                      child: Builder(
-                        builder: (context) {
-                          final bool isFocused = Focus.of(context).hasFocus;
-                          return IconButton(
-                            icon: Icon(
-                              Icons.settings,
-                              color: isFocused ? AppTheme.primaryBlue : AppTheme.textPrimary,
-                              size: 24,  // Reduced from 28
-                            ),
-                            onPressed: () => context.go('/settings'),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-
-                  SizedBox(width: AppSizes.md),
-
-                  // Time and date (updates in real-time)
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        _currentTime,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      Text(_currentDate, style: Theme.of(context).textTheme.bodySmall),
-                    ],
-                  ),
-                ],
+              Icon(
+                item.icon,
+                color: item.isExit ? AppTheme.accentRed : AppTheme.textPrimary,
+                size: AppSizes.iconLg,
               ),
-            ),
-        // Pink line at bottom of top bar - extends left to meet sidebar line
-        Positioned(
-          left: -2, // Extend 2px to the left to cover the divider gap
-          right: 0,
-          bottom: 0,
-          child: Container(
-            height: 2,
-            color: AppTheme.accentPink,
+              const SizedBox(width: 18),
+              Expanded(
+                child: Text(
+                  item.label,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: item.isExit ? AppTheme.accentRed : AppTheme.textPrimary,
+                      ),
+                ),
+              ),
+              if (item.route != null)
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppTheme.textSecondary,
+                  size: AppSizes.iconMd,
+                ),
+              if (item.isExit)
+                Icon(
+                  Icons.power_settings_new_rounded,
+                  color: AppTheme.accentRed,
+                  size: AppSizes.iconMd,
+                ),
+            ],
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildBreadcrumb(String currentRoute) {
-    // Map route to friendly breadcrumb text
-    String breadcrumb = '';
-    IconData? breadcrumbIcon;
-    
-    switch (currentRoute) {
-      case '/':
-        breadcrumb = 'Live TV';
-        breadcrumbIcon = Icons.live_tv;
-        break;
-      case '/movies':
-        breadcrumb = 'Movies';
-        breadcrumbIcon = Icons.movie;
-        break;
-      case '/series':
-        breadcrumb = 'Series';
-        breadcrumbIcon = Icons.tv;
-        break;
-      case '/favorites':
-        breadcrumb = 'Favorites';
-        breadcrumbIcon = Icons.favorite;
-        break;
-      case '/recordings':
-        breadcrumb = 'Recordings';
-        breadcrumbIcon = Icons.fiber_manual_record;
-        break;
-      case '/epg':
-        breadcrumb = 'TV Guide';
-        breadcrumbIcon = Icons.calendar_today;
-        break;
-      case '/search':
-        breadcrumb = 'Search';
-        breadcrumbIcon = Icons.search;
-        break;
-      case '/settings':
-        breadcrumb = 'Settings';
-        breadcrumbIcon = Icons.settings;
-        break;
-      case '/playlist-manager':
-        breadcrumb = 'Playlists';
-        breadcrumbIcon = Icons.playlist_play;
-        break;
-      case '/ai-models':
-        breadcrumb = 'AI Models';
-        breadcrumbIcon = Icons.smart_toy;
-        break;
-      case '/help':
-        breadcrumb = 'Help & About';
-        breadcrumbIcon = Icons.help_outline;
-        break;
-      default:
-        if (currentRoute.startsWith('/settings')) {
-          breadcrumb = 'Settings';
-          breadcrumbIcon = Icons.settings;
-        } else if (currentRoute.startsWith('/content')) {
-          breadcrumb = 'Content Details';
-          breadcrumbIcon = Icons.info_outline;
-        } else if (currentRoute.startsWith('/category')) {
-          breadcrumb = 'Categories';
-          breadcrumbIcon = Icons.category;
-        }
-    }
-
-    if (breadcrumb.isEmpty) return const SizedBox.shrink();
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (breadcrumbIcon != null) ...[
-          Icon(
-            breadcrumbIcon,
-            size: 20,
-            color: AppTheme.primaryBlue,
-          ),
-          const SizedBox(width: 8),
-        ],
-        Text(
-          breadcrumb,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: AppTheme.textPrimary,
-            letterSpacing: 0.3,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
 
-class NavigationItem {
-  final IconData icon;
+class _PrimaryNavItem {
   final String label;
   final String route;
 
-  NavigationItem({
-    required this.icon,
+  const _PrimaryNavItem({required this.label, required this.route});
+}
+
+class _OverflowMenuItem {
+  final String label;
+  final IconData icon;
+  final String? route;
+  final bool isExit;
+
+  const _OverflowMenuItem({
     required this.label,
-    required this.route,
+    required this.icon,
+    this.route,
+    this.isExit = false,
   });
 }

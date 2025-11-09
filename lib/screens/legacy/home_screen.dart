@@ -7,6 +7,7 @@ import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/content.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
+import 'package:iptv_player/widgets/focusable_card.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -31,6 +32,12 @@ class _HomeScreenState extends State<HomeScreen> {
         channelProvider.autoLoadPlaylist();
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _firstContentFocusNode.dispose();
+    super.dispose();
   }
 
   // Call this from navigation shell to focus first content item
@@ -88,7 +95,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   'Live TV Channels (${channelProvider.channels.length})',
                 ),
                 SizedBox(height: AppSizes.md),
-                _buildChannelsRow(channelProvider.channels.take(20).toList()),
+                _buildChannelsRow(
+                  channelProvider.channels.take(20).toList(),
+                  channelProvider,
+                  useSharedFocusNode: true,
+                ),
                 SizedBox(height: AppSizes.xl),
               ],
 
@@ -96,7 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
               if (favoriteChannels.isNotEmpty) ...[
                 _buildSectionHeader('Favorite Channels'),
                 SizedBox(height: AppSizes.md),
-                _buildChannelsRow(favoriteChannels),
+                _buildChannelsRow(favoriteChannels, channelProvider),
                 SizedBox(height: AppSizes.xl),
               ],
 
@@ -123,7 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Icon(
               Icons.live_tv,
               size: 80,
-              color: AppTheme.primaryBlue.withOpacity(0.5),
+              color: AppTheme.primaryBlueOpacity(0.5),
             ),
             SizedBox(height: AppSizes.lg),
             Text(
@@ -171,7 +182,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildChannelsRow(List<Channel> channels) {
+  Widget _buildChannelsRow(
+    List<Channel> channels,
+    ChannelProvider channelProvider, {
+    bool useSharedFocusNode = false,
+  }) {
     if (channels.isEmpty) {
       return SizedBox(
         height: 160,
@@ -191,194 +206,166 @@ class _HomeScreenState extends State<HomeScreen> {
         itemCount: channels.length,
         itemBuilder: (context, index) {
           final channel = channels[index];
-          if (index == 0) {
-            return Focus(
-              focusNode: _firstContentFocusNode,
-              autofocus: true,
-              child: _buildChannelCard(channel),
-            );
-          }
-          return _buildChannelCard(channel);
+          final focusNode = useSharedFocusNode && index == 0
+              ? _firstContentFocusNode
+              : null;
+          final autofocus = useSharedFocusNode && index == 0;
+
+          return _buildChannelCard(
+            channel,
+            channelProvider: channelProvider,
+            focusNode: focusNode,
+            autofocus: autofocus,
+          );
         },
       ),
     );
   }
 
-  Widget _buildChannelCard(Channel channel) {
-    final channelProvider = Provider.of<ChannelProvider>(
-      context,
-      listen: false,
-    );
+  Widget _buildChannelCard(
+    Channel channel, {
+    required ChannelProvider channelProvider,
+    FocusNode? focusNode,
+    bool autofocus = false,
+  }) {
     final isFavorite = channelProvider.isFavorite(channel);
 
-    return Focus(
-      onFocusChange: (_) => setState(() {}),
-      child: Builder(
-        builder: (context) {
-          final bool isFocused = Focus.of(context).hasFocus;
-          return AnimatedScale(
-            scale: isFocused ? 1.08 : 1.0,
-            duration: AppDurations.fast,
-            curve: Curves.easeOut,
-            child: AnimatedContainer(
-              duration: AppDurations.fast,
-              width: 280,
-              margin: EdgeInsets.only(right: AppSizes.md),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-                border: isFocused
-                    ? Border.all(color: AppTheme.primaryBlue, width: 4)
-                    : Border.all(color: Colors.transparent, width: 4),
-                boxShadow: isFocused
-                    ? [
-                        BoxShadow(
-                          color: AppTheme.primaryBlue.withOpacity(0.6),
-                          blurRadius: 24,
-                          spreadRadius: 4,
-                        ),
-                      ]
-                    : [],
-              ),
-              child: InkWell(
-                onTap: () {
-                  // Navigate to player with channel data
-                  context.push('/player', extra: channel);
-                },
-                borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-                  child: Stack(
-                    children: [
-              // Background
-              Container(
-                color: AppTheme.cardBackground,
-                child: channel.logoUrl != null && channel.logoUrl!.isNotEmpty
-                    ? Image.network(
-                        channel.logoUrl!,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: double.infinity,
-                        errorBuilder: (context, error, stackTrace) {
-                          return _buildChannelPlaceholder(channel.name);
-                        },
-                      )
-                    : _buildChannelPlaceholder(channel.name),
-              ),
+    return FocusableCard(
+      focusNode: focusNode,
+      autofocus: autofocus,
+      width: 280,
+      margin: EdgeInsets.only(right: AppSizes.md),
+      onTap: () {
+        context.push('/player', extra: channel);
+      },
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+        child: Stack(
+          children: [
+            // Background
+            Container(
+              color: AppTheme.cardBackground,
+              child: channel.logoUrl != null && channel.logoUrl!.isNotEmpty
+                  ? Image.network(
+                      channel.logoUrl!,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                      errorBuilder: (context, error, stackTrace) {
+                        return _buildChannelPlaceholder(channel.name);
+                      },
+                    )
+                  : _buildChannelPlaceholder(channel.name),
+            ),
 
-              // Gradient overlay
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black.withOpacity(0.8),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              // Channel info
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: Padding(
-                  padding: EdgeInsets.all(AppSizes.md),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        channel.name,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w600),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (channel.groupTitle != null) ...[
-                        SizedBox(height: AppSizes.xs),
-                        Text(
-                          channel.groupTitle!,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: AppTheme.textSecondary),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-
-              // Favorite icon
-              Positioned(
-                top: AppSizes.sm,
-                right: AppSizes.sm,
-                child: IconButton(
-                  icon: Icon(
-                    isFavorite ? Icons.favorite : Icons.favorite_border,
-                    color: isFavorite ? AppTheme.accentRed : Colors.white,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      if (isFavorite) {
-                        channelProvider.removeFromFavorites(channel);
-                      } else {
-                        channelProvider.addToFavorites(channel);
-                      }
-                    });
-                  },
-                ),
-              ),
-
-              // Live indicator
-              Positioned(
-                top: AppSizes.sm,
-                left: AppSizes.sm,
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSizes.sm,
-                    vertical: AppSizes.xs,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.accentRed,
-                    borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        'LIVE',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+            // Gradient overlay
+            Positioned.fill(
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Color.fromRGBO(0, 0, 0, 0.8)],
                   ),
                 ),
               ),
             ),
-          );
-        },
+
+            // Channel info
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Padding(
+                padding: EdgeInsets.all(AppSizes.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      channel.name,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (channel.groupTitle != null) ...[
+                      SizedBox(height: AppSizes.xs),
+                      Text(
+                        channel.groupTitle!,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.textSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+
+            // Favorite icon
+            Positioned(
+              top: AppSizes.sm,
+              right: AppSizes.sm,
+              child: IconButton(
+                icon: Icon(
+                  isFavorite ? Icons.favorite : Icons.favorite_border,
+                  color: isFavorite ? AppTheme.accentRed : AppTheme.textPrimary,
+                ),
+                onPressed: () {
+                  setState(() {
+                    if (isFavorite) {
+                      channelProvider.removeFromFavorites(channel);
+                    } else {
+                      channelProvider.addToFavorites(channel);
+                    }
+                  });
+                },
+              ),
+            ),
+
+            // Live indicator
+            Positioned(
+              top: AppSizes.sm,
+              left: AppSizes.sm,
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSizes.sm,
+                  vertical: AppSizes.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: AppTheme.accentRed,
+                  borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    SizedBox(width: AppSizes.xs),
+                    const Text(
+                      'LIVE',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -393,7 +380,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Icon(
               Icons.live_tv,
               size: 48,
-              color: AppTheme.primaryBlue.withOpacity(0.5),
+              color: AppTheme.primaryBlueOpacity(0.5),
             ),
             SizedBox(height: AppSizes.sm),
             Text(
@@ -452,8 +439,8 @@ class _HomeScreenState extends State<HomeScreen> {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              AppTheme.primaryBlue.withOpacity(0.6),
-              AppTheme.primaryBlue.withOpacity(0.3),
+              AppTheme.primaryBlueOpacity(0.6),
+              AppTheme.primaryBlueOpacity(0.3),
             ],
           ),
           borderRadius: BorderRadius.circular(AppSizes.radiusLg),
@@ -500,49 +487,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildContinueWatchingCard(Content content) {
-    return Focus(
-      onFocusChange: (_) => setState(() {}),
-      child: Builder(
-        builder: (context) {
-          final bool isFocused = Focus.of(context).hasFocus;
-          // Card content without preview wrapper
-          return AnimatedScale(
-            scale: isFocused ? 1.08 : 1.0,
-            duration: AppDurations.fast,
-            curve: Curves.easeOut,
-            child: AnimatedContainer(
-              duration: AppDurations.fast,
-              width: 350,
-              height: 200,
-              margin: EdgeInsets.only(right: AppSizes.md),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-                border: isFocused
-                    ? Border.all(color: AppTheme.primaryBlue, width: 4)
-                    : Border.all(color: Colors.transparent, width: 4),
-                boxShadow: isFocused
-                    ? [
-                        BoxShadow(
-                          color: AppTheme.primaryBlue.withOpacity(0.6),
-                          blurRadius: 24,
-                          spreadRadius: 4,
-                        ),
-                      ]
-                    : [],
-              ),
-              child: InkWell(
-                onTap: () {
-                  // Navigate to content detail or player
-                  if (content.videoUrl != null) {
-                    context.push('/content/${content.id}');
-                  }
-                },
-                child: Stack(
-                  children: [
-                    // Thumbnail
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-                      child: Container(
+    return FocusableCard(
+      width: 350,
+      height: 200,
+      margin: EdgeInsets.only(right: AppSizes.md),
+      onTap: () {
+        if (content.videoUrl != null) {
+          context.push('/content/${content.id}');
+        }
+      },
+      child: Stack(
+        children: [
+          // Thumbnail
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+            child: Container(
               color: AppTheme.cardBackground,
               width: double.infinity,
               height: double.infinity,
@@ -557,62 +516,57 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                     )
                   : _buildContentPlaceholder(content.title),
-                      ),
-                    ),
+            ),
+          ),
 
-                    // Gradient overlay
-                    Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Content info
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      child: Padding(
-                        padding: EdgeInsets.all(AppSizes.md),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              content.displayTitle,
-                              style: Theme.of(context).textTheme.titleMedium,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            SizedBox(height: AppSizes.xs),
-                            // Progress bar
-                            LinearProgressIndicator(
-                              value: content.watchProgress ?? 0.0,
-                              backgroundColor: AppTheme.highlight,
-                              color: AppTheme.primaryBlue,
-                              minHeight: 4,
-                            ),
-                            SizedBox(height: AppSizes.xs),
-                            Text(
-                              '${((content.watchProgress ?? 0) * 100).toInt()}% complete',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+          // Gradient overlay
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                gradient: const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Color.fromRGBO(0, 0, 0, 0.7)],
                 ),
               ),
             ),
-          );
-        },
+          ),
+
+          // Content info
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Padding(
+              padding: EdgeInsets.all(AppSizes.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    content.displayTitle,
+                    style: Theme.of(context).textTheme.titleMedium,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: AppSizes.xs),
+                  // Progress bar
+                  LinearProgressIndicator(
+                    value: content.watchProgress ?? 0.0,
+                    backgroundColor: AppTheme.highlight,
+                    color: AppTheme.primaryBlue,
+                    minHeight: 4,
+                  ),
+                  SizedBox(height: AppSizes.xs),
+                  Text(
+                    '${((content.watchProgress ?? 0) * 100).toInt()}% complete',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -808,7 +762,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Icon(
               Icons.movie,
               size: 48,
-              color: AppTheme.primaryBlue.withOpacity(0.5),
+              color: AppTheme.primaryBlueOpacity(0.5),
             ),
             SizedBox(height: AppSizes.sm),
             Padding(
