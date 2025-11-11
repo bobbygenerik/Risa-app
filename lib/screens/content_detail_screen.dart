@@ -52,7 +52,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                     end: Alignment.bottomCenter,
                     colors: [
                       Colors.transparent,
-                      AppTheme.darkBackground.withOpacity(0.5),
+                      AppTheme.darkBackground.withAlpha((0.5 * 255).round()),
                       AppTheme.darkBackground,
                     ],
                     stops: [0.0, 0.7, 1.0],
@@ -62,7 +62,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                   child: Icon(
                     Icons.movie,
                     size: 120,
-                    color: AppTheme.primaryBlue.withOpacity(0.3),
+                    color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
                   ),
                 ),
               ),
@@ -81,7 +81,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Colors.black.withOpacity(0.7), Colors.transparent],
+                colors: [Colors.black.withAlpha((0.7 * 255).round()), Colors.transparent],
               ),
             ),
             child: Row(
@@ -114,7 +114,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                     fontSize: 56,
                     shadows: [
                       Shadow(
-                        color: Colors.black.withOpacity(0.8),
+                        color: Colors.black.withAlpha((0.8 * 255).round()),
                         offset: Offset(2, 2),
                         blurRadius: 8,
                       ),
@@ -196,7 +196,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                       label: Text('My List'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppTheme.textPrimary,
-                        side: BorderSide(color: AppTheme.textPrimary.withOpacity(0.5)),
+                        side: BorderSide(color: AppTheme.textPrimary.withAlpha((0.5 * 255).round())),
                         padding: EdgeInsets.symmetric(
                           horizontal: AppSizes.lg,
                           vertical: AppSizes.md,
@@ -219,7 +219,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                       label: Text(_isDownloaded ? 'Downloaded' : 'Download'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppTheme.textPrimary,
-                        side: BorderSide(color: AppTheme.textPrimary.withOpacity(0.5)),
+                        side: BorderSide(color: AppTheme.textPrimary.withAlpha((0.5 * 255).round())),
                         padding: EdgeInsets.symmetric(
                           horizontal: AppSizes.lg,
                           vertical: AppSizes.md,
@@ -241,7 +241,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
       margin: EdgeInsets.only(right: AppSizes.sm),
       padding: EdgeInsets.symmetric(horizontal: AppSizes.sm, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
+  color: Colors.black.withAlpha((0.5 * 255).round()),
         borderRadius: BorderRadius.circular(AppSizes.radiusSm),
       ),
       child: Text(
@@ -401,7 +401,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                   child: Icon(
                     Icons.play_circle_filled,
                     size: 40,
-                    color: AppTheme.primaryBlue.withOpacity(0.5),
+                    color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
                   ),
                 ),
               ),
@@ -412,7 +412,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                 child: Container(
                   padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.8),
+                    color: Colors.black.withAlpha((0.8 * 255).round()),
                     borderRadius: BorderRadius.circular(AppSizes.radiusSm),
                   ),
                   child: Text(
@@ -442,7 +442,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                     SizedBox(width: AppSizes.sm),
                     Expanded(
                       child: Text(
-                        'Episode Title ${episodeNumber}',
+                        'Episode Title $episodeNumber',
                         style: Theme.of(context).textTheme.titleMedium,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -513,7 +513,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
               child: Icon(
                 Icons.movie,
                 size: 48,
-                color: AppTheme.primaryBlue.withOpacity(0.3),
+                color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
               ),
             ),
           ),

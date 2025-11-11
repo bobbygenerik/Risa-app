@@ -164,7 +164,7 @@ class _EPGScreenState extends State<EPGScreen> {
           Icon(
             Icons.tv_off,
             size: 80,
-            color: AppTheme.primaryBlue.withOpacity(0.5),
+            color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
           ),
           SizedBox(height: AppSizes.lg),
           Text(
@@ -489,7 +489,7 @@ class _EPGScreenState extends State<EPGScreen> {
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            Colors.black.withOpacity(0.7),
+                            Colors.black.withAlpha((0.7 * 255).round()),
                             Colors.transparent,
                           ],
                         ),
@@ -570,7 +570,7 @@ class _EPGScreenState extends State<EPGScreen> {
                       icon: Icon(Icons.fullscreen, color: Colors.white),
                       onPressed: _expandMiniPlayer,
                       style: IconButton.styleFrom(
-                        backgroundColor: Colors.black.withOpacity(0.5),
+                        backgroundColor: Colors.black.withAlpha((0.5 * 255).round()),
                       ),
                     ),
                   ),
@@ -720,7 +720,7 @@ class _EPGScreenState extends State<EPGScreen> {
     return Container(
       height: 80,
       decoration: BoxDecoration(
-        color: isSelected ? AppTheme.primaryBlue.withOpacity(0.2) : null,
+        color: isSelected ? AppTheme.primaryBlue.withAlpha((0.2 * 255).round()) : null,
         border: Border(
           bottom: BorderSide(color: AppTheme.divider, width: 0.5),
           left: BorderSide(
@@ -836,7 +836,7 @@ class _EPGScreenState extends State<EPGScreen> {
             Icon(
               Icons.calendar_today,
               size: 60,
-              color: AppTheme.primaryBlue.withOpacity(0.5),
+              color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
             ),
             SizedBox(height: AppSizes.md),
             Text(
@@ -966,7 +966,7 @@ class _EPGScreenState extends State<EPGScreen> {
         color: isLive
             ? AppTheme.primaryBlue
             : hasCatchup
-            ? AppTheme.accentOrange.withOpacity(0.3)
+            ? AppTheme.accentOrange.withAlpha((0.3 * 255).round())
             : AppTheme.cardBackground,
         borderRadius: BorderRadius.circular(AppSizes.radiusSm),
         border: Border.all(
@@ -1022,7 +1022,7 @@ class _EPGScreenState extends State<EPGScreen> {
                 if (isLive)
                   LinearProgressIndicator(
                     value: program.progressPercentage,
-                    backgroundColor: AppTheme.textPrimary.withOpacity(0.3),
+                    backgroundColor: AppTheme.textPrimary.withAlpha((0.3 * 255).round()),
                     valueColor: AlwaysStoppedAnimation<Color>(AppTheme.textPrimary),
                     minHeight: 2,
                   ),

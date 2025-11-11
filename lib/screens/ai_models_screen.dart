@@ -25,10 +25,10 @@ class AIModelsScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryBlue.withOpacity(0.1),
+                  color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: AppTheme.primaryBlue.withOpacity(0.3),
+                    color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
                   ),
                 ),
                 child: Column(
@@ -134,7 +134,7 @@ class AIModelsScreen extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: AppTheme.accentOrange.withOpacity(0.1),
+            color: AppTheme.accentOrange.withAlpha((0.1 * 255).round()),
             borderRadius: BorderRadius.circular(6),
           ),
           child: Row(
@@ -286,7 +286,7 @@ class AIModelsScreen extends StatelessWidget {
                       icon: const Icon(Icons.check_circle, size: 18),
                       label: const Text('Downloaded'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.accentGreen.withOpacity(0.2),
+                        backgroundColor: AppTheme.accentGreen.withAlpha((0.2 * 255).round()),
                         foregroundColor: AppTheme.accentGreen,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
@@ -370,7 +370,7 @@ class AIModelsScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withAlpha((0.2 * 255).round()),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(

@@ -203,7 +203,7 @@ class _MyAppState extends State<MyApp> {
       // Save new version
       await prefs.setString('app_version', currentVersion);
 
-      print('Cleared old playlist data - new version: $currentVersion');
+      debugPrint('Cleared old playlist data - new version: $currentVersion');
     }
   }
 
@@ -225,7 +225,7 @@ class _MyAppState extends State<MyApp> {
           try {
             _showDisclaimer();
           } catch (e) {
-            print('Failed to show disclaimer: $e');
+            debugPrint('Failed to show disclaimer: $e');
           }
         }
       });
@@ -745,7 +745,7 @@ Widget _buildPlaceholder(BuildContext context, String title, IconData icon) {
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(icon, size: 80, color: AppTheme.primaryBlue.withOpacity(0.5)),
+        Icon(icon, size: 80, color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round())),
         const SizedBox(height: 16),
         Text(title, style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 8),

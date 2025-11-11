@@ -293,8 +293,8 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                   padding: EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: hasM3UHeader
-                        ? AppTheme.accentGreen.withOpacity(0.2)
-                        : AppTheme.accentRed.withOpacity(0.2),
+                        ? AppTheme.accentGreen.withAlpha((0.2 * 255).round())
+                        : AppTheme.accentRed.withAlpha((0.2 * 255).round()),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
@@ -373,7 +373,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
             end: Alignment.bottomRight,
             colors: [
               AppTheme.darkBackground,
-              AppTheme.primaryBlue.withOpacity(0.1),
+              AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
             ],
           ),
         ),
@@ -402,7 +402,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.25),
+                              color: Colors.black.withAlpha((0.25 * 255).round()),
                               blurRadius: 16,
                               offset: const Offset(0, 8),
                             ),
@@ -538,8 +538,8 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
               setState(() {}); // Trigger rebuild for focus indicator
             }
           },
-          onKey: (node, event) {
-            if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+          onKeyEvent: (node, event) {
+            if (event is! KeyDownEvent) return KeyEventResult.ignored;
             final key = event.logicalKey;
             if (key == LogicalKeyboardKey.select ||
                 key == LogicalKeyboardKey.enter) {
@@ -559,10 +559,10 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                   border: isFocused
                       ? Border.all(color: AppTheme.primaryBlue, width: 3)
                       : null,
-                  boxShadow: isFocused
+                      boxShadow: isFocused
                       ? [
                           BoxShadow(
-                            color: AppTheme.primaryBlue.withOpacity(0.4),
+                            color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
                             blurRadius: 12,
                             spreadRadius: 2,
                           ),
@@ -593,9 +593,9 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
         Container(
           padding: EdgeInsets.all(AppSizes.sm),
           decoration: BoxDecoration(
-            color: AppTheme.primaryBlue.withOpacity(0.1),
+            color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
             borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-            border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.3)),
+            border: Border.all(color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round())),
           ),
           child: Row(
             children: [
@@ -640,8 +640,8 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
               setState(() {}); // Trigger rebuild for focus indicator
             }
           },
-          onKey: (node, event) {
-            if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+          onKeyEvent: (node, event) {
+            if (event is! KeyDownEvent) return KeyEventResult.ignored;
             final key = event.logicalKey;
             if (key == LogicalKeyboardKey.select ||
                 key == LogicalKeyboardKey.enter) {
@@ -661,15 +661,15 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                   border: isFocused
                       ? Border.all(color: AppTheme.primaryBlue, width: 3)
                       : null,
-                  boxShadow: isFocused
-                      ? [
-                          BoxShadow(
-                            color: AppTheme.primaryBlue.withOpacity(0.4),
-                            blurRadius: 12,
-                            spreadRadius: 2,
-                          ),
-                        ]
-                      : null,
+                            boxShadow: isFocused
+                            ? [
+                                BoxShadow(
+                                  color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
+                                  blurRadius: 12,
+                                  spreadRadius: 2,
+                                ),
+                              ]
+                            : null,
                 ),
                 child: TextField(
                   controller: _xtreamServerController,
@@ -707,8 +707,8 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                     setState(() {}); // Trigger rebuild for focus indicator
                   }
                 },
-                onKey: (node, event) {
-                  if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+                onKeyEvent: (node, event) {
+                  if (event is! KeyDownEvent) return KeyEventResult.ignored;
                   final key = event.logicalKey;
                   if (key == LogicalKeyboardKey.select ||
                       key == LogicalKeyboardKey.enter) {
@@ -730,10 +730,10 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                         border: isFocused
                             ? Border.all(color: AppTheme.primaryBlue, width: 3)
                             : null,
-                        boxShadow: isFocused
+                            boxShadow: isFocused
                             ? [
                                 BoxShadow(
-                                  color: AppTheme.primaryBlue.withOpacity(0.4),
+                                  color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
                                   blurRadius: 12,
                                   spreadRadius: 2,
                                 ),
@@ -773,8 +773,8 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                     setState(() {}); // Trigger rebuild for focus indicator
                   }
                 },
-                onKey: (node, event) {
-                  if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+                onKeyEvent: (node, event) {
+                  if (event is! KeyDownEvent) return KeyEventResult.ignored;
                   final key = event.logicalKey;
                   if (key == LogicalKeyboardKey.select ||
                       key == LogicalKeyboardKey.enter) {
@@ -799,7 +799,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                         boxShadow: isFocused
                             ? [
                                 BoxShadow(
-                                  color: AppTheme.primaryBlue.withOpacity(0.4),
+                                  color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
                                   blurRadius: 12,
                                   spreadRadius: 2,
                                 ),

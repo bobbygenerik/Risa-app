@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
@@ -51,7 +52,7 @@ class _MediaKitPlayerScreenState extends State<MediaKitPlayerScreen> {
 
   Future<void> _initializePlayer() async {
     try {
-      print('MediaKit: Initializing player for: ${widget.videoUrl}');
+      debugPrint('MediaKit: Initializing player for: ${widget.videoUrl}');
       
       // Create player instance
       _player = Player(
@@ -64,7 +65,7 @@ class _MediaKitPlayerScreenState extends State<MediaKitPlayerScreen> {
       // Create video controller
       _controller = VideoController(_player);
       
-      print('MediaKit: Player created, opening media...');
+  debugPrint('MediaKit: Player created, opening media...');
       
       // Open media with headers
       await _player.open(
@@ -77,7 +78,7 @@ class _MediaKitPlayerScreenState extends State<MediaKitPlayerScreen> {
         play: true,
       );
       
-      print('MediaKit: Media opened successfully');
+  debugPrint('MediaKit: Media opened successfully');
       
       // Listen to player state
       _player.stream.playing.listen((playing) {
@@ -105,7 +106,7 @@ class _MediaKitPlayerScreenState extends State<MediaKitPlayerScreen> {
       });
       
       _player.stream.error.listen((error) {
-        print('MediaKit: Error: $error');
+        debugPrint('MediaKit: Error: $error');
         if (mounted) {
           setState(() {
             _hasError = true;
@@ -120,10 +121,10 @@ class _MediaKitPlayerScreenState extends State<MediaKitPlayerScreen> {
       
       _startControlsTimer();
       
-      print('MediaKit: Player initialized and ready');
+      debugPrint('MediaKit: Player initialized and ready');
     } catch (e, stackTrace) {
-      print('MediaKit: Error initializing player: $e');
-      print('MediaKit: Stack trace: $stackTrace');
+      debugPrint('MediaKit: Error initializing player: $e');
+      debugPrint('MediaKit: Stack trace: $stackTrace');
       setState(() {
         _hasError = true;
         _errorMessage = 'Failed to initialize video player:\n\n$e\n\nURL: ${widget.videoUrl}';
@@ -319,10 +320,10 @@ class _MediaKitPlayerScreenState extends State<MediaKitPlayerScreen> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.black.withOpacity(0.7),
+            Colors.black.withAlpha((0.7 * 255).round()),
             Colors.transparent,
             Colors.transparent,
-            Colors.black.withOpacity(0.7),
+            Colors.black.withAlpha((0.7 * 255).round()),
           ],
         ),
       ),

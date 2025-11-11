@@ -211,8 +211,8 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
           onEditableChange(false);
         }
       },
-      onKey: (node, event) {
-        if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
         final key = event.logicalKey;
         if ((key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) && !isEditable) {
           onEditableChange(true);
@@ -234,18 +234,18 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
             focusNode.requestFocus();
           });
         },
-        child: TextField(
+            child: TextField(
           controller: controller,
           readOnly: !isEditable,
           obscureText: obscureText,
-          decoration: InputDecoration(
+            decoration: InputDecoration(
             labelText: label,
             hintText: hint,
             prefixIcon: Icon(icon),
-            filled: true,
-            fillColor: isEditable 
-                ? AppTheme.primaryBlue.withOpacity(0.1) 
-                : AppTheme.cardBackground,
+      filled: true,
+      fillColor: isEditable
+        ? AppTheme.primaryBlue.withAlpha((0.1 * 255).round())
+        : AppTheme.cardBackground,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide.none,
@@ -409,8 +409,8 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
               children: [
                 Focus(
                   focusNode: _updateFrequencyFocusNode,
-                  onKey: (node, event) {
-                    if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+                  onKeyEvent: (node, event) {
+                    if (event is! KeyDownEvent) return KeyEventResult.ignored;
                     if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
                       setState(() {
                         if (_updateFrequencyHours > 1) _updateFrequencyHours--;
@@ -462,7 +462,7 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
                 Container(
                   padding: const EdgeInsets.all(AppSizes.md),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryBlue.withOpacity(0.1),
+                    color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
                     borderRadius: BorderRadius.circular(AppSizes.radiusSm),
                   ),
                   child: Row(
@@ -517,11 +517,11 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
 
             Container(
               padding: const EdgeInsets.all(AppSizes.md),
-              decoration: BoxDecoration(
-                color: AppTheme.cardBackground,
-                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                border: Border.all(color: AppTheme.divider),
-              ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.cardBackground,
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    border: Border.all(color: AppTheme.divider),
+                  ),
               child: const Row(
                 children: [
                   Icon(Icons.info_outline, color: AppTheme.textSecondary),

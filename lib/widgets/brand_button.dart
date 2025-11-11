@@ -89,7 +89,7 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(widget.borderRadius),
-                  color: Colors.white.withOpacity(0.04),
+                  color: Colors.white.withAlpha((0.04 * 255).round()),
                 ),
               ),
             ),
@@ -107,8 +107,8 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
         borderRadius: BorderRadius.circular(widget.borderRadius),
         child: InkWell(
           borderRadius: BorderRadius.circular(widget.borderRadius),
-          splashColor: Colors.white.withOpacity(0.2),
-          highlightColor: Colors.white.withOpacity(0.1),
+          splashColor: Colors.white.withAlpha((0.2 * 255).round()),
+          highlightColor: Colors.white.withAlpha((0.1 * 255).round()),
           onTapDown: (_) => setState(() => _pressed = true),
           onTapCancel: () => setState(() => _pressed = false),
           onTap: () {
@@ -211,8 +211,8 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
         borderRadius: BorderRadius.circular(widget.borderRadius),
         child: InkWell(
           borderRadius: BorderRadius.circular(widget.borderRadius),
-          splashColor: Colors.white.withOpacity(0.15),
-          highlightColor: Colors.white.withOpacity(0.08),
+          splashColor: Colors.white.withAlpha((0.15 * 255).round()),
+          highlightColor: Colors.white.withAlpha((0.08 * 255).round()),
           onTap: widget.onPressed,
           child: content,
         ),

@@ -24,12 +24,12 @@ class AppTheme {
   );
 
   // Common opacity variants
-  static Color primaryBlueOpacity(double opacity) => primaryBlue.withOpacity(opacity);
-  static Color accentOrangeOpacity(double opacity) => accentOrange.withOpacity(opacity);
-  static Color accentGreenOpacity(double opacity) => accentGreen.withOpacity(opacity);
-  static Color accentPinkOpacity(double opacity) => accentPink.withOpacity(opacity);
-  static Color textPrimaryOpacity(double opacity) => textPrimary.withOpacity(opacity);
-  static Color darkBackgroundOpacity(double opacity) => darkBackground.withOpacity(opacity);
+  static Color primaryBlueOpacity(double opacity) => primaryBlue.withAlpha((opacity * 255).round());
+  static Color accentOrangeOpacity(double opacity) => accentOrange.withAlpha((opacity * 255).round());
+  static Color accentGreenOpacity(double opacity) => accentGreen.withAlpha((opacity * 255).round());
+  static Color accentPinkOpacity(double opacity) => accentPink.withAlpha((opacity * 255).round());
+  static Color textPrimaryOpacity(double opacity) => textPrimary.withAlpha((opacity * 255).round());
+  static Color darkBackgroundOpacity(double opacity) => darkBackground.withAlpha((opacity * 255).round());
   
   // UI Element Colors
   static const Color divider = Color(0xFF2A2A2A);
@@ -143,7 +143,7 @@ class AppTheme {
           // Android TV focus support - pink border on focus
           overlayColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.focused)) {
-              return accentPink.withOpacity(0.2);
+              return accentPink.withAlpha((0.2 * 255).round());
             }
             return null;
           }),
@@ -164,7 +164,7 @@ class AppTheme {
           // Pink border on focus
           overlayColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.focused)) {
-              return accentPink.withOpacity(0.1);
+              return accentPink.withAlpha((0.1 * 255).round());
             }
             return null;
           }),

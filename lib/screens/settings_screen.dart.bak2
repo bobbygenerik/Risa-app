@@ -199,8 +199,8 @@ class _SettingsScreenState extends State<SettingsScreen>
         Expanded(
           child: Focus(
             canRequestFocus: false,  // Don't trap focus, allow content to be focusable
-            onKey: (node, event) {
-              if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+            onKeyEvent: (node, event) {
+              if (event is! KeyDownEvent) return KeyEventResult.ignored;
               final key = event.logicalKey;
               // Only intercept LEFT to return to settings sidebar
               if (key == LogicalKeyboardKey.arrowLeft) {
@@ -276,8 +276,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                   },
                   child: Focus(
                     focusNode: _menuFocusNodes[index],
-                    onKey: (node, event) {
-                      if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+                    onKeyEvent: (node, event) {
+                      if (event is! KeyDownEvent) return KeyEventResult.ignored;
                       final key = event.logicalKey;
                       if (key == LogicalKeyboardKey.arrowDown) {
                         final next = (index + 1) % menuItems.length;

@@ -26,3 +26,11 @@ linter:
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options
+
+# Exclude backup/temporary files from analysis to avoid noisy warnings
+analyzer:
+  exclude:
+    - "**/*.bak"
+    - "**/*.bak2"
+    - "**/*~"
+    - "**/tools/**"

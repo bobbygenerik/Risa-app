@@ -82,7 +82,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Icon(
               Icons.live_tv,
               size: 80,
-              color: AppTheme.primaryBlue.withOpacity(0.5),
+              color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
             ),
             SizedBox(height: AppSizes.lg),
             Text(
@@ -195,7 +195,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       end: Alignment.bottomCenter,
                       colors: [
                         Colors.transparent,
-                        Colors.black.withOpacity(0.8),
+                        Colors.black.withAlpha((0.8 * 255).round()),
                       ],
                     ),
                   ),
@@ -312,7 +312,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Icon(
               Icons.live_tv,
               size: 48,
-              color: AppTheme.primaryBlue.withOpacity(0.5),
+              color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
             ),
             SizedBox(height: AppSizes.sm),
             Text(
@@ -372,8 +372,8 @@ class _HomeScreenState extends State<HomeScreen> {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              AppTheme.primaryBlue.withOpacity(0.6),
-              AppTheme.primaryBlue.withOpacity(0.3),
+              AppTheme.primaryBlue.withAlpha((0.6 * 255).round()),
+              AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
             ],
           ),
           borderRadius: BorderRadius.circular(AppSizes.radiusLg),

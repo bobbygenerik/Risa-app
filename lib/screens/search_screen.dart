@@ -76,8 +76,8 @@ class _SearchScreenState extends State<SearchScreen> {
                 setState(() => _searchEditable = false);
               }
             },
-            onKey: (node, event) {
-              if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+            onKeyEvent: (node, event) {
+              if (event is! KeyDownEvent) return KeyEventResult.ignored;
               final key = event.logicalKey;
               if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
                 // Enable editing and show keyboard
@@ -173,7 +173,7 @@ class _SearchScreenState extends State<SearchScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 80, color: AppTheme.primaryBlue.withOpacity(0.5)),
+          Icon(icon, size: 80, color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round())),
           SizedBox(height: AppSizes.lg),
           Text(title, style: Theme.of(context).textTheme.headlineSmall),
           SizedBox(height: AppSizes.sm),
@@ -316,7 +316,7 @@ class _SearchScreenState extends State<SearchScreen> {
           Icon(
             Icons.live_tv,
             size: 40,
-            color: AppTheme.primaryBlue.withOpacity(0.3),
+            color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
           ),
           SizedBox(height: 8),
           Text(

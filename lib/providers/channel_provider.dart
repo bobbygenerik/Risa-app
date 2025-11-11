@@ -10,7 +10,7 @@ import 'content_provider.dart';
 
 class ChannelProvider with ChangeNotifier {
   List<Channel> _channels = [];
-  List<Channel> _favoriteChannels = [];
+  final List<Channel> _favoriteChannels = [];
   List<Content> _movies = [];
   List<Content> _series = [];
   bool _isLoading = false;
@@ -39,12 +39,12 @@ class ChannelProvider with ChangeNotifier {
   Future<void> autoLoadPlaylist() async {
     if (_hasLoadedPlaylist) return; // Already loaded
     
-    print('ChannelProvider: Auto-loading playlist...');
+  debugPrint('ChannelProvider: Auto-loading playlist...');
     final prefs = await SharedPreferences.getInstance();
     final playlistType = prefs.getString('playlist_type');
 
     if (playlistType == null) {
-      print('ChannelProvider: No saved playlist found');
+      debugPrint('ChannelProvider: No saved playlist found');
       if (_channels.isNotEmpty || _movies.isNotEmpty || _series.isNotEmpty) {
         _channels = [];
         _movies = [];
@@ -66,36 +66,36 @@ class ChannelProvider with ChangeNotifier {
 
     // If cache is less than 6 hours old (21600000 ms), use it
     if (cachedPlaylist != null && cacheAge != null && cacheAge < 21600000) {
-      print('ChannelProvider: Loading from cache (${(cacheAge / 60000).round()} minutes old)');
+      debugPrint('ChannelProvider: Loading from cache (${(cacheAge / 60000).round()} minutes old)');
       try {
         loadPlaylistFromString(cachedPlaylist);
         _hasLoadedPlaylist = true;
-        print('ChannelProvider: Cache loaded successfully with ${_channels.length} channels');
+  debugPrint('ChannelProvider: Cache loaded successfully with ${_channels.length} channels');
 
         // Load from network in background to update cache
         _refreshCacheInBackground(prefs, playlistType);
         return;
       } catch (e) {
-        print('ChannelProvider: Cache load failed: $e, loading from network');
+        debugPrint('ChannelProvider: Cache load failed: $e, loading from network');
       }
     } else {
-      print('ChannelProvider: Cache expired or not found, loading from network');
+      debugPrint('ChannelProvider: Cache expired or not found, loading from network');
     }
 
-    print('ChannelProvider: Playlist type: $playlistType');
+    debugPrint('ChannelProvider: Playlist type: $playlistType');
     
     try {
       String? playlistUrl;
       
       if (playlistType == 'm3u') {
         playlistUrl = prefs.getString('m3u_url');
-        print('ChannelProvider: M3U URL: $playlistUrl');
+        debugPrint('ChannelProvider: M3U URL: $playlistUrl');
       } else if (playlistType == 'xtream') {
         final server = prefs.getString('xtream_server');
         final username = prefs.getString('xtream_username');
         final password = prefs.getString('xtream_password');
         
-        print('ChannelProvider: Xtream - Server: $server, User: $username');
+        debugPrint('ChannelProvider: Xtream - Server: $server, User: $username');
         if (server != null && username != null && password != null) {
           playlistUrl =
               '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
@@ -103,22 +103,22 @@ class ChannelProvider with ChangeNotifier {
       }
       
       if (playlistUrl != null && playlistUrl.isNotEmpty) {
-        print('ChannelProvider: Loading playlist URL: $playlistUrl');
+        debugPrint('ChannelProvider: Loading playlist URL: $playlistUrl');
         await loadPlaylistFromUrl(playlistUrl);
         _hasLoadedPlaylist = true;
-        print('ChannelProvider: Auto-load completed successfully');
+        debugPrint('ChannelProvider: Auto-load completed successfully');
       } else {
-        print('ChannelProvider: Playlist URL is empty');
+        debugPrint('ChannelProvider: Playlist URL is empty');
       }
     } catch (e) {
       // Silently fail - user can manually load from settings
-      print('ChannelProvider: Auto-load playlist failed: $e');
+      debugPrint('ChannelProvider: Auto-load playlist failed: $e');
     }
   }
   
   /// Refresh cache in background without blocking UI
   Future<void> _refreshCacheInBackground(SharedPreferences prefs, String? playlistType) async {
-    print('ChannelProvider: Refreshing cache in background...');
+    debugPrint('ChannelProvider: Refreshing cache in background...');
     try {
       String? playlistUrl;
       
@@ -146,17 +146,17 @@ class ChannelProvider with ChangeNotifier {
             },
           ).timeout(Duration(seconds: 90));
           
-          if (response.statusCode == 200) {
+            if (response.statusCode == 200) {
             await prefs.setString('cached_playlist', response.body);
             await prefs.setInt('cache_timestamp', DateTime.now().millisecondsSinceEpoch);
-            print('ChannelProvider: Cache updated successfully');
+            debugPrint('ChannelProvider: Cache updated successfully');
           }
         } finally {
           client.close();
         }
       }
     } catch (e) {
-      print('ChannelProvider: Background cache refresh failed: $e');
+      debugPrint('ChannelProvider: Background cache refresh failed: $e');
     }
   }
 
@@ -168,8 +168,8 @@ class ChannelProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      print('ChannelProvider: Loading playlist from URL: $url');
-      print('ChannelProvider: Starting download with 90 second timeout...');
+      debugPrint('ChannelProvider: Loading playlist from URL: $url');
+      debugPrint('ChannelProvider: Starting download with 90 second timeout...');
       
       // Allow insecure connections for IPTV providers with SSL issues
       HttpOverrides.global = _MyHttpOverrides();
@@ -187,32 +187,32 @@ class ChannelProvider with ChangeNotifier {
         ).timeout(
           Duration(seconds: 90), // Increased to 90 seconds for large playlists
           onTimeout: () {
-            print('ChannelProvider: Request timed out after 90 seconds');
+            debugPrint('ChannelProvider: Request timed out after 90 seconds');
             throw Exception('Connection timeout - server took too long to respond (90s limit)');
           },
         );
 
-        print('ChannelProvider: Response received - status: ${response.statusCode}');
-        print('ChannelProvider: Content-Type: ${response.headers['content-type']}');
+        debugPrint('ChannelProvider: Response received - status: ${response.statusCode}');
+        debugPrint('ChannelProvider: Content-Type: ${response.headers['content-type']}');
         
         // ALWAYS store response body for debugging, even if empty
-        _lastM3UContent = response.body;
-        print('ChannelProvider: Captured ${response.body.length} bytes of response data');
+  _lastM3UContent = response.body;
+  debugPrint('ChannelProvider: Captured ${response.body.length} bytes of response data');
         
         if (response.statusCode == 200) {
-          print('ChannelProvider: Parsing M3U content (${response.body.length} bytes)');
+          debugPrint('ChannelProvider: Parsing M3U content (${response.body.length} bytes)');
           _channels = _parserService.parseM3U(response.body);
-          print('ChannelProvider: Parsed ${_channels.length} channels');
+          debugPrint('ChannelProvider: Parsed ${_channels.length} channels');
           
           // Cache the playlist for faster loading next time
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('cached_playlist', response.body);
           await prefs.setInt('cache_timestamp', DateTime.now().millisecondsSinceEpoch);
-          print('ChannelProvider: Playlist cached successfully');
+          debugPrint('ChannelProvider: Playlist cached successfully');
           
           // Save EPG URL if found in M3U header
           if (_parserService.epgUrl != null) {
-            print('ChannelProvider: Saving EPG URL: ${_parserService.epgUrl}');
+            debugPrint('ChannelProvider: Saving EPG URL: ${_parserService.epgUrl}');
             await prefs.setString('epg_url', _parserService.epgUrl!);
           }
 
@@ -224,15 +224,15 @@ class ChannelProvider with ChangeNotifier {
           notifyListeners();
         } else {
           // Non-200 response - content is already stored above for debugging
-          print('ChannelProvider: Non-200 response, content captured for debugging');
+          debugPrint('ChannelProvider: Non-200 response, content captured for debugging');
           throw Exception('HTTP ${response.statusCode}: Failed to load playlist');
         }
       } finally {
         client.close();
       }
     } catch (e, stackTrace) {
-      print('ChannelProvider: Error loading playlist: $e');
-      print('ChannelProvider: Stack trace: $stackTrace');
+      debugPrint('ChannelProvider: Error loading playlist: $e');
+      debugPrint('ChannelProvider: Stack trace: $stackTrace');
       
       // Provide more helpful error messages
       if (e.toString().contains('HandshakeException') || 
@@ -320,11 +320,11 @@ class ChannelProvider with ChangeNotifier {
       final password = uri.queryParameters['password'];
 
       if (username == null || password == null) {
-        print('ChannelProvider: Cannot load VOD - missing credentials in URL');
+        debugPrint('ChannelProvider: Cannot load VOD - missing credentials in URL');
         return;
       }
 
-      print('ChannelProvider: Loading VOD from Xtream Codes API...');
+      debugPrint('ChannelProvider: Loading VOD from Xtream Codes API...');
       final xtreamService = XtreamCodesService(
         serverUrl: serverUrl,
         username: username,
@@ -340,7 +340,7 @@ class ChannelProvider with ChangeNotifier {
       _movies = results[0];
       _series = results[1];
 
-      print('ChannelProvider: Loaded ${_movies.length} movies, ${_series.length} series from Xtream API');
+  debugPrint('ChannelProvider: Loaded ${_movies.length} movies, ${_series.length} series from Xtream API');
 
       // Sync VOD content to ContentProvider
       if (_contentProvider != null) {
@@ -348,7 +348,7 @@ class ChannelProvider with ChangeNotifier {
         _contentProvider!.loadSeries(_series);
       }
     } catch (e) {
-      print('ChannelProvider: Error loading Xtream VOD: $e');
+      debugPrint('ChannelProvider: Error loading Xtream VOD: $e');
       // Don't fail the whole playlist load if VOD fails
     }
   }
@@ -390,7 +390,7 @@ class _MyHttpOverrides extends HttpOverrides {
     return super.createHttpClient(context)
       ..badCertificateCallback = (X509Certificate cert, String host, int port) {
         // Allow all certificates - WARNING: Only use for IPTV providers you trust!
-        print('SSL: Accepting certificate for $host:$port');
+        debugPrint('SSL: Accepting certificate for $host:$port');
         return true;
       };
   }

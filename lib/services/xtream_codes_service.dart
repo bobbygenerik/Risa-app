@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:iptv_player/models/content.dart';
 
@@ -8,16 +9,14 @@ class XtreamCodesService {
   final String serverUrl;
   final String username;
   final String password;
-  late http.Client _client;
+  final http.Client _client;
 
   XtreamCodesService({
     required this.serverUrl,
     required this.username,
     required this.password,
-  }) {
-    // Create HTTP client that accepts all certificates (for providers with SSL issues)
-    _client = http.Client();
-  }
+    http.Client? client,
+  }) : _client = client ?? http.Client();
 
   /// Create HTTP client with custom certificate validation
   static HttpClient _createHttpClient() {
@@ -26,21 +25,21 @@ class XtreamCodesService {
     return client;
   }
 
-  /// Make HTTP request with SSL bypass
+  /// Make HTTP request with optional SSL bypass fallback
   Future<http.Response> _makeRequest(String url) async {
     try {
       // Try with standard client first
-      final response = await _client.get(Uri.parse(url)).timeout(Duration(seconds: 10));
+      final response = await _client.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
       return response;
     } catch (e) {
-      // If SSL error, try with custom client that bypasses cert validation
-      print('XtreamCodes: Standard request failed, trying with SSL bypass: $e');
-      
+      // If the normal client fails (often due to SSL issues), attempt with a low-level HttpClient
+      debugPrint('XtreamCodes: Standard request failed, trying with SSL bypass: $e');
+
       final httpClient = _createHttpClient();
       try {
         final request = await httpClient.getUrl(Uri.parse(url));
         final response = await request.close();
-        
+
         final body = await response.transform(utf8.decoder).join();
         return http.Response(body, response.statusCode, headers: {
           'content-type': response.headers.contentType?.toString() ?? 'application/json',
@@ -55,13 +54,16 @@ class XtreamCodesService {
     _client.close();
   }
 
-  /// Get base API URL
-  String get _apiUrl => '$serverUrl/player_api.php';
+  /// Base API endpoint for Xtream Codes (ensures the path is correct)
+  String get _apiBase {
+    final trimmed = serverUrl.endsWith('/') ? serverUrl.substring(0, serverUrl.length - 1) : serverUrl;
+    return '$trimmed/player_api.php';
+  }
 
   /// Fetch all VOD categories
   Future<List<Map<String, dynamic>>> getVodCategories() async {
     try {
-      final url = '$_apiUrl?username=$username&password=$password&action=get_vod_categories';
+      final url = '$_apiBase?username=$username&password=$password&action=get_vod_categories';
       final response = await _makeRequest(url);
 
       if (response.statusCode == 200) {
@@ -70,7 +72,7 @@ class XtreamCodesService {
       }
       return [];
     } catch (e) {
-      print('XtreamCodes: Error fetching VOD categories: $e');
+      debugPrint('XtreamCodes: Error fetching VOD categories: $e');
       return [];
     }
   }
@@ -78,7 +80,7 @@ class XtreamCodesService {
   /// Fetch all series categories
   Future<List<Map<String, dynamic>>> getSeriesCategories() async {
     try {
-      final url = '$_apiUrl?username=$username&password=$password&action=get_series_categories';
+      final url = '$_apiBase?username=$username&password=$password&action=get_series_categories';
       final response = await _makeRequest(url);
 
       if (response.statusCode == 200) {
@@ -87,7 +89,7 @@ class XtreamCodesService {
       }
       return [];
     } catch (e) {
-      print('XtreamCodes: Error fetching series categories: $e');
+      debugPrint('XtreamCodes: Error fetching series categories: $e');
       return [];
     }
   }
@@ -95,16 +97,16 @@ class XtreamCodesService {
   /// Fetch movies from a specific category
   Future<List<Content>> getMoviesByCategory(String categoryId) async {
     try {
-      final url = '$_apiUrl?username=$username&password=$password&action=get_vod_streams&category_id=$categoryId';
+      final url = '$_apiBase?username=$username&password=$password&action=get_vod_streams&category_id=$categoryId';
       final response = await _makeRequest(url);
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        return data.map((movie) => _parseMovie(movie)).toList();
+        return data.map((movie) => _parseMovie(movie as Map<String, dynamic>)).toList();
       }
       return [];
     } catch (e) {
-      print('XtreamCodes: Error fetching movies for category $categoryId: $e');
+      debugPrint('XtreamCodes: Error fetching movies for category $categoryId: $e');
       return [];
     }
   }
@@ -112,26 +114,26 @@ class XtreamCodesService {
   /// Fetch all movies from all categories
   Future<List<Content>> getAllMovies() async {
     try {
-      print('XtreamCodes: Fetching VOD categories...');
+      debugPrint('XtreamCodes: Fetching VOD categories...');
       final categories = await getVodCategories();
-      print('XtreamCodes: Found ${categories.length} VOD categories');
+      debugPrint('XtreamCodes: Found ${categories.length} VOD categories');
 
       final List<Content> allMovies = [];
 
       for (final category in categories) {
         final categoryId = category['category_id'].toString();
         final categoryName = category['category_name'] ?? 'Unknown';
-        print('XtreamCodes: Fetching movies from "$categoryName" (ID: $categoryId)...');
-        
+        debugPrint('XtreamCodes: Fetching movies from "$categoryName" (ID: $categoryId)...');
+
         final movies = await getMoviesByCategory(categoryId);
-        print('XtreamCodes: Found ${movies.length} movies in "$categoryName"');
+        debugPrint('XtreamCodes: Found ${movies.length} movies in "$categoryName"');
         allMovies.addAll(movies);
       }
 
-      print('XtreamCodes: Total movies loaded: ${allMovies.length}');
+      debugPrint('XtreamCodes: Total movies loaded: ${allMovies.length}');
       return allMovies;
     } catch (e) {
-      print('XtreamCodes: Error fetching all movies: $e');
+      debugPrint('XtreamCodes: Error fetching all movies: $e');
       return [];
     }
   }
@@ -139,16 +141,16 @@ class XtreamCodesService {
   /// Fetch series from a specific category
   Future<List<Content>> getSeriesByCategory(String categoryId) async {
     try {
-      final url = '$_apiUrl?username=$username&password=$password&action=get_series&category_id=$categoryId';
+      final url = '$_apiBase?username=$username&password=$password&action=get_series&category_id=$categoryId';
       final response = await _makeRequest(url);
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        return data.map((series) => _parseSeries(series)).toList();
+        return data.map((series) => _parseSeries(series as Map<String, dynamic>)).toList();
       }
       return [];
     } catch (e) {
-      print('XtreamCodes: Error fetching series for category $categoryId: $e');
+      debugPrint('XtreamCodes: Error fetching series for category $categoryId: $e');
       return [];
     }
   }
@@ -156,26 +158,26 @@ class XtreamCodesService {
   /// Fetch all series from all categories
   Future<List<Content>> getAllSeries() async {
     try {
-      print('XtreamCodes: Fetching series categories...');
+      debugPrint('XtreamCodes: Fetching series categories...');
       final categories = await getSeriesCategories();
-      print('XtreamCodes: Found ${categories.length} series categories');
+      debugPrint('XtreamCodes: Found ${categories.length} series categories');
 
       final List<Content> allSeries = [];
 
       for (final category in categories) {
         final categoryId = category['category_id'].toString();
         final categoryName = category['category_name'] ?? 'Unknown';
-        print('XtreamCodes: Fetching series from "$categoryName" (ID: $categoryId)...');
-        
+        debugPrint('XtreamCodes: Fetching series from "$categoryName" (ID: $categoryId)...');
+
         final series = await getSeriesByCategory(categoryId);
-        print('XtreamCodes: Found ${series.length} series in "$categoryName"');
+        debugPrint('XtreamCodes: Found ${series.length} series in "$categoryName"');
         allSeries.addAll(series);
       }
 
-      print('XtreamCodes: Total series loaded: ${allSeries.length}');
+      debugPrint('XtreamCodes: Total series loaded: ${allSeries.length}');
       return allSeries;
     } catch (e) {
-      print('XtreamCodes: Error fetching all series: $e');
+      debugPrint('XtreamCodes: Error fetching all series: $e');
       return [];
     }
   }
@@ -183,15 +185,15 @@ class XtreamCodesService {
   /// Get detailed info about a specific movie
   Future<Map<String, dynamic>?> getMovieInfo(String streamId) async {
     try {
-      final url = '$_apiUrl?username=$username&password=$password&action=get_vod_info&vod_id=$streamId';
+      final url = '$_apiBase?username=$username&password=$password&action=get_vod_info&vod_id=$streamId';
       final response = await _makeRequest(url);
 
       if (response.statusCode == 200) {
-        return json.decode(response.body);
+        return json.decode(response.body) as Map<String, dynamic>;
       }
       return null;
     } catch (e) {
-      print('XtreamCodes: Error fetching movie info: $e');
+      debugPrint('XtreamCodes: Error fetching movie info: $e');
       return null;
     }
   }
@@ -199,15 +201,15 @@ class XtreamCodesService {
   /// Get detailed info about a specific series (includes all episodes)
   Future<Map<String, dynamic>?> getSeriesInfo(String seriesId) async {
     try {
-      final url = '$_apiUrl?username=$username&password=$password&action=get_series_info&series_id=$seriesId';
+      final url = '$_apiBase?username=$username&password=$password&action=get_series_info&series_id=$seriesId';
       final response = await _makeRequest(url);
 
       if (response.statusCode == 200) {
-        return json.decode(response.body);
+        return json.decode(response.body) as Map<String, dynamic>;
       }
       return null;
     } catch (e) {
-      print('XtreamCodes: Error fetching series info: $e');
+      debugPrint('XtreamCodes: Error fetching series info: $e');
       return null;
     }
   }
@@ -224,7 +226,7 @@ class XtreamCodesService {
       type: ContentType.movie,
       videoUrl: videoUrl,
       imageUrl: data['stream_icon'],
-      backdropUrl: data['backdrop_path'] != null 
+      backdropUrl: data['backdrop_path'] != null
           ? 'https://image.tmdb.org/t/p/original${data['backdrop_path']}'
           : null,
       rating: _parseRating(data['rating']),
@@ -243,7 +245,7 @@ class XtreamCodesService {
       title: data['name'] ?? 'Unknown',
       type: ContentType.series,
       imageUrl: data['cover'],
-      backdropUrl: data['backdrop_path'] != null 
+      backdropUrl: data['backdrop_path'] != null
           ? 'https://image.tmdb.org/t/p/original${data['backdrop_path']}'
           : null,
       rating: _parseRating(data['rating']),

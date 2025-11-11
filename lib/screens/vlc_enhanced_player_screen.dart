@@ -606,7 +606,7 @@ class _VlcEnhancedPlayerScreenState extends State<VlcEnhancedPlayerScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.7),
+                    color: Colors.black.withAlpha((0.7 * 255).round()),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -625,7 +625,7 @@ class _VlcEnhancedPlayerScreenState extends State<VlcEnhancedPlayerScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.8),
+                    color: Colors.black.withAlpha((0.8 * 255).round()),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
@@ -680,7 +680,7 @@ class _VlcEnhancedPlayerScreenState extends State<VlcEnhancedPlayerScreen> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Colors.black.withOpacity(0.7), Colors.transparent],
+          colors: [Colors.black.withAlpha((0.7 * 255).round()), Colors.transparent],
         ),
       ),
       child: Row(
@@ -779,7 +779,7 @@ class _VlcEnhancedPlayerScreenState extends State<VlcEnhancedPlayerScreen> {
         gradient: LinearGradient(
           begin: Alignment.bottomCenter,
           end: Alignment.topCenter,
-          colors: [Colors.black.withOpacity(0.7), Colors.transparent],
+          colors: [Colors.black.withAlpha((0.7 * 255).round()), Colors.transparent],
         ),
       ),
       child: Wrap(
@@ -804,9 +804,9 @@ class _VlcEnhancedPlayerScreenState extends State<VlcEnhancedPlayerScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withAlpha((0.2 * 255).round()),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: Colors.white.withOpacity(0.3)),
+        border: Border.all(color: Colors.white.withAlpha((0.3 * 255).round())),
       ),
       child: Text(
         '$key: $action',
@@ -823,7 +823,7 @@ class _VlcEnhancedPlayerScreenState extends State<VlcEnhancedPlayerScreen> {
         constraints: const BoxConstraints(maxWidth: 400),
         margin: const EdgeInsets.all(32),
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.9),
+          color: Colors.black.withAlpha((0.9 * 255).round()),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppTheme.primaryBlue, width: 2),
         ),
@@ -869,7 +869,7 @@ class _VlcEnhancedPlayerScreenState extends State<VlcEnhancedPlayerScreen> {
 
                 return ListTile(
                   selected: isSelected,
-                  selectedTileColor: AppTheme.primaryBlue.withOpacity(0.3),
+                  selectedTileColor: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
                   leading: Icon(
                     isSelected ? Icons.check_circle : Icons.circle_outlined,
                     color: isSelected ? AppTheme.primaryBlue : Colors.white70,
@@ -900,7 +900,7 @@ class _VlcEnhancedPlayerScreenState extends State<VlcEnhancedPlayerScreen> {
         child: Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.9),
+            color: Colors.black.withAlpha((0.9 * 255).round()),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppTheme.primaryBlue, width: 2),
           ),
@@ -917,7 +917,7 @@ class _VlcEnhancedPlayerScreenState extends State<VlcEnhancedPlayerScreen> {
         constraints: const BoxConstraints(maxWidth: 400),
         margin: const EdgeInsets.all(32),
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.9),
+          color: Colors.black.withAlpha((0.9 * 255).round()),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppTheme.primaryBlue, width: 2),
         ),
@@ -962,7 +962,7 @@ class _VlcEnhancedPlayerScreenState extends State<VlcEnhancedPlayerScreen> {
 
                 return ListTile(
                   selected: isSelected,
-                  selectedTileColor: AppTheme.primaryBlue.withOpacity(0.3),
+                  selectedTileColor: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
                   leading: Icon(
                     isSelected ? Icons.check_circle : Icons.circle_outlined,
                     color: isSelected ? AppTheme.primaryBlue : Colors.white70,

@@ -49,7 +49,7 @@ class MoviesScreen extends StatelessWidget {
           Icon(
             Icons.movie,
             size: 80,
-            color: AppTheme.primaryBlue.withOpacity(0.5),
+            color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
           ),
           SizedBox(height: AppSizes.lg),
           Text(
@@ -185,7 +185,7 @@ class MoviesScreen extends StatelessWidget {
             Icon(
               Icons.movie,
               size: 40,
-              color: AppTheme.primaryBlue.withOpacity(0.3),
+              color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
             ),
             SizedBox(height: 8),
             Padding(

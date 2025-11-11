@@ -9,7 +9,7 @@ class ContentProvider with ChangeNotifier {
   List<Content> _series = [];
   List<Content> _continueWatching = [];
   List<Content> _highlights = [];
-  bool _isLoading = false;
+  final bool _isLoading = false;
   String? _errorMessage;
 
   List<Content> get movies => _movies;

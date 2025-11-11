@@ -243,7 +243,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
           Icon(
             Icons.playlist_play,
             size: 80,
-            color: AppTheme.primaryBlue.withOpacity(0.5),
+            color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
           ),
           SizedBox(height: AppSizes.lg),
           Text(
@@ -288,7 +288,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
               decoration: BoxDecoration(
                 color: isActive
                     ? AppTheme.primaryBlue
-                    : AppTheme.primaryBlue.withOpacity(0.35),
+                    : AppTheme.primaryBlue.withAlpha((0.35 * 255).round()),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(

@@ -129,7 +129,7 @@ class _VoiceSearchButtonState extends State<VoiceSearchButton>
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: AppTheme.accentRed.withOpacity(0.5),
+                      color: AppTheme.accentRed.withAlpha((0.5 * 255).round()),
                       width: 2,
                     ),
                   ),
@@ -169,7 +169,7 @@ class VoiceSearchOverlay extends StatelessWidget {
     return Consumer<VoiceSearchService>(
       builder: (context, voiceService, child) {
         return Container(
-          color: Colors.black.withOpacity(0.8),
+          color: Colors.black.withAlpha((0.8 * 255).round()),
           child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -180,7 +180,7 @@ class VoiceSearchOverlay extends StatelessWidget {
                   height: 120,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppTheme.primaryBlue.withOpacity(0.2),
+                    color: AppTheme.primaryBlue.withAlpha((0.2 * 255).round()),
                   ),
                   child: Icon(
                     Icons.mic,

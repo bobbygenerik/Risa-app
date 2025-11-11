@@ -52,7 +52,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   Future<void> _initializePlayer() async {
     try {
-      print('VideoPlayer: Initializing player for: ${widget.videoUrl}');
+  debugPrint('VideoPlayer: Initializing player for: ${widget.videoUrl}');
       
       // Initialize video player
       _videoPlayerController = VideoPlayerController.networkUrl(
@@ -70,7 +70,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       // Add listener to monitor playback state
       _videoPlayerController.addListener(() {
         if (_videoPlayerController.value.hasError) {
-          print('VideoPlayer: Playback error detected: ${_videoPlayerController.value.errorDescription}');
+          debugPrint('VideoPlayer: Playback error detected: ${_videoPlayerController.value.errorDescription}');
           if (mounted) {
             setState(() {
               _hasError = true;
@@ -79,25 +79,25 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           }
         }
         if (_videoPlayerController.value.isPlaying) {
-          print('VideoPlayer: Stream is playing');
+          debugPrint('VideoPlayer: Stream is playing');
         }
         if (_videoPlayerController.value.isBuffering) {
-          print('VideoPlayer: Stream is buffering');
+          debugPrint('VideoPlayer: Stream is buffering');
         }
       });
 
-      print('VideoPlayer: Waiting for initialization...');
+  debugPrint('VideoPlayer: Waiting for initialization...');
       await _videoPlayerController.initialize();
-      print('VideoPlayer: Initialization complete');
+  debugPrint('VideoPlayer: Initialization complete');
 
       // Check if video is valid
       if (_videoPlayerController.value.hasError) {
         throw Exception('Video player error: ${_videoPlayerController.value.errorDescription}');
       }
 
-      print('VideoPlayer: Duration: ${_videoPlayerController.value.duration}');
-      print('VideoPlayer: Size: ${_videoPlayerController.value.size}');
-      print('VideoPlayer: isInitialized: ${_videoPlayerController.value.isInitialized}');
+  debugPrint('VideoPlayer: Duration: ${_videoPlayerController.value.duration}');
+  debugPrint('VideoPlayer: Size: ${_videoPlayerController.value.size}');
+  debugPrint('VideoPlayer: isInitialized: ${_videoPlayerController.value.isInitialized}');
 
       // Initialize Chewie with TV-optimized controls
       _chewieController = ChewieController(
@@ -109,12 +109,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         allowMuting: true,
         showControls: true,
         showControlsOnInitialize: true,
-        progressColors: ChewieProgressColors(
-          playedColor: AppTheme.accentPink,
-          handleColor: AppTheme.accentPink,
-          backgroundColor: AppTheme.textSecondary,
-          bufferedColor: AppTheme.textSecondary.withOpacity(0.5),
-        ),
         placeholder: Container(
           color: Colors.black,
           child: const Center(
@@ -155,8 +149,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         aiService.setEnabled(true);
       }
     } catch (e, stackTrace) {
-      print('VideoPlayer: Error initializing player: $e');
-      print('VideoPlayer: Stack trace: $stackTrace');
+      debugPrint('VideoPlayer: Error initializing player: $e');
+      debugPrint('VideoPlayer: Stack trace: $stackTrace');
       setState(() {
         _hasError = true;
         _errorMessage = 'Failed to load stream:\n\n$e\n\nURL: ${widget.videoUrl}';
@@ -386,9 +380,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.black.withOpacity(0.7),
-                        Colors.transparent,
-                      ],
+                          Colors.black.withAlpha((0.7 * 255).round()),
+                          Colors.transparent,
+                        ],
                     ),
                   ),
                   padding: const EdgeInsets.all(24),
@@ -491,7 +485,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
+                        color: Colors.black.withAlpha((0.7 * 255).round()),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: AppTheme.primaryBlue),
                       ),
@@ -530,7 +524,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.7),
+        color: Colors.black.withAlpha((0.7 * 255).round()),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(

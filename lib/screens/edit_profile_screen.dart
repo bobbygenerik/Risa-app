@@ -70,10 +70,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             backgroundColor: AppTheme.accentGreen,
           ),
         );
-        Navigator.pop(
-          context,
-          true,
-        ); // Return true to indicate profile was updated
+        Navigator.pop(context, true); // Return true to indicate profile was updated
       }
     } catch (e) {
       if (mounted) {
@@ -119,6 +116,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     setState(() {
       _profileImagePath = null;
     });
+  }
+
+  KeyEventResult _handleFocusKey(FocusNode node, KeyEvent event, VoidCallback onActivate) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
+      onActivate();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   @override
@@ -244,16 +251,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       setState(() => _nameEditable = false);
                     }
                   },
-                  onKey: (node, event) {
-                    if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
-                    final key = event.logicalKey;
-                    if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
-                      setState(() => _nameEditable = true);
-                      Future.microtask(() => _nameFocusNode.requestFocus());
-                      return KeyEventResult.handled;
-                    }
-                    return KeyEventResult.ignored;
-                  },
+                  onKeyEvent: (node, event) =>
+                      _handleFocusKey(node, event, () {
+                    setState(() => _nameEditable = true);
+                    Future.microtask(() => _nameFocusNode.requestFocus());
+                  }),
                   child: TextField(
                     controller: _nameController,
                     autofocus: false,
@@ -286,16 +288,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       setState(() => _emailEditable = false);
                     }
                   },
-                  onKey: (node, event) {
-                    if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
-                    final key = event.logicalKey;
-                    if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
-                      setState(() => _emailEditable = true);
-                      Future.microtask(() => _emailFocusNode.requestFocus());
-                      return KeyEventResult.handled;
-                    }
-                    return KeyEventResult.ignored;
-                  },
+                  onKeyEvent: (node, event) =>
+                      _handleFocusKey(node, event, () {
+                    setState(() => _emailEditable = true);
+                    Future.microtask(() => _emailFocusNode.requestFocus());
+                  }),
                   child: TextField(
                     controller: _emailController,
                     autofocus: false,

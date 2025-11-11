@@ -86,7 +86,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
   Future<void> _initializePlayer() async {
     try {
-      print('VideoPlayer: Initializing player for: ${widget.videoUrl}');
+      debugPrint('VideoPlayer: Initializing player for: ${widget.videoUrl}');
       
       // Initialize video player
       _videoPlayerController = VideoPlayerController.networkUrl(
@@ -101,15 +101,15 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         },
       );
 
-      print('VideoPlayer: Awaiting initialization...');
+  debugPrint('VideoPlayer: Awaiting initialization...');
       await _videoPlayerController.initialize();
-      print('VideoPlayer: Initialized successfully');
+  debugPrint('VideoPlayer: Initialized successfully');
 
       // Skip subtitle controller initialization - causes UnimplementedError
       // Only initialize if subtitles are explicitly provided and needed
       // _subtitleController = null;
 
-      print('VideoPlayer: Creating Chewie controller...');
+  debugPrint('VideoPlayer: Creating Chewie controller...');
       // Initialize Chewie with TV-optimized controls
       _chewieController = ChewieController(
         videoPlayerController: _videoPlayerController,
@@ -154,18 +154,18 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         },
       );
 
-      print('VideoPlayer: Chewie controller created');
-      print('VideoPlayer: Duration: ${_videoPlayerController.value.duration}');
-      print('VideoPlayer: Size: ${_videoPlayerController.value.size}');
+  debugPrint('VideoPlayer: Chewie controller created');
+  debugPrint('VideoPlayer: Duration: ${_videoPlayerController.value.duration}');
+  debugPrint('VideoPlayer: Size: ${_videoPlayerController.value.size}');
 
       setState(() {
         _isInitialized = true;
       });
       
-      print('VideoPlayer: Player initialized and ready');
+  debugPrint('VideoPlayer: Player initialized and ready');
     } catch (e, stackTrace) {
-      print('VideoPlayer: Error initializing player: $e');
-      print('VideoPlayer: Stack trace: $stackTrace');
+      debugPrint('VideoPlayer: Error initializing player: $e');
+      debugPrint('VideoPlayer: Stack trace: $stackTrace');
       setState(() {
         _hasError = true;
         _errorMessage = 'Failed to initialize video player:\n\n$e\n\nURL: ${widget.videoUrl}';
@@ -309,7 +309,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     //   subtitleUrl: option.url,
     //   subtitleType: _getSubtitleType(option.format),
     // );
-    print('VideoPlayer: Subtitle loading disabled to prevent UnimplementedError');
+    debugPrint('VideoPlayer: Subtitle loading disabled to prevent UnimplementedError');
     setState(() {});
   }
 
@@ -466,7 +466,7 @@ Widget _buildSubtitleOverlay() {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.7),
+          color: Colors.black.withAlpha((0.7 * 255).round()),
           borderRadius: BorderRadius.circular(4),
         ),
         child: const Text(
@@ -495,7 +495,7 @@ Widget _buildSubtitleOverlay() {
             return Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.7),
+                color: Colors.black.withAlpha((0.7 * 255).round()),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -525,7 +525,7 @@ Widget _buildSubtitleOverlay() {
           return Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.8),
+              color: Colors.black.withAlpha((0.8 * 255).round()),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: AppTheme.primaryBlue, width: 2),
             ),
@@ -571,10 +571,10 @@ Widget _buildSubtitleOverlay() {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.black.withOpacity(0.7),
+            Colors.black.withAlpha((0.7 * 255).round()),
             Colors.transparent,
             Colors.transparent,
-            Colors.black.withOpacity(0.7),
+            Colors.black.withAlpha((0.7 * 255).round()),
           ],
         ),
       ),
@@ -714,11 +714,11 @@ Widget _buildSubtitleOverlay() {
   Widget _buildHint(String key, String action) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: Colors.white.withOpacity(0.3)),
-      ),
+        decoration: BoxDecoration(
+          color: Colors.white.withAlpha((0.2 * 255).round()),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: Colors.white.withAlpha((0.3 * 255).round())),
+        ),
       child: Text(
         '$key: $action',
         style: const TextStyle(
@@ -740,7 +740,7 @@ Widget _buildSubtitleOverlay() {
         constraints: const BoxConstraints(maxWidth: 400),
         margin: const EdgeInsets.all(32),
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.9),
+          color: Colors.black.withAlpha((0.9 * 255).round()),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppTheme.primaryBlue, width: 2),
         ),
@@ -784,7 +784,7 @@ Widget _buildSubtitleOverlay() {
                 
                 return ListTile(
                   selected: isSelected,
-                  selectedTileColor: AppTheme.primaryBlue.withOpacity(0.3),
+                  selectedTileColor: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
                   leading: Icon(
                     isSelected ? Icons.check_circle : Icons.circle_outlined,
                     color: isSelected ? AppTheme.primaryBlue : Colors.white70,
@@ -818,7 +818,7 @@ Widget _buildSubtitleOverlay() {
         child: Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.9),
+            color: Colors.black.withAlpha((0.9 * 255).round()),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppTheme.primaryBlue, width: 2),
           ),
@@ -835,7 +835,7 @@ Widget _buildSubtitleOverlay() {
         constraints: const BoxConstraints(maxWidth: 400),
         margin: const EdgeInsets.all(32),
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.9),
+          color: Colors.black.withAlpha((0.9 * 255).round()),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppTheme.primaryBlue, width: 2),
         ),
@@ -879,7 +879,7 @@ Widget _buildSubtitleOverlay() {
                 
                 return ListTile(
                   selected: isSelected,
-                  selectedTileColor: AppTheme.primaryBlue.withOpacity(0.3),
+                  selectedTileColor: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
                   leading: Icon(
                     isSelected ? Icons.check_circle : Icons.circle_outlined,
                     color: isSelected ? AppTheme.primaryBlue : Colors.white70,

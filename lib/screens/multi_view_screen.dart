@@ -390,7 +390,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.black.withOpacity(0.7),
+                        Colors.black.withAlpha((0.7 * 255).round()),
                         Colors.transparent,
                       ],
                     ),
@@ -505,7 +505,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Colors.black.withOpacity(0.7), Colors.transparent],
+                colors: [Colors.black.withAlpha((0.7 * 255).round()), Colors.transparent],
               ),
             ),
             child: Row(
@@ -547,7 +547,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
               gradient: LinearGradient(
                 begin: Alignment.bottomCenter,
                 end: Alignment.topCenter,
-                colors: [Colors.black.withOpacity(0.7), Colors.transparent],
+                colors: [Colors.black.withAlpha((0.7 * 255).round()), Colors.transparent],
               ),
             ),
             child: Wrap(
@@ -572,7 +572,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
   Widget _buildGridSizeButton(int size, IconData icon) {
     final isActive = _gridSize == size;
     return Material(
-      color: isActive ? AppTheme.primaryBlue : Colors.white.withOpacity(0.2),
+      color: isActive ? AppTheme.primaryBlue : Colors.white.withAlpha((0.2 * 255).round()),
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: () => _changeGridSize(size),
@@ -589,9 +589,9 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withAlpha((0.2 * 255).round()),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: Colors.white.withOpacity(0.3)),
+        border: Border.all(color: Colors.white.withAlpha((0.3 * 255).round())),
       ),
       child: Text(
         '$key: $action',

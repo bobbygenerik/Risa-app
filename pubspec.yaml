@@ -39,6 +39,12 @@ dependencies:
   # On-Device AI Upscaling (FREE - no cloud costs)
   tflite_flutter: ^0.11.0
   image: ^4.3.0
+
+  # Optional/native media plugins referenced in the codebase
+  media_kit: any
+  media_kit_video: any
+  flutter_vlc_player: any
+  # vosk_flutter: any  # OPTIONAL: removed to avoid forcing transitive downgrades
   
   # Subtitles & Multiple Audio Tracks - REMOVED subtitle_wrapper_package (causes UnimplementedError on Linux)
   # subtitle_wrapper_package: ^2.0.2  # DISABLED - use native video_player subtitles instead
@@ -67,6 +73,8 @@ flutter:
     - assets/models/
     - assets/images/
 
+
+
 # App Icon Configuration
 flutter_launcher_icons:
   android: true
@@ -78,3 +86,7 @@ flutter_launcher_icons:
     image_path: "assets/images/croppedlogo2.png"
     background_color: "#FFFFFF"
     theme_color: "#C8C6D3"
+
+# Note: dependency_overrides previously pinning `permission_handler` and `http`
+# for `vosk_flutter` have been removed. If you need Vosk, re-add it and reintroduce
+# appropriate overrides or prefer to add a guarded adapter implementation.

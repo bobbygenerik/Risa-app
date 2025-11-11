@@ -1,9 +1,4 @@
-enum ContentType {
-  movie,
-  series,
-  liveTV,
-  recording,
-}
+enum ContentType { movie, series, liveTV, recording }
 
 class Content {
   final String id;
@@ -50,11 +45,13 @@ class Content {
     this.lastWatchedDate,
   });
 
-  bool get isContinueWatching => 
+  bool get isContinueWatching =>
       watchProgress != null && watchProgress! > 0.0 && watchProgress! < 0.95;
 
   String get displayTitle {
-    if (type == ContentType.series && seasonNumber != null && episodeNumber != null) {
+    if (type == ContentType.series &&
+        seasonNumber != null &&
+        episodeNumber != null) {
       return '$title - S${seasonNumber}E${episodeNumber}';
     }
     return title;
@@ -62,7 +59,8 @@ class Content {
 
   String? get genre => genres?.isNotEmpty == true ? genres!.first : null;
 
-  String get ratingDisplay => rating != null ? rating!.toStringAsFixed(1) : 'N/A';
+  String get ratingDisplay =>
+      rating != null ? rating!.toStringAsFixed(1) : 'N/A';
 
   factory Content.fromMap(Map<String, dynamic> map) {
     return Content(
@@ -87,9 +85,11 @@ class Content {
       episodeNumber: map['episodeNumber'],
       watchProgress: map['watchProgress']?.toDouble(),
       isFavorite: map['isFavorite'],
-      addedDate: map['addedDate'] != null ? DateTime.parse(map['addedDate']) : null,
-      lastWatchedDate: map['lastWatchedDate'] != null 
-          ? DateTime.parse(map['lastWatchedDate']) 
+      addedDate: map['addedDate'] != null
+          ? DateTime.parse(map['addedDate'])
+          : null,
+      lastWatchedDate: map['lastWatchedDate'] != null
+          ? DateTime.parse(map['lastWatchedDate'])
           : null,
     );
   }

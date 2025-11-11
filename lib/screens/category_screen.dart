@@ -85,7 +85,7 @@ class CategoryScreen extends StatelessWidget {
           Icon(
             Icons.tv_off,
             size: 80,
-            color: AppTheme.primaryBlue.withOpacity(0.5),
+            color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
           ),
           SizedBox(height: AppSizes.lg),
           const Text(
@@ -231,7 +231,7 @@ class CategoryScreen extends StatelessWidget {
           Icon(
             Icons.live_tv,
             size: 40,
-            color: AppTheme.primaryBlue.withOpacity(0.3),
+            color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
           ),
           const SizedBox(height: 8),
           Text(

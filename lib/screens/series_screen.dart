@@ -49,7 +49,7 @@ class SeriesScreen extends StatelessWidget {
           Icon(
             Icons.tv,
             size: 80,
-            color: AppTheme.primaryBlue.withOpacity(0.5),
+            color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
           ),
           SizedBox(height: AppSizes.lg),
           Text(
@@ -206,7 +206,7 @@ class SeriesScreen extends StatelessWidget {
             Icon(
               Icons.tv,
               size: 40,
-              color: AppTheme.primaryBlue.withOpacity(0.3),
+              color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
             ),
             SizedBox(height: 8),
             Padding(

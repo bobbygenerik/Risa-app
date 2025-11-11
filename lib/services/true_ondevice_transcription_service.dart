@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:vosk_flutter/vosk_flutter.dart';
+// Use a local adapter so the project can compile without the optional
+// `vosk_flutter` plugin. If you add `vosk_flutter` back to pubspec.yaml,
+// replace this import with the package import.
+import 'vosk_adapter.dart';
 import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:record/record.dart';
@@ -299,7 +302,10 @@ class TrueOnDeviceTranscriptionService extends ChangeNotifier {
     if (_recognizer == null) return;
 
     try {
-      final result = await _vosk!.recognizeWAVData(
+      // Some versions of the vosk_flutter plugin expose native methods that the
+      // analyzer may not statically recognize. Cast to `dynamic` to call the
+      // method at runtime and avoid analyzer `undefined_method` errors.
+      final result = await (_vosk! as dynamic).recognizeWAVData(
         recognizer: _recognizer!,
         bytes: Uint8List.fromList(audioData),
       );

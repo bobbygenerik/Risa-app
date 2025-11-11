@@ -238,12 +238,12 @@ class _PlaylistGate extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 640),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: AppTheme.cardBackground.withOpacity(0.95),
+              color: AppTheme.cardBackground.withAlpha((0.95 * 255).round()),
               borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.25)),
+              border: Border.all(color: AppTheme.primaryBlue.withAlpha((0.25 * 255).round())),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.45),
+                  color: Colors.black.withAlpha((0.45 * 255).round()),
                   blurRadius: 32,
                   offset: const Offset(0, 18),
                 ),
@@ -278,10 +278,10 @@ class _PlaylistGate extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: AppTheme.accentRed.withOpacity(0.12),
+                        color: AppTheme.accentRed.withAlpha((0.12 * 255).round()),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: AppTheme.accentRed.withOpacity(0.4),
+                          color: AppTheme.accentRed.withAlpha((0.4 * 255).round()),
                         ),
                       ),
                       child: Text(
@@ -395,7 +395,7 @@ class _CtaButtonState extends State<_CtaButton> {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           backgroundColor: _isFocused
               ? AppTheme.primaryBlue
-              : AppTheme.primaryBlue.withOpacity(0.85),
+              : AppTheme.primaryBlue.withAlpha((0.85 * 255).round()),
         ),
         onPressed: widget.onPressed,
         icon: Icon(widget.icon),
@@ -540,12 +540,12 @@ class _TopBarState extends State<_TopBar> {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: _focusedIndex == index
-                ? AppTheme.primaryBlue.withOpacity(0.22)
+                ? AppTheme.primaryBlue.withAlpha((0.22 * 255).round())
                 : Colors.transparent,
             boxShadow: _focusedIndex == index
                 ? [
                     BoxShadow(
-                      color: AppTheme.primaryBlue.withOpacity(0.7),
+                      color: AppTheme.primaryBlue.withAlpha((0.7 * 255).round()),
                       blurRadius: 16,
                       spreadRadius: 2,
                     ),
@@ -632,17 +632,17 @@ class _FocusableCardState extends State<_FocusableCard> {
             ? (Matrix4.identity()..scale(1.12))
             : Matrix4.identity(),
         decoration: BoxDecoration(
-          color: AppTheme.cardBackground.withOpacity(0.88),
+          color: AppTheme.cardBackground.withAlpha((0.88 * 255).round()),
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.32),
+              color: Colors.black.withAlpha((0.32 * 255).round()),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
             if (_focused)
               BoxShadow(
-                color: AppTheme.primaryBlue.withOpacity(0.85),
+                color: AppTheme.primaryBlue.withAlpha((0.85 * 255).round()),
                 blurRadius: 24,
                 spreadRadius: 3,
               ),
@@ -666,7 +666,7 @@ class _FocusableCardState extends State<_FocusableCard> {
                 shadows: _focused
                     ? [
                         Shadow(
-                          color: AppTheme.primaryBlue.withOpacity(0.6),
+                          color: AppTheme.primaryBlue.withAlpha((0.6 * 255).round()),
                           blurRadius: 10,
                         ),
                       ]
@@ -774,7 +774,7 @@ class _FocusableCarouselState extends State<_FocusableCarousel> {
                     shadows: _focused
                         ? [
                             Shadow(
-                              color: AppTheme.primaryBlue.withOpacity(0.4),
+                              color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
                               blurRadius: 8,
                             ),
                           ]

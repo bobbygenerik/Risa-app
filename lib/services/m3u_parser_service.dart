@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../models/channel.dart';
 import '../models/content.dart';
 
@@ -14,8 +15,8 @@ class M3UParserService {
     
     _epgUrl = null; // Reset EPG URL
     
-    print('M3UParser: Parsing ${rawLines.length} raw lines');
-    print('M3UParser: First line: ${rawLines.isNotEmpty ? rawLines[0] : "EMPTY"}');
+  debugPrint('M3UParser: Parsing ${rawLines.length} raw lines');
+  debugPrint('M3UParser: First line: ${rawLines.isNotEmpty ? rawLines[0] : "EMPTY"}');
     
     // Check for EPG URL in M3U header (x-tvg-url attribute)
     if (rawLines.isNotEmpty && rawLines[0].contains('x-tvg-url=')) {
@@ -23,7 +24,7 @@ class M3UParserService {
       final urlMatch = RegExp(r'x-tvg-url="([^"]+)"').firstMatch(firstLine);
       if (urlMatch != null) {
         _epgUrl = urlMatch.group(1);
-        print('M3UParser: Found EPG URL: $_epgUrl');
+        debugPrint('M3UParser: Found EPG URL: $_epgUrl');
       }
     }
 
@@ -43,7 +44,7 @@ class M3UParserService {
       }
     }
     
-    print('M3UParser: Reassembled into ${lines.length} logical lines');
+  debugPrint('M3UParser: Reassembled into ${lines.length} logical lines');
 
     String? currentInfo;
     Map<String, String> currentAttributes = {};
@@ -59,7 +60,7 @@ class M3UParserService {
         currentInfo = line.substring(8); // Remove '#EXTINF:'
         currentAttributes = _parseAttributes(currentInfo);
         if (channelCount < 3) {
-          print('M3UParser: Found EXTINF: ${currentInfo.length > 100 ? currentInfo.substring(0, 100) + "..." : currentInfo}');
+          debugPrint('M3UParser: Found EXTINF: ${currentInfo.length > 100 ? currentInfo.substring(0, 100) + "..." : currentInfo}');
         }
       } else if (!line.startsWith('#') && currentInfo != null) {
         // This is a stream URL
@@ -77,14 +78,14 @@ class M3UParserService {
         channels.add(channel);
         channelCount++;
         if (channelCount <= 3) {
-          print('M3UParser: Added channel #$channelCount: $channelName');
+          debugPrint('M3UParser: Added channel #$channelCount: $channelName');
         }
         currentInfo = null;
         currentAttributes = {};
       }
     }
     
-    print('M3UParser: Total channels parsed: ${channels.length}');
+  debugPrint('M3UParser: Total channels parsed: ${channels.length}');
     return channels;
   }
 

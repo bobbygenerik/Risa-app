@@ -207,8 +207,8 @@ class _SettingsScreenState extends State<SettingsScreen>
         Expanded(
           child: Focus(
             canRequestFocus: false,  // Don't trap focus, allow content to be focusable
-            onKey: (node, event) {
-              if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+            onKeyEvent: (node, event) {
+              if (event is! KeyDownEvent) return KeyEventResult.ignored;
               final key = event.logicalKey;
               // Only intercept LEFT to return to settings sidebar
               if (key == LogicalKeyboardKey.arrowLeft) {
@@ -283,8 +283,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                   },
                   child: Focus(
                     focusNode: _menuFocusNodes[index],
-                    onKey: (node, event) {
-                      if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+                    onKeyEvent: (node, event) {
+                      if (event is! KeyDownEvent) return KeyEventResult.ignored;
                       final key = event.logicalKey;
                       if (key == LogicalKeyboardKey.arrowDown) {
                         final next = (index + 1) % menuItems.length;
@@ -494,10 +494,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                     Container(
                       padding: EdgeInsets.all(AppSizes.sm),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryBlue.withOpacity(0.1),
+                        color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: AppTheme.primaryBlue.withOpacity(0.3),
+                          color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
                         ),
                       ),
                       child: Column(
@@ -581,35 +581,32 @@ class _SettingsScreenState extends State<SettingsScreen>
                             SizedBox(height: AppSizes.sm),
                             ElevatedButton.icon(
                               onPressed: syncService.isSyncing
-                                  ? null
-                                  : () async {
-                                      try {
-                                        await syncService.signIn();
-                                        if (mounted) {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                'Successfully signed in!',
+                                    ? null
+                                    : () async {
+                                        final messenger = ScaffoldMessenger.of(context);
+                                        try {
+                                          await syncService.signIn();
+                                          if (mounted) {
+                                            messenger.showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  'Successfully signed in!',
+                                                ),
                                               ),
-                                            ),
-                                          );
-                                        }
-                                      } catch (e) {
-                                        if (mounted) {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                'Sign in failed. Configure OAuth first.',
+                                            );
+                                          }
+                                        } catch (e) {
+                                          if (mounted) {
+                                            messenger.showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  'Sign in failed. Configure OAuth first.',
+                                                ),
                                               ),
-                                            ),
-                                          );
+                                            );
+                                          }
                                         }
-                                      }
-                                    },
+                                      },
                               icon: Icon(Icons.login),
                               label: Text('Sign In with Google'),
                             ),
@@ -665,9 +662,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                       Center(
                         child: TextButton(
                           onPressed: () async {
+                            final messenger = ScaffoldMessenger.of(context);
                             await syncService.signOut();
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              messenger.showSnackBar(
                                 SnackBar(
                                   content: Text('Signed out successfully'),
                                 ),
@@ -909,9 +907,9 @@ class _SettingsScreenState extends State<SettingsScreen>
             Container(
               padding: EdgeInsets.all(AppSizes.md),
               decoration: BoxDecoration(
-                color: AppTheme.primaryBlue.withOpacity(0.1),
+                color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
                 borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.3)),
+                border: Border.all(color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round())),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -998,10 +996,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                   suffixIcon: IconButton(
                     icon: Icon(Icons.save),
                     onPressed: () async {
+                      final messenger = ScaffoldMessenger.of(context);
                       final prefs = await SharedPreferences.getInstance();
                       await prefs.setString('custom_epg_url', customEpgController.text);
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        messenger.showSnackBar(
                           SnackBar(
                             content: Text('Custom EPG URL saved'),
                             backgroundColor: AppTheme.accentGreen,
@@ -1014,10 +1013,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ),
                 ),
                 onSubmitted: (value) async {
+                  final messenger = ScaffoldMessenger.of(context);
                   final prefs = await SharedPreferences.getInstance();
                   await prefs.setString('custom_epg_url', value);
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    messenger.showSnackBar(
                       SnackBar(
                         content: Text('Custom EPG URL saved'),
                         backgroundColor: AppTheme.accentGreen,
@@ -1073,7 +1073,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   Container(
                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryBlue.withOpacity(0.1),
+                      color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -1133,7 +1133,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   Container(
                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryBlue.withOpacity(0.1),
+                      color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -1236,6 +1236,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   child: ElevatedButton.icon(
                     onPressed: () async {
                       // Show confirmation dialog
+                      final messenger = ScaffoldMessenger.of(context);
                       final confirm = await showDialog<bool>(
                         context: context,
                         builder: (context) => AlertDialog(
@@ -1257,7 +1258,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       if (confirm == true) {
                         // TODO: Implement EPG data clearing
                         if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          messenger.showSnackBar(
                             SnackBar(
                               content: Text('EPG data cleared'),
                               backgroundColor: AppTheme.accentGreen,
@@ -1319,7 +1320,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                   return;
                 }
 
-                ScaffoldMessenger.of(context).showSnackBar(
+                final messenger = ScaffoldMessenger.of(context);
+                messenger.showSnackBar(
                   SnackBar(content: Text('Loading playlist from URL...')),
                 );
 
@@ -1336,7 +1338,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   await prefs.setString('playlist_type', 'm3u');
 
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    messenger.showSnackBar(
                       SnackBar(
                         content: Text(
                           'Playlist loaded successfully! ${provider.channels.length} channels found.',
@@ -1347,7 +1349,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   }
                 } catch (e) {
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    messenger.showSnackBar(
                       SnackBar(
                         content: Text(
                           'Failed to load playlist: ${e.toString()}',
@@ -1428,6 +1430,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 SizedBox(width: AppSizes.sm),
                 ElevatedButton.icon(
                   onPressed: () async {
+                    final messenger = ScaffoldMessenger.of(context);
                     // Load Xtream playlist
                     final server = _xtreamServerController.text.trim();
                     final username = _xtreamUsernameController.text.trim();
@@ -1436,7 +1439,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     if (server.isEmpty ||
                         username.isEmpty ||
                         password.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      messenger.showSnackBar(
                         SnackBar(
                           content: Text(
                             'Please fill in all Xtream Codes fields',
@@ -1446,7 +1449,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       return;
                     }
 
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    messenger.showSnackBar(
                       SnackBar(
                         content: Text('Loading Xtream Codes playlist...'),
                       ),
@@ -1472,7 +1475,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       await prefs.setString('playlist_type', 'xtream');
 
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        messenger.showSnackBar(
                           SnackBar(
                             content: Text(
                               'Xtream playlist loaded! ${provider.channels.length} channels found.',
@@ -1483,7 +1486,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       }
                     } catch (e) {
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        messenger.showSnackBar(
                           SnackBar(
                             content: Text(
                               'Failed to load Xtream playlist: ${e.toString()}',
@@ -1621,7 +1624,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   Container(
                     padding: EdgeInsets.all(AppSizes.md),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryBlue.withOpacity(0.1),
+                      color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Column(
@@ -1678,11 +1681,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                           setState(() {
                             _aiUpscalingEnabled = value;
                           });
+                          final messenger = ScaffoldMessenger.of(context);
                           final prefs = await SharedPreferences.getInstance();
                           await prefs.setBool('ai_upscaling', value);
                           aiService.setEnabled(value);
                           if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            messenger.showSnackBar(
                               SnackBar(
                                 content: Text(
                                   value
@@ -1756,10 +1760,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                     child: Container(
                       padding: EdgeInsets.all(AppSizes.md),
                       decoration: BoxDecoration(
-                        color: AppTheme.accentOrange.withOpacity(0.1),
+                        color: AppTheme.accentOrange.withAlpha((0.1 * 255).round()),
                         borderRadius: BorderRadius.circular(AppSizes.radiusMd),
                         border: Border.all(
-                          color: AppTheme.accentOrange.withOpacity(0.3),
+                          color: AppTheme.accentOrange.withAlpha((0.3 * 255).round()),
                         ),
                       ),
                       child: Column(
@@ -1875,9 +1879,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                   const SizedBox(height: 16),
                   ElevatedButton.icon(
                     onPressed: () async {
+                      final messenger = ScaffoldMessenger.of(context);
                       final success = await driveService.signIn();
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        messenger.showSnackBar(
                           SnackBar(
                             content: Text(
                               success
@@ -1918,6 +1923,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                           onPressed: driveService.isSyncing
                               ? null
                               : () async {
+                                  final messenger = ScaffoldMessenger.of(context);
                                   final success = await driveService
                                       .syncToCloud(
                                         favorites: {},
@@ -1926,7 +1932,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                                         settings: {},
                                       );
                                   if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
+                                    messenger.showSnackBar(
                                       SnackBar(
                                         content: Text(
                                           success
@@ -1960,10 +1966,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                           onPressed: driveService.isSyncing
                               ? null
                               : () async {
+                                  final messenger = ScaffoldMessenger.of(context);
                                   final data = await driveService
                                       .restoreFromCloud();
                                   if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
+                                    messenger.showSnackBar(
                                       SnackBar(
                                         content: Text(
                                           data != null
@@ -1995,9 +2002,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                   const SizedBox(height: 16),
                   TextButton.icon(
                     onPressed: () async {
+                      final messenger = ScaffoldMessenger.of(context);
                       await driveService.signOut();
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        messenger.showSnackBar(
                           const SnackBar(
                             content: Text('Signed out successfully'),
                           ),
@@ -2085,9 +2093,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                   const SizedBox(height: 8),
                   ElevatedButton.icon(
                     onPressed: () async {
+                      final messenger = ScaffoldMessenger.of(context);
                       final success = await subtitleService.authenticate();
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        messenger.showSnackBar(
                           SnackBar(
                             content: Text(
                               success
@@ -2289,7 +2298,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryBlue.withOpacity(0.1),
+                      color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: AppTheme.primaryBlue),
                     ),
@@ -2362,7 +2371,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppTheme.accentGreen.withOpacity(0.1),
+                      color: AppTheme.accentGreen.withAlpha((0.1 * 255).round()),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: AppTheme.accentGreen),
                     ),
@@ -2538,10 +2547,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                 Container(
                   padding: EdgeInsets.all(AppSizes.md),
                   decoration: BoxDecoration(
-                    color: AppTheme.accentOrange.withOpacity(0.1),
+                    color: AppTheme.accentOrange.withAlpha((0.1 * 255).round()),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: AppTheme.accentOrange.withOpacity(0.3),
+                      color: AppTheme.accentOrange.withAlpha((0.3 * 255).round()),
                     ),
                   ),
                   child: Row(
@@ -2791,9 +2800,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                   )
                 else
                   Focus(
-                    onKey: (node, event) {
-                      if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
-                      if (event.logicalKey == LogicalKeyboardKey.select || 
+                    onKeyEvent: (node, event) {
+                      if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                      if (event.logicalKey == LogicalKeyboardKey.select ||
                           event.logicalKey == LogicalKeyboardKey.enter) {
                         context.go('/playlist-editor');
                         return KeyEventResult.handled;
@@ -2805,9 +2814,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                       child: Container(
                         padding: EdgeInsets.all(AppSizes.md),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryBlue.withOpacity(0.1),
+                          color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
                           borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                          border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.3)),
+                          border: Border.all(color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round())),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -3066,8 +3075,8 @@ class _SettingsScreenState extends State<SettingsScreen>
           onEditableChanged(false);
         }
       },
-      onKey: (node, event) {
-        if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
         final key = event.logicalKey;
         // On SELECT/ENTER, enable editing and show keyboard
         if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {

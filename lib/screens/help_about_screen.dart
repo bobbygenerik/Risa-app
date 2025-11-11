@@ -96,8 +96,8 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
       },
       child: Focus(
         focusNode: _tabFocusNodes[index],
-        onKey: (node, event) {
-        if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+        onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
         final key = event.logicalKey;
         if (key == LogicalKeyboardKey.arrowUp) {
           // Pressing UP from any tab should go to top bar
@@ -343,12 +343,12 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
         _buildShortcut('Number Keys', 'Jump to channel (if available)'),
         _buildShortcut('Info', 'Show program information'),
         SizedBox(height: AppSizes.xl),
-        Container(
+          Container(
           padding: EdgeInsets.all(AppSizes.lg),
           decoration: BoxDecoration(
-            color: AppTheme.primaryBlue.withOpacity(0.1),
+            color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.3)),
+            border: Border.all(color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round())),
           ),
           child: Row(
             children: [

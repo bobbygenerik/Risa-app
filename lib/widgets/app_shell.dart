@@ -235,8 +235,8 @@ class _AppShellState extends State<AppShell>
     }
   }
 
-  KeyEventResult _handleSidebarKey(FocusNode node, RawKeyEvent event) {
-    if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+  KeyEventResult _handleSidebarKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
     final key = event.logicalKey;
     if (key == LogicalKeyboardKey.arrowDown) {
       _moveFocus(1);
@@ -271,8 +271,8 @@ class _AppShellState extends State<AppShell>
     return KeyEventResult.ignored;
   }
 
-  KeyEventResult _handleContentKey(FocusNode node, RawKeyEvent event) {
-    if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+  KeyEventResult _handleContentKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
     final key = event.logicalKey;
     if (key == LogicalKeyboardKey.arrowLeft) {
       // If we are on a nested screen with its own sidebar (e.g., Settings), prefer focusing that sidebar
@@ -323,7 +323,7 @@ class _AppShellState extends State<AppShell>
       // Special case: pressing UP from the topmost item should go to top bar
       if (direction < 0 && _currentFocusIndex == 0) {
         _searchButtonFocusNode.requestFocus();
-        print('🎯 Focus moved to top bar (search button)');
+        debugPrint('🎯 Focus moved to top bar (search button)');
         return;
       }
 
@@ -334,7 +334,7 @@ class _AppShellState extends State<AppShell>
         _currentFocusIndex = len - 1; // Wrap to last
       }
       _navFocusNodes[_currentFocusIndex].requestFocus();
-      print('🎯 Focus moved to index $_currentFocusIndex');
+      debugPrint('🎯 Focus moved to index $_currentFocusIndex');
     });
   }
 
@@ -371,6 +371,11 @@ class _AppShellState extends State<AppShell>
 
     return PopScope(
       canPop: false, // Prevent back button from exiting app
+      // Use a dynamic callback to interoperate with various SDK signatures.
+      // The newer PopScope callback signature varies across SDKs; use the
+      // legacy onPopInvoked with an ignore to keep behavior stable while we
+      // continue migrating. This avoids analyzer failures on some toolchains.
+      // ignore: deprecated_member_use
       onPopInvoked: (didPop) {
         if (didPop) return;
         // On back button, go to home instead of exiting
@@ -388,7 +393,7 @@ class _AppShellState extends State<AppShell>
             VerticalDivider(
               width: 2,
               thickness: 2,
-              color: AppTheme.highlight.withOpacity(0.15),
+              color: AppTheme.highlight.withAlpha((0.15 * 255).round()),
             ),
 
             // Main content
@@ -399,7 +404,7 @@ class _AppShellState extends State<AppShell>
                   Expanded(
                     child: Focus(
                       focusNode: _contentScopeNode,
-                      onKey: _handleContentKey,
+                      onKeyEvent: _handleContentKey,
                       child: AnimatedSwitcher(
                         duration: Duration(milliseconds: 250),
                         switchInCurve: Curves.easeOut,
@@ -436,7 +441,7 @@ class _AppShellState extends State<AppShell>
 
     return Focus(
       focusNode: _sidebarScopeNode,
-      onKey: _handleSidebarKey,
+      onKeyEvent: _handleSidebarKey,
       onFocusChange: (hasFocus) {
         // Auto expand when focused, auto collapse when focus leaves
         setState(() {
@@ -560,7 +565,7 @@ class _AppShellState extends State<AppShell>
       onTap: onTap,
       child: Focus(
         focusNode: focusNode,
-        onKey: _handleSidebarKey,
+        onKeyEvent: _handleSidebarKey,
         onFocusChange: (hasFocus) {
           if (hasFocus) {
             setState(() => _currentFocusIndex = index);
@@ -648,9 +653,8 @@ class _AppShellState extends State<AppShell>
                 waitDuration: Duration(milliseconds: 400),
                 child: Focus(
                   focusNode: _searchButtonFocusNode,
-                  onKey: (node, event) {
-                    if (event is! RawKeyDownEvent)
-                      return KeyEventResult.ignored;
+                  onKeyEvent: (node, event) {
+                    if (event is! KeyDownEvent) return KeyEventResult.ignored;
                     final key = event.logicalKey;
                     if (key == LogicalKeyboardKey.arrowRight) {
                       _settingsButtonFocusNode.requestFocus();
@@ -700,9 +704,8 @@ class _AppShellState extends State<AppShell>
                 waitDuration: Duration(milliseconds: 400),
                 child: Focus(
                   focusNode: _settingsButtonFocusNode,
-                  onKey: (node, event) {
-                    if (event is! RawKeyDownEvent)
-                      return KeyEventResult.ignored;
+                  onKeyEvent: (node, event) {
+                    if (event is! KeyDownEvent) return KeyEventResult.ignored;
                     final key = event.logicalKey;
                     if (key == LogicalKeyboardKey.arrowLeft) {
                       _searchButtonFocusNode.requestFocus();

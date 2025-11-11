@@ -182,7 +182,7 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: isCurrentChannel ? AppTheme.primaryBlue.withOpacity(0.2) : null,
+        color: isCurrentChannel ? AppTheme.primaryBlue.withAlpha((0.2 * 255).round()) : null,
         border: Border(bottom: BorderSide(color: AppTheme.divider, width: 0.5)),
       ),
       child: Material(
@@ -372,10 +372,10 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withOpacity(0.7),
+                    Colors.black.withAlpha((0.7 * 255).round()),
                     Colors.transparent,
                     Colors.transparent,
-                    Colors.black.withOpacity(0.7),
+                    Colors.black.withAlpha((0.7 * 255).round()),
                   ],
                   stops: [0.0, 0.2, 0.8, 1.0],
                 ),
@@ -645,7 +645,7 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
         ),
       );
     } catch (e) {
-      print('Error initializing mini player: $e');
+      debugPrint('Error initializing mini player: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error opening player: $e')),
       );
