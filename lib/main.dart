@@ -44,11 +44,11 @@ import 'package:iptv_player/services/background_task_manager.dart';
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
-  // Initialize binding BEFORE any async or zone operations
-  WidgetsFlutterBinding.ensureInitialized();
-  
   runZonedGuarded(
     () {
+      // Initialize binding within the zone context
+      WidgetsFlutterBinding.ensureInitialized();
+      
       FlutterError.onError = (FlutterErrorDetails details) {
         FlutterError.presentError(details);
         Zone.current.handleUncaughtError(
@@ -444,7 +444,8 @@ class _MyAppState extends State<MyApp> {
     debugPrint(
       'ProfileProvider empty; creating default profile for auto-setup',
     );
-    scheduleMicrotask(() async {
+    // Use addPostFrameCallback instead of scheduleMicrotask to avoid zone mismatch
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) {
         _creatingDefaultProfile = false;
         return;
