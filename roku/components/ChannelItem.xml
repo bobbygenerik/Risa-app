@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component name="ChannelItem" extends="Group">
+  <interface>
+    <field id="itemContent" type="node" onChange="updateContent" />
+    <field id="focusPercent" type="float" onChange="updateFocus" />
+  </interface>
+
+  <script type="text/brightscript" uri="pkg:/components/ChannelItem.brs" />
+
+  <children>
+    <Poster id="poster"
+      width="300"
+      height="180"
+      translation="[0, 0]" />
+    <Label id="label"
+      width="300"
+      height="40"
+      translation="[0, 185]"
+      font="font:SmallSystemFont" />
+  </children>
+</component>

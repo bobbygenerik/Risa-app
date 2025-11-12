@@ -1,6 +1,6 @@
+// ignore_for_file: todo
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:record/record.dart';
@@ -168,7 +168,7 @@ class WhisperSpeechService extends ChangeNotifier {
     try {
       final modelPath = await _getModelPath();
       
-      _whisperInterpreter = await Interpreter.fromFile(
+      _whisperInterpreter = Interpreter.fromFile(
         File(modelPath),
         options: InterpreterOptions()
           ..threads = 4

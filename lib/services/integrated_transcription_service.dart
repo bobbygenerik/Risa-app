@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -138,7 +140,7 @@ class IntegratedTranscriptionService extends ChangeNotifier {
       notifyListeners();
 
       // Start speech recognition
-      await _speech.listen(
+  await _speech.listen(
         onResult: (result) async {
           _currentText = result.recognizedWords;
 

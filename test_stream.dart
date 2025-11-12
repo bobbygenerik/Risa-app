@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_print, dangling_library_doc_comments
 /// Test script to validate video URL format and network connectivity
 import 'dart:io';
 import 'package:http/http.dart' as http;

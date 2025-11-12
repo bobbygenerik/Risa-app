@@ -1,3 +1,4 @@
+// ignore_for_file: sized_box_for_whitespace
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -190,7 +191,7 @@ class _EPGScreenState extends State<EPGScreen> {
       child: Row(
         children: [
           // EPG status indicator
-          if (epgService.isLoading)
+          if (epgService.isLoading) 
             Padding(
               padding: EdgeInsets.only(right: AppSizes.md),
               child: SizedBox(
@@ -260,6 +261,7 @@ class _EPGScreenState extends State<EPGScreen> {
                 ? null
                 : () async {
                     // Refresh EPG data
+                    final messenger = ScaffoldMessenger.of(context);
                     final prefs = await SharedPreferences.getInstance();
                     final epgUrl = prefs.getString('epg_url') ?? 
                                    prefs.getString('custom_epg_url');
@@ -267,7 +269,7 @@ class _EPGScreenState extends State<EPGScreen> {
                     if (epgUrl != null && epgUrl.isNotEmpty) {
                       await epgService.refresh(epgUrl);
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        messenger.showSnackBar(
                           SnackBar(
                             content: Text(
                               epgService.error != null
@@ -281,7 +283,7 @@ class _EPGScreenState extends State<EPGScreen> {
                         );
                       }
                     } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      messenger.showSnackBar(
                         SnackBar(
                           content: Text('Configure EPG URL in Settings → General first'),
                           action: SnackBarAction(
@@ -991,15 +993,14 @@ class _EPGScreenState extends State<EPGScreen> {
               children: [
                 Row(
                   children: [
-                    if (hasCatchup)
-                      Padding(
-                        padding: EdgeInsets.only(right: 4),
-                        child: Icon(
-                          Icons.replay,
-                          size: 14,
-                          color: AppTheme.accentOrange,
-                        ),
-                      ),
+                    if (hasCatchup) ...[
+                          Icon(
+                            Icons.replay,
+                            size: 14,
+                            color: AppTheme.accentOrange,
+                          ),
+                          const SizedBox(width: 4),
+                        ],
                     Expanded(
                       child: Text(
                         program.title,

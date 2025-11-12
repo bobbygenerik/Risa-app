@@ -547,69 +547,6 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
     );
   }
 
-  List<Channel> _getMockChannels() {
-    return List.generate(20, (index) {
-      return Channel(
-        id: 'channel_$index',
-        name: [
-          'ESPN',
-          'BBC One',
-          'Discovery',
-          'CNN',
-          'Cartoon Network',
-          'Fox News',
-          'HBO',
-          'NBC',
-          'CBS',
-          'ABC',
-          'MTV',
-          'Comedy Central',
-          'Nickelodeon',
-          'Sky Sports',
-          'Eurosport',
-          'National Geographic',
-          'History Channel',
-          'Food Network',
-          'HGTV',
-          'TLC',
-        ][index],
-        url: 'http://example.com/channel$index',
-        channelNumber: 701 + index,
-        groupTitle: [
-          'Sports',
-          'UK',
-          'Documentary',
-          'News',
-          'Kids',
-          'News',
-          'Entertainment',
-          'US',
-          'US',
-          'US',
-          'Entertainment',
-          'Entertainment',
-          'Kids',
-          'Sports',
-          'Sports',
-          'Documentary',
-          'Documentary',
-          'Lifestyle',
-          'Lifestyle',
-          'Lifestyle',
-        ][index],
-        isFavorite: index % 3 == 0, // Every 3rd channel is favorite
-      );
-    });
-  }
-
-  List<Channel> _getFilteredChannels() {
-    final channels = _getMockChannels();
-    if (_selectedCategory == 'All Channels') {
-      return channels;
-    }
-    return channels.where((c) => c.groupTitle == _selectedCategory).toList();
-  }
-
   Program? _getMockCurrentProgram(Channel channel) {
     final now = DateTime.now();
     return Program(
@@ -618,16 +555,17 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
       title: channel.groupTitle == 'Sports'
           ? 'Live Sports'
           : channel.groupTitle == 'News'
-          ? 'Breaking News'
-          : 'Current Program',
+              ? 'Breaking News'
+              : 'Current Program',
       startTime: now.subtract(Duration(minutes: 30)),
       endTime: now.add(Duration(minutes: 30)),
     );
   }
 
   void _launchFullscreenPlayer() {
+    final messenger = ScaffoldMessenger.of(context);
     if (_currentChannel == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(content: Text('Please select a channel first')),
       );
       return;
@@ -646,7 +584,7 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
       );
     } catch (e) {
       debugPrint('Error initializing mini player: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(content: Text('Error opening player: $e')),
       );
     }

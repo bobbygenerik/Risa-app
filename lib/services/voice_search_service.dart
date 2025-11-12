@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/foundation.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
@@ -58,7 +60,7 @@ class VoiceSearchService with ChangeNotifier {
       _lastError = '';
       notifyListeners();
 
-      await _speech.listen(
+  await _speech.listen(
         onResult: (result) {
           _lastWords = result.recognizedWords;
           _confidence = result.confidence;

@@ -87,7 +87,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       });
 
   debugPrint('VideoPlayer: Waiting for initialization...');
-      await _videoPlayerController.initialize();
+    // Read AI upscaling service before awaiting initialization to avoid
+    // using BuildContext after an async gap (prevents use_build_context_synchronously).
+    final aiService = context.read<AIUpscalingService>();
+
+    await _videoPlayerController.initialize();
   debugPrint('VideoPlayer: Initialization complete');
 
       // Check if video is valid
@@ -99,7 +103,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   debugPrint('VideoPlayer: Size: ${_videoPlayerController.value.size}');
   debugPrint('VideoPlayer: isInitialized: ${_videoPlayerController.value.isInitialized}');
 
-      // Initialize Chewie with TV-optimized controls
+  // Initialize Chewie with TV-optimized controls
       _chewieController = ChewieController(
         videoPlayerController: _videoPlayerController,
         autoPlay: true,
@@ -137,14 +141,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           );
         },
       );
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+          _hasError = false;
+        });
+      }
 
-      setState(() {
-        _isInitialized = true;
-        _hasError = false;
-      });
-
-      // Enable AI upscaling if available
-      final aiService = context.read<AIUpscalingService>();
       if (aiService.isModelLoaded) {
         aiService.setEnabled(true);
       }

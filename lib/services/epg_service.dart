@@ -2,9 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:xml/xml.dart';
 import 'package:iptv_player/models/program.dart';
-import 'package:iptv_player/models/channel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
+// Removed unused imports: channel.dart and dart:convert
 
 class EpgService with ChangeNotifier {
   final Dio _dio = Dio(BaseOptions(
@@ -14,7 +13,7 @@ class EpgService with ChangeNotifier {
   ));
 
   // EPG data cache
-  Map<String, List<Program>> _epgData = {};
+  final Map<String, List<Program>> _epgData = {};
   DateTime? _lastFetchTime;
   bool _isLoading = false;
   String? _error;
@@ -120,7 +119,7 @@ class EpgService with ChangeNotifier {
           final icon = programme.findElements('icon').firstOrNull?.getAttribute('src');
 
           final program = Program(
-            id: '${channelId}_${startStr}',
+            id: '${channelId}_$startStr',
             channelId: channelId,
             title: title,
             description: description,
@@ -310,8 +309,6 @@ class EpgService with ChangeNotifier {
         return 'SSL certificate error';
       case DioExceptionType.unknown:
         return 'Network error: ${e.message ?? 'Unknown error'}';
-      default:
-        return 'EPG load error: ${e.toString()}';
     }
   }
 

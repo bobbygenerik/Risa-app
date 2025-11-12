@@ -168,6 +168,9 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                       label: 'Play',
                       onPressed: () {
                         // Navigate to VLC player with content details
+                        // Capture messenger (safe even without awaits) to avoid
+                        // using BuildContext across potential async gaps.
+                        final messenger = ScaffoldMessenger.of(context);
                         if (widget.content.videoUrl != null) {
                           context.push('/vlc-player', extra: {
                             'videoUrl': widget.content.videoUrl,
@@ -176,8 +179,8 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                             'isLive': false,
                           });
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Video URL not available')),
+                          messenger.showSnackBar(
+                            const SnackBar(content: Text('Video URL not available')),
                           );
                         }
                       },

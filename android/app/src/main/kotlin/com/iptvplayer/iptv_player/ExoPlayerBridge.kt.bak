@@ -1,0 +1,143 @@
+package com.iptvplayer.iptv_player
+
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.util.Log
+import com.google.android.exoplayer2.ExoPlayer
+import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
+import com.google.android.exoplayer2.C
+import com.google.android.exoplayer2.Tracks
+import com.google.android.exoplayer2.Format
+
+/**
+ * Lightweight native ExoPlayer bridge scaffold.
+ *
+ * This class demonstrates how a native ExoPlayer instance could listen for
+ * broadcasted audio-track switch requests coming from Dart via the
+ * platform channel. It is intentionally defensive: if you don't wire a
+ * native ExoPlayer instance into this bridge it will be a no-op and will not
+ * crash the app.
+ *
+ * To enable real switching:
+ * - Create and assign `ExoPlayerBridge.player` with a running ExoPlayer instance.
+ * - Ensure the player's TrackSelector is a DefaultTrackSelector (or adapt accordingly).
+ * - The bridge will attempt to select the audio renderer and set the selected index.
+ */
+object ExoPlayerBridge {
+    private const val TAG = "ExoPlayerBridge"
+    private var registered = false
+    private var context: Context? = null
+
+    // Optional ExoPlayer instance. If null, bridge performs no-op.
+    @Volatile
+    var player: ExoPlayer? = null
+
+    // If you created the player with a DefaultTrackSelector, you can expose it here.
+    @Volatile
+    var trackSelector: DefaultTrackSelector? = null
+
+    // Optional: observe or configure AI upscaling state from native side.
+    @Volatile
+    var aiUpscalingEnabled: Boolean = false
+
+    @Volatile
+    var aiQuality: String = "Balanced"
+
+    private val receiver = object : BroadcastReceiver() {
+        override fun onReceive(ctx: Context?, intent: Intent?) {
+            if (intent == null) return
+            if (intent.action != "com.streamhub.iptv.ACTION_SWITCH_AUDIO") return
+
+            val index = intent.getIntExtra("trackIndex", -1)
+            Log.d(TAG, "Received audio switch broadcast: $index")
+
+            if (index >= 0) {
+                try {
+                    switchAudioTrack(index)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to switch audio track: ${e.message}")
+                }
+            }
+        }
+    }
+
+    fun register(context: Context) {
+        if (registered) return
+        this.context = context.applicationContext
+        val filter = IntentFilter("com.streamhub.iptv.ACTION_SWITCH_AUDIO")
+        context.registerReceiver(receiver, filter)
+        registered = true
+        Log.d(TAG, "ExoPlayerBridge registered for audio switch broadcasts")
+    }
+
+    fun unregister() {
+        val ctx = context ?: return
+        try {
+            ctx.unregisterReceiver(receiver)
+        } catch (e: Exception) {
+            // ignore
+        }
+        registered = false
+        context = null
+        Log.d(TAG, "ExoPlayerBridge unregistered")
+    }
+
+    /**
+     * Attempt to switch audio track on the native ExoPlayer instance.
+     * This implementation assumes a DefaultTrackSelector and that audio
+     * tracks are exposed as renderer index 1 (which is common but not
+     * guaranteed). You should adapt this to your player setup.
+     */
+    private fun switchAudioTrack(index: Int) {
+        val p = player ?: run {
+            Log.w(TAG, "No native ExoPlayer instance attached; skipping audio switch")
+            return
+        }
+
+        val selector = trackSelector ?: run {
+            Log.w(TAG, "No DefaultTrackSelector attached; cannot switch tracks automatically.")
+            return
+        }
+
+        val currentTracks: Tracks? = p.currentTracks
+        if (currentTracks == null) {
+            Log.w(TAG, "No currentTracks available; cannot inspect audio tracks")
+            return
+        }
+
+        Log.d(TAG, "Attempting native audio switch to index: $index")
+
+        // Best-effort: find an audio group and if the requested index maps inside
+        // a group's formats, prefer the format's language via the selector.
+        var handled = false
+        for (group in currentTracks.groups) {
+            if (group.type != C.TRACK_TYPE_AUDIO) continue
+            val mediaGroup = group.mediaTrackGroup ?: continue
+            if (index >= 0 && index < mediaGroup.length) {
+                try {
+                    val format: Format = mediaGroup.getFormat(index)
+                    val lang = format.language
+                    if (!lang.isNullOrEmpty()) {
+                        val builder = selector.buildUponParameters()
+                        builder.setPreferredAudioLanguage(lang)
+                        selector.parameters = builder.build()
+                        Log.d(TAG, "Set preferred audio language to: $lang")
+                        handled = true
+                        break
+                    } else {
+                        // No language metadata; fall back to broadcasting and persisting selection
+                        Log.d(TAG, "Format has no language; cannot prefer by language")
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to inspect format for switching: ${e.message}")
+                }
+            }
+        }
+
+        if (!handled) {
+            Log.d(TAG, "Native selection not completed; emitting broadcast for other handlers")
+        }
+    }
+}

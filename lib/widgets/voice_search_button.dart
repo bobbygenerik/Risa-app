@@ -59,6 +59,8 @@ class _VoiceSearchButtonState extends State<VoiceSearchButton>
   }
 
   void _showSearchDialog(String query) {
+    if (!mounted) return;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(

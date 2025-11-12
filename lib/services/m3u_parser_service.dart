@@ -60,7 +60,7 @@ class M3UParserService {
         currentInfo = line.substring(8); // Remove '#EXTINF:'
         currentAttributes = _parseAttributes(currentInfo);
         if (channelCount < 3) {
-          debugPrint('M3UParser: Found EXTINF: ${currentInfo.length > 100 ? currentInfo.substring(0, 100) + "..." : currentInfo}');
+          debugPrint('M3UParser: Found EXTINF: ${currentInfo.length > 100 ? '${currentInfo.substring(0, 100)}...' : currentInfo}');
         }
       } else if (!line.startsWith('#') && currentInfo != null) {
         // This is a stream URL
@@ -249,18 +249,36 @@ class M3UParserService {
     final genres = <String>[];
     final lower = groupTitle.toLowerCase();
 
-    if (lower.contains('action')) genres.add('Action');
-    if (lower.contains('comedy')) genres.add('Comedy');
-    if (lower.contains('drama')) genres.add('Drama');
-    if (lower.contains('horror')) genres.add('Horror');
-    if (lower.contains('sci-fi') || lower.contains('scifi'))
+    if (lower.contains('action')) {
+      genres.add('Action');
+    }
+    if (lower.contains('comedy')) {
+      genres.add('Comedy');
+    }
+    if (lower.contains('drama')) {
+      genres.add('Drama');
+    }
+    if (lower.contains('horror')) {
+      genres.add('Horror');
+    }
+    if (lower.contains('sci-fi') || lower.contains('scifi')) {
       genres.add('Sci-Fi');
-    if (lower.contains('thriller')) genres.add('Thriller');
-    if (lower.contains('romance')) genres.add('Romance');
-    if (lower.contains('documentary')) genres.add('Documentary');
-    if (lower.contains('kids') || lower.contains('children'))
+    }
+    if (lower.contains('thriller')) {
+      genres.add('Thriller');
+    }
+    if (lower.contains('romance')) {
+      genres.add('Romance');
+    }
+    if (lower.contains('documentary')) {
+      genres.add('Documentary');
+    }
+    if (lower.contains('kids') || lower.contains('children')) {
       genres.add('Kids');
-    if (lower.contains('sport')) genres.add('Sports');
+    }
+    if (lower.contains('sport')) {
+      genres.add('Sports');
+    }
 
     return genres.isNotEmpty ? genres : null;
   }

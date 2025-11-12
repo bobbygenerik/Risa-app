@@ -31,6 +31,9 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
   String _decoderType = 'Auto';
   String _renderingEngine = 'Auto';
   double _videoBufferSize = 50;
+  // This field is stored for settings persistence but currently not read by
+  // any rendering code. Keep for future use and silence the analyzer.
+  // ignore: unused_field
   String _videoQuality = 'Auto';
   bool _hardwareAcceleration = true;
 

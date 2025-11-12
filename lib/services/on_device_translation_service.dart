@@ -28,6 +28,9 @@ class OnDeviceTranslationService extends ChangeNotifier {
   // Model paths
   static const String _encoderModelPath = 'assets/models/nllb_encoder.tflite';
   static const String _decoderModelPath = 'assets/models/nllb_decoder.tflite';
+  // ignore_for_file: todo
+  // Vocabulary file path reserved for future explicit loading. Silence analyzer.
+  // ignore: unused_field
   static const String _vocabPath = 'assets/models/nllb_vocab.json';
 
   // Token limits

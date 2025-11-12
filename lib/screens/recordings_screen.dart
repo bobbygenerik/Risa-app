@@ -1,3 +1,4 @@
+// ignore_for_file: todo
 import 'package:flutter/material.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -146,6 +147,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
   }
 
+  // ignore: unused_element
   String _formatDuration(int seconds) {
     final hours = seconds ~/ 3600;
     final minutes = (seconds % 3600) ~/ 60;

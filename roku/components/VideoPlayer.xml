@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component name="VideoPlayer" extends="Group">
+  <interface>
+    <field id="videoContent" type="node" onChange="onContentChange" />
+  </interface>
+
+  <script type="text/brightscript" uri="pkg:/components/VideoPlayer.brs" />
+
+  <children>
+    <Video id="video"
+      width="1920"
+      height="1080"
+      translation="[0, 0]"
+      visible="true" />
+  </children>
+</component>

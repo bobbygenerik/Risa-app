@@ -1,3 +1,4 @@
+// ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -628,9 +629,9 @@ class _FocusableCardState extends State<_FocusableCard> {
         width: _focused ? 160 : 140,
         height: 220,
         margin: const EdgeInsets.symmetric(vertical: 4),
-        transform: _focused
-            ? (Matrix4.identity()..scale(1.12))
-            : Matrix4.identity(),
+    transform: _focused
+      ? Matrix4.diagonal3Values(1.12, 1.12, 1.12)
+      : Matrix4.identity(),
         decoration: BoxDecoration(
           color: AppTheme.cardBackground.withAlpha((0.88 * 255).round()),
           borderRadius: BorderRadius.circular(18),
@@ -754,7 +755,9 @@ class _FocusableCarouselState extends State<_FocusableCarousel> {
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 240),
         opacity: _focused ? 1.0 : 0.92,
-        child: AnimatedScale(
+  // Deprecated AnimatedScale.scale usage triggers analyzer for older Flutter SDKs;
+  // keep behavior for now.
+  child: AnimatedScale(
           duration: const Duration(milliseconds: 220),
           scale: _focused ? 1.02 : 1.0,
           child: Column(

@@ -52,7 +52,7 @@ class Content {
     if (type == ContentType.series &&
         seasonNumber != null &&
         episodeNumber != null) {
-      return '$title - S${seasonNumber}E${episodeNumber}';
+  return '$title - S${seasonNumber}E$episodeNumber';
     }
     return title;
   }

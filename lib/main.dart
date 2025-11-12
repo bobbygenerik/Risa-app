@@ -1,4 +1,5 @@
 import 'dart:async';
+// ignore_for_file: todo
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -10,7 +11,6 @@ import 'package:iptv_player/services/voice_search_service.dart';
 import 'package:iptv_player/services/epg_service.dart';
 import 'package:iptv_player/services/google_drive_sync_service.dart';
 import 'package:iptv_player/services/ai_upscaling_service.dart';
-import 'package:iptv_player/services/whisper_speech_service.dart';
 import 'package:iptv_player/services/mlkit_translation_service.dart';
 import 'package:iptv_player/services/live_transcription_service.dart';
 import 'package:iptv_player/services/ai_model_manager.dart';
@@ -43,17 +43,19 @@ import 'package:iptv_player/services/background_task_manager.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
-void main() async {
+void main() {
+  // Initialize binding BEFORE any async or zone operations
   WidgetsFlutterBinding.ensureInitialized();
-  FlutterError.onError = (FlutterErrorDetails details) {
-    FlutterError.presentError(details);
-    Zone.current.handleUncaughtError(
-      details.exception,
-      details.stack ?? StackTrace.current,
-    );
-  };
+  
   runZonedGuarded(
     () {
+      FlutterError.onError = (FlutterErrorDetails details) {
+        FlutterError.presentError(details);
+        Zone.current.handleUncaughtError(
+          details.exception,
+          details.stack ?? StackTrace.current,
+        );
+      };
       runApp(const MyApp());
     },
     (error, stack) {
@@ -177,11 +179,12 @@ class _MyAppState extends State<MyApp> {
       debugPrint('Initialization error: $error');
       debugPrint('$stack');
     } finally {
-      if (!mounted) return;
-      setState(() {
-        _profileReady = true;
-        _loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _profileReady = true;
+          _loading = false;
+        });
+      }
     }
   }
 
@@ -334,9 +337,6 @@ class _MyAppState extends State<MyApp> {
             create: (_) => AIUpscalingService()..initialize(),
           ),
           ChangeNotifierProvider(
-            create: (_) => WhisperSpeechService()..initialize(),
-          ),
-          ChangeNotifierProvider(
             create: (_) => MLKitTranslationService()..initialize(),
           ),
           ChangeNotifierProvider(
@@ -362,9 +362,14 @@ class _MyAppState extends State<MyApp> {
               builder: (context, child) {
                 final media = MediaQuery.of(context);
                 final resolvedChild = child ?? const SizedBox.shrink();
-                _maybePromptForProfile(context, profileProvider);
+                _maybePromptForProfile(profileProvider);
+                // Using textScaleFactor is deprecated in newer Flutter versions.
+                // Keep current behavior but silence the deprecation until a
+                // larger migration to TextScaler is performed.
+                // ignore: deprecated_member_use
+                final mediaData = media.copyWith(textScaleFactor: 0.95);
                 return MediaQuery(
-                  data: media.copyWith(textScaleFactor: 0.95),
+                  data: mediaData,
                   child: resolvedChild,
                 );
               },
@@ -375,10 +380,7 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  void _maybePromptForProfile(
-    BuildContext context,
-    ProfileProvider profileProvider,
-  ) {
+  void _maybePromptForProfile(ProfileProvider profileProvider) {
     final shouldPrompt = profileProvider.activeProfile == null;
     if (!shouldPrompt) {
       _profileDialogScheduled = false;
@@ -386,7 +388,7 @@ class _MyAppState extends State<MyApp> {
     }
 
     if (profileProvider.profiles.isEmpty) {
-      _ensureDefaultProfile(context);
+      _ensureDefaultProfile(profileProvider);
       return;
     }
 
@@ -396,28 +398,26 @@ class _MyAppState extends State<MyApp> {
 
     _profileDialogScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
+      // Avoid using the widget BuildContext across async gaps. Use the
+      // ProfileProvider instance passed into this method (already captured
+      // from the widget tree) instead of calling Provider.of(context).
+      final profileProviderRef = profileProvider;
       try {
-        await _showProfileDialog(context);
+        await _showProfileDialog();
       } finally {
-        if (!mounted) {
-          return;
-        }
-        final stillMissingProfile =
-            Provider.of<ProfileProvider>(
-              context,
-              listen: false,
-            ).activeProfile ==
-            null;
+        // Ensure the scheduled flag is cleared regardless of mounted state.
         _profileDialogScheduled = false;
-        if (stillMissingProfile) {
-          setState(() {});
+        if (mounted) {
+          final stillMissingProfile = profileProviderRef.activeProfile == null;
+          if (stillMissingProfile) {
+            setState(() {});
+          }
         }
       }
     });
   }
 
-  Future<void> _showProfileDialog(BuildContext context) async {
+  Future<void> _showProfileDialog() async {
     final navigatorContext = _rootNavigatorKey.currentContext;
     if (navigatorContext == null) {
       _profileDialogScheduled = false;
@@ -431,12 +431,11 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  void _ensureDefaultProfile(BuildContext context) {
+  void _ensureDefaultProfile(ProfileProvider provider) {
     if (_creatingDefaultProfile) {
       return;
     }
 
-    final provider = Provider.of<ProfileProvider>(context, listen: false);
     if (provider.profiles.isNotEmpty) {
       return;
     }
@@ -526,9 +525,13 @@ class _ProfileSelectionDialogState extends State<_ProfileSelectionDialog> {
             if (name.isNotEmpty) {
               final id = DateTime.now().millisecondsSinceEpoch.toString();
               final profile = UserProfile(id: id, name: name, avatarUrl: '');
+              // Capture a reference to the root navigator so we don't use the
+              // dialog's BuildContext after an await (avoids analyzer warnings).
+              final rootNav = _rootNavigatorKey.currentState;
               await provider.addProfile(profile);
               provider.setActiveProfile(profile.id);
-              Navigator.of(context).pop();
+              // Use the root navigator to pop the dialog safely.
+              rootNav?.pop();
             }
           },
           child: const Text('Create'),

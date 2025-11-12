@@ -1,5 +1,5 @@
+// ignore_for_file: todo
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 
@@ -26,7 +26,11 @@ class OnDeviceTranscriptionService extends ChangeNotifier {
 
   // Model configuration
   static const String _modelPath = 'assets/models/whisper_tiny.tflite';
+  // The sample rate and chunk duration are kept for future use; currently
+  // the transcription implementation is a placeholder. Silence analyzer.
+  // ignore: unused_field
   static const int _sampleRate = 16000;
+  // ignore: unused_field
   static const int _chunkDuration = 30; // seconds
 
   // Getters

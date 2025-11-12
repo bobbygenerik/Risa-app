@@ -70,8 +70,5 @@ class WhisperSpeechService extends ChangeNotifier {
     }
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
+  // No additional resources to dispose at this time.
 }

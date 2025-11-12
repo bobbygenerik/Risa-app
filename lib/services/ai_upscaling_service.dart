@@ -71,11 +71,13 @@ class AIUpscalingService extends ChangeNotifier {
       }
 
       if (await downloadedModel.exists()) {
-        _interpreter = await Interpreter.fromFile(
+        // fromFile is synchronous and returns an Interpreter
+        _interpreter = Interpreter.fromFile(
           downloadedModel,
           options: options,
         );
       } else {
+        // fromAsset is asynchronous and returns Future<Interpreter>
         _interpreter = await Interpreter.fromAsset(
           modelPath,
           options: options,
@@ -97,7 +99,22 @@ class AIUpscalingService extends ChangeNotifier {
     }
   }
 
+  /// Return the local downloaded model path if present, otherwise null.
+  Future<String?> getLocalModelPath() async {
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final downloadedModelPath = '${appDir.path}/$_modelFileName';
+      final downloadedModel = File(downloadedModelPath);
+      if (await downloadedModel.exists()) return downloadedModelPath;
+      return null;
+    } catch (e) {
+      debugPrint('Error checking local model path: $e');
+      return null;
+    }
+  }
+
   /// Download the AI upscaling model from Hugging Face
+  /// Uses retry logic (up to 3 attempts with exponential backoff).
   Future<bool> downloadModel() async {
     if (_isDownloading) return false;
 
@@ -105,50 +122,67 @@ class AIUpscalingService extends ChangeNotifier {
     _downloadProgress = 0.0;
     notifyListeners();
 
-    try {
-      final appDir = await getApplicationDocumentsDirectory();
-      final modelPath = '${appDir.path}/$_modelFileName';
-      
-      debugPrint('Downloading AI model from: $_modelUrl');
-      
-      final request = http.Request('GET', Uri.parse(_modelUrl));
-      final response = await request.send();
-      
-      if (response.statusCode != 200) {
-        throw Exception('Failed to download model: ${response.statusCode}');
-      }
-      
-      final contentLength = response.contentLength ?? 0;
-      final file = File(modelPath);
-      final sink = file.openWrite();
-      
-      var received = 0;
-      await for (final chunk in response.stream) {
-        received += chunk.length;
-        sink.add(chunk);
+    int attempt = 0;
+    const maxAttempts = 3;
+    Exception? lastError;
+
+    while (attempt < maxAttempts) {
+      attempt++;
+      try {
+        debugPrint('Downloading AI model (attempt $attempt/$maxAttempts)');
+        final appDir = await getApplicationDocumentsDirectory();
+        final modelPath = '${appDir.path}/$_modelFileName';
         
-        if (contentLength > 0) {
-          _downloadProgress = received / contentLength;
-          notifyListeners();
+        debugPrint('Downloading AI model from: $_modelUrl');
+        
+        final request = http.Request('GET', Uri.parse(_modelUrl));
+        final response = await request.send().timeout(
+          const Duration(seconds: 60),
+          onTimeout: () => throw Exception('Download timeout after 60 seconds'),
+        );
+        
+        if (response.statusCode != 200) {
+          throw Exception('HTTP ${response.statusCode}');
+        }
+        
+        final contentLength = response.contentLength ?? 0;
+        final file = File(modelPath);
+        final sink = file.openWrite();
+        
+        var received = 0;
+        await for (final chunk in response.stream) {
+          received += chunk.length;
+          sink.add(chunk);
+          
+          if (contentLength > 0) {
+            _downloadProgress = received / contentLength;
+            notifyListeners();
+          }
+        }
+        
+        await sink.close();
+        
+        debugPrint('AI model downloaded successfully to: $modelPath');
+        
+        // Initialize with the downloaded model
+        await initialize();
+        
+        return true;
+      } catch (e) {
+        lastError = Exception(e);
+        debugPrint('AI model download attempt $attempt failed: $e');
+
+        if (attempt < maxAttempts) {
+          // Exponential backoff: 2s, 4s, 8s
+          final backoffMs = 1000 * (1 << attempt);
+          debugPrint('Retrying in ${backoffMs}ms...');
+          await Future.delayed(Duration(milliseconds: backoffMs));
         }
       }
-      
-      await sink.close();
-      
-      debugPrint('AI model downloaded successfully to: $modelPath');
-      
-      // Initialize with the downloaded model
-      await initialize();
-      
-      return true;
-    } catch (e) {
-      debugPrint('Error downloading AI model: $e');
-      return false;
-    } finally {
-      _isDownloading = false;
-      _downloadProgress = 0.0;
-      notifyListeners();
     }
+
+    debugPrint('AI model download failed after $maxAttempts attempts: $lastError');
+    return false;
   }
 
   /// Enable/disable AI upscaling

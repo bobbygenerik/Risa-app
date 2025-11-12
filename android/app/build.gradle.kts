@@ -55,4 +55,7 @@ dependencies {
     implementation("org.tensorflow:tensorflow-lite-gpu:2.14.0")
     // Include Play Core to satisfy deferred components references from Flutter embedding
     implementation("com.google.android.play:core:1.10.3")
+    // ExoPlayer for native Android playback and track management (using latest stable)
+    implementation("androidx.media3:media3-exoplayer:1.2.1")
+    implementation("androidx.media3:media3-exoplayer-smoothstreaming:1.2.1")
 }

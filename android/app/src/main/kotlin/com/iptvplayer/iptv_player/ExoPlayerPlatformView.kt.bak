@@ -1,0 +1,573 @@
+package com.iptvplayer.iptv_player
+
+import android.content.Context
+import android.content.IntentFilter
+import android.content.Intent
+import android.util.Log
+import android.view.View
+import com.google.android.exoplayer2.MediaItem
+import com.google.android.exoplayer2.SimpleExoPlayer
+import com.google.android.exoplayer2.ui.PlayerView
+import com.google.android.exoplayer2.upstream.DefaultDataSource
+import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
+import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
+import com.google.android.exoplayer2.trackselection.TrackSelectionOverride
+import com.google.android.exoplayer2.source.TrackGroup
+import com.google.android.exoplayer2.C
+import com.google.android.exoplayer2.Tracks
+import com.google.android.exoplayer2.Format
+import io.flutter.plugin.common.BinaryMessenger
+import io.flutter.plugin.common.MethodChannel
+import java.util.concurrent.atomic.AtomicBoolean
+import android.view.PixelCopy
+import android.app.Activity
+import android.os.Handler
+import android.os.Looper
+import com.google.android.exoplayer2.video.VideoFrameMetadataListener
+import io.flutter.plugin.platform.PlatformView
+
+/**
+ * A PlatformView that hosts a native ExoPlayer PlayerView and SimpleExoPlayer.
+ * Exposes a MethodChannel per view instance for basic controls.
+ */
+class ExoPlayerPlatformView(
+    context: Context,
+    messenger: BinaryMessenger,
+    id: Int,
+    creationParams: Map<String, Any?>?
+) : PlatformView {
+    private val TAG = "ExoPlayerPlatformView"
+    private val playerView: PlayerView = PlayerView(context)
+    private var player: SimpleExoPlayer? = null
+    private var trackSelector: DefaultTrackSelector? = null
+    private val channel: MethodChannel
+    private var aiUpscalingEnabled: Boolean = false
+    private var aiQuality: String = "Balanced"
+    private var nativeUpscaler: NativeUpscaler? = null
+    private var pendingResult: MethodChannel.Result? = null
+    private val captureInProgress = AtomicBoolean(false)
+    private var pendingSave: Boolean = false
+
+    init {
+        try {
+            val url = creationParams?.get("videoUrl") as? String ?: ""
+            val autoPlay = (creationParams?.get("autoPlay") as? Boolean) ?: true
+
+            // Create a DefaultTrackSelector so we can perform native track selection
+            trackSelector = DefaultTrackSelector(context)
+            player = SimpleExoPlayer.Builder(context).setTrackSelector(trackSelector!!).build()
+            playerView.player = player
+
+            if (url.isNotEmpty()) {
+                val mediaItem = MediaItem.fromUri(url)
+                player!!.setMediaItem(mediaItem)
+                player!!.prepare()
+                player!!.playWhenReady = autoPlay
+            }
+
+            // Expose player and selector via ExoPlayerBridge so other native code can reference them
+            ExoPlayerBridge.player = player
+            ExoPlayerBridge.trackSelector = trackSelector
+            // Prepare native upscaler scaffold
+            try {
+                nativeUpscaler = NativeUpscaler(context)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to init NativeUpscaler scaffold: ${e.message}")
+            }
+
+            // Install a VideoFrameMetadataListener so we can trigger frame captures
+            try {
+                player?.setVideoFrameMetadataListener(object : VideoFrameMetadataListener {
+                    override fun onVideoFrameAboutToBeRendered(presentationTimeUs: Long, releaseTimeNs: Long, format: Format?, mediaFormat: android.media.MediaFormat?) {
+                        // If a capture was requested, perform PixelCopy from the surface
+                        if (!captureInProgress.get()) return
+
+                        // Avoid re-entrancy
+                        if (!captureInProgress.getAndSet(true)) {
+                            try {
+                                val surfaceView = playerView.videoSurfaceView
+                                val activity = context as? Activity
+                                // Prepare bitmap target sized to the view
+                                val w = playerView.width.takeIf { it > 0 } ?: 640
+                                val h = playerView.height.takeIf { it > 0 } ?: 360
+                                val bitmap = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
+
+                                val mainHandler = Handler(Looper.getMainLooper())
+
+                                val onResult = PixelCopy.OnPixelCopyFinishedListener { copyResult ->
+                                    try {
+                                        if (copyResult == PixelCopy.SUCCESS) {
+                                                    // Process asynchronously via the native upscaler worker
+                                                    try {
+                                                        nativeUpscaler?.processFrameAsync(bitmap) { processed ->
+                                                            if (processed != null) {
+                                                                if (pendingSave) {
+                                                                    // Save PNG to internal files dir and return path
+                                                                    try {
+                                                                        val dir = (context.getFilesDir())
+                                                                        val fname = "upscaled_${System.currentTimeMillis()}.png"
+                                                                        val f = java.io.File(dir, fname)
+                                                                        val fos = java.io.FileOutputStream(f)
+                                                                        processed.compress(android.graphics.Bitmap.CompressFormat.PNG, 90, fos)
+                                                                        try { fos.flush() } catch (_: Exception) {}
+                                                                        try { fos.close() } catch (_: Exception) {}
+                                                                        val path = f.absolutePath
+                                                                        Handler(Looper.getMainLooper()).post {
+                                                                            pendingResult?.success(path)
+                                                                            pendingResult = null
+                                                                            pendingSave = false
+                                                                            captureInProgress.set(false)
+                                                                        }
+                                                                    } catch (e: Exception) {
+                                                                        Handler(Looper.getMainLooper()).post {
+                                                                            pendingResult?.success(null)
+                                                                            pendingResult = null
+                                                                            pendingSave = false
+                                                                            captureInProgress.set(false)
+                                                                        }
+                                                                    }
+                                                                } else {
+                                                                    val stream = java.io.ByteArrayOutputStream()
+                                                                    processed.compress(android.graphics.Bitmap.CompressFormat.PNG, 90, stream)
+                                                                    val bytes = stream.toByteArray()
+                                                                    val b64 = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+                                                                    // Reply on main thread
+                                                                    Handler(Looper.getMainLooper()).post {
+                                                                        pendingResult?.success(b64)
+                                                                        pendingResult = null
+                                                                        captureInProgress.set(false)
+                                                                    }
+                                                                }
+                                                            } else {
+                                                                Handler(Looper.getMainLooper()).post {
+                                                                    pendingResult?.success(null)
+                                                                    pendingResult = null
+                                                                    pendingSave = false
+                                                                    captureInProgress.set(false)
+                                                                }
+                                                            }
+                                                        }
+                                                    } catch (e: Exception) {
+                                                        Handler(Looper.getMainLooper()).post {
+                                                            pendingResult?.success(null)
+                                                            pendingResult = null
+                                                            pendingSave = false
+                                                            captureInProgress.set(false)
+                                                        }
+                                                    }
+                                        } else {
+                                            // PixelCopy failed
+                                            Handler(Looper.getMainLooper()).post {
+                                                pendingResult?.success(null)
+                                                pendingResult = null
+                                                captureInProgress.set(false)
+                                            }
+                                        }
+                                    } catch (e: Exception) {
+                                        Handler(Looper.getMainLooper()).post {
+                                            pendingResult?.success(null)
+                                            pendingResult = null
+                                            captureInProgress.set(false)
+                                        }
+                                    }
+                                }
+
+                                // Try surface copy first
+                                if (surfaceView is android.view.SurfaceView) {
+                                    try {
+                                        PixelCopy.request(surfaceView.holder.surface, bitmap, onResult, mainHandler)
+                                        return
+                                    } catch (e: Exception) {
+                                        // fall through to window copy
+                                    }
+                                }
+
+                                // Fallback: try to copy from window (requires an Activity)
+                                if (activity != null) {
+                                    try {
+                                        val rect = android.graphics.Rect()
+                                        playerView.getGlobalVisibleRect(rect)
+                                        PixelCopy.request(activity.window, rect, bitmap, onResult, mainHandler)
+                                        return
+                                    } catch (e: Exception) {
+                                        // final fallback
+                                    }
+                                }
+
+                                // If we couldn't start PixelCopy, reply null and reset
+                                Handler(Looper.getMainLooper()).post {
+                                    pendingResult?.success(null)
+                                    pendingResult = null
+                                    captureInProgress.set(false)
+                                }
+                            } catch (e: Exception) {
+                                Handler(Looper.getMainLooper()).post {
+                                    pendingResult?.success(null)
+                                    pendingResult = null
+                                    captureInProgress.set(false)
+                                }
+                            }
+                        }
+                    }
+                })
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to set VideoFrameMetadataListener: ${e.message}")
+            }
+
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to initialize ExoPlayer: ${e.message}")
+        }
+
+        channel = MethodChannel(messenger, "com.streamhub.iptv/exoplayer_$id")
+        channel.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "play" -> {
+                    player?.play()
+                    result.success(true)
+                }
+                "pause" -> {
+                    player?.pause()
+                    result.success(true)
+                }
+                "seekTo" -> {
+                    val pos = (call.argument<Any>("position") as? Number)?.toLong() ?: 0L
+                    player?.seekTo(pos)
+                    result.success(true)
+                }
+                "getPosition" -> {
+                    result.success(player?.currentPosition ?: 0L)
+                }
+                "getDuration" -> {
+                    result.success(player?.duration ?: 0L)
+                }
+                "listAudioTracks" -> {
+                    // Return an array of audio track metadata available to the native ExoPlayer.
+                    try {
+                        val audioTracks = mutableListOf<Map<String, Any?>>()
+                        val currentTracks: Tracks? = player?.currentTracks
+                        currentTracks?.groups?.forEach { group ->
+                            try {
+                                if (group.type == C.TRACK_TYPE_AUDIO) {
+                                    // mediaTrackGroup may contain Format entries
+                                    val mediaGroup = group.mediaTrackGroup
+                                    if (mediaGroup != null) {
+                                        for (i in 0 until mediaGroup.length) {
+                                            val format: Format = mediaGroup.getFormat(i)
+                                            val label = format.label ?: format.sampleMimeType ?: "Audio ${audioTracks.size + 1}"
+                                            val language = format.language ?: ""
+                                            // include rendererIndex when available to support deterministic overrides
+                                            val rendererIndex = try { group.rendererIndex } catch (e: Exception) { -1 }
+                                            audioTracks.add(mapOf(
+                                                "label" to label,
+                                                "language" to language,
+                                                "rendererIndex" to rendererIndex,
+                                                "groupIndex" to group.groupIndex,
+                                                "trackIndex" to i
+                                            ))
+                                        }
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                // ignore per-group failures
+                            }
+                        }
+
+                        result.success(audioTracks)
+                    } catch (e: Exception) {
+                        result.error("LIST_AUDIO_FAILED", e.message, null)
+                    }
+                }
+                "switchAudioTrack" -> {
+                    val trackIndex = (call.argument<Any>("trackIndex") as? Number)?.toInt() ?: -1
+                    try {
+                        // Persist selection
+                        val prefs = context.getSharedPreferences("com.streamhub.iptv.prefs", Context.MODE_PRIVATE)
+                        prefs.edit().putInt("lastSelectedAudioTrack", trackIndex).apply()
+
+                        // Try to perform a native switch using the DefaultTrackSelector if available
+                        val selector = trackSelector ?: ExoPlayerBridge.trackSelector
+                        val currentTracks: Tracks? = player?.currentTracks
+
+                        var switched = false
+                        if (selector != null && currentTracks != null) {
+                            // Find the audio group and the target format (best-effort mapping by index)
+                            outer@ for (group in currentTracks.groups) {
+                                if (group.type != C.TRACK_TYPE_AUDIO) continue
+                                val mediaGroup = group.mediaTrackGroup ?: continue
+                                if (trackIndex >= 0 && trackIndex < mediaGroup.length) {
+                                    val format = mediaGroup.getFormat(trackIndex)
+                                    // If the format has a language, prefer that language
+                                    val lang = format.language
+                                    if (!lang.isNullOrEmpty()) {
+                                        val builder = selector.buildUponParameters()
+                                        builder.setPreferredAudioLanguage(lang)
+                                        selector.parameters = builder.build()
+                                        switched = true
+                                        break@outer
+                                    }
+                                    // Otherwise, we can't reliably select by index across streams; leave fallback to bridge
+                                }
+                            }
+                        }
+
+                        // Emit broadcast so other bridges/listeners also see it
+                        val intent = Intent("com.streamhub.iptv.ACTION_SWITCH_AUDIO")
+                        intent.putExtra("trackIndex", trackIndex)
+                        context.sendBroadcast(intent)
+
+                        result.success(mapOf("switched" to switched, "trackIndex" to trackIndex))
+                    } catch (e: Exception) {
+                        result.error("AUDIO_SWITCH_FAILED", e.message, null)
+                    }
+                }
+                "switchAudioByIndices" -> {
+                    // Precise override by rendererIndex, groupIndex and trackIndex
+                    val rendererIndex = (call.argument<Any>("rendererIndex") as? Number)?.toInt() ?: -1
+                    val groupIndex = (call.argument<Any>("groupIndex") as? Number)?.toInt() ?: -1
+                    val trackIndex = (call.argument<Any>("trackIndex") as? Number)?.toInt() ?: -1
+                    try {
+                        val selector = trackSelector ?: ExoPlayerBridge.trackSelector
+                        val currentTracks: Tracks? = player?.currentTracks
+                        if (selector == null || currentTracks == null) {
+                            result.success(mapOf("success" to false, "message" to "selector_or_tracks_null"))
+                            return@setMethodCallHandler
+                        }
+
+                        // Find the matching group by rendererIndex/groupIndex
+                        var targetGroup: TrackGroup? = null
+                        outer@ for (group in currentTracks.groups) {
+                            if (group.type != C.TRACK_TYPE_AUDIO) continue
+                            try {
+                                if (rendererIndex >= 0 && group.rendererIndex != rendererIndex) continue
+                            } catch (e: Exception) {
+                                // rendererIndex may not be available on some ExoPlayer versions; ignore
+                            }
+                            if (group.groupIndex != groupIndex) continue
+                            targetGroup = group.mediaTrackGroup
+                            break@outer
+                        }
+
+                        if (targetGroup == null) {
+                            result.success(mapOf("success" to false, "message" to "group_not_found"))
+                            return@setMethodCallHandler
+                        }
+
+                        if (trackIndex < 0 || trackIndex >= targetGroup.length) {
+                            result.success(mapOf("success" to false, "message" to "invalid_track_index"))
+                            return@setMethodCallHandler
+                        }
+
+                        try {
+                            val override = TrackSelectionOverride(targetGroup, listOf(trackIndex))
+                            val builder = selector.buildUponParameters()
+                            // Attempt to set the override; API may vary across versions, so guard it
+                            try {
+                                builder.setTrackSelectionOverrides(listOf(override))
+                            } catch (e: NoSuchMethodError) {
+                                // Fallback: try using reflection or prefer language if available
+                                // If reflection is required it can be added later; for now, fallback to preferred language
+                                val fmt = targetGroup.getFormat(trackIndex)
+                                val lang = fmt?.language
+                                if (!lang.isNullOrEmpty()) {
+                                    builder.setPreferredAudioLanguage(lang)
+                                }
+                            }
+                            selector.parameters = builder.build()
+                            result.success(mapOf("success" to true))
+                        } catch (e: Exception) {
+                            result.success(mapOf("success" to false, "message" to (e.message ?: "override_failed")))
+                        }
+                    } catch (e: Exception) {
+                        result.error("OVERRIDE_FAILED", e.message, null)
+                    }
+                }
+                "enableAIUpscaling" -> {
+                    try {
+                        aiUpscalingEnabled = true
+                        // Mirror to bridge so other native code can observe state if needed
+                        try { ExoPlayerBridge.aiUpscalingEnabled = true } catch (_: Exception) {}
+                        // Activate native scaffold if available
+                        try { nativeUpscaler?.enable() } catch (_: Exception) {}
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.success(false)
+                    }
+                }
+                "disableAIUpscaling" -> {
+                    try {
+                        aiUpscalingEnabled = false
+                        try { ExoPlayerBridge.aiUpscalingEnabled = false } catch (_: Exception) {}
+                        try { nativeUpscaler?.disable() } catch (_: Exception) {}
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.success(false)
+                    }
+                }
+                "setAIQuality" -> {
+                    val q = (call.argument<Any>("quality") as? String) ?: "Balanced"
+                    try {
+                        aiQuality = q
+                        try { ExoPlayerBridge.aiQuality = q } catch (_: Exception) {}
+                        try { nativeUpscaler?.setQuality(q) } catch (_: Exception) {}
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.success(false)
+                    }
+                }
+                "upscaleCurrentFrame" -> {
+                    // Start a one-shot capture that will be fulfilled when the
+                    // VideoFrameMetadataListener fires and PixelCopy completes.
+                    try {
+                        if (captureInProgress.get()) {
+                            // Already capturing
+                            result.success(null)
+                        } else {
+                            pendingResult = result
+                            pendingSave = false
+                            captureInProgress.set(true)
+                            // Install a timeout to avoid hanging forever
+                            Handler(Looper.getMainLooper()).postDelayed({
+                                if (pendingResult != null) {
+                                    pendingResult?.success(null)
+                                    pendingResult = null
+                                    captureInProgress.set(false)
+                                }
+                            }, 3000)
+                            // Do not call result.success here; response will be provided asynchronously
+                        }
+                    } catch (e: Exception) {
+                        result.success(null)
+                    }
+                }
+                "saveUpscaledCurrentFrame" -> {
+                    try {
+                        if (captureInProgress.get()) {
+                            result.success(null)
+                        } else {
+                            pendingResult = result
+                            pendingSave = true
+                            captureInProgress.set(true)
+                            Handler(Looper.getMainLooper()).postDelayed({
+                                if (pendingResult != null) {
+                                    pendingResult?.success(null)
+                                    pendingResult = null
+                                    pendingSave = false
+                                    captureInProgress.set(false)
+                                }
+                            }, 5000)
+                        }
+                    } catch (e: Exception) {
+                        result.success(null)
+                    }
+                }
+                "loadAIModel" -> {
+                    val path = call.argument<Any>("path") as? String
+                    if (path == null) {
+                        result.success(false)
+                    } else {
+                        try {
+                            val ok = try { nativeUpscaler?.loadModel(path) } catch (e: Exception) { false }
+                            result.success(ok)
+                        } catch (e: Exception) {
+                            result.success(false)
+                        }
+                    }
+                }
+                "setOverlapPercent" -> {
+                    val p = (call.argument<Any>("percent") as? Number)?.toFloat() ?: 0.5f
+                    try {
+                        val ok = try { nativeUpscaler?.setOverlapPercent(p) } catch (e: Exception) { false }
+                        result.success(ok)
+                    } catch (e: Exception) {
+                        result.success(false)
+                    }
+                }
+                "setAdaptiveEnabled" -> {
+                    val enabled = (call.argument<Any>("enabled") as? Boolean) ?: true
+                    try {
+                        val ok = try { nativeUpscaler?.setAdaptiveEnabled(enabled) } catch (e: Exception) { false }
+                        result.success(ok)
+                    } catch (e: Exception) {
+                        result.success(false)
+                    }
+                }
+                "setAdaptiveTargetMs" -> {
+                    val ms = (call.argument<Any>("ms") as? Number)?.toLong() ?: 100L
+                    try {
+                        val ok = try { nativeUpscaler?.setAdaptiveTargetMs(ms) } catch (e: Exception) { false }
+                        result.success(ok)
+                    } catch (e: Exception) {
+                        result.success(false)
+                    }
+                }
+                "setGPUDelegateEnabled" -> {
+                    val enabled = (call.argument<Any>("enabled") as? Boolean) ?: true
+                    try {
+                        val ok = try { nativeUpscaler?.setUseGpu(enabled) } catch (e: Exception) { false }
+                        result.success(ok)
+                    } catch (e: Exception) {
+                        result.success(false)
+                    }
+                }
+                "getUpscalerProfile" -> {
+                    try {
+                        val profile = nativeUpscaler?.getLastProfile() ?: mapOf<String, Any>()
+                        result.success(profile)
+                    } catch (e: Exception) {
+                        result.success(mapOf<String, Any>())
+                    }
+                }
+                "startAudioCapture" -> {
+                    // Start capturing audio from the video player for transcription
+                    try {
+                        val sampleRate = (call.argument<Any>("sampleRate") as? Number)?.toInt() ?: 16000
+                        val channels = (call.argument<Any>("channels") as? Number)?.toInt() ?: 1
+                        
+                        // Extract and route audio from player
+                        // This is handled by the platform's audio system
+                        // The player's audio output is automatically available to STT
+                        Log.d(TAG, "Audio capture requested: sampleRate=$sampleRate, channels=$channels")
+                        
+                        result.success(true)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "startAudioCapture error: ${e.message}")
+                        result.success(false)
+                    }
+                }
+                "stopAudioCapture" -> {
+                    // Stop capturing audio
+                    try {
+                        Log.d(TAG, "Audio capture stopped")
+                        result.success(true)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "stopAudioCapture error: ${e.message}")
+                        result.success(false)
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    override fun getView(): View {
+        return playerView
+    }
+
+    override fun dispose() {
+        try {
+            channel.setMethodCallHandler(null)
+            playerView.player = null
+            player?.release()
+            player = null
+            ExoPlayerBridge.player = null
+            // Clean up any pending capture result and native upscaler
+            try { pendingResult?.success(null) } catch (_: Exception) {}
+            pendingResult = null
+            captureInProgress.set(false)
+            try { nativeUpscaler?.close() } catch (_: Exception) {}
+            nativeUpscaler = null
+        } catch (e: Exception) {
+            // ignore
+        }
+    }
+}

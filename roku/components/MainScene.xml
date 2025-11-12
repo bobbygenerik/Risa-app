@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component name="MainScene" extends="Scene">
+  <interface>
+    <field id="channels" type="array" />
+  </interface>
+
+  <script type="text/brightscript">
+    <![CDATA[
+      function init()
+        m.background = m.top.findNode("background")
+        m.channelGrid = m.top.findNode("channelGrid")
+        m.videoPlayer = m.top.findNode("videoPlayer")
+        m.titleLabel = m.top.findNode("titleLabel")
+        
+        ' Set up screen dimensions
+        m.screenWidth = 1920
+        m.screenHeight = 1080
+        
+        ' Initialize with demo channels
+        initDemoChannels()
+        
+        ' Set focus to channel grid
+        m.channelGrid.setFocus(true)
+      end function
+
+      function initDemoChannels()
+        channels = []
+        
+        demoChannels = [
+          { title: "Channel 1", url: "http://example.com/stream1.m3u8", logo: "pkg:/images/icon_hd.png" }
+          { title: "Channel 2", url: "http://example.com/stream2.m3u8", logo: "pkg:/images/icon_hd.png" }
+          { title: "Channel 3", url: "http://example.com/stream3.m3u8", logo: "pkg:/images/icon_hd.png" }
+          { title: "Channel 4", url: "http://example.com/stream4.m3u8", logo: "pkg:/images/icon_hd.png" }
+          { title: "Channel 5", url: "http://example.com/stream5.m3u8", logo: "pkg:/images/icon_hd.png" }
+        ]
+        
+        m.channelGrid.channels = demoChannels
+        m.channelGrid.selectedIndex = 0
+      end function
+
+      function onKeyEvent(key as string, press as boolean) as boolean
+        if not press
+          return false
+        end if
+        
+        if key = "OK" or key = "Play"
+          playSelectedChannel()
+          return true
+        else if key = "Back" or key = "Exit"
+          return true
+        end if
+        
+        return false
+      end function
+
+      function playSelectedChannel()
+        channels = m.channelGrid.channels
+        index = m.channelGrid.selectedIndex
+        
+        if channels <> invalid and index >= 0 and index < channels.count()
+          selected = channels[index]
+          m.videoPlayer.videoContent = selected
+          m.videoPlayer.visible = true
+        end if
+      end function
+    ]]>
+  </script>
+
+  <children>
+    <Rectangle id="background"
+      width="1920"
+      height="1080"
+      color="0x1a1a1aff" />
+    
+    <Group id="overlayGroup"
+      width="1920"
+      height="1080"
+      translation="[0, 0]">
+      
+      <ChannelGrid id="channelGrid"
+        width="1920"
+        height="900"
+        translation="[0, 80]" />
+      
+      <Label id="titleLabel"
+        text="IPTV Player"
+        font="font:LargeSystemFont"
+        color="0xffffffff"
+        translation="[30, 30]" />
+    </Group>
+    
+    <VideoPlayer id="videoPlayer"
+      width="1920"
+      height="1080"
+      translation="[0, 0]"
+      visible="false" />
+  </children>
+</component>

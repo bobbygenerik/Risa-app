@@ -1,3 +1,4 @@
+// ignore_for_file: todo
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/services/integrated_transcription_service.dart';
@@ -241,7 +242,8 @@ class TranscriptionControlPanel extends StatelessWidget {
         Text(label, style: Theme.of(context).textTheme.bodyMedium),
         SizedBox(height: 4),
         DropdownButtonFormField<dynamic>(
-          value: currentLanguage,
+          // Use initialValue to avoid deprecated `value` usage.
+          initialValue: currentLanguage,
           decoration: const InputDecoration(
             border: OutlineInputBorder(),
             isDense: true,

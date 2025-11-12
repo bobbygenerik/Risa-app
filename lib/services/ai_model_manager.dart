@@ -1,5 +1,9 @@
 import 'dart:async';
 import 'dart:io';
+
+// Small single-line control statements across this manager are intentionally
+// left without braces in a few places. Silence the analyzer info for now.
+// ignore_for_file: curly_braces_in_flow_control_structures
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
@@ -200,7 +204,7 @@ class AIModel {
 
   /// Get human-readable size
   String get sizeFormatted {
-    if (sizeBytes < 1024) return '${sizeBytes} B';
+    if (sizeBytes < 1024) return '$sizeBytes B';
     if (sizeBytes < 1024 * 1024)
       return '${(sizeBytes / 1024).toStringAsFixed(1)} KB';
     return '${(sizeBytes / (1024 * 1024)).toStringAsFixed(1)} MB';

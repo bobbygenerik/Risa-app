@@ -160,7 +160,12 @@ class _VlcEnhancedPlayerScreenState extends State<VlcEnhancedPlayerScreen> {
         ),
       );
 
-      await _controller!.initialize();
+
+  // Read AI upscaling service before awaiting controller initialization to
+  // avoid using BuildContext after an async gap (prevents use_build_context_synchronously).
+  final aiService = context.read<AIUpscalingService>();
+
+  await _controller!.initialize();
 
       // Get available subtitle and audio tracks
       final spuCount = await _controller!.getSpuTracksCount() ?? 0;
@@ -179,7 +184,6 @@ class _VlcEnhancedPlayerScreenState extends State<VlcEnhancedPlayerScreen> {
       }
 
       // Enable AI upscaling if available
-      final aiService = context.read<AIUpscalingService>();
       if (aiService.isModelLoaded) {
         aiService.setEnabled(true);
       }
@@ -191,10 +195,12 @@ class _VlcEnhancedPlayerScreenState extends State<VlcEnhancedPlayerScreen> {
         _downloadSubtitlesFromOpenSubtitles();
       }
 
-      setState(() {
-        _isInitialized = true;
-        _hasError = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+          _hasError = false;
+        });
+      }
     } catch (e) {
       debugPrint('VLC Player initialization error: $e');
       setState(() {
