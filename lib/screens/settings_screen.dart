@@ -91,9 +91,11 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool _aiUpscalingEnabled = false;
   String _aiQuality = 'Balanced';
   bool _autoDownloadSubtitles = true;
+  // ignore: unused_field
   String _preferredSubtitleLanguage = 'English';
 
   // Other Settings
+  // ignore: unused_field
   String _selectedLanguage = 'English';
   // ignore: unused_field
   String _chromecastDevice = 'Chromecast';
@@ -179,7 +181,9 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   @override
   void dispose() {
-    for (var n in _menuFocusNodes) n.dispose();
+    for (var n in _menuFocusNodes) {
+      n.dispose();
+    }
     _tabController.dispose();
     _m3uUrlController.dispose();
     _m3uUrlFocusNode.dispose();
@@ -757,9 +761,13 @@ class _SettingsScreenState extends State<SettingsScreen>
               (value) async {
                 if (value != null) {
                   int channels = 0;
-                  if (value == 'Stereo') channels = 2;
-                  else if (value == '5.1 Surround') channels = 6;
-                  else if (value == '7.1 Surround') channels = 8;
+                  if (value == 'Stereo') {
+                    channels = 2;
+                  } else if (value == '5.1 Surround') {
+                    channels = 6;
+                  } else if (value == '7.1 Surround') {
+                    channels = 8;
+                  }
                   
                   setState(() => _audioChannels = channels);
                   final prefs = await SharedPreferences.getInstance();
@@ -1512,6 +1520,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
+  // ignore: unused_element
   Widget _buildAISettingsSection() {
     return _buildSettingsSection(
       title: 'AI & Cloud Settings',
@@ -1741,7 +1750,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                             '• GPU Acceleration: ${aiService.isGPUAvailable ? "✓ Available" : "✗ CPU Only"}',
                           ),
                           Text('• Upscales video to 2x resolution'),
-                          Text('• Quality: ${_aiQuality}'),
+                          Text('• Quality: $_aiQuality'),
                           if (aiService.isGPUAvailable)
                             Text(
                               '• Est. Performance: ${_getAIPerformanceText(_aiQuality, true)}',
@@ -3286,6 +3295,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
+  // ignore: unused_element
   String _getLanguageCode(String languageName) {
     switch (languageName) {
       case 'English':
@@ -3335,11 +3345,13 @@ class _SettingsScreenState extends State<SettingsScreen>
     return '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 
+  // ignore: unused_element
   String _formatBytes(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024)
+    if (bytes < 1024 * 1024 * 1024) {
       return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
 

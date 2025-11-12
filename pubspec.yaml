@@ -20,6 +20,7 @@ dependencies:
   provider: ^6.1.2
   xml: ^6.5.0
   shared_preferences: ^2.3.3
+  path: ^1.9.1
   path_provider: ^2.1.5
   speech_to_text: ^7.0.0
   permission_handler: ^11.3.1

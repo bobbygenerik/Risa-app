@@ -458,7 +458,7 @@ class _AppShellState extends State<AppShell>
         child: Column(
           children: [
             // App logo and divider container
-            Container(
+            SizedBox(
               height: AppSizes
                   .appBarHeight, // Match top bar height for perfect alignment
               width: double.infinity,

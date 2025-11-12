@@ -298,6 +298,7 @@ class TrueOnDeviceTranscriptionService extends ChangeNotifier {
   }
 
   /// Process audio chunk with Vosk (on-device recognition)
+  // ignore: unused_element
   Future<void> _processAudioChunk(List<int> audioData) async {
     if (_recognizer == null) return;
 
