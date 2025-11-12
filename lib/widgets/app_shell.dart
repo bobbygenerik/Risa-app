@@ -186,7 +186,9 @@ class _AppShellState extends State<AppShell>
       if (!handled) {
         // Fallback: attempt to move to the next focusable within content area
         try {
-          FocusScope.of(context).nextFocus();
+          // ignore: use_build_context_synchronously
+          final focusScope = FocusScope.of(context);
+          focusScope.nextFocus();
         } catch (e) {
           debugPrint('⚠️ nextFocus() failed: $e');
         }

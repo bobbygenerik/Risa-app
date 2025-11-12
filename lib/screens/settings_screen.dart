@@ -303,6 +303,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       } else if (key == LogicalKeyboardKey.arrowRight) {
                         // Move focus to the content area
                         // Request focus on the first focusable element based on current tab
+                        final focusScope = FocusScope.of(context);
                         Future.microtask(() {
                           switch (_tabController.index) {
                             case 0: // General
@@ -315,7 +316,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                             case 3: // Cloud & AI
                             case 4: // Recordings
                               // For other tabs, use default focus traversal
-                              FocusScope.of(context).nextFocus();
+                              focusScope.nextFocus();
                               break;
                           }
                         });
@@ -2180,9 +2181,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                   const SizedBox(height: 8),
                   ElevatedButton.icon(
                     onPressed: () async {
+                      final messenger = ScaffoldMessenger.of(context);
                       final success = await rdService.testConnection();
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        messenger.showSnackBar(
                           SnackBar(
                             content: Text(
                               success
@@ -2599,6 +2601,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     SizedBox(width: AppSizes.sm),
                     ElevatedButton.icon(
                       onPressed: () async {
+                        final messenger = ScaffoldMessenger.of(context);
                         try {
                           final result = await FilePicker.platform
                               .getDirectoryPath();
@@ -2610,7 +2613,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                             );
                             setState(() {});
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              messenger.showSnackBar(
                                 SnackBar(
                                   content: Text('Recording location updated'),
                                   backgroundColor: AppTheme.accentGreen,
@@ -2620,7 +2623,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                           }
                         } catch (e) {
                           if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            messenger.showSnackBar(
                               SnackBar(
                                 content: Text('Failed to select folder: $e'),
                                 backgroundColor: AppTheme.accentRed,
@@ -3036,7 +3039,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           Text(label, style: Theme.of(context).textTheme.bodyMedium),
           SizedBox(height: AppSizes.sm),
           DropdownButtonFormField<String>(
-            value: value,
+            initialValue: value,
             decoration: InputDecoration(
               border: OutlineInputBorder(),
               contentPadding: EdgeInsets.symmetric(
