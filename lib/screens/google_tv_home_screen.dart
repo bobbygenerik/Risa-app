@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:async';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/widgets/top_navigation_bar.dart';
 
 // Simple shimmer widget for loading/empty states
 class _Shimmer extends StatefulWidget {
@@ -180,15 +182,55 @@ class _GoogleTVHomeScreenState extends State<GoogleTVHomeScreen> {
   final List<String> movies = List.generate(10, (i) => 'Movie ${i + 1}');
   final List<String> continueWatching = List.generate(5, (i) => 'Show ${i + 1}');
 
+  late String _currentTime;
+  late Timer _timeUpdater;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateTime();
+    _startTimeUpdater();
+  }
+
+  @override
+  void dispose() {
+    _timeUpdater.cancel();
+    super.dispose();
+  }
+
+  void _updateTime() {
+    final now = DateTime.now();
+    setState(() {
+      _currentTime = TimeOfDay.fromDateTime(now).format(context);
+    });
+  }
+
+  void _startTimeUpdater() {
+    _timeUpdater = Timer.periodic(const Duration(seconds: 1), (_) {
+      _updateTime();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.darkBackground,
-      body: Stack(
+      body: Column(
         children: [
-          Positioned.fill(
+          // Top Navigation Bar
+          TopNavigationBar(
+            activeTab: 'live',
+            tabs: [
+              NavTab(id: 'live', label: 'LIVE TV', icon: Icons.tv, route: '/'),
+              NavTab(id: 'movies', label: 'Movies', icon: Icons.movie, route: '/movies'),
+              NavTab(id: 'series', label: 'Series', icon: Icons.theaters, route: '/series'),
+            ],
+            currentTime: _currentTime,
+          ),
+          // Hero Banner + Carousels
+          Expanded(
             child: ListView(
-              padding: const EdgeInsets.only(top: 120, bottom: 32),
+              padding: const EdgeInsets.only(top: 24, bottom: 32),
               children: [
                 _HeroBanner(
                   title: 'Tonight: Championship Finals',
@@ -207,7 +249,6 @@ class _GoogleTVHomeScreenState extends State<GoogleTVHomeScreen> {
               ],
             ),
           ),
-          const _FloatingTopBar(),
         ],
       ),
     );
@@ -609,180 +650,6 @@ class _HeroButtonFrame extends StatelessWidget {
       ),
     );
   }
-}
-
-class _FloatingTopBar extends StatelessWidget {
-  const _FloatingTopBar();
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.topCenter,
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.6),
-              borderRadius: BorderRadius.circular(36),
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.45),
-                  blurRadius: 18,
-                  offset: const Offset(0, 12),
-                ),
-              ],
-            ),
-            child: const _TopBar(),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TopBar extends StatefulWidget {
-  const _TopBar();
-
-  @override
-  State<_TopBar> createState() => _TopBarState();
-}
-
-class _TopBarState extends State<_TopBar> {
-  final List<FocusNode> _iconFocusNodes = [FocusNode(), FocusNode(), FocusNode()];
-  int _focusedIndex = -1;
-
-  @override
-  void dispose() {
-    for (final node in _iconFocusNodes) {
-      node.dispose();
-    }
-    super.dispose();
-  }
-
-  void _onFocusChange(int index, bool focused) {
-    setState(() {
-      _focusedIndex = focused ? index : (_focusedIndex == index ? -1 : _focusedIndex);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Text(
-          'Risa IPTV',
-          style: TextStyle(
-            color: AppTheme.primaryBlue,
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.5,
-          ),
-        ),
-        const Spacer(),
-        _buildFocusableIcon(
-          index: 0,
-          icon: Icons.search,
-          tooltip: 'Search',
-          onPressed: () {
-            context.go('/search');
-          },
-        ),
-        const SizedBox(width: 16),
-        _buildFocusableIcon(
-          index: 1,
-          icon: Icons.settings,
-          tooltip: 'Settings',
-          onPressed: () {
-            context.go('/settings');
-          },
-        ),
-        const SizedBox(width: 16),
-        _buildFocusableIcon(
-          index: 2,
-          icon: Icons.person,
-          tooltip: 'Profile',
-          onPressed: () {
-            context.go('/edit-profile');
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFocusableIcon({required int index, required IconData icon, required String tooltip, required VoidCallback onPressed}) {
-    return FocusableActionDetector(
-      focusNode: _iconFocusNodes[index],
-      onFocusChange: (focused) => _onFocusChange(index, focused),
-      autofocus: false,
-      shortcuts: <LogicalKeySet, Intent>{
-        LogicalKeySet(LogicalKeyboardKey.arrowLeft): DirectionalFocusIntent(TraversalDirection.left),
-        LogicalKeySet(LogicalKeyboardKey.arrowRight): DirectionalFocusIntent(TraversalDirection.right),
-        LogicalKeySet(LogicalKeyboardKey.arrowDown): DirectionalFocusIntent(TraversalDirection.down),
-        LogicalKeySet(LogicalKeyboardKey.enter): ActivateIntent(),
-        LogicalKeySet(LogicalKeyboardKey.select): ActivateIntent(),
-        LogicalKeySet(LogicalKeyboardKey.space): ActivateIntent(),
-      },
-      actions: <Type, Action<Intent>>{
-        DirectionalFocusIntent: CallbackAction<DirectionalFocusIntent>(
-          onInvoke: (intent) {
-            if (intent.direction == TraversalDirection.left && index > 0) {
-              _iconFocusNodes[index - 1].requestFocus();
-            } else if (intent.direction == TraversalDirection.right && index < _iconFocusNodes.length - 1) {
-              _iconFocusNodes[index + 1].requestFocus();
-            } else if (intent.direction == TraversalDirection.down) {
-              FocusScope.of(context).nextFocus();
-            }
-            return null;
-          },
-        ),
-        ActivateIntent: CallbackAction<ActivateIntent>(
-          onInvoke: (intent) {
-            onPressed();
-            return null;
-          },
-        ),
-      },
-      child: Tooltip(
-        message: tooltip,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: _focusedIndex == index ? AppTheme.primaryBlue.withOpacity(0.22) : Colors.transparent,
-            boxShadow: _focusedIndex == index
-                ? [
-                    BoxShadow(
-                      color: AppTheme.primaryBlue.withOpacity(0.7),
-                      blurRadius: 16,
-                      spreadRadius: 2,
-                    ),
-                  ]
-                : [],
-            border: _focusedIndex == index
-                ? Border.all(color: AppTheme.primaryBlue, width: 3)
-                : null,
-          ),
-          child: Semantics(
-            label: tooltip,
-            button: true,
-            child: Icon(icon, color: Colors.white, size: 32),
-          ),
-        ),
-      ),
-    );
-  }
-
-
-
-  // _buildCard is now only used as a closure with autofocus param in _buildCarousel
-
-
 }
 
 class _FocusableCard extends StatefulWidget {
