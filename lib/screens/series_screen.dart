@@ -60,6 +60,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
                 NavTab(id: 'series', label: 'Series', icon: Icons.tv, route: '/series'),
               ],
               currentTime: _currentTime,
+              showLogoAndTime: true,
               onSearch: () => context.go('/search'),
             ),
             Expanded(

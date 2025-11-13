@@ -50,99 +50,49 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.darkBackground,
-      body: Stack(
+      body: Column(
         children: [
-          // Main content
-          Column(
-            children: [
-              // Navigation bar (without logo/time - positioned separately)
-              Padding(
-                padding: const EdgeInsets.only(top: 80),
-                child: TopNavigationBar(
-                  activeTab: 'home',
-                  tabs: [
-                    NavTab(id: 'home', label: 'LIVE TV', icon: Icons.live_tv, route: '/home'),
-                    NavTab(id: 'movies', label: 'Movies', icon: Icons.movie, route: '/movies'),
-                    NavTab(id: 'series', label: 'Series', icon: Icons.tv, route: '/series'),
-                  ],
-                  currentTime: '',
-                  showLogoAndTime: false,
-                  onSearch: () => context.go('/search'),
-                ),
-              ),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      // Hero Banner (edge-to-edge)
-                      _buildHeroBanner(),
-                      // Continue Watching
-                      _buildSectionWithCards(
-                        title: 'Continue Watching',
-                        onTap: (content) {
-                          context.push('/player', extra: content);
-                        },
-                      ),
-                      // Featured Channels
-                      _buildChannelSection(
-                        title: 'Featured Channels',
-                        onTap: (channel) {
-                          context.push('/player', extra: channel);
-                        },
-                      ),
-                      // Trending Now
-                      _buildSectionWithCards(
-                        title: 'Trending Now',
-                        onTap: (content) {
-                          context.push('/player', extra: content);
-                        },
-                      ),
-                      SizedBox(height: 40),
-                    ],
-                  ),
-                ),
-              ),
+          // Navigation bar (logo, nav, time all inline)
+          TopNavigationBar(
+            activeTab: 'home',
+            tabs: [
+              NavTab(id: 'home', label: 'LIVE TV', icon: Icons.live_tv, route: '/home'),
+              NavTab(id: 'movies', label: 'Movies', icon: Icons.movie, route: '/movies'),
+              NavTab(id: 'series', label: 'Series', icon: Icons.tv, route: '/series'),
             ],
+            currentTime: _currentTime,
+            showLogoAndTime: true,
+            onSearch: () => context.go('/search'),
           ),
-          // Logo (top-left corner)
-          Positioned(
-            top: 24,
-            left: 24,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'RISA',
-                  style: TextStyle(
-                    color: AppTheme.primaryBlue,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 3.0,
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  // Hero Banner (edge-to-edge)
+                  _buildHeroBanner(),
+                  // Continue Watching
+                  _buildSectionWithCards(
+                    title: 'Continue Watching',
+                    onTap: (content) {
+                      context.push('/player', extra: content);
+                    },
                   ),
-                ),
-                Text(
-                  'IPTV',
-                  style: TextStyle(
-                    color: AppTheme.accentOrange,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 2.0,
+                  // Featured Channels
+                  _buildChannelSection(
+                    title: 'Featured Channels',
+                    onTap: (channel) {
+                      context.push('/player', extra: channel);
+                    },
                   ),
-                ),
-              ],
-            ),
-          ),
-          // Time (top-right corner)
-          Positioned(
-            top: 32,
-            right: 24,
-            child: Text(
-              _currentTime,
-              style: TextStyle(
-                color: AppTheme.textPrimary,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1.0,
+                  // Trending Now
+                  _buildSectionWithCards(
+                    title: 'Trending Now',
+                    onTap: (content) {
+                      context.push('/player', extra: content);
+                    },
+                  ),
+                  SizedBox(height: 40),
+                ],
               ),
             ),
           ),

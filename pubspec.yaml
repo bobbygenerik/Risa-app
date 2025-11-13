@@ -42,9 +42,9 @@ dependencies:
   image: ^4.3.0
 
   # Optional/native media plugins referenced in the codebase
-  media_kit: any
-  media_kit_video: any
-  flutter_vlc_player: any
+  # media_kit: any  # DISABLED: causes CMake errors on Linux
+  # media_kit_video: any  # DISABLED: causes CMake errors on Linux
+  # flutter_vlc_player: any  # DISABLED: use video_player instead
   # vosk_flutter: any  # OPTIONAL: removed to avoid forcing transitive downgrades
   
   # Subtitles & Multiple Audio Tracks - REMOVED subtitle_wrapper_package (causes UnimplementedError on Linux)
