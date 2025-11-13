@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_vlc_player/flutter_vlc_player.dart';
+// import 'package:flutter_vlc_player/flutter_vlc_player.dart'; // DISABLED - causes build errors on Linux
 import 'package:iptv_player/widgets/native_exoplayer.dart';
 // Disabled - causes UnimplementedError
 // import 'package:subtitle_wrapper_package/subtitle_wrapper_package.dart';
@@ -49,9 +49,9 @@ class EnhancedVideoPlayerScreen extends StatefulWidget {
 class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   late VideoPlayerController _videoPlayerController;
   ChewieController? _chewieController;
-  // Optional VLC controller used when real audio-track switching is required
-  VlcPlayerController? _vlcController;
+  // Optional VLC controller - DISABLED: flutter_vlc_player causes build errors
   bool _useVlcBackend = false;
+
   // Native exoplayer per-view controller (Android only)
   NativeExoPlayerController? _nativeController;
   List<Map<String, dynamic>> _nativeAudioTracks = [];
@@ -123,37 +123,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       debugPrint('VideoPlayer: Initializing player for: ${widget.videoUrl}');
       // If audioTracks are provided and non-empty, prefer the VLC backend
       // which supports real audio-track switching via setAudioTrack().
-      _useVlcBackend = widget.forceVlc || (widget.audioTracks != null && widget.audioTracks!.isNotEmpty);
-      if (_useVlcBackend) {
-        debugPrint('VideoPlayer: Using VLC backend for audio-track support');
-        _vlcController = VlcPlayerController.network(
-          widget.videoUrl,
-          autoPlay: true,
-          options: VlcPlayerOptions(),
-        );
-
-        await _vlcController!.initialize();
-
-        // Try to populate selected audio track if available
-        try {
-          final audioCount = await _vlcController!.getAudioTracksCount() ?? 0;
-          if (audioCount > 0) {
-            _selectedAudioTrack = 0;
-            // If the caller did not provide audio track metadata, create
-            // simple labels from what VLC reports.
-            if (widget.audioTracks == null || widget.audioTracks!.isEmpty) {
-              _vlcAudioTrackLabels = List.generate(audioCount, (i) => 'Audio ${i + 1}');
-            }
-          }
-        } catch (_) {}
-
-        if (mounted) {
-          setState(() {
-            _isInitialized = true;
-          });
-        }
-        return;
-      }
+      // VLC DISABLED: flutter_vlc_player causes build errors
+      _useVlcBackend = false;
       
       // Initialize video player
       _videoPlayerController = VideoPlayerController.networkUrl(
@@ -293,53 +264,32 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       case LogicalKeyboardKey.select:
       case LogicalKeyboardKey.enter:
       case LogicalKeyboardKey.space:
-        // Play/Pause - use active backend when available
+        // Play/Pause
         try {
-          if (_useVlcBackend && _vlcController != null) {
-            if (_vlcController!.value.isPlaying) {
-              _vlcController!.pause();
-            } else {
-              _vlcController!.play();
-            }
+          if (_videoPlayerController.value.isPlaying) {
+            _videoPlayerController.pause();
           } else {
-            if (_videoPlayerController.value.isPlaying) {
-              _videoPlayerController.pause();
-            } else {
-              _videoPlayerController.play();
-            }
+            _videoPlayerController.play();
           }
         } catch (_) {}
         break;
 
       case LogicalKeyboardKey.arrowLeft:
-        // Seek backward 10 seconds (use active backend)
+        // Seek backward 10 seconds
         try {
-          if (_useVlcBackend && _vlcController != null) {
-            final currentPosition = _vlcController!.value.position;
-            final newPosition = currentPosition - const Duration(seconds: 10);
-            _vlcController!.seekTo(newPosition > Duration.zero ? newPosition : Duration.zero);
-          } else {
-            final currentPosition = _videoPlayerController.value.position;
-            final newPosition = currentPosition - const Duration(seconds: 10);
-            _videoPlayerController.seekTo(newPosition > Duration.zero ? newPosition : Duration.zero);
-          }
+          final currentPosition = _videoPlayerController.value.position;
+          final newPosition = currentPosition - const Duration(seconds: 10);
+          _videoPlayerController.seekTo(newPosition > Duration.zero ? newPosition : Duration.zero);
         } catch (_) {}
         break;
 
       case LogicalKeyboardKey.arrowRight:
-        // Seek forward 10 seconds (use active backend)
+        // Seek forward 10 seconds
         try {
-            if (_useVlcBackend && _vlcController != null) {
-            final currentPosition = _vlcController!.value.position;
-            final duration = _vlcController!.value.duration;
-            final newPosition = currentPosition + const Duration(seconds: 10);
-            _vlcController!.seekTo(newPosition < duration ? newPosition : duration);
-          } else {
-            final currentPosition = _videoPlayerController.value.position;
-            final duration = _videoPlayerController.value.duration;
-            final newPosition = currentPosition + const Duration(seconds: 10);
-            _videoPlayerController.seekTo(newPosition < duration ? newPosition : duration);
-          }
+          final currentPosition = _videoPlayerController.value.position;
+          final duration = _videoPlayerController.value.duration;
+          final newPosition = currentPosition + const Duration(seconds: 10);
+          _videoPlayerController.seekTo(newPosition < duration ? newPosition : duration);
         } catch (_) {}
         break;
 
@@ -475,14 +425,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           if (!mounted) return;
           if (!_isInitialized) return;
 
-          // Determine current playback position from the active backend
+          // Determine current playback position
           Duration pos = Duration.zero;
           try {
-            if (_useVlcBackend && _vlcController != null) {
-              pos = _vlcController!.value.position;
-            } else {
-              pos = _videoPlayerController.value.position;
-            }
+            pos = _videoPlayerController.value.position;
           } catch (_) {
             pos = Duration.zero;
           }
@@ -682,20 +628,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       );
     }
 
-    if (_useVlcBackend) {
-      if (_vlcController == null) {
-        return const Center(child: CircularProgressIndicator());
-      }
-      return AspectRatio(
-        aspectRatio: 16 / 9,
-        child: VlcPlayer(
-          controller: _vlcController!,
-          aspectRatio: 16 / 9,
-          placeholder: Container(color: Colors.black),
-        ),
-      );
-    }
-
+    // VLC backend disabled - use standard video player
+    
     // On Android, prefer the native ExoPlayer platform view for better native
     // audio-track support and performance. This will be a no-op on other platforms.
     if (Platform.isAndroid) {
@@ -1610,9 +1544,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     try {
       _chewieController?.dispose();
     } catch (_) {}
-    try {
-      _vlcController?.dispose();
-    } catch (_) {}
+    // VLC controller disposed (disabled)
     _playerFocusNode.dispose();
     super.dispose();
   }
@@ -1720,20 +1652,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   Future<void> _switchAudioTrack(int index) async {
     final messenger = ScaffoldMessenger.of(context);
 
-    // If VLC backend is in use, switch via the VlcPlayerController which
-    // supports audio-track switching directly.
-    if (_useVlcBackend && _vlcController != null) {
-      try {
-        await _vlcController!.setAudioTrack(index);
-        messenger.showSnackBar(const SnackBar(content: Text('Audio track changed')));
-        return;
-      } catch (e) {
-        debugPrint('VLC audio track switch failed: $e');
-        messenger.showSnackBar(const SnackBar(content: Text('Failed to change audio track')));
-        return;
-      }
-    }
-
+    // VLC backend disabled - audio track switching not available
+    
     // Fallback: attempt platform method (MainActivity stub) so older setups
     // still get an acknowledgement instead of an exception.
     try {
