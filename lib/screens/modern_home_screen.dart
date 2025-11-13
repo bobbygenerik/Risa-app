@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -7,108 +6,40 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/content.dart';
-import 'package:iptv_player/widgets/top_navigation_bar.dart';
 
-class ModernHomeScreen extends StatefulWidget {
+class ModernHomeScreen extends StatelessWidget {
   const ModernHomeScreen({super.key});
 
   @override
-  State<ModernHomeScreen> createState() => _ModernHomeScreenState();
-}
-
-class _ModernHomeScreenState extends State<ModernHomeScreen> {
-  late String _currentTime;
-  late Timer _timeTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _updateTime();
-    _timeTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) {
-        setState(() => _updateTime());
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _timeTimer.cancel();
-    super.dispose();
-  }
-
-  void _updateTime() {
-    final now = DateTime.now();
-    final hour =
-        now.hour == 0 ? 12 : (now.hour > 12 ? now.hour - 12 : now.hour);
-    final period = now.hour < 12 ? 'AM' : 'PM';
-    _currentTime =
-        '${hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} $period';
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF050710),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFF050710),
-              const Color(0xFF0d1140),
-            ],
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          // Hero Banner (edge-to-edge)
+          _buildHeroBanner(),
+          // Continue Watching
+          _buildSectionWithCards(
+            title: 'Continue Watching',
+            onTap: (content) {
+              context.push('/player', extra: content);
+            },
           ),
-        ),
-        child: Column(
-          children: [
-            // Navigation bar (logo, nav, time all inline)
-            TopNavigationBar(
-              activeTab: 'home',
-              tabs: [
-                NavTab(id: 'home', label: 'LIVE TV', icon: Icons.live_tv, route: '/home'),
-                NavTab(id: 'movies', label: 'Movies', icon: Icons.movie, route: '/movies'),
-                NavTab(id: 'series', label: 'Series', icon: Icons.tv, route: '/series'),
-              ],
-              currentTime: _currentTime,
-              showLogoAndTime: true,
-              onSearch: () => context.go('/search'),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    // Hero Banner (edge-to-edge)
-                    _buildHeroBanner(),
-                    // Continue Watching
-                    _buildSectionWithCards(
-                      title: 'Continue Watching',
-                      onTap: (content) {
-                        context.push('/player', extra: content);
-                      },
-                    ),
-                    // Featured Channels
-                    _buildChannelSection(
-                      title: 'Featured Channels',
-                      onTap: (channel) {
-                        context.push('/player', extra: channel);
-                      },
-                    ),
-                    // Trending Now
-                    _buildSectionWithCards(
-                      title: 'Trending Now',
-                      onTap: (content) {
-                        context.push('/player', extra: content);
-                      },
-                    ),
-                    SizedBox(height: 40),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+          // Featured Channels
+          _buildChannelSection(
+            title: 'Featured Channels',
+            onTap: (channel) {
+              context.push('/player', extra: channel);
+            },
+          ),
+          // Trending Now
+          _buildSectionWithCards(
+            title: 'Trending Now',
+            onTap: (content) {
+              context.push('/player', extra: content);
+            },
+          ),
+          SizedBox(height: 40),
+        ],
       ),
     );
   }

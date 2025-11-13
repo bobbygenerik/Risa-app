@@ -4,40 +4,9 @@ import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:go_router/go_router.dart';
-import 'package:iptv_player/widgets/top_navigation_bar.dart';
 
-class SeriesScreen extends StatefulWidget {
+class SeriesScreen extends StatelessWidget {
   const SeriesScreen({super.key});
-
-  @override
-  State<SeriesScreen> createState() => _SeriesScreenState();
-}
-
-class _SeriesScreenState extends State<SeriesScreen> {
-  late String _currentTime;
-
-  @override
-  void initState() {
-    super.initState();
-    _updateTime();
-    _startTimeUpdater();
-  }
-
-  void _updateTime() {
-    final now = DateTime.now();
-    final hour = now.hour == 0 ? 12 : (now.hour > 12 ? now.hour - 12 : now.hour);
-    final period = now.hour >= 12 ? 'PM' : 'AM';
-    _currentTime = '${hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} $period';
-  }
-
-  void _startTimeUpdater() {
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) {
-        setState(() => _updateTime());
-        _startTimeUpdater();
-      }
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,78 +19,76 @@ class _SeriesScreenState extends State<SeriesScreen> {
           return _buildEmptyState(context);
         }
 
-        return Column(
-          children: [
-            TopNavigationBar(
-              activeTab: 'series',
-              tabs: [
-                NavTab(id: 'live', label: 'LIVE TV', icon: Icons.live_tv, route: '/home'),
-                NavTab(id: 'movies', label: 'Movies', icon: Icons.movie, route: '/movies'),
-                NavTab(id: 'series', label: 'Series', icon: Icons.tv, route: '/series'),
+        return SingleChildScrollView(
+          padding: EdgeInsets.all(AppSizes.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Recently Added Series
+              if (recentSeries.isNotEmpty) ...[
+                _buildSectionHeader(context, 'Recently Added Series'),
+                SizedBox(height: AppSizes.md),
+                _buildSeriesRow(context, recentSeries),
+                SizedBox(height: AppSizes.xl),
               ],
-              currentTime: _currentTime,
-              showLogoAndTime: true,
-              onSearch: () => context.go('/search'),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.all(AppSizes.lg),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Recently Added Series
-                    if (recentSeries.isNotEmpty) ...[
-                      _buildSectionHeader(context, 'Recently Added Series'),
-                      SizedBox(height: AppSizes.md),
-                      _buildSeriesRow(context, recentSeries),
-                      SizedBox(height: AppSizes.xl),
-                    ],
 
-                    // All Series by Genre
-                    ..._buildGenreSections(context, series),
-                  ],
-                ),
-              ),
-            ),
-          ],
+              // All Series by Genre
+              ..._buildGenreSections(context, series),
+            ],
+          ),
         );
       },
     );
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.tv,
-            size: 80,
-            color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
+    return Scaffold(
+      backgroundColor: const Color(0xFF050710),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              const Color(0xFF050710),
+              const Color(0xFF0d1140),
+            ],
           ),
-          SizedBox(height: AppSizes.lg),
-          Text(
-            'No Series Available',
-            style: Theme.of(context).textTheme.headlineMedium,
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.tv,
+                size: 80,
+                color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
+              ),
+              SizedBox(height: AppSizes.lg),
+              Text(
+                'No Series Available',
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
+              SizedBox(height: AppSizes.sm),
+              Text(
+                'Load a playlist with series content from Settings',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: AppSizes.xl),
+              ElevatedButton.icon(
+                onPressed: () => context.go('/settings'),
+                icon: const Icon(Icons.settings),
+                label: const Text('Go to Settings'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryBlue,
+                ),
+              ),
+            ],
           ),
-          SizedBox(height: AppSizes.sm),
-          Text(
-            'Load a playlist with VOD content from Settings',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: AppSizes.xl),
-          ElevatedButton.icon(
-            onPressed: () => context.go('/settings'),
-            icon: const Icon(Icons.settings),
-            label: const Text('Go to Settings'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryBlue,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

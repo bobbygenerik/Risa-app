@@ -16,7 +16,7 @@ import 'package:iptv_player/services/live_transcription_service.dart';
 import 'package:iptv_player/services/ai_model_manager.dart';
 import 'package:iptv_player/services/opensubtitles_service.dart';
 import 'package:iptv_player/services/real_debrid_service.dart';
-// import 'package:iptv_player/widgets/app_shell.dart'; // Removed - no sidebar in new UI
+import 'package:iptv_player/widgets/main_shell.dart';
 import 'package:iptv_player/widgets/legal_disclaimer_dialog.dart';
 import 'package:iptv_player/screens/epg_screen.dart';
 import 'package:iptv_player/screens/settings_screen.dart';
@@ -555,26 +555,44 @@ final _router = GoRouter(
       ),
     ),
     GoRoute(path: '/', redirect: (context, state) => '/home'),
-    GoRoute(
-      path: '/home',
-      pageBuilder: (context, state) => _fadeSlidePage(
-        key: state.pageKey,
-        child: const ModernHomeScreen(),
-      ),
-    ),
-    GoRoute(
-      path: '/movies',
-      pageBuilder: (context, state) => _fadeSlidePage(
-        key: state.pageKey,
-        child: const MoviesScreen(),
-      ),
-    ),
-    GoRoute(
-      path: '/series',
-      pageBuilder: (context, state) => _fadeSlidePage(
-        key: state.pageKey,
-        child: const SeriesScreen(),
-      ),
+    // Main shell containing fixed navbar with home, movies, series screens
+    ShellRoute(
+      builder: (context, state, child) {
+        // Determine active tab from current location
+        final activeTab = state.matchedLocation.contains('/movies')
+            ? 'movies'
+            : state.matchedLocation.contains('/series')
+                ? 'series'
+                : 'home';
+        
+        return MainShell(
+          activeTab: activeTab,
+          child: child,
+        );
+      },
+      routes: [
+        GoRoute(
+          path: '/home',
+          pageBuilder: (context, state) => _fadeSlidePage(
+            key: state.pageKey,
+            child: const ModernHomeScreen(),
+          ),
+        ),
+        GoRoute(
+          path: '/movies',
+          pageBuilder: (context, state) => _fadeSlidePage(
+            key: state.pageKey,
+            child: const MoviesScreen(),
+          ),
+        ),
+        GoRoute(
+          path: '/series',
+          pageBuilder: (context, state) => _fadeSlidePage(
+            key: state.pageKey,
+            child: const SeriesScreen(),
+          ),
+        ),
+      ],
     ),
     GoRoute(
       path: '/search',
