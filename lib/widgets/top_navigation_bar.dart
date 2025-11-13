@@ -150,6 +150,50 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                         ),
                       ),
                     ),
+                    // Overflow menu button (more options)
+                    PopupMenuButton(
+                      color: AppTheme.cardBackground,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8 * scale),
+                        child: Icon(
+                          Icons.more_vert,
+                          size: 18 * scale,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                      itemBuilder: (context) => [
+                        PopupMenuItem(
+                          child: Row(
+                            children: [
+                              Icon(Icons.settings, color: AppTheme.primaryBlue, size: 18),
+                              SizedBox(width: 8),
+                              Text('Settings'),
+                            ],
+                          ),
+                          onTap: () => context.go('/settings'),
+                        ),
+                        PopupMenuItem(
+                          child: Row(
+                            children: [
+                              Icon(Icons.favorite_outline, color: AppTheme.accentPink, size: 18),
+                              SizedBox(width: 8),
+                              Text('Favorites'),
+                            ],
+                          ),
+                          onTap: () => context.go('/favorites'),
+                        ),
+                        PopupMenuItem(
+                          child: Row(
+                            children: [
+                              Icon(Icons.download, color: AppTheme.textSecondary, size: 18),
+                              SizedBox(width: 8),
+                              Text('Downloads'),
+                            ],
+                          ),
+                          onTap: () => context.go('/downloads'),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
