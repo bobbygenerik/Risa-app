@@ -18,11 +18,26 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
   List<FileSystemEntity> _recordings = [];
   bool _isLoading = true;
   String? _errorMessage;
+  late DateTime _currentTime;
 
   @override
   void initState() {
     super.initState();
+    _currentTime = DateTime.now();
+    Future.delayed(Duration(seconds: 1), _updateTime);
     _loadRecordings();
+  }
+
+  void _updateTime() {
+    if (!mounted) return;
+    setState(() {
+      _currentTime = DateTime.now();
+    });
+    Future.delayed(Duration(seconds: 1), _updateTime);
+  }
+
+  String _formatTime(DateTime time) {
+    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 
   Future<void> _loadRecordings() async {
@@ -168,56 +183,60 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
       backgroundColor: AppTheme.darkBackground,
       body: Column(
         children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: AppTheme.cardBackground,
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.fiber_manual_record,
-                  color: AppTheme.accentRed,
+          _buildGlassAppBar(),
+          Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
+          Expanded(child: _buildContent()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGlassAppBar() {
+    return Container(
+      height: AppSizes.appBarHeight,
+      padding: EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
+      decoration: BoxDecoration(
+        color: AppTheme.darkBackground.withAlpha((0.8 * 255).round()),
+        border: Border(
+          bottom: BorderSide(color: AppTheme.accentPink, width: 2),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.fiber_manual_record, color: AppTheme.accentRed, size: 24),
+          SizedBox(width: AppSizes.md),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Recordings',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Recordings',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    if (_storagePath != null)
-                      Text(
-                        'Storage: ${path.basename(_storagePath!)}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                  ],
+              ),
+              if (_storagePath != null)
+                Text(
+                  path.basename(_storagePath!),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.refresh),
-                  onPressed: _loadRecordings,
-                  tooltip: 'Refresh',
-                ),
-                IconButton(
-                  icon: const Icon(Icons.settings),
-                  onPressed: () {
-                    context.go('/settings');
-                  },
-                  tooltip: 'Configure Storage',
-                ),
-              ],
+            ],
+          ),
+          Spacer(),
+          IconButton(
+            icon: Icon(Icons.refresh, color: AppTheme.primaryBlue),
+            onPressed: _loadRecordings,
+          ),
+          SizedBox(width: AppSizes.sm),
+          Text(
+            _formatTime(_currentTime),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppTheme.textSecondary,
             ),
           ),
-
-          // Content
-          Expanded(child: _buildContent()),
         ],
       ),
     );

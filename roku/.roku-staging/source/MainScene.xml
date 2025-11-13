@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component name="MainScene" extends="Scene">
+    <interface>
+        <field id="port" type="object" alias="messageport"/>
+    </interface>
+    <script type="text/brightscript" uri="pkg:/source/MainScene.brs"/>
+    <children>
+    </children>
+</component>

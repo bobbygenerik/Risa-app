@@ -17,19 +17,32 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final TextEditingController _emailController = TextEditingController();
   String? _profileImagePath;
   bool _isLoading = false;
+  late DateTime _currentTime;
 
-  // Editable states for text fields (prevent auto-keyboard on Android TV)
   bool _nameEditable = false;
   bool _emailEditable = false;
 
-  // Focus nodes for text fields
   final FocusNode _nameFocusNode = FocusNode();
   final FocusNode _emailFocusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
+    _currentTime = DateTime.now();
+    Future.delayed(Duration(seconds: 1), _updateTime);
     _loadProfileData();
+  }
+
+  void _updateTime() {
+    if (!mounted) return;
+    setState(() {
+      _currentTime = DateTime.now();
+    });
+    Future.delayed(Duration(seconds: 1), _updateTime);
+  }
+
+  String _formatTime(DateTime time) {
+    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -132,32 +145,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.darkBackground,
-      appBar: AppBar(
-        title: const Text('Edit Profile'),
-        backgroundColor: AppTheme.cardBackground,
-        actions: [
-          if (_isLoading)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.0),
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              ),
-            )
-          else
-            TextButton.icon(
-              onPressed: _saveProfile,
-              icon: const Icon(Icons.check, color: AppTheme.accentGreen),
-              label: Text(
-                'Save',
-                style: TextStyle(color: AppTheme.accentGreen),
-              ),
-            ),
-        ],
-      ),
+      appBar: _buildGlassAppBar(),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Center(
@@ -345,4 +333,36 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       ),
     );
   }
+
+  AppBar _buildGlassAppBar() {
+    return AppBar(
+      title: Text('Edit Profile'),
+      backgroundColor: AppTheme.darkBackground,
+      elevation: 0,
+      actions: [
+        if (_isLoading)
+          const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          )
+        else
+          IconButton(
+            icon: Icon(Icons.check, color: AppTheme.accentGreen, size: 28),
+            onPressed: _saveProfile,
+          ),
+      ],
+      bottom: PreferredSize(
+        preferredSize: Size.fromHeight(2),
+        child: Container(
+          color: AppTheme.accentPink,
+          height: 2,
+        ),
+      ),
+    );
+  }
 }
+

@@ -17,9 +17,25 @@ class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<Channel> _searchResults = [];
   bool _isSearching = false;
-  // Prevent soft keyboard on mere focus; enable only on select/tap
   final FocusNode _searchFieldFocusNode = FocusNode(debugLabel: 'SearchField');
   bool _searchEditable = false;
+  late DateTime _currentTime;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentTime = DateTime.now();
+    // Update time every second
+    Future.delayed(Duration(seconds: 1), _updateTime);
+  }
+
+  void _updateTime() {
+    if (!mounted) return;
+    setState(() {
+      _currentTime = DateTime.now();
+    });
+    Future.delayed(Duration(seconds: 1), _updateTime);
+  }
 
   @override
   void dispose() {
@@ -53,79 +69,137 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.all(AppSizes.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Scaffold(
+      backgroundColor: AppTheme.darkBackground,
+      body: Column(
         children: [
-          // Search Header
-          Text(
-            'Search Channels',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: AppSizes.lg),
+          // Liquid glass app bar with logo and time
+          _buildGlassAppBar(),
+          Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
 
-          // Search Bar (TV friendly: open keyboard only on select)
-          Focus(
-            focusNode: _searchFieldFocusNode,
-            onFocusChange: (hasFocus) {
-              if (!hasFocus && _searchEditable) {
-                // When leaving the field, return to read-only to prevent auto keyboard next time
-                setState(() => _searchEditable = false);
-              }
-            },
-            onKeyEvent: (node, event) {
-              if (event is! KeyDownEvent) return KeyEventResult.ignored;
-              final key = event.logicalKey;
-              if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
-                // Enable editing and show keyboard
-                setState(() => _searchEditable = true);
-                // Request focus again to ensure the editable state takes effect
-                Future.microtask(() => _searchFieldFocusNode.requestFocus());
-                return KeyEventResult.handled;
-              }
-              return KeyEventResult.ignored;
-            },
-            child: TextField(
-              controller: _searchController,
-              autofocus: false,
-              readOnly: !_searchEditable,
-              decoration: InputDecoration(
-              hintText: 'Search for channels...',
-              prefixIcon: Icon(Icons.search),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: Icon(Icons.clear),
-                      onPressed: () {
-                        _searchController.clear();
-                        _performSearch('');
+          // Main content
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.all(AppSizes.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Search Bar (TV friendly: open keyboard only on select)
+                  Focus(
+                    focusNode: _searchFieldFocusNode,
+                    onFocusChange: (hasFocus) {
+                      if (!hasFocus && _searchEditable) {
+                        setState(() => _searchEditable = false);
+                      }
+                    },
+                    onKeyEvent: (node, event) {
+                      if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                      final key = event.logicalKey;
+                      if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
+                        setState(() => _searchEditable = true);
+                        Future.microtask(() => _searchFieldFocusNode.requestFocus());
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child: TextField(
+                      controller: _searchController,
+                      autofocus: false,
+                      readOnly: !_searchEditable,
+                      decoration: InputDecoration(
+                        hintText: 'Search channels, movies & more...',
+                        prefixIcon: Icon(Icons.search, color: AppTheme.primaryBlue),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: Icon(Icons.clear),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  _performSearch('');
+                                },
+                              )
+                            : null,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                          borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                          borderSide: BorderSide(color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()), width: 1),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                          borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
+                        ),
+                        filled: true,
+                        fillColor: AppTheme.cardBackground,
+                        contentPadding: EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
+                      ),
+                      onTap: () {
+                        if (!_searchEditable) {
+                          setState(() => _searchEditable = true);
+                        }
                       },
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                      onChanged: _performSearch,
+                    ),
+                  ),
+                  SizedBox(height: AppSizes.xl),
+
+                  // Results
+                  Expanded(child: _buildResults()),
+                ],
               ),
-              filled: true,
-              fillColor: AppTheme.cardBackground,
-              ),
-              onTap: () {
-                // If tapped (e.g., mouse/trackpad), enable editing
-                if (!_searchEditable) {
-                  setState(() => _searchEditable = true);
-                }
-              },
-              onChanged: _performSearch,
             ),
           ),
-          SizedBox(height: AppSizes.xl),
-
-          // Results
-          Expanded(child: _buildResults()),
         ],
       ),
     );
+  }
+
+  Widget _buildGlassAppBar() {
+    return Container(
+      height: AppSizes.appBarHeight,
+      padding: EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
+      decoration: BoxDecoration(
+        color: AppTheme.darkBackground.withAlpha((0.8 * 255).round()),
+        border: Border(
+          bottom: BorderSide(color: AppTheme.accentPink, width: 2),
+        ),
+      ),
+      child: Row(
+        children: [
+          // Logo
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryBlue,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(Icons.search, color: Colors.white, size: 24),
+          ),
+          SizedBox(width: AppSizes.md),
+          Text(
+            'Search',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          Spacer(),
+          // Current time
+          Text(
+            _formatTime(_currentTime),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppTheme.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatTime(DateTime time) {
+    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 
   Widget _buildResults() {

@@ -25,12 +25,31 @@ class _EPGScreenState extends State<EPGScreen> {
   String? _selectedCategory;
   Channel? _playingChannel;
   VideoPlayerController? _miniPlayerController;
+  late DateTime _currentTime;
 
   final ScrollController _horizontalScrollController = ScrollController();
   final ScrollController _verticalScrollController = ScrollController();
   final FocusNode _firstContentFocusNode = FocusNode();
 
-  // Call this from navigation shell to focus first content item
+  @override
+  void initState() {
+    super.initState();
+    _currentTime = DateTime.now();
+    Future.delayed(Duration(seconds: 1), _updateTime);
+  }
+
+  void _updateTime() {
+    if (!mounted) return;
+    setState(() {
+      _currentTime = DateTime.now();
+    });
+    Future.delayed(Duration(seconds: 1), _updateTime);
+  }
+
+  String _formatTime(DateTime time) {
+    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+  }
+
   void requestFirstContentFocus() {
     if (_firstContentFocusNode.canRequestFocus) {
       _firstContentFocusNode.requestFocus();
@@ -129,7 +148,7 @@ class _EPGScreenState extends State<EPGScreen> {
             Column(
               children: [
                 _buildHeader(epgService),
-                Divider(height: 1, color: AppTheme.divider),
+                Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
                 Expanded(
                   child: Row(
                     children: [
@@ -187,80 +206,40 @@ class _EPGScreenState extends State<EPGScreen> {
 
   Widget _buildHeader(EpgService epgService) {
     return Container(
-      padding: EdgeInsets.all(AppSizes.lg),
+      padding: EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
+      decoration: BoxDecoration(
+        color: AppTheme.darkBackground.withAlpha((0.8 * 255).round()),
+        border: Border(
+          bottom: BorderSide(color: AppTheme.accentPink, width: 2),
+        ),
+      ),
       child: Row(
         children: [
-          // EPG status indicator
-          if (epgService.isLoading) 
-            Padding(
-              padding: EdgeInsets.only(right: AppSizes.md),
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
-          if (epgService.error != null)
-            Padding(
-              padding: EdgeInsets.only(right: AppSizes.md),
-              child: Tooltip(
-                message: epgService.error!,
-                child: Icon(
-                  Icons.warning_amber,
-                  color: AppTheme.accentRed,
-                  size: 20,
+          Icon(Icons.tv, color: AppTheme.primaryBlue, size: 24),
+          SizedBox(width: AppSizes.md),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Electronic Program Guide',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
-
-          // Date navigation
-          IconButton(
-            icon: Icon(Icons.chevron_left),
-            onPressed: () {
-              setState(() {
-                _selectedDate = _selectedDate.subtract(Duration(days: 1));
-              });
-            },
+              Text(
+                DateFormat('EEEE, MMM dd').format(_selectedDate),
+                style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+              ),
+            ],
           ),
-          Text(
-            DateFormat('EEEE, MMM dd').format(_selectedDate),
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          IconButton(
-            icon: Icon(Icons.chevron_right),
-            onPressed: () {
-              setState(() {
-                _selectedDate = _selectedDate.add(Duration(days: 1));
-              });
-            },
-          ),
-
           Spacer(),
-
-          // Time scale toggle
-          Text(
-            'Time Scale: ${_isHourlyView ? "Hourly" : "Half-hour"}',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          SizedBox(width: AppSizes.sm),
-          Switch(
-            value: _isHourlyView,
-            onChanged: (value) {
-              setState(() {
-                _isHourlyView = value;
-              });
-            },
-          ),
-
-          SizedBox(width: AppSizes.md),
-
           // Refresh button
           IconButton(
             icon: Icon(Icons.refresh),
             onPressed: epgService.isLoading
                 ? null
                 : () async {
-                    // Refresh EPG data
                     final messenger = ScaffoldMessenger.of(context);
                     final prefs = await SharedPreferences.getInstance();
                     final epgUrl = prefs.getString('epg_url') ?? 
@@ -282,19 +261,16 @@ class _EPGScreenState extends State<EPGScreen> {
                           ),
                         );
                       }
-                    } else {
-                      messenger.showSnackBar(
-                        SnackBar(
-                          content: Text('Configure EPG URL in Settings → General first'),
-                          action: SnackBarAction(
-                            label: 'SETTINGS',
-                            onPressed: () => context.go('/settings'),
-                          ),
-                        ),
-                      );
                     }
                   },
             tooltip: 'Refresh EPG Data',
+          ),
+          SizedBox(width: AppSizes.sm),
+          Text(
+            _formatTime(_currentTime),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppTheme.textSecondary,
+            ),
           ),
         ],
       ),

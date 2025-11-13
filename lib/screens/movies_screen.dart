@@ -4,9 +4,40 @@ import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:go_router/go_router.dart';
+import 'package:iptv_player/widgets/top_navigation_bar.dart';
 
-class MoviesScreen extends StatelessWidget {
+class MoviesScreen extends StatefulWidget {
   const MoviesScreen({super.key});
+
+  @override
+  State<MoviesScreen> createState() => _MoviesScreenState();
+}
+
+class _MoviesScreenState extends State<MoviesScreen> {
+  late String _currentTime;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateTime();
+    _startTimeUpdater();
+  }
+
+  void _updateTime() {
+    final now = DateTime.now();
+    final hour = now.hour == 0 ? 12 : (now.hour > 12 ? now.hour - 12 : now.hour);
+    final period = now.hour >= 12 ? 'PM' : 'AM';
+    _currentTime = '${hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} $period';
+  }
+
+  void _startTimeUpdater() {
+    Future.delayed(const Duration(seconds: 1), () {
+      if (mounted) {
+        setState(() => _updateTime());
+        _startTimeUpdater();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,23 +50,39 @@ class MoviesScreen extends StatelessWidget {
           return _buildEmptyState(context);
         }
 
-        return SingleChildScrollView(
-          padding: EdgeInsets.all(AppSizes.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Recently Added Movies
-              if (recentMovies.isNotEmpty) ...[
-                _buildSectionHeader(context, 'Recently Added'),
-                SizedBox(height: AppSizes.md),
-                _buildMoviesRow(context, recentMovies),
-                SizedBox(height: AppSizes.xl),
+        return Column(
+          children: [
+            TopNavigationBar(
+              activeTab: 'movies',
+              tabs: [
+                NavTab(id: 'live', label: 'LIVE TV', icon: Icons.live_tv, route: '/home'),
+                NavTab(id: 'movies', label: 'Movies', icon: Icons.movie, route: '/movies'),
+                NavTab(id: 'series', label: 'Series', icon: Icons.tv, route: '/series'),
               ],
+              currentTime: _currentTime,
+              onSearch: () => context.go('/search'),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(AppSizes.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Recently Added Movies
+                    if (recentMovies.isNotEmpty) ...[
+                      _buildSectionHeader(context, 'Recently Added'),
+                      SizedBox(height: AppSizes.md),
+                      _buildMoviesRow(context, recentMovies),
+                      SizedBox(height: AppSizes.xl),
+                    ],
 
-              // All Movies by Genre
-              ..._buildGenreSections(context, movies),
-            ],
-          ),
+                    // All Movies by Genre
+                    ..._buildGenreSections(context, movies),
+                  ],
+                ),
+              ),
+            ),
+          ],
         );
       },
     );

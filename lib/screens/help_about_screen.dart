@@ -11,6 +11,7 @@ class HelpAboutScreen extends StatefulWidget {
 
 class _HelpAboutScreenState extends State<HelpAboutScreen> {
   int _selectedTab = 0;
+  late DateTime _currentTime;
   final List<FocusNode> _tabFocusNodes = [
     FocusNode(debugLabel: 'HelpTab'),
     FocusNode(debugLabel: 'AboutTab'),
@@ -20,11 +21,25 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
   @override
   void initState() {
     super.initState();
+    _currentTime = DateTime.now();
+    Future.delayed(Duration(seconds: 1), _updateTime);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _tabFocusNodes[0].requestFocus();
       }
     });
+  }
+
+  void _updateTime() {
+    if (!mounted) return;
+    setState(() {
+      _currentTime = DateTime.now();
+    });
+    Future.delayed(Duration(seconds: 1), _updateTime);
+  }
+
+  String _formatTime(DateTime time) {
+    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -51,33 +66,69 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.darkBackground,
       body: Column(
         children: [
-          // Tabs
-          Container(
-            padding: EdgeInsets.all(AppSizes.lg),
-            decoration: BoxDecoration(
-              color: AppTheme.cardBackground,
-              border: Border(
-                bottom: BorderSide(color: AppTheme.divider),
-              ),
-            ),
-            child: Row(
+          _buildGlassAppBar(),
+          Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
+          Expanded(
+            child: Column(
               children: [
-                _buildTab('Help', 0),
-                SizedBox(width: AppSizes.md),
-                _buildTab('About', 1),
-                SizedBox(width: AppSizes.md),
-                _buildTab('Shortcuts', 2),
+                // Tabs
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
+                  child: Row(
+                    children: [
+                      _buildTab('Help', 0),
+                      SizedBox(width: AppSizes.md),
+                      _buildTab('About', 1),
+                      SizedBox(width: AppSizes.md),
+                      _buildTab('Shortcuts', 2),
+                    ],
+                  ),
+                ),
+                Divider(height: 1, color: AppTheme.divider),
+                
+                // Content
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.all(AppSizes.xl),
+                    child: _buildTabContent(),
+                  ),
+                ),
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
 
-          // Content
-          Expanded(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.all(AppSizes.xl),
-              child: _buildTabContent(),
+  Widget _buildGlassAppBar() {
+    return Container(
+      height: AppSizes.appBarHeight,
+      padding: EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
+      decoration: BoxDecoration(
+        color: AppTheme.darkBackground.withAlpha((0.8 * 255).round()),
+        border: Border(
+          bottom: BorderSide(color: AppTheme.accentPink, width: 2),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.help_outline, color: AppTheme.primaryBlue, size: 24),
+          SizedBox(width: AppSizes.md),
+          Text(
+            'Help & About',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Spacer(),
+          Text(
+            _formatTime(_currentTime),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppTheme.textSecondary,
             ),
           ),
         ],

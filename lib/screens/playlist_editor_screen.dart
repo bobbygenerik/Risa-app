@@ -21,7 +21,7 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
   final TextEditingController _xtreamPasswordController = TextEditingController();
   final TextEditingController _epgUrlController = TextEditingController();
   
-  final FocusNode _playlistNameFocusNode = FocusNode();
+  late DateTime _currentTime;
   final FocusNode _m3uUrlFocusNode = FocusNode();
   final FocusNode _xtreamServerFocusNode = FocusNode();
   final FocusNode _xtreamUsernameFocusNode = FocusNode();

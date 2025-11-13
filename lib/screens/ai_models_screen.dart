@@ -4,18 +4,40 @@ import 'package:iptv_player/services/ai_model_manager.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 
-
-class AIModelsScreen extends StatelessWidget {
+class AIModelsScreen extends StatefulWidget {
   const AIModelsScreen({super.key});
+
+  @override
+  State<AIModelsScreen> createState() => _AIModelsScreenState();
+}
+
+class _AIModelsScreenState extends State<AIModelsScreen> {
+  late DateTime _currentTime;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentTime = DateTime.now();
+    Future.delayed(Duration(seconds: 1), _updateTime);
+  }
+
+  void _updateTime() {
+    if (!mounted) return;
+    setState(() {
+      _currentTime = DateTime.now();
+    });
+    Future.delayed(Duration(seconds: 1), _updateTime);
+  }
+
+  String _formatTime(DateTime time) {
+    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('AI Model Downloads'),
-        backgroundColor: AppTheme.cardBackground,
-      ),
-      backgroundColor: AppTheme.cardBackground,
+      backgroundColor: AppTheme.darkBackground,
+      appBar: _buildGlassAppBar(),
       body: Consumer<AIModelManager>(
         builder: (context, modelManager, _) {
           return ListView(
@@ -464,6 +486,34 @@ class AIModelsScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  AppBar _buildGlassAppBar() {
+    return AppBar(
+      title: Text('AI Models'),
+      backgroundColor: AppTheme.darkBackground,
+      elevation: 0,
+      bottom: PreferredSize(
+        preferredSize: Size.fromHeight(2),
+        child: Container(
+          color: AppTheme.accentPink,
+          height: 2,
+        ),
+      ),
+      actions: [
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: AppSizes.lg),
+          child: Center(
+            child: Text(
+              _formatTime(_currentTime),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

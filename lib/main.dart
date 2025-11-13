@@ -16,7 +16,7 @@ import 'package:iptv_player/services/live_transcription_service.dart';
 import 'package:iptv_player/services/ai_model_manager.dart';
 import 'package:iptv_player/services/opensubtitles_service.dart';
 import 'package:iptv_player/services/real_debrid_service.dart';
-import 'package:iptv_player/widgets/app_shell.dart';
+// import 'package:iptv_player/widgets/app_shell.dart'; // Removed - no sidebar in new UI
 import 'package:iptv_player/widgets/legal_disclaimer_dialog.dart';
 import 'package:iptv_player/screens/epg_screen.dart';
 import 'package:iptv_player/screens/settings_screen.dart';
@@ -24,15 +24,9 @@ import 'package:iptv_player/screens/playlist_editor_screen.dart';
 import 'package:iptv_player/screens/edit_profile_screen.dart';
 import 'package:iptv_player/screens/recordings_screen.dart';
 import 'package:iptv_player/screens/ai_models_screen.dart';
-import 'package:iptv_player/screens/mini_player_screen.dart';
-import 'package:iptv_player/screens/google_tv_home_screen.dart';
-// import 'package:iptv_player/screens/multi_view_screen.dart';  // Disabled - uses VLC
-import 'package:iptv_player/screens/enhanced_video_player_screen.dart'; // Android/iOS/Web player
-import 'package:iptv_player/screens/content_detail_screen.dart';
+import 'package:iptv_player/screens/modern_home_screen.dart';
+import 'package:iptv_player/screens/enhanced_video_player_screen.dart';
 import 'package:iptv_player/screens/search_screen.dart';
-import 'package:iptv_player/screens/category_screen.dart';
-import 'package:iptv_player/screens/movies_screen.dart';
-import 'package:iptv_player/screens/series_screen.dart';
 import 'package:iptv_player/screens/playlist_login_screen.dart';
 import 'package:iptv_player/screens/help_about_screen.dart';
 
@@ -559,55 +553,30 @@ final _router = GoRouter(
       ),
     ),
     GoRoute(path: '/', redirect: (context, state) => '/home'),
-    ShellRoute(
-      builder: (context, state, child) {
-        return AppShell(child: child);
-      },
-      routes: [
-        GoRoute(
-          path: '/home',
-          pageBuilder: (context, state) => _fadeSlidePage(
-            key: state.pageKey,
-            child: const GoogleTVHomeScreen(),
-          ),
-        ),
-        GoRoute(
-          path: '/search',
-          pageBuilder: (context, state) =>
-              _fadeSlidePage(key: state.pageKey, child: const SearchScreen()),
-        ),
-        GoRoute(
-          path: '/movies',
-          pageBuilder: (context, state) =>
-              _fadeSlidePage(key: state.pageKey, child: const MoviesScreen()),
-        ),
-        GoRoute(
-          path: '/series',
-          pageBuilder: (context, state) =>
-              _fadeSlidePage(key: state.pageKey, child: const SeriesScreen()),
-        ),
-        GoRoute(
-          path: '/category/:name',
-          pageBuilder: (context, state) {
-            final categoryName = state.pathParameters['name'] ?? 'Unknown';
-            return _fadeSlidePage(
-              key: state.pageKey,
-              child: CategoryScreen(category: categoryName),
-            );
-          },
-        ),
-        GoRoute(
-          path: '/epg',
-          pageBuilder: (context, state) =>
-              _fadeSlidePage(key: state.pageKey, child: const EPGScreen()),
-        ),
-        GoRoute(
-          path: '/recordings',
-          pageBuilder: (context, state) => _fadeSlidePage(
-            key: state.pageKey,
-            child: const RecordingsScreen(),
-          ),
-        ),
+    GoRoute(
+      path: '/home',
+      pageBuilder: (context, state) => _fadeSlidePage(
+        key: state.pageKey,
+        child: const ModernHomeScreen(),
+      ),
+    ),
+    GoRoute(
+      path: '/search',
+      pageBuilder: (context, state) =>
+          _fadeSlidePage(key: state.pageKey, child: const SearchScreen()),
+    ),
+    GoRoute(
+      path: '/epg',
+      pageBuilder: (context, state) =>
+          _fadeSlidePage(key: state.pageKey, child: const EPGScreen()),
+    ),
+    GoRoute(
+      path: '/recordings',
+      pageBuilder: (context, state) => _fadeSlidePage(
+        key: state.pageKey,
+        child: const RecordingsScreen(),
+      ),
+    ),
         GoRoute(
           path: '/help',
           pageBuilder: (context, state) => _fadeSlidePage(
@@ -615,43 +584,57 @@ final _router = GoRouter(
             child: const HelpAboutScreen(),
           ),
         ),
-        GoRoute(
-          path: '/settings',
-          pageBuilder: (context, state) =>
-              _fadeSlidePage(key: state.pageKey, child: const SettingsScreen()),
-        ),
-        GoRoute(
-          path: '/playlist-editor',
-          pageBuilder: (context, state) => _fadeSlidePage(
-            key: state.pageKey,
-            child: const PlaylistEditorScreen(),
+    GoRoute(
+      path: '/settings',
+      pageBuilder: (context, state) =>
+          _fadeSlidePage(key: state.pageKey, child: const SettingsScreen()),
+    ),
+    GoRoute(
+      path: '/playlist-editor',
+      pageBuilder: (context, state) => _fadeSlidePage(
+        key: state.pageKey,
+        child: const PlaylistEditorScreen(),
+      ),
+    ),
+    GoRoute(
+      path: '/edit-profile',
+      pageBuilder: (context, state) => _fadeSlidePage(
+        key: state.pageKey,
+        child: const EditProfileScreen(),
+      ),
+    ),
+    GoRoute(
+      path: '/ai-models',
+      pageBuilder: (context, state) =>
+          _fadeSlidePage(key: state.pageKey, child: const AIModelsScreen()),
+    ),
+    GoRoute(
+      path: '/player',
+      pageBuilder: (context, state) {
+        final data = state.extra;
+        String videoUrl = 'https://commondatastorage.googleapis.com/gtv-videos-library/sample/BigBuckBunny.mp4';
+        String title = 'Video';
+
+        if (data is Channel) {
+          videoUrl = data.url;
+          title = data.name;
+        } else if (data is Content) {
+          videoUrl = data.videoUrl ?? videoUrl;
+          title = data.title;
+        }
+
+        return _fadeSlidePage(
+          key: state.pageKey,
+          child: EnhancedVideoPlayerScreen(
+            videoUrl: videoUrl,
+            title: title,
           ),
-        ),
-        GoRoute(
-          path: '/edit-profile',
-          pageBuilder: (context, state) => _fadeSlidePage(
-            key: state.pageKey,
-            child: const EditProfileScreen(),
-          ),
-        ),
-        GoRoute(
-          path: '/ai-models',
-          pageBuilder: (context, state) =>
-              _fadeSlidePage(key: state.pageKey, child: const AIModelsScreen()),
-        ),
-        GoRoute(
-          path: '/player',
-          pageBuilder: (context, state) {
-            final channel = state.extra as Channel?;
-            return _fadeSlidePage(
-              key: state.pageKey,
-              child: MiniPlayerScreen(channel: channel),
-            );
-          },
-        ),
-        GoRoute(
-          path: '/vlc-player',
-          pageBuilder: (context, state) {
+        );
+      },
+    ),
+    GoRoute(
+      path: '/vlc-player',
+      pageBuilder: (context, state) {
             final params = state.extra as Map<String, dynamic>?;
             return _fadeSlidePage(
               key: state.pageKey,
@@ -664,34 +647,6 @@ final _router = GoRouter(
             );
           },
         ),
-      ],
-    ),
-    GoRoute(
-      path: '/content/:id',
-      pageBuilder: (context, state) {
-        // Deep link: /content/123
-        // If launched from a URI, state.extra may be null
-        final content = state.extra as Content?;
-        final id = state.pathParameters['id'] ?? '1';
-        if (content != null) {
-          return _fadeSlidePage(
-            key: state.pageKey,
-            child: ContentDetailScreen(content: content),
-          );
-        }
-        // Optionally, fetch content by id here if needed
-        return _fadeSlidePage(
-          key: state.pageKey,
-          child: ContentDetailScreen(
-            content: Content(
-              id: id,
-              title: 'Content Not Found (Deep Link: $id)',
-              type: ContentType.movie,
-            ),
-          ),
-        );
-      },
-    ),
   ],
 );
 

@@ -6,8 +6,34 @@ import 'package:iptv_player/utils/app_theme.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 
-class FavoritesScreen extends StatelessWidget {
+class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
+
+  @override
+  State<FavoritesScreen> createState() => _FavoritesScreenState();
+}
+
+class _FavoritesScreenState extends State<FavoritesScreen> {
+  late DateTime _currentTime;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentTime = DateTime.now();
+    Future.delayed(Duration(seconds: 1), _updateTime);
+  }
+
+  void _updateTime() {
+    if (!mounted) return;
+    setState(() {
+      _currentTime = DateTime.now();
+    });
+    Future.delayed(Duration(seconds: 1), _updateTime);
+  }
+
+  String _formatTime(DateTime time) {
+    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,44 +41,74 @@ class FavoritesScreen extends StatelessWidget {
       builder: (context, channelProvider, child) {
         final favorites = channelProvider.favoriteChannels;
 
-        return Padding(
-          padding: EdgeInsets.all(AppSizes.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        return Scaffold(
+          backgroundColor: AppTheme.darkBackground,
+          body: Column(
             children: [
-              // Header
-              Row(
-                children: [
-                  Icon(Icons.favorite, color: AppTheme.accentRed, size: 32),
-                  SizedBox(width: AppSizes.md),
-                  Text(
-                    'Favorite Channels',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Spacer(),
-                  if (favorites.isNotEmpty)
-                    Text(
-                      '${favorites.length} ${favorites.length == 1 ? 'channel' : 'channels'}',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                ],
-              ),
-              SizedBox(height: AppSizes.xl),
-
-              // Content
+              _buildGlassAppBar(favorites.length),
+              Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
               Expanded(
-                child: favorites.isEmpty
-                    ? _buildEmptyState(context)
-                    : _buildFavoritesList(context, favorites),
+                child: Padding(
+                  padding: EdgeInsets.all(AppSizes.lg),
+                  child: favorites.isEmpty
+                      ? _buildEmptyState(context)
+                      : _buildFavoritesList(context, favorites),
+                ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildGlassAppBar(int favCount) {
+    return Container(
+      height: AppSizes.appBarHeight,
+      padding: EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
+      decoration: BoxDecoration(
+        color: AppTheme.darkBackground.withAlpha((0.8 * 255).round()),
+        border: Border(
+          bottom: BorderSide(color: AppTheme.accentPink, width: 2),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.favorite, color: AppTheme.accentRed, size: 24),
+          SizedBox(width: AppSizes.md),
+          Text(
+            'Favorites',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Spacer(),
+          if (favCount > 0)
+            Padding(
+              padding: EdgeInsets.only(right: AppSizes.lg),
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: AppSizes.md, vertical: AppSizes.xs),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryBlue.withAlpha((0.2 * 255).round()),
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                ),
+                child: Text(
+                  '$favCount',
+                  style: TextStyle(
+                    color: AppTheme.primaryBlue,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          Text(
+            _formatTime(_currentTime),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppTheme.textSecondary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
