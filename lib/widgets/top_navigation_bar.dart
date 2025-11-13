@@ -77,142 +77,239 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
     final isTV = size.width > 1920 && size.height > 1080;
     final scale = isTV ? 1.8 : 1.0;
 
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 32 * scale, vertical: 24 * scale),
-      decoration: BoxDecoration(
-        color: Colors.transparent,
-        border: Border(
-          bottom: BorderSide(
-            color: Colors.white.withOpacity(0.1),
-            width: 1,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 32 * scale, vertical: 24 * scale),
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            border: Border(
+              bottom: BorderSide(
+                color: Colors.white.withOpacity(0.1),
+                width: 1,
+              ),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Logo (if shown)
+              if (widget.showLogoAndTime) ...[
+                Image.asset(
+                  'assets/images/croppedlogo2.png',
+                  height: 40 * scale,
+                  fit: BoxFit.contain,
+                ),
+                SizedBox(width: 20 * scale),
+              ],
+              // Navigation bar with tabs and search (centered, expanded)
+              Expanded(
+                child: Container(
+                  height: 56 * scale,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.08),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.15),
+                      width: 1.5,
+                    ),
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primaryBlue.withOpacity(0.1),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12 * scale),
+                    child: Row(
+                      children: [
+                        ...List.generate(
+                          widget.tabs.length,
+                          (index) => _buildTabButton(index, scale),
+                        ),
+                        // Search icon in nav bar
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () {
+                              setState(() => _showSearchBox = !_showSearchBox);
+                              if (_showSearchBox) {
+                                Future.delayed(const Duration(milliseconds: 100), () {
+                                  _searchFocusNode.requestFocus();
+                                });
+                              }
+                            },
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 8 * scale),
+                              child: Icon(
+                                Icons.search_outlined,
+                                size: 18 * scale,
+                                color: AppTheme.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Overflow menu button (more options)
+                        PopupMenuButton(
+                          color: Colors.white.withOpacity(0.08),
+                          elevation: 16,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(
+                              color: Colors.white.withOpacity(0.15),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 8 * scale),
+                            child: Icon(
+                              Icons.more_vert,
+                              size: 18 * scale,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                          itemBuilder: (context) => [
+                            PopupMenuItem(
+                              child: Row(
+                                children: [
+                                  Icon(Icons.settings, color: AppTheme.primaryBlue, size: 16 * scale),
+                                  SizedBox(width: 12 * scale),
+                                  Text('Settings', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500)),
+                                ],
+                              ),
+                              onTap: () {
+                                Future.delayed(const Duration(milliseconds: 100), () {
+                                  if (mounted) context.go('/settings');
+                                });
+                              },
+                            ),
+                            PopupMenuItem(
+                              child: Row(
+                                children: [
+                                  Icon(Icons.favorite_outline, color: AppTheme.accentPink, size: 16 * scale),
+                                  SizedBox(width: 12 * scale),
+                                  Text('Favorites', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500)),
+                                ],
+                              ),
+                              onTap: () {
+                                Future.delayed(const Duration(milliseconds: 100), () {
+                                  if (mounted) context.go('/favorites');
+                                });
+                              },
+                            ),
+                            PopupMenuItem(
+                              child: Row(
+                                children: [
+                                  Icon(Icons.download, color: AppTheme.textSecondary, size: 16 * scale),
+                                  SizedBox(width: 12 * scale),
+                                  Text('Downloads', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500)),
+                                ],
+                              ),
+                              onTap: () {
+                                Future.delayed(const Duration(milliseconds: 100), () {
+                                  if (mounted) context.go('/downloads');
+                                });
+                              },
+                            ),
+                            PopupMenuItem(
+                              child: Row(
+                                children: [
+                                  Icon(Icons.schedule, color: AppTheme.primaryBlue, size: 16 * scale),
+                                  SizedBox(width: 12 * scale),
+                                  Text('Guide', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500)),
+                                ],
+                              ),
+                              onTap: () {
+                                Future.delayed(const Duration(milliseconds: 100), () {
+                                  if (mounted) context.go('/epg');
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(width: 20 * scale),
+              // Time (if shown)
+              if (widget.showLogoAndTime)
+                Text(
+                  widget.currentTime,
+                  style: TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 18 * scale,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+            ],
           ),
         ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Logo (if shown)
-          if (widget.showLogoAndTime) ...[
-            Image.asset(
-              'assets/images/croppedlogo2.png',
-              height: 40 * scale,
-              fit: BoxFit.contain,
-            ),
-            SizedBox(width: 20 * scale),
-          ],
-          // Navigation bar with tabs and search (centered, expanded)
-          Expanded(
+        // Search input field (appears when search icon is clicked)
+        if (_showSearchBox)
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 32 * scale, vertical: 16 * scale),
             child: Container(
-              height: 56 * scale,
+              height: 48 * scale,
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.08),
                 border: Border.all(
                   color: Colors.white.withOpacity(0.15),
                   width: 1.5,
                 ),
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primaryBlue.withOpacity(0.1),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                borderRadius: BorderRadius.circular(24),
               ),
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12 * scale),
-                child: Row(
-                  children: [
-                    ...List.generate(
-                      widget.tabs.length,
-                      (index) => _buildTabButton(index, scale),
-                    ),
-                    // Search icon in nav bar
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () {
-                          setState(() => _showSearchBox = !_showSearchBox);
-                          if (_showSearchBox) {
-                            Future.delayed(const Duration(milliseconds: 100), () {
-                              _searchFocusNode.requestFocus();
-                            });
-                          }
-                        },
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 8 * scale),
-                          child: Icon(
-                            Icons.search_outlined,
-                            size: 18 * scale,
-                            color: AppTheme.textSecondary,
-                          ),
-                        ),
-                      ),
-                    ),
-                    // Overflow menu button (more options)
-                    PopupMenuButton(
-                      color: AppTheme.cardBackground,
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 8 * scale),
-                        child: Icon(
-                          Icons.more_vert,
-                          size: 18 * scale,
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                      itemBuilder: (context) => [
-                        PopupMenuItem(
-                          child: Row(
-                            children: [
-                              Icon(Icons.settings, color: AppTheme.primaryBlue, size: 18),
-                              SizedBox(width: 8),
-                              Text('Settings'),
-                            ],
-                          ),
-                          onTap: () => context.go('/settings'),
-                        ),
-                        PopupMenuItem(
-                          child: Row(
-                            children: [
-                              Icon(Icons.favorite_outline, color: AppTheme.accentPink, size: 18),
-                              SizedBox(width: 8),
-                              Text('Favorites'),
-                            ],
-                          ),
-                          onTap: () => context.go('/favorites'),
-                        ),
-                        PopupMenuItem(
-                          child: Row(
-                            children: [
-                              Icon(Icons.download, color: AppTheme.textSecondary, size: 18),
-                              SizedBox(width: 8),
-                              Text('Downloads'),
-                            ],
-                          ),
-                          onTap: () => context.go('/downloads'),
-                        ),
-                      ],
-                    ),
-                  ],
+              child: TextField(
+                controller: _searchController,
+                focusNode: _searchFocusNode,
+                style: TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 16 * scale,
                 ),
+                decoration: InputDecoration(
+                  hintText: 'Search...',
+                  hintStyle: TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 16 * scale,
+                  ),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 20 * scale, vertical: 12 * scale),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: AppTheme.textSecondary,
+                    size: 20 * scale,
+                  ),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? InkWell(
+                          onTap: () {
+                            _searchController.clear();
+                            setState(() {});
+                          },
+                          child: Icon(
+                            Icons.clear,
+                            color: AppTheme.textSecondary,
+                            size: 20 * scale,
+                          ),
+                        )
+                      : null,
+                ),
+                onChanged: (_) => setState(() {}),
+                onSubmitted: (query) {
+                  if (widget.onSearchSubmit != null) {
+                    widget.onSearchSubmit!(query);
+                  }
+                  context.go('/search?q=$query');
+                },
               ),
             ),
           ),
-          SizedBox(width: 20 * scale),
-          // Time (if shown)
-          if (widget.showLogoAndTime)
-            Text(
-              widget.currentTime,
-              style: TextStyle(
-                color: AppTheme.textPrimary,
-                fontSize: 18 * scale,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1.0,
-              ),
-            ),
-        ],
-      ),
+      ],
     );
   }
 

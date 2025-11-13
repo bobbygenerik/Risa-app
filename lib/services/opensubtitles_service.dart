@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 class OpenSubtitlesService extends ChangeNotifier {
   static const String _apiUrl = 'https://api.opensubtitles.com/api/v1';
   static const String _apiKey =
-      'YOUR_API_KEY_HERE'; // User needs to register at opensubtitles.com
+      'WX4Acrpk0veYJrpQTc1I5oUBkpNnIqbc';
 
   String? _username;
   String? _password;

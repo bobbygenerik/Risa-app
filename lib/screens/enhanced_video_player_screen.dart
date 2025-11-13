@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 // import 'package:flutter_vlc_player/flutter_vlc_player.dart'; // DISABLED - causes build errors on Linux
 import 'package:iptv_player/widgets/native_exoplayer.dart';
 // Disabled - causes UnimplementedError
@@ -13,6 +14,8 @@ import 'package:iptv_player/widgets/native_exoplayer.dart';
 import 'package:iptv_player/services/ai_upscaling_service.dart';
 import 'package:iptv_player/services/live_transcription_service.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/models/channel.dart';
+import 'package:iptv_player/providers/channel_provider.dart';
 import 'dart:io' as io;
 
 /// Enhanced full-screen video player with advanced features:
@@ -30,6 +33,7 @@ class EnhancedVideoPlayerScreen extends StatefulWidget {
   final List<SubtitleOption>? subtitleOptions;
   final List<AudioTrackOption>? audioTracks;
   final bool forceVlc;
+  final Channel? channel;
 
   const EnhancedVideoPlayerScreen({
     super.key,
@@ -40,6 +44,7 @@ class EnhancedVideoPlayerScreen extends StatefulWidget {
     this.subtitleOptions,
     this.audioTracks,
     this.forceVlc = false,
+    this.channel,
   });
 
   @override
@@ -294,19 +299,29 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         break;
 
       case LogicalKeyboardKey.arrowUp:
-        // Show subtitle selector
-        setState(() => _showSubtitleSelector = !_showSubtitleSelector);
+        // Switch to previous channel (live TV only)
+        if (widget.isLive && widget.channel != null) {
+          _switchToPreviousChannel();
+        } else {
+          // For VOD, toggle subtitle selector
+          setState(() => _showSubtitleSelector = !_showSubtitleSelector);
+        }
         break;
 
       case LogicalKeyboardKey.arrowDown:
-        // Show audio selector
-        setState(() => _showAudioSelector = !_showAudioSelector);
-        // If opening the audio selector and we have a native controller, fetch
-        // the native audio track list for display.
-        if (!_showAudioSelector && Platform.isAndroid) {
-          // was open, now closed - do nothing
-        } else if (_showAudioSelector && _nativeController != null && Platform.isAndroid) {
-          _loadNativeAudioTracks();
+        // Switch to next channel (live TV only)
+        if (widget.isLive && widget.channel != null) {
+          _switchToNextChannel();
+        } else {
+          // For VOD, toggle audio selector
+          setState(() => _showAudioSelector = !_showAudioSelector);
+          // If opening the audio selector and we have a native controller, fetch
+          // the native audio track list for display.
+          if (!_showAudioSelector && Platform.isAndroid) {
+            // was open, now closed - do nothing
+          } else if (_showAudioSelector && _nativeController != null && Platform.isAndroid) {
+            _loadNativeAudioTracks();
+          }
         }
         break;
 
@@ -361,8 +376,14 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
       case LogicalKeyboardKey.escape:
       case LogicalKeyboardKey.goBack:
-        // Exit player
-        Navigator.of(context).pop();
+        // Exit player - navigate to EPG with mini player if this is live TV
+        if (widget.isLive && widget.channel != null) {
+          // For live TV, go back to EPG with mini player
+          context.go('/epg', extra: {'channel': widget.channel, 'continuePlayback': true});
+        } else {
+          // For VOD, just pop
+          Navigator.of(context).pop();
+        }
         break;
     }
   }
@@ -462,6 +483,46 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   // Removed _getSubtitleType - subtitle support disabled
+
+  void _switchToNextChannel() {
+    final channelProvider = Provider.of<ChannelProvider>(context, listen: false);
+    final channels = channelProvider.channels;
+    
+    if (channels.isEmpty || widget.channel == null) return;
+    
+    // Find current channel index
+    final currentIndex = channels.indexWhere((ch) => ch.id == widget.channel!.id);
+    if (currentIndex == -1) return;
+    
+    // Get next channel (wrap around to first if at end)
+    final nextIndex = (currentIndex + 1) % channels.length;
+    final nextChannel = channels[nextIndex];
+    
+    // Navigate to next channel with mini player support
+    if (mounted) {
+      context.go('/player', extra: nextChannel);
+    }
+  }
+
+  void _switchToPreviousChannel() {
+    final channelProvider = Provider.of<ChannelProvider>(context, listen: false);
+    final channels = channelProvider.channels;
+    
+    if (channels.isEmpty || widget.channel == null) return;
+    
+    // Find current channel index
+    final currentIndex = channels.indexWhere((ch) => ch.id == widget.channel!.id);
+    if (currentIndex == -1) return;
+    
+    // Get previous channel (wrap around to last if at start)
+    final previousIndex = (currentIndex - 1) < 0 ? channels.length - 1 : (currentIndex - 1);
+    final previousChannel = channels[previousIndex];
+    
+    // Navigate to previous channel with mini player support
+    if (mounted) {
+      context.go('/player', extra: previousChannel);
+    }
+  }
 
   Future<void> _toggleLiveTranscription() async {
     final transcriptionService = Provider.of<LiveTranscriptionService>(context, listen: false);

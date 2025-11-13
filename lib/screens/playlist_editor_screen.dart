@@ -21,7 +21,6 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
   final TextEditingController _xtreamPasswordController = TextEditingController();
   final TextEditingController _epgUrlController = TextEditingController();
   
-  late DateTime _currentTime;
   final FocusNode _playlistNameFocusNode = FocusNode();
   final FocusNode _m3uUrlFocusNode = FocusNode();
   final FocusNode _xtreamServerFocusNode = FocusNode();
@@ -270,17 +269,26 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: AppTheme.darkBackground,
-        body: Center(
-          child: CircularProgressIndicator(color: AppTheme.primaryBlue),
+        backgroundColor: Colors.transparent,
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF050710), Color(0xFF0d1140)],
+            ),
+          ),
+          child: Center(
+            child: CircularProgressIndicator(color: AppTheme.primaryBlue),
+          ),
         ),
       );
     }
 
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: AppTheme.cardBackground,
+        backgroundColor: Colors.white.withOpacity(0.08),
         title: const Text('Edit Playlist'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -300,35 +308,43 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSizes.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Playlist Name
-            _buildSectionCard(
-              title: 'Playlist Name',
-              subtitle: 'Give your playlist a custom name',
-              children: [
-                _buildTVFriendlyTextField(
-                  controller: _playlistNameController,
-                  focusNode: _playlistNameFocusNode,
-                  isEditable: _playlistNameEditable,
-                  onEditableChange: (value) => setState(() => _playlistNameEditable = value),
-                  label: 'Playlist Name',
-                  hint: 'e.g., My IPTV Channels',
-                  icon: Icons.label,
-                ),
-              ],
-            ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF050710), Color(0xFF0d1140)],
+          ),
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSizes.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Playlist Name
+              _buildSectionCard(
+                title: 'Playlist Name',
+                subtitle: 'Give your playlist a custom name',
+                children: [
+                  _buildTVFriendlyTextField(
+                    controller: _playlistNameController,
+                    focusNode: _playlistNameFocusNode,
+                    isEditable: _playlistNameEditable,
+                    onEditableChange: (value) => setState(() => _playlistNameEditable = value),
+                    label: 'Playlist Name',
+                    hint: 'e.g., My IPTV Channels',
+                    icon: Icons.label,
+                  ),
+                ],
+              ),
 
-            const SizedBox(height: AppSizes.lg),
+              const SizedBox(height: AppSizes.lg),
 
-            // Playlist Source
-            _buildSectionCard(
-              title: 'Playlist Source',
-              subtitle: _playlistType == 'm3u' ? 'M3U URL Configuration' : 'Xtream Codes Configuration',
-              children: [
+              // Playlist Source
+              _buildSectionCard(
+                title: 'Playlist Source',
+                subtitle: _playlistType == 'm3u' ? 'M3U URL Configuration' : 'Xtream Codes Configuration',
+                children: [
                 if (_playlistType == 'm3u') ...[
                   _buildTVFriendlyTextField(
                     controller: _m3uUrlController,
@@ -382,10 +398,10 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
               ],
             ),
 
-            const SizedBox(height: AppSizes.lg),
+              const SizedBox(height: AppSizes.lg),
 
-            // EPG Source
-            _buildSectionCard(
+              // EPG Source
+              _buildSectionCard(
               title: 'EPG Source',
               subtitle: 'Electronic Program Guide URL',
               children: [
@@ -401,10 +417,10 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
               ],
             ),
 
-            const SizedBox(height: AppSizes.lg),
+              const SizedBox(height: AppSizes.lg),
 
-            // Update Frequency
-            _buildSectionCard(
+              // Update Frequency
+              _buildSectionCard(
               title: 'Auto-Update Frequency',
               subtitle: 'How often to refresh the playlist automatically',
               children: [
@@ -482,10 +498,10 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
               ],
             ),
 
-            const SizedBox(height: AppSizes.xl),
+              const SizedBox(height: AppSizes.xl),
 
-            // Action Buttons
-            Row(
+              // Action Buttons
+              Row(
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
@@ -514,31 +530,32 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
               ],
             ),
 
-            const SizedBox(height: AppSizes.md),
+              const SizedBox(height: AppSizes.md),
 
-            Container(
-              padding: const EdgeInsets.all(AppSizes.md),
-                  decoration: BoxDecoration(
-                    color: AppTheme.cardBackground,
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                    border: Border.all(color: AppTheme.divider),
-                  ),
-              child: const Row(
-                children: [
-                  Icon(Icons.info_outline, color: AppTheme.textSecondary),
-                  SizedBox(width: AppSizes.md),
-                  Expanded(
-                    child: Text(
-                      'Press ENTER on text fields to edit them. Press ESC to finish editing. Don\'t forget to save your changes!',
-                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+              Container(
+                padding: const EdgeInsets.all(AppSizes.md),
+                decoration: BoxDecoration(
+                  color: AppTheme.cardBackground,
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                  border: Border.all(color: AppTheme.divider),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.info_outline, color: AppTheme.textSecondary),
+                    SizedBox(width: AppSizes.md),
+                    Expanded(
+                      child: Text(
+                        'Press ENTER on text fields to edit them. Press ESC to finish editing. Don\'t forget to save your changes!',
+                        style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),
+    ),
     );
   }
 

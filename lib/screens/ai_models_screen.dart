@@ -36,98 +36,107 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: Colors.transparent,
       appBar: _buildGlassAppBar(),
-      body: Consumer<AIModelManager>(
-        builder: (context, modelManager, _) {
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              // Header info
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF050710), Color(0xFF0d1140)],
+          ),
+        ),
+        child: Consumer<AIModelManager>(
+          builder: (context, modelManager, _) {
+            return ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                // Header info
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            color: AppTheme.primaryBlue,
+                            size: 20,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'About AI Models',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'All models are processed on-device for privacy and work offline after download. '
+                        'Models are shared between services to avoid duplicates.',
+                        style: TextStyle(fontSize: 13, height: 1.4),
+                      ),
+                      const SizedBox(height: 12),
+                      FutureBuilder<int>(
+                        future: modelManager.getTotalDownloadedSize(),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasData) {
+                            final sizeMB = (snapshot.data! / (1024 * 1024))
+                                .toStringAsFixed(1);
+                            return Text(
+                              'Total downloaded: $sizeMB MB',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.primaryBlue,
+                              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                    ],
                   ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          color: AppTheme.primaryBlue,
-                          size: 20,
-                        ),
-                        SizedBox(width: 8),
-                        Text(
-                          'About AI Models',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'All models are processed on-device for privacy and work offline after download. '
-                      'Models are shared between services to avoid duplicates.',
-                      style: TextStyle(fontSize: 13, height: 1.4),
-                    ),
-                    const SizedBox(height: 12),
-                    FutureBuilder<int>(
-                      future: modelManager.getTotalDownloadedSize(),
-                      builder: (context, snapshot) {
-                        if (snapshot.hasData) {
-                          final sizeMB = (snapshot.data! / (1024 * 1024))
-                              .toStringAsFixed(1);
-                          return Text(
-                            'Total downloaded: $sizeMB MB',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.primaryBlue,
-                            ),
-                          );
-                        }
-                        return const SizedBox.shrink();
-                      },
-                    ),
-                  ],
+
+                const SizedBox(height: 24),
+
+                // Video Upscaling Models
+                _buildCategorySection(
+                  context,
+                  modelManager,
+                  ModelCategory.videoUpscaling,
+                  'Choose ONE model for AI video upscaling',
                 ),
-              ),
 
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-              // Video Upscaling Models
-              _buildCategorySection(
-                context,
-                modelManager,
-                ModelCategory.videoUpscaling,
-                'Choose ONE model for AI video upscaling',
-              ),
+                // Speech Recognition Models
+                _buildCategorySection(
+                  context,
+                  modelManager,
+                  ModelCategory.speechRecognition,
+                  'Choose ONE model for speech-to-text (shared by all transcription features)',
+                ),
 
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-              // Speech Recognition Models
-              _buildCategorySection(
-                context,
-                modelManager,
-                ModelCategory.speechRecognition,
-                'Choose ONE model for speech-to-text (shared by all transcription features)',
-              ),
-
-              const SizedBox(height: 24),
-
-              // Translation info
-              _buildTranslationInfo(),
-            ],
-          );
-        },
+                // Translation info
+                _buildTranslationInfo(),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -492,7 +501,7 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
   AppBar _buildGlassAppBar() {
     return AppBar(
       title: Text('AI Models'),
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: Colors.white.withOpacity(0.08),
       elevation: 0,
       bottom: PreferredSize(
         preferredSize: Size.fromHeight(2),

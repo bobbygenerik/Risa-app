@@ -180,13 +180,22 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
-      body: Column(
-        children: [
-          _buildGlassAppBar(),
-          Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
-          Expanded(child: _buildContent()),
-        ],
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF050710), Color(0xFF0d1140)],
+          ),
+        ),
+        child: Column(
+          children: [
+            _buildGlassAppBar(),
+            Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
+            Expanded(child: _buildContent()),
+          ],
+        ),
       ),
     );
   }
@@ -196,7 +205,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
       height: AppSizes.appBarHeight,
       padding: EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
       decoration: BoxDecoration(
-        color: AppTheme.darkBackground.withAlpha((0.8 * 255).round()),
+        color: Colors.white.withOpacity(0.08),
         border: Border(
           bottom: BorderSide(color: AppTheme.accentPink, width: 2),
         ),

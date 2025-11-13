@@ -213,10 +213,10 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: Text('Manage Playlists'),
-        backgroundColor: AppTheme.cardBackground,
+        backgroundColor: Colors.white.withOpacity(0.08),
         actions: [
           IconButton(
             icon: Icon(Icons.add),
@@ -227,11 +227,20 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
           ),
         ],
       ),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator())
-          : _playlists.isEmpty
-          ? _buildEmptyState()
-          : _buildPlaylistList(),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF050710), Color(0xFF0d1140)],
+          ),
+        ),
+        child: _isLoading
+            ? Center(child: CircularProgressIndicator())
+            : _playlists.isEmpty
+            ? _buildEmptyState()
+            : _buildPlaylistList(),
+      ),
     );
   }
 

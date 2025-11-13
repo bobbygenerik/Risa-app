@@ -19,23 +19,46 @@ class SeriesScreen extends StatelessWidget {
           return _buildEmptyState(context);
         }
 
-        return SingleChildScrollView(
-          padding: EdgeInsets.all(AppSizes.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Recently Added Series
-              if (recentSeries.isNotEmpty) ...[
-                _buildSectionHeader(context, 'Recently Added Series'),
-                SizedBox(height: AppSizes.md),
-                _buildSeriesRow(context, recentSeries),
-                SizedBox(height: AppSizes.xl),
-              ],
+        return Stack(
+          children: [
+            // Full-height hero banner background
+            Positioned.fill(
+              child: _buildHeroBannerBackground(series.first),
+            ),
+            // Content on top
+            SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Hero banner with content overlay
+                  _buildHeroBannerOverlay(context, series.first),
+                  SizedBox(height: AppSizes.lg),
+                  
+                  Container(
+                    color: Color(0xFF050710),
+                    child: Padding(
+                      padding: EdgeInsets.all(AppSizes.lg),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Recently Added Series
+                          if (recentSeries.isNotEmpty) ...[
+                            _buildSectionHeader(context, 'Recently Added Series'),
+                            SizedBox(height: AppSizes.md),
+                            _buildSeriesRow(context, recentSeries),
+                            SizedBox(height: AppSizes.xl),
+                          ],
 
-              // All Series by Genre
-              ..._buildGenreSections(context, series),
-            ],
-          ),
+                          // All Series by Genre
+                          ..._buildGenreSections(context, series),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         );
       },
     );
@@ -265,5 +288,117 @@ class SeriesScreen extends StatelessWidget {
     }
 
     return sections;
+  }
+
+  Widget _buildHeroBannerBackground(Content featuredSeries) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.black.withOpacity(0.3),
+            Colors.black.withOpacity(0.7),
+          ],
+        ),
+      ),
+      child: Container(
+        color: AppTheme.cardBackground,
+        child: featuredSeries.backdropUrl != null
+            ? Image.network(
+                featuredSeries.backdropUrl!,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+                errorBuilder: (_, __, ___) => _buildBannerPlaceholder(),
+              )
+            : _buildBannerPlaceholder(),
+      ),
+    );
+  }
+
+  Widget _buildHeroBannerOverlay(BuildContext context, Content featuredSeries) {
+    return GestureDetector(
+      onTap: () {
+        context.push('/content/${featuredSeries.id}', extra: featuredSeries);
+      },
+      child: Container(
+        height: 300,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.transparent,
+              Colors.black.withOpacity(0.9),
+            ],
+          ),
+        ),
+        child: Align(
+          alignment: Alignment.bottomLeft,
+          child: Padding(
+            padding: EdgeInsets.all(AppSizes.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  featuredSeries.title,
+                  style: TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.play_circle,
+                        color: AppTheme.accentOrange, size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'Watch Now',
+                      style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 14,
+                      ),
+                    ),
+                    if (featuredSeries.rating != null) ...[
+                      SizedBox(width: 16),
+                      Icon(Icons.star, color: Colors.amber, size: 16),
+                      SizedBox(width: 4),
+                      Text(
+                        featuredSeries.ratingDisplay,
+                        style: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBannerPlaceholder() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppTheme.primaryBlue.withOpacity(0.2),
+            AppTheme.accentOrange.withOpacity(0.2),
+          ],
+        ),
+      ),
+    );
   }
 }

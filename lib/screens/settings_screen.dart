@@ -204,38 +204,48 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        _buildSidebarMenu(),
-        VerticalDivider(width: 1, color: AppTheme.divider),
-        Expanded(
-          child: Focus(
-            canRequestFocus: false,  // Don't trap focus, allow content to be focusable
-            onKeyEvent: (node, event) {
-              if (event is! KeyDownEvent) return KeyEventResult.ignored;
-              final key = event.logicalKey;
-              // Only intercept LEFT to return to settings sidebar
-              if (key == LogicalKeyboardKey.arrowLeft) {
-                requestFirstSidebarFocus();
-                return KeyEventResult.handled;
-              }
-              // Let UP/DOWN pass through for scrolling
-              return KeyEventResult.ignored;
-            },
-            child: TabBarView(
-              controller: _tabController,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                _buildGeneralSettings(),
-                _buildAccountSettings(),
-                _buildPlaybackSettings(),
-                _buildCloudAndAISettings(),
-                _buildRecordingsSettings(),
-              ],
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF050710),
+            Color(0xFF0d1140),
+          ],
+        ),
+      ),
+      child: Row(
+        children: [
+          _buildSidebarMenu(),
+          VerticalDivider(width: 1, color: Colors.white.withOpacity(0.1)),
+          Expanded(
+            child: Focus(
+              canRequestFocus: false,
+              onKeyEvent: (node, event) {
+                if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                final key = event.logicalKey;
+                if (key == LogicalKeyboardKey.arrowLeft) {
+                  requestFirstSidebarFocus();
+                  return KeyEventResult.handled;
+                }
+                return KeyEventResult.ignored;
+              },
+              child: TabBarView(
+                controller: _tabController,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  _buildGeneralSettings(),
+                  _buildAccountSettings(),
+                  _buildPlaybackSettings(),
+                  _buildCloudAndAISettings(),
+                  _buildRecordingsSettings(),
+                ],
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -249,31 +259,46 @@ class _SettingsScreenState extends State<SettingsScreen>
     ];
 
     return Container(
-      width: 200,  // Reduced from 250
-      color: AppTheme.sidebarBackground,
+      width: 220,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        border: Border(
+          right: BorderSide(
+            color: Colors.white.withOpacity(0.1),
+            width: 1,
+          ),
+        ),
+      ),
       child: Column(
         children: [
-          // Settings header matching main sidebar height
+          // Settings header
           Container(
-            height: AppSizes.appBarHeight,
-            padding: EdgeInsets.all(AppSizes.md),  // Reduced from lg
-            child: Center(
+            height: 80,
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: AppTheme.accentPink,
+                  width: 2,
+                ),
+              ),
+            ),
+            child: Align(
+              alignment: Alignment.centerLeft,
               child: Text(
                 'Settings',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),  // Reduced from headlineSmall
+                style: TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
               ),
             ),
           ),
-          // Divider matching the top bar's solid pink line
-          Container(
-            height: 2,
-            color: AppTheme.accentPink,
-          ),
           Expanded(
             child: ListView.builder(
-              padding: EdgeInsets.only(top: AppSizes.sm),  // Prevent first item clipping on focus
+              padding: EdgeInsets.symmetric(vertical: 12),
               itemCount: menuItems.length,
               itemBuilder: (context, index) {
                 final item = menuItems[index];
@@ -297,7 +322,6 @@ class _SettingsScreenState extends State<SettingsScreen>
                         return KeyEventResult.handled;
                       } else if (key == LogicalKeyboardKey.arrowUp) {
                         if (index == 0) {
-                          // Let the parent scope handle it (moves to top bar)
                           return KeyEventResult.ignored;
                         }
                         final prev = index - 1;
@@ -305,88 +329,64 @@ class _SettingsScreenState extends State<SettingsScreen>
                         setState(() => _tabController.index = prev);
                         return KeyEventResult.handled;
                       } else if (key == LogicalKeyboardKey.arrowRight) {
-                        // Move focus to the content area
-                        // Request focus on the first focusable element based on current tab
                         final focusScope = FocusScope.of(context);
                         Future.microtask(() {
                           switch (_tabController.index) {
-                            case 0: // General
+                            case 0:
                               _m3uUrlFocusNode.requestFocus();
                               break;
-                            case 1: // Account
+                            case 1:
                               _realDebridApiKeyFocusNode.requestFocus();
-                              break;
-                            case 2: // Playback
-                            case 3: // Cloud & AI
-                            case 4: // Recordings
-                              // For other tabs, use default focus traversal
-                              focusScope.nextFocus();
                               break;
                           }
                         });
                         return KeyEventResult.handled;
-                      } else if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
-                        setState(() => _tabController.index = index);
-                        return KeyEventResult.handled;
-                      } else if (key == LogicalKeyboardKey.arrowLeft) {
-                        // Navigate back to main sidebar
-                        FocusScope.of(context).parent?.requestFocus();
-                        return KeyEventResult.handled;
                       }
                       return KeyEventResult.ignored;
                     },
-                    onFocusChange: (_) => setState(() {}),
-                    child: Builder(
-                      builder: (context) {
-                        final bool isFocused = Focus.of(context).hasFocus;
-                        final Color iconColor = isFocused ? AppTheme.primaryBlue : AppTheme.textPrimary;
-                        final Color textColor = isFocused ? AppTheme.primaryBlue : AppTheme.textPrimary;
-                        
-                        return AnimatedScale(
-                          scale: isFocused ? 1.08 : 1.0,  // Reduced from 1.1
-                          duration: AppDurations.fast,
-                          curve: Curves.easeOut,
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: AppSizes.lg,  // Match main sidebar
-                              vertical: 12,  // Reduced from 18
+                    child: Container(
+                      margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppTheme.primaryBlue.withOpacity(0.3)
+                            : Colors.transparent,
+                        border: Border.all(
+                          color: isSelected
+                              ? AppTheme.primaryBlue.withOpacity(0.5)
+                              : Colors.transparent,
+                          width: 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        child: Row(
+                          children: [
+                            Icon(
+                              item['icon'] as IconData,
+                              color: isSelected
+                                  ? AppTheme.primaryBlue
+                                  : AppTheme.textSecondary,
+                              size: 20,
                             ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  item['icon'] as IconData,
-                                  color: iconColor,
-                                  size: AppSizes.iconMd + (isFocused ? 3 : 0),  // Reduced from 4
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                item['title'] as String,
+                                style: TextStyle(
+                                  color: isSelected
+                                      ? AppTheme.textPrimary
+                                      : AppTheme.textSecondary,
+                                  fontSize: 14,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
                                 ),
-                                SizedBox(width: AppSizes.sm),  // Reduced from md
-                                Expanded(
-                                  child: Text(
-                                    item['title'] as String,
-                                    style: TextStyle(
-                                      color: textColor,
-                                      fontWeight: (isFocused || isSelected)
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
-                                      fontSize: 15,  // Reduced from 17
-                                      letterSpacing: isFocused ? 0.3 : 0,  // Reduced from 0.5
-                                    ),
-                                  ),
-                                ),
-                                if (isSelected)
-                                  Container(
-                                    width: 3,
-                                    height: 20,
-                                    margin: const EdgeInsets.only(left: 10),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.accentPink,
-                                      borderRadius: BorderRadius.circular(2),
-                                    ),
-                                  ),
-                              ],
+                              ),
                             ),
-                          ),
-                        );
-                      },
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 );

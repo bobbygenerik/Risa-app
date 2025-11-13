@@ -36,6 +36,24 @@ class _EPGScreenState extends State<EPGScreen> {
     super.initState();
     _currentTime = DateTime.now();
     Future.delayed(Duration(seconds: 1), _updateTime);
+    
+    // Check if we're coming back from player with mini player data
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final routeState = GoRouterState.of(context);
+      final extra = routeState.extra as Map<String, dynamic>?;
+      
+      if (extra != null) {
+        final channel = extra['channel'] as Channel?;
+        final continuePlayback = extra['continuePlayback'] as bool? ?? false;
+        
+        if (channel != null && continuePlayback) {
+          // Auto-play the channel in mini player
+          Future.delayed(const Duration(milliseconds: 100), () {
+            _playChannelInMiniPlayer(channel);
+          });
+        }
+      }
+    });
   }
 
   void _updateTime() {
@@ -143,34 +161,43 @@ class _EPGScreenState extends State<EPGScreen> {
               return a.name.compareTo(b.name);
             });
 
-        return Stack(
-          children: [
-            Column(
-              children: [
-                _buildHeader(epgService),
-                Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
-                Expanded(
-                  child: Row(
-                    children: [
-                      // Category sidebar
-                      _buildCategorySidebar(categoryNames),
-                      VerticalDivider(width: 1, color: AppTheme.divider),
-                      // Channel list
-                      _buildChannelList(filteredChannels),
-                      VerticalDivider(width: 1, color: AppTheme.divider),
-                      // Program grid
-                      Expanded(
-                        child: _buildProgramGrid(filteredChannels, epgService),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF050710), Color(0xFF0d1140)],
             ),
+          ),
+          child: Stack(
+            children: [
+              Column(
+                children: [
+                  _buildHeader(epgService),
+                  Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        // Category sidebar
+                        _buildCategorySidebar(categoryNames),
+                        VerticalDivider(width: 1, color: AppTheme.divider),
+                        // Channel list
+                        _buildChannelList(filteredChannels),
+                        VerticalDivider(width: 1, color: AppTheme.divider),
+                        // Program grid
+                        Expanded(
+                          child: _buildProgramGrid(filteredChannels, epgService),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
 
-            // Mini player overlay
-            if (_playingChannel != null) _buildMiniPlayer(),
-          ],
+              // Mini player overlay
+              if (_playingChannel != null) _buildMiniPlayer(),
+            ],
+          ),
         );
       },
     );
@@ -208,7 +235,7 @@ class _EPGScreenState extends State<EPGScreen> {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
       decoration: BoxDecoration(
-        color: AppTheme.darkBackground.withAlpha((0.8 * 255).round()),
+        color: Colors.white.withOpacity(0.08),
         border: Border(
           bottom: BorderSide(color: AppTheme.accentPink, width: 2),
         ),
@@ -280,7 +307,12 @@ class _EPGScreenState extends State<EPGScreen> {
   Widget _buildCategorySidebar(List<String> categories) {
     return Container(
       width: 180,
-      color: AppTheme.sidebarBackground,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        border: Border(
+          right: BorderSide(color: Colors.white.withOpacity(0.1), width: 1),
+        ),
+      ),
       child: Column(
         children: [
           // All Channels option

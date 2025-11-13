@@ -70,87 +70,96 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
-      body: Column(
-        children: [
-          // Liquid glass app bar with logo and time
-          _buildGlassAppBar(),
-          Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF050710), Color(0xFF0d1140)],
+          ),
+        ),
+        child: Column(
+          children: [
+            // Liquid glass app bar with logo and time
+            _buildGlassAppBar(),
+            Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
 
-          // Main content
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.all(AppSizes.lg),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Search Bar (TV friendly: open keyboard only on select)
-                  Focus(
-                    focusNode: _searchFieldFocusNode,
-                    onFocusChange: (hasFocus) {
-                      if (!hasFocus && _searchEditable) {
-                        setState(() => _searchEditable = false);
-                      }
-                    },
-                    onKeyEvent: (node, event) {
-                      if (event is! KeyDownEvent) return KeyEventResult.ignored;
-                      final key = event.logicalKey;
-                      if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
-                        setState(() => _searchEditable = true);
-                        Future.microtask(() => _searchFieldFocusNode.requestFocus());
-                        return KeyEventResult.handled;
-                      }
-                      return KeyEventResult.ignored;
-                    },
-                    child: TextField(
-                      controller: _searchController,
-                      autofocus: false,
-                      readOnly: !_searchEditable,
-                      decoration: InputDecoration(
-                        hintText: 'Search channels, movies & more...',
-                        prefixIcon: Icon(Icons.search, color: AppTheme.primaryBlue),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: Icon(Icons.clear),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  _performSearch('');
-                                },
-                              )
-                            : null,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-                          borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-                          borderSide: BorderSide(color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()), width: 1),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-                          borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
-                        ),
-                        filled: true,
-                        fillColor: AppTheme.cardBackground,
-                        contentPadding: EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
-                      ),
-                      onTap: () {
-                        if (!_searchEditable) {
-                          setState(() => _searchEditable = true);
+            // Main content
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.all(AppSizes.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Search Bar (TV friendly: open keyboard only on select)
+                    Focus(
+                      focusNode: _searchFieldFocusNode,
+                      onFocusChange: (hasFocus) {
+                        if (!hasFocus && _searchEditable) {
+                          setState(() => _searchEditable = false);
                         }
                       },
-                      onChanged: _performSearch,
+                      onKeyEvent: (node, event) {
+                        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                        final key = event.logicalKey;
+                        if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
+                          setState(() => _searchEditable = true);
+                          Future.microtask(() => _searchFieldFocusNode.requestFocus());
+                          return KeyEventResult.handled;
+                        }
+                        return KeyEventResult.ignored;
+                      },
+                      child: TextField(
+                        controller: _searchController,
+                        autofocus: false,
+                        readOnly: !_searchEditable,
+                        decoration: InputDecoration(
+                          hintText: 'Search channels, movies & more...',
+                          prefixIcon: Icon(Icons.search, color: AppTheme.primaryBlue),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: Icon(Icons.clear),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    _performSearch('');
+                                  },
+                                )
+                              : null,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                            borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                            borderSide: BorderSide(color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()), width: 1),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                            borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
+                          ),
+                          filled: true,
+                          fillColor: AppTheme.cardBackground,
+                          contentPadding: EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
+                        ),
+                        onTap: () {
+                          if (!_searchEditable) {
+                            setState(() => _searchEditable = true);
+                          }
+                        },
+                        onChanged: _performSearch,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: AppSizes.xl),
+                    SizedBox(height: AppSizes.xl),
 
-                  // Results
-                  Expanded(child: _buildResults()),
-                ],
+                    // Results
+                    Expanded(child: _buildResults()),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

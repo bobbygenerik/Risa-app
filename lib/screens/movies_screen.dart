@@ -19,23 +19,46 @@ class MoviesScreen extends StatelessWidget {
           return _buildEmptyState(context);
         }
 
-        return SingleChildScrollView(
-          padding: EdgeInsets.all(AppSizes.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Recently Added Movies
-              if (recentMovies.isNotEmpty) ...[
-                _buildSectionHeader(context, 'Recently Added'),
-                SizedBox(height: AppSizes.md),
-                _buildMoviesRow(context, recentMovies),
-                SizedBox(height: AppSizes.xl),
-              ],
+        return Stack(
+          children: [
+            // Full-height hero banner background
+            Positioned.fill(
+              child: _buildHeroBannerBackground(movies.first),
+            ),
+            // Content on top
+            SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Hero banner with content overlay
+                  _buildHeroBannerOverlay(context, movies.first),
+                  SizedBox(height: AppSizes.lg),
+                  
+                  Container(
+                    color: Color(0xFF050710),
+                    child: Padding(
+                      padding: EdgeInsets.all(AppSizes.lg),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Recently Added Movies
+                          if (recentMovies.isNotEmpty) ...[
+                            _buildSectionHeader(context, 'Recently Added'),
+                            SizedBox(height: AppSizes.md),
+                            _buildMoviesRow(context, recentMovies),
+                            SizedBox(height: AppSizes.xl),
+                          ],
 
-              // All Movies by Genre
-              ..._buildGenreSections(context, movies),
-            ],
-          ),
+                          // All Movies by Genre
+                          ..._buildGenreSections(context, movies),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         );
       },
     );
@@ -244,5 +267,117 @@ class MoviesScreen extends StatelessWidget {
     }
 
     return sections;
+  }
+
+  Widget _buildHeroBannerBackground(Content featuredMovie) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.black.withOpacity(0.3),
+            Colors.black.withOpacity(0.7),
+          ],
+        ),
+      ),
+      child: Container(
+        color: AppTheme.cardBackground,
+        child: featuredMovie.backdropUrl != null
+            ? Image.network(
+                featuredMovie.backdropUrl!,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+                errorBuilder: (_, __, ___) => _buildBannerPlaceholder(),
+              )
+            : _buildBannerPlaceholder(),
+      ),
+    );
+  }
+
+  Widget _buildHeroBannerOverlay(BuildContext context, Content featuredMovie) {
+    return GestureDetector(
+      onTap: () {
+        context.push('/content/${featuredMovie.id}', extra: featuredMovie);
+      },
+      child: Container(
+        height: 300,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.transparent,
+              Colors.black.withOpacity(0.9),
+            ],
+          ),
+        ),
+        child: Align(
+          alignment: Alignment.bottomLeft,
+          child: Padding(
+            padding: EdgeInsets.all(AppSizes.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  featuredMovie.title,
+                  style: TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.play_circle,
+                        color: AppTheme.accentOrange, size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'Play Now',
+                      style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 14,
+                      ),
+                    ),
+                    if (featuredMovie.rating != null) ...[
+                      SizedBox(width: 16),
+                      Icon(Icons.star, color: Colors.amber, size: 16),
+                      SizedBox(width: 4),
+                      Text(
+                        featuredMovie.ratingDisplay,
+                        style: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBannerPlaceholder() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppTheme.primaryBlue.withOpacity(0.2),
+            AppTheme.accentOrange.withOpacity(0.2),
+          ],
+        ),
+      ),
+    );
   }
 }

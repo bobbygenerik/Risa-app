@@ -31,6 +31,8 @@ import 'package:iptv_player/screens/enhanced_video_player_screen.dart';
 import 'package:iptv_player/screens/search_screen.dart';
 import 'package:iptv_player/screens/playlist_login_screen.dart';
 import 'package:iptv_player/screens/help_about_screen.dart';
+import 'package:iptv_player/screens/favorites_screen.dart';
+import 'package:iptv_player/screens/downloads_screen.dart';
 
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/models/channel.dart';
@@ -624,6 +626,16 @@ final _router = GoRouter(
           _fadeSlidePage(key: state.pageKey, child: const SettingsScreen()),
     ),
     GoRoute(
+      path: '/favorites',
+      pageBuilder: (context, state) =>
+          _fadeSlidePage(key: state.pageKey, child: const FavoritesScreen()),
+    ),
+    GoRoute(
+      path: '/downloads',
+      pageBuilder: (context, state) =>
+          _fadeSlidePage(key: state.pageKey, child: const DownloadsScreen()),
+    ),
+    GoRoute(
       path: '/playlist-editor',
       pageBuilder: (context, state) => _fadeSlidePage(
         key: state.pageKey,
@@ -648,10 +660,14 @@ final _router = GoRouter(
         final data = state.extra;
         String videoUrl = 'https://commondatastorage.googleapis.com/gtv-videos-library/sample/BigBuckBunny.mp4';
         String title = 'Video';
+        Channel? channel;
+        bool isLive = false;
 
         if (data is Channel) {
           videoUrl = data.url;
           title = data.name;
+          channel = data;
+          isLive = true;
         } else if (data is Content) {
           videoUrl = data.videoUrl ?? videoUrl;
           title = data.title;
@@ -662,6 +678,8 @@ final _router = GoRouter(
           child: EnhancedVideoPlayerScreen(
             videoUrl: videoUrl,
             title: title,
+            isLive: isLive,
+            channel: channel,
           ),
         );
       },

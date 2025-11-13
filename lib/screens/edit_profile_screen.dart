@@ -17,8 +17,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final TextEditingController _emailController = TextEditingController();
   String? _profileImagePath;
   bool _isLoading = false;
-  late DateTime _currentTime;
-
   bool _nameEditable = false;
   bool _emailEditable = false;
 
@@ -28,21 +26,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _currentTime = DateTime.now();
     Future.delayed(Duration(seconds: 1), _updateTime);
     _loadProfileData();
   }
 
   void _updateTime() {
     if (!mounted) return;
-    setState(() {
-      _currentTime = DateTime.now();
-    });
+    setState(() {});
     Future.delayed(Duration(seconds: 1), _updateTime);
-  }
-
-  String _formatTime(DateTime time) {
-    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -144,63 +135,71 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: Colors.transparent,
       appBar: _buildGlassAppBar(),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Profile Image Section
-                Center(
-                  child: Column(
-                    children: [
-                      Stack(
-                        children: [
-                          GestureDetector(
-                            onTap: _pickProfileImage,
-                            child: CircleAvatar(
-                              radius: 80,
-                              backgroundColor: AppTheme.cardBackground,
-                              backgroundImage: _profileImagePath != null
-                                  ? FileImage(File(_profileImagePath!))
-                                  : null,
-                              child: _profileImagePath == null
-                                  ? const Icon(
-                                      Icons.person,
-                                      size: 80,
-                                      color: AppTheme.primaryBlue,
-                                    )
-                                  : null,
-                            ),
-                          ),
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: AppTheme.primaryBlue,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: AppTheme.darkBackground,
-                                  width: 3,
-                                ),
-                              ),
-                              child: IconButton(
-                                icon: const Icon(
-                                  Icons.camera_alt,
-                                  color: AppTheme.textPrimary,
-                                  size: 20,
-                                ),
-                                onPressed: _pickProfileImage,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF050710), Color(0xFF0d1140)],
+          ),
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Profile Image Section
+                  Center(
+                    child: Column(
+                      children: [
+                        Stack(
+                          children: [
+                            GestureDetector(
+                              onTap: _pickProfileImage,
+                              child: CircleAvatar(
+                                radius: 80,
+                                backgroundColor: AppTheme.cardBackground,
+                                backgroundImage: _profileImagePath != null
+                                    ? FileImage(File(_profileImagePath!))
+                                    : null,
+                                child: _profileImagePath == null
+                                    ? const Icon(
+                                        Icons.person,
+                                        size: 80,
+                                        color: AppTheme.primaryBlue,
+                                      )
+                                    : null,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryBlue,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: AppTheme.darkBackground,
+                                    width: 3,
+                                  ),
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.camera_alt,
+                                    color: AppTheme.textPrimary,
+                                    size: 20,
+                                  ),
+                                  onPressed: _pickProfileImage,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       const SizedBox(height: 16),
                       Text(
                         'Tap to change profile picture',
@@ -331,13 +330,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 
   AppBar _buildGlassAppBar() {
     return AppBar(
       title: Text('Edit Profile'),
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: Colors.white.withOpacity(0.08),
       elevation: 0,
       actions: [
         if (_isLoading)

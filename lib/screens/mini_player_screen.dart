@@ -579,6 +579,7 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
             title: _currentChannel!.name,
             subtitle: _currentProgram?.title,
             isLive: true,
+            channel: _currentChannel,
           ),
         ),
       );

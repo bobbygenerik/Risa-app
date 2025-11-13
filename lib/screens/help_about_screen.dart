@@ -66,40 +66,49 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
-      body: Column(
-        children: [
-          _buildGlassAppBar(),
-          Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
-          Expanded(
-            child: Column(
-              children: [
-                // Tabs
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
-                  child: Row(
-                    children: [
-                      _buildTab('Help', 0),
-                      SizedBox(width: AppSizes.md),
-                      _buildTab('About', 1),
-                      SizedBox(width: AppSizes.md),
-                      _buildTab('Shortcuts', 2),
-                    ],
-                  ),
-                ),
-                Divider(height: 1, color: AppTheme.divider),
-                
-                // Content
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.all(AppSizes.xl),
-                    child: _buildTabContent(),
-                  ),
-                ),
-              ],
-            ),
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF050710), Color(0xFF0d1140)],
           ),
-        ],
+        ),
+        child: Column(
+          children: [
+            _buildGlassAppBar(),
+            Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
+            Expanded(
+              child: Column(
+                children: [
+                  // Tabs
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
+                    child: Row(
+                      children: [
+                        _buildTab('Help', 0),
+                        SizedBox(width: AppSizes.md),
+                        _buildTab('About', 1),
+                        SizedBox(width: AppSizes.md),
+                        _buildTab('Shortcuts', 2),
+                      ],
+                    ),
+                  ),
+                  Divider(height: 1, color: AppTheme.divider),
+                  
+                  // Content
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.all(AppSizes.xl),
+                      child: _buildTabContent(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
