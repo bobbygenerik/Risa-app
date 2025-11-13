@@ -12,34 +12,92 @@ class ModernHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          // Hero Banner (edge-to-edge)
-          _buildHeroBanner(),
-          // Continue Watching
-          _buildSectionWithCards(
-            title: 'Continue Watching',
-            onTap: (content) {
-              context.push('/player', extra: content);
-            },
-          ),
-          // Featured Channels
-          _buildChannelSection(
-            title: 'Featured Channels',
-            onTap: (channel) {
-              context.push('/player', extra: channel);
-            },
-          ),
-          // Trending Now
-          _buildSectionWithCards(
-            title: 'Trending Now',
-            onTap: (content) {
-              context.push('/player', extra: content);
-            },
-          ),
-          SizedBox(height: 40),
-        ],
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF050710),
+            const Color(0xFF0d1140),
+          ],
+        ),
+      ),
+      child: Consumer<ChannelProvider>(
+        builder: (context, channelProvider, _) {
+          final channels = channelProvider.channels;
+          
+          // Show empty state if no channels available
+          if (channels.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.live_tv,
+                    size: 80,
+                    color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
+                  ),
+                  SizedBox(height: 24),
+                  Text(
+                    'No Live TV Available',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Load a playlist with Live TV channels from Settings',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 32),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Future.delayed(const Duration(milliseconds: 100), () {
+                        if (context.mounted) context.go('/settings');
+                      });
+                    },
+                    icon: const Icon(Icons.settings),
+                    label: const Text('Go to Settings'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryBlue,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+          
+          return SingleChildScrollView(
+            child: Column(
+              children: [
+                // Hero Banner (edge-to-edge)
+                _buildHeroBanner(),
+                // Continue Watching
+                _buildSectionWithCards(
+                  title: 'Continue Watching',
+                  onTap: (content) {
+                    context.push('/player', extra: content);
+                  },
+                ),
+                // Featured Channels
+                _buildChannelSection(
+                  title: 'Featured Channels',
+                  onTap: (channel) {
+                    context.push('/player', extra: channel);
+                  },
+                ),
+                // Trending Now
+                _buildSectionWithCards(
+                  title: 'Trending Now',
+                  onTap: (content) {
+                    context.push('/player', extra: content);
+                  },
+                ),
+                SizedBox(height: 40),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

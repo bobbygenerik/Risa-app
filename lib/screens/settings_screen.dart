@@ -204,47 +204,53 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF050710),
-            Color(0xFF0d1140),
-          ],
+    return WillPopScope(
+      onWillPop: () async {
+        context.go('/home');
+        return false;
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF050710),
+              Color(0xFF0d1140),
+            ],
+          ),
         ),
-      ),
-      child: Row(
-        children: [
-          _buildSidebarMenu(),
-          VerticalDivider(width: 1, color: Colors.white.withOpacity(0.1)),
-          Expanded(
-            child: Focus(
-              canRequestFocus: false,
-              onKeyEvent: (node, event) {
-                if (event is! KeyDownEvent) return KeyEventResult.ignored;
-                final key = event.logicalKey;
-                if (key == LogicalKeyboardKey.arrowLeft) {
-                  requestFirstSidebarFocus();
-                  return KeyEventResult.handled;
-                }
-                return KeyEventResult.ignored;
-              },
-              child: TabBarView(
-                controller: _tabController,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  _buildGeneralSettings(),
-                  _buildAccountSettings(),
-                  _buildPlaybackSettings(),
-                  _buildCloudAndAISettings(),
-                  _buildRecordingsSettings(),
-                ],
+        child: Row(
+          children: [
+            _buildSidebarMenu(),
+            VerticalDivider(width: 1, color: Colors.white.withOpacity(0.1)),
+            Expanded(
+              child: Focus(
+                canRequestFocus: false,
+                onKeyEvent: (node, event) {
+                  if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                  final key = event.logicalKey;
+                  if (key == LogicalKeyboardKey.arrowLeft) {
+                    requestFirstSidebarFocus();
+                    return KeyEventResult.handled;
+                  }
+                  return KeyEventResult.ignored;
+                },
+                child: TabBarView(
+                  controller: _tabController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    _buildGeneralSettings(),
+                    _buildAccountSettings(),
+                    _buildPlaybackSettings(),
+                    _buildCloudAndAISettings(),
+                    _buildRecordingsSettings(),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -329,7 +335,6 @@ class _SettingsScreenState extends State<SettingsScreen>
                         setState(() => _tabController.index = prev);
                         return KeyEventResult.handled;
                       } else if (key == LogicalKeyboardKey.arrowRight) {
-                        final focusScope = FocusScope.of(context);
                         Future.microtask(() {
                           switch (_tabController.index) {
                             case 0:

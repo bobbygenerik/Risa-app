@@ -84,12 +84,6 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
           padding: EdgeInsets.symmetric(horizontal: 32 * scale, vertical: 24 * scale),
           decoration: BoxDecoration(
             color: Colors.transparent,
-            border: Border(
-              bottom: BorderSide(
-                color: Colors.white.withOpacity(0.1),
-                width: 1,
-              ),
-            ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -155,12 +149,12 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                         ),
                         // Overflow menu button (more options)
                         PopupMenuButton(
-                          color: Colors.white.withOpacity(0.08),
-                          elevation: 16,
+                          color: Colors.black.withOpacity(0.85),
+                          elevation: 24,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                             side: BorderSide(
-                              color: Colors.white.withOpacity(0.15),
+                              color: AppTheme.accentPink.withOpacity(0.4),
                               width: 1.5,
                             ),
                           ),
@@ -278,7 +272,21 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                     color: AppTheme.textSecondary,
                     fontSize: 16 * scale,
                   ),
-                  border: InputBorder.none,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide(
+                      color: AppTheme.accentPink,
+                      width: 2,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide.none,
+                  ),
                   contentPadding: EdgeInsets.symmetric(horizontal: 20 * scale, vertical: 12 * scale),
                   prefixIcon: Icon(
                     Icons.search,

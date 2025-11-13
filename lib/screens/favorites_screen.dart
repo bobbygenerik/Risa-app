@@ -37,24 +37,29 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ChannelProvider>(
-      builder: (context, channelProvider, child) {
-        final favorites = channelProvider.favoriteChannels;
+    return WillPopScope(
+      onWillPop: () async {
+        context.go('/home');
+        return false;
+      },
+      child: Consumer<ChannelProvider>(
+        builder: (context, channelProvider, child) {
+          final favorites = channelProvider.favoriteChannels;
 
-        return Scaffold(
-          backgroundColor: Colors.transparent,
-          body: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF050710),
-                  Color(0xFF0d1140),
-                ],
+          return Scaffold(
+            backgroundColor: Colors.transparent,
+            body: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF050710),
+                    Color(0xFF0d1140),
+                  ],
+                ),
               ),
-            ),
-            child: Column(
+              child: Column(
               children: [
                 _buildGlassAppBar(favorites.length),
                 Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
@@ -69,8 +74,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               ],
             ),
           ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 

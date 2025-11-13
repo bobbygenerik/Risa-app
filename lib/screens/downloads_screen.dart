@@ -161,17 +161,22 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF050710), Color(0xFF0d1140)],
+    return WillPopScope(
+      onWillPop: () async {
+        context.go('/home');
+        return false;
+      },
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF050710), Color(0xFF0d1140)],
+            ),
           ),
-        ),
-        child: Column(
+          child: Column(
           children: [
             // Glass app bar
             Container(
@@ -384,5 +389,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
           ],
         ),
       ),
+    ),
     );
   }
+}

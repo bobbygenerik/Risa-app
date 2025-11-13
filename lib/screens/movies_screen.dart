@@ -102,7 +102,11 @@ class MoviesScreen extends StatelessWidget {
               ),
               SizedBox(height: AppSizes.xl),
               ElevatedButton.icon(
-                onPressed: () => context.go('/settings'),
+                onPressed: () {
+                  Future.delayed(const Duration(milliseconds: 100), () {
+                    if (context.mounted) context.go('/settings');
+                  });
+                },
                 icon: const Icon(Icons.settings),
                 label: const Text('Go to Settings'),
                 style: ElevatedButton.styleFrom(

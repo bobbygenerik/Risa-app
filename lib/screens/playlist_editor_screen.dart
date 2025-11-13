@@ -267,6 +267,16 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return WillPopScope(
+      onWillPop: () async {
+        context.go('/home');
+        return false;
+      },
+      child: _buildContent(),
+    );
+  }
+
+  Widget _buildContent() {
     if (_isLoading) {
       return Scaffold(
         backgroundColor: Colors.transparent,

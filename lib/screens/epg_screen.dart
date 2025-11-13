@@ -126,80 +126,86 @@ class _EPGScreenState extends State<EPGScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<ChannelProvider, EpgService>(
-      builder: (context, channelProvider, epgService, child) {
-        final channels = channelProvider.channels;
-        final hasChannels = channels.isNotEmpty;
-
-        if (!hasChannels) {
-          return _buildEmptyState(context);
-        }
-
-        // Get categories
-        final categories = channelProvider.getGroupedChannels();
-        final categoryNames = categories.keys.toList()..sort();
-
-        // Filter channels by selected category and hidden status
-        final filteredChannels =
-            channels.where((ch) {
-              // Filter by hidden status
-              if (ch.isHidden == true) return false;
-              // Filter by category
-              if (_selectedCategory != null &&
-                  ch.groupTitle != _selectedCategory) {
-                return false;
-              }
-              return true;
-            }).toList()..sort((a, b) {
-              // Sort by custom order first, then by channel number, then by name
-              if (a.sortOrder != null && b.sortOrder != null) {
-                return a.sortOrder!.compareTo(b.sortOrder!);
-              }
-              if (a.channelNumber != null && b.channelNumber != null) {
-                return a.channelNumber!.compareTo(b.channelNumber!);
-              }
-              return a.name.compareTo(b.name);
-            });
-
-        return Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF050710), Color(0xFF0d1140)],
-            ),
-          ),
-          child: Stack(
-            children: [
-              Column(
-                children: [
-                  _buildHeader(epgService),
-                  Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
-                  Expanded(
-                    child: Row(
-                      children: [
-                        // Category sidebar
-                        _buildCategorySidebar(categoryNames),
-                        VerticalDivider(width: 1, color: AppTheme.divider),
-                        // Channel list
-                        _buildChannelList(filteredChannels),
-                        VerticalDivider(width: 1, color: AppTheme.divider),
-                        // Program grid
-                        Expanded(
-                          child: _buildProgramGrid(filteredChannels, epgService),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-
-              // Mini player overlay
-              if (_playingChannel != null) _buildMiniPlayer(),
-            ],
-          ),
-        );
+    return WillPopScope(
+      onWillPop: () async {
+        context.go('/home');
+        return false;
       },
+      child: Consumer2<ChannelProvider, EpgService>(
+        builder: (context, channelProvider, epgService, child) {
+          final channels = channelProvider.channels;
+          final hasChannels = channels.isNotEmpty;
+
+          if (!hasChannels) {
+            return _buildEmptyState(context);
+          }
+
+          // Get categories
+          final categories = channelProvider.getGroupedChannels();
+          final categoryNames = categories.keys.toList()..sort();
+
+          // Filter channels by selected category and hidden status
+          final filteredChannels =
+              channels.where((ch) {
+                // Filter by hidden status
+                if (ch.isHidden == true) return false;
+                // Filter by category
+                if (_selectedCategory != null &&
+                    ch.groupTitle != _selectedCategory) {
+                  return false;
+                }
+                return true;
+              }).toList()..sort((a, b) {
+                // Sort by custom order first, then by channel number, then by name
+                if (a.sortOrder != null && b.sortOrder != null) {
+                  return a.sortOrder!.compareTo(b.sortOrder!);
+                }
+                if (a.channelNumber != null && b.channelNumber != null) {
+                  return a.channelNumber!.compareTo(b.channelNumber!);
+                }
+                return a.name.compareTo(b.name);
+              });
+
+          return Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF050710), Color(0xFF0d1140)],
+              ),
+            ),
+            child: Stack(
+              children: [
+                Column(
+                  children: [
+                    _buildHeader(epgService),
+                    Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          // Category sidebar
+                          _buildCategorySidebar(categoryNames),
+                          VerticalDivider(width: 1, color: AppTheme.divider),
+                          // Channel list
+                          _buildChannelList(filteredChannels),
+                          VerticalDivider(width: 1, color: AppTheme.divider),
+                          // Program grid
+                          Expanded(
+                            child: _buildProgramGrid(filteredChannels, epgService),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Mini player overlay
+                if (_playingChannel != null) _buildMiniPlayer(),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 

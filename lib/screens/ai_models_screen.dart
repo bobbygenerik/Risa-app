@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:iptv_player/services/ai_model_manager.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
@@ -35,6 +36,16 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return WillPopScope(
+      onWillPop: () async {
+        context.go('/home');
+        return false;
+      },
+      child: _buildContent(),
+    );
+  }
+
+  Widget _buildContent() {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: _buildGlassAppBar(),

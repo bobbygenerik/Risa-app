@@ -365,6 +365,16 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
 
   @override
   Widget build(BuildContext context) {
+    return WillPopScope(
+      onWillPop: () async {
+        context.go('/home');
+        return false;
+      },
+      child: _buildContent(),
+    );
+  }
+
+  Widget _buildContent() {
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(

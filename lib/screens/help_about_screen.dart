@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 
 class HelpAboutScreen extends StatefulWidget {
@@ -65,17 +66,22 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF050710), Color(0xFF0d1140)],
+    return WillPopScope(
+      onWillPop: () async {
+        context.go('/home');
+        return false;
+      },
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF050710), Color(0xFF0d1140)],
+            ),
           ),
-        ),
-        child: Column(
+          child: Column(
           children: [
             _buildGlassAppBar(),
             Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
@@ -110,6 +116,7 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 
