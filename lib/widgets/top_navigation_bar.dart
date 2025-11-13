@@ -88,165 +88,85 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
           ),
         ),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Top row: Logo on left, Time on right
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Logo (if shown)
-              if (widget.showLogoAndTime) ...[
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'RISA',
-                      style: TextStyle(
-                        color: AppTheme.primaryBlue,
-                        fontSize: 24 * scale,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 2.0,
-                      ),
-                    ),
-                    Text(
-                      'IPTV',
-                      style: TextStyle(
-                        color: AppTheme.accentPink,
-                        fontSize: 11 * scale,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-              // Time (if shown)
-              if (widget.showLogoAndTime)
-                Text(
-                  widget.currentTime,
-                  style: TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: 18 * scale,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1.0,
-                  ),
-                ),
-            ],
-          ),
-          SizedBox(height: 20 * scale),
-          // Navigation bar with tabs and search
-          Row(
-            children: [
-              // Liquid glass nav bar (tabs)
-              Expanded(
-                child: Container(
-                  height: 56 * scale,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.08),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.15),
-                      width: 1.5,
-                    ),
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.primaryBlue.withOpacity(0.1),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12 * scale),
-                    child: Row(
-                      children: List.generate(
-                        widget.tabs.length,
-                        (index) => _buildTabButton(index, scale),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(width: 16 * scale),
-              // Search button
-              _buildSearchButtonContainer(scale),
-            ],
-          ),
-          // Inline search box (shown when activated)
-          if (_showSearchBox) ...[
-            SizedBox(height: 12 * scale),
-            Container(
-              height: 48 * scale,
+          // Logo (if shown)
+          if (widget.showLogoAndTime) ...[
+            Image.asset(
+              'assets/images/croppedlogo2.png',
+              height: 40 * scale,
+              fit: BoxFit.contain,
+            ),
+            SizedBox(width: 20 * scale),
+          ],
+          // Navigation bar with tabs and search (centered, expanded)
+          Expanded(
+            child: Container(
+              height: 56 * scale,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.12),
+                color: Colors.white.withOpacity(0.08),
                 border: Border.all(
-                  color: AppTheme.primaryBlue.withOpacity(0.5),
-                  width: 2,
+                  color: Colors.white.withOpacity(0.15),
+                  width: 1.5,
                 ),
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primaryBlue.withOpacity(0.1),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              child: Row(
-                children: [
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12 * scale),
-                    child: Icon(
-                      Icons.search_outlined,
-                      color: AppTheme.primaryBlue,
-                      size: 20 * scale,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12 * scale),
+                child: Row(
+                  children: [
+                    ...List.generate(
+                      widget.tabs.length,
+                      (index) => _buildTabButton(index, scale),
                     ),
-                  ),
-                  Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      focusNode: _searchFocusNode,
-                      style: TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontSize: 14 * scale,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'Search channels, movies, series...',
-                        hintStyle: TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 14 * scale,
-                        ),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(vertical: 12 * scale),
-                      ),
-                      onSubmitted: (query) {
-                        if (query.isNotEmpty) {
-                          widget.onSearchSubmit?.call(query);
-                          context.push('/search', extra: {'query': query});
-                          setState(() => _showSearchBox = false);
-                        }
-                      },
-                    ),
-                  ),
-                  if (_searchController.text.isNotEmpty)
+                    // Search icon in nav bar
                     Material(
                       color: Colors.transparent,
                       child: InkWell(
                         onTap: () {
-                          _searchController.clear();
-                          setState(() {});
+                          setState(() => _showSearchBox = !_showSearchBox);
+                          if (_showSearchBox) {
+                            Future.delayed(const Duration(milliseconds: 100), () {
+                              _searchFocusNode.requestFocus();
+                            });
+                          }
                         },
                         child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12 * scale),
+                          padding: EdgeInsets.symmetric(horizontal: 8 * scale),
                           child: Icon(
-                            Icons.close,
-                            color: AppTheme.textSecondary,
+                            Icons.search_outlined,
                             size: 18 * scale,
+                            color: AppTheme.textSecondary,
                           ),
                         ),
                       ),
                     ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ],
+          ),
+          SizedBox(width: 20 * scale),
+          // Time (if shown)
+          if (widget.showLogoAndTime)
+            Text(
+              widget.currentTime,
+              style: TextStyle(
+                color: AppTheme.textPrimary,
+                fontSize: 18 * scale,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1.0,
+              ),
+            ),
         ],
       ),
     );
@@ -298,58 +218,6 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                 );
               },
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSearchButtonContainer(double scale) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          setState(() => _showSearchBox = !_showSearchBox);
-          if (_showSearchBox) {
-            Future.delayed(const Duration(milliseconds: 100), () {
-              _searchFocusNode.requestFocus();
-            });
-          }
-        },
-        child: Focus(
-          focusNode: _searchFocusNode,
-          onFocusChange: (_) => setState(() {}),
-          child: Builder(
-            builder: (context) {
-              final isFocused = Focus.of(context).hasFocus;
-              return Container(
-                width: 56 * scale,
-                height: 56 * scale,
-                decoration: BoxDecoration(
-                  color: _showSearchBox
-                      ? AppTheme.primaryBlue.withOpacity(0.2)
-                      : (isFocused
-                          ? Colors.white.withOpacity(0.15)
-                          : Colors.transparent),
-                  borderRadius: BorderRadius.circular(28),
-                  border: (isFocused || _showSearchBox)
-                      ? Border.all(
-                          color: AppTheme.primaryBlue.withOpacity(0.6),
-                          width: 2,
-                        )
-                      : null,
-                ),
-                child: Center(
-                  child: Icon(
-                    Icons.search_outlined,
-                    size: 22 * scale,
-                    color: (_showSearchBox || isFocused)
-                        ? AppTheme.primaryBlue
-                        : AppTheme.textSecondary,
-                  ),
-                ),
-              );
-            },
           ),
         ),
       ),

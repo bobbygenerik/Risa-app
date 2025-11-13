@@ -49,54 +49,66 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
-      body: Column(
-        children: [
-          // Navigation bar (logo, nav, time all inline)
-          TopNavigationBar(
-            activeTab: 'home',
-            tabs: [
-              NavTab(id: 'home', label: 'LIVE TV', icon: Icons.live_tv, route: '/home'),
-              NavTab(id: 'movies', label: 'Movies', icon: Icons.movie, route: '/movies'),
-              NavTab(id: 'series', label: 'Series', icon: Icons.tv, route: '/series'),
+      backgroundColor: const Color(0xFF050710),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              const Color(0xFF050710),
+              const Color(0xFF0d1140),
             ],
-            currentTime: _currentTime,
-            showLogoAndTime: true,
-            onSearch: () => context.go('/search'),
           ),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  // Hero Banner (edge-to-edge)
-                  _buildHeroBanner(),
-                  // Continue Watching
-                  _buildSectionWithCards(
-                    title: 'Continue Watching',
-                    onTap: (content) {
-                      context.push('/player', extra: content);
-                    },
-                  ),
-                  // Featured Channels
-                  _buildChannelSection(
-                    title: 'Featured Channels',
-                    onTap: (channel) {
-                      context.push('/player', extra: channel);
-                    },
-                  ),
-                  // Trending Now
-                  _buildSectionWithCards(
-                    title: 'Trending Now',
-                    onTap: (content) {
-                      context.push('/player', extra: content);
-                    },
-                  ),
-                  SizedBox(height: 40),
-                ],
+        ),
+        child: Column(
+          children: [
+            // Navigation bar (logo, nav, time all inline)
+            TopNavigationBar(
+              activeTab: 'home',
+              tabs: [
+                NavTab(id: 'home', label: 'LIVE TV', icon: Icons.live_tv, route: '/home'),
+                NavTab(id: 'movies', label: 'Movies', icon: Icons.movie, route: '/movies'),
+                NavTab(id: 'series', label: 'Series', icon: Icons.tv, route: '/series'),
+              ],
+              currentTime: _currentTime,
+              showLogoAndTime: true,
+              onSearch: () => context.go('/search'),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    // Hero Banner (edge-to-edge)
+                    _buildHeroBanner(),
+                    // Continue Watching
+                    _buildSectionWithCards(
+                      title: 'Continue Watching',
+                      onTap: (content) {
+                        context.push('/player', extra: content);
+                      },
+                    ),
+                    // Featured Channels
+                    _buildChannelSection(
+                      title: 'Featured Channels',
+                      onTap: (channel) {
+                        context.push('/player', extra: channel);
+                      },
+                    ),
+                    // Trending Now
+                    _buildSectionWithCards(
+                      title: 'Trending Now',
+                      onTap: (content) {
+                        context.push('/player', extra: content);
+                      },
+                    ),
+                    SizedBox(height: 40),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
