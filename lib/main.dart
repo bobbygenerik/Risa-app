@@ -25,6 +25,8 @@ import 'package:iptv_player/screens/edit_profile_screen.dart';
 import 'package:iptv_player/screens/recordings_screen.dart';
 import 'package:iptv_player/screens/ai_models_screen.dart';
 import 'package:iptv_player/screens/modern_home_screen.dart';
+import 'package:iptv_player/screens/movies_screen.dart';
+import 'package:iptv_player/screens/series_screen.dart';
 import 'package:iptv_player/screens/enhanced_video_player_screen.dart';
 import 'package:iptv_player/screens/search_screen.dart';
 import 'package:iptv_player/screens/playlist_login_screen.dart';
@@ -558,6 +560,20 @@ final _router = GoRouter(
       pageBuilder: (context, state) => _fadeSlidePage(
         key: state.pageKey,
         child: const ModernHomeScreen(),
+      ),
+    ),
+    GoRoute(
+      path: '/movies',
+      pageBuilder: (context, state) => _fadeSlidePage(
+        key: state.pageKey,
+        child: const MoviesScreen(),
+      ),
+    ),
+    GoRoute(
+      path: '/series',
+      pageBuilder: (context, state) => _fadeSlidePage(
+        key: state.pageKey,
+        child: const SeriesScreen(),
       ),
     ),
     GoRoute(

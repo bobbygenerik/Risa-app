@@ -2,14 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 
-/// Reusable top navigation bar with liquid glass effect
+/// Reusable top navigation bar optimized for Android TV
 /// Features:
-/// - Logo + time display at top left/right (separate row) - can be hidden
-/// - Slim liquid glass nav bar below with tabs, search, and overflow menu
+/// - Logo in top-left corner
+/// - Navigation tabs in center (text-only)
+/// - Inline search box (not a separate page)
+/// - Time in top-right corner
+/// - Larger text and spacing for TV viewing
 class TopNavigationBar extends StatefulWidget {
   final String? activeTab;
   final List<NavTab> tabs;
   final VoidCallback? onSearch;
+  final Function(String)? onSearchSubmit;
   final VoidCallback? onOverflow;
   final String currentTime;
   final bool showLogoAndTime;
@@ -19,6 +23,7 @@ class TopNavigationBar extends StatefulWidget {
     this.activeTab,
     required this.tabs,
     this.onSearch,
+    this.onSearchSubmit,
     this.onOverflow,
     required this.currentTime,
     this.showLogoAndTime = true,
@@ -45,14 +50,14 @@ class NavTab {
 class _TopNavigationBarState extends State<TopNavigationBar> {
   late List<FocusNode> _tabFocusNodes;
   late FocusNode _searchFocusNode;
-  late FocusNode _overflowFocusNode;
+  TextEditingController _searchController = TextEditingController();
+  bool _showSearchBox = false;
 
   @override
   void initState() {
     super.initState();
     _tabFocusNodes = List.generate(widget.tabs.length, (_) => FocusNode());
     _searchFocusNode = FocusNode();
-    _overflowFocusNode = FocusNode();
   }
 
   @override
@@ -61,14 +66,19 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
       node.dispose();
     }
     _searchFocusNode.dispose();
-    _overflowFocusNode.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Android TV screen size detection (TV usually > 50 inches diagonal)
+    final size = MediaQuery.of(context).size;
+    final isTV = size.width > 1920 && size.height > 1080;
+    final scale = isTV ? 1.8 : 1.0;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: EdgeInsets.symmetric(horizontal: 32 * scale, vertical: 24 * scale),
       decoration: BoxDecoration(
         color: Colors.transparent,
         border: Border(
@@ -78,102 +88,171 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
           ),
         ),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Logo (if shown)
-          if (widget.showLogoAndTime) ...[
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'RISA',
-                  style: TextStyle(
-                    color: AppTheme.primaryBlue,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 2.0,
-                  ),
-                ),
-                Text(
-                  'IPTV',
-                  style: TextStyle(
-                    color: AppTheme.accentPink,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1.5,
-                  ),
+          // Top row: Logo on left, Time on right
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Logo (if shown)
+              if (widget.showLogoAndTime) ...[
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'RISA',
+                      style: TextStyle(
+                        color: AppTheme.primaryBlue,
+                        fontSize: 24 * scale,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 2.0,
+                      ),
+                    ),
+                    Text(
+                      'IPTV',
+                      style: TextStyle(
+                        color: AppTheme.accentPink,
+                        fontSize: 11 * scale,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                  ],
                 ),
               ],
-            ),
-            const SizedBox(width: 40),
-          ],
-          // Liquid glass nav bar (centered)
-          Expanded(
-            child: Container(
-              height: 48,
+              // Time (if shown)
+              if (widget.showLogoAndTime)
+                Text(
+                  widget.currentTime,
+                  style: TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 18 * scale,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+            ],
+          ),
+          SizedBox(height: 20 * scale),
+          // Navigation bar with tabs and search
+          Row(
+            children: [
+              // Liquid glass nav bar (tabs)
+              Expanded(
+                child: Container(
+                  height: 56 * scale,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.08),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.15),
+                      width: 1.5,
+                    ),
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primaryBlue.withOpacity(0.1),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12 * scale),
+                    child: Row(
+                      children: List.generate(
+                        widget.tabs.length,
+                        (index) => _buildTabButton(index, scale),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(width: 16 * scale),
+              // Search button
+              _buildSearchButtonContainer(scale),
+            ],
+          ),
+          // Inline search box (shown when activated)
+          if (_showSearchBox) ...[
+            SizedBox(height: 12 * scale),
+            Container(
+              height: 48 * scale,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.08),
+                color: Colors.white.withOpacity(0.12),
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.15),
-                  width: 1.5,
+                  color: AppTheme.primaryBlue.withOpacity(0.5),
+                  width: 2,
                 ),
                 borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primaryBlue.withOpacity(0.1),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
               ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Row(
-                  children: [
-                    // Tab buttons (no icons)
-                    Expanded(
-                      child: Row(
-                        children: List.generate(
-                          widget.tabs.length,
-                          (index) => _buildTabButton(index),
+              child: Row(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12 * scale),
+                    child: Icon(
+                      Icons.search_outlined,
+                      color: AppTheme.primaryBlue,
+                      size: 20 * scale,
+                    ),
+                  ),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      focusNode: _searchFocusNode,
+                      style: TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: 14 * scale,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Search channels, movies, series...',
+                        hintStyle: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 14 * scale,
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(vertical: 12 * scale),
+                      ),
+                      onSubmitted: (query) {
+                        if (query.isNotEmpty) {
+                          widget.onSearchSubmit?.call(query);
+                          context.push('/search', extra: {'query': query});
+                          setState(() => _showSearchBox = false);
+                        }
+                      },
+                    ),
+                  ),
+                  if (_searchController.text.isNotEmpty)
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          _searchController.clear();
+                          setState(() {});
+                        },
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 12 * scale),
+                          child: Icon(
+                            Icons.close,
+                            color: AppTheme.textSecondary,
+                            size: 18 * scale,
+                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    // Divider
-                    Container(
-                      height: 24,
-                      width: 1,
-                      color: Colors.white.withOpacity(0.2),
-                    ),
-                    const SizedBox(width: 8),
-                    // Search button (modern outline)
-                    _buildSearchButton(),
-                  ],
-                ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(width: 40),
-          // Time (if shown)
-          if (widget.showLogoAndTime)
-            Text(
-              widget.currentTime,
-              style: TextStyle(
-                color: AppTheme.textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1.0,
-              ),
-            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildTabButton(int index) {
+  Widget _buildTabButton(int index, double scale) {
     final tab = widget.tabs[index];
     final isActive = widget.activeTab == tab.id;
 
@@ -181,7 +260,10 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => context.go(tab.route),
+          onTap: () {
+            setState(() => _showSearchBox = false);
+            context.go(tab.route);
+          },
           child: Focus(
             focusNode: _tabFocusNodes[index],
             onFocusChange: (_) => setState(() {}),
@@ -191,15 +273,15 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                 return Container(
                   decoration: BoxDecoration(
                     color: isActive
-                        ? AppTheme.primaryBlue.withOpacity(0.25)
+                        ? AppTheme.primaryBlue.withOpacity(0.3)
                         : (isFocused
                             ? Colors.white.withOpacity(0.15)
                             : Colors.transparent),
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(24),
                     border: isFocused
                         ? Border.all(
-                            color: AppTheme.primaryBlue.withOpacity(0.5),
-                            width: 1.5,
+                            color: AppTheme.primaryBlue.withOpacity(0.6),
+                            width: 2,
                           )
                         : null,
                   ),
@@ -208,8 +290,8 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                       tab.label,
                       style: TextStyle(
                         color: isActive ? AppTheme.primaryBlue : AppTheme.textSecondary,
-                        fontSize: 12,
-                        fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                        fontSize: 14 * scale,
+                        fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
                       ),
                     ),
                   ),
@@ -222,47 +304,56 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
     );
   }
 
-  Widget _buildSearchButton() {
-    return SizedBox(
-      width: 40,
-      height: 40,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: widget.onSearch ?? () => context.go('/search'),
-          child: Focus(
-            focusNode: _searchFocusNode,
-            onFocusChange: (_) => setState(() {}),
-            child: Builder(
-              builder: (context) {
-                final isFocused = Focus.of(context).hasFocus;
-                return Tooltip(
-                  message: 'Search',
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      color: isFocused ? Colors.white.withOpacity(0.15) : Colors.transparent,
-                      border: isFocused
-                          ? Border.all(
-                              color: AppTheme.primaryBlue.withOpacity(0.5),
-                              width: 1.5,
-                            )
-                          : null,
-                    ),
-                    child: Center(
-                      child: Icon(
-                        Icons.search_outlined,
-                        size: 20,
-                        color: isFocused ? AppTheme.primaryBlue : AppTheme.textSecondary,
-                      ),
-                    ),
+  Widget _buildSearchButtonContainer(double scale) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          setState(() => _showSearchBox = !_showSearchBox);
+          if (_showSearchBox) {
+            Future.delayed(const Duration(milliseconds: 100), () {
+              _searchFocusNode.requestFocus();
+            });
+          }
+        },
+        child: Focus(
+          focusNode: _searchFocusNode,
+          onFocusChange: (_) => setState(() {}),
+          child: Builder(
+            builder: (context) {
+              final isFocused = Focus.of(context).hasFocus;
+              return Container(
+                width: 56 * scale,
+                height: 56 * scale,
+                decoration: BoxDecoration(
+                  color: _showSearchBox
+                      ? AppTheme.primaryBlue.withOpacity(0.2)
+                      : (isFocused
+                          ? Colors.white.withOpacity(0.15)
+                          : Colors.transparent),
+                  borderRadius: BorderRadius.circular(28),
+                  border: (isFocused || _showSearchBox)
+                      ? Border.all(
+                          color: AppTheme.primaryBlue.withOpacity(0.6),
+                          width: 2,
+                        )
+                      : null,
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.search_outlined,
+                    size: 22 * scale,
+                    color: (_showSearchBox || isFocused)
+                        ? AppTheme.primaryBlue
+                        : AppTheme.textSecondary,
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            },
           ),
         ),
       ),
     );
   }
 }
+
