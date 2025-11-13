@@ -29,10 +29,10 @@
             flex: 1;
             min-width: 400px;
             background: #0a0e27;
-            border: 2px solid #1e88e5;
+            border: 2px solid #2E3192;
             border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 8px 32px rgba(30, 136, 229, 0.2);
+            box-shadow: 0 8px 32px rgba(46, 49, 146, 0.2);
         }
         
         .screen-header {
@@ -41,7 +41,7 @@
             text-align: center;
             font-size: 18px;
             font-weight: bold;
-            color: #1e88e5;
+            color: #2E3192;
         }
         
         .screen-content {
@@ -54,11 +54,13 @@
         /* Top Corner Elements */
         .top-bar {
             position: relative;
-            height: 80px;
-            padding: 20px 24px;
+            height: 60px;
+            padding: 16px 24px;
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
+            align-items: center;
+            gap: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .logo {
@@ -68,17 +70,17 @@
         }
         
         .logo-risa {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 800;
-            color: #1e88e5;
-            letter-spacing: 3px;
+            color: #2E3192;
+            letter-spacing: 2px;
         }
         
         .logo-iptv {
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 600;
-            color: #ff6b35;
-            letter-spacing: 2px;
+            color: #E61E6E;
+            letter-spacing: 1.5px;
         }
         
         .time {
@@ -90,7 +92,7 @@
         
         /* Navigation Bar */
         .nav-bar {
-            margin: 0 24px 20px 24px;
+            margin: 0;
             height: 48px;
             background: rgba(255, 255, 255, 0.08);
             border: 1.5px solid rgba(255, 255, 255, 0.15);
@@ -99,6 +101,7 @@
             align-items: center;
             padding: 0 12px;
             gap: 8px;
+            flex: 1;
         }
         
         .nav-tabs {
@@ -123,8 +126,8 @@
         }
         
         .nav-tab.active {
-            background: rgba(30, 136, 229, 0.3);
-            color: #1e88e5;
+            background: rgba(46, 49, 146, 0.25);
+            color: #2E3192;
             font-weight: 600;
         }
         
@@ -158,7 +161,7 @@
         
         .nav-icon:hover {
             background: rgba(255, 255, 255, 0.15);
-            color: #1e88e5;
+            color: #2E3192;
         }
         
         /* Content Sections */
@@ -177,7 +180,7 @@
         .hero-banner {
             width: 100%;
             height: 200px;
-            background: linear-gradient(135deg, #1e88e5 0%, #ff6b35 100%);
+            background: linear-gradient(135deg, #2E3192 0%, #E61E6E 100%);
             border-radius: 8px;
             margin-bottom: 24px;
             display: flex;
@@ -197,8 +200,8 @@
         
         .card {
             aspect-ratio: 9/12;
-            background: rgba(30, 136, 229, 0.1);
-            border: 1px solid rgba(30, 136, 229, 0.3);
+            background: rgba(46, 49, 146, 0.1);
+            border: 1px solid rgba(46, 49, 146, 0.3);
             border-radius: 8px;
             display: flex;
             align-items: center;
@@ -212,8 +215,8 @@
         }
         
         .card:hover {
-            background: rgba(30, 136, 229, 0.2);
-            border-color: #1e88e5;
+            background: rgba(46, 49, 146, 0.2);
+            border-color: #2E3192;
             transform: translateY(-4px);
         }
         
@@ -236,8 +239,8 @@
         }
         
         .info-box {
-            background: rgba(30, 136, 229, 0.1);
-            border-left: 3px solid #1e88e5;
+            background: rgba(46, 49, 146, 0.1);
+            border-left: 3px solid #2E3192;
             padding: 16px;
             margin: 20px;
             border-radius: 4px;
@@ -247,7 +250,7 @@
         h1 {
             text-align: center;
             margin: 20px 0;
-            color: #1e88e5;
+            color: #2E3192;
             font-size: 28px;
         }
     </style>
@@ -265,20 +268,20 @@
                         <div class="logo-risa">RISA</div>
                         <div class="logo-iptv">IPTV</div>
                     </div>
+                    
+                    <div class="nav-bar">
+                        <div class="nav-tabs">
+                            <div class="nav-tab active">LIVE TV</div>
+                            <div class="nav-tab">Movies</div>
+                            <div class="nav-tab">Series</div>
+                        </div>
+                        <div class="nav-divider"></div>
+                        <div class="nav-icons">
+                            <div class="nav-icon" title="Search">🔍</div>
+                        </div>
+                    </div>
+                    
                     <div class="time">08:30 PM</div>
-                </div>
-                
-                <div class="nav-bar">
-                    <div class="nav-tabs">
-                        <div class="nav-tab active">📺 LIVE TV</div>
-                        <div class="nav-tab">🎬 Movies</div>
-                        <div class="nav-tab">📺 Series</div>
-                    </div>
-                    <div class="nav-divider"></div>
-                    <div class="nav-icons">
-                        <div class="nav-icon">🔍</div>
-                        <div class="nav-icon">⋮</div>
-                    </div>
                 </div>
                 
                 <div class="section">
@@ -326,20 +329,20 @@
                         <div class="logo-risa">RISA</div>
                         <div class="logo-iptv">IPTV</div>
                     </div>
+                    
+                    <div class="nav-bar">
+                        <div class="nav-tabs">
+                            <div class="nav-tab">LIVE TV</div>
+                            <div class="nav-tab active">Movies</div>
+                            <div class="nav-tab">Series</div>
+                        </div>
+                        <div class="nav-divider"></div>
+                        <div class="nav-icons">
+                            <div class="nav-icon" title="Search">🔍</div>
+                        </div>
+                    </div>
+                    
                     <div class="time">08:30 PM</div>
-                </div>
-                
-                <div class="nav-bar">
-                    <div class="nav-tabs">
-                        <div class="nav-tab">📺 LIVE TV</div>
-                        <div class="nav-tab active">🎬 Movies</div>
-                        <div class="nav-tab">📺 Series</div>
-                    </div>
-                    <div class="nav-divider"></div>
-                    <div class="nav-icons">
-                        <div class="nav-icon">🔍</div>
-                        <div class="nav-icon">⋮</div>
-                    </div>
                 </div>
                 
                 <div class="section">
@@ -393,20 +396,20 @@
                         <div class="logo-risa">RISA</div>
                         <div class="logo-iptv">IPTV</div>
                     </div>
+                    
+                    <div class="nav-bar">
+                        <div class="nav-tabs">
+                            <div class="nav-tab">LIVE TV</div>
+                            <div class="nav-tab">Movies</div>
+                            <div class="nav-tab active">Series</div>
+                        </div>
+                        <div class="nav-divider"></div>
+                        <div class="nav-icons">
+                            <div class="nav-icon" title="Search">🔍</div>
+                        </div>
+                    </div>
+                    
                     <div class="time">08:30 PM</div>
-                </div>
-                
-                <div class="nav-bar">
-                    <div class="nav-tabs">
-                        <div class="nav-tab">📺 LIVE TV</div>
-                        <div class="nav-tab">🎬 Movies</div>
-                        <div class="nav-tab active">📺 Series</div>
-                    </div>
-                    <div class="nav-divider"></div>
-                    <div class="nav-icons">
-                        <div class="nav-icon">🔍</div>
-                        <div class="nav-icon">⋮</div>
-                    </div>
                 </div>
                 
                 <div class="section">
@@ -453,14 +456,15 @@
     </div>
     
     <div class="info-box">
-        <strong>✓ UI Features:</strong><br>
-        • Logo in top-left corner, Time in top-right<br>
-        • Unified TopNavigationBar across all screens<br>
-        • Liquid glass effect with transparency<br>
-        • Smooth focus/hover transitions<br>
-        • Dark theme (#0a0e27) with blue (#1e88e5) and orange (#ff6b35) accents<br>
-        • TV/Remote-friendly navigation<br>
-        • Scrollable content sections
+        <strong>✓ Updated UI Features:</strong><br>
+        • Logo, navbar, and time all on ONE line<br>
+        • Tab labels only (no icons)<br>
+        • Modern outline search icon (Icons.search_outlined)<br>
+        • Brand colors: Deep Blue (#2E3192) + Pink (#E61E6E)<br>
+        • Simplified header with liquid glass effect<br>
+        • Unified layout across all screens<br>
+        • TV/Remote-friendly focus handling<br>
+        • Removed overflow menu for cleaner design
     </div>
 </body>
 </html>
