@@ -4,7 +4,7 @@ import 'package:iptv_player/utils/app_theme.dart';
 
 /// Reusable top navigation bar with liquid glass effect
 /// Features:
-/// - Logo + time display at top left/right (separate row)
+/// - Logo + time display at top left/right (separate row) - can be hidden
 /// - Slim liquid glass nav bar below with tabs, search, and overflow menu
 class TopNavigationBar extends StatefulWidget {
   final String? activeTab;
@@ -12,6 +12,7 @@ class TopNavigationBar extends StatefulWidget {
   final VoidCallback? onSearch;
   final VoidCallback? onOverflow;
   final String currentTime;
+  final bool showLogoAndTime;
 
   const TopNavigationBar({
     super.key,
@@ -20,6 +21,7 @@ class TopNavigationBar extends StatefulWidget {
     this.onSearch,
     this.onOverflow,
     required this.currentTime,
+    this.showLogoAndTime = true,
   });
 
   @override
@@ -68,35 +70,36 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Logo + Time row (top level, full width, horizontally level)
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Logo (top left)
-              Text(
-                'RISA',
-                style: TextStyle(
-                  color: AppTheme.primaryBlue,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 2.0,
+        // Logo + Time row (conditionally shown)
+        if (widget.showLogoAndTime)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Logo (top left)
+                Text(
+                  'RISA',
+                  style: TextStyle(
+                    color: AppTheme.primaryBlue,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2.0,
+                  ),
                 ),
-              ),
-              // Time (top right)
-              Text(
-                widget.currentTime,
-                style: TextStyle(
-                  color: AppTheme.textSecondary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0.5,
+                // Time (top right)
+                Text(
+                  widget.currentTime,
+                  style: TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.5,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
         // Liquid glass nav bar (slim)
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 24),
