@@ -91,31 +91,10 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
             children: [
               // Logo (if shown)
               if (widget.showLogoAndTime) ...[
-                Container(
+                Image.asset(
+                  'assets/images/croppedlogo2.png',
                   height: 40 * scale,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'RISA',
-                        style: TextStyle(
-                          color: AppTheme.primaryBlue,
-                          fontSize: 20 * scale,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 2.0,
-                        ),
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        'IPTV',
-                        style: TextStyle(
-                          color: AppTheme.accentOrange,
-                          fontSize: 12 * scale,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
+                  fit: BoxFit.contain,
                 ),
                 SizedBox(width: 20 * scale),
               ],
@@ -170,12 +149,12 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                         ),
                         // Overflow menu button (more options)
                         PopupMenuButton(
-                          color: Colors.black.withOpacity(0.85),
-                          elevation: 24,
+                          color: Colors.white.withOpacity(0.08 * 0.85),
+                          elevation: 16,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(28),
                             side: BorderSide(
-                              color: AppTheme.accentPink.withOpacity(0.4),
+                              color: Colors.white.withOpacity(0.15 * 0.85),
                               width: 1.5,
                             ),
                           ),

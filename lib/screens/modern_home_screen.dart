@@ -7,7 +7,6 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/content.dart';
-import 'package:iptv_player/widgets/top_navigation_bar.dart';
 
 class ModernHomeScreen extends StatefulWidget {
   const ModernHomeScreen({super.key});
@@ -50,61 +49,106 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.darkBackground,
-      body: Column(
-        children: [
-          // Top Navigation Bar
-          TopNavigationBar(
-            activeTab: 'home',
-            tabs: [
-              NavTab(id: 'home', label: 'LIVE TV', icon: Icons.live_tv, route: '/home'),
-              NavTab(id: 'movies', label: 'Movies', icon: Icons.movie, route: '/movies'),
-              NavTab(id: 'series', label: 'Series', icon: Icons.tv, route: '/series'),
-            ],
-            currentTime: _currentTime,
-            showLogoAndTime: true,
-            onSearchSubmit: (query) {
-              context.go('/search?q=$query');
-            },
-          ),
-          // Content Area
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  // Hero Banner (edge-to-edge)
-                  _buildHeroBanner(),
-                  // Continue Watching
-                  _buildSectionWithCards(
-                    title: 'Continue Watching',
-                    onTap: (content) {
-                      context.push('/player', extra: content);
-                    },
-                  ),
-                  // Featured Channels
-                  _buildChannelSection(
-                    title: 'Featured Channels',
-                    onTap: (channel) {
-                      context.push('/player', extra: channel);
-                    },
-                  ),
-                  // Trending Now
-                  _buildSectionWithCards(
-                    title: 'Trending Now',
-                    onTap: (content) {
-                      context.push('/player', extra: content);
-                    },
-                  ),
-                  SizedBox(height: 40),
-                ],
-              ),
+      extendBodyBehindAppBar: true,
+      appBar: _buildGlassAppBar(),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Hero Banner (edge-to-edge)
+            _buildHeroBanner(),
+            // Continue Watching
+            _buildSectionWithCards(
+              title: 'Continue Watching',
+              onTap: (content) {
+                context.push('/player', extra: content);
+              },
             ),
-          ),
-        ],
+            // Featured Channels
+            _buildChannelSection(
+              title: 'Featured Channels',
+              onTap: (channel) {
+                context.push('/player', extra: channel);
+              },
+            ),
+            // Trending Now
+            _buildSectionWithCards(
+              title: 'Trending Now',
+              onTap: (content) {
+                context.push('/player', extra: content);
+              },
+            ),
+            SizedBox(height: 40),
+          ],
+        ),
       ),
     );
   }
 
+  PreferredSizeWidget _buildGlassAppBar() {
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(70),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        decoration: BoxDecoration(
+          // Liquid glass effect using gradient + opacity
+          color: Colors.black.withOpacity(0.3),
+          border: Border(
+            bottom: BorderSide(
+              color: Colors.white.withOpacity(0.1),
+              width: 1,
+            ),
+          ),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Logo (top-left)
+              _buildLogo(),
+              // Time (top-right)
+              Text(
+                _currentTime,
+                style: TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.0,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
+  Widget _buildLogo() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'RISA',
+          style: TextStyle(
+            color: AppTheme.primaryBlue,
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 3.0,
+          ),
+        ),
+        Text(
+          'IPTV',
+          style: TextStyle(
+            color: AppTheme.accentOrange,
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 2.0,
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _buildHeroBanner() {
     return Consumer<ContentProvider>(
