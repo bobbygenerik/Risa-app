@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:tflite_flutter/tflite_flutter.dart';
+import 'package:tflite_flutter/tflite_flutter.dart' if (dart.library.html) '../services/ai_upscaling_web_stub.dart';
 
 /// True On-Device Translation Service using NLLB or MarianMT
 ///

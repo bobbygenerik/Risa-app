@@ -1,9 +1,12 @@
 import 'package:flutter/foundation.dart';
-import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:image/image.dart' as img;
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
+
+// Conditional import for TensorFlow Lite (not available on web)
+import 'package:tflite_flutter/tflite_flutter.dart' if (dart.library.html) 'ai_upscaling_web_stub.dart';
 
 /// On-Device AI Upscaling Service
 /// Uses TensorFlow Lite for real-time video upscaling (FREE - no cloud costs)
@@ -39,6 +42,15 @@ class AIUpscalingService extends ChangeNotifier {
   /// Initialize the AI upscaling model
   Future<bool> initialize() async {
     if (_isInitialized) return true;
+
+    // AI upscaling is not supported on web
+    if (kIsWeb) {
+      debugPrint('AI Upscaling: Not supported on web platform');
+      _isInitialized = false;
+      _isModelLoaded = false;
+      notifyListeners();
+      return false;
+    }
 
     try {
       // First check if downloaded model exists

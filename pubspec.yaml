@@ -37,8 +37,8 @@ dependencies:
   googleapis_auth: ^1.6.0
   google_sign_in: ^6.2.2
   
-  # On-Device AI Upscaling (FREE - no cloud costs)
-  tflite_flutter: ^0.11.0
+  # On-Device AI Upscaling (FREE - no cloud costs) - DISABLED for web
+  # tflite_flutter: ^0.11.0  # DISABLED: FFI not supported on web
   image: ^4.3.0
 
   # Optional/native media plugins referenced in the codebase

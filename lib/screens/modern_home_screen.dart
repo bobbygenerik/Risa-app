@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -7,98 +8,145 @@ import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/content.dart';
 
-class ModernHomeScreen extends StatelessWidget {
+class ModernHomeScreen extends StatefulWidget {
   const ModernHomeScreen({super.key});
 
   @override
+  State<ModernHomeScreen> createState() => _ModernHomeScreenState();
+}
+
+class _ModernHomeScreenState extends State<ModernHomeScreen> {
+  late String _currentTime;
+  late Timer _timeTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateTime();
+    _timeTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) {
+        setState(() => _updateTime());
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timeTimer.cancel();
+    super.dispose();
+  }
+
+  void _updateTime() {
+    final now = DateTime.now();
+    final hour =
+        now.hour == 0 ? 12 : (now.hour > 12 ? now.hour - 12 : now.hour);
+    final period = now.hour < 12 ? 'AM' : 'PM';
+    _currentTime =
+        '${hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} $period';
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF050710),
-            const Color(0xFF0d1140),
+    return Scaffold(
+      backgroundColor: AppTheme.darkBackground,
+      extendBodyBehindAppBar: true,
+      appBar: _buildGlassAppBar(),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Hero Banner (edge-to-edge)
+            _buildHeroBanner(),
+            // Continue Watching
+            _buildSectionWithCards(
+              title: 'Continue Watching',
+              onTap: (content) {
+                context.push('/player', extra: content);
+              },
+            ),
+            // Featured Channels
+            _buildChannelSection(
+              title: 'Featured Channels',
+              onTap: (channel) {
+                context.push('/player', extra: channel);
+              },
+            ),
+            // Trending Now
+            _buildSectionWithCards(
+              title: 'Trending Now',
+              onTap: (content) {
+                context.push('/player', extra: content);
+              },
+            ),
+            SizedBox(height: 40),
           ],
         ),
       ),
-      child: Consumer<ChannelProvider>(
-        builder: (context, channelProvider, _) {
-          final channels = channelProvider.channels;
-          
-          // Show empty state if no channels available
-          if (channels.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.live_tv,
-                    size: 80,
-                    color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
-                  ),
-                  SizedBox(height: 24),
-                  Text(
-                    'No Live TV Available',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Load a playlist with Live TV channels from Settings',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 32),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Future.delayed(const Duration(milliseconds: 100), () {
-                        if (context.mounted) context.go('/settings');
-                      });
-                    },
-                    icon: const Icon(Icons.settings),
-                    label: const Text('Go to Settings'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryBlue,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-          
-          return SingleChildScrollView(
-            child: Column(
-              children: [
-                // Hero Banner (edge-to-edge)
-                _buildHeroBanner(),
-                // Continue Watching
-                _buildSectionWithCards(
-                  title: 'Continue Watching',
-                  onTap: (content) {
-                    context.push('/player', extra: content);
-                  },
-                ),
-                // Featured Channels
-                _buildChannelSection(
-                  title: 'Featured Channels',
-                  onTap: (channel) {
-                    context.push('/player', extra: channel);
-                  },
-                ),
-                // Trending Now
-                _buildSectionWithCards(
-                  title: 'Trending Now',
-                  onTap: (content) {
-                    context.push('/player', extra: content);
-                  },
-                ),
-                SizedBox(height: 40),
-              ],
+    );
+  }
+
+  PreferredSizeWidget _buildGlassAppBar() {
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(70),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        decoration: BoxDecoration(
+          // Liquid glass effect using gradient + opacity
+          color: Colors.black.withOpacity(0.3),
+          border: Border(
+            bottom: BorderSide(
+              color: Colors.white.withOpacity(0.1),
+              width: 1,
             ),
-          );
-        },
+          ),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Logo (top-left)
+              _buildLogo(),
+              // Time (top-right)
+              Text(
+                _currentTime,
+                style: TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.0,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
+    );
+  }
+
+  Widget _buildLogo() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'RISA',
+          style: TextStyle(
+            color: AppTheme.primaryBlue,
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 3.0,
+          ),
+        ),
+        Text(
+          'IPTV',
+          style: TextStyle(
+            color: AppTheme.accentOrange,
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 2.0,
+          ),
+        ),
+      ],
     );
   }
 

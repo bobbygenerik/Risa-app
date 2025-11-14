@@ -16,7 +16,7 @@ import 'package:iptv_player/services/live_transcription_service.dart';
 import 'package:iptv_player/services/ai_model_manager.dart';
 import 'package:iptv_player/services/opensubtitles_service.dart';
 import 'package:iptv_player/services/real_debrid_service.dart';
-import 'package:iptv_player/widgets/main_shell.dart';
+// import 'package:iptv_player/widgets/app_shell.dart'; // Removed - no sidebar in new UI
 import 'package:iptv_player/widgets/legal_disclaimer_dialog.dart';
 import 'package:iptv_player/screens/epg_screen.dart';
 import 'package:iptv_player/screens/settings_screen.dart';
@@ -25,14 +25,10 @@ import 'package:iptv_player/screens/edit_profile_screen.dart';
 import 'package:iptv_player/screens/recordings_screen.dart';
 import 'package:iptv_player/screens/ai_models_screen.dart';
 import 'package:iptv_player/screens/modern_home_screen.dart';
-import 'package:iptv_player/screens/movies_screen.dart';
-import 'package:iptv_player/screens/series_screen.dart';
 import 'package:iptv_player/screens/enhanced_video_player_screen.dart';
 import 'package:iptv_player/screens/search_screen.dart';
 import 'package:iptv_player/screens/playlist_login_screen.dart';
 import 'package:iptv_player/screens/help_about_screen.dart';
-import 'package:iptv_player/screens/favorites_screen.dart';
-import 'package:iptv_player/screens/downloads_screen.dart';
 
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/models/channel.dart';
@@ -557,44 +553,12 @@ final _router = GoRouter(
       ),
     ),
     GoRoute(path: '/', redirect: (context, state) => '/home'),
-    // Main shell containing fixed navbar with home, movies, series screens
-    ShellRoute(
-      builder: (context, state, child) {
-        // Determine active tab from current location
-        final activeTab = state.matchedLocation.contains('/movies')
-            ? 'movies'
-            : state.matchedLocation.contains('/series')
-                ? 'series'
-                : 'home';
-        
-        return MainShell(
-          activeTab: activeTab,
-          child: child,
-        );
-      },
-      routes: [
-        GoRoute(
-          path: '/home',
-          pageBuilder: (context, state) => _fadeSlidePage(
-            key: state.pageKey,
-            child: const ModernHomeScreen(),
-          ),
-        ),
-        GoRoute(
-          path: '/movies',
-          pageBuilder: (context, state) => _fadeSlidePage(
-            key: state.pageKey,
-            child: const MoviesScreen(),
-          ),
-        ),
-        GoRoute(
-          path: '/series',
-          pageBuilder: (context, state) => _fadeSlidePage(
-            key: state.pageKey,
-            child: const SeriesScreen(),
-          ),
-        ),
-      ],
+    GoRoute(
+      path: '/home',
+      pageBuilder: (context, state) => _fadeSlidePage(
+        key: state.pageKey,
+        child: const ModernHomeScreen(),
+      ),
     ),
     GoRoute(
       path: '/search',
@@ -626,16 +590,6 @@ final _router = GoRouter(
           _fadeSlidePage(key: state.pageKey, child: const SettingsScreen()),
     ),
     GoRoute(
-      path: '/favorites',
-      pageBuilder: (context, state) =>
-          _fadeSlidePage(key: state.pageKey, child: const FavoritesScreen()),
-    ),
-    GoRoute(
-      path: '/downloads',
-      pageBuilder: (context, state) =>
-          _fadeSlidePage(key: state.pageKey, child: const DownloadsScreen()),
-    ),
-    GoRoute(
       path: '/playlist-editor',
       pageBuilder: (context, state) => _fadeSlidePage(
         key: state.pageKey,
@@ -660,14 +614,10 @@ final _router = GoRouter(
         final data = state.extra;
         String videoUrl = 'https://commondatastorage.googleapis.com/gtv-videos-library/sample/BigBuckBunny.mp4';
         String title = 'Video';
-        Channel? channel;
-        bool isLive = false;
 
         if (data is Channel) {
           videoUrl = data.url;
           title = data.name;
-          channel = data;
-          isLive = true;
         } else if (data is Content) {
           videoUrl = data.videoUrl ?? videoUrl;
           title = data.title;
@@ -678,8 +628,6 @@ final _router = GoRouter(
           child: EnhancedVideoPlayerScreen(
             videoUrl: videoUrl,
             title: title,
-            isLive: isLive,
-            channel: channel,
           ),
         );
       },

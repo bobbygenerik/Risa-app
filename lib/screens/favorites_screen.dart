@@ -37,46 +37,28 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        context.go('/home');
-        return false;
-      },
-      child: Consumer<ChannelProvider>(
-        builder: (context, channelProvider, child) {
-          final favorites = channelProvider.favoriteChannels;
+    return Consumer<ChannelProvider>(
+      builder: (context, channelProvider, child) {
+        final favorites = channelProvider.favoriteChannels;
 
-          return Scaffold(
-            backgroundColor: Colors.transparent,
-            body: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF050710),
-                    Color(0xFF0d1140),
-                  ],
+        return Scaffold(
+          backgroundColor: AppTheme.darkBackground,
+          body: Column(
+            children: [
+              _buildGlassAppBar(favorites.length),
+              Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.all(AppSizes.lg),
+                  child: favorites.isEmpty
+                      ? _buildEmptyState(context)
+                      : _buildFavoritesList(context, favorites),
                 ),
               ),
-              child: Column(
-              children: [
-                _buildGlassAppBar(favorites.length),
-                Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.all(AppSizes.lg),
-                    child: favorites.isEmpty
-                        ? _buildEmptyState(context)
-                        : _buildFavoritesList(context, favorites),
-                  ),
-                ),
-              ],
-            ),
+            ],
           ),
-          );
-        },
-      ),
+        );
+      },
     );
   }
 
@@ -176,7 +158,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         crossAxisCount: 5,
         crossAxisSpacing: AppSizes.md,
         mainAxisSpacing: AppSizes.md,
-        childAspectRatio: 1.5,
+        childAspectRatio: 0.75,
       ),
       itemCount: favorites.length,
       itemBuilder: (context, index) {
