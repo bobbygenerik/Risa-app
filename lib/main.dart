@@ -566,6 +566,26 @@ final _router = GoRouter(
           _fadeSlidePage(key: state.pageKey, child: const SearchScreen()),
     ),
     GoRoute(
+      path: '/movies',
+      pageBuilder: (context, state) =>
+          _fadeSlidePage(key: state.pageKey, child: const MoviesPlaceholder()),
+    ),
+    GoRoute(
+      path: '/series',
+      pageBuilder: (context, state) =>
+          _fadeSlidePage(key: state.pageKey, child: const SeriesPlaceholder()),
+    ),
+    GoRoute(
+      path: '/favorites',
+      pageBuilder: (context, state) =>
+          _fadeSlidePage(key: state.pageKey, child: const FavoritesPlaceholder()),
+    ),
+    GoRoute(
+      path: '/downloads',
+      pageBuilder: (context, state) =>
+          _fadeSlidePage(key: state.pageKey, child: const DownloadsPlaceholder()),
+    ),
+    GoRoute(
       path: '/epg',
       pageBuilder: (context, state) =>
           _fadeSlidePage(key: state.pageKey, child: const EPGScreen()),
@@ -696,6 +716,24 @@ class CatchupPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _buildPlaceholder(context, 'Catch-up TV', Icons.restore);
+  }
+}
+
+class FavoritesPlaceholder extends StatelessWidget {
+  const FavoritesPlaceholder({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return _buildPlaceholder(context, 'Favorites', Icons.favorite);
+  }
+}
+
+class DownloadsPlaceholder extends StatelessWidget {
+  const DownloadsPlaceholder({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return _buildPlaceholder(context, 'Downloads', Icons.download);
   }
 }
 

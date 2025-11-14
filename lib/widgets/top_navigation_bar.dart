@@ -91,10 +91,31 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
             children: [
               // Logo (if shown)
               if (widget.showLogoAndTime) ...[
-                Image.asset(
-                  'assets/images/croppedlogo2.png',
+                Container(
                   height: 40 * scale,
-                  fit: BoxFit.contain,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'RISA',
+                        style: TextStyle(
+                          color: AppTheme.primaryBlue,
+                          fontSize: 20 * scale,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 2.0,
+                        ),
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        'IPTV',
+                        style: TextStyle(
+                          color: AppTheme.accentOrange,
+                          fontSize: 12 * scale,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 SizedBox(width: 20 * scale),
               ],
