@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-label="Modern Home Screen mockup">
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="#0b0d0f" />
+
+  <!-- Glass app bar -->
+  <defs>
+    <linearGradient id="glassGrad" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#111213" stop-opacity="0.58"/>
+      <stop offset="100%" stop-color="#0b0d0f" stop-opacity="0.28"/>
+    </linearGradient>
+    <linearGradient id="heroOverlay" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#00000000"/>
+      <stop offset="90%" stop-color="#000000c0"/>
+    </linearGradient>
+    <linearGradient id="cardGradient" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#1e2a3b"/>
+      <stop offset="100%" stop-color="#12202d"/>
+    </linearGradient>
+  </defs>
+
+  <g id="appBar">
+    <rect x="0" y="0" width="1280" height="72" fill="url(#glassGrad)" />
+    <rect x="0" y="72" width="1280" height="2" fill="#ff57a0" opacity="0.12" />
+
+    <!-- Logo -->
+    <g transform="translate(24, 14)">
+      <text x="0" y="18" font-family="Arial,Helvetica,sans-serif" font-size="28" font-weight="800" fill="#3aa1ff">RISA</text>
+      <text x="0" y="36" font-family="Arial,Helvetica,sans-serif" font-size="10" font-weight="700" fill="#ff9b42">IPTV</text>
+    </g>
+
+    <!-- Time, right aligned -->
+    <text x="1240" y="38" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#e6eef7" opacity="0.95">02:45 PM</text>
+  </g>
+
+  <!-- Hero banner area -->
+  <g transform="translate(0, 74)">
+    <rect x="0" y="0" width="1280" height="400" fill="#121416" />
+
+    <!-- Simulated backdrop image as gradient box -->
+    <rect x="0" y="0" width="1280" height="400" fill="url(#cardGradient)" />
+    <!-- Overlay gradient faux-image -->
+    <rect x="0" y="0" width="1280" height="400" fill="url(#heroOverlay)" />
+
+    <!-- Hero Big Title & CTA -->
+    <g transform="translate(28, 290)">
+      <text x="0" y="0" font-family="Arial,Helvetica,sans-serif" font-size="34" font-weight="700" fill="#f8fbff">Eternal Seas: The Lost Voyage</text>
+      <g transform="translate(0, 28)">
+        <rect x="0" y="0" rx="6" ry="6" width="180" height="36" fill="#ff941a" opacity="0.95" />
+        <text x="24" y="24" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#fff">▶ Continue Watching</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- Row: Continue Watching -->
+  <g transform="translate(0, 490)">
+    <text x="24" y="24" font-family="Arial,Helvetica,sans-serif" font-size="20" fill="#e6eef7">Continue Watching</text>
+
+    <!-- Four example poster cards horizontally -->
+    <g transform="translate(24, 50)">
+      <rect x="0" y="0" width="180" height="260" rx="12" fill="#0f1a25" stroke="#ffffff10" />
+      <rect x="196" y="0" width="180" height="260" rx="12" fill="#0f1a25" stroke="#ffffff10" />
+      <rect x="392" y="0" width="180" height="260" rx="12" fill="#0f1a25" stroke="#ffffff10" />
+      <rect x="588" y="0" width="180" height="260" rx="12" fill="#0f1a25" stroke="#ffffff10" />
+
+      <!-- small titles under posters -->
+      <text x="0" y="280" font-family="Arial,Helvetica,sans-serif" font-size="12" fill="#e6eef7">Ocean City</text>
+      <text x="196" y="280" font-family="Arial,Helvetica,sans-serif" font-size="12" fill="#e6eef7">Lost Harbor</text>
+      <text x="392" y="280" font-family="Arial,Helvetica,sans-serif" font-size="12" fill="#e6eef7">Night Tides</text>
+      <text x="588" y="280" font-family="Arial,Helvetica,sans-serif" font-size="12" fill="#e6eef7">Siren</text>
+    </g>
+  </g>
+
+  <!-- Row: Featured Channels -->
+  <g transform="translate(0, 570)">
+    <text x="24" y="24" font-family="Arial,Helvetica,sans-serif" font-size="20" fill="#e6eef7">Featured Channels</text>
+    <g transform="translate(24, 50)">
+      <rect x="0" y="0" width="220" height="110" rx="12" fill="#10161b" stroke="#ffffff10" />
+      <rect x="236" y="0" width="220" height="110" rx="12" fill="#10161b" stroke="#ffffff10" />
+      <rect x="472" y="0" width="220" height="110" rx="12" fill="#10161b" stroke="#ffffff10" />
+      <rect x="708" y="0" width="220" height="110" rx="12" fill="#10161b" stroke="#ffffff10" />
+    </g>
+  </g>
+
+  <!-- Footer spacing -->
+  <g transform="translate(0, 680)">
+    <rect x="0" y="0" width="1280" height="40" fill="#00000000" />
+  </g>
+</svg>
