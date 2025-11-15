@@ -253,4 +253,11 @@ class RealDebridService extends ChangeNotifier {
     if (_premiumUntil == null) return null;
     return DateTime.fromMillisecondsSinceEpoch(_premiumUntil! * 1000);
   }
+
+  /// Get premium expiry date as formatted string
+  String get premiumExpiryDateString {
+    final date = premiumExpiryDate;
+    if (date == null) return 'Not Premium';
+    return '${date.day}/${date.month}/${date.year}';
+  }
 }

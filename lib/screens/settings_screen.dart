@@ -9,6 +9,7 @@ import 'package:iptv_player/services/real_debrid_service.dart';
 import 'package:iptv_player/services/whisper_speech_service.dart';
 import 'package:iptv_player/services/ai_model_manager.dart';
 import 'package:iptv_player/services/epg_service.dart';
+import 'package:iptv_player/services/service_validator.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/services/ai_upscaling_service.dart';
@@ -1944,13 +1945,43 @@ class _SettingsScreenState extends State<SettingsScreen>
     return _buildSettingsSection(
       title: 'Cloud & AI',
       children: [
+        // Service Status Overview
+        _buildSectionCard(
+          title: 'Service Status',
+          subtitle: 'External service configuration status',
+          children: [
+            _buildServiceStatusGrid(),
+            SizedBox(height: AppSizes.md),
+            Container(
+              padding: EdgeInsets.all(AppSizes.sm),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryBlue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: AppTheme.primaryBlue, size: 16),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'See SETUP_GUIDE.md for API key configuration',
+                      style: TextStyle(fontSize: 12, color: AppTheme.primaryBlue),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        
         // Google Drive Sync
         Consumer<GoogleDriveSyncService>(
           builder: (context, driveService, child) {
             return _buildSectionCard(
               title: 'Google Drive Sync',
-              subtitle:
-                  'FREE - Sync favorites, playlists, and settings to your Google Drive',
+              subtitle: ServiceValidator.isGoogleDriveAvailable
+                  ? 'FREE - Sync favorites, playlists, and settings to your Google Drive'
+                  : 'Requires OAuth setup - see SETUP_GUIDE.md',
               children: [
                 if (!driveService.isSignedIn) ...[
                   const Text(
@@ -3438,6 +3469,76 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   String _formatDateTime(DateTime dateTime) {
     return '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
+  }
+
+  Widget _buildServiceStatusGrid() {
+    final services = [
+      {'name': 'Google Drive', 'key': 'google_drive', 'icon': Icons.cloud},
+      {'name': 'OpenSubtitles', 'key': 'opensubtitles', 'icon': Icons.subtitles},
+      {'name': 'TMDB', 'key': 'tmdb', 'icon': Icons.movie},
+      {'name': 'AI Upscaling', 'key': 'ai_upscaling', 'icon': Icons.high_quality},
+      {'name': 'Whisper AI', 'key': 'whisper', 'icon': Icons.record_voice_over},
+    ];
+    
+    final status = ServiceValidator.getServiceStatus();
+    
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        childAspectRatio: 2.5,
+      ),
+      itemCount: services.length,
+      itemBuilder: (context, index) {
+        final service = services[index];
+        final isAvailable = status[service['key']] ?? false;
+        
+        return Container(
+          padding: EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isAvailable 
+                ? AppTheme.accentGreen.withOpacity(0.1)
+                : AppTheme.textSecondary.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isAvailable 
+                  ? AppTheme.accentGreen.withOpacity(0.3)
+                  : AppTheme.textSecondary.withOpacity(0.3),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                service['icon'] as IconData,
+                size: 16,
+                color: isAvailable ? AppTheme.accentGreen : AppTheme.textSecondary,
+              ),
+              SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  service['name'] as String,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isAvailable ? AppTheme.accentGreen : AppTheme.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Icon(
+                isAvailable ? Icons.check_circle : Icons.circle_outlined,
+                size: 12,
+                color: isAvailable ? AppTheme.accentGreen : AppTheme.textSecondary,
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   // ignore: unused_element

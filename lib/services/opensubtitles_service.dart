@@ -1,14 +1,14 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:iptv_player/config/oauth_config.dart';
 
 /// OpenSubtitles API Service
 /// Provides subtitle downloading from OpenSubtitles.org (FREE API)
 /// API Documentation: https://opensubtitles.stoplight.io/docs/opensubtitles-api
 class OpenSubtitlesService extends ChangeNotifier {
   static const String _apiUrl = 'https://api.opensubtitles.com/api/v1';
-  static const String _apiKey =
-      'WX4Acrpk0veYJrpQTc1I5oUBkpNnIqbc';
+  static const String _apiKey = OAuthConfig.openSubtitlesApiKey;
 
   String? _username;
   String? _password;

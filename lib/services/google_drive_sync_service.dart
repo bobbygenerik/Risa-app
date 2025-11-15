@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
+import 'package:iptv_player/config/oauth_config.dart';
 
 /// Google Drive Sync Service
 /// Syncs app data to user's Google Drive (FREE - uses user's storage)
@@ -24,6 +25,9 @@ class GoogleDriveSyncService extends ChangeNotifier {
 
   bool get _isSupportedPlatform {
     if (kIsWeb) {
+      return false;
+    }
+    if (!OAuthConfig.isGoogleConfigured) {
       return false;
     }
     return defaultTargetPlatform == TargetPlatform.android ||
