@@ -31,6 +31,7 @@ dependencies:
   animations: ^2.0.11
   cached_network_image: ^3.4.1
   file_picker: ^8.1.6
+  image_picker: ^1.1.2
   
   # Google Drive Integration (FREE - uses user's storage)
   googleapis: ^13.2.0

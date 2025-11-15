@@ -217,11 +217,9 @@ class AIUpscalingService extends ChangeNotifier {
   /// Check if GPU acceleration is available
   bool _checkGPUAvailability() {
     // Check if GPU delegate is available on the platform
-    try {
-      return true; // Assume GPU available on Android/iOS
-    } catch (e) {
-      return false;
-    }
+    if (kIsWeb) return false;
+    return defaultTargetPlatform == TargetPlatform.android || 
+           defaultTargetPlatform == TargetPlatform.iOS;
   }
 
   /// Upscale a single frame (used for real-time video processing)
