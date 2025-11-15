@@ -9,9 +9,9 @@ class TMDBService {
   static Future<double?> getMovieRating(String title, {int? year}) async {
     try {
       // Search for movie by title
-      final searchUrl = '$_baseUrl/search/movie?api_key=$_apiKey&query=${Uri.encodeComponent(title)}';
+      var searchUrl = '$_baseUrl/search/movie?api_key=$_apiKey&query=${Uri.encodeComponent(title)}';
       if (year != null) {
-        searchUrl + '&year=$year';
+        searchUrl += '&year=$year';
       }
       
       final response = await http.get(Uri.parse(searchUrl));
@@ -36,9 +36,9 @@ class TMDBService {
   static Future<double?> getTVShowRating(String title, {int? year}) async {
     try {
       // Search for TV show by title
-      final searchUrl = '$_baseUrl/search/tv?api_key=$_apiKey&query=${Uri.encodeComponent(title)}';
+      var searchUrl = '$_baseUrl/search/tv?api_key=$_apiKey&query=${Uri.encodeComponent(title)}';
       if (year != null) {
-        searchUrl + '&first_air_date_year=$year';
+        searchUrl += '&first_air_date_year=$year';
       }
       
       final response = await http.get(Uri.parse(searchUrl));
