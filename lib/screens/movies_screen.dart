@@ -118,7 +118,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
 
         return PopScope(
           canPop: false,
-          onPopInvoked: (didPop) {
+          onPopInvokedWithResult: (didPop, result) {
             if (!didPop) {
               context.go('/home');
             }

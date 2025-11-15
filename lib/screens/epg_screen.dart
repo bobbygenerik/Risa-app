@@ -89,7 +89,7 @@ class _EPGScreenState extends State<EPGScreen> {
 
         return PopScope(
           canPop: false,
-          onPopInvoked: (didPop) {
+          onPopInvokedWithResult: (didPop, result) {
             if (!didPop) {
               context.go('/home');
             }

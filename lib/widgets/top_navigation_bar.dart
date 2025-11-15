@@ -176,8 +176,15 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                                 ],
                               ),
                               onTap: () {
+                                Navigator.of(context).pop();
                                 Future.delayed(const Duration(milliseconds: 100), () {
-                                  if (mounted) context.go('/settings');
+                                  if (mounted) {
+                                    try {
+                                      context.push('/settings');
+                                    } catch (e) {
+                                      context.go('/settings');
+                                    }
+                                  }
                                 });
                               },
                             ),

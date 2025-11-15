@@ -50,7 +50,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
         return PopScope(
           canPop: false,
-          onPopInvoked: (didPop) {
+          onPopInvokedWithResult: (didPop, result) {
             if (!didPop) {
               context.go('/home');
             }

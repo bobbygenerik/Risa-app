@@ -118,7 +118,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
 
         return PopScope(
           canPop: false,
-          onPopInvoked: (didPop) {
+          onPopInvokedWithResult: (didPop, result) {
             if (!didPop) {
               context.go('/home');
             }
