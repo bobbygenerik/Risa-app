@@ -82,7 +82,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
       if (show.rating == null || show.rating == 0) {
         final rating = await TMDBService.getTVShowRating(show.title, year: show.year);
         if (rating != null && rating > 0) {
-          show.rating = rating;
+          // Note: Cannot modify final field, would need to update in provider
         }
       }
     }

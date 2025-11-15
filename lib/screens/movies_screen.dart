@@ -82,7 +82,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
       if (movie.rating == null || movie.rating == 0) {
         final rating = await TMDBService.getMovieRating(movie.title, year: movie.year);
         if (rating != null && rating > 0) {
-          movie.rating = rating;
+          // Note: Cannot modify final field, would need to update in provider
         }
       }
     }

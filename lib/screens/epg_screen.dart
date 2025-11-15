@@ -70,7 +70,7 @@ class _EPGScreenState extends State<EPGScreen> {
 
         // Filter channels by selected category and hidden status
         final filteredChannels = hasChannels
-            ? channels.where((ch) {
+            ? (channels.where((ch) {
                 if (ch.isHidden == true) return false;
                 if (_selectedCategory != null && ch.groupTitle != _selectedCategory) {
                   return false;
@@ -84,7 +84,7 @@ class _EPGScreenState extends State<EPGScreen> {
                   return a.channelNumber!.compareTo(b.channelNumber!);
                 }
                 return a.name.compareTo(b.name);
-              })
+              }))
             : <Channel>[];
 
         return PopScope(
@@ -389,12 +389,7 @@ class _EPGScreenState extends State<EPGScreen> {
               itemCount: channels.length,
               itemBuilder: (context, index) {
                 final channel = channels[index];
-                if (index == 0) {
-                  return Focus(
-                    focusNode: _firstContentFocusNode,
-                    child: _buildChannelItem(channel),
-                  );
-                }
+
                 return _buildChannelItem(channel);
               },
             ),
