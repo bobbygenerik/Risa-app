@@ -29,6 +29,10 @@ import 'package:iptv_player/screens/enhanced_video_player_screen.dart';
 import 'package:iptv_player/screens/search_screen.dart';
 import 'package:iptv_player/screens/playlist_login_screen.dart';
 import 'package:iptv_player/screens/help_about_screen.dart';
+import 'package:iptv_player/screens/favorites_screen.dart';
+import 'package:iptv_player/screens/downloads_screen.dart';
+import 'package:iptv_player/screens/movies_screen.dart';
+import 'package:iptv_player/screens/series_screen.dart';
 
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/models/channel.dart';
@@ -607,6 +611,34 @@ final _router = GoRouter(
       path: '/ai-models',
       pageBuilder: (context, state) =>
           _fadeSlidePage(key: state.pageKey, child: const AIModelsScreen()),
+    ),
+    GoRoute(
+      path: '/favorites',
+      pageBuilder: (context, state) => _fadeSlidePage(
+        key: state.pageKey,
+        child: const FavoritesScreen(),
+      ),
+    ),
+    GoRoute(
+      path: '/downloads',
+      pageBuilder: (context, state) => _fadeSlidePage(
+        key: state.pageKey,
+        child: const DownloadsScreen(),
+      ),
+    ),
+    GoRoute(
+      path: '/movies',
+      pageBuilder: (context, state) => _fadeSlidePage(
+        key: state.pageKey,
+        child: const MoviesScreen(),
+      ),
+    ),
+    GoRoute(
+      path: '/series',
+      pageBuilder: (context, state) => _fadeSlidePage(
+        key: state.pageKey,
+        child: const SeriesScreen(),
+      ),
     ),
     GoRoute(
       path: '/player',

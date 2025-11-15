@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/widgets/top_navigation_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:path/path.dart' as path;
@@ -17,26 +19,32 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
   List<FileSystemEntity> _files = [];
   bool _isLoading = true;
   String? _errorMessage;
-  late DateTime _currentTime;
+  late String _currentTime;
+  late Timer _timeTimer;
 
   @override
   void initState() {
     super.initState();
-    _currentTime = DateTime.now();
-    Future.delayed(Duration(seconds: 1), _updateTime);
+    _updateTime();
+    _timeTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) {
+        setState(() => _updateTime());
+      }
+    });
     _loadFiles();
   }
 
-  void _updateTime() {
-    if (!mounted) return;
-    setState(() {
-      _currentTime = DateTime.now();
-    });
-    Future.delayed(Duration(seconds: 1), _updateTime);
+  @override
+  void dispose() {
+    _timeTimer.cancel();
+    super.dispose();
   }
 
-  String _formatTime(DateTime time) {
-    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+  void _updateTime() {
+    final now = DateTime.now();
+    final hour = now.hour == 0 ? 12 : (now.hour > 12 ? now.hour - 12 : now.hour);
+    final period = now.hour < 12 ? 'AM' : 'PM';
+    _currentTime = '${hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} $period';
   }
 
   Future<void> _loadFiles() async {
@@ -161,233 +169,233 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        context.go('/home');
-        return false;
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          context.go('/home');
+        }
       },
       child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF050710), Color(0xFF0d1140)],
-            ),
-          ),
-          child: Column(
-          children: [
-            // Glass app bar
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.08),
-                border: Border(
-                  bottom: BorderSide(color: AppTheme.accentPink, width: 2),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.download_rounded, color: AppTheme.primaryBlue, size: 24),
-                  SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: AppTheme.darkBackground,
+      body: Stack(
+        children: [
+          // Main content
+          SingleChildScrollView(
+            child: Column(
+              children: [
+                // Top padding for floating nav
+                SizedBox(height: 100),
+                // Page title
+                Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Row(
                     children: [
+                      Icon(Icons.download_rounded, color: AppTheme.primaryBlue, size: 28),
+                      SizedBox(width: 12),
                       Text(
                         'Downloads & Recordings',
                         style: TextStyle(
                           color: AppTheme.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      Text(
-                        '${_files.length} items',
-                        style: TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 12,
+                      Spacer(),
+                      if (_files.isNotEmpty)
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryBlue.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            '${_files.length} files',
+                            style: TextStyle(
+                              color: AppTheme.primaryBlue,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
-                      ),
                     ],
                   ),
-                  Spacer(),
-                  Text(
-                    _formatTime(_currentTime),
-                    style: TextStyle(
-                      color: AppTheme.textSecondary,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
-            // Content
-            Expanded(
-              child: _isLoading
-                  ? Center(
-                      child: CircularProgressIndicator(
-                        color: AppTheme.primaryBlue,
-                      ),
-                    )
-                  : _errorMessage != null
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.error_outline,
-                                size: 80,
-                                color: AppTheme.textSecondary.withOpacity(0.3),
-                              ),
-                              SizedBox(height: 24),
-                              Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 32),
-                                child: Text(
-                                  _errorMessage!,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: AppTheme.textSecondary,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : _files.isEmpty
-                          ? Center(
+                ),
+                // Content
+                _isLoading
+                    ? Container(
+                        height: 400,
+                        child: Center(
+                          child: CircularProgressIndicator(color: AppTheme.primaryBlue),
+                        ),
+                      )
+                    : _errorMessage != null
+                        ? Container(
+                            height: 400,
+                            child: Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Icon(
-                                    Icons.download_rounded,
+                                    Icons.error_outline,
                                     size: 80,
-                                    color: AppTheme.textSecondary.withOpacity(0.3),
+                                    color: AppTheme.primaryBlue.withOpacity(0.5),
                                   ),
                                   SizedBox(height: 24),
-                                  Text(
-                                    'No Downloads Yet',
-                                    style: TextStyle(
-                                      color: AppTheme.textPrimary,
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
+                                  Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 32),
+                                    child: Text(
+                                      _errorMessage!,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: AppTheme.textSecondary,
+                                        fontSize: 16,
+                                      ),
                                     ),
                                   ),
-                                  SizedBox(height: 8),
-                                  Text(
-                                    'Recorded programs will appear here',
-                                    style: TextStyle(
-                                      color: AppTheme.textSecondary,
-                                      fontSize: 14,
+                                  SizedBox(height: 32),
+                                  ElevatedButton.icon(
+                                    icon: Icon(Icons.settings),
+                                    label: Text('Go to Settings'),
+                                    onPressed: () => context.go('/settings'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.primaryBlue,
                                     ),
                                   ),
                                 ],
                               ),
-                            )
-                          : ListView.builder(
-                              itemCount: _files.length,
-                              itemBuilder: (context, index) {
-                                final file = _files[index];
-                                final fileName = path.basename(file.path);
-                                final fileStat = file.statSync();
-                                final fileSize = _formatFileSize(fileStat.size);
-                                final modDate =
-                                    '${fileStat.modified.month}/${fileStat.modified.day}/${fileStat.modified.year} ${fileStat.modified.hour.toString().padLeft(2, '0')}:${fileStat.modified.minute.toString().padLeft(2, '0')}';
-
-                                return Container(
-                                  margin: EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.05),
-                                    border: Border.all(
-                                      color: Colors.white.withOpacity(0.1),
-                                      width: 1,
-                                    ),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: ListTile(
-                                    leading: Icon(
-                                      Icons.video_file,
-                                      color: AppTheme.primaryBlue,
-                                      size: 32,
-                                    ),
-                                    title: Text(
-                                      fileName,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        color: AppTheme.textPrimary,
-                                        fontWeight: FontWeight.w500,
+                            ),
+                          )
+                        : _files.isEmpty
+                            ? Container(
+                                height: 400,
+                                child: Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.download_rounded,
+                                        size: 80,
+                                        color: AppTheme.primaryBlue.withOpacity(0.5),
                                       ),
-                                    ),
-                                    subtitle: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        SizedBox(height: 4),
-                                        Text(
-                                          '$fileSize • $modDate',
-                                          style: TextStyle(
-                                            color: AppTheme.textSecondary,
-                                            fontSize: 12,
-                                          ),
+                                      SizedBox(height: 24),
+                                      Text(
+                                        'No Downloads Yet',
+                                        style: TextStyle(
+                                          color: AppTheme.textPrimary,
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w600,
                                         ),
-                                      ],
-                                    ),
-                                    trailing: PopupMenuButton(
-                                      color: Colors.white.withOpacity(0.08),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        side: BorderSide(
-                                          color: Colors.white.withOpacity(0.15),
+                                      ),
+                                      SizedBox(height: 12),
+                                      Text(
+                                        'Recorded programs will appear here',
+                                        style: TextStyle(
+                                          color: AppTheme.textSecondary,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            : Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 24),
+                                child: Column(
+                                  children: _files.map((file) {
+                                    final fileName = path.basename(file.path);
+                                    final fileStat = file.statSync();
+                                    final fileSize = _formatFileSize(fileStat.size);
+                                    final modDate = '${fileStat.modified.month}/${fileStat.modified.day}/${fileStat.modified.year}';
+
+                                    return Container(
+                                      margin: EdgeInsets.only(bottom: 16),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.cardBackground,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: Colors.white.withOpacity(0.1),
                                           width: 1,
                                         ),
                                       ),
-                                      itemBuilder: (context) => [
-                                        PopupMenuItem(
-                                          child: Row(
-                                            children: [
-                                              Icon(Icons.play_arrow,
-                                                  color: AppTheme.primaryBlue,
-                                                  size: 18),
-                                              SizedBox(width: 8),
-                                              Text('Play',
-                                                  style: TextStyle(
-                                                      color: AppTheme
-                                                          .textSecondary)),
-                                            ],
+                                      child: ListTile(
+                                        contentPadding: EdgeInsets.all(16),
+                                        leading: Container(
+                                          padding: EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.primaryBlue.withOpacity(0.2),
+                                            borderRadius: BorderRadius.circular(8),
                                           ),
-                                          onTap: () {
-                                            context.push('/player',
-                                                extra: {'url': file.path});
-                                          },
-                                        ),
-                                        PopupMenuItem(
-                                          child: Row(
-                                            children: [
-                                              Icon(Icons.delete,
-                                                  color: AppTheme.accentPink,
-                                                  size: 18),
-                                              SizedBox(width: 8),
-                                              Text('Delete',
-                                                  style: TextStyle(
-                                                      color: AppTheme
-                                                          .textSecondary)),
-                                            ],
+                                          child: Icon(
+                                            Icons.video_file,
+                                            color: AppTheme.primaryBlue,
+                                            size: 24,
                                           ),
-                                          onTap: () => _deleteFile(file),
                                         ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
+                                        title: Text(
+                                          fileName,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            color: AppTheme.textPrimary,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        subtitle: Padding(
+                                          padding: EdgeInsets.only(top: 4),
+                                          child: Text(
+                                            '$fileSize • $modDate',
+                                            style: TextStyle(
+                                              color: AppTheme.textSecondary,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ),
+                                        trailing: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            IconButton(
+                                              icon: Icon(Icons.play_arrow, color: AppTheme.primaryBlue),
+                                              onPressed: () {
+                                                context.push('/player', extra: {'url': file.path});
+                                              },
+                                            ),
+                                            IconButton(
+                                              icon: Icon(Icons.delete, color: AppTheme.accentRed),
+                                              onPressed: () => _deleteFile(file),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                SizedBox(height: 40),
+              ],
             ),
-          ],
-        ),
+          ),
+          // Floating Navigation Bar
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: TopNavigationBar(
+              activeTab: 'downloads',
+              tabs: [
+                NavTab(id: 'home', label: 'LIVE TV', icon: Icons.live_tv, route: '/home'),
+                NavTab(id: 'movies', label: 'Movies', icon: Icons.movie, route: '/movies'),
+                NavTab(id: 'series', label: 'Series', icon: Icons.tv, route: '/series'),
+              ],
+              currentTime: _currentTime,
+              showLogoAndTime: true,
+              onSearchSubmit: (query) {
+                context.go('/search?q=$query');
+              },
+            ),
+          ),
+        ],
       ),
     ),
     );

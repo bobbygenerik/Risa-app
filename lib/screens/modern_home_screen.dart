@@ -196,9 +196,9 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         SizedBox(height: 8),
-                        if (featuredChannel.category != null)
+                        if (featuredChannel.groupTitle != null)
                           Text(
-                            featuredChannel.category!,
+                            featuredChannel.groupTitle!,
                             style: TextStyle(
                               color: AppTheme.textSecondary,
                               fontSize: 16,

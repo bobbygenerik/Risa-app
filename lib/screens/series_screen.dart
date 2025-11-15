@@ -116,8 +116,15 @@ class _SeriesScreenState extends State<SeriesScreen> {
             ? _featuredSeries[_currentHeroIndex % _featuredSeries.length]
             : series.first;
 
-        return Scaffold(
-          backgroundColor: AppTheme.darkBackground,
+        return PopScope(
+          canPop: false,
+          onPopInvoked: (didPop) {
+            if (!didPop) {
+              context.go('/home');
+            }
+          },
+          child: Scaffold(
+            backgroundColor: AppTheme.darkBackground,
           body: Stack(
             children: [
               // Full screen scrollable content with hero banner at top
@@ -172,6 +179,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
               ),
             ],
           ),
+        ),
         );
       },
     );
@@ -179,18 +187,8 @@ class _SeriesScreenState extends State<SeriesScreen> {
 
   Widget _buildEmptyState(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF050710),
+      backgroundColor: AppTheme.darkBackground,
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFF050710),
-              const Color(0xFF0d1140),
-            ],
-          ),
-        ),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,

@@ -8,6 +8,7 @@ import 'package:iptv_player/services/opensubtitles_service.dart';
 import 'package:iptv_player/services/real_debrid_service.dart';
 import 'package:iptv_player/services/whisper_speech_service.dart';
 import 'package:iptv_player/services/ai_model_manager.dart';
+import 'package:iptv_player/services/epg_service.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/services/ai_upscaling_service.dart';
@@ -204,26 +205,19 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        context.go('/home');
-        return false;
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          context.go('/home');
+        }
       },
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF050710),
-              Color(0xFF0d1140),
-            ],
-          ),
-        ),
-        child: Row(
+      child: Scaffold(
+        backgroundColor: AppTheme.darkBackground,
+        body: Row(
           children: [
             _buildSidebarMenu(),
-            VerticalDivider(width: 1, color: Colors.white.withOpacity(0.1)),
+            VerticalDivider(width: 1, color: AppTheme.divider),
             Expanded(
               child: Focus(
                 canRequestFocus: false,
@@ -267,10 +261,10 @@ class _SettingsScreenState extends State<SettingsScreen>
     return Container(
       width: 220,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: AppTheme.sidebarBackground,
         border: Border(
           right: BorderSide(
-            color: Colors.white.withOpacity(0.1),
+            color: AppTheme.divider,
             width: 1,
           ),
         ),
@@ -284,7 +278,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             decoration: BoxDecoration(
               border: Border(
                 bottom: BorderSide(
-                  color: AppTheme.accentPink,
+                  color: AppTheme.primaryBlue,
                   width: 2,
                 ),
               ),
@@ -354,11 +348,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                       decoration: BoxDecoration(
                         color: isSelected
                             ? AppTheme.primaryBlue.withOpacity(0.3)
-                            : Colors.transparent,
+                            : AppTheme.darkBackground,
                         border: Border.all(
                           color: isSelected
                               ? AppTheme.primaryBlue.withOpacity(0.5)
-                              : Colors.transparent,
+                              : AppTheme.darkBackground,
                           width: 1.5,
                         ),
                         borderRadius: BorderRadius.circular(12),
@@ -726,9 +720,11 @@ class _SettingsScreenState extends State<SettingsScreen>
               'Decoder Type',
               _decoderType,
               ['Auto', 'MediaCodec', 'FFmpeg', 'Software'],
-              (value) {
+              (value) async {
                 if (value != null) {
                   setState(() => _decoderType = value);
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setString('decoder_type', value);
                 }
               },
             ),
@@ -736,9 +732,11 @@ class _SettingsScreenState extends State<SettingsScreen>
               'Rendering Engine',
               _renderingEngine,
               ['Auto', 'SurfaceView', 'TextureView'],
-              (value) {
+              (value) async {
                 if (value != null) {
                   setState(() => _renderingEngine = value);
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setString('rendering_engine', value);
                 }
               },
             ),
@@ -808,9 +806,11 @@ class _SettingsScreenState extends State<SettingsScreen>
               'Video Quality',
               _videoQuality,
               ['Auto', '4K', '1080p', '720p', '480p'],
-              (value) {
+              (value) async {
                 if (value != null) {
                   setState(() => _videoQuality = value);
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setString('video_quality', value);
                 }
               },
             ),
@@ -828,6 +828,10 @@ class _SettingsScreenState extends State<SettingsScreen>
               label: '${_videoBufferSize.round()}%',
               onChanged: (value) {
                 setState(() => _videoBufferSize = value);
+              },
+              onChangeEnd: (value) async {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setDouble('video_buffer_size', value);
               },
             ),
             Text(
@@ -1229,13 +1233,52 @@ class _SettingsScreenState extends State<SettingsScreen>
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                    onPressed: () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      final prefs = await SharedPreferences.getInstance();
+                      final customEpgUrl = prefs.getString('custom_epg_url');
+                      final playlistEpgUrl = prefs.getString('epg_url'); // From playlist
+                      
+                      final urlToUse = customEpgUrl?.isNotEmpty == true ? customEpgUrl! : playlistEpgUrl;
+                      
+                      if (urlToUse == null || urlToUse.isEmpty) {
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text('No EPG URL configured'),
+                            backgroundColor: AppTheme.accentRed,
+                          ),
+                        );
+                        return;
+                      }
+                      
+                      messenger.showSnackBar(
                         SnackBar(
                           content: Text('Updating EPG data...'),
                           backgroundColor: AppTheme.primaryBlue,
                         ),
                       );
+                      
+                      try {
+                        final epgService = Provider.of<EpgService>(context, listen: false);
+                        await epgService.refresh(urlToUse);
+                        if (mounted) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text('EPG updated successfully'),
+                              backgroundColor: AppTheme.accentGreen,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text('EPG update failed: ${e.toString()}'),
+                              backgroundColor: AppTheme.accentRed,
+                            ),
+                          );
+                        }
+                      }
                     },
                     icon: Icon(Icons.refresh),
                     label: Text('Update EPG'),
@@ -1270,14 +1313,26 @@ class _SettingsScreenState extends State<SettingsScreen>
                       );
                       
                       if (confirm == true) {
-                        // TODO: Implement EPG data clearing
-                        if (mounted) {
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text('EPG data cleared'),
-                              backgroundColor: AppTheme.accentGreen,
-                            ),
-                          );
+                        try {
+                          final epgService = Provider.of<EpgService>(context, listen: false);
+                          await epgService.clearCache();
+                          if (mounted) {
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text('EPG data cleared'),
+                                backgroundColor: AppTheme.accentGreen,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text('Failed to clear EPG: ${e.toString()}'),
+                                backgroundColor: AppTheme.accentRed,
+                              ),
+                            );
+                          }
                         }
                       }
                     },
@@ -1521,6 +1576,12 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
           ],
         ),
+        
+        // Saved Playlists Section
+        _buildSavedPlaylistsSection(),
+        
+        // EPG Source Section
+        _buildEPGSourceSection(),
       ],
     );
   }
@@ -2687,28 +2748,52 @@ class _SettingsScreenState extends State<SettingsScreen>
             _buildSectionCard(
               title: 'Display Options',
               children: [
-                _buildDropdown('Time Zone', 'UTC-5 (EST)', [
-                  'UTC-8 (PST)',
-                  'UTC-5 (EST)',
-                  'UTC+0 (GMT)',
-                  'UTC+1 (CET)',
-                ], (value) {}),
-                _buildSwitchTile('Show Channel Logos', true),
-                _buildSwitchTile('Show Program Images', true),
-              ],
-            ),
-            _buildSectionCard(
-              title: 'Actions',
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Updating EPG data...')),
-                    );
-                    // TODO: Implement EPG update functionality
+                FutureBuilder<String>(
+                  future: SharedPreferences.getInstance().then((prefs) => prefs.getString('recording_timezone') ?? 'UTC-5 (EST)'),
+                  builder: (context, snapshot) {
+                    final timeZone = snapshot.data ?? 'UTC-5 (EST)';
+                    return _buildDropdown('Time Zone', timeZone, [
+                      'UTC-8 (PST)',
+                      'UTC-5 (EST)',
+                      'UTC+0 (GMT)',
+                      'UTC+1 (CET)',
+                    ], (value) async {
+                      if (value != null) {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setString('recording_timezone', value);
+                      }
+                    });
                   },
-                  icon: Icon(Icons.refresh),
-                  label: Text('Update EPG Now'),
+                ),
+                FutureBuilder<bool>(
+                  future: SharedPreferences.getInstance().then((prefs) => prefs.getBool('recording_show_logos') ?? true),
+                  builder: (context, snapshot) {
+                    final showLogos = snapshot.data ?? true;
+                    return SwitchListTile(
+                      title: Text('Show Channel Logos'),
+                      value: showLogos,
+                      onChanged: (value) async {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setBool('recording_show_logos', value);
+                        setState(() {});
+                      },
+                    );
+                  },
+                ),
+                FutureBuilder<bool>(
+                  future: SharedPreferences.getInstance().then((prefs) => prefs.getBool('recording_show_images') ?? true),
+                  builder: (context, snapshot) {
+                    final showImages = snapshot.data ?? true;
+                    return SwitchListTile(
+                      title: Text('Show Program Images'),
+                      value: showImages,
+                      onChanged: (value) async {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setBool('recording_show_images', value);
+                        setState(() {});
+                      },
+                    );
+                  },
                 ),
               ],
             ),

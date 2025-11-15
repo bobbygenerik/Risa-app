@@ -6,13 +6,13 @@ import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 
 // Conditional import for TensorFlow Lite (not available on web)
-import 'package:tflite_flutter/tflite_flutter.dart' if (dart.library.html) 'ai_upscaling_web_stub.dart';
+// import 'package:tflite_flutter/tflite_flutter.dart' if (dart.library.html) 'ai_upscaling_web_stub.dart';
 
 /// On-Device AI Upscaling Service
 /// Uses TensorFlow Lite for real-time video upscaling (FREE - no cloud costs)
 /// Requires GPU acceleration for smooth performance
 class AIUpscalingService extends ChangeNotifier {
-  Interpreter? _interpreter;
+  // Interpreter? _interpreter;
   bool _isInitialized = false;
   bool _isEnabled = false;
   String _quality = 'Balanced'; // Fast, Balanced, Quality
@@ -68,33 +68,33 @@ class AIUpscalingService extends ChangeNotifier {
         debugPrint('AI Upscaling: Attempting to load from assets');
       }
       
-      // Load TFLite model
-      final options = InterpreterOptions();
-      
-      // Try to use GPU delegate for hardware acceleration
-      _isGPUAvailable = _checkGPUAvailability();
-      if (_isGPUAvailable) {
-        options.addDelegate(GpuDelegateV2());
-        debugPrint('AI Upscaling: GPU acceleration enabled');
-      } else {
-        // Fallback to CPU with multiple threads
-        options.threads = 4;
-        debugPrint('AI Upscaling: CPU mode with 4 threads');
-      }
+      // TODO: Load TFLite model when tflite_flutter package is available
+      // final options = InterpreterOptions();
+      // 
+      // // Try to use GPU delegate for hardware acceleration
+      // _isGPUAvailable = _checkGPUAvailability();
+      // if (_isGPUAvailable) {
+      //   options.addDelegate(GpuDelegateV2());
+      //   debugPrint('AI Upscaling: GPU acceleration enabled');
+      // } else {
+      //   // Fallback to CPU with multiple threads
+      //   options.threads = 4;
+      //   debugPrint('AI Upscaling: CPU mode with 4 threads');
+      // }
 
-      if (await downloadedModel.exists()) {
-        // fromFile is synchronous and returns an Interpreter
-        _interpreter = Interpreter.fromFile(
-          downloadedModel,
-          options: options,
-        );
-      } else {
-        // fromAsset is asynchronous and returns Future<Interpreter>
-        _interpreter = await Interpreter.fromAsset(
-          modelPath,
-          options: options,
-        );
-      }
+      // if (await downloadedModel.exists()) {
+      //   // fromFile is synchronous and returns an Interpreter
+      //   _interpreter = Interpreter.fromFile(
+      //     downloadedModel,
+      //     options: options,
+      //   );
+      // } else {
+      //   // fromAsset is asynchronous and returns Future<Interpreter>
+      //   _interpreter = await Interpreter.fromAsset(
+      //     modelPath,
+      //     options: options,
+      //   );
+      // }
       
       _isInitialized = true;
       _isModelLoaded = true;
@@ -226,7 +226,7 @@ class AIUpscalingService extends ChangeNotifier {
 
   /// Upscale a single frame (used for real-time video processing)
   Future<Uint8List?> upscaleFrame(Uint8List frameData, int width, int height) async {
-    if (!_isEnabled || !_isInitialized || _interpreter == null) {
+    if (!_isEnabled || !_isInitialized) {
       return frameData; // Return original if not enabled
     }
 
@@ -293,7 +293,8 @@ class AIUpscalingService extends ChangeNotifier {
 
   /// Upscale a single tile using the AI model
   Future<img.Image?> _upscaleTile(img.Image tile) async {
-    if (_interpreter == null) return null;
+    // if (_interpreter == null) return null;
+    return null; // TODO: Implement when TensorFlow Lite is available
 
     try {
       // Resize tile to model input size
@@ -320,7 +321,8 @@ class AIUpscalingService extends ChangeNotifier {
       );
 
       // Run inference
-      _interpreter!.run(input, output);
+      // _interpreter!.run(input, output);
+      // TODO: Implement when TensorFlow Lite is available
 
       // Convert output tensor back to image
       return _tensorToImage(output[0], outputSize, outputSize);
@@ -397,8 +399,8 @@ class AIUpscalingService extends ChangeNotifier {
   /// Dispose resources
   @override
   void dispose() {
-    _interpreter?.close();
-    _interpreter = null;
+    // _interpreter?.close();
+    // _interpreter = null;
     _isInitialized = false;
     super.dispose();
   }
