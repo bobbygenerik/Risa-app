@@ -1,0 +1,86 @@
+<svg width="1200" height="800" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#050710;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0d1140;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="heroGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2563eb;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#ea580c;stop-opacity:0.3" />
+    </linearGradient>
+    <linearGradient id="glassEffect" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#000000;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#000000;stop-opacity:0.3" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Main background -->
+  <rect width="1200" height="800" fill="url(#bgGradient)"/>
+  
+  <!-- Glass AppBar -->
+  <rect x="0" y="0" width="1200" height="70" fill="url(#glassEffect)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+  
+  <!-- Logo -->
+  <text x="24" y="35" font-family="Arial, sans-serif" font-size="24" font-weight="800" fill="#2563eb" letter-spacing="3px">RISA</text>
+  <text x="24" y="50" font-family="Arial, sans-serif" font-size="10" font-weight="600" fill="#ea580c" letter-spacing="2px">IPTV</text>
+  
+  <!-- Time -->
+  <text x="1150" y="40" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="#ffffff" text-anchor="end">05:42 PM</text>
+  
+  <!-- Hero Banner -->
+  <rect x="0" y="70" width="1200" height="400" fill="url(#heroGradient)"/>
+  
+  <!-- Hero content overlay -->
+  <rect x="0" y="370" width="1200" height="100" fill="rgba(0,0,0,0.9)"/>
+  <text x="24" y="410" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#ffffff">Featured Movie Title</text>
+  <circle cx="34" cy="440" r="8" fill="#ea580c"/>
+  <text x="50" y="445" font-family="Arial, sans-serif" font-size="14" fill="#9ca3af">Continue Watching</text>
+  
+  <!-- Continue Watching Section -->
+  <text x="24" y="510" font-family="Arial, sans-serif" font-size="20" font-weight="700" fill="#ffffff">Continue Watching</text>
+  
+  <!-- Movie cards row -->
+  <g transform="translate(24, 530)">
+    <rect x="0" y="0" width="180" height="280" rx="12" fill="#1f2937" stroke="rgba(255,255,255,0.1)"/>
+    <rect x="0" y="240" width="180" height="40" rx="0 0 12 12" fill="rgba(0,0,0,0.8)"/>
+    <text x="12" y="265" font-family="Arial, sans-serif" font-size="12" font-weight="600" fill="#ffffff">Movie 1</text>
+    
+    <rect x="196" y="0" width="180" height="280" rx="12" fill="#1f2937" stroke="rgba(255,255,255,0.1)"/>
+    <rect x="196" y="240" width="180" height="40" rx="0 0 12 12" fill="rgba(0,0,0,0.8)"/>
+    <text x="208" y="265" font-family="Arial, sans-serif" font-size="12" font-weight="600" fill="#ffffff">Movie 2</text>
+    
+    <rect x="392" y="0" width="180" height="280" rx="12" fill="#1f2937" stroke="rgba(255,255,255,0.1)"/>
+    <rect x="392" y="240" width="180" height="40" rx="0 0 12 12" fill="rgba(0,0,0,0.8)"/>
+    <text x="404" y="265" font-family="Arial, sans-serif" font-size="12" font-weight="600" fill="#ffffff">Movie 3</text>
+    
+    <rect x="588" y="0" width="180" height="280" rx="12" fill="#1f2937" stroke="rgba(255,255,255,0.1)"/>
+    <rect x="588" y="240" width="180" height="40" rx="0 0 12 12" fill="rgba(0,0,0,0.8)"/>
+    <text x="600" y="265" font-family="Arial, sans-serif" font-size="12" font-weight="600" fill="#ffffff">Movie 4</text>
+    
+    <rect x="784" y="0" width="180" height="280" rx="12" fill="#1f2937" stroke="rgba(255,255,255,0.1)"/>
+    <rect x="784" y="240" width="180" height="40" rx="0 0 12 12" fill="rgba(0,0,0,0.8)"/>
+    <text x="796" y="265" font-family="Arial, sans-serif" font-size="12" font-weight="600" fill="#ffffff">Movie 5</text>
+  </g>
+  
+  <!-- Placeholder icons for movie cards -->
+  <g fill="#6b7280" opacity="0.5">
+    <circle cx="114" cy="670" r="24"/>
+    <text x="114" y="678" font-family="Arial, sans-serif" font-size="20" text-anchor="middle">🎬</text>
+    
+    <circle cx="310" cy="670" r="24"/>
+    <text x="310" y="678" font-family="Arial, sans-serif" font-size="20" text-anchor="middle">🎬</text>
+    
+    <circle cx="506" cy="670" r="24"/>
+    <text x="506" y="678" font-family="Arial, sans-serif" font-size="20" text-anchor="middle">🎬</text>
+    
+    <circle cx="702" cy="670" r="24"/>
+    <text x="702" y="678" font-family="Arial, sans-serif" font-size="20" text-anchor="middle">🎬</text>
+    
+    <circle cx="898" cy="670" r="24"/>
+    <text x="898" y="678" font-family="Arial, sans-serif" font-size="20" text-anchor="middle">🎬</text>
+  </g>
+  
+  <!-- Scroll indicator -->
+  <text x="1000" y="670" font-family="Arial, sans-serif" font-size="24" fill="#6b7280">→</text>
+</svg>

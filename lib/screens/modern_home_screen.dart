@@ -124,29 +124,10 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
   }
 
   Widget _buildLogo() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'RISA',
-          style: TextStyle(
-            color: AppTheme.primaryBlue,
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 3.0,
-          ),
-        ),
-        Text(
-          'IPTV',
-          style: TextStyle(
-            color: AppTheme.accentOrange,
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 2.0,
-          ),
-        ),
-      ],
+    return Image.asset(
+      'assets/images/croppedlogo2.png',
+      height: 40,
+      fit: BoxFit.contain,
     );
   }
 
