@@ -6,6 +6,7 @@ import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
+import 'package:iptv_player/widgets/top_navigation_bar.dart';
 import 'package:go_router/go_router.dart';
 
 class MoviesScreen extends StatefulWidget {
@@ -16,6 +17,8 @@ class MoviesScreen extends StatefulWidget {
 }
 
 class _MoviesScreenState extends State<MoviesScreen> {
+  late String _currentTime;
+  late Timer _timeTimer;
   late Timer _heroTimer;
   int _currentHeroIndex = 0;
   final Random _random = Random();
@@ -25,6 +28,12 @@ class _MoviesScreenState extends State<MoviesScreen> {
   @override
   void initState() {
     super.initState();
+    _updateTime();
+    _timeTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) {
+        setState(() => _updateTime());
+      }
+    });
     _heroTimer = Timer.periodic(const Duration(seconds: 8), (_) {
       if (mounted && _featuredMovies.isNotEmpty) {
         setState(() {
@@ -36,8 +45,18 @@ class _MoviesScreenState extends State<MoviesScreen> {
 
   @override
   void dispose() {
+    _timeTimer.cancel();
     _heroTimer.cancel();
     super.dispose();
+  }
+
+  void _updateTime() {
+    final now = DateTime.now();
+    final hour =
+        now.hour == 0 ? 12 : (now.hour > 12 ? now.hour - 12 : now.hour);
+    final period = now.hour < 12 ? 'AM' : 'PM';
+    _currentTime =
+        '${hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} $period';
   }
 
   List<Content> _getFeaturedMovies(List<Content> movies) {
@@ -97,46 +116,62 @@ class _MoviesScreenState extends State<MoviesScreen> {
             ? _featuredMovies[_currentHeroIndex % _featuredMovies.length]
             : movies.first;
 
-        return Stack(
-          children: [
-            // Full-height hero banner background
-            Positioned.fill(
-              child: _buildHeroBannerBackground(featuredMovie),
-            ),
-            // Content on top
-            SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Hero banner with content overlay
-                  _buildHeroBannerOverlay(context, featuredMovie),
-                  SizedBox(height: AppSizes.lg),
-                  
-                  Container(
-                    color: Color(0xFF050710),
-                    child: Padding(
-                      padding: EdgeInsets.all(AppSizes.lg),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Recently Added Movies
-                          if (recentMovies.isNotEmpty) ...[
-                            _buildSectionHeader(context, 'Recently Added'),
-                            SizedBox(height: AppSizes.md),
-                            _buildMoviesRow(context, recentMovies),
-                            SizedBox(height: AppSizes.xl),
-                          ],
-
-                          // All Movies by Genre
-                          ..._buildGenreSections(context, movies),
-                        ],
+        return Scaffold(
+          backgroundColor: AppTheme.darkBackground,
+          body: Stack(
+            children: [
+              // Full screen scrollable content with hero banner at top
+              SingleChildScrollView(
+                child: Column(
+                  children: [
+                    // Hero Banner (full height, edge-to-edge)
+                    _buildHeroBanner(featuredMovie),
+                    // Recently Added Movies
+                    if (recentMovies.isNotEmpty) ...[
+                      Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Recently Added',
+                            style: TextStyle(
+                              color: AppTheme.textPrimary,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                ],
+                      _buildMoviesRow(context, recentMovies),
+                      SizedBox(height: 40),
+                    ],
+                    // All Movies by Genre
+                    ..._buildGenreSections(context, movies),
+                    SizedBox(height: 40),
+                  ],
+                ),
               ),
-            ),
-          ],
+              // Floating Navigation Bar on top
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: TopNavigationBar(
+                  activeTab: 'movies',
+                  tabs: [
+                    NavTab(id: 'home', label: 'LIVE TV', icon: Icons.live_tv, route: '/home'),
+                    NavTab(id: 'movies', label: 'Movies', icon: Icons.movie, route: '/movies'),
+                    NavTab(id: 'series', label: 'Series', icon: Icons.tv, route: '/series'),
+                  ],
+                  currentTime: _currentTime,
+                  showLogoAndTime: true,
+                  onSearchSubmit: (query) {
+                    context.go('/search?q=$query');
+                  },
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -351,98 +386,115 @@ class _MoviesScreenState extends State<MoviesScreen> {
     return sections;
   }
 
-  Widget _buildHeroBannerBackground(Content featuredMovie) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.black.withOpacity(0.3),
-            Colors.black.withOpacity(0.7),
-          ],
-        ),
-      ),
-      child: Container(
-        color: AppTheme.cardBackground,
-        child: featuredMovie.backdropUrl != null
-            ? Image.network(
-                featuredMovie.backdropUrl!,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
-                errorBuilder: (_, __, ___) => _buildBannerPlaceholder(),
-              )
-            : _buildBannerPlaceholder(),
-      ),
-    );
-  }
-
-  Widget _buildHeroBannerOverlay(BuildContext context, Content featuredMovie) {
+  Widget _buildHeroBanner(Content featuredMovie) {
     return GestureDetector(
-      onTap: () {
-        context.push('/content/${featuredMovie.id}', extra: featuredMovie);
-      },
+      onTap: () => context.push('/player', extra: featuredMovie),
       child: Container(
-        height: 300,
+        height: 470,
+        width: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Colors.transparent,
-              Colors.black.withOpacity(0.9),
+              Colors.black.withOpacity(0.3),
+              Colors.black.withOpacity(0.7),
             ],
           ),
         ),
-        child: Align(
-          alignment: Alignment.bottomLeft,
-          child: Padding(
-            padding: EdgeInsets.all(AppSizes.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  featuredMovie.title,
-                  style: TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.play_circle,
-                        color: AppTheme.accentOrange, size: 18),
-                    SizedBox(width: 8),
-                    Text(
-                      'Play Now',
-                      style: TextStyle(
-                        color: AppTheme.textSecondary,
-                        fontSize: 14,
-                      ),
-                    ),
-                    if (featuredMovie.rating != null) ...[
-                      SizedBox(width: 16),
-                      Icon(Icons.star, color: Colors.amber, size: 16),
-                      SizedBox(width: 4),
-                      Text(
-                        featuredMovie.ratingDisplay,
-                        style: TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 14,
-                        ),
-                      ),
+        child: Stack(
+          children: [
+            // Background image or gradient
+            Container(
+              color: AppTheme.cardBackground,
+              child: featuredMovie.backdropUrl != null
+                  ? Image.network(
+                      featuredMovie.backdropUrl!,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                      errorBuilder: (_, __, ___) => _buildPlaceholderGradient(),
+                    )
+                  : _buildPlaceholderGradient(),
+            ),
+            // Content overlay
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.9),
                     ],
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      featuredMovie.title,
+                      style: TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Icon(Icons.play_circle,
+                            color: AppTheme.accentOrange, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'Play Now',
+                          style: TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 14,
+                          ),
+                        ),
+                        if (featuredMovie.rating != null) ...[
+                          SizedBox(width: 16),
+                          Icon(Icons.star, color: Colors.amber, size: 16),
+                          SizedBox(width: 4),
+                          Text(
+                            featuredMovie.rating!.toStringAsFixed(1),
+                            style: TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ],
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholderGradient() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppTheme.primaryBlue.withOpacity(0.2),
+            AppTheme.accentOrange.withOpacity(0.2),
+          ],
         ),
       ),
     );

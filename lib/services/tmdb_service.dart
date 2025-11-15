@@ -33,6 +33,33 @@ class TMDBService {
     return null;
   }
   
+  static Future<double?> getTVShowRating(String title, {int? year}) async {
+    try {
+      // Search for TV show by title
+      final searchUrl = '$_baseUrl/search/tv?api_key=$_apiKey&query=${Uri.encodeComponent(title)}';
+      if (year != null) {
+        searchUrl + '&first_air_date_year=$year';
+      }
+      
+      final response = await http.get(Uri.parse(searchUrl));
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final results = data['results'] as List;
+        
+        if (results.isNotEmpty) {
+          final show = results.first;
+          final rating = show['vote_average'] as double?;
+          return rating;
+        }
+      }
+    } catch (e) {
+      print('TMDB API error: $e');
+    }
+    
+    return null;
+  }
+  
   static Future<Map<String, dynamic>?> getMovieDetails(String title, {int? year}) async {
     try {
       final searchUrl = '$_baseUrl/search/movie?api_key=$_apiKey&query=${Uri.encodeComponent(title)}';
