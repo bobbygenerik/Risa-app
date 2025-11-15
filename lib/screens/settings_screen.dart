@@ -182,24 +182,30 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   @override
   void dispose() {
+    // Dispose all focus nodes
     for (var n in _menuFocusNodes) {
       n.dispose();
     }
     _tabController.dispose();
+    
+    // Dispose text controllers
     _m3uUrlController.dispose();
-    _m3uUrlFocusNode.dispose();
     _xtreamServerController.dispose();
-    _xtreamServerFocusNode.dispose();
     _xtreamUsernameController.dispose();
-    _xtreamUsernameFocusNode.dispose();
     _xtreamPasswordController.dispose();
-    _xtreamPasswordFocusNode.dispose();
     _realDebridApiKeyController.dispose();
-    _realDebridApiKeyFocusNode.dispose();
     _openSubtitlesUsernameController.dispose();
-    _openSubtitlesUsernameFocusNode.dispose();
     _openSubtitlesPasswordController.dispose();
+    
+    // Dispose focus nodes
+    _m3uUrlFocusNode.dispose();
+    _xtreamServerFocusNode.dispose();
+    _xtreamUsernameFocusNode.dispose();
+    _xtreamPasswordFocusNode.dispose();
+    _realDebridApiKeyFocusNode.dispose();
+    _openSubtitlesUsernameFocusNode.dispose();
     _openSubtitlesPasswordFocusNode.dispose();
+    
     super.dispose();
   }
 
@@ -230,9 +236,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                   }
                   return KeyEventResult.ignored;
                 },
-                child: TabBarView(
-                  controller: _tabController,
-                  physics: const NeverScrollableScrollPhysics(),
+                child: IndexedStack(
+                  index: _tabController.index,
                   children: [
                     _buildGeneralSettings(),
                     _buildAccountSettings(),

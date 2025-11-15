@@ -136,7 +136,7 @@ class _EPGScreenState extends State<EPGScreen> {
                     ),
                   ),
                   Expanded(
-                    child: hasChannels
+                    child: hasChannels && epgService.hasData
                         ? Row(
                             children: [
                               _buildCategorySidebar(categoryNames),
@@ -145,6 +145,72 @@ class _EPGScreenState extends State<EPGScreen> {
                                 child: _buildProgramGrid(filteredChannels, epgService),
                               ),
                             ],
+                          )
+                        : hasChannels && epgService.isLoading
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                CircularProgressIndicator(color: AppTheme.primaryBlue),
+                                SizedBox(height: 24),
+                                Text(
+                                  'Loading EPG Data...',
+                                  style: TextStyle(
+                                    color: AppTheme.textPrimary,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  'Please wait while we load the TV guide',
+                                  style: TextStyle(
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : hasChannels && !epgService.hasData
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.calendar_today,
+                                  size: 80,
+                                  color: AppTheme.primaryBlue.withOpacity(0.5),
+                                ),
+                                SizedBox(height: 24),
+                                Text(
+                                  'No EPG Data Available',
+                                  style: TextStyle(
+                                    color: AppTheme.textPrimary,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                SizedBox(height: 12),
+                                Text(
+                                  'Configure EPG URL in Settings to view TV guide',
+                                  style: TextStyle(
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 14,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                SizedBox(height: 32),
+                                ElevatedButton.icon(
+                                  icon: Icon(Icons.settings),
+                                  label: Text('Configure EPG'),
+                                  onPressed: () => context.go('/settings'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.primaryBlue,
+                                  ),
+                                ),
+                              ],
+                            ),
                           )
                         : _buildEmptyState(context),
                   ),

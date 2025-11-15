@@ -101,24 +101,24 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
               // Navigation bar with tabs and search (centered, expanded)
               Expanded(
                 child: Container(
-                  height: 56 * scale,
+                  height: 44 * scale,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.08),
+                    color: Colors.white.withOpacity(0.06),
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.15),
-                      width: 1.5,
+                      color: Colors.white.withOpacity(0.12),
+                      width: 1,
                     ),
-                    borderRadius: BorderRadius.circular(28),
+                    borderRadius: BorderRadius.circular(22),
                     boxShadow: [
                       BoxShadow(
-                        color: AppTheme.primaryBlue.withOpacity(0.1),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
+                        color: AppTheme.primaryBlue.withOpacity(0.08),
+                        blurRadius: 12,
+                        offset: const Offset(0, 2),
                       ),
                     ],
                   ),
                   child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12 * scale),
+                    padding: EdgeInsets.symmetric(horizontal: 8 * scale),
                     child: Row(
                       children: [
                         ...List.generate(
@@ -137,11 +137,12 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                                 });
                               }
                             },
+                            borderRadius: BorderRadius.circular(16),
                             child: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 8 * scale),
+                              padding: EdgeInsets.all(6 * scale),
                               child: Icon(
                                 Icons.search_outlined,
-                                size: 18 * scale,
+                                size: 16 * scale,
                                 color: AppTheme.textSecondary,
                               ),
                             ),
@@ -149,20 +150,20 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                         ),
                         // Overflow menu button (more options)
                         PopupMenuButton(
-                          color: Colors.white.withOpacity(0.08 * 0.85),
-                          elevation: 16,
+                          color: AppTheme.cardBackground,
+                          elevation: 12,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(28),
+                            borderRadius: BorderRadius.circular(16),
                             side: BorderSide(
-                              color: Colors.white.withOpacity(0.15 * 0.85),
-                              width: 1.5,
+                              color: Colors.white.withOpacity(0.1),
+                              width: 1,
                             ),
                           ),
                           child: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 8 * scale),
+                            padding: EdgeInsets.all(6 * scale),
                             child: Icon(
                               Icons.more_vert,
-                              size: 18 * scale,
+                              size: 16 * scale,
                               color: AppTheme.textSecondary,
                             ),
                           ),
@@ -172,12 +173,12 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                                 children: [
                                   Icon(Icons.settings, color: AppTheme.primaryBlue, size: 16 * scale),
                                   SizedBox(width: 12 * scale),
-                                  Text('Settings', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500)),
+                                  Text('Settings', style: TextStyle(color: AppTheme.textPrimary, fontSize: 13 * scale, fontWeight: FontWeight.w500)),
                                 ],
                               ),
                               onTap: () {
                                 Navigator.of(context).pop();
-                                Future.delayed(const Duration(milliseconds: 100), () {
+                                Future.delayed(const Duration(milliseconds: 50), () {
                                   if (mounted) {
                                     try {
                                       context.push('/settings');
@@ -193,7 +194,7 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                                 children: [
                                   Icon(Icons.favorite_outline, color: AppTheme.accentPink, size: 16 * scale),
                                   SizedBox(width: 12 * scale),
-                                  Text('Favorites', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500)),
+                                  Text('Favorites', style: TextStyle(color: AppTheme.textPrimary, fontSize: 13 * scale, fontWeight: FontWeight.w500)),
                                 ],
                               ),
                               onTap: () {
@@ -207,7 +208,7 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                                 children: [
                                   Icon(Icons.download, color: AppTheme.textSecondary, size: 16 * scale),
                                   SizedBox(width: 12 * scale),
-                                  Text('Downloads', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500)),
+                                  Text('Downloads', style: TextStyle(color: AppTheme.textPrimary, fontSize: 13 * scale, fontWeight: FontWeight.w500)),
                                 ],
                               ),
                               onTap: () {
@@ -221,7 +222,7 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                                 children: [
                                   Icon(Icons.schedule, color: AppTheme.primaryBlue, size: 16 * scale),
                                   SizedBox(width: 12 * scale),
-                                  Text('Guide', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500)),
+                                  Text('Guide', style: TextStyle(color: AppTheme.textPrimary, fontSize: 13 * scale, fontWeight: FontWeight.w500)),
                                 ],
                               ),
                               onTap: () {
@@ -366,8 +367,8 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                       tab.label,
                       style: TextStyle(
                         color: isActive ? AppTheme.primaryBlue : AppTheme.textSecondary,
-                        fontSize: 14 * scale,
-                        fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
+                        fontSize: 13 * scale,
+                        fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
                       ),
                     ),
                   ),
