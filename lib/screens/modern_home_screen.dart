@@ -7,6 +7,7 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/content.dart';
+import 'package:iptv_player/widgets/top_navigation_bar.dart';
 
 class ModernHomeScreen extends StatefulWidget {
   const ModernHomeScreen({super.key});
@@ -49,13 +50,14 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.darkBackground,
-      extendBodyBehindAppBar: true,
-      appBar: _buildGlassAppBar(),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Hero Banner (edge-to-edge)
-            _buildHeroBanner(),
+      body: Stack(
+        children: [
+          // Full screen scrollable content with hero banner at top
+          SingleChildScrollView(
+            child: Column(
+              children: [
+                // Hero Banner (full height, edge-to-edge)
+                _buildHeroBanner(),
             // Continue Watching
             _buildSectionWithCards(
               title: 'Continue Watching',
@@ -77,59 +79,35 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
                 context.push('/player', extra: content);
               },
             ),
-            SizedBox(height: 40),
-          ],
-        ),
-      ),
-    );
-  }
-
-  PreferredSizeWidget _buildGlassAppBar() {
-    return PreferredSize(
-      preferredSize: const Size.fromHeight(70),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        decoration: BoxDecoration(
-          // Liquid glass effect using gradient + opacity
-          color: Colors.black.withOpacity(0.3),
-          border: Border(
-            bottom: BorderSide(
-              color: Colors.white.withOpacity(0.1),
-              width: 1,
+                SizedBox(height: 40),
+              ],
             ),
           ),
-        ),
-        child: SafeArea(
-          bottom: false,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Logo (top-left)
-              _buildLogo(),
-              // Time (top-right)
-              Text(
-                _currentTime,
-                style: TextStyle(
-                  color: AppTheme.textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 1.0,
-                ),
-              ),
-            ],
+          // Floating Navigation Bar on top
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: TopNavigationBar(
+              activeTab: 'home',
+              tabs: [
+                NavTab(id: 'home', label: 'LIVE TV', icon: Icons.live_tv, route: '/home'),
+                NavTab(id: 'movies', label: 'Movies', icon: Icons.movie, route: '/movies'),
+                NavTab(id: 'series', label: 'Series', icon: Icons.tv, route: '/series'),
+              ],
+              currentTime: _currentTime,
+              showLogoAndTime: true,
+              onSearchSubmit: (query) {
+                context.go('/search?q=$query');
+              },
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildLogo() {
-    return Image.asset(
-      'assets/images/croppedlogo2.png',
-      height: 40,
-      fit: BoxFit.contain,
-    );
-  }
+
 
   Widget _buildHeroBanner() {
     return Consumer<ContentProvider>(
@@ -143,7 +121,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
         return GestureDetector(
           onTap: () => context.push('/player', extra: featured),
           child: Container(
-            height: 400,
+            height: 470,
             width: double.infinity,
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -310,8 +288,8 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
                   return GestureDetector(
                     onTap: () => onTap(content),
                     child: Container(
-                      width: 180,
-                      height: 280,
+                      width: 320,
+                      height: 180,
                       margin: EdgeInsets.only(right: 16),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
@@ -337,7 +315,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
                                   )
                                 : _buildCardPlaceholder(),
                           ),
-                          // Overlay with title
+                          // Overlay with title and progress
                           Positioned(
                             bottom: 0,
                             left: 0,
@@ -358,15 +336,40 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
                                   bottomRight: Radius.circular(12),
                                 ),
                               ),
-                              child: Text(
-                                content.title,
-                                style: TextStyle(
-                                  color: AppTheme.textPrimary,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    content.title,
+                                    style: TextStyle(
+                                      color: AppTheme.textPrimary,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  SizedBox(height: 4),
+                                  // Progress bar
+                                  Container(
+                                    height: 3,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[800],
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                    child: FractionallySizedBox(
+                                      alignment: Alignment.centerLeft,
+                                      widthFactor: content.watchProgress ?? 0.3,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.primaryBlue,
+                                          borderRadius: BorderRadius.circular(2),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
