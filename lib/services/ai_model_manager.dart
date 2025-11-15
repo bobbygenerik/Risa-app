@@ -34,6 +34,35 @@ class AIModelManager extends ChangeNotifier {
     return _downloadProgress[modelId] ?? 0.0;
   }
 
+  /// Check if model is downloaded
+  bool isModelDownloaded(String modelId) {
+    return _modelStatus[modelId] == ModelDownloadStatus.downloaded;
+  }
+
+  /// Check if model is downloading
+  bool isDownloading(String modelId) {
+    return _modelStatus[modelId] == ModelDownloadStatus.downloading;
+  }
+
+  /// Cancel download
+  void cancelDownload(String modelId) {
+    _modelStatus[modelId] = ModelDownloadStatus.notDownloaded;
+    _downloadProgress[modelId] = 0.0;
+    notifyListeners();
+  }
+
+  /// Download model by ID
+  Future<bool> downloadModel(String modelId) async {
+    final model = AIModel.allModels.firstWhere((m) => m.id == modelId);
+    return await _downloadModelInternal(model);
+  }
+
+  /// Delete model by ID
+  Future<bool> deleteModel(String modelId) async {
+    final model = AIModel.allModels.firstWhere((m) => m.id == modelId);
+    return await _deleteModelInternal(model);
+  }
+
   /// Check status of all models
   Future<void> _checkAllModels() async {
     for (final model in AIModel.allModels) {
@@ -66,7 +95,7 @@ class AIModelManager extends ChangeNotifier {
   }
 
   /// Download a model
-  Future<bool> downloadModel(AIModel model) async {
+  Future<bool> _downloadModelInternal(AIModel model) async {
     if (_modelStatus[model.id] == ModelDownloadStatus.downloading) {
       return false; // Already downloading
     }
@@ -120,7 +149,7 @@ class AIModelManager extends ChangeNotifier {
   }
 
   /// Delete a model
-  Future<bool> deleteModel(AIModel model) async {
+  Future<bool> _deleteModelInternal(AIModel model) async {
     try {
       final path = await _getModelPath(model);
       final file = File(path);

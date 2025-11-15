@@ -16,6 +16,7 @@ import 'package:iptv_player/services/live_transcription_service.dart';
 import 'package:iptv_player/services/ai_model_manager.dart';
 import 'package:iptv_player/services/opensubtitles_service.dart';
 import 'package:iptv_player/services/real_debrid_service.dart';
+import 'package:iptv_player/services/whisper_speech_service.dart';
 // import 'package:iptv_player/widgets/app_shell.dart'; // Removed - no sidebar in new UI
 import 'package:iptv_player/widgets/legal_disclaimer_dialog.dart';
 import 'package:iptv_player/screens/epg_screen.dart';
@@ -345,6 +346,9 @@ class _MyAppState extends State<MyApp> {
           ),
           ChangeNotifierProvider(
             create: (_) => RealDebridService()..initialize(),
+          ),
+          ChangeNotifierProvider(
+            create: (_) => WhisperSpeechService()..initialize(),
           ),
         ],
         child: Builder(
