@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -19,6 +20,9 @@ class ModernHomeScreen extends StatefulWidget {
 class _ModernHomeScreenState extends State<ModernHomeScreen> {
   late String _currentTime;
   late Timer _timeTimer;
+  late Timer _heroTimer;
+  int _currentHeroIndex = 0;
+  final Random _random = Random();
 
   @override
   void initState() {
@@ -29,11 +33,22 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
         setState(() => _updateTime());
       }
     });
+    _heroTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+      if (mounted) {
+        setState(() {
+          final channelProvider = Provider.of<ChannelProvider>(context, listen: false);
+          if (channelProvider.channels.isNotEmpty) {
+            _currentHeroIndex = _random.nextInt(channelProvider.channels.length);
+          }
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
     _timeTimer.cancel();
+    _heroTimer.cancel();
     super.dispose();
   }
 
@@ -110,16 +125,16 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
 
 
   Widget _buildHeroBanner() {
-    return Consumer<ContentProvider>(
-      builder: (context, contentProvider, _) {
-        final movies = contentProvider.movies;
-        if (movies.isEmpty) {
+    return Consumer<ChannelProvider>(
+      builder: (context, channelProvider, _) {
+        final channels = channelProvider.channels;
+        if (channels.isEmpty) {
           return _buildPlaceholderBanner();
         }
 
-        final featured = movies.first;
+        final featuredChannel = channels[_currentHeroIndex % channels.length];
         return GestureDetector(
-          onTap: () => context.push('/player', extra: featured),
+          onTap: () => context.push('/player', extra: featuredChannel),
           child: Container(
             height: 470,
             width: double.infinity,
@@ -135,12 +150,12 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
             ),
             child: Stack(
               children: [
-                // Background image or gradient
+                // Background with channel logo or gradient
                 Container(
                   color: AppTheme.cardBackground,
-                  child: featured.backdropUrl != null
+                  child: featuredChannel.logoUrl != null && featuredChannel.logoUrl!.isNotEmpty
                       ? Image.network(
-                          featured.backdropUrl!,
+                          featuredChannel.logoUrl!,
                           fit: BoxFit.cover,
                           width: double.infinity,
                           height: double.infinity,
@@ -171,7 +186,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          featured.title,
+                          featuredChannel.name,
                           style: TextStyle(
                             color: AppTheme.textPrimary,
                             fontSize: 28,
@@ -180,17 +195,39 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
+                        SizedBox(height: 8),
+                        if (featuredChannel.category != null)
+                          Text(
+                            featuredChannel.category!,
+                            style: TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         SizedBox(height: 12),
                         Row(
                           children: [
-                            Icon(Icons.play_circle,
+                            Icon(Icons.live_tv,
                                 color: AppTheme.accentOrange, size: 20),
                             SizedBox(width: 8),
                             Text(
-                              'Continue Watching',
+                              'Watch Live',
                               style: TextStyle(
                                 color: AppTheme.textSecondary,
                                 fontSize: 14,
+                              ),
+                            ),
+                            SizedBox(width: 16),
+                            Icon(Icons.circle,
+                                color: Colors.red, size: 8),
+                            SizedBox(width: 4),
+                            Text(
+                              'LIVE',
+                              style: TextStyle(
+                                color: Colors.red,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
