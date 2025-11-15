@@ -1,12 +1,80 @@
+import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:go_router/go_router.dart';
 
-class MoviesScreen extends StatelessWidget {
+class MoviesScreen extends StatefulWidget {
   const MoviesScreen({super.key});
+
+  @override
+  State<MoviesScreen> createState() => _MoviesScreenState();
+}
+
+class _MoviesScreenState extends State<MoviesScreen> {
+  late Timer _heroTimer;
+  int _currentHeroIndex = 0;
+  final Random _random = Random();
+  List<Content> _featuredMovies = [];
+  bool _ratingsLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _heroTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+      if (mounted && _featuredMovies.isNotEmpty) {
+        setState(() {
+          _currentHeroIndex = _random.nextInt(_featuredMovies.length);
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _heroTimer.cancel();
+    super.dispose();
+  }
+
+  List<Content> _getFeaturedMovies(List<Content> movies) {
+    // If ratings are loaded, sort by rating and take top 10
+    if (_ratingsLoaded) {
+      final moviesWithRatings = movies.where((m) => m.rating != null && m.rating! > 0).toList();
+      if (moviesWithRatings.length >= 5) {
+        moviesWithRatings.sort((a, b) => (b.rating ?? 0).compareTo(a.rating ?? 0));
+        return moviesWithRatings.take(10).toList();
+      }
+    }
+    // Fallback to first 10 movies
+    return movies.take(10).toList();
+  }
+
+  Future<void> _loadRatingsForMovies(List<Content> movies) async {
+    if (_ratingsLoaded) return;
+    
+    // Load ratings for first 20 movies to get a good sample
+    final moviesToRate = movies.take(20).toList();
+    
+    for (final movie in moviesToRate) {
+      if (movie.rating == null || movie.rating == 0) {
+        final rating = await TMDBService.getMovieRating(movie.title, year: movie.year);
+        if (rating != null && rating > 0) {
+          movie.rating = rating;
+        }
+      }
+    }
+    
+    if (mounted) {
+      setState(() {
+        _ratingsLoaded = true;
+        _featuredMovies = _getFeaturedMovies(movies);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,11 +87,21 @@ class MoviesScreen extends StatelessWidget {
           return _buildEmptyState(context);
         }
 
+        // Load TMDB ratings in background
+        if (!_ratingsLoaded) {
+          _loadRatingsForMovies(movies);
+        }
+        
+        _featuredMovies = _getFeaturedMovies(movies);
+        final featuredMovie = _featuredMovies.isNotEmpty 
+            ? _featuredMovies[_currentHeroIndex % _featuredMovies.length]
+            : movies.first;
+
         return Stack(
           children: [
             // Full-height hero banner background
             Positioned.fill(
-              child: _buildHeroBannerBackground(movies.first),
+              child: _buildHeroBannerBackground(featuredMovie),
             ),
             // Content on top
             SingleChildScrollView(
@@ -31,7 +109,7 @@ class MoviesScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Hero banner with content overlay
-                  _buildHeroBannerOverlay(context, movies.first),
+                  _buildHeroBannerOverlay(context, featuredMovie),
                   SizedBox(height: AppSizes.lg),
                   
                   Container(
