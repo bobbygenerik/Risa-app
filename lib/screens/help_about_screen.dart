@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 
 class HelpAboutScreen extends StatefulWidget {
@@ -22,7 +23,7 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
   void initState() {
     super.initState();
     _currentTime = DateTime.now();
-    Future.delayed(const Duration(seconds: 1), _updateTime);
+    Future.delayed(Duration(seconds: 1), _updateTime);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _tabFocusNodes[0].requestFocus();
@@ -35,7 +36,7 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
     setState(() {
       _currentTime = DateTime.now();
     });
-    Future.delayed(const Duration(seconds: 1), _updateTime);
+    Future.delayed(Duration(seconds: 1), _updateTime);
   }
 
   String _formatTime(DateTime time) {
@@ -65,66 +66,81 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
-      body: Column(
-        children: [
-          _buildGlassAppBar(),
-          const Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
-          Expanded(
-            child: Column(
-              children: [
-                // Tabs
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
-                  child: Row(
-                    children: [
-                      _buildTab('Help', 0),
-                      const SizedBox(width: AppSizes.md),
-                      _buildTab('About', 1),
-                      const SizedBox(width: AppSizes.md),
-                      _buildTab('Shortcuts', 2),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1, color: AppTheme.divider),
-                
-                // Content
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(AppSizes.xl),
-                    child: _buildTabContent(),
-                  ),
-                ),
-              ],
+    return WillPopScope(
+      onWillPop: () async {
+        context.go('/home');
+        return false;
+      },
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF050710), Color(0xFF0d1140)],
             ),
           ),
-        ],
+          child: Column(
+          children: [
+            _buildGlassAppBar(),
+            Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
+            Expanded(
+              child: Column(
+                children: [
+                  // Tabs
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
+                    child: Row(
+                      children: [
+                        _buildTab('Help', 0),
+                        SizedBox(width: AppSizes.md),
+                        _buildTab('About', 1),
+                        SizedBox(width: AppSizes.md),
+                        _buildTab('Shortcuts', 2),
+                      ],
+                    ),
+                  ),
+                  Divider(height: 1, color: AppTheme.divider),
+                  
+                  // Content
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.all(AppSizes.xl),
+                      child: _buildTabContent(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
+    ),
     );
   }
 
   Widget _buildGlassAppBar() {
     return Container(
       height: AppSizes.appBarHeight,
-      padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
+      padding: EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
       decoration: BoxDecoration(
         color: AppTheme.darkBackground.withAlpha((0.8 * 255).round()),
-        border: const Border(
+        border: Border(
           bottom: BorderSide(color: AppTheme.accentPink, width: 2),
         ),
       ),
       child: Row(
         children: [
-          const Icon(Icons.help_outline, color: AppTheme.primaryBlue, size: 24),
-          const SizedBox(width: AppSizes.md),
+          Icon(Icons.help_outline, color: AppTheme.primaryBlue, size: 24),
+          SizedBox(width: AppSizes.md),
           Text(
             'Help & About',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
-          const Spacer(),
+          Spacer(),
           Text(
             _formatTime(_currentTime),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -179,7 +195,7 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
           final isFocused = Focus.of(context).hasFocus;
           return AnimatedContainer(
             duration: AppDurations.fast,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             decoration: BoxDecoration(
               gradient: isSelected ? AppTheme.brandGradient : null,
               color: isSelected ? null : Colors.transparent,
@@ -224,7 +240,7 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: AppSizes.lg),
+        SizedBox(height: AppSizes.lg),
         _buildHelpSection(
           'Loading Playlists',
           'To get started, you need to load an M3U playlist:\n\n'
@@ -233,7 +249,7 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
           '3. Enter your playlist URL or upload a file\n'
           '4. Press "Load Playlist" to start watching',
         ),
-        const SizedBox(height: AppSizes.xl),
+        SizedBox(height: AppSizes.xl),
         _buildHelpSection(
           'Navigation',
           'Use your remote control or keyboard to navigate:\n\n'
@@ -242,7 +258,7 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
           '• Back button to return to previous screen\n'
           '• Press Right from sidebar to access content',
         ),
-        const SizedBox(height: AppSizes.xl),
+        SizedBox(height: AppSizes.xl),
         _buildHelpSection(
           'Features',
           '• Live TV: Watch live channels\n'
@@ -251,7 +267,7 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
           '• Favorites: Mark channels as favorites\n'
           '• Search: Find content quickly',
         ),
-        const SizedBox(height: AppSizes.xl),
+        SizedBox(height: AppSizes.xl),
         _buildHelpSection(
           'Need More Help?',
           'If you encounter issues or have questions:\n\n'
@@ -274,7 +290,7 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
               Container(
                 width: 120,
                 height: 120,
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: AppTheme.textPrimary,
                   borderRadius: BorderRadius.circular(20),
@@ -284,14 +300,14 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
                   fit: BoxFit.contain,
                 ),
               ),
-              const SizedBox(height: AppSizes.lg),
+              SizedBox(height: AppSizes.lg),
               Text(
                 'IPTV Player',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: AppSizes.sm),
+              SizedBox(height: AppSizes.sm),
               Text(
                 'Version 1.0.0',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -301,35 +317,35 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
             ],
           ),
         ),
-        const SizedBox(height: AppSizes.lg),
+        SizedBox(height: AppSizes.lg),
         Text(
           'About',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: AppSizes.md),
+        SizedBox(height: AppSizes.md),
         Text(
           'A modern, feature-rich IPTV player built for Android TV. '
               'Stream live TV, movies, and series with an intuitive interface '
               'designed for remote control navigation.',
           style: Theme.of(context).textTheme.bodyMedium,
         ),
-        const SizedBox(height: AppSizes.xl),
+        SizedBox(height: AppSizes.xl),
         Text(
           'Features',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: AppSizes.md),
+        SizedBox(height: AppSizes.md),
         _buildFeatureItem(Icons.live_tv, 'Live TV streaming'),
         _buildFeatureItem(Icons.movie, 'Movies & Series on demand'),
         _buildFeatureItem(Icons.calendar_today, 'Electronic Program Guide (EPG)'),
         _buildFeatureItem(Icons.favorite, 'Favorites management'),
         _buildFeatureItem(Icons.search, 'Quick search'),
         _buildFeatureItem(Icons.video_library, 'Recording support'),
-        const SizedBox(height: AppSizes.xl),
+        SizedBox(height: AppSizes.xl),
         Center(
           child: Text(
             '© 2025 IPTV Player. All rights reserved.',
@@ -352,7 +368,7 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: AppSizes.lg),
+        SizedBox(height: AppSizes.lg),
         Text(
           'Navigation',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -360,14 +376,14 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
             color: AppTheme.primaryBlue,
           ),
         ),
-        const SizedBox(height: AppSizes.md),
+        SizedBox(height: AppSizes.md),
         _buildShortcut('Arrow Keys / D-pad', 'Navigate between items'),
         _buildShortcut('Select / Enter', 'Confirm selection'),
         _buildShortcut('Back', 'Return to previous screen'),
         _buildShortcut('Right (from sidebar)', 'Move to main content'),
         _buildShortcut('Left (from content)', 'Return to sidebar'),
         _buildShortcut('Up (from content)', 'Move to top bar'),
-        const SizedBox(height: AppSizes.xl),
+        SizedBox(height: AppSizes.xl),
         Text(
           'Playback',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -375,13 +391,13 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
             color: AppTheme.primaryBlue,
           ),
         ),
-        const SizedBox(height: AppSizes.md),
+        SizedBox(height: AppSizes.md),
         _buildShortcut('Play/Pause', 'Toggle playback'),
         _buildShortcut('Fast Forward', 'Skip forward'),
         _buildShortcut('Rewind', 'Skip backward'),
         _buildShortcut('Volume Up/Down', 'Adjust volume'),
         _buildShortcut('Menu', 'Show player controls'),
-        const SizedBox(height: AppSizes.xl),
+        SizedBox(height: AppSizes.xl),
         Text(
           'Quick Actions',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -389,13 +405,13 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
             color: AppTheme.primaryBlue,
           ),
         ),
-        const SizedBox(height: AppSizes.md),
+        SizedBox(height: AppSizes.md),
         _buildShortcut('Long Press Select', 'Show context menu'),
         _buildShortcut('Number Keys', 'Jump to channel (if available)'),
         _buildShortcut('Info', 'Show program information'),
-        const SizedBox(height: AppSizes.xl),
+        SizedBox(height: AppSizes.xl),
           Container(
-          padding: const EdgeInsets.all(AppSizes.lg),
+          padding: EdgeInsets.all(AppSizes.lg),
           decoration: BoxDecoration(
             color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
             borderRadius: BorderRadius.circular(12),
@@ -403,8 +419,8 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
           ),
           child: Row(
             children: [
-              const Icon(Icons.info_outline, color: AppTheme.primaryBlue),
-              const SizedBox(width: AppSizes.md),
+              Icon(Icons.info_outline, color: AppTheme.primaryBlue),
+              SizedBox(width: AppSizes.md),
               Expanded(
                 child: Text(
                   'Tip: All navigation can be done with D-pad only. '
@@ -421,7 +437,7 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
 
   Widget _buildHelpSection(String title, String content) {
     return Container(
-      padding: const EdgeInsets.all(AppSizes.lg),
+      padding: EdgeInsets.all(AppSizes.lg),
       decoration: BoxDecoration(
         color: AppTheme.cardBackground,
         borderRadius: BorderRadius.circular(12),
@@ -437,7 +453,7 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
               color: AppTheme.primaryBlue,
             ),
           ),
-          const SizedBox(height: AppSizes.md),
+          SizedBox(height: AppSizes.md),
           Text(
             content,
             style: Theme.of(context).textTheme.bodyLarge,
@@ -449,11 +465,11 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
 
   Widget _buildFeatureItem(IconData icon, String text) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSizes.sm),
+      padding: EdgeInsets.symmetric(vertical: AppSizes.sm),
       child: Row(
         children: [
           Icon(icon, color: AppTheme.primaryBlue, size: 24),
-          const SizedBox(width: AppSizes.md),
+          SizedBox(width: AppSizes.md),
           Text(
             text,
             style: Theme.of(context).textTheme.bodyLarge,
@@ -465,12 +481,12 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
 
   Widget _buildShortcut(String key, String description) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSizes.sm),
+      padding: EdgeInsets.symmetric(vertical: AppSizes.sm),
       child: Row(
         children: [
           Container(
             width: 180,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: AppTheme.cardBackground,
               borderRadius: BorderRadius.circular(6),
@@ -478,13 +494,13 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
             ),
             child: Text(
               key,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: AppTheme.primaryBlue,
               ),
             ),
           ),
-          const SizedBox(width: AppSizes.lg),
+          SizedBox(width: AppSizes.lg),
           Expanded(
             child: Text(
               description,

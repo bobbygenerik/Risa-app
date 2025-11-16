@@ -1,10 +1,9 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/utils/app_theme.dart';
-import 'package:iptv_player/widgets/top_navigation_bar.dart';
 import 'package:go_router/go_router.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -19,30 +18,27 @@ class _SearchScreenState extends State<SearchScreen> {
   List<Channel> _searchResults = [];
   bool _isSearching = false;
   final FocusNode _searchFieldFocusNode = FocusNode(debugLabel: 'SearchField');
-  late String _currentTime;
-  late Timer _timeTimer;
+  bool _searchEditable = false;
+  late DateTime _currentTime;
 
   @override
   void initState() {
     super.initState();
-    _updateTime();
-    _timeTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) {
-        setState(() => _updateTime());
-      }
-    });
+    _currentTime = DateTime.now();
+    // Update time every second
+    Future.delayed(Duration(seconds: 1), _updateTime);
   }
 
   void _updateTime() {
-    final now = DateTime.now();
-    final hour = now.hour == 0 ? 12 : (now.hour > 12 ? now.hour - 12 : now.hour);
-    final period = now.hour < 12 ? 'AM' : 'PM';
-    _currentTime = '${hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} $period';
+    if (!mounted) return;
+    setState(() {
+      _currentTime = DateTime.now();
+    });
+    Future.delayed(Duration(seconds: 1), _updateTime);
   }
 
   @override
   void dispose() {
-    _timeTimer.cancel();
     _searchFieldFocusNode.dispose();
     _searchController.dispose();
     super.dispose();
@@ -73,111 +69,157 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) {
-          context.go('/home');
-        }
+    return WillPopScope(
+      onWillPop: () async {
+        context.go('/home');
+        return false;
       },
       child: Scaffold(
-        backgroundColor: AppTheme.darkBackground,
-        body: Stack(
-          children: [
-            // Main content
-            SingleChildScrollView(
-              child: Column(
-                children: [
-                  // Top padding for floating nav
-                  const SizedBox(height: 100),
-                  // Page title
-                  const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Row(
-                      children: [
-                        Icon(Icons.search, color: AppTheme.primaryBlue, size: 28),
-                        SizedBox(width: 12),
-                        Text(
-                          'Search',
-                          style: TextStyle(
-                            color: AppTheme.textPrimary,
-                            fontSize: 24,
-                            fontWeight: FontWeight.w700,
+        backgroundColor: Colors.transparent,
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF050710), Color(0xFF0d1140)],
+            ),
+          ),
+          child: Column(
+            children: [
+              // Liquid glass app bar with logo and time
+              _buildGlassAppBar(),
+              Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
+
+              // Main content
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.all(AppSizes.lg),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Search Bar (TV friendly: open keyboard only on select)
+                      Focus(
+                        focusNode: _searchFieldFocusNode,
+                        onFocusChange: (hasFocus) {
+                          if (!hasFocus && _searchEditable) {
+                            setState(() => _searchEditable = false);
+                          }
+                        },
+                        onKeyEvent: (node, event) {
+                          if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                          final key = event.logicalKey;
+                          if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
+                            setState(() => _searchEditable = true);
+                            Future.microtask(() => _searchFieldFocusNode.requestFocus());
+                            return KeyEventResult.handled;
+                          }
+                          return KeyEventResult.ignored;
+                        },
+                        child: TextField(
+                          controller: _searchController,
+                          autofocus: false,
+                          readOnly: !_searchEditable,
+                          decoration: InputDecoration(
+                            hintText: 'Search channels, movies & more...',
+                            prefixIcon: Icon(Icons.search, color: AppTheme.primaryBlue),
+                            suffixIcon: _searchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: Icon(Icons.clear),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      _performSearch('');
+                                    },
+                                  )
+                                : null,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                              borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                              borderSide: BorderSide(color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()), width: 1),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                              borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
+                            ),
+                            filled: true,
+                            fillColor: AppTheme.cardBackground,
+                            contentPadding: EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Search Bar
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: TextField(
-                      controller: _searchController,
-                      autofocus: false,
-                      decoration: InputDecoration(
-                        hintText: 'Search channels, movies & more...',
-                        prefixIcon: const Icon(Icons.search, color: AppTheme.primaryBlue),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  _performSearch('');
-                                },
-                              )
-                            : null,
-                        filled: true,
-                        fillColor: AppTheme.cardBackground,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 2),
+                          onTap: () {
+                            if (!_searchEditable) {
+                              setState(() => _searchEditable = true);
+                            }
+                          },
+                          onChanged: _performSearch,
                         ),
                       ),
-                      onChanged: _performSearch,
-                    ),
+                      SizedBox(height: AppSizes.xl),
+
+                      // Results
+                      Expanded(child: _buildResults()),
+                    ],
                   ),
-                  const SizedBox(height: 24),
-                  // Results
-                  _buildResults(),
-                  const SizedBox(height: 40),
-                ],
+                ),
               ),
-            ),
-            // Floating Navigation Bar
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: TopNavigationBar(
-                activeTab: 'search',
-                tabs: [
-                  NavTab(id: 'home', label: 'LIVE TV', icon: Icons.live_tv, route: '/home'),
-                  NavTab(id: 'movies', label: 'Movies', icon: Icons.movie, route: '/movies'),
-                  NavTab(id: 'series', label: 'Series', icon: Icons.tv, route: '/series'),
-                ],
-                currentTime: _currentTime,
-                showLogoAndTime: true,
-                onSearchSubmit: (query) {
-                  _searchController.text = query;
-                  _performSearch(query);
-                },
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
+  Widget _buildGlassAppBar() {
+    return Container(
+      height: AppSizes.appBarHeight,
+      padding: EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
+      decoration: BoxDecoration(
+        color: AppTheme.darkBackground.withAlpha((0.8 * 255).round()),
+        border: Border(
+          bottom: BorderSide(color: AppTheme.accentPink, width: 2),
+        ),
+      ),
+      child: Row(
+        children: [
+          // Logo
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryBlue,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(Icons.search, color: Colors.white, size: 24),
+          ),
+          SizedBox(width: AppSizes.md),
+          Text(
+            'Search',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          Spacer(),
+          // Current time
+          Text(
+            _formatTime(_currentTime),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppTheme.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
+  String _formatTime(DateTime time) {
+    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+  }
 
   Widget _buildResults() {
     if (_isSearching) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(child: CircularProgressIndicator());
     }
 
     if (_searchController.text.isEmpty) {
@@ -196,23 +238,18 @@ class _SearchScreenState extends State<SearchScreen> {
       );
     }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: MediaQuery.of(context).size.width > 1200 ? 6 : 4,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio: 0.8,
-        ),
-        itemCount: _searchResults.length,
-        itemBuilder: (context, index) {
-          final channel = _searchResults[index];
-          return _buildChannelCard(channel);
-        },
+    return GridView.builder(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        crossAxisSpacing: AppSizes.md,
+        mainAxisSpacing: AppSizes.md,
+        childAspectRatio: 0.75,
       ),
+      itemCount: _searchResults.length,
+      itemBuilder: (context, index) {
+        final channel = _searchResults[index];
+        return _buildChannelCard(channel);
+      },
     );
   }
 
@@ -226,9 +263,9 @@ class _SearchScreenState extends State<SearchScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon, size: 80, color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round())),
-          const SizedBox(height: AppSizes.lg),
+          SizedBox(height: AppSizes.lg),
           Text(title, style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: AppSizes.sm),
+          SizedBox(height: AppSizes.sm),
           Text(
             subtitle,
             style: Theme.of(
@@ -259,7 +296,7 @@ class _SearchScreenState extends State<SearchScreen> {
             Expanded(
               child: Container(
                 width: double.infinity,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: AppTheme.cardBackground,
                   borderRadius: BorderRadius.vertical(
                     top: Radius.circular(AppSizes.radiusMd),
@@ -267,7 +304,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
                 child: channel.logoUrl != null && channel.logoUrl!.isNotEmpty
                     ? ClipRRect(
-                        borderRadius: const BorderRadius.vertical(
+                        borderRadius: BorderRadius.vertical(
                           top: Radius.circular(AppSizes.radiusMd),
                         ),
                         child: Image.network(
@@ -284,7 +321,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
             // Channel Info
             Padding(
-              padding: const EdgeInsets.all(AppSizes.sm),
+              padding: EdgeInsets.all(AppSizes.sm),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -297,7 +334,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   if (channel.groupTitle != null) ...[
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
                     Text(
                       channel.groupTitle!,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -307,12 +344,12 @@ class _SearchScreenState extends State<SearchScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
-                  const SizedBox(height: AppSizes.xs),
+                  SizedBox(height: AppSizes.xs),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(
+                        padding: EdgeInsets.symmetric(
                           horizontal: AppSizes.xs,
                           vertical: 2,
                         ),
@@ -320,7 +357,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           color: AppTheme.accentRed,
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: const Text(
+                        child: Text(
                           'LIVE',
                           style: TextStyle(
                             color: Colors.white,
@@ -347,7 +384,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           });
                         },
                         padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
+                        constraints: BoxConstraints(),
                       ),
                     ],
                   ),
@@ -370,10 +407,10 @@ class _SearchScreenState extends State<SearchScreen> {
             size: 40,
             color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Text(
             name.substring(0, name.length > 15 ? 15 : name.length),
-            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 11),
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,

@@ -9,14 +9,14 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/services/voice_search_service.dart';
 import 'package:iptv_player/services/epg_service.dart';
+import 'package:iptv_player/services/google_drive_sync_service.dart';
 import 'package:iptv_player/services/ai_upscaling_service.dart';
 import 'package:iptv_player/services/mlkit_translation_service.dart';
 import 'package:iptv_player/services/live_transcription_service.dart';
 import 'package:iptv_player/services/ai_model_manager.dart';
 import 'package:iptv_player/services/opensubtitles_service.dart';
 import 'package:iptv_player/services/real_debrid_service.dart';
-import 'package:iptv_player/services/whisper_speech_service.dart';
-// import 'package:iptv_player/widgets/app_shell.dart'; // Removed - no sidebar in new UI
+import 'package:iptv_player/widgets/main_shell.dart';
 import 'package:iptv_player/widgets/legal_disclaimer_dialog.dart';
 import 'package:iptv_player/screens/epg_screen.dart';
 import 'package:iptv_player/screens/settings_screen.dart';
@@ -25,14 +25,14 @@ import 'package:iptv_player/screens/edit_profile_screen.dart';
 import 'package:iptv_player/screens/recordings_screen.dart';
 import 'package:iptv_player/screens/ai_models_screen.dart';
 import 'package:iptv_player/screens/modern_home_screen.dart';
+import 'package:iptv_player/screens/movies_screen.dart';
+import 'package:iptv_player/screens/series_screen.dart';
 import 'package:iptv_player/screens/enhanced_video_player_screen.dart';
 import 'package:iptv_player/screens/search_screen.dart';
 import 'package:iptv_player/screens/playlist_login_screen.dart';
 import 'package:iptv_player/screens/help_about_screen.dart';
 import 'package:iptv_player/screens/favorites_screen.dart';
 import 'package:iptv_player/screens/downloads_screen.dart';
-import 'package:iptv_player/screens/movies_screen.dart';
-import 'package:iptv_player/screens/series_screen.dart';
 
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/models/channel.dart';
@@ -114,7 +114,7 @@ class _GlobalErrorScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline, color: Colors.redAccent, size: 80),
+                Icon(Icons.error_outline, color: Colors.redAccent, size: 80),
                 const SizedBox(height: 24),
                 Text(
                   'Something went wrong',
@@ -298,7 +298,7 @@ class _MyAppState extends State<MyApp> {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: AppTheme.darkTheme,
-        home: const Scaffold(body: Center(child: CircularProgressIndicator())),
+        home: Scaffold(body: Center(child: CircularProgressIndicator())),
       );
     }
 
@@ -324,81 +324,27 @@ class _MyAppState extends State<MyApp> {
             },
           ),
           ChangeNotifierProvider(
-            create: (_) {
-              final service = VoiceSearchService();
-              service.initialize().catchError((e) {
-                debugPrint('VoiceSearch init error: $e');
-              });
-              return service;
-            },
+            create: (_) => VoiceSearchService()..initialize(),
           ),
           ChangeNotifierProvider(create: (_) => EpgService()),
-          // Google Drive sync removed; use LocalBackupService for local exports/imports.
           ChangeNotifierProvider(
-            create: (_) {
-              final service = AIModelManager();
-              service.initialize().catchError((e) {
-                debugPrint('AIModel init error: $e');
-              });
-              return service;
-            },
+            create: (_) => GoogleDriveSyncService()..initialize(),
+          ),
+          ChangeNotifierProvider(create: (_) => AIModelManager()..initialize()),
+          ChangeNotifierProvider(
+            create: (_) => AIUpscalingService()..initialize(),
           ),
           ChangeNotifierProvider(
-            create: (_) {
-              final service = AIUpscalingService();
-              service.initialize().catchError((e) {
-                debugPrint('AIUpscaling init error: $e');
-                return false;
-              });
-              return service;
-            },
+            create: (_) => MLKitTranslationService()..initialize(),
           ),
           ChangeNotifierProvider(
-            create: (_) {
-              final service = MLKitTranslationService();
-              service.initialize().catchError((e) {
-                debugPrint('MLKitTranslation init error: $e');
-                return false;
-              });
-              return service;
-            },
+            create: (_) => LiveTranscriptionService()..initialize(),
           ),
           ChangeNotifierProvider(
-            create: (_) {
-              final service = LiveTranscriptionService();
-              service.initialize().catchError((e) {
-                debugPrint('LiveTranscription init error: $e');
-                return false;
-              });
-              return service;
-            },
+            create: (_) => OpenSubtitlesService()..initialize(),
           ),
           ChangeNotifierProvider(
-            create: (_) {
-              final service = OpenSubtitlesService();
-              service.initialize().catchError((e) {
-                debugPrint('OpenSubtitles init error: $e');
-              });
-              return service;
-            },
-          ),
-          ChangeNotifierProvider(
-            create: (_) {
-              final service = RealDebridService();
-              service.initialize().catchError((e) {
-                debugPrint('RealDebrid init error: $e');
-              });
-              return service;
-            },
-          ),
-          ChangeNotifierProvider(
-            create: (_) {
-              final service = WhisperSpeechService();
-              service.initialize().catchError((e) {
-                debugPrint('WhisperSpeech init error: $e');
-              });
-              return service;
-            },
+            create: (_) => RealDebridService()..initialize(),
           ),
         ],
         child: Builder(
@@ -611,12 +557,44 @@ final _router = GoRouter(
       ),
     ),
     GoRoute(path: '/', redirect: (context, state) => '/home'),
-    GoRoute(
-      path: '/home',
-      pageBuilder: (context, state) => _fadeSlidePage(
-        key: state.pageKey,
-        child: const ModernHomeScreen(),
-      ),
+    // Main shell containing fixed navbar with home, movies, series screens
+    ShellRoute(
+      builder: (context, state, child) {
+        // Determine active tab from current location
+        final activeTab = state.matchedLocation.contains('/movies')
+            ? 'movies'
+            : state.matchedLocation.contains('/series')
+                ? 'series'
+                : 'home';
+        
+        return MainShell(
+          activeTab: activeTab,
+          child: child,
+        );
+      },
+      routes: [
+        GoRoute(
+          path: '/home',
+          pageBuilder: (context, state) => _fadeSlidePage(
+            key: state.pageKey,
+            child: const ModernHomeScreen(),
+          ),
+        ),
+        GoRoute(
+          path: '/movies',
+          pageBuilder: (context, state) => _fadeSlidePage(
+            key: state.pageKey,
+            child: const MoviesScreen(),
+          ),
+        ),
+        GoRoute(
+          path: '/series',
+          pageBuilder: (context, state) => _fadeSlidePage(
+            key: state.pageKey,
+            child: const SeriesScreen(),
+          ),
+        ),
+      ],
     ),
     GoRoute(
       path: '/search',
@@ -648,6 +626,16 @@ final _router = GoRouter(
           _fadeSlidePage(key: state.pageKey, child: const SettingsScreen()),
     ),
     GoRoute(
+      path: '/favorites',
+      pageBuilder: (context, state) =>
+          _fadeSlidePage(key: state.pageKey, child: const FavoritesScreen()),
+    ),
+    GoRoute(
+      path: '/downloads',
+      pageBuilder: (context, state) =>
+          _fadeSlidePage(key: state.pageKey, child: const DownloadsScreen()),
+    ),
+    GoRoute(
       path: '/playlist-editor',
       pageBuilder: (context, state) => _fadeSlidePage(
         key: state.pageKey,
@@ -667,43 +655,19 @@ final _router = GoRouter(
           _fadeSlidePage(key: state.pageKey, child: const AIModelsScreen()),
     ),
     GoRoute(
-      path: '/favorites',
-      pageBuilder: (context, state) => _fadeSlidePage(
-        key: state.pageKey,
-        child: const FavoritesScreen(),
-      ),
-    ),
-    GoRoute(
-      path: '/downloads',
-      pageBuilder: (context, state) => _fadeSlidePage(
-        key: state.pageKey,
-        child: const DownloadsScreen(),
-      ),
-    ),
-    GoRoute(
-      path: '/movies',
-      pageBuilder: (context, state) => _fadeSlidePage(
-        key: state.pageKey,
-        child: const MoviesScreen(),
-      ),
-    ),
-    GoRoute(
-      path: '/series',
-      pageBuilder: (context, state) => _fadeSlidePage(
-        key: state.pageKey,
-        child: const SeriesScreen(),
-      ),
-    ),
-    GoRoute(
       path: '/player',
       pageBuilder: (context, state) {
         final data = state.extra;
         String videoUrl = 'https://commondatastorage.googleapis.com/gtv-videos-library/sample/BigBuckBunny.mp4';
         String title = 'Video';
+        Channel? channel;
+        bool isLive = false;
 
         if (data is Channel) {
           videoUrl = data.url;
           title = data.name;
+          channel = data;
+          isLive = true;
         } else if (data is Content) {
           videoUrl = data.videoUrl ?? videoUrl;
           title = data.title;
@@ -714,6 +678,8 @@ final _router = GoRouter(
           child: EnhancedVideoPlayerScreen(
             videoUrl: videoUrl,
             title: title,
+            isLive: isLive,
+            channel: channel,
           ),
         );
       },

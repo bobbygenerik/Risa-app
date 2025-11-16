@@ -102,7 +102,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                     : '⚠️ 0 channels found!\n\nThe URL responded but no content was captured.\nCheck your M3U URL format.',
               ),
               backgroundColor: AppTheme.accentRed,
-              duration: const Duration(seconds: 10),
+              duration: Duration(seconds: 10),
               action: hasContent
                   ? SnackBarAction(
                       label: 'View Content',
@@ -125,7 +125,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
             SnackBar(
               content: Text('✓ Loaded: ${parts.join(", ")}'),
               backgroundColor: AppTheme.accentGreen,
-              duration: const Duration(seconds: 4),
+              duration: Duration(seconds: 4),
             ),
           );
 
@@ -197,7 +197,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                     : '⚠️ 0 channels found!\n\nCheck your Xtream credentials.\nNo response data available.',
               ),
               backgroundColor: AppTheme.accentRed,
-              duration: const Duration(seconds: 8),
+              duration: Duration(seconds: 8),
               action: hasContent
                   ? SnackBarAction(
                       label: 'View Response',
@@ -220,7 +220,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
             SnackBar(
               content: Text('✓ Loaded: ${parts.join(", ")}'),
               backgroundColor: AppTheme.accentGreen,
-              duration: const Duration(seconds: 4),
+              duration: Duration(seconds: 4),
             ),
           );
 
@@ -250,7 +250,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
         SnackBar(
           content: Text(message),
           backgroundColor: AppTheme.accentRed,
-          duration: const Duration(seconds: 6),
+          duration: Duration(seconds: 6),
         ),
       );
     }
@@ -280,17 +280,17 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.cardBackground,
-        title: const Text('M3U Content Analysis'),
+        title: Text('M3U Content Analysis'),
         content: Container(
           width: double.maxFinite,
-          constraints: const BoxConstraints(maxHeight: 500),
+          constraints: BoxConstraints(maxHeight: 500),
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Diagnostics
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: hasM3UHeader
                         ? AppTheme.accentGreen.withAlpha((0.2 * 255).round())
@@ -300,14 +300,14 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         '📊 Diagnostics:',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: AppTheme.primaryBlue,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       Text('✓ Total lines: ${lines.length}'),
                       Text(
                         hasM3UHeader
@@ -316,34 +316,34 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                       ),
                       Text('✓ Found $extinfCount #EXTINF entries'),
                       Text('✓ Found $urlCount stream URLs'),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       if (extinfCount == 0)
-                        const Text(
+                        Text(
                           '⚠ No #EXTINF entries found! This may not be a valid M3U format.',
                           style: TextStyle(color: AppTheme.accentOrange),
                         ),
                       if (urlCount == 0)
-                        const Text(
+                        Text(
                           '⚠ No URLs found! Channels need stream URLs.',
                           style: TextStyle(color: AppTheme.accentOrange),
                         ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                const Divider(),
-                const SizedBox(height: 8),
-                const Text(
+                SizedBox(height: 16),
+                Divider(),
+                SizedBox(height: 8),
+                Text(
                   'First 25 lines:',
                   style: TextStyle(
                     color: AppTheme.primaryBlue,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 SelectableText(
                   preview,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'monospace',
                     fontSize: 11,
                     color: AppTheme.textPrimary,
@@ -356,7 +356,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: Text('Close'),
           ),
         ],
       ),
@@ -365,8 +365,6 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Suppress deprecation note for older WillPopScope usage on some SDKs
-    // ignore: deprecated_member_use
     return WillPopScope(
       onWillPop: () async {
         context.go('/home');
@@ -421,14 +419,14 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                           ],
                         ),
                         child: Padding(
-                          padding: const EdgeInsets.all(
+                          padding: EdgeInsets.all(
                             AppSizes.sm,
                           ), // Reduced padding
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               // Logo - Use new app logo
-                              const SizedBox(height: AppSizes.xs),
+                              SizedBox(height: AppSizes.xs),
                               Image.asset(
                                 'assets/images/croppedlogo2.png',
                                 height: isTV ? 48.0 : 56.0, // Reduced height
@@ -442,14 +440,14 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                                   );
                                 },
                               ),
-                              const SizedBox(height: AppSizes.xs),
+                              SizedBox(height: AppSizes.xs),
                               Text(
                                 'Load your playlist to get started',
                                 style: Theme.of(context).textTheme.bodyMedium
                                     ?.copyWith(color: AppTheme.textSecondary),
                                 textAlign: TextAlign.center,
                               ),
-                              const SizedBox(height: AppSizes.sm),
+                              SizedBox(height: AppSizes.sm),
 
                               // Tab selector
                               Container(
@@ -476,11 +474,11 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                                 ),
                               ),
 
-                              const SizedBox(height: AppSizes.sm),
+                              SizedBox(height: AppSizes.sm),
 
                               // Tab content - Reduced constraints for better visibility
                               ConstrainedBox(
-                                constraints: const BoxConstraints(
+                                constraints: BoxConstraints(
                                   minHeight: 220, // Reduced height
                                   maxHeight: 280, // Reduced height
                                 ),
@@ -494,10 +492,10 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                               ),
 
                               if (_isLoading) ...[
-                                const SizedBox(height: AppSizes.sm),
+                                SizedBox(height: AppSizes.sm),
                                 const CircularProgressIndicator(),
-                                const SizedBox(height: AppSizes.xs),
-                                const Text(
+                                SizedBox(height: AppSizes.xs),
+                                Text(
                                   'Loading playlist...',
                                   style: TextStyle(
                                     color: AppTheme.textSecondary,
@@ -540,7 +538,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
           'Enter M3U Playlist URL',
           style: Theme.of(context).textTheme.titleMedium,
         ),
-        const SizedBox(height: AppSizes.sm),
+        SizedBox(height: AppSizes.sm),
         Focus(
           focusNode: _m3uUrlFocusNode,
           onFocusChange: (hasFocus) {
@@ -601,15 +599,15 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
             },
           ),
         ),
-        const SizedBox(height: AppSizes.sm),
+        SizedBox(height: AppSizes.sm),
         Container(
-          padding: const EdgeInsets.all(AppSizes.sm),
+          padding: EdgeInsets.all(AppSizes.sm),
           decoration: BoxDecoration(
             color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
             borderRadius: BorderRadius.circular(AppSizes.radiusMd),
             border: Border.all(color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round())),
           ),
-          child: const Row(
+          child: Row(
             children: [
               Icon(Icons.info_outline, size: 18, color: AppTheme.primaryBlue),
               SizedBox(width: 8),
@@ -628,7 +626,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
           icon: Icons.download,
           label: 'Load Playlist',
           onPressed: _isLoading ? () {} : _loadM3UPlaylist,
-          padding: const EdgeInsets.symmetric(vertical: AppSizes.sm),
+          padding: EdgeInsets.symmetric(vertical: AppSizes.sm),
         ),
       ],
     );
@@ -642,7 +640,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
           'Xtream Codes Login',
           style: Theme.of(context).textTheme.titleMedium,
         ),
-        const SizedBox(height: AppSizes.sm),
+        SizedBox(height: AppSizes.sm),
         Focus(
           focusNode: _xtreamServerFocusNode,
           onFocusChange: (hasFocus) {
@@ -706,7 +704,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
             },
           ),
         ),
-        const SizedBox(height: AppSizes.sm),
+        SizedBox(height: AppSizes.sm),
         Row(
           children: [
             Expanded(
@@ -774,7 +772,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                 ),
               ),
             ),
-            const SizedBox(width: AppSizes.sm),
+            SizedBox(width: AppSizes.sm),
             Expanded(
               child: Focus(
                 focusNode: _xtreamPasswordFocusNode,
@@ -849,7 +847,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
           icon: Icons.download,
           label: 'Load Playlist',
           onPressed: _isLoading ? () {} : _loadXtreamPlaylist,
-          padding: const EdgeInsets.symmetric(vertical: AppSizes.sm),
+          padding: EdgeInsets.symmetric(vertical: AppSizes.sm),
         ),
       ],
     );
