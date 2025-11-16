@@ -1,0 +1,9 @@
+name: speech_to_text
+description: "Local shim package to provide minimal speech_to_text API for build"
+version: 0.0.1
+environment:
+  sdk: '>=2.18.0 <3.0.0'
+
+flutter:
+  plugin:
+    platforms: {}

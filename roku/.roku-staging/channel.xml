@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<channel version="1.0">
+    <name>IPTV Player</name>
+    <description>Advanced IPTV player with live transcription, AI upscaling, and cloud sync</description>
+    <version major="1" minor="0" build="1" />
+    <copyright>2025</copyright>
+    <subtitle>Stream Live TV with AI Features</subtitle>
+    <author name="Bobby">
+        <email>support@iptvplayer.local</email>
+        <website>https://github.com/bobbygenerik/iptv-player</website>
+    </author>
+
+    <assets>
+        <splash size="hd">pkg:/images/splash_hd.png</splash>
+        <splash size="fhd">pkg:/images/splash_fhd.png</splash>
+        <icon size="hd">pkg:/images/icon_hd.png</icon>
+        <icon size="fhd">pkg:/images/icon_fhd.png</icon>
+    </assets>
+
+    <ui_resolutions>
+        <ui resolution="hd" menus="overlay" />
+        <ui resolution="fhd" menus="overlay" />
+        <ui resolution="4k" menus="overlay" />
+    </ui_resolutions>
+
+    <rokuallowgoogleanalytics>1</rokuallowgoogleanalytics>
+
+    <manifest>
+        <targets>
+            <target id="brightscript" version="1" />
+        </targets>
+        <plugins />
+        <features />
+    </manifest>
+
+    <pubSubServerInfo url="http://localhost:8080" />
+</channel>

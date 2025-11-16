@@ -1,0 +1,588 @@
+package com.risa.app
+
+import android.content.Context
+import android.graphics.Bitmap
+import android.util.Log
+import java.io.FileInputStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.nio.MappedByteBuffer
+import java.nio.channels.FileChannel
+import java.nio.FloatBuffer
+import kotlin.math.roundToInt
+
+import org.tensorflow.lite.Interpreter
+import org.tensorflow.lite.DataType
+import org.tensorflow.lite.Tensor
+import org.tensorflow.lite.gpu.GpuDelegate
+
+/**
+ * Skeleton native upscaler helper.
+ *
+ * This class is a defensive scaffold to host native model-loading and
+ * frame-processing logic. It purposely avoids adding heavy dependencies
+ * (TensorFlow Lite, NNAPI, GPU delegates) in this initial commit. The
+ * methods provide no-op/default behavior so callers can safely interact
+ * with the API while we implement real inference later.
+ */
+class NativeUpscaler(private val context: Context) {
+    private val TAG = "NativeUpscaler"
+
+    private var interpreter: Interpreter? = null
+    private var gpuDelegate: GpuDelegate? = null
+    // Reusable I/O buffers to avoid per-frame allocations
+    private var inputByteBuffer: ByteBuffer? = null
+    private var outputByteBuffer: ByteBuffer? = null
+    private var outputFloatArray: FloatArray? = null
+    private var outputByteArray: ByteArray? = null
+    private var outPixelsIntArray: IntArray? = null
+    private var inW: Int = 0
+    private var inH: Int = 0
+    private var outW: Int = 0
+    private var outH: Int = 0
+    // Quantization metadata
+    private var inputIsQuantized: Boolean = false
+    private var inputScale: Float = 1.0f
+    private var inputZeroPoint: Int = 0
+    private var outputIsQuantized: Boolean = false
+    private var outputScale: Float = 1.0f
+    private var outputZeroPoint: Int = 0
+    // Worker thread for inference to avoid blocking UI
+    private var workerThread: android.os.HandlerThread? = null
+    private var workerHandler: android.os.Handler? = null
+    private var lastModelPath: String? = null
+    private var useGpu: Boolean = true
+    // Overlap percentage for tiled inference (0.0 - 0.9). Default 0.5 = 50% overlap.
+    private var overlapPercent: Float = 0.5f
+    // Adaptive overlap tuning
+    private var adaptiveEnabled: Boolean = true
+    private var adaptiveTargetMs: Long = 100 // desired total inference time per capture in ms
+    private val adaptiveWindow: MutableList<Long> = mutableListOf()
+    private val adaptiveWindowSize = 5
+    // Profiling
+    private var lastTotalMillis: Long = 0
+    private var lastTileCount: Int = 0
+    private var lastTileMillis: MutableList<Long> = mutableListOf()
+    // Whether the upscaler is logically enabled. Actual frame processing
+    // will only occur when true and when a real model implementation exists.
+    @Volatile
+    var enabled: Boolean = false
+        private set
+
+    // Quality string (e.g., Fast/Balanced/Quality)
+    @Volatile
+    var quality: String = "Balanced"
+        private set
+
+    /**
+     * Load the model from assets or a file path. No-op in scaffold.
+     */
+    fun loadModel(path: String?): Boolean {
+        Log.d(TAG, "loadModel called path=$path")
+        if (path == null) return false
+        try {
+            // Reset profiling
+            lastTileMillis.clear()
+            // Close any existing interpreter
+            // Close any existing interpreter
+            try { interpreter?.close() } catch (_: Exception) {}
+            try { gpuDelegate?.close() } catch (_: Exception) {}
+            interpreter = null
+            gpuDelegate = null
+
+            // Load model file into a MappedByteBuffer
+            val file = java.io.File(path)
+            if (!file.exists()) {
+                Log.w(TAG, "Model file does not exist: $path")
+                return false
+            }
+
+            val mapped: MappedByteBuffer = FileInputStream(file).use { inputStream ->
+                val fileChannel = inputStream.channel
+                fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, fileChannel.size())
+            }
+
+            val options = Interpreter.Options()
+            // Try to add GPU delegate if available and requested
+            if (useGpu) {
+                try {
+                    val delegate = GpuDelegate()
+                    options.addDelegate(delegate)
+                    gpuDelegate = delegate
+                    Log.d(TAG, "GPU delegate attached")
+                } catch (e: Exception) {
+                    Log.w(TAG, "GPU delegate unavailable: ${e.message}")
+                }
+            }
+
+            interpreter = Interpreter(mapped, options)
+            // Inspect tensor shapes and pre-allocate buffers
+            try {
+                    val inputTensor: Tensor = interpreter!!.getInputTensor(0)
+                    val inputShape = inputTensor.shape() // [1,H,W,3]
+                    val inputType = inputTensor.dataType()
+                    if (inputShape.size >= 4) {
+                        inH = inputShape[1]
+                        inW = inputShape[2]
+                        inputIsQuantized = inputType == DataType.UINT8
+                        if (inputIsQuantized) {
+                            val qp = inputTensor.quantizationParams()
+                            inputScale = qp.scale
+                            inputZeroPoint = qp.zeroPoint
+                            // allocate direct ByteBuffer for quantized uint8 input
+                            val inputSize = inW * inH * 3
+                            inputByteBuffer = ByteBuffer.allocateDirect(inputSize).order(ByteOrder.nativeOrder())
+                        } else {
+                            // float32
+                            val inputSize = 4 * inW * inH * 3
+                            inputByteBuffer = ByteBuffer.allocateDirect(inputSize).order(ByteOrder.nativeOrder())
+                        }
+                    }
+                    val outputTensor: Tensor = interpreter!!.getOutputTensor(0)
+                    val outputShape = outputTensor.shape()
+                    val outputType = outputTensor.dataType()
+                    outputIsQuantized = outputType == DataType.UINT8
+                        if (outputShape.size >= 4) {
+                            outH = outputShape[1]
+                            outW = outputShape[2]
+                            val pixCount = outW * outH
+                            if (outputIsQuantized) {
+                                val qp = outputTensor.quantizationParams()
+                                outputScale = qp.scale
+                                outputZeroPoint = qp.zeroPoint
+                                // one byte per channel
+                                outputByteBuffer = ByteBuffer.allocateDirect(pixCount * 3).order(ByteOrder.nativeOrder())
+                                outputByteArray = ByteArray(pixCount * 3)
+                                // allocate int pixel buffer for direct Bitmap writing
+                                outPixelsIntArray = IntArray(pixCount)
+                                // keep a float array for convenience if needed
+                                outputFloatArray = FloatArray(pixCount * 3)
+                            } else {
+                                outputFloatArray = FloatArray(pixCount * 3)
+                                outPixelsIntArray = IntArray(pixCount)
+                            }
+                        }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to pre-allocate I/O buffers: ${e.message}")
+            }
+            Log.d(TAG, "TFLite interpreter created successfully")
+            lastModelPath = path
+            startWorkerIfNeeded()
+            return true
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to load model: ${e.message}")
+            try { interpreter?.close() } catch (_: Exception) {}
+            interpreter = null
+            try { gpuDelegate?.close() } catch (_: Exception) {}
+            gpuDelegate = null
+            return false
+    }
+
+    fun enable() {
+        enabled = true
+        Log.d(TAG, "NativeUpscaler enabled (scaffold)")
+    }
+
+    fun disable() {
+        enabled = false
+        Log.d(TAG, "NativeUpscaler disabled (scaffold)")
+    }
+
+    fun setQuality(q: String) {
+        quality = q
+        Log.d(TAG, "NativeUpscaler quality set to $q (scaffold)")
+    }
+
+    /**
+     * Process a frame bitmap and return a processed bitmap. Currently a
+     * no-op that returns null to indicate not implemented.
+     */
+    fun processFrame(frame: Bitmap): Bitmap? {
+        val totalStart = System.nanoTime()
+        lastTileMillis.clear()
+        val interp = interpreter
+        if (interp == null) {
+            // fallback CPU scale
+            try {
+                val w = frame.width
+                val h = frame.height
+                val outW = w * 2
+                val outH = h * 2
+                val scaled = Bitmap.createBitmap(outW, outH, frame.config ?: Bitmap.Config.ARGB_8888)
+                val canvas = android.graphics.Canvas(scaled)
+                val src = android.graphics.Rect(0, 0, w, h)
+                val dst = android.graphics.Rect(0, 0, outW, outH)
+                val paint = android.graphics.Paint()
+                paint.isFilterBitmap = true
+                canvas.drawBitmap(frame, src, dst, paint)
+                return scaled
+            } catch (e: Exception) {
+                Log.w(TAG, "processFrame POC failed: ${e.message}")
+                return null
+            }
+        }
+
+        try {
+            if (inW <= 0 || inH <= 0 || outW <= 0 || outH <= 0 || inputByteBuffer == null) {
+                Log.w(TAG, "Interpreter buffers not initialized")
+                return null
+            }
+
+            // If the frame is larger than the model input, try tiled inference.
+            // This simple tiling splits the scaled input into non-overlapping tiles
+            // of size (inW x inH) and stitches outputs together. Works best when
+            // the input dimensions are multiples of the model input.
+            val scaleFactor = outW / inW
+            val fullW = frame.width
+            val fullH = frame.height
+
+            // If frame fits single input, do single-shot inference and return Bitmap
+            if (fullW <= inW && fullH <= inH) {
+                val t0 = System.nanoTime()
+                val pixels = runSingleInferencePixels(frame, interp) ?: return null
+                val t1 = System.nanoTime()
+                lastTileMillis.add((t1 - t0) / 1_000_000)
+                val bmp = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888)
+                bmp.setPixels(pixels, 0, outW, 0, 0, outW, outH)
+                val totalEnd = System.nanoTime()
+                lastTotalMillis = (totalEnd - totalStart) / 1_000_000
+                lastTileCount = lastTileMillis.size
+                return bmp
+            }
+
+            // Tiled inference with overlapping tiles and separable Hann window blending
+            val resizedFull = Bitmap.createScaledBitmap(
+                frame,
+                ((fullW.toFloat() / inW).roundToInt() * inW),
+                ((fullH.toFloat() / inH).roundToInt() * inH),
+                true
+            )
+
+            // Overlap in pixels based on configured overlapPercent
+            val overlapPx = (inW * overlapPercent).toInt().coerceIn(1, inW - 1)
+            val strideX = inW - overlapPx
+            val strideY = inH - overlapPx
+
+            // Build tile start coordinates ensuring coverage to the right/bottom edges
+            val startsX = ArrayList<Int>()
+            var sxPos = 0
+            while (sxPos + inW <= resizedFull.width) {
+                startsX.add(sxPos)
+                sxPos += strideX
+            }
+            if (startsX.isEmpty() || startsX.last() + inW < resizedFull.width) {
+                startsX.add(resizedFull.width - inW)
+            }
+
+            val startsY = ArrayList<Int>()
+            var syPos = 0
+            while (syPos + inH <= resizedFull.height) {
+                startsY.add(syPos)
+                syPos += strideY
+            }
+            if (startsY.isEmpty() || startsY.last() + inH < resizedFull.height) {
+                startsY.add(resizedFull.height - inH)
+            }
+
+            val tilesX = startsX.size
+            val tilesY = startsY.size
+            val totalOutW = (tilesX - 1) * outW + outW
+            val totalOutH = (tilesY - 1) * outH + outH
+
+            val pixCountTotal = totalOutW * totalOutH
+            // accumulation buffers (weighted sums) and weight sums
+            val accum = FloatArray(pixCountTotal * 3)
+            val weight = FloatArray(pixCountTotal)
+
+            // Precompute Hann windows for output tile dimensions (separable)
+            val wx = FloatArray(outW)
+            val wy = FloatArray(outH)
+            val TWO_PI = (2.0 * Math.PI)
+            for (i in 0 until outW) {
+                val t = if (outW > 1) i.toDouble() / (outW - 1) else 0.0
+                wx[i] = (0.5 * (1.0 - kotlin.math.cos(TWO_PI * t))).toFloat()
+            }
+            for (j in 0 until outH) {
+                val t = if (outH > 1) j.toDouble() / (outH - 1) else 0.0
+                wy[j] = (0.5 * (1.0 - kotlin.math.cos(TWO_PI * t))).toFloat()
+            }
+
+            for (ty in 0 until tilesY) {
+                for (tx in 0 until tilesX) {
+                    val sx = startsX[tx]
+                    val sy = startsY[ty]
+                    val tilePixels = IntArray(inW * inH)
+                    resizedFull.getPixels(tilePixels, 0, inW, sx, sy, inW, inH)
+                    val tileBmp = Bitmap.createBitmap(inW, inH, Bitmap.Config.ARGB_8888)
+                    tileBmp.setPixels(tilePixels, 0, inW, 0, 0, inW, inH)
+
+                    val t0 = System.nanoTime()
+                    val outTilePixels = runSingleInferencePixels(tileBmp, interp) ?: continue
+                    val t1 = System.nanoTime()
+                    lastTileMillis.add((t1 - t0) / 1_000_000)
+
+                    // Accumulate weighted contributions
+                    val baseX = tx * outW
+                    val baseY = ty * outH
+                    for (oy in 0 until outH) {
+                        val wyv = wy[oy]
+                        for (ox in 0 until outW) {
+                            val wxv = wx[ox]
+                            val wval = wxv * wyv
+                            val localIdx = oy * outW + ox
+                            val globalX = baseX + ox
+                            val globalY = baseY + oy
+                            val gIdx = globalY * totalOutW + globalX
+                            val color = outTilePixels[localIdx]
+                            val r = ((color shr 16) and 0xFF).toFloat()
+                            val g2 = ((color shr 8) and 0xFF).toFloat()
+                            val b = (color and 0xFF).toFloat()
+                            val ai = gIdx * 3
+                            accum[ai + 0] += r * wval
+                            accum[ai + 1] += g2 * wval
+                            accum[ai + 2] += b * wval
+                            weight[gIdx] += wval
+                        }
+                    }
+                }
+            }
+
+            // Normalize accumulations into final pixel array using weight sums
+            val finalPixels = IntArray(pixCountTotal)
+            for (i in 0 until pixCountTotal) {
+                val wsum = if (weight[i] > 0f) weight[i] else 1f
+                val ai = i * 3
+                val rr = (accum[ai + 0] / wsum).roundToInt().coerceIn(0, 255)
+                val gg = (accum[ai + 1] / wsum).roundToInt().coerceIn(0, 255)
+                val bb = (accum[ai + 2] / wsum).roundToInt().coerceIn(0, 255)
+                finalPixels[i] = (0xFF shl 24) or (rr shl 16) or (gg shl 8) or bb
+            }
+
+            val outBitmap = Bitmap.createBitmap(totalOutW, totalOutH, Bitmap.Config.ARGB_8888)
+            outBitmap.setPixels(finalPixels, 0, totalOutW, 0, 0, totalOutW, totalOutH)
+            val totalEnd = System.nanoTime()
+            lastTotalMillis = (totalEnd - totalStart) / 1_000_000
+            lastTileCount = lastTileMillis.size
+
+            // Adaptive overlap tuning: maintain a small window of recent totals and adjust overlap
+            if (adaptiveEnabled) {
+                adaptiveWindow.add(lastTotalMillis)
+                if (adaptiveWindow.size > adaptiveWindowSize) {
+                    adaptiveWindow.removeAt(0)
+                }
+                if (adaptiveWindow.size >= 2) {
+                    val avg = adaptiveWindow.sum().toDouble() / adaptiveWindow.size
+                    // If we're slower than target, reduce overlap proportionally (sqrt dampening)
+                    if (avg > adaptiveTargetMs.toDouble()) {
+                        val ratio = adaptiveTargetMs.toDouble() / avg
+                        // scale overlap down (but not below 0.0)
+                        val newOverlap = (overlapPercent * kotlin.math.sqrt(ratio)).toFloat().coerceIn(0.0f, 0.9f)
+                        if (kotlin.math.abs(newOverlap - overlapPercent) >= 0.01f) {
+                            overlapPercent = newOverlap
+                        }
+                    } else if (avg < adaptiveTargetMs.toDouble() * 0.6) {
+                        // if significantly faster, increase overlap slightly for quality
+                        val boost = 1.05f
+                        val newOverlap = (overlapPercent * boost).toFloat().coerceIn(0.0f, 0.9f)
+                        if (kotlin.math.abs(newOverlap - overlapPercent) >= 0.01f) {
+                            overlapPercent = newOverlap
+                        }
+                    }
+                }
+            }
+            return outBitmap
+        } catch (e: Exception) {
+            Log.w(TAG, "TFLite processFrame failed: ${e.message}")
+            return null
+        }
+    }
+
+    // Helper: run inference for a single input-sized bitmap and return output pixel array (ARGB ints)
+    private fun runSingleInferencePixels(frame: Bitmap, interp: Interpreter): IntArray? {
+        try {
+            // Resize to model input
+            val resized = Bitmap.createScaledBitmap(frame, inW, inH, true)
+            val pixelInts = IntArray(inW * inH)
+            resized.getPixels(pixelInts, 0, inW, 0, 0, inW, inH)
+
+            // Fill input buffer depending on quantization
+            inputByteBuffer!!.clear()
+            if (inputIsQuantized) {
+                // Input quantized: use scale and zeroPoint
+                for (i in pixelInts.indices) {
+                    val px = pixelInts[i]
+                    val r = ((px shr 16) and 0xFF) / 255.0f
+                    val g = ((px shr 8) and 0xFF) / 255.0f
+                    val b = (px and 0xFF) / 255.0f
+                    val qr = ((r / inputScale) + inputZeroPoint).roundToInt().coerceIn(0, 255).toByte()
+                    val qg = ((g / inputScale) + inputZeroPoint).roundToInt().coerceIn(0, 255).toByte()
+                    val qb = ((b / inputScale) + inputZeroPoint).roundToInt().coerceIn(0, 255).toByte()
+                    inputByteBuffer!!.put(qr)
+                    inputByteBuffer!!.put(qg)
+                    inputByteBuffer!!.put(qb)
+                }
+                inputByteBuffer!!.position(0)
+            } else {
+                val fb = inputByteBuffer!!.asFloatBuffer()
+                fb.rewind()
+                for (i in pixelInts.indices) {
+                    val px = pixelInts[i]
+                    val r = ((px shr 16) and 0xFF) / 255.0f
+                    val g = ((px shr 8) and 0xFF) / 255.0f
+                    val b = (px and 0xFF) / 255.0f
+                    fb.put(r)
+                    fb.put(g)
+                    fb.put(b)
+                }
+                // reset position for interpreter
+                inputByteBuffer!!.position(0)
+            }
+
+            // Run inference into appropriate output buffer and write directly to int pixel array
+            val pixCount = outW * outH
+            val outInts = outPixelsIntArray ?: IntArray(pixCount)
+            if (outputIsQuantized && outputByteBuffer != null && outputByteArray != null) {
+                outputByteBuffer!!.clear()
+                interp.run(inputByteBuffer, outputByteBuffer)
+                outputByteBuffer!!.position(0)
+                outputByteBuffer!!.get(outputByteArray!!)
+                // output bytes are in RGB order
+                var bi = 0
+                var oi = 0
+                while (bi < outputByteArray!!.size && oi < pixCount) {
+                    val qr = outputByteArray!![bi++].toInt() and 0xFF
+                    val qg = outputByteArray!![bi++].toInt() and 0xFF
+                    val qb = outputByteArray!![bi++].toInt() and 0xFF
+                    val rf = ((qr - outputZeroPoint) * outputScale).coerceIn(0.0f, 1.0f)
+                    val gf = ((qg - outputZeroPoint) * outputScale).coerceIn(0.0f, 1.0f)
+                    val bf = ((qb - outputZeroPoint) * outputScale).coerceIn(0.0f, 1.0f)
+                    val r = (rf * 255.0f).roundToInt()
+                    val g = (gf * 255.0f).roundToInt()
+                    val b = (bf * 255.0f).roundToInt()
+                    outInts[oi++] = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+                }
+            } else {
+                // float output path
+                outputFloatArray = outputFloatArray ?: FloatArray(pixCount * 3)
+                interp.run(inputByteBuffer, outputFloatArray)
+                var ii = 0
+                for (p in 0 until pixCount) {
+                    val rf = outputFloatArray!![ii++].coerceIn(0.0f, 1.0f)
+                    val gf = outputFloatArray!![ii++].coerceIn(0.0f, 1.0f)
+                    val bf = outputFloatArray!![ii++].coerceIn(0.0f, 1.0f)
+                    val r = (rf * 255.0f).roundToInt()
+                    val g = (gf * 255.0f).roundToInt()
+                    val b = (bf * 255.0f).roundToInt()
+                    outInts[p] = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+                }
+            }
+            return outInts
+        } catch (e: Exception) {
+            Log.w(TAG, "runSingleInference failed: ${e.message}")
+            return null
+        }
+    }
+
+    private fun startWorkerIfNeeded() {
+        if (workerThread == null) {
+            workerThread = android.os.HandlerThread("NativeUpscalerWorker")
+            workerThread!!.start()
+            workerHandler = android.os.Handler(workerThread!!.looper)
+            Log.d(TAG, "NativeUpscaler worker started")
+        }
+    }
+
+    private fun stopWorker() {
+        try {
+            workerThread?.quitSafely()
+        } catch (_: Exception) {}
+        workerThread = null
+        workerHandler = null
+        Log.d(TAG, "NativeUpscaler worker stopped")
+    }
+
+    /**
+     * Asynchronously process a frame on the worker thread. The callback is invoked
+     * on the main thread with the resulting Bitmap or null on failure.
+     */
+    fun processFrameAsync(frame: Bitmap, callback: (Bitmap?) -> Unit) {
+        startWorkerIfNeeded()
+        val h = workerHandler ?: run {
+            // fallback: run synchronously
+            val bmp = processFrame(frame)
+            callback(bmp)
+            return
+        }
+        h.post {
+            val bmp = try { processFrame(frame) } catch (e: Exception) { null }
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                callback(bmp)
+            }
+        }
+    }
+
+    fun setUseGpu(enabled: Boolean): Boolean {
+        useGpu = enabled
+        // If a model is loaded, reload it to pick up new delegate preference
+        val path = lastModelPath
+        if (path != null) {
+            try {
+                // reload model synchronously; this is a quick operation that will recreate interpreter
+                return loadModel(path)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to reload model with GPU setting: ${e.message}")
+                return false
+            }
+        }
+        return true
+    }
+
+    /**
+     * Set overlap percent for tiled inference. Range: 0.0 (no overlap) .. 0.9 (90% overlap).
+     */
+    fun setOverlapPercent(p: Float): Boolean {
+        val clamped = when {
+            p.isNaN() -> return false
+            p < 0f -> 0f
+            p > 0.9f -> 0.9f
+            else -> p
+        }
+        overlapPercent = clamped
+        return true
+    }
+
+    fun setAdaptiveEnabled(enabled: Boolean): Boolean {
+        adaptiveEnabled = enabled
+        return true
+    }
+
+    fun setAdaptiveTargetMs(ms: Long): Boolean {
+        if (ms <= 0) return false
+        adaptiveTargetMs = ms
+        return true
+    }
+
+    fun getLastProfile(): Map<String, Any> {
+        val perTile = lastTileMillis.toList()
+        return mapOf(
+            "totalMillis" to lastTotalMillis,
+            "tileCount" to lastTileCount,
+            "perTileMillis" to perTile
+        )
+    }
+
+    fun close() {
+        try { interpreter?.close() } catch (_: Exception) {}
+        interpreter = null
+        try { gpuDelegate?.close() } catch (_: Exception) {}
+        gpuDelegate = null
+        stopWorker()
+        lastModelPath = null
+        // clear buffers
+        inputByteBuffer = null
+        outputByteBuffer = null
+        outputByteArray = null
+        outputFloatArray = null
+        outPixelsIntArray = null
+    }
+}

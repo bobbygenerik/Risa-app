@@ -1,0 +1,22 @@
+#!/bin/bash
+# Firebase deployment for RISA IPTV
+
+echo "🔥 Firebase Deployment Guide"
+echo ""
+echo "1. Install Firebase CLI:"
+echo "   npm install -g firebase-tools"
+echo ""
+echo "2. Login to Firebase:"
+echo "   firebase login"
+echo ""
+echo "3. Initialize project:"
+echo "   firebase init hosting"
+echo "   - Select existing project or create new"
+echo "   - Public directory: build/web"
+echo "   - Single-page app: Yes"
+echo "   - Overwrite index.html: No"
+echo ""
+echo "4. Deploy:"
+echo "   firebase deploy"
+echo ""
+echo "✅ Your app will be live at: https://PROJECT-ID.web.app"

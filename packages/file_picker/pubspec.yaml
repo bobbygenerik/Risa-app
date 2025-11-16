@@ -1,0 +1,13 @@
+name: file_picker
+version: 6.2.1
+description: "Local override of file_picker for build fixes (minimal Dart-only implementation)."
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms: {}

@@ -1,0 +1,58 @@
+name: iptv_player
+description: "A modern IPTV streaming player application built with Flutter - Stream Hub."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  video_player: ^2.8.6
+  chewie: ^1.7.5
+  http: ^1.1.2
+  dio: ^5.4.3
+  provider: ^6.1.2
+  xml: ^6.4.2
+  shared_preferences: ^2.2.3
+  path: ^1.9.0
+  path_provider: ^2.1.3
+  go_router: ^12.1.3
+  intl: ^0.20.2
+  url_launcher: ^6.2.6
+  flutter_svg: ^2.0.10
+  animations: ^2.0.11
+  speech_to_text: ^7.3.0
+  permission_handler: ^12.0.1
+  # googleapis and google_sign_in removed: Drive sync replaced by local backup
+  image: ^4.1.7
+  image_picker: ^1.2.1
+  file_picker: ^10.3.3
+  record: ^6.1.2
+
+  flutter_tts: ^4.2.3
+  # Bump ML Kit packages to pick up AGP/namespace fixes in newer releases.
+  # If this causes version conflicts, I'll iterate carefully.
+  # Upgrade ML Kit to a newer release series that includes Android namespace fixes.
+  google_mlkit_translation: ^0.13.0
+  google_mlkit_commons: ^0.11.0
+  tflite_flutter: ^0.12.1
+  subtitle_wrapper_package: ^2.2.1
+  flutter_vlc_player: ^7.2.0
+  wakelock_plus: ^1.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+
+# Removed dependency_overrides to allow resolver to upgrade packages.

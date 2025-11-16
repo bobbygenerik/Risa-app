@@ -1,0 +1,18 @@
+{
+  "project": {
+    "projectName": "IPTV Player Roku",
+    "rokuVersion": "10.0.0"
+  },
+  "sourceMap": false,
+  "rootDir": ".",
+  "outDir": "./out",
+  "files": [
+    "source/**/*.brs",
+    "components/**/*",
+    "images/**/*",
+    "manifest"
+  ],
+  "autoImportComponentScript": false,
+  "plugins": [],
+  "diagnosticLevel": "warn"
+}

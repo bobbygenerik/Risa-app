@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component name="MainScene" extends="Scene">
+    <script type="text/brightscript" uri="pkg:/components/MainScene.brs" />
+    <children>
+        <!-- Full-screen debug overlay so launch is unmistakable -->
+        <Group id="root" width="1920" height="1080">
+            <Rectangle width="1920" height="1080" color="0xFF000000" opacity="1.0" />
+            <Label id="debugLabel" translation="[960,540]" horizAlign="center" vertAlign="center" width="1600" height="600"
+                text="RISA IPTV DEV\n\n(Launching...)" textAlign="center" wrap="true" textColor="0xFFFFFFFF" font="font:LargeSystemFont" />
+        </Group>
+    </children>
+</component>
