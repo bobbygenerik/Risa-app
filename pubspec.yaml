@@ -44,6 +44,7 @@ dependencies:
   tflite_flutter: ^0.12.1
   subtitle_wrapper_package: ^2.2.1
   flutter_vlc_player: ^7.2.0
+  wakelock_plus: ^1.2.8
 
 dev_dependencies:
   flutter_test:

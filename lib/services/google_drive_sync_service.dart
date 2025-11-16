@@ -16,12 +16,12 @@ class GoogleDriveSyncService extends ChangeNotifier {
   int? _storageLimit;
   int? _storageUsed;
   
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: [
-      drive.DriveApi.driveFileScope,
-      drive.DriveApi.driveAppdataScope,
-    ],
-  );
+  // Use the new google_sign_in 7.x singleton API. Initialization occurs
+  // in `initialize()` below using values from `OAuthConfig` when present.
+  final _scopes = <String>[
+    drive.DriveApi.driveFileScope,
+    drive.DriveApi.driveAppdataScope,
+  ];
 
   bool get _isSupportedPlatform {
     if (kIsWeb) {
@@ -50,7 +50,23 @@ class GoogleDriveSyncService extends ChangeNotifier {
       return;
     }
     try {
-      _currentUser = await _googleSignIn.signInSilently();
+      // Initialize the google_sign_in singleton before using it.
+      try {
+        await GoogleSignIn.instance.initialize(
+          clientId: OAuthConfig.googleClientId == 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com' ? null : OAuthConfig.googleClientId,
+        );
+      } catch (e) {
+        // Some platforms may not require explicit initialization; ignore errors.
+        debugPrint('GoogleSignIn.initialize() warning: $e');
+      }
+
+      // Try a lightweight / silent authentication first (non-interactive).
+      final lightweight = GoogleSignIn.instance.attemptLightweightAuthentication();
+      if (lightweight != null) {
+        _currentUser = await lightweight;
+      } else {
+        _currentUser = null;
+      }
       if (_currentUser != null) {
         await _initializeDriveApi();
         _isSignedIn = true;
@@ -68,7 +84,11 @@ class GoogleDriveSyncService extends ChangeNotifier {
       return false;
     }
     try {
-      _currentUser = await _googleSignIn.signIn();
+      // Trigger an interactive authenticate flow. Use scope hint to prefer
+      // combined auth+authz flows on platforms that support it.
+      _currentUser = await GoogleSignIn.instance.authenticate(
+        scopeHint: _scopes,
+      );
       if (_currentUser == null) {
         return false;
       }
@@ -92,7 +112,7 @@ class GoogleDriveSyncService extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    await _googleSignIn.signOut();
+    await GoogleSignIn.instance.signOut();
     _currentUser = null;
     _driveApi = null;
     _isSignedIn = false;
@@ -104,8 +124,16 @@ class GoogleDriveSyncService extends ChangeNotifier {
     if (!_isSupportedPlatform) {
       return;
     }
-    final authHeaders = await _currentUser!.authHeaders;
-    final authenticateClient = GoogleAuthClient(authHeaders);
+    // Obtain authorization headers for the Drive scopes. The new API exposes
+    // an authorization client on the account which can produce headers.
+    final headers = await _currentUser!.authorizationClient.authorizationHeaders(
+      _scopes,
+      promptIfNecessary: true,
+    );
+    if (headers == null) {
+      throw Exception('Unable to obtain Google authorization headers.');
+    }
+    final authenticateClient = GoogleAuthClient(headers);
     _driveApi = drive.DriveApi(authenticateClient);
   }
 
