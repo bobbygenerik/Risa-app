@@ -316,7 +316,7 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
                       expand: true,
                       icon: Icons.download,
                       label: 'Download',
-                      onPressed: () => modelManager.downloadModel(model),
+                      onPressed: () => modelManager.downloadModel(model.id),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
@@ -364,7 +364,7 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
                       expand: true,
                       icon: Icons.refresh,
                       label: 'Re-download',
-                      onPressed: () => modelManager.downloadModel(model),
+                      onPressed: () => modelManager.downloadModel(model.id),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
@@ -493,7 +493,7 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              modelManager.deleteModel(model);
+              modelManager.deleteModel(model.id);
               Navigator.pop(context);
               ScaffoldMessenger.of(
                 context,
