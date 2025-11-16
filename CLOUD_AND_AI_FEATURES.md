@@ -2,35 +2,12 @@
 
 ## ✅ **New Features Implemented**
 
-### 1. **Google Drive Cloud Sync** ☁️
+### 1. **Cloud Sync (Removed)** ☁️
 
-**Location**: Will be added to Settings > Account or Settings > General
+The Google Drive cloud sync feature has been removed from the app and replaced by a local export/import backup workflow. Use the Local Backup tools in `Settings > Account` to export your data as a JSON file and import it on another device.
 
-**Features**:
-- ✅ **100% FREE** - Uses user's own Google Drive storage
-- ✅ Sign in with Google account
-- ✅ Automatic sync of:
-  - Favorites
-  - Playlists
-  - Watch history
-  - App settings
-- ✅ Restore data on new devices
-- ✅ Manual sync button
-- ✅ Shows last sync time
-- ✅ Shows Drive storage usage
-
-**How It Works**:
-1. User signs in with their Google account
-2. App creates a "StreamHubData" folder in their Drive
-3. App syncs data as JSON files
-4. User can restore data on any device
-5. No server costs - everything stored in user's Drive!
-
-**Privacy**:
-- Data is encrypted in transit (Google's HTTPS)
-- Stored in user's private Drive folder
-- Only app can access the data folder
-- User has full control (can delete anytime)
+- **Where to find it**: `Settings > Account > Local Backup` (Export / Import)
+- **Notes**: Local backups are stored as files the user selects; they are not uploaded to any cloud by the app.
 
 ---
 
@@ -76,16 +53,9 @@
 
 ## 📋 Implementation Status
 
-### Google Drive Sync Service ✅
-- [x] Service file created: `lib/services/google_drive_sync_service.dart`
-- [x] Google Sign-In integration
-- [x] Drive API implementation
-- [x] Upload/Download JSON data
-- [x] Folder management
-- [x] Storage info retrieval
-- [ ] **TODO**: Add UI to settings screen
-- [ ] **TODO**: Add to providers in main.dart
-- [ ] **TODO**: Configure OAuth credentials
+### Cloud Sync (Google Drive) — Removed
+- The previous Google Drive sync service has been removed and is no longer supported in the application.
+- Use the `Local Backup` export/import workflow instead (`Settings > Account`).
 
 ### AI Upscaling Service ✅
 - [x] Service file created: `lib/services/ai_upscaling_service.dart`
@@ -101,11 +71,6 @@
 
 ### Dependencies Added ✅
 ```yaml
-# Google Drive (FREE - user's storage)
-googleapis: ^13.2.0
-googleapis_auth: ^1.6.0
-google_sign_in: ^6.2.2
-
 # AI Upscaling (FREE - on-device)
 tflite_flutter: ^0.11.0
 image: ^4.3.0

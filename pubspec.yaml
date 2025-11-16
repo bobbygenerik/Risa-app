@@ -28,8 +28,7 @@ dependencies:
   animations: ^2.0.11
   speech_to_text: ^7.3.0
   permission_handler: ^12.0.1
-  googleapis: ^15.0.0
-  google_sign_in: ^7.2.0
+  # googleapis and google_sign_in removed: Drive sync replaced by local backup
   image: ^4.1.7
   image_picker: ^1.2.1
   file_picker: ^10.3.3

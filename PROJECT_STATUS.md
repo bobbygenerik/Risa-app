@@ -32,7 +32,7 @@ The IPTV Player project now has TWO fully functional versions:
 - ✅ Live transcription (Google Cloud Speech-to-Text)
 - ✅ Real-time translation (Google Cloud Translation)
 - ✅ AI upscaling (TensorFlow Lite)
-- ✅ Google Drive sync with OAuth2
+- ☑️ Cloud sync (Google Drive) — removed; replaced by Local Backup
 - ✅ Persistent settings storage
 - ✅ Comprehensive testing (15 tests)
 - 📦 **Result**: 344 MB APK, 0 errors, 15/15 tests passing
@@ -98,7 +98,7 @@ lib/
 │   ├── transcription_service.dart
 │   ├── translation_service.dart
 │   ├── upscaling_service.dart
-│   └── google_drive_service.dart
+│   └── (cloud sync removed - use `LocalBackupService`)
 └── utils/                    # Utilities
     ├── constants.dart
     └── helpers.dart
@@ -125,6 +125,7 @@ roku/
 
 ## Core Services
 
+
 ### Shared Services (Both Platforms)
 
 #### 1. **M3U Parser**
@@ -139,11 +140,8 @@ roku/
 - Current/upcoming program queries
 - Dynamic EPG caching
 
-#### 3. **Google Drive Integration**
-- OAuth 2.0 authentication flow
-- Token management and refresh
-- File upload/download
-- Playlist sync capability
+#### 3. **Cloud Sync (Removed)**
+- Google Drive integration was previously implemented but has been removed. Use local export/import backups instead.
 
 ### Android-Exclusive Services
 

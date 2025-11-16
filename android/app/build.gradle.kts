@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.iptvplayer.iptv_player"
+    namespace = "com.risa.app"
     // Use an explicit compileSdk to satisfy newer AndroidX library requirements
     // (some updated plugins require compileSdk 34+). Set to 36 to be safe.
     compileSdk = 36
@@ -23,7 +23,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.iptvplayer.iptv_player"
+        applicationId = "com.risa.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

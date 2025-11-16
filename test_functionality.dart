@@ -31,7 +31,7 @@ void main() async {
   results['Voice Search'] = await testServiceFile('lib/services/voice_search_service.dart');
   results['Live Transcription'] = await testServiceFile('lib/services/live_transcription_service.dart');
   results['ML Kit Translation'] = await testServiceFile('lib/services/mlkit_translation_service.dart');
-  results['Google Drive Sync'] = await testServiceFile('lib/services/google_drive_sync_service.dart');
+  results['Local Backup Service'] = await testServiceFile('lib/services/local_backup_service.dart');
   results['OpenSubtitles'] = await testServiceFile('lib/services/opensubtitles_service.dart');
   results['Real-Debrid'] = await testServiceFile('lib/services/real_debrid_service.dart');
   results['AI Upscaling'] = await testServiceFile('lib/services/ai_upscaling_service.dart');
@@ -99,7 +99,7 @@ void main() async {
   print('✅ AI Video Enhancement');
   print('✅ Live Transcription & Translation');
   print('✅ Voice Search');
-  print('✅ Cloud Sync (Google Drive)');
+  print('✅ Local Backup (Export/Import)');
   print('✅ Subtitle Support (OpenSubtitles)');
   print('✅ Premium Link Support (Real-Debrid)');
   print('✅ Multi-profile Support');

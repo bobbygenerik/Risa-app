@@ -365,6 +365,8 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Suppress deprecation note for older WillPopScope usage on some SDKs
+    // ignore: deprecated_member_use
     return WillPopScope(
       onWillPop: () async {
         context.go('/home');

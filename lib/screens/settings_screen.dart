@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:iptv_player/services/live_transcription_service.dart';
-import 'package:iptv_player/services/google_drive_sync_service.dart';
+import 'package:iptv_player/services/local_backup_service.dart';
 import 'package:iptv_player/services/opensubtitles_service.dart';
 import 'package:iptv_player/services/real_debrid_service.dart';
 import 'package:iptv_player/services/whisper_speech_service.dart';
@@ -16,6 +16,8 @@ import 'package:iptv_player/utils/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/services/ai_upscaling_service.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
+import 'package:iptv_player/providers/content_provider.dart';
+import 'package:iptv_player/models/content.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 
@@ -35,27 +37,13 @@ class _SettingsScreenState extends State<SettingsScreen>
   final TextEditingController _xtreamServerController = TextEditingController();
   final TextEditingController _xtreamUsernameController =
       TextEditingController();
-  final TextEditingController _xtreamPasswordController =
-      TextEditingController();
+  final TextEditingController _xtreamPasswordController = TextEditingController();
+  final TextEditingController _realDebridApiKeyController = TextEditingController();
+  final TextEditingController _openSubtitlesUsernameController = TextEditingController();
+  final TextEditingController _openSubtitlesPasswordController = TextEditingController();
 
-  // Integration Settings
-  final TextEditingController _realDebridApiKeyController =
-      TextEditingController();
-  final TextEditingController _openSubtitlesUsernameController =
-      TextEditingController();
-  final TextEditingController _openSubtitlesPasswordController =
-      TextEditingController();
-
-  // Editable states for text fields (prevent auto-keyboard on Android TV)
-  bool _m3uUrlEditable = false;
-  bool _xtreamServerEditable = false;
-  bool _xtreamUsernameEditable = false;
-  bool _xtreamPasswordEditable = false;
-  bool _realDebridApiKeyEditable = false;
-  bool _openSubtitlesUsernameEditable = false;
-  bool _openSubtitlesPasswordEditable = false;
-
-  // Focus nodes for text fields
+  // Focus nodes and menu focus list
+  late final List<FocusNode> _menuFocusNodes = List.generate(5, (_) => FocusNode());
   final FocusNode _m3uUrlFocusNode = FocusNode();
   final FocusNode _xtreamServerFocusNode = FocusNode();
   final FocusNode _xtreamUsernameFocusNode = FocusNode();
@@ -64,117 +52,44 @@ class _SettingsScreenState extends State<SettingsScreen>
   final FocusNode _openSubtitlesUsernameFocusNode = FocusNode();
   final FocusNode _openSubtitlesPasswordFocusNode = FocusNode();
 
-  // Playback Settings
-  bool _autoPlayNextEpisode = true;
-  bool _hardwareAcceleration = true;
-  bool _hardwareDecoding = true;
-  bool _hardwarePostProcessing = true;
-  bool _autoFrameRate = true;
-  String _decoderType = 'Auto';
-  String _renderingEngine = 'Auto';
-  double _videoBufferSize = 50;
-  String _videoQuality = 'Auto';
-  
-  // Audio Settings
-  String _audioDecoderType = 'Auto';
-  bool _audioPassthrough = false;
-  bool _audioBoost = false;
-  String _preferredAudioLanguage = 'Default';
-  bool _normalizeAudio = false;
-  int _audioChannels = 0; // 0 = Auto, 2 = Stereo, 6 = 5.1, 8 = 7.1
+  // State flags and settings defaults
+  bool _openSubtitlesEnabled = false;
+  bool _openSubtitlesUsernameEditable = false;
+  bool _openSubtitlesPasswordEditable = false;
+  bool _autoDownloadSubtitles = false;
 
-  // Real-Debrid Settings
   bool _realDebridEnabled = false;
+  bool _realDebridApiKeyEditable = false;
   bool _realDebridForCatchup = true;
   bool _realDebridForVOD = true;
 
-  // OpenSubtitles Settings
-  bool _openSubtitlesEnabled = false;
+  // Playback + UI state defaults
+  final bool _hardwareAcceleration = false;
+  final bool _hardwareDecoding = false;
+  final bool _hardwarePostProcessing = false;
+  bool _autoFrameRate = false;
+  String _decoderType = 'Auto';
+  String _renderingEngine = 'Auto';
+  String _audioDecoderType = 'Auto';
+  int _audioChannels = 0;
+  String _preferredAudioLanguage = 'Default';
+  bool _audioPassthrough = false;
+  bool _audioBoost = false;
+  bool _normalizeAudio = false;
+  bool _autoPlayNextEpisode = true;
+  String _videoQuality = 'Auto';
+  double _videoBufferSize = 50.0;
 
-  // AI Upscaling settings
+  // AI settings
   bool _aiUpscalingEnabled = false;
   String _aiQuality = 'Balanced';
-  bool _autoDownloadSubtitles = true;
-  // ignore: unused_field
-  String _preferredSubtitleLanguage = 'English';
+  
+  // Editable flags for input fields
+  bool _m3uUrlEditable = true;
+  bool _xtreamServerEditable = true;
+  bool _xtreamUsernameEditable = true;
+  bool _xtreamPasswordEditable = true;
 
-  // Other Settings
-  // ignore: unused_field
-  String _selectedLanguage = 'English';
-  // ignore: unused_field
-  String _chromecastDevice = 'Chromecast';
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 5, vsync: this); // Reduced from 7 to 5
-    // Prepare focus nodes for the sidebar menu so external callers can request focus
-    for (int i = 0; i < 5; i++) {
-      _menuFocusNodes.add(FocusNode(debugLabel: 'SettingsMenu$i'));
-    }
-    _loadSettings();
-  }
-
-  final List<FocusNode> _menuFocusNodes = [];
-
-  // Load settings from SharedPreferences
-  Future<void> _loadSettings() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      if (!mounted) return;
-      setState(() {
-      // Text controllers
-      _m3uUrlController.text = prefs.getString('m3u_url') ?? '';
-      _xtreamServerController.text = prefs.getString('xtream_server') ?? '';
-      _xtreamUsernameController.text = prefs.getString('xtream_username') ?? '';
-      _xtreamPasswordController.text = prefs.getString('xtream_password') ?? '';
-      _realDebridApiKeyController.text =
-          prefs.getString('realdebrid_api_key') ?? '';
-      _openSubtitlesUsernameController.text =
-          prefs.getString('opensubtitles_username') ?? '';
-      _openSubtitlesPasswordController.text =
-          prefs.getString('opensubtitles_password') ?? '';
-
-      // Boolean settings
-      _autoPlayNextEpisode = prefs.getBool('auto_play_next') ?? true;
-      _hardwareAcceleration = prefs.getBool('hardware_acceleration') ?? true;
-      _hardwareDecoding = prefs.getBool('hardware_decoding') ?? true;
-      _hardwarePostProcessing =
-          prefs.getBool('hardware_postprocessing') ?? true;
-      _autoFrameRate = prefs.getBool('auto_frame_rate') ?? true;
-      _realDebridEnabled = prefs.getBool('realdebrid_enabled') ?? false;
-      _realDebridForCatchup = prefs.getBool('realdebrid_catchup') ?? true;
-      _realDebridForVOD = prefs.getBool('realdebrid_vod') ?? true;
-      _openSubtitlesEnabled = prefs.getBool('opensubtitles_enabled') ?? false;
-      _aiUpscalingEnabled = prefs.getBool('ai_upscaling') ?? false;
-      _autoDownloadSubtitles = prefs.getBool('auto_download_subtitles') ?? true;
-
-      // String settings
-      _decoderType = prefs.getString('decoder_type') ?? 'Auto';
-      _renderingEngine = prefs.getString('rendering_engine') ?? 'Auto';
-      _videoQuality = prefs.getString('video_quality') ?? 'Auto';
-      _aiQuality = prefs.getString('ai_quality') ?? 'Balanced';
-      _preferredSubtitleLanguage =
-          prefs.getString('subtitle_language') ?? 'English';
-      _selectedLanguage = prefs.getString('app_language') ?? 'English';
-      _chromecastDevice = prefs.getString('chromecast_device') ?? 'Chromecast';
-      
-      // Audio settings
-      _audioDecoderType = prefs.getString('audio_decoder_type') ?? 'Auto';
-      _preferredAudioLanguage = prefs.getString('preferred_audio_language') ?? 'Default';
-      _audioPassthrough = prefs.getBool('audio_passthrough') ?? false;
-      _audioBoost = prefs.getBool('audio_boost') ?? false;
-      _normalizeAudio = prefs.getBool('normalize_audio') ?? false;
-      _audioChannels = prefs.getInt('audio_channels') ?? 0;
-
-      // Double settings
-      _videoBufferSize = prefs.getDouble('video_buffer_size') ?? 50;
-    });
-    } catch (e) {
-      debugPrint('Error loading settings: $e');
-      // Continue with default values if settings fail to load
-    }
-  }
 
   // Save individual setting
   // ignore: unused_element
@@ -442,269 +357,300 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Widget _buildAccountSettings() {
-    return _buildSafeConsumer<GoogleDriveSyncService>(
-      builder: (context, syncService) {
-        return FutureBuilder<Map<String, String?>>(
-          future: _loadProfileData(),
-          builder: (context, snapshot) {
-            final userName = snapshot.data?['name'] ?? 'User';
-            final userEmail = snapshot.data?['email'] ?? 'user@example.com';
-            final profileImagePath = snapshot.data?['imagePath'];
+    return FutureBuilder<Map<String, String?>>(
+      future: _loadProfileData(),
+      builder: (context, snapshot) {
+        final userName = snapshot.data?['name'] ?? 'User';
+        final userEmail = snapshot.data?['email'] ?? 'user@example.com';
+        final profileImagePath = snapshot.data?['imagePath'];
 
-            return _buildSettingsSection(
-              title: 'Account',
+        return _buildSettingsSection(
+          title: 'Account',
+          children: [
+            _buildSectionCard(
+              title: 'Profile',
               children: [
-                _buildSectionCard(
-                  title: 'Profile',
-                  children: [
-                    Center(
-                      child: Column(
-                        children: [
-                          CircleAvatar(
-                            radius: 50,
-                            backgroundColor: AppTheme.cardBackground,
-                            backgroundImage:
-                                profileImagePath != null &&
-                                    profileImagePath.isNotEmpty
+                Center(
+                  child: Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundColor: AppTheme.cardBackground,
+                        backgroundImage:
+                            profileImagePath != null && profileImagePath.isNotEmpty
                                 ? FileImage(File(profileImagePath))
                                 : null,
-                            child:
-                                profileImagePath == null || profileImagePath.isEmpty
-                                ? const Icon(
-                                    Icons.person,
-                                    size: 50,
-                                    color: AppTheme.primaryBlue,
-                                  )
-                                : null,
-                          ),
-                          const SizedBox(height: AppSizes.md),
-                          Text(
-                            userName,
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          Text(
-                            userEmail,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.textSecondary,
-                            ),
-                          ),
-                          const SizedBox(height: AppSizes.md),
-                          ElevatedButton(
-                            onPressed: () async {
-                              final result = await context.push('/edit-profile');
-                              if (result == true) {
-                                // Profile was updated, refresh the UI
-                                setState(() {});
-                              }
-                            },
-                            child: const Text('Edit Profile'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                _buildSectionCard(
-                  title: 'Google Drive Sync',
-                  subtitle: 'Backup your settings and profile to Google Drive',
-                  children: [
-                    // Info box about what gets synced
-                    Container(
-                      padding: const EdgeInsets.all(AppSizes.sm),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
-                        ),
-                      ),
-                      child: const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                size: 18,
+                        child: profileImagePath == null || profileImagePath.isEmpty
+                            ? const Icon(
+                                Icons.person,
+                                size: 50,
                                 color: AppTheme.primaryBlue,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'What gets backed up:',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.primaryBlue,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            '✓ Profile, settings, playlists, watch history & favorites.',
-                            style: TextStyle(
-                              fontSize: 12,
+                              )
+                            : null,
+                      ),
+                      const SizedBox(height: AppSizes.md),
+                      Text(
+                        userName,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      Text(
+                        userEmail,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: AppTheme.textSecondary,
                             ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            '⚠ Recordings are NOT backed up.',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: AppTheme.accentOrange,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ],
                       ),
+                      const SizedBox(height: AppSizes.md),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final result = await context.push('/edit-profile');
+                          if (result == true) {
+                            setState(() {});
+                          }
+                        },
+                        child: const Text('Edit Profile'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            _buildSectionCard(
+              title: 'Local Backup',
+              subtitle: 'Export and import your settings, playlists, and history locally',
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(AppSizes.sm),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
                     ),
-                    const SizedBox(height: AppSizes.sm),
-                    if (!syncService.isSupported) ...[
-                      Center(
-                        child: Column(
-                          children: [
-                            const Icon(
-                              Icons.desktop_access_disabled,
-                              size: 36,
-                              color: AppTheme.textSecondary,
-                            ),
-                            const SizedBox(height: AppSizes.sm),
-                            const Text(
-                              'Google Drive sync is unavailable on this platform.',
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: AppSizes.sm),
-                            Text(
-                              'Use an Android or iOS device to enable cloud sync.',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(color: AppTheme.textSecondary),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ] else if (!syncService.isSignedIn) ...[
-                      Center(
-                        child: Column(
-                          children: [
-                            const Icon(
-                              Icons.cloud_off,
-                              size: 36,
-                              color: AppTheme.textSecondary,
-                            ),
-                            const SizedBox(height: AppSizes.sm),
-                            const Text('Sign in with Google to enable cloud sync.'),
-                            const SizedBox(height: AppSizes.sm),
-                            ElevatedButton.icon(
-                              onPressed: syncService.isSyncing
-                                    ? null
-                                    : () async {
-                                        final messenger = ScaffoldMessenger.of(context);
-                                        try {
-                                          final success = await syncService.signIn();
-                                          if (!mounted) return;
-                                          messenger.showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                success ? 'Successfully signed in!' : 'Sign in failed. Configure OAuth first.',
-                                              ),
-                                            ),
-                                          );
-                                        } catch (e) {
-                                          if (!mounted) return;
-                                          messenger.showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                'Sign in failed. Configure OAuth first.',
-                                              ),
-                                            ),
-                                          );
-                                        }
-                                      },
-                              icon: const Icon(Icons.login),
-                              label: const Text('Sign In with Google'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ] else ...[
-                      _buildInfoRow(
-                        'Account',
-                        syncService.userEmail ?? 'Signed In',
-                      ),
-                      _buildInfoRow(
-                        'Last Sync',
-                        syncService.lastSyncTime != null
-                            ? _formatDateTime(syncService.lastSyncTime!)
-                            : 'Never',
-                      ),
-                      const SizedBox(height: AppSizes.sm),
+                  ),
+                  child: const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Row(
                         children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: syncService.isSyncing
-                                  ? null
-                                  : () async {
-                                      final messenger = ScaffoldMessenger.of(context);
-                                      // Sync logic would go here
-                                      if (!mounted) return;
-                                      messenger.showSnackBar(
-                                        const SnackBar(content: Text('Syncing to cloud...')),
-                                      );
-                                    },
-                              icon: const Icon(Icons.cloud_upload),
-                              label: const Text('Sync Now'),
-                            ),
+                          Icon(
+                            Icons.info_outline,
+                            size: 18,
+                            color: AppTheme.primaryBlue,
                           ),
-                          const SizedBox(width: AppSizes.sm),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: syncService.isSyncing
-                                  ? null
-                                  : () async {
-                                      final messenger = ScaffoldMessenger.of(context);
-                                      // Restore logic would go here
-                                      if (!mounted) return;
-                                      messenger.showSnackBar(
-                                        const SnackBar(content: Text('Restoring from cloud...')),
-                                      );
-                                    },
-                              icon: const Icon(Icons.cloud_download),
-                              label: const Text('Restore'),
+                          SizedBox(width: 8),
+                          Text(
+                            'What gets backed up:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.primaryBlue,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: AppSizes.sm),
-                      Center(
-                          child: TextButton(
-                          onPressed: () async {
-                            final messenger = ScaffoldMessenger.of(context);
-                            await syncService.signOut();
-                            if (!mounted) return;
-                            messenger.showSnackBar(
-                              const SnackBar(
-                                content: Text('Signed out successfully'),
-                              ),
-                            );
-                          },
-                          child: const Text('Sign Out'),
+                      SizedBox(height: 4),
+                      Text(
+                        '✓ Profile, settings, playlists, watch history & favorites.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textSecondary,
                         ),
                       ),
-                      if (syncService.isSyncing)
-                        const Padding(
-                          padding: EdgeInsets.only(top: AppSizes.sm),
-                          child: LinearProgressIndicator(),
+                      SizedBox(height: 4),
+                      Text(
+                        '⚠ Recordings are NOT backed up.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppTheme.accentOrange,
+                          fontStyle: FontStyle.italic,
                         ),
+                      ),
                     ],
+                  ),
+                ),
+                const SizedBox(height: AppSizes.sm),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          try {
+                            final prefs = await SharedPreferences.getInstance();
+                            // Collect prefs
+                            final Map<String, dynamic> prefsMap = {};
+                            for (final k in prefs.getKeys()) {
+                              prefsMap[k] = prefs.get(k);
+                            }
+
+                            final channelProvider = Provider.of<ChannelProvider>(context, listen: false);
+                            final contentProvider = Provider.of<ContentProvider>(context, listen: false);
+
+                            final combined = <String, dynamic>{
+                              'prefs': prefsMap,
+                              'favorites': channelProvider.favoriteChannels.map((c) => c.toMap()).toList(),
+                              'channels': channelProvider.channels.map((c) => c.toMap()).toList(),
+                              'movies': contentProvider.movies.map((m) => m.toMap()).toList(),
+                              'series': contentProvider.series.map((s) => s.toMap()).toList(),
+                              'cached_playlist': prefs.getString('cached_playlist'),
+                            };
+
+                            final path = await LocalBackupService.exportBackup(combined);
+                            if (!mounted) return;
+                            messenger.showSnackBar(
+                              SnackBar(content: Text('Backup exported: $path')),
+                            );
+                          } catch (e) {
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Export failed: $e')),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.download),
+                        label: const Text('Export Backup'),
+                      ),
+                    ),
+                    const SizedBox(width: AppSizes.sm),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          try {
+                            // Ask for confirmation and whether the user wants a pre-backup
+                            final choice = await showDialog<String>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('Import Backup'),
+                                content: const Text('Importing a backup will overwrite local settings and data. Would you like to create a pre-backup first?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(ctx).pop('cancel'),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.of(ctx).pop('backup'),
+                                    child: const Text('Backup & Continue'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.of(ctx).pop('continue'),
+                                    child: const Text('Continue'),
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            if (choice == null || choice == 'cancel') {
+                              if (!mounted) return;
+                              messenger.showSnackBar(const SnackBar(content: Text('Import cancelled')));
+                              return;
+                            }
+
+                            if (choice == 'backup') {
+                              // create a pre-backup of current state
+                              final prefs = await SharedPreferences.getInstance();
+                              final Map<String, dynamic> prefsMap = {};
+                              for (final k in prefs.getKeys()) {
+                                prefsMap[k] = prefs.get(k);
+                              }
+
+                              final channelProvider = Provider.of<ChannelProvider>(context, listen: false);
+                              final contentProvider = Provider.of<ContentProvider>(context, listen: false);
+
+                              final combined = <String, dynamic>{
+                                'prefs': prefsMap,
+                                'favorites': channelProvider.favoriteChannels.map((c) => c.toMap()).toList(),
+                                'channels': channelProvider.channels.map((c) => c.toMap()).toList(),
+                                'movies': contentProvider.movies.map((m) => m.toMap()).toList(),
+                                'series': contentProvider.series.map((s) => s.toMap()).toList(),
+                                'cached_playlist': prefs.getString('cached_playlist'),
+                              };
+
+                              final backupPath = await LocalBackupService.exportBackup(combined);
+                              if (!mounted) return;
+                              messenger.showSnackBar(SnackBar(content: Text('Pre-backup created: $backupPath')));
+                            }
+
+                            // Now prompt user to select the backup to import
+                            final data = await LocalBackupService.importBackup();
+                            if (data == null) {
+                              if (!mounted) return;
+                              messenger.showSnackBar(const SnackBar(content: Text('Import cancelled')));
+                              return;
+                            }
+
+                            final prefs = await SharedPreferences.getInstance();
+                            final prefsMap = data['prefs'] as Map<String, dynamic>?;
+                            if (prefsMap != null) {
+                              for (final entry in prefsMap.entries) {
+                                final key = entry.key;
+                                final val = entry.value;
+                                if (val is String) {
+                                  await prefs.setString(key, val);
+                                } else if (val is bool) {
+                                  await prefs.setBool(key, val);
+                                } else if (val is int) {
+                                  await prefs.setInt(key, val);
+                                } else if (val is double) {
+                                  await prefs.setDouble(key, val);
+                                } else if (val is List) {
+                                  await prefs.setStringList(key, List<String>.from(val.map((e) => e.toString())));
+                                }
+                              }
+                            }
+
+                            // Restore movies/series if present
+                            final contentProvider = Provider.of<ContentProvider>(context, listen: false);
+                            final movies = data['movies'] as List<dynamic>?;
+                            final series = data['series'] as List<dynamic>?;
+                            if (movies != null) {
+                              contentProvider.loadMovies(movies.map((m) => Content.fromMap(m as Map<String, dynamic>)).toList());
+                            }
+                            if (series != null) {
+                              contentProvider.loadSeries(series.map((s) => Content.fromMap(s as Map<String, dynamic>)).toList());
+                            }
+
+                            // Restore cached playlist if present
+                            final cached = data['cached_playlist'] as String?;
+                            final channelProvider = Provider.of<ChannelProvider>(context, listen: false);
+                            if (cached != null && cached.isNotEmpty) {
+                              await prefs.setString('cached_playlist', cached);
+                              try {
+                                channelProvider.loadPlaylistFromString(cached);
+                              } catch (_) {
+                                // ignore errors; the cache may be incompatible
+                              }
+                            }
+
+                            // Restore favorites by matching channel ids
+                            final favorites = data['favorites'] as List<dynamic>?;
+                            if (favorites != null) {
+                              final favIds = favorites.map((f) => (f as Map<String, dynamic>)['id']?.toString()).whereType<String>().toSet();
+                              for (final ch in channelProvider.channels) {
+                                if (favIds.contains(ch.id)) {
+                                  channelProvider.addToFavorites(ch);
+                                }
+                              }
+                            }
+
+                            if (!mounted) return;
+                            messenger.showSnackBar(const SnackBar(content: Text('Import completed.')));
+                          } catch (e) {
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Import failed: $e')),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.upload_file),
+                        label: const Text('Import Backup'),
+                      ),
+                    ),
                   ],
                 ),
               ],
-            );
-          },
+            ),
+          ],
         );
       },
     );
@@ -1980,146 +1926,19 @@ class _SettingsScreenState extends State<SettingsScreen>
           ],
         ),
         
-        // Google Drive Sync
-        _buildSafeConsumer<GoogleDriveSyncService>(
-          builder: (context, driveService) {
-            return _buildSectionCard(
-              title: 'Google Drive Sync',
-              subtitle: ServiceValidator.isGoogleDriveAvailable
-                  ? 'FREE - Sync favorites, playlists, and settings to your Google Drive'
-                  : 'Requires OAuth setup - see SETUP_GUIDE.md',
-              children: [
-                if (!driveService.isSignedIn) ...[
-                  const Text(
-                    'Sign in with your Google account to enable cloud sync.',
-                    style: TextStyle(color: AppTheme.textSecondary),
-                  ),
-                  const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                    onPressed: () async {
-                      final messenger = ScaffoldMessenger.of(context);
-                      final success = await driveService.signIn();
-                      if (!mounted) return;
-                      messenger.showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            success ? 'Signed in successfully!' : 'Sign-in failed',
-                          ),
-                          backgroundColor: success ? Colors.green : AppTheme.accentRed,
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.login),
-                    label: const Text('Sign in with Google'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryBlue,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 16,
-                      ),
-                    ),
-                  ),
-                ] else ...[
-                  ListTile(
-                    leading: const Icon(
-                      Icons.account_circle,
-                      color: AppTheme.primaryBlue,
-                    ),
-                    title: Text(driveService.userName ?? 'Signed In'),
-                    subtitle: Text(driveService.userEmail ?? ''),
-                  ),
-                  const Divider(),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: driveService.isSyncing
-                              ? null
-                              : () async {
-                                  final messenger = ScaffoldMessenger.of(context);
-                                  final success = await driveService.syncToCloud(
-                                    favorites: {},
-                                    playlists: {},
-                                    watchHistory: {},
-                                    settings: {},
-                                  );
-                                  if (!mounted) return;
-                                  messenger.showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        success ? 'Synced successfully!' : 'Sync failed',
-                                      ),
-                                      backgroundColor: success ? Colors.green : AppTheme.accentRed,
-                                    ),
-                                  );
-                                },
-                          icon: driveService.isSyncing
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.cloud_upload),
-                          label: Text(
-                            driveService.isSyncing ? 'Syncing...' : 'Sync Now',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: driveService.isSyncing
-                              ? null
-                              : () async {
-                                  final messenger = ScaffoldMessenger.of(context);
-                                  final data = await driveService.restoreFromCloud();
-                                  if (!mounted) return;
-                                  messenger.showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        data != null ? 'Restored successfully!' : 'Restore failed',
-                                      ),
-                                      backgroundColor: data != null ? Colors.green : AppTheme.accentRed,
-                                    ),
-                                  );
-                                },
-                          icon: const Icon(Icons.cloud_download),
-                          label: const Text('Restore'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  if (driveService.lastSyncTime != null)
-                    Text(
-                      'Last synced: ${driveService.lastSyncTime}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-                  TextButton.icon(
-                    onPressed: () async {
-                      final messenger = ScaffoldMessenger.of(context);
-                      await driveService.signOut();
-                      if (mounted) {
-                        messenger.showSnackBar(
-                          const SnackBar(
-                            content: Text('Signed out successfully'),
-                          ),
-                        );
-                      }
-                    },
-                    icon: const Icon(Icons.logout),
-                    label: const Text('Sign Out'),
-                  ),
-                ],
-              ],
-            );
-          },
+        // Google Drive Sync removed: replaced by local backup controls
+        _buildSectionCard(
+          title: 'Cloud Sync (Removed)',
+          subtitle: 'Google Drive integration has been removed',
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Text(
+                'Google Drive syncing has been removed to simplify setup. Use the Local Backup section above to export and import your settings, playlists, and favorites as a local JSON file.',
+                style: TextStyle(color: AppTheme.textSecondary),
+              ),
+            ),
+          ],
         ),
 
         // OpenSubtitles Integration
@@ -3456,13 +3275,10 @@ class _SettingsScreenState extends State<SettingsScreen>
     }
   }
 
-  String _formatDateTime(DateTime dateTime) {
-    return '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
-  }
+  
 
   Widget _buildServiceStatusGrid() {
     final services = [
-      {'name': 'Google Drive', 'key': 'google_drive', 'icon': Icons.cloud},
       {'name': 'OpenSubtitles', 'key': 'opensubtitles', 'icon': Icons.subtitles},
       {'name': 'TMDB', 'key': 'tmdb', 'icon': Icons.movie},
       {'name': 'AI Upscaling', 'key': 'ai_upscaling', 'icon': Icons.high_quality},

@@ -9,7 +9,6 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/services/voice_search_service.dart';
 import 'package:iptv_player/services/epg_service.dart';
-import 'package:iptv_player/services/google_drive_sync_service.dart';
 import 'package:iptv_player/services/ai_upscaling_service.dart';
 import 'package:iptv_player/services/mlkit_translation_service.dart';
 import 'package:iptv_player/services/live_transcription_service.dart';
@@ -327,64 +326,77 @@ class _MyAppState extends State<MyApp> {
           ChangeNotifierProvider(
             create: (_) {
               final service = VoiceSearchService();
-              service.initialize().catchError((e) => debugPrint('VoiceSearch init error: $e'));
+              service.initialize().catchError((e) {
+                debugPrint('VoiceSearch init error: $e');
+              });
               return service;
             },
           ),
           ChangeNotifierProvider(create: (_) => EpgService()),
-          ChangeNotifierProvider(
-            create: (_) {
-              final service = GoogleDriveSyncService();
-              service.initialize().catchError((e) => debugPrint('GoogleDrive init error: $e'));
-              return service;
-            },
-          ),
+          // Google Drive sync removed; use LocalBackupService for local exports/imports.
           ChangeNotifierProvider(
             create: (_) {
               final service = AIModelManager();
-              service.initialize().catchError((e) => debugPrint('AIModel init error: $e'));
+              service.initialize().catchError((e) {
+                debugPrint('AIModel init error: $e');
+              });
               return service;
             },
           ),
           ChangeNotifierProvider(
             create: (_) {
               final service = AIUpscalingService();
-              service.initialize().catchError((e) => debugPrint('AIUpscaling init error: $e'));
+              service.initialize().catchError((e) {
+                debugPrint('AIUpscaling init error: $e');
+                return false;
+              });
               return service;
             },
           ),
           ChangeNotifierProvider(
             create: (_) {
               final service = MLKitTranslationService();
-              service.initialize().catchError((e) => debugPrint('MLKitTranslation init error: $e'));
+              service.initialize().catchError((e) {
+                debugPrint('MLKitTranslation init error: $e');
+                return false;
+              });
               return service;
             },
           ),
           ChangeNotifierProvider(
             create: (_) {
               final service = LiveTranscriptionService();
-              service.initialize().catchError((e) => debugPrint('LiveTranscription init error: $e'));
+              service.initialize().catchError((e) {
+                debugPrint('LiveTranscription init error: $e');
+                return false;
+              });
               return service;
             },
           ),
           ChangeNotifierProvider(
             create: (_) {
               final service = OpenSubtitlesService();
-              service.initialize().catchError((e) => debugPrint('OpenSubtitles init error: $e'));
+              service.initialize().catchError((e) {
+                debugPrint('OpenSubtitles init error: $e');
+              });
               return service;
             },
           ),
           ChangeNotifierProvider(
             create: (_) {
               final service = RealDebridService();
-              service.initialize().catchError((e) => debugPrint('RealDebrid init error: $e'));
+              service.initialize().catchError((e) {
+                debugPrint('RealDebrid init error: $e');
+              });
               return service;
             },
           ),
           ChangeNotifierProvider(
             create: (_) {
               final service = WhisperSpeechService();
-              service.initialize().catchError((e) => debugPrint('WhisperSpeech init error: $e'));
+              service.initialize().catchError((e) {
+                debugPrint('WhisperSpeech init error: $e');
+              });
               return service;
             },
           ),

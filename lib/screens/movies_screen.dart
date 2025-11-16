@@ -188,44 +188,42 @@ class _MoviesScreenState extends State<MoviesScreen> {
   Widget _buildEmptyState(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.darkBackground,
-      body: Container(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.movie,
-                size: 80,
-                color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.movie,
+              size: 80,
+              color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
+            ),
+            const SizedBox(height: AppSizes.lg),
+            Text(
+              'No Movies Available',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            const SizedBox(height: AppSizes.sm),
+            Text(
+              'Load a playlist with VOD content from Settings',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSizes.xl),
+            ElevatedButton.icon(
+              onPressed: () {
+                Future.delayed(const Duration(milliseconds: 100), () {
+                  if (context.mounted) context.go('/settings');
+                });
+              },
+              icon: const Icon(Icons.settings),
+              label: const Text('Go to Settings'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryBlue,
               ),
-              const SizedBox(height: AppSizes.lg),
-              Text(
-                'No Movies Available',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-              const SizedBox(height: AppSizes.sm),
-              Text(
-                'Load a playlist with VOD content from Settings',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppSizes.xl),
-              ElevatedButton.icon(
-                onPressed: () {
-                  Future.delayed(const Duration(milliseconds: 100), () {
-                    if (context.mounted) context.go('/settings');
-                  });
-                },
-                icon: const Icon(Icons.settings),
-                label: const Text('Go to Settings'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryBlue,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -271,7 +269,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
                 borderRadius: BorderRadius.circular(AppSizes.radiusMd),
                 child: Stack(
                   children: [
-                    Container(
+                    ColoredBox(
                       color: AppTheme.cardBackground,
                       child: movie.imageUrl != null
                           ? Image.network(
@@ -329,7 +327,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
   }
 
   Widget _buildPlaceholder(String title) {
-    return Container(
+    return ColoredBox(
       color: AppTheme.cardBackground,
       child: Center(
         child: Column(

@@ -1,4 +1,4 @@
-package com.iptvplayer.iptv_player
+package com.risa.app
 
 import android.content.BroadcastReceiver
 import android.content.Context

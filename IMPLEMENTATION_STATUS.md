@@ -1,37 +1,16 @@
 # Implementation Status Report
 
-## ✅ Google Drive Cloud Sync - COMPLETE
+## Google Drive Cloud Sync — REMOVED
 
-### Service Implementation (100%)
-- ✅ `GoogleDriveSyncService` fully implemented (290 lines)
-- ✅ Google Sign-In integration with Drive API scopes
-- ✅ `signIn()` and `signOut()` methods
-- ✅ `syncToCloud()` - uploads favorites, playlists, watch history, settings
-- ✅ `restoreFromCloud()` - downloads and restores data
-- ✅ `getStorageInfo()` - retrieves Drive quota information
-- ✅ Automatic folder creation ("StreamHubData" in appDataFolder)
-- ✅ JSON serialization/deserialization
-- ✅ Error handling and status tracking
-- ✅ GoogleAuthClient for API authentication
+The Google Drive cloud sync feature has been intentionally removed from the codebase and replaced by a local export/import backup workflow. The old Drive service implementations and dependencies have been deprecated.
 
-### Dependencies (100%)
-- ✅ googleapis: ^13.2.0
-- ✅ googleapis_auth: ^1.6.0
-- ✅ google_sign_in: ^6.2.2
-- ✅ All added to pubspec.yaml under dependencies
+### Current State
+- ❌ Drive integration removed from runtime (use `LocalBackupService` in `lib/services/local_backup_service.dart`).
+- ⚠️ Any remaining references in docs or legacy scripts should be updated or archived.
 
-### State Management (100%)
-- ✅ Provider configured in main.dart
-- ✅ ChangeNotifierProvider initialization
-- ✅ Cascade operator for initialize() call
+### Migration Notes
+- If you previously relied on Drive sync, export a local backup (`Settings > Account > Export Backup`) and transfer that file to your target device for import.
 
-### Configuration Required ⚠️
-- ⏸️ OAuth 2.0 credentials (see OAUTH_SETUP_GUIDE.md)
-- ⏸️ Google Cloud project setup
-- ⏸️ Google Drive API enabled
-- ⏸️ OAuth consent screen configured
-
-**Note:** Service is fully implemented and ready to use. Only OAuth configuration by end-user is required for it to function.
 
 ---
 
@@ -77,7 +56,7 @@
 ## 🚧 Settings UI Integration - PARTIAL
 
 ### Current Status
-- ✅ Imports added (provider, google_drive_sync_service, ai_upscaling_service)
+- ✅ Imports added (provider, ai_upscaling_service)
 - ✅ State variables added (_aiUpscalingEnabled, _aiQuality)
 - ✅ Python script created to insert UI sections
 - ⏸️ UI sections not verified in settings_screen.dart
@@ -85,13 +64,10 @@
 ### What's Needed
 The settings screen needs two new sections:
 
-1. **Google Drive Sync Card** (in Account settings tab):
-   - Sign In/Sign Out button
-   - Sync Now button
-   - Restore Data button
-   - Last sync time display
-   - Storage info (used/total)
-   - Current user email
+1. **Local Backup Card** (in Account settings tab):
+  - Export Backup button
+  - Import Backup button (with pre-backup option)
+  - Show last exported backup path/time
 
 2. **AI Enhancement Card** (in Playback settings tab):
    - Enable AI Upscaling toggle

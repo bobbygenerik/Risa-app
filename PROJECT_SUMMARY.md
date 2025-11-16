@@ -101,7 +101,7 @@ iptv-player/
 │   │   ├── m3u_parser_service.dart  # Parse M3U playlists
 │   │   ├── epg_service.dart         # EPG data management
 │   │   ├── voice_search_service.dart # Speech-to-text
-│   │   ├── google_drive_sync_service.dart # Cloud sync (FREE)
+│   │   ├── (cloud sync removed — use `lib/services/local_backup_service.dart`)
 │   │   └── ai_upscaling_service.dart # AI upscaling (FREE)
 │   ├── providers/                    # State management
 │   │   └── channel_provider.dart    # Channel state & favorites
@@ -156,7 +156,7 @@ iptv-player/
 
 ### 5. Settings Screen (`/settings`)
 **7 Tabs:**
-- Account (Google Drive sync, logout)
+-- Account (Local Backup — Export / Import, logout)
 - General (Xtream Codes, M3U, Real-Debrid, startup)
 - Playback (OpenSubtitles, AI upscaling, video settings)
 - EPG (data sources, refresh, time format)
@@ -194,11 +194,9 @@ iptv-player/
    - Channel-program mapping
    - Error handling & retries
 
-4. **GoogleDriveSyncService** (lib/services/google_drive_sync_service.dart)
-   - Google Sign-In integration
-   - Cloud sync (favorites, playlists, history, settings)
-   - Automatic/manual sync
-   - Storage quota monitoring
+4. **Cloud Sync (Removed)**
+   - Google Drive sync has been removed and replaced by a local export/import backup workflow (`LocalBackupService`).
+   - Export backups via `Settings > Account > Export Backup`; import via `Settings > Account > Import Backup`.
 
 5. **AIUpscalingService** (lib/services/ai_upscaling_service.dart)
    - TensorFlow Lite model loading
