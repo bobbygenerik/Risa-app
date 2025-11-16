@@ -519,6 +519,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildBannerPlaceholder() {
     return Container(
       decoration: BoxDecoration(

@@ -3561,13 +3561,6 @@ class _SettingsScreenState extends State<SettingsScreen>
     return Consumer<T>(
       builder: (context, service, child) {
         try {
-          if (service == null) {
-            return _buildSectionCard(
-              title: 'Service Unavailable',
-              subtitle: 'Service ${T.toString()} not initialized',
-              children: [Text('${T.toString()} service is not available')],
-            );
-          }
           return builder(context, service);
         } catch (e) {
           debugPrint('Error in consumer for ${T.toString()}: $e');

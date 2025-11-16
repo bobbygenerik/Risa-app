@@ -297,6 +297,7 @@ class AIUpscalingService extends ChangeNotifier {
   }
 
   /// Convert image to tensor format
+  // ignore: unused_element
   List<List<List<List<double>>>> _imageToTensor(img.Image image) {
     final buffer = List.generate(
       1,
@@ -319,6 +320,7 @@ class AIUpscalingService extends ChangeNotifier {
   }
 
   /// Convert tensor back to image
+  // ignore: unused_element
   img.Image _tensorToImage(List<List<List<double>>> tensor, int width, int height) {
     final image = img.Image(width: width, height: height);
     

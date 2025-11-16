@@ -1,7 +1,6 @@
 #!/usr/bin/env dart
 
 import 'dart:io';
-import 'dart:convert';
 
 /// Comprehensive functionality test for IPTV Player
 /// Tests all services and features to ensure they work correctly

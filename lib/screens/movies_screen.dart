@@ -498,6 +498,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildBannerPlaceholder() {
     return Container(
       decoration: BoxDecoration(
