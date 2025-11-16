@@ -18,7 +18,7 @@ import 'package:record/record.dart';
 class IntegratedTranscriptionService extends ChangeNotifier {
   // Speech recognition
   final stt.SpeechToText _speech = stt.SpeechToText();
-  final Record _recorder = Record();
+  final AudioRecorder _recorder = AudioRecorder();
 
   // Translation (ON-DEVICE)
   OnDeviceTranslator? _translator;

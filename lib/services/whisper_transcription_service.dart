@@ -21,7 +21,7 @@ class WhisperTranscriptionService extends ChangeNotifier {
   bool _isWhisperLoaded = false;
 
   // Audio recording
-  final Record _recorder = Record();
+  final AudioRecorder _recorder = AudioRecorder();
 
   // Translation (ON-DEVICE)
   OnDeviceTranslator? _translator;
@@ -220,9 +220,11 @@ class WhisperTranscriptionService extends ChangeNotifier {
             '${appDir.path}/transcription_audio_${DateTime.now().millisecondsSinceEpoch}.wav';
 
         await _recorder.start(
+          RecordConfig(
+            encoder: AudioEncoder.wav,
+            sampleRate: _sampleRate,
+          ),
           path: _currentAudioPath!,
-          encoder: AudioEncoder.wav,
-          samplingRate: _sampleRate,
         );
 
         _isTranscribing = true;
@@ -332,9 +334,11 @@ class WhisperTranscriptionService extends ChangeNotifier {
             '${appDir.path}/transcription_audio_${DateTime.now().millisecondsSinceEpoch}.wav';
 
         await _recorder.start(
+          RecordConfig(
+            encoder: AudioEncoder.wav,
+            sampleRate: _sampleRate,
+          ),
           path: _currentAudioPath!,
-          encoder: AudioEncoder.wav,
-          samplingRate: _sampleRate,
         );
       }
     } catch (e) {
