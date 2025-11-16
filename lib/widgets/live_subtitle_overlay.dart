@@ -37,7 +37,7 @@ class LiveSubtitleOverlay extends StatelessWidget {
           left: 20,
           right: 20,
           child: Container(
-            padding: EdgeInsets.symmetric(
+            padding: const EdgeInsets.symmetric(
               horizontal: AppSizes.md,
               vertical: AppSizes.sm,
             ),
@@ -79,7 +79,7 @@ class TranscriptionControlPanel extends StatelessWidget {
       builder: (context, service, child) {
         return Card(
           child: Padding(
-            padding: EdgeInsets.all(AppSizes.md),
+            padding: const EdgeInsets.all(AppSizes.md),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -87,7 +87,7 @@ class TranscriptionControlPanel extends StatelessWidget {
                   'Live Transcription & Translation',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
-                SizedBox(height: AppSizes.md),
+                const SizedBox(height: AppSizes.md),
 
                 // Transcription toggle
                 SwitchListTile(
@@ -116,7 +116,7 @@ class TranscriptionControlPanel extends StatelessWidget {
                 ),
 
                 if (service.isTranslating) ...[
-                  SizedBox(height: AppSizes.md),
+                  const SizedBox(height: AppSizes.md),
 
                   // Source language
                   _buildLanguageDropdown(
@@ -127,7 +127,7 @@ class TranscriptionControlPanel extends StatelessWidget {
                     (lang) async => await service.setSourceLanguage(lang),
                   ),
 
-                  SizedBox(height: AppSizes.sm),
+                  const SizedBox(height: AppSizes.sm),
 
                   // Target language
                   _buildLanguageDropdown(
@@ -138,7 +138,7 @@ class TranscriptionControlPanel extends StatelessWidget {
                     (lang) async => await service.setTargetLanguage(lang),
                   ),
 
-                  SizedBox(height: AppSizes.md),
+                  const SizedBox(height: AppSizes.md),
 
                   // Download models button
                   if (service.isDownloadingModels)
@@ -147,7 +147,7 @@ class TranscriptionControlPanel extends StatelessWidget {
                         LinearProgressIndicator(
                           value: service.downloadProgress,
                         ),
-                        SizedBox(height: AppSizes.sm),
+                        const SizedBox(height: AppSizes.sm),
                         Text(
                           'Downloading language models... ${(service.downloadProgress * 100).toInt()}%',
                           style: Theme.of(context).textTheme.bodySmall,
@@ -172,7 +172,7 @@ class TranscriptionControlPanel extends StatelessWidget {
                   onChanged: service.setTTSEnabled,
                 ),
 
-                SizedBox(height: AppSizes.md),
+                const SizedBox(height: AppSizes.md),
 
                 // Actions
                 Row(
@@ -191,7 +191,7 @@ class TranscriptionControlPanel extends StatelessWidget {
                       icon: const Icon(Icons.clear),
                       label: const Text('Clear'),
                     ),
-                    SizedBox(width: AppSizes.sm),
+                    const SizedBox(width: AppSizes.sm),
                     ElevatedButton.icon(
                       onPressed: service.subtitles.isEmpty
                           ? null
@@ -214,7 +214,7 @@ class TranscriptionControlPanel extends StatelessWidget {
                 ),
 
                 // Subtitle count
-                SizedBox(height: AppSizes.sm),
+                const SizedBox(height: AppSizes.sm),
                 Text(
                   '${service.subtitles.length} subtitle entries',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -240,9 +240,8 @@ class TranscriptionControlPanel extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: Theme.of(context).textTheme.bodyMedium),
-        SizedBox(height: 4),
+        const SizedBox(height: 4),
         DropdownButtonFormField<dynamic>(
-          // Use initialValue to avoid deprecated `value` usage.
           initialValue: currentLanguage,
           decoration: const InputDecoration(
             border: OutlineInputBorder(),

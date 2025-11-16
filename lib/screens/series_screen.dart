@@ -135,7 +135,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
                     _buildHeroBanner(featuredShow),
                     // Recently Added Series
                     if (recentSeries.isNotEmpty) ...[
-                      Padding(
+                      const Padding(
                         padding: EdgeInsets.all(24),
                         child: Align(
                           alignment: Alignment.centerLeft,
@@ -150,11 +150,11 @@ class _SeriesScreenState extends State<SeriesScreen> {
                         ),
                       ),
                       _buildSeriesRow(context, recentSeries),
-                      SizedBox(height: 40),
+                      const SizedBox(height: 40),
                     ],
                     // All Series by Genre
                     ..._buildGenreSections(context, series),
-                    SizedBox(height: 40),
+                    const SizedBox(height: 40),
                   ],
                 ),
               ),
@@ -198,12 +198,12 @@ class _SeriesScreenState extends State<SeriesScreen> {
                 size: 80,
                 color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
               ),
-              SizedBox(height: AppSizes.lg),
+              const SizedBox(height: AppSizes.lg),
               Text(
                 'No Series Available',
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
-              SizedBox(height: AppSizes.sm),
+              const SizedBox(height: AppSizes.sm),
               Text(
                 'Load a playlist with series content from Settings',
                 style: Theme.of(
@@ -211,7 +211,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
                 ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
                 textAlign: TextAlign.center,
               ),
-              SizedBox(height: AppSizes.xl),
+              const SizedBox(height: AppSizes.xl),
               ElevatedButton.icon(
                 onPressed: () {
                   Future.delayed(const Duration(milliseconds: 100), () {
@@ -270,7 +270,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
 
     return Container(
       width: 140,
-      margin: EdgeInsets.only(right: AppSizes.md),
+      margin: const EdgeInsets.only(right: AppSizes.md),
       child: InkWell(
         onTap: () {
           context.push('/content/${firstEpisode.id}', extra: firstEpisode);
@@ -303,7 +303,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
                       top: 8,
                       right: 8,
                       child: Container(
-                        padding: EdgeInsets.symmetric(
+                        padding: const EdgeInsets.symmetric(
                           horizontal: 8,
                           vertical: 4,
                         ),
@@ -313,7 +313,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
                         ),
                         child: Text(
                           '${episodes.length} EP',
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
@@ -325,7 +325,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
                 ),
               ),
             ),
-            SizedBox(height: AppSizes.xs),
+            const SizedBox(height: AppSizes.xs),
             // Series Title
             Text(
               title,
@@ -361,12 +361,12 @@ class _SeriesScreenState extends State<SeriesScreen> {
               size: 40,
               color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Padding(
-              padding: EdgeInsets.all(8),
+              padding: const EdgeInsets.all(8),
               child: Text(
                 title,
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
                 textAlign: TextAlign.center,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
@@ -396,9 +396,9 @@ class _SeriesScreenState extends State<SeriesScreen> {
     for (final entry in genreMap.entries) {
       sections.addAll([
         _buildSectionHeader(context, entry.key),
-        SizedBox(height: AppSizes.md),
+        const SizedBox(height: AppSizes.md),
         _buildSeriesRow(context, entry.value),
-        SizedBox(height: AppSizes.xl),
+        const SizedBox(height: AppSizes.xl),
       ]);
     }
 
@@ -416,8 +416,8 @@ class _SeriesScreenState extends State<SeriesScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Colors.black.withOpacity(0.3),
-              Colors.black.withOpacity(0.7),
+              Colors.black.withAlpha((0.3 * 255).round()),
+              Colors.black.withAlpha((0.7 * 255).round()),
             ],
           ),
         ),
@@ -442,15 +442,15 @@ class _SeriesScreenState extends State<SeriesScreen> {
               left: 0,
               right: 0,
               child: Container(
-                padding: EdgeInsets.all(24),
+                padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withOpacity(0.9),
-                    ],
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withAlpha((0.9 * 255).round()),
+                        ],
                   ),
                 ),
                 child: Column(
@@ -459,7 +459,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
                   children: [
                     Text(
                       featuredSeries.title,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: AppTheme.textPrimary,
                         fontSize: 28,
                         fontWeight: FontWeight.w700,
@@ -467,13 +467,13 @@ class _SeriesScreenState extends State<SeriesScreen> {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(height: 12),
+                    const SizedBox(height: 12),
                     Row(
                       children: [
-                        Icon(Icons.play_circle,
+                        const Icon(Icons.play_circle,
                             color: AppTheme.accentOrange, size: 20),
-                        SizedBox(width: 8),
-                        Text(
+                        const SizedBox(width: 8),
+                        const Text(
                           'Watch Now',
                           style: TextStyle(
                             color: AppTheme.textSecondary,
@@ -481,12 +481,12 @@ class _SeriesScreenState extends State<SeriesScreen> {
                           ),
                         ),
                         if (featuredSeries.rating != null) ...[
-                          SizedBox(width: 16),
-                          Icon(Icons.star, color: Colors.amber, size: 16),
-                          SizedBox(width: 4),
+                          const SizedBox(width: 16),
+                          const Icon(Icons.star, color: Colors.amber, size: 16),
+                          const SizedBox(width: 4),
                           Text(
                             featuredSeries.rating!.toStringAsFixed(1),
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: AppTheme.textSecondary,
                               fontSize: 14,
                             ),
@@ -511,8 +511,8 @@ class _SeriesScreenState extends State<SeriesScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppTheme.primaryBlue.withOpacity(0.2),
-            AppTheme.accentOrange.withOpacity(0.2),
+            AppTheme.primaryBlue.withAlpha((0.2 * 255).round()),
+            AppTheme.accentOrange.withAlpha((0.2 * 255).round()),
           ],
         ),
       ),
@@ -526,8 +526,8 @@ class _SeriesScreenState extends State<SeriesScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppTheme.primaryBlue.withOpacity(0.2),
-            AppTheme.accentOrange.withOpacity(0.2),
+            AppTheme.primaryBlue.withAlpha((0.2 * 255).round()),
+            AppTheme.accentOrange.withAlpha((0.2 * 255).round()),
           ],
         ),
       ),

@@ -17,7 +17,7 @@ class CategoryScreen extends StatelessWidget {
         final channels = channelProvider.filterByCategory(category);
 
         return Padding(
-          padding: EdgeInsets.all(AppSizes.lg),
+          padding: const EdgeInsets.all(AppSizes.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -44,14 +44,14 @@ class CategoryScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              SizedBox(height: AppSizes.xl),
+              const SizedBox(height: AppSizes.xl),
 
               // Channels Grid
               Expanded(
                 child: channels.isEmpty
                     ? _buildEmptyState()
                     : GridView.builder(
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount:
                               6, // Increased from 4 to 6 for smaller cards
                           crossAxisSpacing: AppSizes.md,
@@ -87,7 +87,7 @@ class CategoryScreen extends StatelessWidget {
             size: 80,
             color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
           ),
-          SizedBox(height: AppSizes.lg),
+          const SizedBox(height: AppSizes.lg),
           const Text(
             'No channels in this category',
             style: TextStyle(fontSize: 18),
@@ -116,7 +116,7 @@ class CategoryScreen extends StatelessWidget {
             Expanded(
               child: Container(
                 width: double.infinity,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: AppTheme.cardBackground,
                   borderRadius: BorderRadius.vertical(
                     top: Radius.circular(AppSizes.radiusMd),
@@ -127,12 +127,12 @@ class CategoryScreen extends StatelessWidget {
                     // Logo
                     if (channel.logoUrl != null && channel.logoUrl!.isNotEmpty)
                       ClipRRect(
-                        borderRadius: BorderRadius.vertical(
+                        borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(AppSizes.radiusMd),
                         ),
                         child: Center(
                           child: Padding(
-                            padding: EdgeInsets.all(AppSizes.sm),
+                            padding: const EdgeInsets.all(AppSizes.sm),
                             child: Image.network(
                               channel.logoUrl!,
                               fit: BoxFit
@@ -201,7 +201,7 @@ class CategoryScreen extends StatelessWidget {
 
             // Channel Info
             Padding(
-              padding: EdgeInsets.all(AppSizes.xs),
+              padding: const EdgeInsets.all(AppSizes.xs),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

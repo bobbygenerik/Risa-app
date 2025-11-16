@@ -135,7 +135,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
                     _buildHeroBanner(featuredMovie),
                     // Recently Added Movies
                     if (recentMovies.isNotEmpty) ...[
-                      Padding(
+                      const Padding(
                         padding: EdgeInsets.all(24),
                         child: Align(
                           alignment: Alignment.centerLeft,
@@ -150,11 +150,11 @@ class _MoviesScreenState extends State<MoviesScreen> {
                         ),
                       ),
                       _buildMoviesRow(context, recentMovies),
-                      SizedBox(height: 40),
+                      const SizedBox(height: 40),
                     ],
                     // All Movies by Genre
                     ..._buildGenreSections(context, movies),
-                    SizedBox(height: 40),
+                    const SizedBox(height: 40),
                   ],
                 ),
               ),
@@ -198,12 +198,12 @@ class _MoviesScreenState extends State<MoviesScreen> {
                 size: 80,
                 color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
               ),
-              SizedBox(height: AppSizes.lg),
+              const SizedBox(height: AppSizes.lg),
               Text(
                 'No Movies Available',
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
-              SizedBox(height: AppSizes.sm),
+              const SizedBox(height: AppSizes.sm),
               Text(
                 'Load a playlist with VOD content from Settings',
                 style: Theme.of(
@@ -211,7 +211,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
                 ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
                 textAlign: TextAlign.center,
               ),
-              SizedBox(height: AppSizes.xl),
+              const SizedBox(height: AppSizes.xl),
               ElevatedButton.icon(
                 onPressed: () {
                   Future.delayed(const Duration(milliseconds: 100), () {
@@ -257,7 +257,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
   Widget _buildMovieCard(BuildContext context, Content movie) {
     return Container(
       width: 140,
-      margin: EdgeInsets.only(right: AppSizes.md),
+      margin: const EdgeInsets.only(right: AppSizes.md),
       child: InkWell(
         onTap: () {
           context.push('/content/${movie.id}', extra: movie);
@@ -304,7 +304,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
                 ),
               ),
             ),
-            SizedBox(height: AppSizes.xs),
+            const SizedBox(height: AppSizes.xs),
             // Movie Title
             Text(
               movie.title,
@@ -340,12 +340,12 @@ class _MoviesScreenState extends State<MoviesScreen> {
               size: 40,
               color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Padding(
-              padding: EdgeInsets.all(8),
+              padding: const EdgeInsets.all(8),
               child: Text(
                 title,
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
                 textAlign: TextAlign.center,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
@@ -375,9 +375,9 @@ class _MoviesScreenState extends State<MoviesScreen> {
     for (final entry in genreMap.entries) {
       sections.addAll([
         _buildSectionHeader(context, entry.key),
-        SizedBox(height: AppSizes.md),
+        const SizedBox(height: AppSizes.md),
         _buildMoviesRow(context, entry.value),
-        SizedBox(height: AppSizes.xl),
+        const SizedBox(height: AppSizes.xl),
       ]);
     }
 
@@ -395,8 +395,8 @@ class _MoviesScreenState extends State<MoviesScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Colors.black.withOpacity(0.3),
-              Colors.black.withOpacity(0.7),
+              Colors.black.withAlpha((0.3 * 255).round()),
+              Colors.black.withAlpha((0.7 * 255).round()),
             ],
           ),
         ),
@@ -421,15 +421,15 @@ class _MoviesScreenState extends State<MoviesScreen> {
               left: 0,
               right: 0,
               child: Container(
-                padding: EdgeInsets.all(24),
+                padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withOpacity(0.9),
-                    ],
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withAlpha((0.9 * 255).round()),
+                        ],
                   ),
                 ),
                 child: Column(
@@ -438,7 +438,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
                   children: [
                     Text(
                       featuredMovie.title,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: AppTheme.textPrimary,
                         fontSize: 28,
                         fontWeight: FontWeight.w700,
@@ -446,13 +446,13 @@ class _MoviesScreenState extends State<MoviesScreen> {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(height: 12),
+                    const SizedBox(height: 12),
                     Row(
                       children: [
-                        Icon(Icons.play_circle,
+                        const Icon(Icons.play_circle,
                             color: AppTheme.accentOrange, size: 20),
-                        SizedBox(width: 8),
-                        Text(
+                        const SizedBox(width: 8),
+                        const Text(
                           'Play Now',
                           style: TextStyle(
                             color: AppTheme.textSecondary,
@@ -460,12 +460,12 @@ class _MoviesScreenState extends State<MoviesScreen> {
                           ),
                         ),
                         if (featuredMovie.rating != null) ...[
-                          SizedBox(width: 16),
-                          Icon(Icons.star, color: Colors.amber, size: 16),
-                          SizedBox(width: 4),
+                          const SizedBox(width: 16),
+                          const Icon(Icons.star, color: Colors.amber, size: 16),
+                          const SizedBox(width: 4),
                           Text(
                             featuredMovie.rating!.toStringAsFixed(1),
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: AppTheme.textSecondary,
                               fontSize: 14,
                             ),
@@ -490,8 +490,8 @@ class _MoviesScreenState extends State<MoviesScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppTheme.primaryBlue.withOpacity(0.2),
-            AppTheme.accentOrange.withOpacity(0.2),
+            AppTheme.primaryBlue.withAlpha((0.2 * 255).round()),
+            AppTheme.accentOrange.withAlpha((0.2 * 255).round()),
           ],
         ),
       ),
@@ -505,8 +505,8 @@ class _MoviesScreenState extends State<MoviesScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppTheme.primaryBlue.withOpacity(0.2),
-            AppTheme.accentOrange.withOpacity(0.2),
+            AppTheme.primaryBlue.withAlpha((0.2 * 255).round()),
+            AppTheme.accentOrange.withAlpha((0.2 * 255).round()),
           ],
         ),
       ),

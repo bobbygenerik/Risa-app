@@ -445,9 +445,9 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                             color: AppTheme.accentRed,
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: Row(
+                          child: const Row(
                             mainAxisSize: MainAxisSize.min,
-                            children: const [
+                            children: [
                               Icon(
                                 Icons.volume_up,
                                 size: 12,
@@ -477,7 +477,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                 right: 8,
                 child: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: AppTheme.primaryBlue,
                     shape: BoxShape.circle,
                   ),

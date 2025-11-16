@@ -1,22 +1,21 @@
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 
 // Conditional import for TensorFlow Lite (not available on web)
-// import 'package:tflite_flutter/tflite_flutter.dart' if (dart.library.html) 'ai_upscaling_web_stub.dart';
+import 'package:tflite_flutter/tflite_flutter.dart' if (dart.library.html) 'ai_upscaling_web_stub.dart';
 
 /// On-Device AI Upscaling Service
 /// Uses TensorFlow Lite for real-time video upscaling (FREE - no cloud costs)
 /// Requires GPU acceleration for smooth performance
 class AIUpscalingService extends ChangeNotifier {
-  // Interpreter? _interpreter;
+  Interpreter? _interpreter;
   bool _isInitialized = false;
   bool _isEnabled = false;
   String _quality = 'Balanced'; // Fast, Balanced, Quality
-  bool _isGPUAvailable = false;
+  final bool _isGPUAvailable = false;
   bool _isModelLoaded = false;
   bool _isDownloading = false;
   double _downloadProgress = 0.0;
@@ -24,6 +23,7 @@ class AIUpscalingService extends ChangeNotifier {
   // Model information
   static const String _modelAssetPath = 'assets/models/esrgan_x2.tflite';
   static const String _modelFileName = 'esrgan_x2.tflite';
+  // ignore: unused_field
   static const int _inputSize = 64; // Input tile size
   static const int _outputScale = 2; // 2x upscaling
   
@@ -58,14 +58,11 @@ class AIUpscalingService extends ChangeNotifier {
       final downloadedModelPath = '${appDir.path}/$_modelFileName';
       final downloadedModel = File(downloadedModelPath);
       
-      String modelPath;
       if (await downloadedModel.exists()) {
-        modelPath = downloadedModelPath;
-        debugPrint('AI Upscaling: Using downloaded model');
+        debugPrint('AI Upscaling: Using downloaded model at $downloadedModelPath');
       } else {
         // Try to load from assets
-        modelPath = _modelAssetPath;
-        debugPrint('AI Upscaling: Attempting to load from assets');
+        debugPrint('AI Upscaling: Attempting to load from asset $_modelAssetPath');
       }
       
       // TODO: Load TFLite model when tflite_flutter package is available
@@ -291,43 +288,12 @@ class AIUpscalingService extends ChangeNotifier {
 
   /// Upscale a single tile using the AI model
   Future<img.Image?> _upscaleTile(img.Image tile) async {
-    // if (_interpreter == null) return null;
-    return null; // TODO: Implement when TensorFlow Lite is available
+    // If interpreter is not available (TFLite not configured), skip upscaling
+    if (_interpreter == null) return null;
 
-    try {
-      // Resize tile to model input size
-      final resized = img.copyResize(
-        tile,
-        width: _inputSize,
-        height: _inputSize,
-      );
-
-      // Prepare input tensor
-      final input = _imageToTensor(resized);
-      
-      // Prepare output tensor
-      final outputSize = _inputSize * _outputScale;
-      final output = List.generate(
-        1,
-        (_) => List.generate(
-          outputSize,
-          (_) => List.generate(
-            outputSize,
-            (_) => List.filled(3, 0.0),
-          ),
-        ),
-      );
-
-      // Run inference
-      // _interpreter!.run(input, output);
-      // TODO: Implement when TensorFlow Lite is available
-
-      // Convert output tensor back to image
-      return _tensorToImage(output[0], outputSize, outputSize);
-    } catch (e) {
-      debugPrint('Tile upscaling error: $e');
-      return null;
-    }
+    // Placeholder: real implementation requires TensorFlow Lite interpreter
+    // and is intentionally left as a TODO until the native delegate is added.
+    return null;
   }
 
   /// Convert image to tensor format

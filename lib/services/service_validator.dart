@@ -9,7 +9,9 @@ class ServiceValidator {
   static bool get isGoogleDriveAvailable {
     if (kIsWeb) return false;
     if (defaultTargetPlatform != TargetPlatform.android && 
-        defaultTargetPlatform != TargetPlatform.iOS) return false;
+        defaultTargetPlatform != TargetPlatform.iOS) {
+      return false;
+    }
     return OAuthConfig.isGoogleConfigured;
   }
   

@@ -94,7 +94,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
                 context.push('/player', extra: content);
               },
             ),
-                SizedBox(height: 40),
+                const SizedBox(height: 40),
               ],
             ),
           ),
@@ -143,8 +143,8 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.black.withOpacity(0.3),
-                  Colors.black.withOpacity(0.7),
+                  Colors.black.withAlpha((0.3 * 255).round()),
+                  Colors.black.withAlpha((0.7 * 255).round()),
                 ],
               ),
             ),
@@ -170,14 +170,14 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
                   left: 0,
                   right: 0,
                   child: Container(
-                    padding: EdgeInsets.all(24),
+                    padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
                           Colors.transparent,
-                          Colors.black.withOpacity(0.9),
+                          Colors.black.withAlpha((0.9 * 255).round()),
                         ],
                       ),
                     ),
@@ -187,7 +187,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
                       children: [
                         Text(
                           featuredChannel.name,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppTheme.textPrimary,
                             fontSize: 28,
                             fontWeight: FontWeight.w700,
@@ -195,18 +195,18 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        SizedBox(height: 8),
+                        const SizedBox(height: 8),
                         if (featuredChannel.groupTitle != null)
                           Text(
                             featuredChannel.groupTitle!,
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: AppTheme.textSecondary,
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                        SizedBox(height: 12),
-                        Row(
+                        const SizedBox(height: 12),
+                        const Row(
                           children: [
                             Icon(Icons.live_tv,
                                 color: AppTheme.accentOrange, size: 20),
@@ -252,9 +252,9 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            AppTheme.primaryBlue.withOpacity(0.3),
-            AppTheme.accentOrange.withOpacity(0.3),
+            colors: [
+            AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
+            AppTheme.accentOrange.withAlpha((0.3 * 255).round()),
           ],
         ),
       ),
@@ -263,9 +263,9 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.movie,
-                size: 64, color: AppTheme.textSecondary.withOpacity(0.5)),
-            SizedBox(height: 16),
-            Text(
+                size: 64, color: AppTheme.textSecondary.withAlpha((0.5 * 255).round())),
+            const SizedBox(height: 16),
+            const Text(
               'No Content Available',
               style: TextStyle(
                 color: AppTheme.textSecondary,
@@ -285,8 +285,8 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppTheme.primaryBlue.withOpacity(0.2),
-            AppTheme.accentOrange.withOpacity(0.2),
+            AppTheme.primaryBlue.withAlpha((0.2 * 255).round()),
+            AppTheme.accentOrange.withAlpha((0.2 * 255).round()),
           ],
         ),
       ),
@@ -300,16 +300,16 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
     return Consumer<ContentProvider>(
       builder: (context, contentProvider, _) {
         final movies = contentProvider.movies;
-        if (movies.isEmpty) return SizedBox.shrink();
+        if (movies.isEmpty) return const SizedBox.shrink();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: EdgeInsets.all(24),
+              padding: const EdgeInsets.all(24),
               child: Text(
                 title,
-                style: TextStyle(
+                style: const TextStyle(
                   color: AppTheme.textPrimary,
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
@@ -319,7 +319,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
             ),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(
                 children: movies.take(6).map((content) {
                   return GestureDetector(
@@ -327,12 +327,12 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
                     child: Container(
                       width: 320,
                       height: 180,
-                      margin: EdgeInsets.only(right: 16),
+                      margin: const EdgeInsets.only(right: 16),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
                         color: AppTheme.cardBackground,
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.1),
+                          color: Colors.white.withAlpha((0.1 * 255).round()),
                           width: 1,
                         ),
                       ),
@@ -358,17 +358,17 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
                             left: 0,
                             right: 0,
                             child: Container(
-                              padding: EdgeInsets.all(12),
+                              padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,
                                   colors: [
                                     Colors.transparent,
-                                    Colors.black.withOpacity(0.8),
+                                    Colors.black.withAlpha((0.8 * 255).round()),
                                   ],
                                 ),
-                                borderRadius: BorderRadius.only(
+                                borderRadius: const BorderRadius.only(
                                   bottomLeft: Radius.circular(12),
                                   bottomRight: Radius.circular(12),
                                 ),
@@ -379,7 +379,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
                                 children: [
                                   Text(
                                     content.title,
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       color: AppTheme.textPrimary,
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
@@ -387,7 +387,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  SizedBox(height: 4),
+                                  const SizedBox(height: 4),
                                   // Progress bar
                                   Container(
                                     height: 3,
@@ -417,7 +417,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
                 }).toList(),
               ),
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
           ],
         );
       },
@@ -431,16 +431,16 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
     return Consumer<ChannelProvider>(
       builder: (context, channelProvider, _) {
         final channels = channelProvider.channels.take(6).toList();
-        if (channels.isEmpty) return SizedBox.shrink();
+        if (channels.isEmpty) return const SizedBox.shrink();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: EdgeInsets.all(24),
+              padding: const EdgeInsets.all(24),
               child: Text(
                 title,
-                style: TextStyle(
+                style: const TextStyle(
                   color: AppTheme.textPrimary,
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
@@ -450,7 +450,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
             ),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(
                 children: channels.map((channel) {
                   return GestureDetector(
@@ -458,12 +458,12 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
                     child: Container(
                       width: 200,
                       height: 120,
-                      margin: EdgeInsets.only(right: 16),
+                      margin: const EdgeInsets.only(right: 16),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
                         color: AppTheme.cardBackground,
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.1),
+                          color: Colors.white.withAlpha((0.1 * 255).round()),
                           width: 1,
                         ),
                       ),
@@ -486,7 +486,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
                 }).toList(),
               ),
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
           ],
         );
       },
@@ -501,12 +501,12 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.movie,
-                size: 48, color: AppTheme.textSecondary.withOpacity(0.5)),
-            SizedBox(height: 8),
+                size: 48, color: AppTheme.textSecondary.withAlpha((0.5 * 255).round())),
+            const SizedBox(height: 8),
             Text(
               'No Image',
               style: TextStyle(
-                color: AppTheme.textSecondary.withOpacity(0.5),
+                color: AppTheme.textSecondary.withAlpha((0.5 * 255).round()),
                 fontSize: 12,
               ),
             ),
@@ -524,12 +524,12 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.live_tv,
-                size: 40, color: AppTheme.textSecondary.withOpacity(0.5)),
-            SizedBox(height: 8),
+                size: 40, color: AppTheme.textSecondary.withAlpha((0.5 * 255).round())),
+            const SizedBox(height: 8),
             Text(
               name.length > 20 ? name.substring(0, 20) : name,
               style: TextStyle(
-                color: AppTheme.textSecondary.withOpacity(0.7),
+                color: AppTheme.textSecondary.withAlpha((0.7 * 255).round()),
                 fontSize: 10,
               ),
               textAlign: TextAlign.center,

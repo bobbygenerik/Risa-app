@@ -41,7 +41,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
         Container(
           height: 600,
           width: double.infinity,
-          decoration: BoxDecoration(color: AppTheme.cardBackground),
+          decoration: const BoxDecoration(color: AppTheme.cardBackground),
           child: Stack(
             children: [
               // Placeholder image with gradient overlay
@@ -55,7 +55,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                       AppTheme.darkBackground.withAlpha((0.5 * 255).round()),
                       AppTheme.darkBackground,
                     ],
-                    stops: [0.0, 0.7, 1.0],
+                    stops: const [0.0, 0.7, 1.0],
                   ),
                 ),
                 child: Center(
@@ -76,7 +76,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
           left: 0,
           right: 0,
           child: Container(
-            padding: EdgeInsets.all(AppSizes.md),
+            padding: const EdgeInsets.all(AppSizes.md),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
@@ -87,10 +87,10 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
             child: Row(
               children: [
                 IconButton(
-                  icon: Icon(Icons.arrow_back, color: AppTheme.textPrimary),
+                  icon: const Icon(Icons.arrow_back, color: AppTheme.textPrimary),
                   onPressed: () => Navigator.pop(context),
                 ),
-                Spacer(),
+                const Spacer(),
               ],
             ),
           ),
@@ -102,7 +102,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
           left: 0,
           right: 0,
           child: Padding(
-            padding: EdgeInsets.all(AppSizes.xxl),
+            padding: const EdgeInsets.all(AppSizes.xxl),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -115,14 +115,14 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                     shadows: [
                       Shadow(
                         color: Colors.black.withAlpha((0.8 * 255).round()),
-                        offset: Offset(2, 2),
+                        offset: const Offset(2, 2),
                         blurRadius: 8,
                       ),
                     ],
                   ),
                 ),
 
-                SizedBox(height: AppSizes.md),
+                const SizedBox(height: AppSizes.md),
 
                 // Metadata
                 Row(
@@ -136,8 +136,8 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                       _buildMetadataChip('${widget.content.duration} min'),
                     // Quality badge
                     Container(
-                      margin: EdgeInsets.only(left: AppSizes.sm),
-                      padding: EdgeInsets.symmetric(
+                      margin: const EdgeInsets.only(left: AppSizes.sm),
+                      padding: const EdgeInsets.symmetric(
                         horizontal: AppSizes.sm,
                         vertical: 4,
                       ),
@@ -145,7 +145,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                         border: Border.all(color: AppTheme.textPrimary, width: 2),
                         borderRadius: BorderRadius.circular(AppSizes.radiusSm),
                       ),
-                      child: Text(
+                      child: const Text(
                         'HD',
                         style: TextStyle(
                           fontSize: 12,
@@ -157,7 +157,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                   ],
                 ),
 
-                SizedBox(height: AppSizes.xl),
+                const SizedBox(height: AppSizes.xl),
 
                 // Action buttons
                 Row(
@@ -186,7 +186,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                       },
                     ),
 
-                    SizedBox(width: AppSizes.md),
+                    const SizedBox(width: AppSizes.md),
 
                     // My List button
                     OutlinedButton.icon(
@@ -196,18 +196,18 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                         });
                       },
                       icon: Icon(_isInMyList ? Icons.check : Icons.add),
-                      label: Text('My List'),
+                      label: const Text('My List'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppTheme.textPrimary,
                         side: BorderSide(color: AppTheme.textPrimary.withAlpha((0.5 * 255).round())),
-                        padding: EdgeInsets.symmetric(
+                        padding: const EdgeInsets.symmetric(
                           horizontal: AppSizes.lg,
                           vertical: AppSizes.md,
                         ),
                       ),
                     ),
 
-                    SizedBox(width: AppSizes.md),
+                    const SizedBox(width: AppSizes.md),
 
                     // Download button
                     OutlinedButton.icon(
@@ -223,7 +223,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppTheme.textPrimary,
                         side: BorderSide(color: AppTheme.textPrimary.withAlpha((0.5 * 255).round())),
-                        padding: EdgeInsets.symmetric(
+                        padding: const EdgeInsets.symmetric(
                           horizontal: AppSizes.lg,
                           vertical: AppSizes.md,
                         ),
@@ -241,15 +241,15 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
 
   Widget _buildMetadataChip(String text) {
     return Container(
-      margin: EdgeInsets.only(right: AppSizes.sm),
-      padding: EdgeInsets.symmetric(horizontal: AppSizes.sm, vertical: 4),
+      margin: const EdgeInsets.only(right: AppSizes.sm),
+      padding: const EdgeInsets.symmetric(horizontal: AppSizes.sm, vertical: 4),
       decoration: BoxDecoration(
   color: Colors.black.withAlpha((0.5 * 255).round()),
         borderRadius: BorderRadius.circular(AppSizes.radiusSm),
       ),
       child: Text(
         text,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
           color: AppTheme.textPrimary,
@@ -260,7 +260,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
 
   Widget _buildContentInfo() {
     return Padding(
-      padding: EdgeInsets.all(AppSizes.xxl),
+      padding: const EdgeInsets.all(AppSizes.xxl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -275,16 +275,16 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
             overflow: TextOverflow.ellipsis,
           ),
 
-          SizedBox(height: AppSizes.xl),
+          const SizedBox(height: AppSizes.xl),
 
           // Additional info
           _buildInfoRow('Cast', _getMockCast()),
-          SizedBox(height: AppSizes.md),
+          const SizedBox(height: AppSizes.md),
           _buildInfoRow('Director', _getMockDirector()),
-          SizedBox(height: AppSizes.md),
+          const SizedBox(height: AppSizes.md),
           _buildInfoRow('Genres', widget.content.genre ?? 'Action, Sci-Fi'),
 
-          SizedBox(height: AppSizes.xl),
+          const SizedBox(height: AppSizes.xl),
 
           // Tags
           Wrap(
@@ -323,7 +323,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
 
   Widget _buildTag(String text) {
     return Container(
-      padding: EdgeInsets.symmetric(
+      padding: const EdgeInsets.symmetric(
         horizontal: AppSizes.md,
         vertical: AppSizes.sm,
       ),
@@ -346,17 +346,17 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
     }
 
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: AppSizes.xxl),
+      padding: const EdgeInsets.symmetric(horizontal: AppSizes.xxl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Divider(color: AppTheme.divider),
-          SizedBox(height: AppSizes.xl),
+          const Divider(color: AppTheme.divider),
+          const SizedBox(height: AppSizes.xl),
 
           Row(
             children: [
               Text('Episodes', style: Theme.of(context).textTheme.titleLarge),
-              Spacer(),
+              const Spacer(),
               DropdownButton<String>(
                 value: 'Season 1',
                 items: ['Season 1', 'Season 2', 'Season 3'].map((season) {
@@ -367,19 +367,19 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
             ],
           ),
 
-          SizedBox(height: AppSizes.lg),
+          const SizedBox(height: AppSizes.lg),
 
           // Episode list
           ListView.builder(
             shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
+            physics: const NeverScrollableScrollPhysics(),
             itemCount: 3,
             itemBuilder: (context, index) {
               return _buildEpisodeItem(index + 1);
             },
           ),
 
-          SizedBox(height: AppSizes.xl),
+          const SizedBox(height: AppSizes.xl),
         ],
       ),
     );
@@ -387,7 +387,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
 
   Widget _buildEpisodeItem(int episodeNumber) {
     return Padding(
-      padding: EdgeInsets.only(bottom: AppSizes.md),
+      padding: const EdgeInsets.only(bottom: AppSizes.md),
       child: Row(
         children: [
           // Episode thumbnail
@@ -413,12 +413,12 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                 bottom: 4,
                 right: 4,
                 child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.black.withAlpha((0.8 * 255).round()),
                     borderRadius: BorderRadius.circular(AppSizes.radiusSm),
                   ),
-                  child: Text(
+                  child: const Text(
                     '42m',
                     style: TextStyle(fontSize: 10, color: Colors.white),
                   ),
@@ -427,7 +427,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
             ],
           ),
 
-          SizedBox(width: AppSizes.md),
+          const SizedBox(width: AppSizes.md),
 
           // Episode info
           Expanded(
@@ -442,7 +442,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                         color: AppTheme.textTertiary,
                       ),
                     ),
-                    SizedBox(width: AppSizes.sm),
+                    const SizedBox(width: AppSizes.sm),
                     Expanded(
                       child: Text(
                         'Episode Title $episodeNumber',
@@ -453,7 +453,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                     ),
                   ],
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   'Episode description goes here with some details about the plot.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -472,21 +472,21 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
 
   Widget _buildMoreLikeThis() {
     return Padding(
-      padding: EdgeInsets.all(AppSizes.xxl),
+      padding: const EdgeInsets.all(AppSizes.xxl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Divider(color: AppTheme.divider),
-          SizedBox(height: AppSizes.xl),
+          const Divider(color: AppTheme.divider),
+          const SizedBox(height: AppSizes.xl),
 
           Text('More Like This', style: Theme.of(context).textTheme.titleLarge),
 
-          SizedBox(height: AppSizes.lg),
+          const SizedBox(height: AppSizes.lg),
 
           GridView.builder(
             shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 6,
               childAspectRatio: 0.7,
               crossAxisSpacing: AppSizes.md,
@@ -521,7 +521,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
             ),
           ),
         ),
-        SizedBox(height: AppSizes.sm),
+        const SizedBox(height: AppSizes.sm),
         Text(
           'Movie ${index + 1}',
           style: Theme.of(context).textTheme.bodyMedium,

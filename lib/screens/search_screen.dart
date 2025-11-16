@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter/services.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/utils/app_theme.dart';
@@ -20,7 +19,6 @@ class _SearchScreenState extends State<SearchScreen> {
   List<Channel> _searchResults = [];
   bool _isSearching = false;
   final FocusNode _searchFieldFocusNode = FocusNode(debugLabel: 'SearchField');
-  bool _searchEditable = false;
   late String _currentTime;
   late Timer _timeTimer;
 
@@ -91,9 +89,9 @@ class _SearchScreenState extends State<SearchScreen> {
               child: Column(
                 children: [
                   // Top padding for floating nav
-                  SizedBox(height: 100),
+                  const SizedBox(height: 100),
                   // Page title
-                  Padding(
+                  const Padding(
                     padding: EdgeInsets.all(24),
                     child: Row(
                       children: [
@@ -112,16 +110,16 @@ class _SearchScreenState extends State<SearchScreen> {
                   ),
                   // Search Bar
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 24),
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: TextField(
                       controller: _searchController,
                       autofocus: false,
                       decoration: InputDecoration(
                         hintText: 'Search channels, movies & more...',
-                        prefixIcon: Icon(Icons.search, color: AppTheme.primaryBlue),
+                        prefixIcon: const Icon(Icons.search, color: AppTheme.primaryBlue),
                         suffixIcon: _searchController.text.isNotEmpty
                             ? IconButton(
-                                icon: Icon(Icons.clear),
+                                icon: const Icon(Icons.clear),
                                 onPressed: () {
                                   _searchController.clear();
                                   _performSearch('');
@@ -136,16 +134,16 @@ class _SearchScreenState extends State<SearchScreen> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
+                          borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 2),
                         ),
                       ),
                       onChanged: _performSearch,
                     ),
                   ),
-                  SizedBox(height: 24),
+                  const SizedBox(height: 24),
                   // Results
                   _buildResults(),
-                  SizedBox(height: 40),
+                  const SizedBox(height: 40),
                 ],
               ),
             ),
@@ -179,7 +177,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildResults() {
     if (_isSearching) {
-      return Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_searchController.text.isEmpty) {
@@ -199,10 +197,10 @@ class _SearchScreenState extends State<SearchScreen> {
     }
 
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
       child: GridView.builder(
         shrinkWrap: true,
-        physics: NeverScrollableScrollPhysics(),
+        physics: const NeverScrollableScrollPhysics(),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: MediaQuery.of(context).size.width > 1200 ? 6 : 4,
           crossAxisSpacing: 16,
@@ -228,9 +226,9 @@ class _SearchScreenState extends State<SearchScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon, size: 80, color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round())),
-          SizedBox(height: AppSizes.lg),
+          const SizedBox(height: AppSizes.lg),
           Text(title, style: Theme.of(context).textTheme.headlineSmall),
-          SizedBox(height: AppSizes.sm),
+          const SizedBox(height: AppSizes.sm),
           Text(
             subtitle,
             style: Theme.of(
@@ -261,7 +259,7 @@ class _SearchScreenState extends State<SearchScreen> {
             Expanded(
               child: Container(
                 width: double.infinity,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: AppTheme.cardBackground,
                   borderRadius: BorderRadius.vertical(
                     top: Radius.circular(AppSizes.radiusMd),
@@ -269,7 +267,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
                 child: channel.logoUrl != null && channel.logoUrl!.isNotEmpty
                     ? ClipRRect(
-                        borderRadius: BorderRadius.vertical(
+                        borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(AppSizes.radiusMd),
                         ),
                         child: Image.network(
@@ -286,7 +284,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
             // Channel Info
             Padding(
-              padding: EdgeInsets.all(AppSizes.sm),
+              padding: const EdgeInsets.all(AppSizes.sm),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -299,7 +297,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   if (channel.groupTitle != null) ...[
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
                       channel.groupTitle!,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -309,12 +307,12 @@ class _SearchScreenState extends State<SearchScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
-                  SizedBox(height: AppSizes.xs),
+                  const SizedBox(height: AppSizes.xs),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Container(
-                        padding: EdgeInsets.symmetric(
+                        padding: const EdgeInsets.symmetric(
                           horizontal: AppSizes.xs,
                           vertical: 2,
                         ),
@@ -322,7 +320,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           color: AppTheme.accentRed,
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Text(
+                        child: const Text(
                           'LIVE',
                           style: TextStyle(
                             color: Colors.white,
@@ -349,7 +347,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           });
                         },
                         padding: EdgeInsets.zero,
-                        constraints: BoxConstraints(),
+                        constraints: const BoxConstraints(),
                       ),
                     ],
                   ),
@@ -372,10 +370,10 @@ class _SearchScreenState extends State<SearchScreen> {
             size: 40,
             color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
             name.substring(0, name.length > 15 ? 15 : name.length),
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,

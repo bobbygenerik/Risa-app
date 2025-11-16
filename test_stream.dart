@@ -22,7 +22,7 @@ void main() async {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         },
-      ).timeout(Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 10));
       
       print('  ✓ Status: ${response.statusCode}');
       print('  ✓ Content-Type: ${response.headers['content-type']}');

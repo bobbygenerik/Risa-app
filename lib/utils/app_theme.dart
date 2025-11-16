@@ -149,7 +149,7 @@ class AppTheme {
           }),
           side: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.focused)) {
-              return BorderSide(color: accentPink, width: 3);
+              return const BorderSide(color: accentPink, width: 3);
             }
             return null;
           }),
@@ -170,7 +170,7 @@ class AppTheme {
           }),
           side: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.focused)) {
-              return BorderSide(color: accentPink, width: 3);
+              return const BorderSide(color: accentPink, width: 3);
             }
             return null;
           }),
@@ -218,9 +218,9 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: tvFocusHighlight, width: 3),
+          borderSide: const BorderSide(color: tvFocusHighlight, width: 3),
         ),
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
     );
   }

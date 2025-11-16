@@ -7,10 +7,7 @@ import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-// import 'package:flutter_vlc_player/flutter_vlc_player.dart'; // DISABLED - causes build errors on Linux
 import 'package:iptv_player/widgets/native_exoplayer.dart';
-// Disabled - causes UnimplementedError
-// import 'package:subtitle_wrapper_package/subtitle_wrapper_package.dart';
 import 'package:iptv_player/services/ai_upscaling_service.dart';
 import 'package:iptv_player/services/live_transcription_service.dart';
 import 'package:iptv_player/utils/app_theme.dart';
@@ -82,7 +79,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   bool _showAudioSelector = false;
   // Labels discovered from VLC when using the VLC backend and no external
   // audioTracks list was provided by the caller.
-  List<String> _vlcAudioTrackLabels = [];
+  final List<String> _vlcAudioTrackLabels = [];
   
   // Live Transcription
   bool _liveTranscriptionEnabled = false;
@@ -738,10 +735,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                 color: Colors.black.withAlpha((0.7 * 255).round()),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Row(
+              child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const SizedBox(
+                  SizedBox(
                     width: 16,
                     height: 16,
                     child: CircularProgressIndicator(
@@ -749,10 +746,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                       valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Text(
                     'Listening...',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: Colors.white70,
                       fontSize: 14,
                     ),
@@ -774,11 +771,11 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.mic, color: AppTheme.primaryBlue, size: 16),
+                    const Icon(Icons.mic, color: AppTheme.primaryBlue, size: 16),
                     const SizedBox(width: 8),
                     Text(
                       transcriptionService.isTranslating ? 'LIVE TRANSLATION' : 'LIVE TRANSCRIPTION',
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: AppTheme.primaryBlue,
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -1329,9 +1326,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
             // Header
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppTheme.primaryBlue,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
               ),
               child: Row(
                 children: [
@@ -1499,9 +1496,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
             // Header
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppTheme.primaryBlue,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
               ),
               child: Row(
                 children: [

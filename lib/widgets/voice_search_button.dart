@@ -65,7 +65,7 @@ class _VoiceSearchButtonState extends State<VoiceSearchButton>
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.cardBackground,
-        title: Row(
+        title: const Row(
           children: [
             Icon(Icons.search, color: AppTheme.primaryBlue),
             SizedBox(width: AppSizes.sm),
@@ -80,14 +80,14 @@ class _VoiceSearchButtonState extends State<VoiceSearchButton>
               'Searching for:',
               style: Theme.of(context).textTheme.bodySmall,
             ),
-            SizedBox(height: AppSizes.sm),
+            const SizedBox(height: AppSizes.sm),
             Text(
               '"$query"',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: AppTheme.primaryBlue,
               ),
             ),
-            SizedBox(height: AppSizes.md),
+            const SizedBox(height: AppSizes.md),
             Text(
               'Implementation: Connect this to your search functionality',
               style: Theme.of(context).textTheme.bodySmall,
@@ -97,7 +97,7 @@ class _VoiceSearchButtonState extends State<VoiceSearchButton>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Close'),
+            child: const Text('Close'),
           ),
         ],
       ),
@@ -111,7 +111,7 @@ class _VoiceSearchButtonState extends State<VoiceSearchButton>
         if (!voiceService.isAvailable && voiceService.lastError.isNotEmpty) {
           return Tooltip(
             message: 'Voice search unavailable: ${voiceService.lastError}',
-            child: IconButton(
+            child: const IconButton(
               icon: Icon(Icons.mic_off, color: AppTheme.textTertiary),
               onPressed: null,
             ),
@@ -184,14 +184,14 @@ class VoiceSearchOverlay extends StatelessWidget {
                     shape: BoxShape.circle,
                     color: AppTheme.primaryBlue.withAlpha((0.2 * 255).round()),
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.mic,
                     size: 60,
                     color: AppTheme.primaryBlue,
                   ),
                 ),
                 
-                SizedBox(height: AppSizes.xl),
+                const SizedBox(height: AppSizes.xl),
                 
                 Text(
                   voiceService.isListening 
@@ -200,12 +200,12 @@ class VoiceSearchOverlay extends StatelessWidget {
                   style: Theme.of(context).textTheme.headlineMedium,
                 ),
                 
-                SizedBox(height: AppSizes.md),
+                const SizedBox(height: AppSizes.md),
                 
                 if (voiceService.lastWords.isNotEmpty)
                   Container(
-                    padding: EdgeInsets.all(AppSizes.md),
-                    margin: EdgeInsets.symmetric(horizontal: AppSizes.xxl),
+                    padding: const EdgeInsets.all(AppSizes.md),
+                    margin: const EdgeInsets.symmetric(horizontal: AppSizes.xxl),
                     decoration: BoxDecoration(
                       color: AppTheme.cardBackground,
                       borderRadius: BorderRadius.circular(AppSizes.radiusLg),
@@ -217,7 +217,7 @@ class VoiceSearchOverlay extends StatelessWidget {
                     ),
                   ),
                 
-                SizedBox(height: AppSizes.xl),
+                const SizedBox(height: AppSizes.xl),
                 
                 if (voiceService.lastError.isNotEmpty)
                   Text(
@@ -227,11 +227,11 @@ class VoiceSearchOverlay extends StatelessWidget {
                     ),
                   ),
                 
-                SizedBox(height: AppSizes.xxl),
+                const SizedBox(height: AppSizes.xxl),
                 
                 TextButton(
                   onPressed: onClose,
-                  child: Text('Close'),
+                  child: const Text('Close'),
                 ),
               ],
             ),

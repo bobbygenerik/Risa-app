@@ -7,7 +7,9 @@ plugins {
 
 android {
     namespace = "com.iptvplayer.iptv_player"
-    compileSdk = flutter.compileSdkVersion
+    // Use an explicit compileSdk to satisfy newer AndroidX library requirements
+    // (some updated plugins require compileSdk 34+). Set to 36 to be safe.
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -25,7 +27,8 @@ android {
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        // Match compileSdk with a modern target to satisfy updated dependencies.
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

@@ -16,7 +16,7 @@ class OAuthConfig {
   
   // TMDB API Key (for movie/series metadata)
   // Get from: https://www.themoviedb.org/settings/api
-  static const String tmdbApiKey = 'YOUR_TMDB_API_KEY';
+  static const String tmdbApiKey = 'd98ee3033187dff844095fcff7873e21';
   
   /// Check if Google OAuth is configured
   static bool get isGoogleConfigured {

@@ -5,94 +5,54 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.9.2
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
-  # Video players
-  video_player: ^2.9.2  # Android, iOS, Web support
-  chewie: ^1.8.5  # Video player UI
-  http: ^1.2.2
-  dio: ^5.7.0
+  video_player: ^2.8.6
+  chewie: ^1.7.5
+  http: ^1.1.2
+  dio: ^5.4.3
   provider: ^6.1.2
-  xml: ^6.5.0
-  shared_preferences: ^2.3.3
-  path: ^1.9.1
-  path_provider: ^2.1.5
-  speech_to_text: ^7.0.0
-  permission_handler: ^11.3.1
-  go_router: ^14.6.2
-  intl: ^0.20.1
-  url_launcher: ^6.3.1
-  flutter_svg: ^2.0.12
+  xml: ^6.4.2
+  shared_preferences: ^2.2.3
+  path: ^1.9.0
+  path_provider: ^2.1.3
+  go_router: ^12.1.3
+  intl: ^0.20.2
+  url_launcher: ^6.2.6
+  flutter_svg: ^2.0.10
   animations: ^2.0.11
-  cached_network_image: ^3.4.1
-  file_picker: ^8.1.6
-  image_picker: ^1.1.2
-  
-  # Google Drive Integration (FREE - uses user's storage)
-  googleapis: ^13.2.0
-  googleapis_auth: ^1.6.0
-  google_sign_in: ^6.2.2
-  
-  # On-Device AI Upscaling (FREE - no cloud costs) - DISABLED for web
-  tflite_flutter: ^0.11.0  # Re-enabled for AI services
-  image: ^4.3.0
+  speech_to_text: ^7.3.0
+  permission_handler: ^12.0.1
+  googleapis: ^15.0.0
+  google_sign_in: ^7.2.0
+  image: ^4.1.7
+  image_picker: ^1.2.1
+  file_picker: ^10.3.3
+  record: ^6.1.2
 
-  # Optional/native media plugins referenced in the codebase
-  # media_kit: any  # DISABLED: causes CMake errors on Linux
-  # media_kit_video: any  # DISABLED: causes CMake errors on Linux
-  flutter_vlc_player: ^7.4.2  # Re-enabled for VLC player screens
-  # vosk_flutter: any  # OPTIONAL: removed to avoid forcing transitive downgrades
-  
-  # Additional dependencies for services
-  chewie: ^1.8.5  # Already declared above but ensuring it's available
-  dio: ^5.7.0  # Already declared above
-  
-  # Subtitles & Multiple Audio Tracks - REMOVED subtitle_wrapper_package (causes UnimplementedError on Linux)
-  # subtitle_wrapper_package: ^2.0.2  # DISABLED - use native video_player subtitles instead
-  
-  # Picture-in-Picture (Android native implementation)
-  # Will use platform channels for Android PiP
-  
-  # On-Device Transcription & Translation
-  # NOTE: speech_to_text uses platform APIs (requires internet, may incur costs)
-  # For TRUE on-device: manually add vosk_flutter (requires downgrading dependencies)
-  flutter_tts: ^4.2.0  # Text-to-speech for translated audio  
-  google_mlkit_translation: ^0.11.0  # On-device translation (auto-downloads language packs) - TRUE OFFLINE
-  record: ^6.0.0  # Audio recording for transcription
+  flutter_tts: ^4.2.3
+  # Bump ML Kit packages to pick up AGP/namespace fixes in newer releases.
+  # If this causes version conflicts, I'll iterate carefully.
+  # Upgrade ML Kit to a newer release series that includes Android namespace fixes.
+  google_mlkit_translation: ^0.13.0
+  google_mlkit_commons: ^0.11.0
+  tflite_flutter: ^0.12.1
+  subtitle_wrapper_package: ^2.2.1
+  flutter_vlc_player: ^7.2.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
-  flutter_launcher_icons: ^0.14.4
+  flutter_lints: ^6.0.0
 
 flutter:
   uses-material-design: true
-
-  # Assets for AI Upscaling
   assets:
-    - assets/models/
     - assets/images/
 
-
-
-# App Icon Configuration
-flutter_launcher_icons:
-  android: true
-  image_path: "assets/images/croppedlogo2.png"  # Use transparent logo; background stays white via adaptive
-  adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/images/croppedlogo2.png"
-  web:
-    generate: true
-    image_path: "assets/images/croppedlogo2.png"
-    background_color: "#FFFFFF"
-    theme_color: "#C8C6D3"
-
-# Note: dependency_overrides previously pinning `permission_handler` and `http`
-# for `vosk_flutter` have been removed. If you need Vosk, re-add it and reintroduce
-# appropriate overrides or prefer to add a guarded adapter implementation.
+# Removed dependency_overrides to allow resolver to upgrade packages.

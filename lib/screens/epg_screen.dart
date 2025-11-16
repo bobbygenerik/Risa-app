@@ -19,8 +19,8 @@ class EPGScreen extends StatefulWidget {
 }
 
 class _EPGScreenState extends State<EPGScreen> {
-  DateTime _selectedDate = DateTime.now();
-  bool _isHourlyView = true;
+  final DateTime _selectedDate = DateTime.now();
+  final bool _isHourlyView = true;
   String? _selectedChannelId;
   String? _selectedCategory;
   late String _currentTime;
@@ -100,17 +100,17 @@ class _EPGScreenState extends State<EPGScreen> {
             children: [
               Column(
                 children: [
-                  SizedBox(height: 100),
+                  const SizedBox(height: 100),
                   Padding(
-                    padding: EdgeInsets.all(24),
+                    padding: const EdgeInsets.all(24),
                     child: Row(
                       children: [
-                        Icon(Icons.tv, color: AppTheme.primaryBlue, size: 28),
-                        SizedBox(width: 12),
+                        const Icon(Icons.tv, color: AppTheme.primaryBlue, size: 28),
+                        const SizedBox(width: 12),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            const Text(
                               'TV Guide',
                               style: TextStyle(
                                 color: AppTheme.textPrimary,
@@ -120,16 +120,16 @@ class _EPGScreenState extends State<EPGScreen> {
                             ),
                             Text(
                               DateFormat('EEEE, MMM dd').format(_selectedDate),
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: AppTheme.textSecondary,
                                 fontSize: 14,
                               ),
                             ),
                           ],
                         ),
-                        Spacer(),
+                        const Spacer(),
                         IconButton(
-                          icon: Icon(Icons.refresh, color: AppTheme.primaryBlue),
+                          icon: const Icon(Icons.refresh, color: AppTheme.primaryBlue),
                           onPressed: epgService.isLoading ? null : () => _refreshEPG(epgService),
                         ),
                       ],
@@ -147,7 +147,7 @@ class _EPGScreenState extends State<EPGScreen> {
                             ],
                           )
                         : hasChannels && epgService.isLoading
-                        ? Center(
+                        ? const Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
@@ -180,10 +180,10 @@ class _EPGScreenState extends State<EPGScreen> {
                                 Icon(
                                   Icons.calendar_today,
                                   size: 80,
-                                  color: AppTheme.primaryBlue.withOpacity(0.5),
+                                  color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
                                 ),
-                                SizedBox(height: 24),
-                                Text(
+                                const SizedBox(height: 24),
+                                const Text(
                                   'No EPG Data Available',
                                   style: TextStyle(
                                     color: AppTheme.textPrimary,
@@ -191,8 +191,8 @@ class _EPGScreenState extends State<EPGScreen> {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                SizedBox(height: 12),
-                                Text(
+                                const SizedBox(height: 12),
+                                const Text(
                                   'Configure EPG URL in Settings to view TV guide',
                                   style: TextStyle(
                                     color: AppTheme.textSecondary,
@@ -200,10 +200,10 @@ class _EPGScreenState extends State<EPGScreen> {
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
-                                SizedBox(height: 32),
+                                const SizedBox(height: 32),
                                 ElevatedButton.icon(
-                                  icon: Icon(Icons.settings),
-                                  label: Text('Configure EPG'),
+                                  icon: const Icon(Icons.settings),
+                                  label: const Text('Configure EPG'),
                                   onPressed: () => context.go('/settings'),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: AppTheme.primaryBlue,
@@ -265,7 +265,7 @@ class _EPGScreenState extends State<EPGScreen> {
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    return Container(
+    return SizedBox(
       height: 400,
       child: Center(
         child: Column(
@@ -274,10 +274,10 @@ class _EPGScreenState extends State<EPGScreen> {
             Icon(
               Icons.tv_off,
               size: 80,
-              color: AppTheme.primaryBlue.withOpacity(0.5),
+              color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
             ),
-            SizedBox(height: 24),
-            Text(
+            const SizedBox(height: 24),
+            const Text(
               'No Channels Available',
               style: TextStyle(
                 color: AppTheme.textPrimary,
@@ -285,8 +285,8 @@ class _EPGScreenState extends State<EPGScreen> {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            SizedBox(height: 12),
-            Text(
+            const SizedBox(height: 12),
+            const Text(
               'Load a playlist in Settings to view EPG',
               style: TextStyle(
                 color: AppTheme.textSecondary,
@@ -294,10 +294,10 @@ class _EPGScreenState extends State<EPGScreen> {
               ),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: 32),
+            const SizedBox(height: 32),
             ElevatedButton.icon(
-              icon: Icon(Icons.settings),
-              label: Text('Go to Settings'),
+              icon: const Icon(Icons.settings),
+              label: const Text('Go to Settings'),
               onPressed: () => context.go('/settings'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryBlue,
@@ -327,7 +327,7 @@ class _EPGScreenState extends State<EPGScreen> {
               });
             },
           ),
-          Divider(height: 1, color: AppTheme.divider),
+          const Divider(height: 1, color: AppTheme.divider),
           // Category list
           Expanded(
             child: ListView.builder(
@@ -374,7 +374,7 @@ class _EPGScreenState extends State<EPGScreen> {
             duration: AppDurations.fast,
             curve: Curves.easeOut,
             child: Padding(
-              padding: EdgeInsets.symmetric(
+              padding: const EdgeInsets.symmetric(
                 horizontal: AppSizes.md,
                 vertical: AppSizes.sm,
               ),
@@ -402,9 +402,9 @@ class _EPGScreenState extends State<EPGScreen> {
                           : null,
                     ),
                   ),
-                  if (isSelected) SizedBox(width: AppSizes.sm),
+                  if (isSelected) const SizedBox(width: AppSizes.sm),
                   Icon(Icons.folder, size: 18, color: iconColor),
-                  SizedBox(width: AppSizes.sm),
+                  const SizedBox(width: AppSizes.sm),
                   Expanded(
                     child: Text(
                       name,
@@ -437,7 +437,7 @@ class _EPGScreenState extends State<EPGScreen> {
           // Header
           Container(
             height: 60,
-            padding: EdgeInsets.all(AppSizes.md),
+            padding: const EdgeInsets.all(AppSizes.md),
             alignment: Alignment.centerLeft,
             child: Text(
               'CHANNELS',
@@ -446,7 +446,7 @@ class _EPGScreenState extends State<EPGScreen> {
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
-          Divider(height: 1, color: AppTheme.divider),
+          const Divider(height: 1, color: AppTheme.divider),
 
           // Channel list
           Expanded(
@@ -471,8 +471,8 @@ class _EPGScreenState extends State<EPGScreen> {
     return Container(
       height: 80,
       decoration: BoxDecoration(
-        color: isSelected ? AppTheme.primaryBlue.withOpacity(0.2) : null,
-        border: Border(
+        color: isSelected ? AppTheme.primaryBlue.withAlpha((0.2 * 255).round()) : null,
+        border: const Border(
           bottom: BorderSide(color: AppTheme.divider, width: 0.5),
         ),
       ),
@@ -490,7 +490,7 @@ class _EPGScreenState extends State<EPGScreen> {
             _showChannelOptions(channel);
           },
           child: Padding(
-            padding: EdgeInsets.all(AppSizes.sm),
+            padding: const EdgeInsets.all(AppSizes.sm),
             child: Row(
               children: [
                 // Channel logo
@@ -510,7 +510,7 @@ class _EPGScreenState extends State<EPGScreen> {
                             channel.logoUrl!,
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) {
-                              return Center(
+                              return const Center(
                                 child: Icon(
                                   Icons.tv,
                                   color: AppTheme.primaryBlue,
@@ -520,7 +520,7 @@ class _EPGScreenState extends State<EPGScreen> {
                             },
                           ),
                         )
-                      : Center(
+                      : const Center(
                           child: Icon(
                             Icons.tv,
                             color: AppTheme.primaryBlue,
@@ -529,7 +529,7 @@ class _EPGScreenState extends State<EPGScreen> {
                         ),
                 ),
 
-                SizedBox(width: AppSizes.sm),
+                const SizedBox(width: AppSizes.sm),
 
                 // Channel info
                 Expanded(
@@ -563,7 +563,7 @@ class _EPGScreenState extends State<EPGScreen> {
 
   Widget _buildProgramGrid(List<Channel> channels, EpgService epgService) {
     if (epgService.isLoading) {
-      return Center(
+      return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -585,12 +585,12 @@ class _EPGScreenState extends State<EPGScreen> {
               size: 60,
               color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
             ),
-            SizedBox(height: AppSizes.md),
+            const SizedBox(height: AppSizes.md),
             Text(
               'No EPG Data Available',
               style: Theme.of(context).textTheme.titleLarge,
             ),
-            SizedBox(height: AppSizes.sm),
+            const SizedBox(height: AppSizes.sm),
             Text(
               'Configure EPG URL in Settings',
               style: Theme.of(
@@ -606,7 +606,7 @@ class _EPGScreenState extends State<EPGScreen> {
       children: [
         // Time header
         _buildTimeHeader(),
-        Divider(height: 1, color: AppTheme.divider),
+        const Divider(height: 1, color: AppTheme.divider),
 
         // Programs grid
         Expanded(
@@ -633,7 +633,7 @@ class _EPGScreenState extends State<EPGScreen> {
   Widget _buildTimeHeader() {
     final hours = _isHourlyView ? 24 : 48;
 
-    return Container(
+    return SizedBox(
       height: 60,
       child: Row(
         children: List.generate(hours, (index) {
@@ -643,8 +643,8 @@ class _EPGScreenState extends State<EPGScreen> {
 
           return Container(
             width: _isHourlyView ? 120 : 60,
-            padding: EdgeInsets.all(AppSizes.sm),
-            decoration: BoxDecoration(
+            padding: const EdgeInsets.all(AppSizes.sm),
+            decoration: const BoxDecoration(
               border: Border(
                 right: BorderSide(color: AppTheme.divider, width: 0.5),
               ),
@@ -671,7 +671,7 @@ class _EPGScreenState extends State<EPGScreen> {
       _selectedDate.month,
       _selectedDate.day,
     );
-    final endOfDay = startOfDay.add(Duration(days: 1));
+    final endOfDay = startOfDay.add(const Duration(days: 1));
 
     final dayPrograms = programs.where((program) {
       return program.startTime.isBefore(endOfDay) &&
@@ -680,7 +680,7 @@ class _EPGScreenState extends State<EPGScreen> {
 
     return Container(
       height: 80,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: AppTheme.divider, width: 0.5)),
       ),
       child: dayPrograms.isEmpty
@@ -708,7 +708,7 @@ class _EPGScreenState extends State<EPGScreen> {
 
     return Container(
       width: width,
-      margin: EdgeInsets.all(2),
+      margin: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         color: isLive
             ? AppTheme.primaryBlue
@@ -731,7 +731,7 @@ class _EPGScreenState extends State<EPGScreen> {
           onTap: () => _showProgramDetails(program),
           borderRadius: BorderRadius.circular(AppSizes.radiusSm),
           child: Padding(
-            padding: EdgeInsets.all(AppSizes.sm),
+            padding: const EdgeInsets.all(AppSizes.sm),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
@@ -739,7 +739,7 @@ class _EPGScreenState extends State<EPGScreen> {
                 Row(
                   children: [
                     if (hasCatchup) ...[
-                          Icon(
+                          const Icon(
                             Icons.replay,
                             size: 14,
                             color: AppTheme.accentOrange,
@@ -760,7 +760,7 @@ class _EPGScreenState extends State<EPGScreen> {
                     ),
                   ],
                 ),
-                SizedBox(height: 2),
+                const SizedBox(height: 2),
                 Text(
                   '${DateFormat.Hm().format(program.startTime)} - ${DateFormat.Hm().format(program.endTime)}',
                   style: Theme.of(context).textTheme.bodySmall,
@@ -769,7 +769,7 @@ class _EPGScreenState extends State<EPGScreen> {
                   LinearProgressIndicator(
                     value: program.progressPercentage,
                     backgroundColor: AppTheme.textPrimary.withAlpha((0.3 * 255).round()),
-                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.textPrimary),
+                    valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.textPrimary),
                     minHeight: 2,
                   ),
               ],
@@ -787,7 +787,7 @@ class _EPGScreenState extends State<EPGScreen> {
         backgroundColor: AppTheme.cardBackground,
         child: Container(
           width: 600,
-          padding: EdgeInsets.all(AppSizes.lg),
+          padding: const EdgeInsets.all(AppSizes.lg),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -805,13 +805,13 @@ class _EPGScreenState extends State<EPGScreen> {
                       return Container(
                         height: 200,
                         color: AppTheme.darkBackground,
-                        child: Icon(Icons.tv, size: 64),
+                        child: const Icon(Icons.tv, size: 64),
                       );
                     },
                   ),
                 ),
 
-              SizedBox(height: AppSizes.lg),
+              const SizedBox(height: AppSizes.lg),
 
               // Title
               Text(
@@ -819,25 +819,25 @@ class _EPGScreenState extends State<EPGScreen> {
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
 
-              SizedBox(height: AppSizes.sm),
+              const SizedBox(height: AppSizes.sm),
 
               // Time and status
               Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.access_time,
                     size: 16,
                     color: AppTheme.textSecondary,
                   ),
-                  SizedBox(width: AppSizes.xs),
+                  const SizedBox(width: AppSizes.xs),
                   Text(
                     '${DateFormat.Hm().format(program.startTime)} - ${DateFormat.Hm().format(program.endTime)}',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
-                  SizedBox(width: AppSizes.md),
+                  const SizedBox(width: AppSizes.md),
                   if (program.isCurrentlyPlaying)
                     Container(
-                      padding: EdgeInsets.symmetric(
+                      padding: const EdgeInsets.symmetric(
                         horizontal: AppSizes.sm,
                         vertical: 4,
                       ),
@@ -845,7 +845,7 @@ class _EPGScreenState extends State<EPGScreen> {
                         color: AppTheme.accentRed,
                         borderRadius: BorderRadius.circular(AppSizes.radiusSm),
                       ),
-                      child: Row(
+                      child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
@@ -867,7 +867,7 @@ class _EPGScreenState extends State<EPGScreen> {
                 ],
               ),
 
-              SizedBox(height: AppSizes.md),
+              const SizedBox(height: AppSizes.md),
 
               // Description
               if (program.description != null)
@@ -876,7 +876,7 @@ class _EPGScreenState extends State<EPGScreen> {
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
 
-              SizedBox(height: AppSizes.xl),
+              const SizedBox(height: AppSizes.xl),
 
               // Action buttons
               Row(
@@ -895,7 +895,7 @@ class _EPGScreenState extends State<EPGScreen> {
                         } else if (program.isFutureProgram) {
                           // Show message for future programs
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
+                            const SnackBar(
                               content: Text('This program hasn\'t aired yet'),
                             ),
                           );
@@ -915,11 +915,11 @@ class _EPGScreenState extends State<EPGScreen> {
                         backgroundColor: program.hasCatchup
                             ? AppTheme.accentOrange
                             : AppTheme.primaryBlue,
-                        padding: EdgeInsets.symmetric(vertical: 16),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
                     ),
                   ),
-                  SizedBox(width: AppSizes.sm),
+                  const SizedBox(width: AppSizes.sm),
                   // Record button (only for future programs)
                   if (program.isFutureProgram)
                     Expanded(
@@ -934,17 +934,17 @@ class _EPGScreenState extends State<EPGScreen> {
                             ),
                           );
                         },
-                        icon: Icon(Icons.fiber_manual_record),
-                        label: Text('Record'),
+                        icon: const Icon(Icons.fiber_manual_record),
+                        label: const Text('Record'),
                         style: OutlinedButton.styleFrom(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          side: BorderSide(color: AppTheme.accentRed),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          side: const BorderSide(color: AppTheme.accentRed),
                         ),
                       ),
                     ),
                   // Remind button (only for future programs)
                   if (program.isFutureProgram) ...[
-                    SizedBox(width: AppSizes.sm),
+                    const SizedBox(width: AppSizes.sm),
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () {
@@ -957,11 +957,11 @@ class _EPGScreenState extends State<EPGScreen> {
                             ),
                           );
                         },
-                        icon: Icon(Icons.alarm),
-                        label: Text('Remind'),
+                        icon: const Icon(Icons.alarm),
+                        label: const Text('Remind'),
                         style: OutlinedButton.styleFrom(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          side: BorderSide(color: AppTheme.primaryBlue),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          side: const BorderSide(color: AppTheme.primaryBlue),
                         ),
                       ),
                     ),
@@ -986,7 +986,7 @@ class _EPGScreenState extends State<EPGScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.cardBackground,
-        title: Text('Channel Options'),
+        title: const Text('Channel Options'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1008,27 +1008,27 @@ class _EPGScreenState extends State<EPGScreen> {
               },
             ),
             ListTile(
-              leading: Icon(
+              leading: const Icon(
                 Icons.visibility_off,
                 color: AppTheme.textSecondary,
               ),
-              title: Text('Hide Channel'),
+              title: const Text('Hide Channel'),
               onTap: () {
                 Navigator.pop(context);
                 _hideChannel(channel);
               },
             ),
             ListTile(
-              leading: Icon(Icons.edit, color: AppTheme.primaryBlue),
-              title: Text('Edit Channel Number'),
+              leading: const Icon(Icons.edit, color: AppTheme.primaryBlue),
+              title: const Text('Edit Channel Number'),
               onTap: () {
                 Navigator.pop(context);
                 _editChannelNumber(channel);
               },
             ),
             ListTile(
-              leading: Icon(Icons.link, color: AppTheme.accentGreen),
-              title: Text('Assign EPG Source'),
+              leading: const Icon(Icons.link, color: AppTheme.accentGreen),
+              title: const Text('Assign EPG Source'),
               onTap: () {
                 Navigator.pop(context);
                 _assignEPGSource(channel);
@@ -1085,11 +1085,11 @@ class _EPGScreenState extends State<EPGScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.cardBackground,
-        title: Text('Edit Channel Number'),
+        title: const Text('Edit Channel Number'),
         content: TextField(
           controller: controller,
           keyboardType: TextInputType.number,
-          decoration: InputDecoration(
+          decoration: const InputDecoration(
             labelText: 'Channel Number',
             hintText: 'Enter channel number',
           ),
@@ -1097,7 +1097,7 @@ class _EPGScreenState extends State<EPGScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
+            child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1105,9 +1105,9 @@ class _EPGScreenState extends State<EPGScreen> {
               // Update channel number
               ScaffoldMessenger.of(
                 context,
-              ).showSnackBar(SnackBar(content: Text('Channel number updated')));
+              ).showSnackBar(const SnackBar(content: Text('Channel number updated')));
             },
-            child: Text('Save'),
+            child: const Text('Save'),
           ),
         ],
       ),
@@ -1121,18 +1121,18 @@ class _EPGScreenState extends State<EPGScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.cardBackground,
-        title: Text('Assign EPG Source'),
+        title: const Text('Assign EPG Source'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
+            const Text(
               'Enter the TVG ID or EPG channel ID to link this channel to EPG data.',
               style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             TextField(
               controller: controller,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'EPG Channel ID',
                 hintText: 'e.g., cnn.us or BBCOne.uk',
               ),
@@ -1142,7 +1142,7 @@ class _EPGScreenState extends State<EPGScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
+            child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1150,9 +1150,9 @@ class _EPGScreenState extends State<EPGScreen> {
               // Update EPG source
               ScaffoldMessenger.of(
                 context,
-              ).showSnackBar(SnackBar(content: Text('EPG source assigned')));
+              ).showSnackBar(const SnackBar(content: Text('EPG source assigned')));
             },
-            child: Text('Save'),
+            child: const Text('Save'),
           ),
         ],
       ),
@@ -1197,7 +1197,7 @@ class _EPGScreenState extends State<EPGScreen> {
     } else {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Channel not available')));
+      ).showSnackBar(const SnackBar(content: Text('Channel not available')));
     }
   }
 }

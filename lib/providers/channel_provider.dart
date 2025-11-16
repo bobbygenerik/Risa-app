@@ -144,7 +144,7 @@ class ChannelProvider with ChangeNotifier {
               'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
               'Accept': '*/*',
             },
-          ).timeout(Duration(seconds: 90));
+          ).timeout(const Duration(seconds: 90));
           
             if (response.statusCode == 200) {
             await prefs.setString('cached_playlist', response.body);
@@ -185,7 +185,7 @@ class ChannelProvider with ChangeNotifier {
             'Accept-Encoding': 'gzip, deflate',
           },
         ).timeout(
-          Duration(seconds: 90), // Increased to 90 seconds for large playlists
+          const Duration(seconds: 90), // Increased to 90 seconds for large playlists
           onTimeout: () {
             debugPrint('ChannelProvider: Request timed out after 90 seconds');
             throw Exception('Connection timeout - server took too long to respond (90s limit)');

@@ -29,7 +29,7 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
 
   @override
   Widget build(BuildContext context) {
-    final baseColor = AppTheme.primaryBlue;
+    const baseColor = AppTheme.primaryBlue;
     final pressedColor = _pressed
         ? HSLColor.fromColor(baseColor)
             .withLightness((HSLColor.fromColor(baseColor).lightness + 0.06)

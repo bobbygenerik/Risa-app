@@ -50,7 +50,7 @@ class NavTab {
 class _TopNavigationBarState extends State<TopNavigationBar> {
   late List<FocusNode> _tabFocusNodes;
   late FocusNode _searchFocusNode;
-  TextEditingController _searchController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   bool _showSearchBox = false;
 
   @override
@@ -82,7 +82,7 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
       children: [
         Container(
           padding: EdgeInsets.symmetric(horizontal: 32 * scale, vertical: 24 * scale),
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: Colors.transparent,
           ),
           child: Row(
@@ -103,15 +103,15 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                 child: Container(
                   height: 44 * scale,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.06),
+                    color: Colors.white.withAlpha((0.06 * 255).round()),
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.12),
+                      color: Colors.white.withAlpha((0.12 * 255).round()),
                       width: 1,
                     ),
                     borderRadius: BorderRadius.circular(22),
                     boxShadow: [
                       BoxShadow(
-                        color: AppTheme.primaryBlue.withOpacity(0.08),
+                        color: AppTheme.primaryBlue.withAlpha((0.08 * 255).round()),
                         blurRadius: 12,
                         offset: const Offset(0, 2),
                       ),
@@ -155,7 +155,7 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                             side: BorderSide(
-                              color: Colors.white.withOpacity(0.1),
+                              color: Colors.white.withAlpha((0.1 * 255).round()),
                               width: 1,
                             ),
                           ),
@@ -177,13 +177,15 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                                 ],
                               ),
                               onTap: () {
+                                // Capture router instance synchronously to avoid using BuildContext across async gap
+                                final router = GoRouter.of(context);
                                 Navigator.of(context).pop();
                                 Future.delayed(const Duration(milliseconds: 50), () {
                                   if (mounted) {
                                     try {
-                                      context.push('/settings');
+                                      router.push('/settings');
                                     } catch (e) {
-                                      context.go('/settings');
+                                      router.go('/settings');
                                     }
                                   }
                                 });
@@ -198,8 +200,9 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                                 ],
                               ),
                               onTap: () {
+                                final router = GoRouter.of(context);
                                 Future.delayed(const Duration(milliseconds: 100), () {
-                                  if (mounted) context.go('/favorites');
+                                  if (mounted) router.go('/favorites');
                                 });
                               },
                             ),
@@ -212,8 +215,9 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                                 ],
                               ),
                               onTap: () {
+                                final router = GoRouter.of(context);
                                 Future.delayed(const Duration(milliseconds: 100), () {
-                                  if (mounted) context.go('/downloads');
+                                  if (mounted) router.go('/downloads');
                                 });
                               },
                             ),
@@ -226,8 +230,9 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                                 ],
                               ),
                               onTap: () {
+                                final router = GoRouter.of(context);
                                 Future.delayed(const Duration(milliseconds: 100), () {
-                                  if (mounted) context.go('/epg');
+                                  if (mounted) router.go('/epg');
                                 });
                               },
                             ),
@@ -260,9 +265,9 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
             child: Container(
               height: 48 * scale,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.08),
+                color: Colors.white.withAlpha((0.08 * 255).round()),
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withAlpha((0.15 * 255).round()),
                   width: 1.5,
                 ),
                 borderRadius: BorderRadius.circular(24),
@@ -286,7 +291,7 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide(
+                    borderSide: const BorderSide(
                       color: AppTheme.accentPink,
                       width: 2,
                     ),
@@ -350,14 +355,14 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                 return Container(
                   decoration: BoxDecoration(
                     color: isActive
-                        ? AppTheme.primaryBlue.withOpacity(0.3)
+                        ? AppTheme.primaryBlue.withAlpha((0.3 * 255).round())
                         : (isFocused
-                            ? Colors.white.withOpacity(0.15)
+                            ? Colors.white.withAlpha((0.15 * 255).round())
                             : Colors.transparent),
                     borderRadius: BorderRadius.circular(24),
                     border: isFocused
                         ? Border.all(
-                            color: AppTheme.primaryBlue.withOpacity(0.6),
+                            color: AppTheme.primaryBlue.withAlpha((0.6 * 255).round()),
                             width: 2,
                           )
                         : null,

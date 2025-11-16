@@ -17,7 +17,7 @@ import 'package:http/http.dart' as http;
 /// - FREE - no usage costs
 class WhisperSpeechService extends ChangeNotifier {
   Interpreter? _whisperInterpreter;
-  final AudioRecorder _recorder = AudioRecorder();
+  final Record _recorder = Record();
   
   bool _isListening = false;
   bool _isInitialized = false;
@@ -221,12 +221,9 @@ class WhisperSpeechService extends ChangeNotifier {
 
       // Start recording
       await _recorder.start(
-        const RecordConfig(
-          encoder: AudioEncoder.wav,
-          sampleRate: 16000, // Whisper requires 16kHz
-          numChannels: 1,    // Mono
-        ),
         path: _currentAudioPath!,
+        encoder: AudioEncoder.wav,
+        samplingRate: 16000,
       );
 
       // Process audio every 5 seconds for real-time transcription

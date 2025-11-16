@@ -55,17 +55,17 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.cardBackground,
-        title: Text('Delete Playlist'),
+        title: const Text('Delete Playlist'),
         content: Text('Are you sure you want to delete "${playlist.name}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: AppTheme.accentRed),
-            child: Text('Delete'),
+            child: const Text('Delete'),
           ),
         ],
       ),
@@ -159,10 +159,10 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.cardBackground,
-        title: Text('Edit Playlist Name'),
+        title: const Text('Edit Playlist Name'),
         content: TextField(
           controller: nameController,
-          decoration: InputDecoration(
+          decoration: const InputDecoration(
             labelText: 'Playlist Name',
             border: OutlineInputBorder(),
           ),
@@ -171,11 +171,11 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
+            child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, nameController.text),
-            child: Text('Save'),
+            child: const Text('Save'),
           ),
         ],
       ),
@@ -215,11 +215,11 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: Text('Manage Playlists'),
-        backgroundColor: Colors.white.withOpacity(0.08),
+        title: const Text('Manage Playlists'),
+        backgroundColor: Colors.white.withAlpha((0.08 * 255).round()),
         actions: [
           IconButton(
-            icon: Icon(Icons.add),
+            icon: const Icon(Icons.add),
             tooltip: 'Add New Playlist',
             onPressed: () {
               context.go('/settings/playlist-login');
@@ -228,7 +228,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
         ],
       ),
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -236,7 +236,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
           ),
         ),
         child: _isLoading
-            ? Center(child: CircularProgressIndicator())
+            ? const Center(child: CircularProgressIndicator())
             : _playlists.isEmpty
             ? _buildEmptyState()
             : _buildPlaylistList(),
@@ -254,24 +254,24 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
             size: 80,
             color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
           ),
-          SizedBox(height: AppSizes.lg),
+          const SizedBox(height: AppSizes.lg),
           Text(
             'No Saved Playlists',
             style: Theme.of(context).textTheme.headlineMedium,
           ),
-          SizedBox(height: AppSizes.sm),
+          const SizedBox(height: AppSizes.sm),
           Text(
             'Add a playlist to get started',
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
           ),
-          SizedBox(height: AppSizes.xl),
+          const SizedBox(height: AppSizes.xl),
           BrandPrimaryButton(
             icon: Icons.add,
             label: 'Add Playlist',
             onPressed: () => context.go('/settings/playlist-login'),
-            padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
           ),
         ],
       ),
@@ -280,7 +280,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
 
   Widget _buildPlaylistList() {
     return ListView.builder(
-      padding: EdgeInsets.all(AppSizes.lg),
+      padding: const EdgeInsets.all(AppSizes.lg),
       itemCount: _playlists.length,
       itemBuilder: (context, index) {
         final playlist = _playlists[index];
@@ -288,9 +288,9 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
 
         return Card(
           color: AppTheme.cardBackground,
-          margin: EdgeInsets.only(bottom: AppSizes.md),
+          margin: const EdgeInsets.only(bottom: AppSizes.md),
           child: ListTile(
-            contentPadding: EdgeInsets.all(AppSizes.md),
+            contentPadding: const EdgeInsets.all(AppSizes.md),
             leading: Container(
               width: 50,
               height: 50,
@@ -311,17 +311,17 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
                 Expanded(
                   child: Text(
                     playlist.name,
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ),
                 if (isActive)
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: AppTheme.accentGreen,
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: Text(
+                    child: const Text(
                       'ACTIVE',
                       style: TextStyle(
                         color: Colors.white,
@@ -335,15 +335,15 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   playlist.type == 'm3u' ? 'M3U Playlist' : 'Xtream Codes',
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
                 ),
                 if (playlist.type == 'xtream' && playlist.server != null)
                   Text(
                     playlist.server!,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppTheme.textSecondary,
                       fontSize: 11,
                     ),
@@ -353,12 +353,12 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
               ],
             ),
             trailing: PopupMenuButton(
-              icon: Icon(Icons.more_vert, color: AppTheme.textPrimary),
+              icon: const Icon(Icons.more_vert, color: AppTheme.textPrimary),
               color: AppTheme.cardBackground,
               itemBuilder: (context) => [
                 if (!isActive)
                   PopupMenuItem(
-                    child: Row(
+                    child: const Row(
                       children: [
                         Icon(Icons.play_arrow, color: AppTheme.primaryBlue),
                         SizedBox(width: 8),
@@ -371,7 +371,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
                     ),
                   ),
                 PopupMenuItem(
-                  child: Row(
+                  child: const Row(
                     children: [
                       Icon(Icons.edit, color: AppTheme.textPrimary),
                       SizedBox(width: 8),
@@ -384,7 +384,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
                   ),
                 ),
                 PopupMenuItem(
-                  child: Row(
+                  child: const Row(
                     children: [
                       Icon(Icons.delete, color: AppTheme.accentRed),
                       SizedBox(width: 8),

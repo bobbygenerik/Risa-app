@@ -276,14 +276,14 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                                       width: 100,
                                       height: 100,
                                       decoration: BoxDecoration(
-                                        gradient: LinearGradient(
+                                        gradient: const LinearGradient(
                                           colors: [Color(0xFF2E3192), AppTheme.accentPink],
                                           begin: Alignment.topLeft,
                                           end: Alignment.bottomRight,
                                         ),
                                         borderRadius: BorderRadius.circular(16),
                                       ),
-                                      child: Icon(
+                                      child: const Icon(
                                         Icons.play_arrow,
                                         color: Colors.white,
                                         size: 60,
@@ -495,7 +495,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.auto_awesome,
                             color: AppTheme.primaryBlue,
                             size: 16,

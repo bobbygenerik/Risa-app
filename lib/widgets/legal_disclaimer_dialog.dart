@@ -17,16 +17,16 @@ class _LegalDisclaimerDialogState extends State<LegalDisclaimerDialog> {
       backgroundColor: AppTheme.cardBackground,
       child: Container(
         width: 600,
-        padding: EdgeInsets.all(AppSizes.xxl),
+        padding: const EdgeInsets.all(AppSizes.xxl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
+            const Icon(
               Icons.gavel,
               size: 64,
               color: AppTheme.accentRed,
             ),
-            SizedBox(height: AppSizes.lg),
+            const SizedBox(height: AppSizes.lg),
             Text(
               'Legal Disclaimer',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -34,10 +34,10 @@ class _LegalDisclaimerDialogState extends State<LegalDisclaimerDialog> {
                 color: AppTheme.accentRed,
               ),
             ),
-            SizedBox(height: AppSizes.lg),
+            const SizedBox(height: AppSizes.lg),
             Container(
               height: 300,
-              padding: EdgeInsets.all(AppSizes.md),
+              padding: const EdgeInsets.all(AppSizes.md),
               decoration: BoxDecoration(
                 color: AppTheme.darkBackground,
                 borderRadius: BorderRadius.circular(AppSizes.radiusMd),
@@ -92,7 +92,7 @@ By accepting this disclaimer, you confirm that you understand and will comply wi
                 ),
               ),
             ),
-            SizedBox(height: AppSizes.lg),
+            const SizedBox(height: AppSizes.lg),
             CheckboxListTile(
               value: _accepted,
               onChanged: (value) {
@@ -109,7 +109,7 @@ By accepting this disclaimer, you confirm that you understand and will comply wi
               controlAffinity: ListTileControlAffinity.leading,
               activeColor: AppTheme.primaryBlue,
             ),
-            SizedBox(height: AppSizes.lg),
+            const SizedBox(height: AppSizes.lg),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -118,9 +118,9 @@ By accepting this disclaimer, you confirm that you understand and will comply wi
                     // Exit app
                     Navigator.of(context).pop(false);
                   },
-                  child: Text('Decline & Exit'),
+                  child: const Text('Decline & Exit'),
                 ),
-                SizedBox(width: AppSizes.md),
+                const SizedBox(width: AppSizes.md),
                 ElevatedButton(
                   onPressed: _accepted
                       ? () {
@@ -129,12 +129,12 @@ By accepting this disclaimer, you confirm that you understand and will comply wi
                       : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryBlue,
-                    padding: EdgeInsets.symmetric(
+                    padding: const EdgeInsets.symmetric(
                       horizontal: AppSizes.xl,
                       vertical: AppSizes.md,
                     ),
                   ),
-                  child: Text('Accept & Continue'),
+                  child: const Text('Accept & Continue'),
                 ),
               ],
             ),

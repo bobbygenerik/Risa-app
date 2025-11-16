@@ -748,8 +748,8 @@ class _VlcEnhancedPlayerScreenState extends State<VlcEnhancedPlayerScreen> {
                   color: AppTheme.primaryBlue,
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: Row(
-                  children: const [
+                child: const Row(
+                  children: [
                     Icon(Icons.auto_awesome, color: Colors.white, size: 14),
                     SizedBox(width: 4),
                     Text(
@@ -839,9 +839,9 @@ class _VlcEnhancedPlayerScreenState extends State<VlcEnhancedPlayerScreen> {
             // Header
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppTheme.primaryBlue,
-                borderRadius: const BorderRadius.vertical(
+                borderRadius: BorderRadius.vertical(
                   top: Radius.circular(10),
                 ),
               ),
@@ -933,9 +933,9 @@ class _VlcEnhancedPlayerScreenState extends State<VlcEnhancedPlayerScreen> {
             // Header
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppTheme.primaryBlue,
-                borderRadius: const BorderRadius.vertical(
+                borderRadius: BorderRadius.vertical(
                   top: Radius.circular(10),
                 ),
               ),

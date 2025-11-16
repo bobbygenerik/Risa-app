@@ -115,7 +115,7 @@ class _GlobalErrorScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.error_outline, color: Colors.redAccent, size: 80),
+                const Icon(Icons.error_outline, color: Colors.redAccent, size: 80),
                 const SizedBox(height: 24),
                 Text(
                   'Something went wrong',
@@ -299,7 +299,7 @@ class _MyAppState extends State<MyApp> {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: AppTheme.darkTheme,
-        home: Scaffold(body: Center(child: CircularProgressIndicator())),
+        home: const Scaffold(body: Center(child: CircularProgressIndicator())),
       );
     }
 
@@ -325,30 +325,68 @@ class _MyAppState extends State<MyApp> {
             },
           ),
           ChangeNotifierProvider(
-            create: (_) => VoiceSearchService()..initialize(),
+            create: (_) {
+              final service = VoiceSearchService();
+              service.initialize().catchError((e) => debugPrint('VoiceSearch init error: $e'));
+              return service;
+            },
           ),
           ChangeNotifierProvider(create: (_) => EpgService()),
           ChangeNotifierProvider(
-            create: (_) => GoogleDriveSyncService()..initialize(),
-          ),
-          ChangeNotifierProvider(create: (_) => AIModelManager()..initialize()),
-          ChangeNotifierProvider(
-            create: (_) => AIUpscalingService()..initialize(),
-          ),
-          ChangeNotifierProvider(
-            create: (_) => MLKitTranslationService()..initialize(),
+            create: (_) {
+              final service = GoogleDriveSyncService();
+              service.initialize().catchError((e) => debugPrint('GoogleDrive init error: $e'));
+              return service;
+            },
           ),
           ChangeNotifierProvider(
-            create: (_) => LiveTranscriptionService()..initialize(),
+            create: (_) {
+              final service = AIModelManager();
+              service.initialize().catchError((e) => debugPrint('AIModel init error: $e'));
+              return service;
+            },
           ),
           ChangeNotifierProvider(
-            create: (_) => OpenSubtitlesService()..initialize(),
+            create: (_) {
+              final service = AIUpscalingService();
+              service.initialize().catchError((e) => debugPrint('AIUpscaling init error: $e'));
+              return service;
+            },
           ),
           ChangeNotifierProvider(
-            create: (_) => RealDebridService()..initialize(),
+            create: (_) {
+              final service = MLKitTranslationService();
+              service.initialize().catchError((e) => debugPrint('MLKitTranslation init error: $e'));
+              return service;
+            },
           ),
           ChangeNotifierProvider(
-            create: (_) => WhisperSpeechService()..initialize(),
+            create: (_) {
+              final service = LiveTranscriptionService();
+              service.initialize().catchError((e) => debugPrint('LiveTranscription init error: $e'));
+              return service;
+            },
+          ),
+          ChangeNotifierProvider(
+            create: (_) {
+              final service = OpenSubtitlesService();
+              service.initialize().catchError((e) => debugPrint('OpenSubtitles init error: $e'));
+              return service;
+            },
+          ),
+          ChangeNotifierProvider(
+            create: (_) {
+              final service = RealDebridService();
+              service.initialize().catchError((e) => debugPrint('RealDebrid init error: $e'));
+              return service;
+            },
+          ),
+          ChangeNotifierProvider(
+            create: (_) {
+              final service = WhisperSpeechService();
+              service.initialize().catchError((e) => debugPrint('WhisperSpeech init error: $e'));
+              return service;
+            },
           ),
         ],
         child: Builder(

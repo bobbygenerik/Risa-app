@@ -38,7 +38,7 @@ class _AppShellState extends State<AppShell>
 
     // Initialize logo animation
     _logoAnimationController = AnimationController(
-      duration: Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 2000),
       vsync: this,
     )..repeat(reverse: true);
 
@@ -59,7 +59,7 @@ class _AppShellState extends State<AppShell>
       if (mounted) {
         _startTimeUpdater();
         // Request focus on first item after build
-        Future.delayed(Duration(milliseconds: 100), () {
+        Future.delayed(const Duration(milliseconds: 100), () {
           if (mounted && _navFocusNodes.isNotEmpty) {
             _navFocusNodes[0].requestFocus();
             setState(() => _currentFocusIndex = 0);
@@ -139,7 +139,7 @@ class _AppShellState extends State<AppShell>
   // Helper: Try to focus a screen's secondary menu first; fall back to main content; else next traversal
   void _requestFirstSecondaryOrContentFocus(String route) {
     // Small delay to ensure content is fully rendered before requesting focus
-    Future.delayed(Duration(milliseconds: 150), () {
+    Future.delayed(const Duration(milliseconds: 150), () {
       bool handled = false;
       try {
         final contentState = _getContentScreenState(route);
@@ -408,7 +408,7 @@ class _AppShellState extends State<AppShell>
                       focusNode: _contentScopeNode,
                       onKeyEvent: _handleContentKey,
                       child: AnimatedSwitcher(
-                        duration: Duration(milliseconds: 250),
+                        duration: const Duration(milliseconds: 250),
                         switchInCurve: Curves.easeOut,
                         switchOutCurve: Curves.easeIn,
                         transitionBuilder: (child, animation) {
@@ -451,7 +451,7 @@ class _AppShellState extends State<AppShell>
         });
       },
       child: AnimatedContainer(
-        duration: Duration(milliseconds: 350),
+        duration: const Duration(milliseconds: 350),
         curve: Curves.easeInOut,
         width: width,
         color: AppTheme.sidebarBackground,
@@ -517,7 +517,7 @@ class _AppShellState extends State<AppShell>
             // Navigation Items
             Expanded(
               child: ListView(
-                padding: EdgeInsets.only(
+                padding: const EdgeInsets.only(
                   top: AppSizes.sm,
                   bottom: AppSizes.sm,
                 ), // Prevent first item clipping on focus
@@ -581,9 +581,9 @@ class _AppShellState extends State<AppShell>
           curve: Curves.easeOut,
           child: AnimatedContainer(
             duration: AppDurations.fast,
-            decoration: BoxDecoration(),
+            decoration: const BoxDecoration(),
             child: Padding(
-              padding: EdgeInsets.symmetric(
+              padding: const EdgeInsets.symmetric(
                 horizontal: AppSizes.lg, // Adjusted
                 vertical: 12, // Reduced from 18
               ),
@@ -598,7 +598,7 @@ class _AppShellState extends State<AppShell>
                         AppSizes.iconMd + (isFocused ? 3 : 0), // Reduced from 4
                   ),
                   if (!_isSidebarCollapsed) ...[
-                    SizedBox(width: AppSizes.sm), // Reduced from md
+                    const SizedBox(width: AppSizes.sm), // Reduced from md
                     Expanded(
                       child: Text(
                         item.label,
@@ -642,8 +642,8 @@ class _AppShellState extends State<AppShell>
         // Main AppBar container
         Container(
           height: AppSizes.appBarHeight,
-          decoration: BoxDecoration(color: AppTheme.darkBackground),
-          padding: EdgeInsets.symmetric(horizontal: AppSizes.lg),
+          decoration: const BoxDecoration(color: AppTheme.darkBackground),
+          padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg),
           child: Row(
             children: [
               // Dynamic breadcrumb showing current context
@@ -652,7 +652,7 @@ class _AppShellState extends State<AppShell>
               // Search button (top bar: blue icon on focus only)
               Tooltip(
                 message: 'Search',
-                waitDuration: Duration(milliseconds: 400),
+                waitDuration: const Duration(milliseconds: 400),
                 child: Focus(
                   focusNode: _searchButtonFocusNode,
                   onKeyEvent: (node, event) {
@@ -698,12 +698,12 @@ class _AppShellState extends State<AppShell>
                 ),
               ),
 
-              SizedBox(width: AppSizes.sm),
+              const SizedBox(width: AppSizes.sm),
 
               // Settings button (top bar: blue icon on focus only)
               Tooltip(
                 message: 'Settings',
-                waitDuration: Duration(milliseconds: 400),
+                waitDuration: const Duration(milliseconds: 400),
                 child: Focus(
                   focusNode: _settingsButtonFocusNode,
                   onKeyEvent: (node, event) {
@@ -717,7 +717,7 @@ class _AppShellState extends State<AppShell>
                       final currentRoute = GoRouterState.of(context).uri.path;
                       if (currentRoute.startsWith('/settings')) {
                         // For settings, focus the first input field in the current tab
-                        Future.delayed(Duration(milliseconds: 100), () {
+                        Future.delayed(const Duration(milliseconds: 100), () {
                           try {
                             final contentState = _getContentScreenState(
                               '/settings',
@@ -760,7 +760,7 @@ class _AppShellState extends State<AppShell>
                 ),
               ),
 
-              SizedBox(width: AppSizes.md),
+              const SizedBox(width: AppSizes.md),
 
               // Time and date (updates in real-time)
               Column(
@@ -866,7 +866,7 @@ class _AppShellState extends State<AppShell>
         ],
         Text(
           breadcrumb,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
             color: AppTheme.textPrimary,

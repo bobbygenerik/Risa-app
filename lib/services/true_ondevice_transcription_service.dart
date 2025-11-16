@@ -25,7 +25,7 @@ class TrueOnDeviceTranscriptionService extends ChangeNotifier {
   Recognizer? _recognizer;
 
   // Audio recording
-  final AudioRecorder _recorder = AudioRecorder();
+  final Record _recorder = Record();
 
   // Translation (ON-DEVICE)
   OnDeviceTranslator? _translator;
@@ -258,12 +258,9 @@ class TrueOnDeviceTranscriptionService extends ChangeNotifier {
         final audioPath = '${appDir.path}/transcription_audio.wav';
 
         await _recorder.start(
-          const RecordConfig(
-            encoder: AudioEncoder.wav,
-            sampleRate: 16000,
-            numChannels: 1,
-          ),
           path: audioPath,
+          encoder: AudioEncoder.wav,
+          samplingRate: 16000,
         );
 
         _isTranscribing = true;

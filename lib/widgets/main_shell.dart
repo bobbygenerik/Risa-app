@@ -53,13 +53,13 @@ class _MainShellState extends State<MainShell> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              const Color(0xFF050710),
-              const Color(0xFF0d1140),
+              Color(0xFF050710),
+              Color(0xFF0d1140),
             ],
           ),
         ),
