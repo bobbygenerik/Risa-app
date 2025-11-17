@@ -203,7 +203,7 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                         PopupMenuItem(
                           child: Row(
                             children: [
-                              Icon(Icons.download, color: AppTheme.textSecondary, size: 16 * scale),
+                              Icon(Icons.download, color: AppTheme.primaryBlue, size: 16 * scale),
                               SizedBox(width: 12 * scale),
                               Text('Downloads', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500)),
                             ],
