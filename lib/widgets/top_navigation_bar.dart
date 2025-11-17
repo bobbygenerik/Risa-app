@@ -80,14 +80,13 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
 
     // If we're on the Live TV route (home), make the top bar transparent
     // so the screen's hero/gradient shows through (matches other screens).
-    final location = GoRouterState.of(context).uri.path;
-    final isLiveRoute = location == '/' || location == '/home' || location.contains('/live');
+    // location can be used in future conditional styling; currently unused
 
+    // Make the top nav transparent always and use a moving highlighter
+    // under tabs for a cleaner, less-blocky look.
     final navBar = Container(
       padding: EdgeInsets.symmetric(horizontal: 32 * scale, vertical: 24 * scale),
-      decoration: BoxDecoration(
-        color: isLiveRoute ? Colors.transparent : AppTheme.darkBackgroundOpacity(0.55),
-      ),
+      decoration: const BoxDecoration(color: Colors.transparent),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -105,28 +104,16 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
           Expanded(
             child: Container(
               height: 56 * scale,
-              decoration: BoxDecoration(
-                color: Colors.white.withAlpha((0.08 * 255).round()),
-                border: Border.all(
-                  color: Colors.white.withAlpha((0.15 * 255).round()),
-                  width: 1.5,
-                ),
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
+              // keep transparent container; tabs render inline with an underline/highlighter
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(28)),
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 12 * scale),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     ...List.generate(
                       widget.tabs.length,
-                      (index) => _buildTabButton(index, scale),
+                      (index) => Expanded(child: _buildTabButton(index, scale)),
                     ),
                     // Search icon in nav bar
                     Material(
@@ -345,49 +332,45 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
     final tab = widget.tabs[index];
     final isActive = widget.activeTab == tab.id;
 
-    return Expanded(
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            setState(() => _showSearchBox = false);
-            context.go(tab.route);
-          },
-          child: Focus(
-            focusNode: _tabFocusNodes[index],
-            onFocusChange: (_) => setState(() {}),
-            child: Builder(
-              builder: (context) {
-                final isFocused = Focus.of(context).hasFocus;
-                return Container(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          setState(() => _showSearchBox = false);
+          context.go(tab.route);
+        },
+        child: Focus(
+          focusNode: _tabFocusNodes[index],
+          onFocusChange: (_) => setState(() {}),
+          child: Builder(builder: (context) {
+            final isFocused = Focus.of(context).hasFocus;
+            final showHighlight = isActive || isFocused;
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  tab.label,
+                  style: TextStyle(
+                    color: showHighlight ? AppTheme.primaryBlue : AppTheme.textSecondary,
+                    fontSize: 14 * scale,
+                    fontWeight: showHighlight ? FontWeight.w700 : FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeInOut,
+                  width: showHighlight ? 56 * scale : 0,
+                  height: 4,
                   decoration: BoxDecoration(
-                    color: isActive
-                        ? AppTheme.primaryBlue.withAlpha((0.3 * 255).round())
-                        : (isFocused
-                            ? Colors.white.withAlpha((0.15 * 255).round())
-                            : Colors.transparent),
-                    borderRadius: BorderRadius.circular(24),
-                    border: isFocused
-                        ? Border.all(
-                            color: AppTheme.primaryBlue.withAlpha((0.6 * 255).round()),
-                            width: 2,
-                          )
-                        : null,
+                    color: AppTheme.primaryBlue,
+                    borderRadius: BorderRadius.circular(4),
                   ),
-                  child: Center(
-                    child: Text(
-                      tab.label,
-                      style: TextStyle(
-                        color: isActive ? AppTheme.primaryBlue : AppTheme.textSecondary,
-                        fontSize: 14 * scale,
-                        fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
+                ),
+              ],
+            );
+          }),
         ),
       ),
     );
