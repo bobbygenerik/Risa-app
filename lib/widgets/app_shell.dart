@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/screens/live_tv_screen.dart';
+import 'package:iptv_player/screens/movies_screen.dart';
+import 'package:iptv_player/screens/series_screen.dart';
 
 class AppShell extends StatefulWidget {
   final Widget child;
@@ -408,24 +411,43 @@ class _AppShellState extends State<AppShell>
                     child: Focus(
                       focusNode: _contentScopeNode,
                       onKeyEvent: _handleContentKey,
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 250),
-                        switchInCurve: Curves.easeOut,
-                        switchOutCurve: Curves.easeIn,
-                        transitionBuilder: (child, animation) {
-                          return FadeTransition(
-                            opacity: animation,
-                            child: ScaleTransition(
-                              scale: Tween<double>(
-                                begin: 0.98,
-                                end: 1.0,
-                              ).animate(animation),
-                              child: child,
-                            ),
+                      child: Builder(builder: (context) {
+                        // Render an IndexedStack for the three main screens to keep them alive
+                        final mainRoutes = ['/', '/home', '/movies', '/series'];
+                        final route = currentRoute;
+
+                        if (mainRoutes.contains(route) || route == '/home' || route == '/') {
+                          int index = 0;
+                          if (route.startsWith('/movies')) index = 1;
+                          if (route.startsWith('/series')) index = 2;
+
+                          return IndexedStack(
+                            index: index,
+                            children: [
+                              KeepAliveWrapper(child: LiveTVScreen()),
+                              KeepAliveWrapper(child: MoviesScreen()),
+                              KeepAliveWrapper(child: SeriesScreen()),
+                            ],
                           );
-                        },
-                        child: widget.child,
-                      ),
+                        }
+
+                        // Fallback: animate other route children as before
+                        return AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 250),
+                          switchInCurve: Curves.easeOut,
+                          switchOutCurve: Curves.easeIn,
+                          transitionBuilder: (child, animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: ScaleTransition(
+                                scale: Tween<double>(begin: 0.98, end: 1.0).animate(animation),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: widget.child,
+                        );
+                      }),
                     ),
                   ),
                 ],
@@ -900,4 +922,25 @@ class NavigationItem {
     required this.label,
     required this.route,
   });
+}
+
+// Small wrapper to keep screens alive when used inside an IndexedStack.
+class KeepAliveWrapper extends StatefulWidget {
+  final Widget child;
+  const KeepAliveWrapper({super.key, required this.child});
+
+  @override
+  State<KeepAliveWrapper> createState() => _KeepAliveWrapperState();
+}
+
+class _KeepAliveWrapperState extends State<KeepAliveWrapper>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
+  }
 }
