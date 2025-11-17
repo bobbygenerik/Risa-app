@@ -50,9 +50,9 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
     });
 
     // Default focus to the watch button
-    final _watchFocusNode = _watchFocus;
+    final watchFocusNode = _watchFocus;
     Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) _watchFocusNode.requestFocus();
+      if (mounted) watchFocusNode.requestFocus();
     });
   }
 
@@ -86,9 +86,9 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
                   const SizedBox(height: 32),
                   ElevatedButton.icon(
                     onPressed: () {
-                      final _router = GoRouter.of(context);
+                      final router = GoRouter.of(context);
                       Future.delayed(const Duration(milliseconds: 100), () {
-                        if (mounted) _router.go('/settings');
+                        if (mounted) router.go('/settings');
                       });
                     },
                     icon: const Icon(Icons.settings),

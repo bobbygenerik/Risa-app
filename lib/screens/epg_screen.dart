@@ -20,8 +20,8 @@ class EPGScreen extends StatefulWidget {
 }
 
 class _EPGScreenState extends State<EPGScreen> {
-  DateTime _selectedDate = DateTime.now();
-  bool _isHourlyView = true;
+  final DateTime _selectedDate = DateTime.now();
+  final bool _isHourlyView = true;
   String? _selectedChannelId;
   String? _selectedCategory;
   Channel? _playingChannel;
@@ -401,7 +401,7 @@ class _EPGScreenState extends State<EPGScreen> {
                       height: 18,
                       decoration: isSelected
                           ? const BoxDecoration(
-                              gradient: const LinearGradient(
+                              gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [

@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 // app can compile and run when Drive integration is intentionally removed.
 
 class GoogleDriveSyncService extends ChangeNotifier {
-  bool _isSupported = false;
+  final bool _isSupported = false;
   bool _isSignedIn = false;
   bool _isSyncing = false;
   String? _userEmail;

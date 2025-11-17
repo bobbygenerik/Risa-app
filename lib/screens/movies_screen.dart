@@ -58,9 +58,9 @@ class _MoviesScreenState extends State<MoviesScreen> {
       // prepare curated list (may perform TMDB lookups)
       _prepareCuratedList();
       // request focus so Play gets default focus when entering the screen
-      final _playFocusNode = _playFocus;
+      final playFocusNode = _playFocus;
       Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted) _playFocusNode.requestFocus();
+        if (mounted) playFocusNode.requestFocus();
       });
     });
   }

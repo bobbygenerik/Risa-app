@@ -41,9 +41,9 @@ class _SeriesScreenState extends State<SeriesScreen> {
         }
       });
       _prepareCuratedSeriesList();
-                  final _focusNode = _watchFocus;
+                  final focusNode = _watchFocus;
                   Future.delayed(const Duration(milliseconds: 100), () {
-                    if (mounted) _focusNode.requestFocus();
+                    if (mounted) focusNode.requestFocus();
                   });
     });
   }

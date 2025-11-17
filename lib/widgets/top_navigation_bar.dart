@@ -51,7 +51,7 @@ class NavTab {
 class _TopNavigationBarState extends State<TopNavigationBar> {
   late List<FocusNode> _tabFocusNodes;
   late FocusNode _searchFocusNode;
-  TextEditingController _searchController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   bool _showSearchBox = false;
 
   @override
@@ -174,9 +174,9 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                             ],
                           ),
                           onTap: () {
-                            final _router = GoRouter.of(context);
+                            final router = GoRouter.of(context);
                             Future.delayed(const Duration(milliseconds: 100), () {
-                              if (mounted) _router.go('/settings');
+                              if (mounted) router.go('/settings');
                             });
                           },
                         ),
@@ -189,9 +189,9 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                             ],
                           ),
                           onTap: () {
-                            final _router = GoRouter.of(context);
+                            final router = GoRouter.of(context);
                             Future.delayed(const Duration(milliseconds: 100), () {
-                              if (mounted) _router.go('/favorites');
+                              if (mounted) router.go('/favorites');
                             });
                           },
                         ),
@@ -204,9 +204,9 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                             ],
                           ),
                           onTap: () {
-                            final _router = GoRouter.of(context);
+                            final router = GoRouter.of(context);
                             Future.delayed(const Duration(milliseconds: 100), () {
-                              if (mounted) _router.go('/downloads');
+                              if (mounted) router.go('/downloads');
                             });
                           },
                         ),
@@ -219,9 +219,9 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                             ],
                           ),
                           onTap: () {
-                            final _router = GoRouter.of(context);
+                            final router = GoRouter.of(context);
                             Future.delayed(const Duration(milliseconds: 100), () {
-                              if (mounted) _router.go('/epg');
+                              if (mounted) router.go('/epg');
                             });
                           },
                         ),

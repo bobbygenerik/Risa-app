@@ -14,7 +14,7 @@ class ModernHomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
@@ -205,7 +205,7 @@ class ModernHomeScreen extends StatelessWidget {
       height: 400,
       width: double.infinity,
       decoration: const BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
@@ -237,7 +237,7 @@ class ModernHomeScreen extends StatelessWidget {
   Widget _buildPlaceholderGradient() {
     return Container(
       decoration: const BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [

@@ -82,7 +82,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   bool _showAudioSelector = false;
   // Labels discovered from VLC when using the VLC backend and no external
   // audioTracks list was provided by the caller.
-  List<String> _vlcAudioTrackLabels = [];
+  final List<String> _vlcAudioTrackLabels = [];
   
   // Live Transcription
   bool _liveTranscriptionEnabled = false;

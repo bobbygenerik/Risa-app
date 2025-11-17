@@ -247,7 +247,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 child: Container(
                   height: 3,
                   decoration: const BoxDecoration(
-                    gradient: const LinearGradient(
+                    gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [

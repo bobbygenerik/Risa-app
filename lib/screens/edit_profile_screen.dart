@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+// 'package:flutter/services.dart' not needed; material covers required symbols
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
-import 'package:file_picker/file_picker.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -18,8 +17,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final TextEditingController _emailController = TextEditingController();
   String? _profileImagePath;
   bool _isLoading = false;
-  bool _nameEditable = false;
-  bool _emailEditable = false;
 
   final FocusNode _nameFocusNode = FocusNode();
   final FocusNode _emailFocusNode = FocusNode();
@@ -93,45 +90,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  Future<void> _pickProfileImage() async {
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.image,
-        allowMultiple: false,
-      );
-
-      if (result != null && result.files.single.path != null) {
-        setState(() {
-          _profileImagePath = result.files.single.path;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to pick image: $e'),
-            backgroundColor: AppTheme.accentRed,
-          ),
-        );
-      }
-    }
-  }
-
-  void _removeProfileImage() {
-    setState(() {
-      _profileImagePath = null;
-    });
-  }
-
-  KeyEventResult _handleFocusKey(FocusNode node, KeyEvent event, VoidCallback onActivate) {
-    if (event is! KeyDownEvent) return KeyEventResult.ignored;
-    final key = event.logicalKey;
-    if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
-      onActivate();
-      return KeyEventResult.handled;
-    }
-    return KeyEventResult.ignored;
-  }
+  // Image picking and keyboard helper functions removed — not used currently.
 
   @override
   Widget build(BuildContext context) {
