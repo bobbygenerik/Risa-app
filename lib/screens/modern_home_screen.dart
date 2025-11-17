@@ -14,7 +14,14 @@ class ModernHomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: AppTheme.darkBackground,
+        gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              ),
       ),
       child: Consumer<ChannelProvider>(
         builder: (context, channelProvider, _) {
@@ -198,7 +205,14 @@ class ModernHomeScreen extends StatelessWidget {
       height: 400,
       width: double.infinity,
       decoration: const BoxDecoration(
-        color: AppTheme.darkBackground,
+        gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              ),
       ),
       child: Center(
         child: Column(
@@ -223,7 +237,14 @@ class ModernHomeScreen extends StatelessWidget {
   Widget _buildPlaceholderGradient() {
     return Container(
       decoration: const BoxDecoration(
-        color: AppTheme.darkBackground,
+        gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              ),
       ),
     );
   }
