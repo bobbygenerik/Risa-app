@@ -108,6 +108,10 @@ class _SettingsScreenState extends State<SettingsScreen>
     for (int i = 0; i < 5; i++) {
       _menuFocusNodes.add(FocusNode(debugLabel: 'SettingsMenu$i'));
     }
+    // Rebuild when the active tab changes so we can lazily render tab content
+    _tabController.addListener(() {
+      if (mounted) setState(() {});
+    });
     _loadSettings();
   }
 
@@ -184,6 +188,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     for (var n in _menuFocusNodes) {
       n.dispose();
     }
+    _tabController.removeListener(() {});
     _tabController.dispose();
     _m3uUrlController.dispose();
     _m3uUrlFocusNode.dispose();
@@ -236,10 +241,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                   }
                   return KeyEventResult.ignored;
                 },
-                child: TabBarView(
-                  controller: _tabController,
-                  physics: const NeverScrollableScrollPhysics(),
+                child: IndexedStack(
+                  index: _tabController.index,
                   children: [
+                    // Lazily build content per selected tab to avoid building
+                    // expensive consumers (AI models, services) for hidden tabs
                     _buildGeneralSettings(),
                     _buildAccountSettings(),
                     _buildPlaybackSettings(),

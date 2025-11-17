@@ -571,7 +571,7 @@ class _AppShellState extends State<AppShell>
                             ),
                     ),
                   ),
-                  // Solid pink line at bottom - extends to cover the divider gap
+                  // Subtle bottom line to match app backdrop styling
                   Positioned(
                     left: 0,
                     right:
@@ -580,7 +580,10 @@ class _AppShellState extends State<AppShell>
                     child: AnimatedOpacity(
                       opacity: _isSidebarCollapsed ? 0.0 : 1.0,
                       duration: AppDurations.fast,
-                      child: Container(height: 2, color: AppTheme.accentPink),
+                      child: Container(
+                        height: 2,
+                        color: AppTheme.darkBackgroundOpacity(0.12),
+                      ),
                     ),
                   ),
                 ],
@@ -859,17 +862,20 @@ class _AppShellState extends State<AppShell>
         AppTheme.useBackdropFilter(context)
             ? ClipRect(
                 child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 6.0, sigmaY: 6.0),
+                  filter: ImageFilter.blur(
+                    sigmaX: AppTheme.getBackdropSigma(context),
+                    sigmaY: AppTheme.getBackdropSigma(context),
+                  ),
                   child: appBarContent,
                 ),
               )
             : appBarContent,
-        // Pink line at bottom of top bar - extends left to meet sidebar line
+        // Subtle line at bottom of top bar to match broader app backdrop styling
         Positioned(
           left: -2, // Extend 2px to the left to cover the divider gap
           right: 0,
           bottom: 0,
-          child: Container(height: 2, color: AppTheme.accentPink),
+          child: Container(height: 2, color: AppTheme.darkBackgroundOpacity(0.12)),
         ),
       ],
     );
@@ -974,7 +980,7 @@ class NavigationItem {
   });
 }
 
-// Small wrapper to keep screens alive when used inside an IndexedStack.
+// Small wrapper to keep screens alive when used inside a Stack.
 class KeepAliveWrapper extends StatefulWidget {
   final Widget child;
   const KeepAliveWrapper({super.key, required this.child});

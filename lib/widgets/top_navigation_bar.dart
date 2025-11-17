@@ -152,8 +152,8 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                         side: BorderSide(
-                          color: AppTheme.accentPink.withOpacity(0.4),
-                          width: 1.5,
+                          color: AppTheme.darkBackgroundOpacity(0.12),
+                          width: 1.0,
                         ),
                       ),
                       child: Padding(
