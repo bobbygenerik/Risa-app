@@ -147,17 +147,52 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
               );
             }),
           ),
-          SizedBox(width: 20 * scale),
-          // Time (if shown)
+          // Right-side controls: search, overflow, time
           if (widget.showLogoAndTime)
-            Text(
-              widget.currentTime,
-              style: TextStyle(
-                color: AppTheme.textPrimary,
-                fontSize: 18 * scale,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1.0,
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                IconButton(
+                  onPressed: () {
+                    setState(() => _showSearchBox = !_showSearchBox);
+                    if (_showSearchBox) {
+                      widget.onSearch?.call();
+                      Future.microtask(() => _searchFocusNode.requestFocus());
+                    } else {
+                      _searchFocusNode.unfocus();
+                    }
+                  },
+                  icon: Icon(
+                    Icons.search,
+                    color: AppTheme.textSecondary,
+                  ),
+                  iconSize: 22 * scale,
+                  tooltip: 'Search',
+                ),
+                SizedBox(width: 8 * scale),
+                IconButton(
+                  onPressed: () {
+                    widget.onOverflow?.call();
+                  },
+                  icon: Icon(
+                    Icons.more_vert,
+                    color: AppTheme.textSecondary,
+                  ),
+                  iconSize: 22 * scale,
+                  tooltip: 'More',
+                ),
+                SizedBox(width: 12 * scale),
+                Text(
+                  widget.currentTime,
+                  style: TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 18 * scale,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+              ],
             ),
         ],
       ),
@@ -280,17 +315,8 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                     fontWeight: showHighlight ? FontWeight.w700 : FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 8),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 220),
-                  curve: Curves.easeInOut,
-                  width: showHighlight ? 56 * scale : 0,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryBlue,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
+                // Removed per-tab underline in favor of the single sliding highlighter
+                SizedBox(height: 12 * scale),
               ],
             );
           }),

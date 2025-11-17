@@ -80,14 +80,15 @@ flutter:
 # App Icon Configuration
 flutter_launcher_icons:
   android: true
-  image_path: "assets/images/croppedlogo2.png"  # Use transparent logo; background stays white via adaptive
-  adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/images/croppedlogo2.png"
+  image_path: "assets/images/lonelogo (1).png"
+  # Match app dark theme background for adaptive icon
+  adaptive_icon_background: "#1C1C1E"
+  adaptive_icon_foreground: "assets/images/lonelogo (1).png"
   web:
     generate: true
-    image_path: "assets/images/croppedlogo2.png"
-    background_color: "#FFFFFF"
-    theme_color: "#C8C6D3"
+    image_path: "assets/images/lonelogo (1).png"
+    background_color: "#1C1C1E"
+    theme_color: "#1C1C1E"
 
 # Note: dependency_overrides previously pinning `permission_handler` and `http`
 # for `vosk_flutter` have been removed. If you need Vosk, re-add it and reintroduce

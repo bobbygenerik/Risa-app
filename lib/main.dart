@@ -390,13 +390,13 @@ class _MyAppState extends State<MyApp> {
           ),
           ChangeNotifierProvider(create: (_) => AIModelManager()..initialize()),
           ChangeNotifierProvider(
-            create: (_) => AIUpscalingService()..initialize(),
+            create: (_) => AIUpscalingService(),
           ),
           ChangeNotifierProvider(
             create: (_) => MLKitTranslationService()..initialize(),
           ),
           ChangeNotifierProvider(
-            create: (_) => LiveTranscriptionService()..initialize(),
+            create: (_) => LiveTranscriptionService(),
           ),
           ChangeNotifierProvider(
             create: (_) => WhisperSpeechService()..initialize(),

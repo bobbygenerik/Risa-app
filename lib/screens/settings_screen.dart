@@ -1541,156 +1541,164 @@ class _SettingsScreenState extends State<SettingsScreen>
         // Live Transcription
         Consumer<LiveTranscriptionService>(
           builder: (context, transcriptionService, _) {
-            return _buildSectionCard(
-              title: 'Live Transcription',
-              subtitle: 'Real-time speech-to-text from video audio',
-              children: [
-                SwitchListTile(
-                  value: transcriptionService.isTranscribing,
-                  onChanged: (value) async {
-                    if (value) {
-                      await transcriptionService.startTranscription();
-                    } else {
-                      await transcriptionService.stopTranscription();
-                    }
-                  },
-                ),
-                if (transcriptionService.isTranscribing) ...[
+            try {
+              return _buildSectionCard(
+                title: 'Live Transcription',
+                subtitle: 'Real-time speech-to-text from video audio',
+                children: [
                   SwitchListTile(
-                    title: const Text('Enable Translation'),
-                    subtitle: const Text(
-                      'Translate transcribed text to another language',
-                    ),
-                    value: transcriptionService.isTranslating,
-                    onChanged:
-                        transcriptionService.setTranslationEnabled,
+                    value: transcriptionService.isTranscribing,
+                    onChanged: (value) async {
+                      if (value) {
+                        await transcriptionService.startTranscription();
+                      } else {
+                        await transcriptionService.stopTranscription();
+                      }
+                    },
                   ),
-
-                  ListTile(
-                    leading: const Icon(Icons.record_voice_over),
-                    title: const Text('Source Language'),
-                    subtitle: Text(transcriptionService.sourceLanguage),
-                    trailing: const Icon(
-                      Icons.arrow_forward_ios,
-                      size: 16,
-                    ),
-                    onTap: () => _showSourceLanguageSelector(
-                      context,
-                      transcriptionService,
-                    ),
-                  ),
-
-                  if (transcriptionService.isTranslating) ...[
-                    ListTile(
-                      leading: const Icon(Icons.language),
-                      title: const Text('Target Language'),
-                      subtitle: Text(
-                        transcriptionService.targetLanguage,
+                  if (transcriptionService.isTranscribing) ...[
+                    SwitchListTile(
+                      title: const Text('Enable Translation'),
+                      subtitle: const Text(
+                        'Translate transcribed text to another language',
                       ),
+                      value: transcriptionService.isTranslating,
+                      onChanged: transcriptionService.setTranslationEnabled,
+                    ),
+
+                    ListTile(
+                      leading: const Icon(Icons.record_voice_over),
+                      title: const Text('Source Language'),
+                      subtitle: Text(transcriptionService.sourceLanguage),
                       trailing: const Icon(
                         Icons.arrow_forward_ios,
                         size: 16,
                       ),
-                      onTap: () => _showTargetLanguageSelector(
+                      onTap: () => _showSourceLanguageSelector(
                         context,
                         transcriptionService,
                       ),
                     ),
 
-                    SwitchListTile(
-                      title: const Text('Text-to-Speech'),
-                      subtitle: const Text(
-                        'Speak translated text aloud',
-                      ),
-                      value: transcriptionService.isTTSEnabled,
-                      onChanged: transcriptionService.setTTSEnabled,
-                    ),
-                  ],
-
-                  const Divider(),
-
-                  if (transcriptionService
-                      .transcriptions
-                      .isNotEmpty) ...[
-                    ListTile(
-                      leading: const Icon(Icons.download),
-                      title: const Text('Export Transcriptions'),
-                      subtitle: Text(
-                        '${transcriptionService.transcriptions.length} entries available',
-                      ),
-                      trailing: ElevatedButton(
-                        onPressed: () => _exportTranscriptions(
+                    if (transcriptionService.isTranslating) ...[
+                      ListTile(
+                        leading: const Icon(Icons.language),
+                        title: const Text('Target Language'),
+                        subtitle: Text(
+                          transcriptionService.targetLanguage,
+                        ),
+                        trailing: const Icon(
+                          Icons.arrow_forward_ios,
+                          size: 16,
+                        ),
+                        onTap: () => _showTargetLanguageSelector(
                           context,
                           transcriptionService,
                         ),
-                        child: const Text('Export as SRT'),
                       ),
-                    ),
 
-                    ListTile(
-                      leading: const Icon(Icons.delete_outline),
-                      title: const Text('Clear Transcriptions'),
-                      subtitle: const Text(
-                        'Remove all saved transcriptions',
-                      ),
-                      trailing: TextButton(
-                        onPressed: () => _confirmClearTranscriptions(
-                          context,
-                          transcriptionService,
+                      SwitchListTile(
+                        title: const Text('Text-to-Speech'),
+                        subtitle: const Text(
+                          'Speak translated text aloud',
                         ),
-                        child: const Text('Clear All'),
+                        value: transcriptionService.isTTSEnabled,
+                        onChanged: transcriptionService.setTTSEnabled,
                       ),
-                    ),
-                  ],
+                    ],
 
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: EdgeInsets.all(AppSizes.md),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.info_outline,
-                              size: 20,
-                              color: AppTheme.primaryBlue,
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              'About Live Transcription',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
+                    const Divider(),
+
+                    if (transcriptionService.transcriptions.isNotEmpty) ...[
+                      ListTile(
+                        leading: const Icon(Icons.download),
+                        title: const Text('Export Transcriptions'),
+                        subtitle: Text(
+                          '${transcriptionService.transcriptions.length} entries available',
+                        ),
+                        trailing: ElevatedButton(
+                          onPressed: () => _exportTranscriptions(
+                            context,
+                            transcriptionService,
+                          ),
+                          child: const Text('Export as SRT'),
+                        ),
+                      ),
+
+                      ListTile(
+                        leading: const Icon(Icons.delete_outline),
+                        title: const Text('Clear Transcriptions'),
+                        subtitle: const Text(
+                          'Remove all saved transcriptions',
+                        ),
+                        trailing: TextButton(
+                          onPressed: () => _confirmClearTranscriptions(
+                            context,
+                            transcriptionService,
+                          ),
+                          child: const Text('Clear All'),
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: EdgeInsets.all(AppSizes.md),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                size: 20,
+                                color: AppTheme.primaryBlue,
                               ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Live transcription uses on-device speech recognition to convert video audio to text in real-time. '
-                          'Translation and text-to-speech are also processed on your device for privacy and performance.',
-                          style: TextStyle(fontSize: 12, height: 1.4),
-                        ),
-                      ],
+                              SizedBox(width: 8),
+                              Text(
+                                'About Live Transcription',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Live transcription uses on-device speech recognition to convert video audio to text in real-time. '
+                            'Translation and text-to-speech are also processed on your device for privacy and performance.',
+                            style: TextStyle(fontSize: 12, height: 1.4),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
                 ],
-              ],
-            );
+              );
+            } catch (e, st) {
+              debugPrint('Settings: LiveTranscription builder error: $e\n$st');
+              return _buildSectionCard(
+                title: 'Live Transcription',
+                children: [
+                  Text('Unavailable on this device', style: TextStyle(color: AppTheme.textSecondary)),
+                ],
+              );
+            }
           },
         ),
 
         // AI Video Enhancement
         Consumer<AIUpscalingService>(
           builder: (context, aiService, _) {
-            return _buildSectionCard(
-              title: 'AI Video Enhancement',
-              subtitle: 'On-device upscaling for better quality (FREE)',
-              children: [
+            try {
+              return _buildSectionCard(
+                title: 'AI Video Enhancement',
+                subtitle: 'On-device upscaling for better quality (FREE)',
+                children: [
                 SwitchListTile(
                   title: Text('Enable AI Upscaling'),
                   subtitle: Text(
@@ -1828,7 +1836,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                     ),
                   ),
               ],
-            );
+              );
+            } catch (e, st) {
+              debugPrint('Settings: AIUpscaling builder error: $e\n$st');
+              return _buildSectionCard(
+                title: 'AI Video Enhancement',
+                children: [Text('Unavailable on this device', style: TextStyle(color: AppTheme.textSecondary))],
+              );
+            }
           },
         ),
 
@@ -2245,10 +2260,11 @@ class _SettingsScreenState extends State<SettingsScreen>
         // AI Upscaling
         Consumer<AIUpscalingService>(
           builder: (context, aiService, child) {
-            return _buildSectionCard(
-              title: 'AI Video Upscaling',
-              subtitle: 'FREE - On-device AI upscaling (no cloud costs)',
-              children: [
+            try {
+              return _buildSectionCard(
+                title: 'AI Video Upscaling',
+                subtitle: 'FREE - On-device AI upscaling (no cloud costs)',
+                children: [
                 SwitchListTile(
                   title: const Text('Enable AI Upscaling'),
                   subtitle: const Text(
@@ -2307,150 +2323,165 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ),
                 ],
               ],
-            );
+              );
+            } catch (e, st) {
+              debugPrint('Settings: AIUpscaling (secondary) builder error: $e\n$st');
+              return _buildSectionCard(
+                title: 'AI Video Upscaling',
+                children: [Text('Unavailable on this device', style: TextStyle(color: AppTheme.textSecondary))],
+              );
+            }
           },
         ),
 
         // Whisper On-Device Transcription
         Consumer<WhisperSpeechService>(
           builder: (context, whisperService, child) {
-            return _buildSectionCard(
-              title: '🎙️ On-Device Transcription (Whisper)',
-              subtitle: '100% OFFLINE - AUTO-DOWNLOAD - NO COSTS - TRUE AI',
-              children: [
-                if (!whisperService.isModelDownloaded) ...[
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppTheme.primaryBlue),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: const [
-                            Icon(
-                              Icons.cloud_download,
-                              color: AppTheme.primaryBlue,
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              'Model Not Downloaded Yet',
-                              style: TextStyle(
-                                color: AppTheme.primaryBlue,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Whisper model (~40MB) will automatically download on first use.\n\n'
-                          'This is a ONE-TIME download:\n'
-                          '• Downloads from Hugging Face (free hosting)\n'
-                          '• Takes ~30 seconds on WiFi\n'
-                          '• Works 100% offline after download\n'
-                          '• Never needs re-downloading\n\n'
-                          'Benefits:\n'
-                          '• TRUE on-device AI (both Android & iOS)\n'
-                          '• No cloud costs - completely free\n'
-                          '• Private - no data sent to servers\n'
-                          '• Supports 99+ languages',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                        const SizedBox(height: 12),
-                        if (!whisperService.isDownloading)
-                          ElevatedButton.icon(
-                            onPressed: () async {
-                              await whisperService.downloadModelIfNeeded();
-                            },
-                            icon: const Icon(Icons.download),
-                            label: const Text('Download Now'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryBlue,
-                            ),
-                          ),
-                        if (whisperService.isDownloading) ...[
-                          Column(
-                            children: [
-                              LinearProgressIndicator(
-                                value: whisperService.downloadProgress,
-                                backgroundColor: AppTheme.highlight,
+            try {
+              return _buildSectionCard(
+                title: '🎙️ On-Device Transcription (Whisper)',
+                subtitle: '100% OFFLINE - AUTO-DOWNLOAD - NO COSTS - TRUE AI',
+                children: [
+                  if (!whisperService.isModelDownloaded) ...[
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppTheme.primaryBlue),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: const [
+                              Icon(
+                                Icons.cloud_download,
                                 color: AppTheme.primaryBlue,
                               ),
-                              const SizedBox(height: 8),
+                              SizedBox(width: 8),
                               Text(
-                                'Downloading... ${(whisperService.downloadProgress * 100).toInt()}%',
-                                style: const TextStyle(fontSize: 12),
+                                'Model Not Downloaded Yet',
+                                style: TextStyle(
+                                  color: AppTheme.primaryBlue,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ],
                           ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Whisper model (~40MB) will automatically download on first use.\n\n'
+                            'This is a ONE-TIME download:\n'
+                            '• Downloads from Hugging Face (free hosting)\n'
+                            '• Takes ~30 seconds on WiFi\n'
+                            '• Works 100% offline after download\n'
+                            '• Never needs re-downloading\n\n'
+                            'Benefits:\n'
+                            '• TRUE on-device AI (both Android & iOS)\n'
+                            '• No cloud costs - completely free\n'
+                            '• Private - no data sent to servers\n'
+                            '• Supports 99+ languages',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          const SizedBox(height: 12),
+                          if (!whisperService.isDownloading)
+                            ElevatedButton.icon(
+                              onPressed: () async {
+                                await whisperService.downloadModelIfNeeded();
+                              },
+                              icon: const Icon(Icons.download),
+                              label: const Text('Download Now'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primaryBlue,
+                              ),
+                            ),
+                          if (whisperService.isDownloading) ...[
+                            Column(
+                              children: [
+                                LinearProgressIndicator(
+                                  value: whisperService.downloadProgress,
+                                  backgroundColor: AppTheme.highlight,
+                                  color: AppTheme.primaryBlue,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Downloading... ${(whisperService.downloadProgress * 100).toInt()}%',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
-                  ),
-                ] else ...[
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppTheme.accentGreen.withAlpha((0.1 * 255).round()),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppTheme.accentGreen),
-                    ),
-                    child: Row(
-                      children: const [
-                        Icon(Icons.check_circle, color: AppTheme.accentGreen),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '✅ Whisper model ready! True on-device transcription enabled.',
-                            style: TextStyle(
-                              color: AppTheme.accentGreen,
-                              fontWeight: FontWeight.bold,
+                  ] else ...[
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentGreen.withAlpha((0.1 * 255).round()),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppTheme.accentGreen),
+                      ),
+                      child: Row(
+                        children: const [
+                          Icon(Icons.check_circle, color: AppTheme.accentGreen),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '✅ Whisper model ready! True on-device transcription enabled.',
+                              style: TextStyle(
+                                color: AppTheme.accentGreen,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  ListTile(
-                    leading: const Icon(
-                      Icons.offline_bolt,
-                      color: AppTheme.primaryBlue,
+                    const SizedBox(height: 16),
+                    ListTile(
+                      leading: const Icon(
+                        Icons.offline_bolt,
+                        color: AppTheme.primaryBlue,
+                      ),
+                      title: const Text('Status: 100% Offline'),
+                      subtitle: const Text(
+                        'Works without internet • No cloud APIs ever',
+                      ),
                     ),
-                    title: const Text('Status: 100% Offline'),
-                    subtitle: const Text(
-                      'Works without internet • No cloud APIs ever',
+                    const SizedBox(height: 8),
+                    ListTile(
+                      leading: const Icon(
+                        Icons.security,
+                        color: AppTheme.primaryBlue,
+                      ),
+                      title: const Text('Privacy: Complete'),
+                      subtitle: const Text(
+                        'All AI processing on your device • Zero data collection',
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  ListTile(
-                    leading: const Icon(
-                      Icons.security,
-                      color: AppTheme.primaryBlue,
+                    const SizedBox(height: 8),
+                    ListTile(
+                      leading: const Icon(
+                        Icons.language,
+                        color: AppTheme.primaryBlue,
+                      ),
+                      title: const Text('Languages: 99+'),
+                      subtitle: const Text(
+                        'Multilingual support built-in (no extra downloads)',
+                      ),
                     ),
-                    title: const Text('Privacy: Complete'),
-                    subtitle: const Text(
-                      'All AI processing on your device • Zero data collection',
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  ListTile(
-                    leading: const Icon(
-                      Icons.language,
-                      color: AppTheme.primaryBlue,
-                    ),
-                    title: const Text('Languages: 99+'),
-                    subtitle: const Text(
-                      'Multilingual support built-in (no extra downloads)',
-                    ),
-                  ),
+                  ],
                 ],
-              ],
-            );
+              );
+            } catch (e, st) {
+              debugPrint('Settings: Whisper builder error: $e\n$st');
+              return _buildSectionCard(
+                title: 'On-Device Transcription (Whisper)',
+                children: [Text('Unavailable on this device', style: TextStyle(color: AppTheme.textSecondary))],
+              );
+            }
           },
         ),
 
