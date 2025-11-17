@@ -8,6 +8,7 @@ import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/services/voice_search_service.dart';
+import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/epg_service.dart';
 import 'package:iptv_player/services/google_drive_sync_service.dart';
 import 'package:iptv_player/services/ai_upscaling_service.dart';
@@ -42,12 +43,18 @@ import 'package:iptv_player/services/background_task_manager.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Load TMDB disk cache before starting the app so lookups can hit cache immediately
+  try {
+    await TMDBService.init();
+  } catch (e) {
+    // ignore init errors and continue with in-memory cache
+    debugPrint('TMDBService.init() failed: $e');
+  }
+
   runZonedGuarded(
     () {
-      // Initialize binding within the zone context
-      WidgetsFlutterBinding.ensureInitialized();
-      
       FlutterError.onError = (FlutterErrorDetails details) {
         FlutterError.presentError(details);
         Zone.current.handleUncaughtError(

@@ -244,4 +244,11 @@ class TMDBService {
 
     return null;
   }
+
+  /// Initialize TMDBService (loads disk cache). Call once during app startup.
+  static Future<void> init() async {
+    if (!_cacheLoaded) {
+      await _loadCacheFromDisk();
+    }
+  }
 }
