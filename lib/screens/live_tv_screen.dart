@@ -223,8 +223,8 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
                             decoration: hasFocus
                                 ? BoxDecoration(
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: AppTheme.accentOrange, width: 3),
-                                    boxShadow: [BoxShadow(color: AppTheme.accentOrange.withOpacity(0.15), blurRadius: 16, offset: const Offset(0, 6))],
+                                    border: Border.all(color: AppTheme.accentPink, width: 3),
+                                    boxShadow: [BoxShadow(color: AppTheme.accentPink.withOpacity(0.15), blurRadius: 16, offset: const Offset(0, 6))],
                                   )
                                 : null,
                             child: ElevatedButton.icon(
@@ -248,7 +248,7 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
                             label: const Text('Guide'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: f ? Colors.white : AppTheme.textPrimary,
-                              side: BorderSide(color: f ? AppTheme.accentOrange : AppTheme.primaryBlue.withOpacity(0.4), width: f ? 2 : 1),
+                              side: BorderSide(color: f ? AppTheme.accentPink : AppTheme.primaryBlue.withOpacity(0.4), width: f ? 2 : 1),
                               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                             ),
                           );

@@ -47,6 +47,7 @@ class _LegalDisclaimerDialogState extends State<LegalDisclaimerDialog> {
                   Color(0xFF0d1140),
                 ],
               )
+                ,
                 borderRadius: BorderRadius.circular(AppSizes.radiusMd),
                 border: Border.all(color: AppTheme.divider),
               ),

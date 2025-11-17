@@ -478,13 +478,13 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
                 height: 60,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF050710),
-                  Color(0xFF0d1140),
-                ],
-              )
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF050710),
+                      Color(0xFF0d1140),
+                    ],
+                  ),
                   borderRadius: BorderRadius.circular(AppSizes.radiusSm),
                 ),
                 child: Icon(Icons.tv, color: AppTheme.primaryBlue, size: 32),

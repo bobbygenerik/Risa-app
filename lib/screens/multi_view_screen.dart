@@ -302,14 +302,16 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
     if (index >= widget.channels.length) {
       return Container(
         margin: const EdgeInsets.all(1),
-        gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF050710),
-                  Color(0xFF0d1140),
-                ],
-              )
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF050710),
+              Color(0xFF0d1140),
+            ],
+          ),
+        ),
         child: const Center(
           child: Text('No channel', style: TextStyle(color: Colors.white54)),
         ),

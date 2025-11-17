@@ -25,7 +25,7 @@ import 'package:iptv_player/screens/playlist_editor_screen.dart';
 import 'package:iptv_player/screens/edit_profile_screen.dart';
 import 'package:iptv_player/screens/recordings_screen.dart';
 import 'package:iptv_player/screens/ai_models_screen.dart';
-import 'package:iptv_player/screens/modern_home_screen.dart';
+// modern_home_screen is unused in the redesigned UI; import removed to silence lints
 import 'package:iptv_player/screens/live_tv_screen.dart';
 import 'package:iptv_player/screens/movies_screen.dart';
 import 'package:iptv_player/screens/series_screen.dart';
@@ -43,15 +43,8 @@ import 'package:iptv_player/services/background_task_manager.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  // Load TMDB disk cache before starting the app so lookups can hit cache immediately
-  try {
-    await TMDBService.init();
-  } catch (e) {
-    // ignore init errors and continue with in-memory cache
-    debugPrint('TMDBService.init() failed: $e');
-  }
 
   runZonedGuarded(
     () {
@@ -62,13 +55,69 @@ void main() async {
           details.stack ?? StackTrace.current,
         );
       };
-      runApp(const MyApp());
+      // Show a short startup loader while TMDB disk cache loads
+      runApp(const StartupLoader());
     },
     (error, stack) {
       // Optionally log error to a service
       _ErrorHandler.reportError(error, stack);
     },
   );
+}
+
+class StartupLoader extends StatefulWidget {
+  const StartupLoader({super.key});
+
+  @override
+  State<StartupLoader> createState() => _StartupLoaderState();
+}
+
+class _StartupLoaderState extends State<StartupLoader> {
+  bool _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    try {
+      // Load disk cache so lookups hit cache immediately. Errors are safe to ignore.
+      await TMDBService.init();
+    } catch (e) {
+      debugPrint('TMDBService.init() failed during startup: $e');
+    } finally {
+      if (mounted) {
+        // Small delay so the indicator is visible briefly on very fast devices
+        await Future.delayed(const Duration(milliseconds: 150));
+        setState(() => _ready = true);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_ready) return const MyApp();
+
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.darkTheme,
+      home: Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              CircularProgressIndicator(),
+              SizedBox(height: 12),
+              Text('Loading cache...', style: TextStyle(color: Colors.white)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Global error handler for reporting and displaying errors
