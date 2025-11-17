@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -9,8 +10,50 @@ import 'package:iptv_player/models/program.dart';
 
 /// A focused Live TV screen. Shows a hero for the currently airing program
 /// on a featured channel, plus channel rows below.
-class LiveTVScreen extends StatelessWidget {
+class LiveTVScreen extends StatefulWidget {
   const LiveTVScreen({super.key});
+
+  @override
+  State<LiveTVScreen> createState() => _LiveTVScreenState();
+}
+
+class _LiveTVScreenState extends State<LiveTVScreen> {
+  Timer? _carouselTimer;
+  int _featuredIndex = 0;
+  final FocusNode _watchFocus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    // Start carousel once the widget is built — will be updated when channels load
+    WidgetsBinding.instance.addPostFrameCallback((_) => _startCarouselIfNeeded());
+  }
+
+  @override
+  void dispose() {
+    _carouselTimer?.cancel();
+    _watchFocus.dispose();
+    super.dispose();
+  }
+
+  void _startCarouselIfNeeded() {
+    // Cancel existing timer
+    _carouselTimer?.cancel();
+    // Start a timer that advances featured index every 8 seconds
+    _carouselTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+      final channelProvider = Provider.of<ChannelProvider>(context, listen: false);
+      final channels = channelProvider.channels;
+      if (channels.isEmpty) return;
+      setState(() {
+        _featuredIndex = (_featuredIndex + 1) % channels.length;
+      });
+    });
+
+    // Default focus to the watch button
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) _watchFocus.requestFocus();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,22 +94,11 @@ class LiveTVScreen extends StatelessWidget {
             );
           }
 
-          // Pick featured channel: prefer one with a current program
-          Channel? featuredChannel;
-          Program? currentProgram;
+          // Ensure index is valid for current channel list
+          if (_featuredIndex >= channels.length) _featuredIndex = 0;
 
-          for (final c in channels) {
-            final p = epgService.getCurrentProgram(c.id);
-            if (p != null) {
-              featuredChannel = c;
-              currentProgram = p;
-              break;
-            }
-          }
-
-          // Fallback to first channel
-          featuredChannel ??= channels.first;
-          currentProgram ??= epgService.getCurrentProgram(featuredChannel.id);
+          final featuredChannel = channels[_featuredIndex];
+          final currentProgram = epgService.getCurrentProgram(featuredChannel.id);
 
           return SingleChildScrollView(
             child: Column(
@@ -182,18 +214,45 @@ class LiveTVScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      ElevatedButton.icon(
-                        onPressed: () => context.push('/player', extra: channel),
-                        icon: const Icon(Icons.play_arrow),
-                        label: const Text('Watch'),
-                        style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue),
+                      // Watch button with larger focus outline
+                      Focus(
+                        focusNode: _watchFocus,
+                        child: Builder(builder: (ctx) {
+                          final hasFocus = Focus.of(ctx).hasFocus;
+                          return Container(
+                            decoration: hasFocus
+                                ? BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: AppTheme.accentOrange, width: 3),
+                                    boxShadow: [BoxShadow(color: AppTheme.accentOrange.withOpacity(0.15), blurRadius: 16, offset: const Offset(0, 6))],
+                                  )
+                                : null,
+                            child: ElevatedButton.icon(
+                              onPressed: () => context.push('/player', extra: channel),
+                              icon: const Icon(Icons.play_arrow),
+                              label: const Text('Watch'),
+                              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14), textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                            ),
+                          );
+                        }),
                       ),
                       const SizedBox(width: 12),
-                      OutlinedButton.icon(
-                        onPressed: () => context.go('/epg'),
-                        icon: const Icon(Icons.schedule),
-                        label: const Text('Guide'),
-                        style: OutlinedButton.styleFrom(foregroundColor: AppTheme.textPrimary, side: BorderSide(color: AppTheme.primaryBlue.withOpacity(0.4))),
+                      // Guide button with stronger contrast when focused
+                      FocusableActionDetector(
+                        mouseCursor: SystemMouseCursors.click,
+                        child: Builder(builder: (ctx) {
+                          final f = Focus.of(ctx).hasFocus;
+                          return OutlinedButton.icon(
+                            onPressed: () => context.go('/epg'),
+                            icon: const Icon(Icons.schedule),
+                            label: const Text('Guide'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: f ? Colors.white : AppTheme.textPrimary,
+                              side: BorderSide(color: f ? AppTheme.accentOrange : AppTheme.primaryBlue.withOpacity(0.4), width: f ? 2 : 1),
+                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                            ),
+                          );
+                        }),
                       ),
                     ],
                   ),

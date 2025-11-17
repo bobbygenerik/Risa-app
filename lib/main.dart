@@ -581,14 +581,7 @@ final _router = GoRouter(
             child: const LiveTVScreen(),
           ),
         ),
-        // Preserve discovery/browse experience at /discover
-        GoRoute(
-          path: '/discover',
-          pageBuilder: (context, state) => _fadeSlidePage(
-            key: state.pageKey,
-            child: const ModernHomeScreen(),
-          ),
-        ),
+        // (No /discover route — the three main tabs are Live TV, Movies, Series)
         GoRoute(
           path: '/movies',
           pageBuilder: (context, state) => _fadeSlidePage(
