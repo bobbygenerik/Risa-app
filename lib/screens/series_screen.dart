@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/services/tmdb_service.dart';
+import 'package:iptv_player/services/service_validator.dart';
 import 'package:go_router/go_router.dart';
 
 class SeriesScreen extends StatefulWidget {
@@ -14,12 +16,116 @@ class SeriesScreen extends StatefulWidget {
 }
 
 class _SeriesScreenState extends State<SeriesScreen> {
+  Timer? _carouselTimer;
+  int _featuredIndex = 0;
   final FocusNode _watchFocus = FocusNode();
+  List<Content> _curatedSeries = [];
 
   @override
   void dispose() {
+    _carouselTimer?.cancel();
     _watchFocus.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startCarousel();
+      _watchFocus.addListener(() {
+        if (_watchFocus.hasFocus) {
+          _carouselTimer?.cancel();
+        } else {
+          _startCarousel();
+        }
+      });
+      _prepareCuratedSeriesList();
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) _watchFocus.requestFocus();
+      });
+    });
+  }
+
+  void _startCarousel() {
+    _carouselTimer?.cancel();
+    _carouselTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+      final provider = Provider.of<ContentProvider>(context, listen: false);
+      final series = _curatedSeries.isNotEmpty ? _curatedSeries : provider.series;
+      if (series.isEmpty) return;
+      if (mounted) {
+        setState(() {
+          _featuredIndex = (_featuredIndex + 1) % series.length;
+        });
+      }
+    });
+  }
+
+  Future<void> _prepareCuratedSeriesList() async {
+    try {
+      final provider = Provider.of<ContentProvider>(context, listen: false);
+      final series = provider.series;
+      if (series.isEmpty) return;
+
+      final candidates = series.take(20).toList();
+      final List<Content> curated = [];
+
+      if (ServiceValidator.isTmdbAvailable) {
+        for (final s in candidates) {
+          try {
+            final details = await TMDBService.getTVDetails(s.title, year: s.year);
+            if (details != null) {
+              final patched = s.copyWith(
+                backdropUrl: details['backdrop'] ?? s.backdropUrl,
+                imageUrl: details['poster'] ?? s.imageUrl,
+                rating: (details['rating'] as double?) ?? s.rating,
+                description: details['overview'] ?? s.description,
+              );
+              curated.add(patched);
+            } else if (s.backdropUrl != null || s.imageUrl != null) {
+              curated.add(s);
+            }
+          } catch (_) {
+            // ignore per-item failures
+          }
+          if (curated.length >= 12) break;
+        }
+      } else {
+        curated.addAll(series.where((s) => s.backdropUrl != null || s.imageUrl != null));
+      }
+
+      if (mounted && curated.isNotEmpty) {
+        // prefer backdrops, then posters, then newer items
+        curated.sort((a, b) {
+          final aBackdrop = a.backdropUrl != null;
+          final bBackdrop = b.backdropUrl != null;
+          if (aBackdrop != bBackdrop) return aBackdrop ? -1 : 1;
+
+          final aPoster = a.imageUrl != null;
+          final bPoster = b.imageUrl != null;
+          if (aPoster != bPoster) return aPoster ? -1 : 1;
+
+          final aAdded = a.addedDate?.millisecondsSinceEpoch ?? 0;
+          final bAdded = b.addedDate?.millisecondsSinceEpoch ?? 0;
+          if (aAdded != bAdded) return bAdded.compareTo(aAdded);
+
+          final aYear = a.year ?? 0;
+          final bYear = b.year ?? 0;
+          if (aYear != bYear) return bYear.compareTo(aYear);
+
+          final aRating = a.rating ?? 0.0;
+          final bRating = b.rating ?? 0.0;
+          return bRating.compareTo(aRating);
+        });
+
+        final limited = curated.length > 12 ? curated.sublist(0, 12) : curated;
+        setState(() {
+          _curatedSeries = limited;
+        });
+      }
+    } catch (e) {
+      // ignore
+    }
   }
 
   @override
@@ -37,7 +143,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
           children: [
             // Full-height hero banner background
             Positioned.fill(
-              child: _buildHeroBannerBackground(series.first),
+              child: _buildHeroBannerBackground((_curatedSeries.isNotEmpty ? _curatedSeries : series)[_featuredIndex >= (_curatedSeries.isNotEmpty ? _curatedSeries.length : series.length) ? 0 : _featuredIndex]),
             ),
             // Content on top
             SingleChildScrollView(
@@ -45,7 +151,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Hero banner with content overlay
-                  _buildHeroBannerOverlay(context, series.first),
+                  _buildHeroBannerOverlay(context, (_curatedSeries.isNotEmpty ? _curatedSeries : series)[_featuredIndex >= (_curatedSeries.isNotEmpty ? _curatedSeries.length : series.length) ? 0 : _featuredIndex]),
                   SizedBox(height: AppSizes.lg),
 
                   Container(
