@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+// Backdrop filter mode for performance tuning
+enum BackdropFilterMode { auto, on, off }
+
 class AppTheme {
   // Brand Colors (updated to match croppedlogo2.jpg dominant blue)
   // Using deep blue from logo palette
@@ -40,9 +43,39 @@ class AppTheme {
   static const Color tvFocusHighlight = Color(0xFF2E3192);
   static const Color tvFocusGlow = Color(0x402E3192);
   // Performance toggles
-  // Set to false to avoid expensive BackdropFilter blur on low-end devices.
-  // Can be toggled at runtime (e.g., from Settings) by assigning to this field.
+
+  // Backdrop filter behaviour mode: auto = use heuristic, on = always enabled, off = always disabled
+  static const double _kMinAreaForBackdrop = 1280.0 * 720.0; // pixels
+
+  static BackdropFilterMode backdropFilterMode = BackdropFilterMode.auto;
+
+  // Legacy toggle (keeps backward compatibility). If set to false, it forces off.
   static bool enableBackdropFilter = true;
+
+  // Decide at runtime whether to use BackdropFilter (true) or fallback (false).
+  // Heuristic: if explicit mode set to on/off, obey it. For auto, use screen area
+  // and basic platform checks as a proxy for device capability.
+  static bool useBackdropFilter(BuildContext context) {
+    if (!enableBackdropFilter) return false;
+    if (backdropFilterMode == BackdropFilterMode.on) return true;
+    if (backdropFilterMode == BackdropFilterMode.off) return false;
+
+    // Auto mode: basic heuristic
+    try {
+      final mq = MediaQuery.of(context);
+      final area = mq.size.width * mq.size.height;
+      if (area < _kMinAreaForBackdrop) return false;
+
+      // On phones / small devices (shortestSide < 600) disable blur
+      if (mq.size.shortestSide < 600) return false;
+
+      // Default to enabled for larger screens (TVs, tablets, desktops)
+      return true;
+    } catch (_) {
+      // If MediaQuery is unavailable for some reason, default to enabled
+      return true;
+    }
+  }
   
   static ThemeData get darkTheme {
     return ThemeData(

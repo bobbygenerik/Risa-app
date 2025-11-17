@@ -784,7 +784,7 @@ class _AppShellState extends State<AppShell>
     return Stack(
       children: [
         // Conditionally apply blur filter; fallback to plain translucent background
-        AppTheme.enableBackdropFilter
+        AppTheme.useBackdropFilter(context)
             ? ClipRect(
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 6.0, sigmaY: 6.0),

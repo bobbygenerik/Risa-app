@@ -248,7 +248,7 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
       mainAxisSize: MainAxisSize.min,
       children: [
         // Conditionally use BackdropFilter for glass effect; fall back to plain translucent background for performance
-        AppTheme.enableBackdropFilter
+        AppTheme.useBackdropFilter(context)
             ? ClipRect(
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 6.0, sigmaY: 6.0),
