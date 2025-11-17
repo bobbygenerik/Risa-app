@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/services/tmdb_service.dart';
+import 'package:iptv_player/services/service_validator.dart';
 import 'package:go_router/go_router.dart';
 
 class MoviesScreen extends StatefulWidget {
@@ -17,12 +19,8 @@ class _MoviesScreenState extends State<MoviesScreen> {
   Timer? _carouselTimer;
   int _featuredIndex = 0;
   final FocusNode _playFocus = FocusNode();
+  List<Content> _curatedMovies = [];
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _startCarousel());
-  }
 
   @override
   void dispose() {
@@ -35,13 +33,34 @@ class _MoviesScreenState extends State<MoviesScreen> {
     _carouselTimer?.cancel();
     _carouselTimer = Timer.periodic(const Duration(seconds: 8), (_) {
       final provider = Provider.of<ContentProvider>(context, listen: false);
-      final movies = provider.movies;
+      final movies = _curatedMovies.isNotEmpty ? _curatedMovies : provider.movies;
       if (movies.isEmpty) return;
       if (mounted) {
         setState(() {
           _featuredIndex = (_featuredIndex + 1) % movies.length;
         });
       }
+    });
+  }
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startCarousel();
+      // pause carousel when hero play button receives focus
+      _playFocus.addListener(() {
+        if (_playFocus.hasFocus) {
+          _carouselTimer?.cancel();
+        } else {
+          _startCarousel();
+        }
+      });
+      // prepare curated list (may perform TMDB lookups)
+      _prepareCuratedList();
+      // request focus so Play gets default focus when entering the screen
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) _playFocus.requestFocus();
+      });
     });
   }
 
@@ -56,8 +75,9 @@ class _MoviesScreenState extends State<MoviesScreen> {
           return _buildEmptyState(context);
         }
 
-        if (_featuredIndex >= movies.length) _featuredIndex = 0;
-        final featured = movies[_featuredIndex];
+        final displayMovies = _curatedMovies.isNotEmpty ? _curatedMovies : movies;
+        if (_featuredIndex >= displayMovies.length) _featuredIndex = 0;
+        final featured = displayMovies[_featuredIndex];
 
         return Stack(
           children: [
@@ -387,7 +407,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
                           decoration: hasFocus
                               ? BoxDecoration(
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: AppTheme.accentOrange, width: 3),
+                                  border: Border.all(color: AppTheme.accentPink, width: 3),
                                 )
                               : null,
                           child: ElevatedButton.icon(
@@ -435,5 +455,48 @@ class _MoviesScreenState extends State<MoviesScreen> {
               )
       ),
     );
+  }
+
+  Future<void> _prepareCuratedList() async {
+    try {
+      final provider = Provider.of<ContentProvider>(context, listen: false);
+      final movies = provider.movies;
+      if (movies.isEmpty) return;
+
+      final candidates = movies.take(20).toList();
+      final List<Content> curated = [];
+
+      if (ServiceValidator.isTmdbAvailable) {
+        for (final m in candidates) {
+          try {
+            final details = await TMDBService.getMovieDetails(m.title, year: m.year);
+            if (details != null) {
+              final patched = m.copyWith(
+                backdropUrl: details['backdrop'] ?? m.backdropUrl,
+                imageUrl: details['poster'] ?? m.imageUrl,
+                rating: (details['rating'] as double?) ?? m.rating,
+                description: details['overview'] ?? m.description,
+              );
+              curated.add(patched);
+            } else if (m.backdropUrl != null || m.imageUrl != null) {
+              curated.add(m);
+            }
+          } catch (_) {
+            // ignore per-item TMDB failures
+          }
+          if (curated.length >= 12) break;
+        }
+      } else {
+        curated.addAll(movies.where((m) => m.backdropUrl != null || m.imageUrl != null));
+      }
+
+      if (mounted && curated.isNotEmpty) {
+        setState(() {
+          _curatedMovies = curated;
+        });
+      }
+    } catch (e) {
+      // ignore top-level failures
+    }
   }
 }
