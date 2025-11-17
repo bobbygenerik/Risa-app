@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
@@ -175,46 +176,62 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildGlassAppBar() {
-    return Container(
+    // Keep time updated immediately on build
+    _currentTime = DateTime.now();
+    final bar = SizedBox(
       height: AppSizes.appBarHeight,
-      padding: EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
-      decoration: BoxDecoration(
-        color: AppTheme.darkBackground.withAlpha((0.8 * 255).round()),
-        border: Border(
-          bottom: BorderSide(color: AppTheme.darkBackgroundOpacity(0.12), width: 2),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.sm),
+        decoration: const BoxDecoration(color: Colors.transparent),
+        child: Row(
+          children: [
+            // Small search icon/logo area
+            SizedBox(
+              width: 40,
+              height: 40,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryBlue,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.search, color: Colors.white, size: 24),
+              ),
+            ),
+            SizedBox(width: AppSizes.md),
+            Text(
+              'Search',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+            Spacer(),
+            SizedBox(
+              width: 120,
+              child: Text(
+                _formatTime(_currentTime),
+                textAlign: TextAlign.right,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
-      child: Row(
-        children: [
-          // Logo
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppTheme.primaryBlue,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(Icons.search, color: Colors.white, size: 24),
-          ),
-          SizedBox(width: AppSizes.md),
-          Text(
-            'Search',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimary,
-            ),
-          ),
-          Spacer(),
-          // Current time
-          Text(
-            _formatTime(_currentTime),
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppTheme.textSecondary,
-            ),
-          ),
-        ],
-      ),
     );
+
+    return AppTheme.useBackdropFilter(context)
+        ? ClipRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(
+                sigmaX: AppTheme.getBackdropSigma(context),
+                sigmaY: AppTheme.getBackdropSigma(context),
+              ),
+              child: bar,
+            ),
+          )
+        : bar;
   }
 
   String _formatTime(DateTime time) {

@@ -48,37 +48,7 @@ class _MainShellState extends State<MainShell> {
         '${hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} $period';
   }
 
-  Future<void> _handleOverflow() async {
-    final result = await showDialog<String>(
-      context: context,
-      builder: (ctx) => SimpleDialog(
-        title: const Text('Menu'),
-        children: [
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(ctx, 'settings'),
-            child: const Text('Settings'),
-          ),
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(ctx, 'help'),
-            child: const Text('Help'),
-          ),
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(ctx, 'signout'),
-            child: const Text('Sign Out'),
-          ),
-        ],
-      ),
-    );
-
-    if (!mounted) return;
-    if (result == 'settings') {
-      context.go('/settings');
-    } else if (result == 'help') {
-      context.go('/help');
-    } else if (result == 'signout') {
-      // TODO: implement sign out flow
-    }
-  }
+  // Overflow menu handled within `TopNavigationBar` now; removed temporary handler
 
   @override
   Widget build(BuildContext context) {
@@ -108,7 +78,6 @@ class _MainShellState extends State<MainShell> {
               currentTime: _currentTime,
               showLogoAndTime: true,
               onSearch: () => context.go('/search'),
-              onOverflow: _handleOverflow,
             ),
             // Content area - changes when navigating between tabs
             Expanded(
