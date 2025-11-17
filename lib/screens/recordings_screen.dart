@@ -200,7 +200,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
           child: Column(
           children: [
             _buildGlassAppBar(),
-            Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
+            Divider(height: 1, color: AppTheme.darkBackgroundOpacity(0.12), thickness: 2),
             Expanded(child: _buildContent()),
           ],
         ),
@@ -216,7 +216,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.08),
         border: Border(
-          bottom: BorderSide(color: AppTheme.accentPink, width: 2),
+          bottom: BorderSide(color: AppTheme.darkBackgroundOpacity(0.12), width: 2),
         ),
       ),
       child: Row(

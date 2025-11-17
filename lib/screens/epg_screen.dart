@@ -182,7 +182,7 @@ class _EPGScreenState extends State<EPGScreen> {
                 Column(
                   children: [
                     _buildHeader(epgService),
-                    Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
+                    Divider(height: 1, color: AppTheme.darkBackgroundOpacity(0.12), thickness: 2),
                     Expanded(
                       child: Row(
                         children: [
@@ -246,7 +246,7 @@ class _EPGScreenState extends State<EPGScreen> {
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.08),
         border: Border(
-          bottom: BorderSide(color: AppTheme.accentPink, width: 2),
+          bottom: BorderSide(color: AppTheme.darkBackgroundOpacity(0.12), width: 2),
         ),
       ),
       child: Row(

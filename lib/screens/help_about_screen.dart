@@ -87,7 +87,7 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
           child: Column(
           children: [
             _buildGlassAppBar(),
-            Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
+            Divider(height: 1, color: AppTheme.darkBackgroundOpacity(0.12), thickness: 2),
             Expanded(
               child: Column(
                 children: [
@@ -130,7 +130,7 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
       decoration: BoxDecoration(
         color: AppTheme.darkBackground.withAlpha((0.8 * 255).round()),
         border: Border(
-          bottom: BorderSide(color: AppTheme.accentPink, width: 2),
+          bottom: BorderSide(color: AppTheme.darkBackgroundOpacity(0.12), width: 2),
         ),
       ),
       child: Row(
