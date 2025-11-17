@@ -39,6 +39,10 @@ class AppTheme {
   // Android TV Focus Colors
   static const Color tvFocusHighlight = Color(0xFF2E3192);
   static const Color tvFocusGlow = Color(0x402E3192);
+  // Performance toggles
+  // Set to false to avoid expensive BackdropFilter blur on low-end devices.
+  // Can be toggled at runtime (e.g., from Settings) by assigning to this field.
+  static bool enableBackdropFilter = true;
   
   static ThemeData get darkTheme {
     return ThemeData(

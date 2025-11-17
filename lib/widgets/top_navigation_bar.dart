@@ -78,180 +78,184 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
     final isTV = size.width > 1920 && size.height > 1080;
     final scale = isTV ? 1.8 : 1.0;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Semi-transparent blurred background for the top nav (glass effect)
-        ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 6.0, sigmaY: 6.0),
+    final navBar = Container(
+      padding: EdgeInsets.symmetric(horizontal: 32 * scale, vertical: 24 * scale),
+      decoration: BoxDecoration(
+        color: AppTheme.darkBackgroundOpacity(0.55),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Logo (if shown)
+          if (widget.showLogoAndTime) ...[
+            Image.asset(
+              'assets/images/croppedlogo2.png',
+              height: 40 * scale,
+              fit: BoxFit.contain,
+            ),
+            SizedBox(width: 20 * scale),
+          ],
+          // Navigation bar with tabs and search (centered, expanded)
+          Expanded(
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 32 * scale, vertical: 24 * scale),
+              height: 56 * scale,
               decoration: BoxDecoration(
-                color: AppTheme.darkBackgroundOpacity(0.55),
+                color: Colors.white.withOpacity(0.08),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.15),
+                  width: 1.5,
+                ),
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primaryBlue.withOpacity(0.1),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Logo (if shown)
-                  if (widget.showLogoAndTime) ...[
-                    Image.asset(
-                      'assets/images/croppedlogo2.png',
-                      height: 40 * scale,
-                      fit: BoxFit.contain,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12 * scale),
+                child: Row(
+                  children: [
+                    ...List.generate(
+                      widget.tabs.length,
+                      (index) => _buildTabButton(index, scale),
                     ),
-                    SizedBox(width: 20 * scale),
-                  ],
-                  // Navigation bar with tabs and search (centered, expanded)
-                  Expanded(
-                    child: Container(
-                      height: 56 * scale,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.08),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.15),
+                    // Search icon in nav bar
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          setState(() => _showSearchBox = !_showSearchBox);
+                          if (_showSearchBox) {
+                            Future.delayed(const Duration(milliseconds: 100), () {
+                              _searchFocusNode.requestFocus();
+                            });
+                          }
+                        },
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 8 * scale),
+                          child: Icon(
+                            Icons.search_outlined,
+                            size: 18 * scale,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Overflow menu button (more options)
+                    PopupMenuButton(
+                      color: Colors.black.withOpacity(0.85),
+                      elevation: 24,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(
+                          color: AppTheme.accentPink.withOpacity(0.4),
                           width: 1.5,
                         ),
-                        borderRadius: BorderRadius.circular(28),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.primaryBlue.withOpacity(0.1),
-                            blurRadius: 16,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
                       ),
                       child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 12 * scale),
-                        child: Row(
-                          children: [
-                            ...List.generate(
-                              widget.tabs.length,
-                              (index) => _buildTabButton(index, scale),
-                            ),
-                            // Search icon in nav bar
-                            Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () {
-                                  setState(() => _showSearchBox = !_showSearchBox);
-                                  if (_showSearchBox) {
-                                    Future.delayed(const Duration(milliseconds: 100), () {
-                                      _searchFocusNode.requestFocus();
-                                    });
-                                  }
-                                },
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 8 * scale),
-                                  child: Icon(
-                                    Icons.search_outlined,
-                                    size: 18 * scale,
-                                    color: AppTheme.textSecondary,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            // Overflow menu button (more options)
-                            PopupMenuButton(
-                              color: Colors.black.withOpacity(0.85),
-                              elevation: 24,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                side: BorderSide(
-                                  color: AppTheme.accentPink.withOpacity(0.4),
-                                  width: 1.5,
-                                ),
-                              ),
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 8 * scale),
-                                child: Icon(
-                                  Icons.more_vert,
-                                  size: 18 * scale,
-                                  color: AppTheme.textSecondary,
-                                ),
-                              ),
-                              itemBuilder: (context) => [
-                                PopupMenuItem(
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.settings, color: AppTheme.primaryBlue, size: 16 * scale),
-                                      SizedBox(width: 12 * scale),
-                                      Text('Settings', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500)),
-                                    ],
-                                  ),
-                                  onTap: () {
-                                    Future.delayed(const Duration(milliseconds: 100), () {
-                                      if (mounted) context.go('/settings');
-                                    });
-                                  },
-                                ),
-                                PopupMenuItem(
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.favorite_outline, color: AppTheme.accentPink, size: 16 * scale),
-                                      SizedBox(width: 12 * scale),
-                                      Text('Favorites', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500)),
-                                    ],
-                                  ),
-                                  onTap: () {
-                                    Future.delayed(const Duration(milliseconds: 100), () {
-                                      if (mounted) context.go('/favorites');
-                                    });
-                                  },
-                                ),
-                                PopupMenuItem(
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.download, color: AppTheme.textSecondary, size: 16 * scale),
-                                      SizedBox(width: 12 * scale),
-                                      Text('Downloads', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500)),
-                                    ],
-                                  ),
-                                  onTap: () {
-                                    Future.delayed(const Duration(milliseconds: 100), () {
-                                      if (mounted) context.go('/downloads');
-                                    });
-                                  },
-                                ),
-                                PopupMenuItem(
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.schedule, color: AppTheme.primaryBlue, size: 16 * scale),
-                                      SizedBox(width: 12 * scale),
-                                      Text('Guide', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500)),
-                                    ],
-                                  ),
-                                  onTap: () {
-                                    Future.delayed(const Duration(milliseconds: 100), () {
-                                      if (mounted) context.go('/epg');
-                                    });
-                                  },
-                                ),
-                              ],
-                            ),
-                          ],
+                        padding: EdgeInsets.symmetric(horizontal: 8 * scale),
+                        child: Icon(
+                          Icons.more_vert,
+                          size: 18 * scale,
+                          color: AppTheme.textSecondary,
                         ),
                       ),
+                      itemBuilder: (context) => [
+                        PopupMenuItem(
+                          child: Row(
+                            children: [
+                              Icon(Icons.settings, color: AppTheme.primaryBlue, size: 16 * scale),
+                              SizedBox(width: 12 * scale),
+                              Text('Settings', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500)),
+                            ],
+                          ),
+                          onTap: () {
+                            Future.delayed(const Duration(milliseconds: 100), () {
+                              if (mounted) context.go('/settings');
+                            });
+                          },
+                        ),
+                        PopupMenuItem(
+                          child: Row(
+                            children: [
+                              Icon(Icons.favorite_outline, color: AppTheme.accentPink, size: 16 * scale),
+                              SizedBox(width: 12 * scale),
+                              Text('Favorites', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500)),
+                            ],
+                          ),
+                          onTap: () {
+                            Future.delayed(const Duration(milliseconds: 100), () {
+                              if (mounted) context.go('/favorites');
+                            });
+                          },
+                        ),
+                        PopupMenuItem(
+                          child: Row(
+                            children: [
+                              Icon(Icons.download, color: AppTheme.textSecondary, size: 16 * scale),
+                              SizedBox(width: 12 * scale),
+                              Text('Downloads', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500)),
+                            ],
+                          ),
+                          onTap: () {
+                            Future.delayed(const Duration(milliseconds: 100), () {
+                              if (mounted) context.go('/downloads');
+                            });
+                          },
+                        ),
+                        PopupMenuItem(
+                          child: Row(
+                            children: [
+                              Icon(Icons.schedule, color: AppTheme.primaryBlue, size: 16 * scale),
+                              SizedBox(width: 12 * scale),
+                              Text('Guide', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500)),
+                            ],
+                          ),
+                          onTap: () {
+                            Future.delayed(const Duration(milliseconds: 100), () {
+                              if (mounted) context.go('/epg');
+                            });
+                          },
+                        ),
+                      ],
                     ),
-                  ),
-                  SizedBox(width: 20 * scale),
-                  // Time (if shown)
-                  if (widget.showLogoAndTime)
-                    Text(
-                      widget.currentTime,
-                      style: TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontSize: 18 * scale,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 1.0,
-                      ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-        ),
+          SizedBox(width: 20 * scale),
+          // Time (if shown)
+          if (widget.showLogoAndTime)
+            Text(
+              widget.currentTime,
+              style: TextStyle(
+                color: AppTheme.textPrimary,
+                fontSize: 18 * scale,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1.0,
+              ),
+            ),
+        ],
+      ),
+    );
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Conditionally use BackdropFilter for glass effect; fall back to plain translucent background for performance
+        AppTheme.enableBackdropFilter
+            ? ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 6.0, sigmaY: 6.0),
+                  child: navBar,
+                ),
+              )
+            : navBar,
         // Search input field (appears when search icon is clicked)
         if (_showSearchBox)
           Padding(

@@ -638,156 +638,160 @@ class _AppShellState extends State<AppShell>
   }
 
   Widget _buildAppBar(BuildContext context, String currentRoute) {
-    return Stack(
-      children: [
-        // Main AppBar container with translucent blurred background
-        ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 6.0, sigmaY: 6.0),
-            child: Container(
-              height: AppSizes.appBarHeight,
-              padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg),
-              decoration: BoxDecoration(
-                color: AppTheme.darkBackgroundOpacity(0.55),
-              ),
-              child: Row(
-                children: [
-                  // Dynamic breadcrumb showing current context
-                  _buildBreadcrumb(currentRoute),
-                  Expanded(child: Container()), // Spacer
-                  // Search button (top bar: blue icon on focus only)
-                  Tooltip(
-                    message: 'Search',
-                    waitDuration: const Duration(milliseconds: 400),
-                    child: Focus(
-                      focusNode: _searchButtonFocusNode,
-                      onKeyEvent: (node, event) {
-                        if (event is! KeyDownEvent) return KeyEventResult.ignored;
-                        final key = event.logicalKey;
-                        if (key == LogicalKeyboardKey.arrowRight) {
-                          _settingsButtonFocusNode.requestFocus();
-                          return KeyEventResult.handled;
-                        } else if (key == LogicalKeyboardKey.arrowDown) {
-                          _contentScopeNode.requestFocus();
-                          return KeyEventResult.handled;
-                        } else if (key == LogicalKeyboardKey.arrowLeft) {
-                          _sidebarScopeNode.requestFocus();
-                          if (_navFocusNodes.isNotEmpty) {
-                            _navFocusNodes[_currentFocusIndex].requestFocus();
-                          }
-                          return KeyEventResult.handled;
-                        } else if (key == LogicalKeyboardKey.select ||
-                            key == LogicalKeyboardKey.enter) {
-                          context.go('/search');
-                          return KeyEventResult.handled;
-                        }
-                        return KeyEventResult.ignored;
-                      },
-                      onFocusChange: (_) => setState(() {}),
-                      child: Builder(
-                        builder: (context) {
-                          final isFocused = Focus.of(context).hasFocus;
-                          return IconButton(
-                            icon: Icon(
-                              Icons.search,
-                              size: 24, // Reduced from default
-                              color: isFocused
-                                  ? AppTheme.primaryBlue
-                                  : AppTheme.textPrimary,
-                            ),
-                            onPressed: () {
-                              context.go('/search');
-                            },
-                          );
-                        },
-                      ),
+    final appBarContent = Container(
+      height: AppSizes.appBarHeight,
+      padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg),
+      decoration: BoxDecoration(
+        color: AppTheme.darkBackgroundOpacity(0.55),
+      ),
+      child: Row(
+        children: [
+          // Dynamic breadcrumb showing current context
+          _buildBreadcrumb(currentRoute),
+          Expanded(child: Container()), // Spacer
+          // Search button (top bar: blue icon on focus only)
+          Tooltip(
+            message: 'Search',
+            waitDuration: const Duration(milliseconds: 400),
+            child: Focus(
+              focusNode: _searchButtonFocusNode,
+              onKeyEvent: (node, event) {
+                if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                final key = event.logicalKey;
+                if (key == LogicalKeyboardKey.arrowRight) {
+                  _settingsButtonFocusNode.requestFocus();
+                  return KeyEventResult.handled;
+                } else if (key == LogicalKeyboardKey.arrowDown) {
+                  _contentScopeNode.requestFocus();
+                  return KeyEventResult.handled;
+                } else if (key == LogicalKeyboardKey.arrowLeft) {
+                  _sidebarScopeNode.requestFocus();
+                  if (_navFocusNodes.isNotEmpty) {
+                    _navFocusNodes[_currentFocusIndex].requestFocus();
+                  }
+                  return KeyEventResult.handled;
+                } else if (key == LogicalKeyboardKey.select ||
+                    key == LogicalKeyboardKey.enter) {
+                  context.go('/search');
+                  return KeyEventResult.handled;
+                }
+                return KeyEventResult.ignored;
+              },
+              onFocusChange: (_) => setState(() {}),
+              child: Builder(
+                builder: (context) {
+                  final isFocused = Focus.of(context).hasFocus;
+                  return IconButton(
+                    icon: Icon(
+                      Icons.search,
+                      size: 24, // Reduced from default
+                      color: isFocused
+                          ? AppTheme.primaryBlue
+                          : AppTheme.textPrimary,
                     ),
-                  ),
-
-                  const SizedBox(width: AppSizes.sm),
-
-                  // Settings button (top bar: blue icon on focus only)
-                  Tooltip(
-                    message: 'Settings',
-                    waitDuration: const Duration(milliseconds: 400),
-                    child: Focus(
-                      focusNode: _settingsButtonFocusNode,
-                      onKeyEvent: (node, event) {
-                        if (event is! KeyDownEvent) return KeyEventResult.ignored;
-                        final key = event.logicalKey;
-                        if (key == LogicalKeyboardKey.arrowLeft) {
-                          _searchButtonFocusNode.requestFocus();
-                          return KeyEventResult.handled;
-                        } else if (key == LogicalKeyboardKey.arrowDown) {
-                          // Focus content area
-                          final currentRoute = GoRouterState.of(context).uri.path;
-                          if (currentRoute.startsWith('/settings')) {
-                            // For settings, focus the first input field in the current tab
-                            Future.delayed(const Duration(milliseconds: 100), () {
-                              try {
-                                final contentState = _getContentScreenState(
-                                  '/settings',
-                                );
-                                if (contentState != null && contentState.mounted) {
-                                  final dyn = contentState as dynamic;
-                                  dyn.requestFirstContentFocus();
-                                }
-                              } catch (_) {
-                                _contentScopeNode.requestFocus();
-                              }
-                            });
-                          } else {
-                            _contentScopeNode.requestFocus();
-                          }
-                          return KeyEventResult.handled;
-                        } else if (key == LogicalKeyboardKey.select ||
-                            key == LogicalKeyboardKey.enter) {
-                          context.go('/settings');
-                          return KeyEventResult.handled;
-                        }
-                        return KeyEventResult.ignored;
-                      },
-                      onFocusChange: (_) => setState(() {}),
-                      child: Builder(
-                        builder: (context) {
-                          final bool isFocused = Focus.of(context).hasFocus;
-                          return IconButton(
-                            icon: Icon(
-                              Icons.settings,
-                              color: isFocused
-                                  ? AppTheme.primaryBlue
-                                  : AppTheme.textPrimary,
-                              size: 24, // Reduced from 28
-                            ),
-                            onPressed: () => context.go('/settings'),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(width: AppSizes.md),
-
-                  // Time and date (updates in real-time)
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        _currentTime,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      Text(
-                        _currentDate,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ],
+                    onPressed: () {
+                      context.go('/search');
+                    },
+                  );
+                },
               ),
             ),
           ),
-        ),
+
+          const SizedBox(width: AppSizes.sm),
+
+          // Settings button (top bar: blue icon on focus only)
+          Tooltip(
+            message: 'Settings',
+            waitDuration: const Duration(milliseconds: 400),
+            child: Focus(
+              focusNode: _settingsButtonFocusNode,
+              onKeyEvent: (node, event) {
+                if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                final key = event.logicalKey;
+                if (key == LogicalKeyboardKey.arrowLeft) {
+                  _searchButtonFocusNode.requestFocus();
+                  return KeyEventResult.handled;
+                } else if (key == LogicalKeyboardKey.arrowDown) {
+                  // Focus content area
+                  final currentRoute = GoRouterState.of(context).uri.path;
+                  if (currentRoute.startsWith('/settings')) {
+                    // For settings, focus the first input field in the current tab
+                    Future.delayed(const Duration(milliseconds: 100), () {
+                      try {
+                        final contentState = _getContentScreenState(
+                          '/settings',
+                        );
+                        if (contentState != null && contentState.mounted) {
+                          final dyn = contentState as dynamic;
+                          dyn.requestFirstContentFocus();
+                        }
+                      } catch (_) {
+                        _contentScopeNode.requestFocus();
+                      }
+                    });
+                  } else {
+                    _contentScopeNode.requestFocus();
+                  }
+                  return KeyEventResult.handled;
+                } else if (key == LogicalKeyboardKey.select ||
+                    key == LogicalKeyboardKey.enter) {
+                  context.go('/settings');
+                  return KeyEventResult.handled;
+                }
+                return KeyEventResult.ignored;
+              },
+              onFocusChange: (_) => setState(() {}),
+              child: Builder(
+                builder: (context) {
+                  final bool isFocused = Focus.of(context).hasFocus;
+                  return IconButton(
+                    icon: Icon(
+                      Icons.settings,
+                      color: isFocused
+                          ? AppTheme.primaryBlue
+                          : AppTheme.textPrimary,
+                      size: 24, // Reduced from 28
+                    ),
+                    onPressed: () => context.go('/settings'),
+                  );
+                },
+              ),
+            ),
+          ),
+
+          const SizedBox(width: AppSizes.md),
+
+          // Time and date (updates in real-time)
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                _currentTime,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              Text(
+                _currentDate,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    return Stack(
+      children: [
+        // Conditionally apply blur filter; fallback to plain translucent background
+        AppTheme.enableBackdropFilter
+            ? ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 6.0, sigmaY: 6.0),
+                  child: appBarContent,
+                ),
+              )
+            : appBarContent,
         // Pink line at bottom of top bar - extends left to meet sidebar line
         Positioned(
           left: -2, // Extend 2px to the left to cover the divider gap
