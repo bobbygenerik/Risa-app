@@ -62,7 +62,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               child: Column(
               children: [
                 _buildGlassAppBar(favorites.length),
-                Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
                 Expanded(
                   child: Padding(
                     padding: EdgeInsets.all(AppSizes.lg),
@@ -84,11 +83,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     return Container(
       height: AppSizes.appBarHeight,
       padding: EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
-      decoration: BoxDecoration(
-        color: AppTheme.darkBackground.withAlpha((0.8 * 255).round()),
-        border: Border(
-          bottom: BorderSide(color: AppTheme.accentPink, width: 2),
-        ),
+      decoration: const BoxDecoration(
+        color: Colors.transparent,
       ),
       child: Row(
         children: [

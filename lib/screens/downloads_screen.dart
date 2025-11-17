@@ -182,13 +182,11 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
           child: Column(
           children: [
             // Glass app bar
+            // Top bar - make fully transparent (only text/icons visible)
             Container(
               padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.08),
-                border: Border(
-                  bottom: BorderSide(color: AppTheme.accentPink, width: 2),
-                ),
+              decoration: const BoxDecoration(
+                color: Colors.transparent,
               ),
               child: Row(
                 children: [
@@ -225,7 +223,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                 ],
               ),
             ),
-            Divider(height: 1, color: AppTheme.accentPink, thickness: 2),
+            // removed pink divider to keep top bar visually transparent
             // Content
             Expanded(
               child: _isLoading
