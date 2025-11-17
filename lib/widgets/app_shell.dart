@@ -421,13 +421,28 @@ class _AppShellState extends State<AppShell>
                           if (route.startsWith('/movies')) index = 1;
                           if (route.startsWith('/series')) index = 2;
 
-                          return IndexedStack(
-                            index: index,
-                            children: [
-                              KeepAliveWrapper(child: LiveTVScreen()),
-                              KeepAliveWrapper(child: MoviesScreen()),
-                              KeepAliveWrapper(child: SeriesScreen()),
-                            ],
+                          // Use a Stack + AnimatedOpacity to cross-fade between
+                          // the three main screens while keeping them alive.
+                          final screens = [
+                            KeepAliveWrapper(child: LiveTVScreen()),
+                            KeepAliveWrapper(child: MoviesScreen()),
+                            KeepAliveWrapper(child: SeriesScreen()),
+                          ];
+
+                          return Stack(
+                            fit: StackFit.expand,
+                            children: List.generate(screens.length, (i) {
+                              final visible = i == index;
+                              return IgnorePointer(
+                                ignoring: !visible,
+                                child: AnimatedOpacity(
+                                  opacity: visible ? 1.0 : 0.0,
+                                  duration: const Duration(milliseconds: 240),
+                                  curve: Curves.easeInOut,
+                                  child: screens[i],
+                                ),
+                              );
+                            }).toList(),
                           );
                         }
 
