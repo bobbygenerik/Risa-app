@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:iptv_player/config/tmdb_config.dart';
+import 'package:path_provider/path_provider.dart';
 
 class _CacheItem {
   final Map<String, dynamic> data;
@@ -23,6 +25,11 @@ class TMDBService {
   }
 
   static Map<String, dynamic>? _getFromCache(String key) {
+    // lazy-load disk cache once
+    if (!_cacheLoaded) {
+      _loadCacheFromDisk();
+    }
+
     final item = _cache[key];
     if (item == null) return null;
     if (item.isExpired) {
@@ -39,6 +46,57 @@ class TMDBService {
       _cache.remove(firstKey);
     }
     _cache[key] = _CacheItem(data, DateTime.now().add(ttl ?? _defaultTtl));
+    // persist asynchronously
+    _persistCacheToDisk();
+  }
+
+  static bool _cacheLoaded = false;
+  static const String _cacheFileName = 'tmdb_cache.json';
+
+  static Future<void> _loadCacheFromDisk() async {
+    try {
+      final dir = await getApplicationSupportDirectory();
+      final file = File('${dir.path}/$_cacheFileName');
+      if (!await file.exists()) {
+        _cacheLoaded = true;
+        return;
+      }
+      final contents = await file.readAsString();
+      final Map<String, dynamic> jsonMap = json.decode(contents) as Map<String, dynamic>;
+      jsonMap.forEach((key, value) {
+        try {
+          final data = Map<String, dynamic>.from(value['data'] ?? {});
+          final expiryMs = value['expiry'] as int? ?? 0;
+          final expiry = DateTime.fromMillisecondsSinceEpoch(expiryMs);
+          if (DateTime.now().isBefore(expiry)) {
+            _cache[key] = _CacheItem(data, expiry);
+          }
+        } catch (_) {
+          // ignore malformed entries
+        }
+      });
+    } catch (e) {
+      // ignore disk load errors
+    } finally {
+      _cacheLoaded = true;
+    }
+  }
+
+  static Future<void> _persistCacheToDisk() async {
+    try {
+      final dir = await getApplicationSupportDirectory();
+      final file = File('${dir.path}/$_cacheFileName');
+      final Map<String, dynamic> out = {};
+      _cache.forEach((key, item) {
+        out[key] = {
+          'data': item.data,
+          'expiry': item.expiry.millisecondsSinceEpoch,
+        };
+      });
+      await file.writeAsString(json.encode(out));
+    } catch (e) {
+      // ignore disk write errors
+    }
   }
   
   static Future<double?> getMovieRating(String title, {int? year}) async {
