@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/widgets/compat_pop_scope.dart';
 
 class HelpAboutScreen extends StatefulWidget {
   const HelpAboutScreen({super.key});
@@ -66,7 +67,7 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
+    return CompatPopScope(
       onWillPop: () async {
         context.go('/home');
         return false;

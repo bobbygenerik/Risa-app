@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/channel_provider.dart';
 import '../utils/app_theme.dart';
+import 'package:iptv_player/widgets/compat_pop_scope.dart';
 
 class PlaylistEditorScreen extends StatefulWidget {
   const PlaylistEditorScreen({super.key});
@@ -267,7 +268,7 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
+    return CompatPopScope(
       onWillPop: () async {
         context.go('/home');
         return false;

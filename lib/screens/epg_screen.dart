@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/widgets/compat_pop_scope.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/services/epg_service.dart';
@@ -129,7 +130,7 @@ class _EPGScreenState extends State<EPGScreen> {
     // Keep using WillPopScope for now to remain compatible with current SDK.
     // TODO: Replace with `PopScope` when the project SDK is upgraded.
     // ignore: deprecated_member_use
-    return WillPopScope(
+    return CompatPopScope(
       onWillPop: () async {
         context.go('/home');
         return false;

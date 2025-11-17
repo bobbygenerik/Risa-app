@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'package:go_router/go_router.dart';
+import 'package:iptv_player/widgets/compat_pop_scope.dart';
 
 class RecordingsScreen extends StatefulWidget {
   const RecordingsScreen({super.key});
@@ -179,10 +180,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Keep using WillPopScope for now to remain compatible with current SDK.
-    // TODO: Replace with `PopScope` when the project SDK is upgraded.
-    // ignore: deprecated_member_use
-    return WillPopScope(
+    return CompatPopScope(
       onWillPop: () async {
         context.go('/home');
         return false;

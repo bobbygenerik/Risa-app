@@ -4,6 +4,7 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:go_router/go_router.dart';
+import 'package:iptv_player/widgets/compat_pop_scope.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 
 class FavoritesScreen extends StatefulWidget {
@@ -37,10 +38,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Keep using WillPopScope for now to remain compatible with current SDK.
-    // TODO: Replace with `PopScope` when the project SDK is upgraded.
-    // ignore: deprecated_member_use
-    return WillPopScope(
+    return CompatPopScope(
       onWillPop: () async {
         context.go('/home');
         return false;
