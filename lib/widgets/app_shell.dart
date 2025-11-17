@@ -122,7 +122,7 @@ class _AppShellState extends State<AppShell>
   }
 
   final List<NavigationItem> _navigationItems = [
-    NavigationItem(icon: Icons.live_tv, label: 'LIVE TV', route: '/home'),
+    NavigationItem(icon: Icons.live_tv, label: 'Live TV', route: '/home'),
     NavigationItem(icon: Icons.movie, label: 'Movies', route: '/movies'),
     NavigationItem(icon: Icons.tv, label: 'Series', route: '/series'),
     NavigationItem(icon: Icons.grid_view, label: 'EPG', route: '/epg'),

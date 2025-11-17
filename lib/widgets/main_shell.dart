@@ -69,7 +69,7 @@ class _MainShellState extends State<MainShell> {
             TopNavigationBar(
               activeTab: widget.activeTab ?? 'home',
               tabs: [
-                NavTab(id: 'home', label: 'LIVE TV', icon: Icons.live_tv, route: '/home'),
+                NavTab(id: 'home', label: 'Live TV', icon: Icons.live_tv, route: '/home'),
                 NavTab(id: 'movies', label: 'Movies', icon: Icons.movie, route: '/movies'),
                 NavTab(id: 'series', label: 'Series', icon: Icons.tv, route: '/series'),
               ],
