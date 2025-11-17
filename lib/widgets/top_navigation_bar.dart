@@ -101,15 +101,15 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
             child: Container(
               height: 56 * scale,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.08),
+                color: Colors.white.withAlpha((0.08 * 255).round()),
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withAlpha((0.15 * 255).round()),
                   width: 1.5,
                 ),
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.primaryBlue.withOpacity(0.1),
+                    color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
                     blurRadius: 16,
                     offset: const Offset(0, 4),
                   ),
@@ -147,7 +147,7 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                     ),
                     // Overflow menu button (more options)
                     PopupMenuButton(
-                      color: Colors.black.withOpacity(0.85),
+                      color: Colors.black.withAlpha((0.85 * 255).round()),
                       elevation: 24,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -174,22 +174,24 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                             ],
                           ),
                           onTap: () {
+                            final _router = GoRouter.of(context);
                             Future.delayed(const Duration(milliseconds: 100), () {
-                              if (mounted) context.go('/settings');
+                              if (mounted) _router.go('/settings');
                             });
                           },
                         ),
                         PopupMenuItem(
                           child: Row(
                             children: [
-                              Icon(Icons.favorite_outline, color: AppTheme.accentPink, size: 16 * scale),
+                              Icon(Icons.favorite_outline, color: AppTheme.primaryBlue, size: 16 * scale),
                               SizedBox(width: 12 * scale),
                               Text('Favorites', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500)),
                             ],
                           ),
                           onTap: () {
+                            final _router = GoRouter.of(context);
                             Future.delayed(const Duration(milliseconds: 100), () {
-                              if (mounted) context.go('/favorites');
+                              if (mounted) _router.go('/favorites');
                             });
                           },
                         ),
@@ -202,8 +204,9 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                             ],
                           ),
                           onTap: () {
+                            final _router = GoRouter.of(context);
                             Future.delayed(const Duration(milliseconds: 100), () {
-                              if (mounted) context.go('/downloads');
+                              if (mounted) _router.go('/downloads');
                             });
                           },
                         ),
@@ -216,8 +219,9 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                             ],
                           ),
                           onTap: () {
+                            final _router = GoRouter.of(context);
                             Future.delayed(const Duration(milliseconds: 100), () {
-                              if (mounted) context.go('/epg');
+                              if (mounted) _router.go('/epg');
                             });
                           },
                         ),
@@ -263,9 +267,9 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
             child: Container(
               height: 48 * scale,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.08),
+                color: Colors.white.withAlpha((0.08 * 255).round()),
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withAlpha((0.15 * 255).round()),
                   width: 1.5,
                 ),
                 borderRadius: BorderRadius.circular(24),
@@ -290,7 +294,7 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
                     borderSide: BorderSide(
-                      color: AppTheme.accentPink,
+                      color: AppTheme.primaryBlue,
                       width: 2,
                     ),
                   ),
@@ -353,14 +357,14 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                 return Container(
                   decoration: BoxDecoration(
                     color: isActive
-                        ? AppTheme.primaryBlue.withOpacity(0.3)
+                        ? AppTheme.primaryBlue.withAlpha((0.3 * 255).round())
                         : (isFocused
-                            ? Colors.white.withOpacity(0.15)
+                            ? Colors.white.withAlpha((0.15 * 255).round())
                             : Colors.transparent),
                     borderRadius: BorderRadius.circular(24),
                     border: isFocused
                         ? Border.all(
-                            color: AppTheme.primaryBlue.withOpacity(0.6),
+                            color: AppTheme.primaryBlue.withAlpha((0.6 * 255).round()),
                             width: 2,
                           )
                         : null,

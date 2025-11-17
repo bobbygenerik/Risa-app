@@ -50,8 +50,9 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
     });
 
     // Default focus to the watch button
+    final _watchFocusNode = _watchFocus;
     Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) _watchFocus.requestFocus();
+      if (mounted) _watchFocusNode.requestFocus();
     });
   }
 
@@ -84,7 +85,12 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
                   Text('Load a playlist with Live TV channels from Settings', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary), textAlign: TextAlign.center),
                   const SizedBox(height: 32),
                   ElevatedButton.icon(
-                    onPressed: () => Future.delayed(const Duration(milliseconds: 100), () { if (context.mounted) context.go('/settings'); }),
+                    onPressed: () {
+                      final _router = GoRouter.of(context);
+                      Future.delayed(const Duration(milliseconds: 100), () {
+                        if (mounted) _router.go('/settings');
+                      });
+                    },
                     icon: const Icon(Icons.settings),
                     label: const Text('Go to Settings'),
                     style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue),
@@ -201,7 +207,7 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  LinearProgressIndicator(value: progress, color: AppTheme.accentOrange, backgroundColor: Colors.white.withOpacity(0.08)),
+                                  LinearProgressIndicator(value: progress, color: AppTheme.accentOrange, backgroundColor: Colors.white.withAlpha((0.08 * 255).round())),
                                   const SizedBox(height: 8),
                                   Text('${(progress * 100).round()}% elapsed', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                                 ],
@@ -222,11 +228,11 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
                           return Container(
                             decoration: hasFocus
                                 ? BoxDecoration(
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: AppTheme.accentPink, width: 3),
-                                    boxShadow: [BoxShadow(color: AppTheme.accentPink.withOpacity(0.15), blurRadius: 16, offset: const Offset(0, 6))],
-                                  )
-                                : null,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: AppTheme.primaryBlue, width: 3),
+                                        boxShadow: [BoxShadow(color: AppTheme.primaryBlue.withAlpha((0.15 * 255).round()), blurRadius: 16, offset: const Offset(0, 6))],
+                                      )
+                                    : null,
                             child: ElevatedButton.icon(
                               onPressed: () => context.push('/player', extra: channel),
                               icon: const Icon(Icons.play_arrow),
@@ -248,7 +254,7 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
                             label: const Text('Guide'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: f ? Colors.white : AppTheme.textPrimary,
-                              side: BorderSide(color: f ? AppTheme.accentPink : AppTheme.primaryBlue.withOpacity(0.4), width: f ? 2 : 1),
+                              side: BorderSide(color: f ? AppTheme.primaryBlue : AppTheme.primaryBlue.withAlpha((0.4 * 255).round()), width: f ? 2 : 1),
                               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                             ),
                           );
@@ -286,7 +292,7 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
                   width: 200,
                   height: 120,
                   margin: const EdgeInsets.only(right: 16),
-                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: AppTheme.cardBackground, border: Border.all(color: Colors.white.withOpacity(0.1), width: 1)),
+                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: AppTheme.cardBackground, border: Border.all(color: Colors.white.withAlpha((0.1 * 255).round()), width: 1)),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: channel.logoUrl != null && channel.logoUrl!.isNotEmpty
@@ -310,9 +316,9 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.live_tv, size: 40, color: AppTheme.textSecondary.withOpacity(0.5)),
+            Icon(Icons.live_tv, size: 40, color: AppTheme.textSecondary.withAlpha((0.5 * 255).round())),
             const SizedBox(height: 8),
-            Text(name.length > 20 ? name.substring(0, 20) : name, style: TextStyle(color: AppTheme.textSecondary.withOpacity(0.7), fontSize: 10), textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text(name.length > 20 ? name.substring(0, 20) : name, style: TextStyle(color: AppTheme.textSecondary.withAlpha((0.7 * 255).round()), fontSize: 10), textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
           ],
         ),
       ),

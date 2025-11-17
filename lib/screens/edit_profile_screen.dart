@@ -137,10 +137,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     // Simplified layout to avoid syntax/paren mismatches during build.
     // Keeps essential fields and save functionality.
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: false,
+      // ignore: deprecated_member_use
+      onPopInvoked: (didPop) {
+        if (didPop) return;
         context.go('/home');
-        return false;
       },
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -197,7 +199,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   AppBar _buildGlassAppBar() {
     return AppBar(
       title: Text('Edit Profile'),
-      backgroundColor: Colors.white.withOpacity(0.08),
+      backgroundColor: Colors.white.withAlpha((0.08 * 255).round()),
       elevation: 0,
       actions: [
         if (_isLoading)
@@ -218,7 +220,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       bottom: PreferredSize(
         preferredSize: Size.fromHeight(2),
         child: Container(
-          color: AppTheme.accentPink,
+          color: AppTheme.primaryBlue,
           height: 2,
         ),
       ),

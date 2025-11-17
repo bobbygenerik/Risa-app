@@ -216,7 +216,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
       backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: Text('Manage Playlists'),
-        backgroundColor: Colors.white.withOpacity(0.08),
+        backgroundColor: Colors.white.withAlpha((0.08 * 255).round()),
         actions: [
           IconButton(
             icon: Icon(Icons.add),

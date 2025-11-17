@@ -219,7 +219,7 @@ class ModernHomeScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.movie,
-                size: 64, color: AppTheme.textSecondary.withOpacity(0.5)),
+                size: 64, color: AppTheme.textSecondary.withAlpha((0.5 * 255).round())),
             SizedBox(height: 16),
             Text(
               'No Content Available',
@@ -288,7 +288,7 @@ class ModernHomeScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                         color: AppTheme.cardBackground,
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.1),
+                          color: Colors.white.withAlpha((0.1 * 255).round()),
                           width: 1,
                         ),
                       ),
@@ -394,7 +394,7 @@ class ModernHomeScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                         color: AppTheme.cardBackground,
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.1),
+                          color: Colors.white.withAlpha((0.1 * 255).round()),
                           width: 1,
                         ),
                       ),
@@ -432,12 +432,12 @@ class ModernHomeScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.movie,
-                size: 48, color: AppTheme.textSecondary.withOpacity(0.5)),
+                size: 48, color: AppTheme.textSecondary.withAlpha((0.5 * 255).round())),
             SizedBox(height: 8),
             Text(
               'No Image',
               style: TextStyle(
-                color: AppTheme.textSecondary.withOpacity(0.5),
+                color: AppTheme.textSecondary.withAlpha((0.5 * 255).round()),
                 fontSize: 12,
               ),
             ),
@@ -455,12 +455,12 @@ class ModernHomeScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.live_tv,
-                size: 40, color: AppTheme.textSecondary.withOpacity(0.5)),
+                size: 40, color: AppTheme.textSecondary.withAlpha((0.5 * 255).round())),
             SizedBox(height: 8),
             Text(
               name.length > 20 ? name.substring(0, 20) : name,
               style: TextStyle(
-                color: AppTheme.textSecondary.withOpacity(0.7),
+                color: AppTheme.textSecondary.withAlpha((0.7 * 255).round()),
                 fontSize: 10,
               ),
               textAlign: TextAlign.center,

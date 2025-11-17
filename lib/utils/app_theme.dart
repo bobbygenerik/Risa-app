@@ -23,7 +23,7 @@ class AppTheme {
   static const LinearGradient brandGradient = LinearGradient(
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
-    colors: [primaryBlue, accentPink],
+    colors: [primaryBlue, Color(0xFF2E3192)],
   );
 
   // Common opacity variants
@@ -189,13 +189,13 @@ class AppTheme {
           // Android TV focus support - pink border on focus
           overlayColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.focused)) {
-              return accentPink.withAlpha((0.2 * 255).round());
+              return primaryBlue.withAlpha((0.2 * 255).round());
             }
             return null;
           }),
           side: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.focused)) {
-              return const BorderSide(color: accentPink, width: 3);
+              return const BorderSide(color: primaryBlue, width: 3);
             }
             return null;
           }),
@@ -210,13 +210,13 @@ class AppTheme {
           // Pink border on focus
           overlayColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.focused)) {
-              return accentPink.withAlpha((0.1 * 255).round());
+              return primaryBlue.withAlpha((0.1 * 255).round());
             }
             return null;
           }),
           side: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.focused)) {
-              return const BorderSide(color: accentPink, width: 3);
+              return const BorderSide(color: primaryBlue, width: 3);
             }
             return null;
           }),

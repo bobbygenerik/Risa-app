@@ -126,6 +126,9 @@ class _EPGScreenState extends State<EPGScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Keep using WillPopScope for now to remain compatible with current SDK.
+    // TODO: Replace with `PopScope` when the project SDK is upgraded.
+    // ignore: deprecated_member_use
     return WillPopScope(
       onWillPop: () async {
         context.go('/home');
@@ -244,7 +247,7 @@ class _EPGScreenState extends State<EPGScreen> {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08),
+        color: Colors.white.withAlpha((0.08 * 255).round()),
         border: Border(
           bottom: BorderSide(color: AppTheme.darkBackgroundOpacity(0.12), width: 2),
         ),
@@ -317,9 +320,9 @@ class _EPGScreenState extends State<EPGScreen> {
     return Container(
       width: 180,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withAlpha((0.05 * 255).round()),
         border: Border(
-          right: BorderSide(color: Colors.white.withOpacity(0.1), width: 1),
+          right: BorderSide(color: Colors.white.withAlpha((0.1 * 255).round()), width: 1),
         ),
       ),
       child: Column(

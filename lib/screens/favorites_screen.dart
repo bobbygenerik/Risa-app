@@ -37,6 +37,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Keep using WillPopScope for now to remain compatible with current SDK.
+    // TODO: Replace with `PopScope` when the project SDK is upgraded.
+    // ignore: deprecated_member_use
     return WillPopScope(
       onWillPop: () async {
         context.go('/home');

@@ -179,6 +179,9 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Keep using WillPopScope for now to remain compatible with current SDK.
+    // TODO: Replace with `PopScope` when the project SDK is upgraded.
+    // ignore: deprecated_member_use
     return WillPopScope(
       onWillPop: () async {
         context.go('/home');
@@ -214,7 +217,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
       height: AppSizes.appBarHeight,
       padding: EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08),
+        color: Colors.white.withAlpha((0.08 * 255).round()),
         border: Border(
           bottom: BorderSide(color: AppTheme.darkBackgroundOpacity(0.12), width: 2),
         ),

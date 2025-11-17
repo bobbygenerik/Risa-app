@@ -275,12 +275,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                                   fit: BoxFit.contain,
                                   errorBuilder: (context, error, stackTrace) {
                                     // Fallback to gradient icon if logo not found
-                                    return Container(
+                                      return Container(
                                       width: 100,
                                       height: 100,
                                       decoration: BoxDecoration(
-                                        gradient: const LinearGradient(
-                                          colors: [Color(0xFF2E3192), AppTheme.accentPink],
+                                        gradient: LinearGradient(
+                                          colors: [const Color(0xFF2E3192), AppTheme.primaryBlue],
                                           begin: Alignment.topLeft,
                                           end: Alignment.bottomRight,
                                         ),
@@ -436,9 +436,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: AppTheme.accentPink,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
+                                  color: AppTheme.primaryBlue,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
                               child: const Text(
                                 'LIVE',
                                 style: TextStyle(

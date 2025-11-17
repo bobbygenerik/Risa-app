@@ -163,6 +163,7 @@ class _AppShellState extends State<AppShell>
   // Helper: Try to focus a screen's secondary menu first; fall back to main content; else next traversal
   void _requestFirstSecondaryOrContentFocus(String route) {
     // Small delay to ensure content is fully rendered before requesting focus
+    final _focusScope = FocusScope.of(context);
     Future.delayed(const Duration(milliseconds: 150), () {
       bool handled = false;
       try {
@@ -210,9 +211,7 @@ class _AppShellState extends State<AppShell>
       if (!handled) {
         // Fallback: attempt to move to the next focusable within content area
         try {
-          // ignore: use_build_context_synchronously
-          final focusScope = FocusScope.of(context);
-          focusScope.nextFocus();
+          _focusScope.nextFocus();
         } catch (e) {
           debugPrint('⚠️ nextFocus() failed: $e');
         }
@@ -699,7 +698,7 @@ class _AppShellState extends State<AppShell>
                       height: 20,
                       margin: const EdgeInsets.only(left: 10),
                       decoration: BoxDecoration(
-                        color: AppTheme.accentPink,
+                        color: AppTheme.primaryBlue,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),

@@ -161,10 +161,12 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: false,
+      // ignore: deprecated_member_use
+      onPopInvoked: (didPop) {
+        if (didPop) return;
         context.go('/home');
-        return false;
       },
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -240,7 +242,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                               Icon(
                                 Icons.error_outline,
                                 size: 80,
-                                color: AppTheme.textSecondary.withOpacity(0.3),
+                                color: AppTheme.textSecondary.withAlpha((0.3 * 255).round()),
                               ),
                               SizedBox(height: 24),
                               Padding(
@@ -265,7 +267,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                                   Icon(
                                     Icons.download_rounded,
                                     size: 80,
-                                    color: AppTheme.textSecondary.withOpacity(0.3),
+                                    color: AppTheme.textSecondary.withAlpha((0.3 * 255).round()),
                                   ),
                                   SizedBox(height: 24),
                                   Text(
@@ -301,9 +303,9 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                                   margin: EdgeInsets.symmetric(
                                       horizontal: 16, vertical: 8),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.05),
+                                    color: Colors.white.withAlpha((0.05 * 255).round()),
                                     border: Border.all(
-                                      color: Colors.white.withOpacity(0.1),
+                                      color: Colors.white.withAlpha((0.1 * 255).round()),
                                       width: 1,
                                     ),
                                     borderRadius: BorderRadius.circular(12),
@@ -338,11 +340,11 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                                       ],
                                     ),
                                     trailing: PopupMenuButton(
-                                      color: Colors.white.withOpacity(0.08),
+                                      color: Colors.white.withAlpha((0.08 * 255).round()),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(8),
                                         side: BorderSide(
-                                          color: Colors.white.withOpacity(0.15),
+                                          color: Colors.white.withAlpha((0.15 * 255).round()),
                                           width: 1,
                                         ),
                                       ),
@@ -368,8 +370,8 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                                         PopupMenuItem(
                                           child: Row(
                                             children: [
-                                              Icon(Icons.delete,
-                                                  color: AppTheme.accentPink,
+                                                Icon(Icons.delete,
+                                                  color: AppTheme.accentRed,
                                                   size: 18),
                                               SizedBox(width: 8),
                                               Text('Delete',

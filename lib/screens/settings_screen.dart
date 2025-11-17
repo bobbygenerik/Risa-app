@@ -209,10 +209,12 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: false,
+      // ignore: deprecated_member_use
+      onPopInvoked: (didPop) {
+        if (didPop) return;
         context.go('/home');
-        return false;
       },
       child: Container(
         decoration: BoxDecoration(
@@ -228,7 +230,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         child: Row(
           children: [
             _buildSidebarMenu(),
-            VerticalDivider(width: 1, color: Colors.white.withOpacity(0.1)),
+            VerticalDivider(width: 1, color: Colors.white.withAlpha((0.1 * 255).round())),
             Expanded(
               child: Focus(
                 canRequestFocus: false,
@@ -273,10 +275,10 @@ class _SettingsScreenState extends State<SettingsScreen>
     return Container(
       width: 220,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withAlpha((0.05 * 255).round()),
         border: Border(
           right: BorderSide(
-            color: Colors.white.withOpacity(0.1),
+            color: Colors.white.withAlpha((0.1 * 255).round()),
             width: 1,
           ),
         ),
@@ -290,7 +292,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             decoration: BoxDecoration(
               border: Border(
                 bottom: BorderSide(
-                  color: AppTheme.accentPink,
+                  color: AppTheme.primaryBlue,
                   width: 2,
                 ),
               ),
@@ -359,11 +361,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                       margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? AppTheme.primaryBlue.withOpacity(0.3)
+                            ? AppTheme.primaryBlue.withAlpha((0.3 * 255).round())
                             : Colors.transparent,
                         border: Border.all(
                           color: isSelected
-                              ? AppTheme.primaryBlue.withOpacity(0.5)
+                              ? AppTheme.primaryBlue.withAlpha((0.5 * 255).round())
                               : Colors.transparent,
                           width: 1.5,
                         ),

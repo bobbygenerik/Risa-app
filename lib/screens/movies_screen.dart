@@ -58,8 +58,9 @@ class _MoviesScreenState extends State<MoviesScreen> {
       // prepare curated list (may perform TMDB lookups)
       _prepareCuratedList();
       // request focus so Play gets default focus when entering the screen
+      final _playFocusNode = _playFocus;
       Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted) _playFocus.requestFocus();
+        if (mounted) _playFocusNode.requestFocus();
       });
     });
   }
@@ -407,7 +408,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
                           decoration: hasFocus
                               ? BoxDecoration(
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: AppTheme.accentPink, width: 3),
+                                  border: Border.all(color: AppTheme.primaryBlue, width: 3),
                                 )
                               : null,
                           child: ElevatedButton.icon(

@@ -301,7 +301,7 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: Colors.white.withOpacity(0.08),
+        backgroundColor: Colors.white.withAlpha((0.08 * 255).round()),
         title: const Text('Edit Playlist'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),

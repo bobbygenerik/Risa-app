@@ -36,10 +36,12 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: false,
+      // ignore: deprecated_member_use
+      onPopInvoked: (didPop) {
+        if (didPop) return;
         context.go('/home');
-        return false;
       },
       child: _buildContent(),
     );
@@ -515,12 +517,12 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
   AppBar _buildGlassAppBar() {
     return AppBar(
       title: Text('AI Models'),
-      backgroundColor: Colors.white.withOpacity(0.08),
+      backgroundColor: Colors.white.withAlpha((0.08 * 255).round()),
       elevation: 0,
       bottom: PreferredSize(
         preferredSize: Size.fromHeight(2),
         child: Container(
-          color: AppTheme.accentPink,
+          color: AppTheme.primaryBlue,
           height: 2,
         ),
       ),

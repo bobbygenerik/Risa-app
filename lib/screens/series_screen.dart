@@ -41,9 +41,10 @@ class _SeriesScreenState extends State<SeriesScreen> {
         }
       });
       _prepareCuratedSeriesList();
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted) _watchFocus.requestFocus();
-      });
+                  final _focusNode = _watchFocus;
+                  Future.delayed(const Duration(milliseconds: 100), () {
+                    if (mounted) _focusNode.requestFocus();
+                  });
     });
   }
 
@@ -488,7 +489,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
                           decoration: hasFocus
                               ? BoxDecoration(
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: AppTheme.accentPink, width: 3),
+                                  border: Border.all(color: AppTheme.primaryBlue, width: 3),
                                 )
                               : null,
                           child: ElevatedButton.icon(
