@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
@@ -5,8 +6,44 @@ import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:go_router/go_router.dart';
 
-class MoviesScreen extends StatelessWidget {
+class MoviesScreen extends StatefulWidget {
   const MoviesScreen({super.key});
+
+  @override
+  State<MoviesScreen> createState() => _MoviesScreenState();
+}
+
+class _MoviesScreenState extends State<MoviesScreen> {
+  Timer? _carouselTimer;
+  int _featuredIndex = 0;
+  final FocusNode _playFocus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _startCarousel());
+  }
+
+  @override
+  void dispose() {
+    _carouselTimer?.cancel();
+    _playFocus.dispose();
+    super.dispose();
+  }
+
+  void _startCarousel() {
+    _carouselTimer?.cancel();
+    _carouselTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+      final provider = Provider.of<ContentProvider>(context, listen: false);
+      final movies = provider.movies;
+      if (movies.isEmpty) return;
+      if (mounted) {
+        setState(() {
+          _featuredIndex = (_featuredIndex + 1) % movies.length;
+        });
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,11 +56,14 @@ class MoviesScreen extends StatelessWidget {
           return _buildEmptyState(context);
         }
 
+        if (_featuredIndex >= movies.length) _featuredIndex = 0;
+        final featured = movies[_featuredIndex];
+
         return Stack(
           children: [
             // Full-height hero banner background
             Positioned.fill(
-              child: _buildHeroBannerBackground(movies.first),
+              child: _buildHeroBannerBackground(featured),
             ),
             // Content on top
             SingleChildScrollView(
@@ -31,11 +71,11 @@ class MoviesScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Hero banner with content overlay
-                  _buildHeroBannerOverlay(context, movies.first),
+                  _buildHeroBannerOverlay(context, featured),
                   SizedBox(height: AppSizes.lg),
-                  
+
                   Container(
-                    color: Color(0xFF050710),
+                    color: const Color(0xFF050710),
                     child: Padding(
                       padding: EdgeInsets.all(AppSizes.lg),
                       child: Column(
@@ -307,15 +347,15 @@ class MoviesScreen extends StatelessWidget {
       },
       child: Container(
         height: 300,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF050710),
-                  Color(0xFF0d1140),
-                ],
-              )
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF050710),
+              Color(0xFF0d1140),
+            ],
+          ),
         ),
         child: Align(
           alignment: Alignment.bottomLeft,
@@ -327,7 +367,7 @@ class MoviesScreen extends StatelessWidget {
               children: [
                 Text(
                   featuredMovie.title,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: AppTheme.textPrimary,
                     fontSize: 24,
                     fontWeight: FontWeight.w700,
@@ -335,26 +375,38 @@ class MoviesScreen extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(Icons.play_circle,
-                        color: AppTheme.accentOrange, size: 18),
-                    SizedBox(width: 8),
-                    Text(
-                      'Play Now',
-                      style: TextStyle(
-                        color: AppTheme.textSecondary,
-                        fontSize: 14,
-                      ),
+                    // Play button with focus outline
+                    Focus(
+                      focusNode: _playFocus,
+                      child: Builder(builder: (ctx) {
+                        final hasFocus = Focus.of(ctx).hasFocus;
+                        return Container(
+                          decoration: hasFocus
+                              ? BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: AppTheme.accentOrange, width: 3),
+                                )
+                              : null,
+                          child: ElevatedButton.icon(
+                            onPressed: () => context.push('/content/${featuredMovie.id}', extra: featuredMovie),
+                            icon: const Icon(Icons.play_arrow),
+                            label: const Text('Play'),
+                            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12), textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                          ),
+                        );
+                      }),
                     ),
+                    const SizedBox(width: 12),
                     if (featuredMovie.rating != null) ...[
-                      SizedBox(width: 16),
-                      Icon(Icons.star, color: Colors.amber, size: 16),
-                      SizedBox(width: 4),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.star, color: Colors.amber, size: 16),
+                      const SizedBox(width: 4),
                       Text(
                         featuredMovie.ratingDisplay,
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: AppTheme.textSecondary,
                           fontSize: 14,
                         ),

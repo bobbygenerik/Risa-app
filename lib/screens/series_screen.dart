@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
@@ -5,8 +6,21 @@ import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:go_router/go_router.dart';
 
-class SeriesScreen extends StatelessWidget {
+class SeriesScreen extends StatefulWidget {
   const SeriesScreen({super.key});
+
+  @override
+  State<SeriesScreen> createState() => _SeriesScreenState();
+}
+
+class _SeriesScreenState extends State<SeriesScreen> {
+  final FocusNode _watchFocus = FocusNode();
+
+  @override
+  void dispose() {
+    _watchFocus.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,9 +47,9 @@ class SeriesScreen extends StatelessWidget {
                   // Hero banner with content overlay
                   _buildHeroBannerOverlay(context, series.first),
                   SizedBox(height: AppSizes.lg),
-                  
+
                   Container(
-                    color: Color(0xFF050710),
+                    color: const Color(0xFF050710),
                     child: Padding(
                       padding: EdgeInsets.all(AppSizes.lg),
                       child: Column(
@@ -359,15 +373,26 @@ class SeriesScreen extends StatelessWidget {
                 SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(Icons.play_circle,
-                        color: AppTheme.accentOrange, size: 18),
-                    SizedBox(width: 8),
-                    Text(
-                      'Watch Now',
-                      style: TextStyle(
-                        color: AppTheme.textSecondary,
-                        fontSize: 14,
-                      ),
+                    // Watch button with focus outline
+                    Focus(
+                      focusNode: _watchFocus,
+                      child: Builder(builder: (ctx) {
+                        final hasFocus = Focus.of(ctx).hasFocus;
+                        return Container(
+                          decoration: hasFocus
+                              ? BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: AppTheme.accentOrange, width: 3),
+                                )
+                              : null,
+                          child: ElevatedButton.icon(
+                            onPressed: () => context.push('/content/${featuredSeries.id}', extra: featuredSeries),
+                            icon: const Icon(Icons.play_arrow),
+                            label: const Text('Watch'),
+                            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12), textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                          ),
+                        );
+                      }),
                     ),
                     if (featuredSeries.rating != null) ...[
                       SizedBox(width: 16),
