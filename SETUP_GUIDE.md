@@ -4,23 +4,11 @@ This guide covers the final 5% setup needed for external service integrations.
 
 ## 🔧 Required API Keys & OAuth Setup
 
-### 1. Google Drive Sync (Optional - for cloud backup)
+### 1. Cloud Sync (Removed)
 
-**What it does:** Backs up your favorites, playlists, and settings to Google Drive
+Drive-based cloud sync has been removed from this project. Use the local export/import backup workflow in `Settings > Account` to move data between devices.
 
-**Setup:**
-1. Go to [Google Cloud Console](https://console.developers.google.com/)
-2. Create a new project or select existing
-3. Enable Google Drive API
-4. Create OAuth 2.0 credentials
-5. Add your package name to authorized origins
-6. Update `lib/config/oauth_config.dart`:
-   ```dart
-   static const String googleClientId = 'your-client-id.apps.googleusercontent.com';
-   static const String googleClientSecret = 'your-client-secret';
-   ```
-
-**Cost:** FREE (uses user's Google Drive storage)
+If you need cloud sync in a fork, implement a provider-agnostic solution (S3, WebDAV, or custom API) and handle credentials securely.
 
 ### 2. Real-Debrid Integration (Optional - for premium links)
 
@@ -86,23 +74,23 @@ This guide covers the final 5% setup needed for external service integrations.
 
 ### Android
 - All services supported
-- Google Drive sync available
+- Cloud sync: removed (use local export/import backups)
 - Hardware acceleration for AI
 
 ### iOS  
 - All services supported
-- Google Drive sync available
+- Cloud sync: removed (use local export/import backups)
 - Hardware acceleration for AI
 
 ### Web
-- Limited service support
-- No Google Drive sync
-- No AI upscaling
+ - Limited service support
+ - No provider-specific cloud sync
+ - No AI upscaling
 - OpenSubtitles and Real-Debrid work
 
-### Desktop (Linux/Windows/macOS)
+- ### Desktop (Linux/Windows/macOS)
 - Limited service support
-- No Google Drive sync
+- No provider-specific cloud sync
 - AI upscaling available (CPU only)
 - OpenSubtitles and Real-Debrid work
 

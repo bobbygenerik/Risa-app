@@ -1,10 +1,10 @@
-# Google Drive & On-Device AI Upscaling
+# Cloud & On-Device AI Upscaling
 
 ## ✅ **New Features Implemented**
 
 ### 1. **Cloud Sync (Removed)** ☁️
 
-The Google Drive cloud sync feature has been removed from the app and replaced by a local export/import backup workflow. Use the Local Backup tools in `Settings > Account` to export your data as a JSON file and import it on another device.
+The cloud sync feature has been removed from the app and replaced by a local export/import backup workflow. Use the Local Backup tools in `Settings > Account` to export your data as a JSON file and import it on another device.
 
 - **Where to find it**: `Settings > Account > Local Backup` (Export / Import)
 - **Notes**: Local backups are stored as files the user selects; they are not uploaded to any cloud by the app.
@@ -53,8 +53,8 @@ The Google Drive cloud sync feature has been removed from the app and replaced b
 
 ## 📋 Implementation Status
 
-### Cloud Sync (Google Drive) — Removed
-- The previous Google Drive sync service has been removed and is no longer supported in the application.
+### Cloud Sync — Removed
+- The previous cloud sync service has been removed and is no longer supported in the application.
 - Use the `Local Backup` export/import workflow instead (`Settings > Account`).
 
 ### AI Upscaling Service ✅
@@ -82,23 +82,9 @@ image: ^4.3.0
 
 ### 1. Add UI to Settings Screen
 
-Add to `_buildAccountSettings()` or `_buildGeneralSettings()`:
+Add the AI upscaling controls to `_buildPlaybackSettings()` and provide a local Backup/Restore entry under `Settings > Account`.
 
-```dart
-_buildSectionCard(
-  title: 'Google Drive Sync',
-  subtitle: 'Backup and restore your data across devices (FREE)',
-  children: [
-    // Sign in button
-    // Last sync time
-    // Manual sync button
-    // Storage usage
-    // Sign out button
-  ],
-),
-```
-
-Add to `_buildPlaybackSettings()`:
+Example AI settings card to add to `_buildPlaybackSettings()`:
 
 ```dart
 _buildSectionCard(
@@ -125,66 +111,23 @@ _buildSectionCard(
         });
       },
     ),
-    // GPU availability indicator
-    // Performance estimate
   ],
 ),
 ```
 
+And add a simple local backup section under `Settings > Account` (Export / Import JSON backup).
+
 ### 2. Update Main.dart
 
-Add providers:
+Add AI provider to `main.dart` providers list if not already present:
 
 ```dart
-MultiProvider(
-  providers: [
-    ChangeNotifierProvider(create: (_) => ChannelProvider()),
-    ChangeNotifierProvider(create: (_) => VoiceSearchService()..initialize()),
-    ChangeNotifierProvider(create: (_) => EpgService()),
-    ChangeNotifierProvider(create: (_) => GoogleDriveSyncService()..initialize()), // NEW
-    ChangeNotifierProvider(create: (_) => AIUpscalingService()..initialize()),    // NEW
-  ],
-  ...
-)
+ChangeNotifierProvider(create: (_) => AIUpscalingService()..initialize()),
 ```
 
-### 3. Configure Google OAuth
+### 3. Add AI Model File
 
-For Google Sign-In to work, you need to configure OAuth credentials:
-
-**Android** (`android/app/src/main/AndroidManifest.xml`):
-```xml
-<meta-data
-  android:name="com.google.android.gms.version"
-  android:value="@integer/google_play_services_version" />
-```
-
-**iOS** (`ios/Runner/Info.plist`):
-```xml
-<key>CFBundleURLTypes</key>
-<array>
-  <dict>
-    <key>CFBundleURLSchemes</key>
-    <array>
-      <string>com.googleusercontent.apps.YOUR_CLIENT_ID</string>
-    </array>
-  </dict>
-</array>
-```
-
-**Get OAuth Credentials**:
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create new project or select existing
-3. Enable Google Drive API
-4. Create OAuth 2.0 credentials
-5. Download and configure
-
-### 4. Add AI Model File
-
-Download a pre-trained ESRGAN model:
-1. Convert TensorFlow model to TFLite format
-2. Save as `assets/models/esrgan_x2.tflite`
-3. Add to `pubspec.yaml`:
+Download a pre-trained ESRGAN model or lightweight alternative and add to `assets/models/`:
 
 ```yaml
 flutter:
@@ -192,30 +135,22 @@ flutter:
     - assets/models/esrgan_x2.tflite
 ```
 
-**Alternative**: Use a lightweight model like SRCNN or FSRCNN for better mobile performance.
-
 ---
 
 ## 💡 Usage Examples
 
-### Google Drive Sync
+### Local Backup (Usage Example)
+
+Export and import JSON backups from `Settings > Account`.
 
 ```dart
-final driveSync = Provider.of<GoogleDriveSyncService>(context);
-
-// Sign in
-await driveSync.signIn();
-
-// Sync data
-await driveSync.syncToCloud(
-  favorites: {'channels': [...]},
-  playlists: {'m3u_urls': [...]},
-  watchHistory: {'watched': [...]},
-  settings: {'theme': 'dark', ...},
-);
-
-// Restore data
-final data = await driveSync.restoreFromCloud();
+// Example: read a local backup file and parse JSON
+final file = await FilePicker.platform.pickFiles();
+if (file != null) {
+  final contents = await File(file.files.single.path!).readAsString();
+  final data = jsonDecode(contents) as Map<String, dynamic>;
+  // Restore preferences/playlists from `data`
+}
 ```
 
 ### AI Upscaling
@@ -242,12 +177,11 @@ final upscaledFrame = await aiUpscaling.upscaleFrame(
 
 ## 🎯 Benefits
 
-### Google Drive Sync
+### Local Backup
 - ✅ No backend server needed
 - ✅ No database costs
-- ✅ No storage costs (uses user's Drive)
-- ✅ Automatic backup
-- ✅ Cross-device sync
+- ✅ No storage costs (uses user-chosen location)
+- ✅ Manual export/import workflow
 - ✅ User controls their data
 
 ### On-Device AI Upscaling
@@ -262,11 +196,9 @@ final upscaledFrame = await aiUpscaling.upscaleFrame(
 
 ## ⚠️ Limitations & Considerations
 
-### Google Drive Sync
-- Requires internet connection
-- Requires Google account
-- Limited by user's Drive quota (usually 15GB free)
-- Sync speed depends on network
+### Local Backup
+- Requires user action to export/import
+- Limited by user's device storage
 
 ### AI Upscaling
 - Requires decent GPU for smooth 1080p
@@ -282,12 +214,11 @@ final upscaledFrame = await aiUpscaling.upscaleFrame(
 ### Cloud Sync Alternatives
 | Solution | Cost | Storage | Control |
 |----------|------|---------|---------|
-| **Google Drive** | FREE | 15GB free | User owns |
 | Firebase | $0.026/GB | Pay as you go | Google owns |
 | AWS S3 | $0.023/GB | Pay as you go | AWS owns |
 | Custom Server | $5-50/mo | Variable | You manage |
 
-**Winner**: Google Drive (FREE + User controls data)
+**Winner**: Evaluate based on your needs (no built-in cloud sync in this build)
 
 ### AI Upscaling Alternatives
 | Solution | Cost | Speed | Quality |

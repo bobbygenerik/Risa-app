@@ -2,16 +2,9 @@
 
 ## ✅ What's Been Completed
 
-### 1. Google Drive Cloud Sync UI ✅
-- **Location**: Settings → Account tab
-- **Features**:
-  - Sign In/Sign Out with Google
-  - Sync Now button (uploads favorites, playlists, history, settings)
-  - Restore Data button (downloads from Drive)
-  - Shows last sync time and user email
-  - Displays Drive storage usage
-  - Loading indicator during sync
-- **Status**: Fully functional (requires OAuth configuration)
+### 1. Cloud Sync (Removed)
+- The previous cloud sync feature has been removed from the application.
+- Use the Local Backup tools in `Settings → Account` to export/import data between devices.
 
 ### 2. AI Video Upscaling UI ✅
 - **Location**: Settings → Playback tab
@@ -41,22 +34,22 @@ cd ~/iptv-player
 flutter run -d linux  # or -d android, -d chrome, etc.
 ```
 
-**What to verify:**
+- **What to verify:**
 - ✅ App launches without errors
 - ✅ Legal disclaimer shows on first launch
 - ✅ Navigate to Settings → Account
-- ✅ See "Google Drive Sync" card with "Sign In with Google" button
+- ✅ See local Profile and Backup tools (Cloud sync removed)
 - ✅ Navigate to Settings → Playback
 - ✅ See "AI Video Enhancement" card
 - ✅ If no model: See warning message with setup instructions
 - ✅ All other screens work normally
 
-### Test 2: Try Google Drive Features (Without OAuth)
+### Test 2: Local Backup / Restore
 
 **Expected behavior:**
-- Click "Sign In with Google" → Shows error message "Configure OAuth first"
-- This is CORRECT! OAuth needs configuration (see below)
-- No app crashes, just helpful error message
+- Use Settings → Account → Export to save JSON backup to device
+- Use Settings → Account → Import to restore from a JSON file
+- No app crashes; local backup is a manual process replacing cloud sync
 
 ### Test 3: Check AI Upscaling
 
@@ -70,20 +63,17 @@ flutter run -d linux  # or -d android, -d chrome, etc.
 
 ## 📝 Optional Configuration (15-25 minutes)
 
-### Option A: Configure Google OAuth (15 minutes)
+### Option A: Configure Google OAuth (Removed / Not Recommended)
 
-**Why:** Enable actual Google Drive sync functionality
+**Why:** Drive cloud sync has been removed from this build and is not supported in the current release.
 
-**Steps:**
-1. Open `OAUTH_SETUP_GUIDE.md`
-2. Follow steps to create Google Cloud project
-3. Enable Google Drive API
-4. Create OAuth credentials
-5. Update Android/iOS configuration
-6. Rebuild app
-7. Test sign-in → Should work!
+If you require cloud-sync in your own fork, consider these alternatives instead of reintroducing cloud sync:
 
-**Result:** Full cloud sync across devices
+- Host playlist and EPG files on a static web server or CDN and use authenticated endpoints if needed.
+- Use a network share or SMB/FTP server accessible from your devices for backup/restore files.
+- Implement a provider-agnostic cloud-sync plugin (S3-compatible storage, WebDAV) if you need hosted sync across devices.
+
+If you still want to restore Drive sync in your fork, follow `OAUTH_SETUP_GUIDE.md` and implement a secure OAuth flow, but be aware this repository's mainline build intentionally omits cloud sync.
 
 ### Option B: Add AI Model (10 minutes)
 
@@ -107,7 +97,6 @@ flutter run -d linux  # or -d android, -d chrome, etc.
 - **UI Screens**: 100% ✅
 - **Navigation**: 100% ✅
 - **State Management**: 100% ✅
-- **Google Drive Sync**: 100% ✅ (UI + Service)
 - **AI Upscaling**: 100% ✅ (UI + Service)
 - **Legal Compliance**: 100% ✅
 
@@ -123,8 +112,8 @@ flutter run -d linux  # or -d android, -d chrome, etc.
 - ✅ OpenSubtitles settings
 - ✅ Hardware acceleration options
 
-### What Needs Configuration
-- ⏸️ Google OAuth (for Drive sync to work)
+- ### What Needs Configuration
+- ⏸️ AI Model file (for upscaling to work)
 - ⏸️ AI Model file (for upscaling to work)
 - ⏸️ Video player integration (future work)
 - ⏸️ Real IPTV provider connections (future work)
@@ -138,13 +127,12 @@ flutter run -d linux  # or -d android, -d chrome, etc.
 2. ✅ Run `flutter run -d linux`
 3. ✅ Test all screen navigation
 4. ✅ Check Settings tabs
-5. ✅ Verify new Google Drive & AI sections visible
+5. ✅ Verify AI sections visible and local Backup tools present
 
-### Phase 2: Google OAuth Setup (Optional, 15 min)
-1. Follow `OAUTH_SETUP_GUIDE.md`
-2. Configure Google Cloud project
-3. Test sign-in functionality
-4. Test sync/restore data
+### Phase 2: AI Model Setup (Optional, 15 min)
+1. Follow `AI_MODEL_SETUP_GUIDE.md`
+2. Configure and add model file
+3. Test AI upscaling behavior
 
 ### Phase 3: AI Model Setup (Optional, 10 min)
 1. Follow `AI_MODEL_SETUP_GUIDE.md`
@@ -195,7 +183,7 @@ flutter build apk
 
 - **Total Lines of Code**: ~8,500+
 - **Files Created/Modified**: 30+
-- **Services Implemented**: 5 (M3U, EPG, Voice, Drive, AI)
+-- **Services Implemented**: 4 (M3U, EPG, Voice, AI)
 - **Providers Configured**: 5
 - **UI Screens**: 5 main + 4 secondary
 - **Compilation Errors**: 0

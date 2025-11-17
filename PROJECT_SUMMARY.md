@@ -26,8 +26,8 @@
 - Recently added content
 - Content categories and search
 
-✅ **Advanced Features**
-- Google Drive cloud sync (FREE - uses user's storage)
+- ✅ **Advanced Features**
+- Cloud sync (removed)
 - On-device AI upscaling (FREE - no cloud costs)
 - OpenSubtitles integration (FREE API)
 - Hardware video acceleration
@@ -57,10 +57,8 @@
 - **video_player**: 2.9.2
 - **chewie**: 1.8.5
 
-### Cloud Integration (FREE)
-- **googleapis**: 13.2.0
-- **googleapis_auth**: 1.6.0
-- **google_sign_in**: 6.2.2
+### Cloud Integration (Removed)
+The previous provider-specific client libraries and instructions have been removed from the mainline project. Use local export/import backups or implement a provider-agnostic cloud-sync solution in a fork if needed.
 
 ### AI/ML (FREE - On-Device)
 - **tflite_flutter**: 0.11.0
@@ -195,7 +193,7 @@ iptv-player/
    - Error handling & retries
 
 4. **Cloud Sync (Removed)**
-   - Google Drive sync has been removed and replaced by a local export/import backup workflow (`LocalBackupService`).
+   - Cloud sync has been removed and replaced by a local export/import backup workflow (`LocalBackupService`).
    - Export backups via `Settings > Account > Export Backup`; import via `Settings > Account > Import Backup`.
 
 5. **AIUpscalingService** (lib/services/ai_upscaling_service.dart)
@@ -209,26 +207,9 @@ iptv-player/
 
 ## Key Features Implementation
 
-### Google Drive Cloud Sync (FREE)
+### Cloud Sync (Removed)
 
-**What it does:**
-- Backs up favorites, playlists, watch history, and settings
-- Syncs across multiple devices
-- Uses user's free 15GB Google Drive storage
-- No backend server costs
-
-**Implementation:**
-- `GoogleDriveSyncService` handles all Drive API calls
-- Data stored in `appDataFolder` (hidden from user's Drive UI)
-- JSON format for easy parsing
-- Sign-in with Google OAuth 2.0
-
-**Configuration Required:**
-1. Create Google Cloud project
-2. Enable Google Drive API
-3. Configure OAuth consent screen
-4. Create OAuth credentials (Android/iOS/Web)
-5. See `OAUTH_SETUP_GUIDE.md` for detailed steps
+The Drive cloud sync feature has been removed from this repository and replaced by a local export/import backup workflow (`LocalBackupService`). If you need cloud sync in your fork, implement a provider-agnostic solution (S3/WebDAV/HTTP) and secure credential handling.
 
 ### AI Video Upscaling (FREE)
 
@@ -400,16 +381,16 @@ On first launch, users see a legal disclaimer dialog that:
 - Real-Debrid settings UI
 - OpenSubtitles settings UI
 - Hardware acceleration settings
-- Google Drive sync service (full implementation)
+- Cloud sync service (archived)
 - AI upscaling service (full implementation)
 - State management setup
 - Design system & theming
 
 ### 🚧 Partially Complete
-- Google Drive OAuth setup (requires user configuration)
+- Cloud sync OAuth setup (archival; provider-specific)
 - AI model file (optional - app works without it)
 - Video player integration (dependencies installed)
-- Google Drive + AI UI in settings (providers configured, UI pending verification)
+- Cloud sync + AI UI in settings (provider options configured, UI pending verification)
 
 ### 📋 Pending
 - Video player actual implementation
@@ -452,7 +433,7 @@ On first launch, users see a legal disclaimer dialog that:
 
 3. **Configure Google OAuth (Optional but recommended):**
    - See `OAUTH_SETUP_GUIDE.md`
-   - Required for Google Drive sync
+   - Required for cloud sync (archival)
    - Takes ~15 minutes
 
 4. **Add AI model (Optional):**
@@ -486,7 +467,7 @@ On first launch, users see a legal disclaimer dialog that:
 - [ ] Voice search activates
 - [ ] Settings tabs switch correctly
 
-### Google Drive Sync
+### Cloud Sync (archival)
 - [ ] Sign in with Google works
 - [ ] Sync button uploads data
 - [ ] Restore button downloads data
@@ -519,7 +500,7 @@ All dependencies configured, including:
 - Video playback (video_player, chewie)
 - State management (provider)
 - Routing (go_router)
-- Google Drive sync (googleapis, googleapis_auth, google_sign_in)
+- Cloud sync (provider-specific packages)
 - AI upscaling (tflite_flutter, image)
 - Voice search (speech_to_text)
 
@@ -543,7 +524,7 @@ Permissions:
 ## Cost Analysis
 
 ### FREE Services ✅
-1. **Google Drive Sync**
+1. **Cloud Sync (archival)**
    - Uses user's free 15GB storage
    - No backend server needed
    - No API costs
@@ -578,7 +559,7 @@ Permissions:
 ## Known Limitations
 
 1. **OAuth Setup Required**
-   - Google Drive sync needs OAuth configuration
+   - Cloud sync needs OAuth configuration (optional for forks)
    - Takes ~15 minutes to set up
    - Required for production use
 
@@ -689,7 +670,7 @@ For issues, questions, or feature requests:
 
 ---
 
-**Status**: Feature-complete with Google Drive sync and AI upscaling
+**Status**: Feature-complete; cloud sync removed from mainline and AI upscaling implemented
 **Next Steps**: Configure OAuth, add AI model (optional), test on device
 **Deployment Ready**: Yes (with OAuth configuration)
 

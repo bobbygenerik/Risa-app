@@ -10,7 +10,6 @@ import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/services/voice_search_service.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/epg_service.dart';
-import 'package:iptv_player/services/google_drive_sync_service.dart';
 import 'package:iptv_player/services/ai_upscaling_service.dart';
 import 'package:iptv_player/services/mlkit_translation_service.dart';
 import 'package:iptv_player/services/live_transcription_service.dart';
@@ -45,10 +44,14 @@ import 'package:iptv_player/services/background_task_manager.dart';
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-
   runZonedGuarded(
     () {
+      // Ensure the Flutter bindings are created inside the same Zone
+      // that will run the application. Creating the binding outside
+      // the guarded zone can cause a "bindings initialized in a
+      // different zone" error when the framework is used later.
+      WidgetsFlutterBinding.ensureInitialized();
+
       FlutterError.onError = (FlutterErrorDetails details) {
         FlutterError.presentError(details);
         Zone.current.handleUncaughtError(
@@ -56,6 +59,7 @@ void main() {
           details.stack ?? StackTrace.current,
         );
       };
+
       // Show a short startup loader while TMDB disk cache loads
       runApp(const StartupLoader());
     },
@@ -385,9 +389,7 @@ class _MyAppState extends State<MyApp> {
             create: (_) => VoiceSearchService()..initialize(),
           ),
           ChangeNotifierProvider(create: (_) => EpgService()),
-          ChangeNotifierProvider(
-            create: (_) => GoogleDriveSyncService()..initialize(),
-          ),
+          // Drive sync service removed.
           ChangeNotifierProvider(create: (_) => AIModelManager()..initialize()),
           ChangeNotifierProvider(
             create: (_) => AIUpscalingService(),

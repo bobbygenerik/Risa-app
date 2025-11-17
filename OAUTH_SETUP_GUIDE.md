@@ -1,8 +1,10 @@
-# Google OAuth Setup Guide
+# OAuth Setup Guide (archival)
 
 ## Overview
 
-To enable Google Drive sync, you need to configure OAuth 2.0 credentials through Google Cloud Console.
+Note: Drive sync has been removed from the mainline project. This guide is provided for archival/reference purposes only; follow local backup workflows in the app or implement a custom cloud-sync solution in a fork.
+
+This document historically described steps to configure OAuth credentials for Drive-based sync.
 
 ---
 
@@ -15,11 +17,9 @@ To enable Google Drive sync, you need to configure OAuth 2.0 credentials through
 
 ---
 
-## Step 2: Enable Google Drive API
+## Step 2: Enable Drive API (archival)
 
-1. In your project, go to "APIs & Services" → "Library"
-2. Search for "Google Drive API"
-3. Click on it and press "Enable"
+This section is retained for reference. Drive API configuration is not required for this repository's mainline build.
 
 ---
 
@@ -34,8 +34,7 @@ To enable Google Drive sync, you need to configure OAuth 2.0 credentials through
    - **Developer contact**: your email
 5. Click "Save and Continue"
 6. **Scopes**: Click "Add or Remove Scopes"
-   - Add: `https://www.googleapis.com/auth/drive.file`
-   - Add: `https://www.googleapis.com/auth/drive.appdata`
+    - Add: provider-specific file access scopes (e.g., file access, appdata) as required by your chosen provider
 7. Click "Save and Continue"
 8. **Test users**: Add your Gmail address for testing
 9. Click "Save and Continue"
@@ -98,7 +97,7 @@ Edit `android/app/src/main/AndroidManifest.xml`:
 </manifest>
 ```
 
-No additional configuration needed - google_sign_in handles it automatically!
+No additional configuration needed - the appropriate sign-in package handles provider-specific setup in provider guides.
 
 ---
 
@@ -161,7 +160,7 @@ flutter run -d linux  # or android, ios, etc.
 **Solution:**
 1. Go to Google Cloud Console
 2. APIs & Services → Library
-3. Search "Google Drive API"
+3. Search your cloud provider's storage API (archival reference)
 4. Click "Enable"
 
 ### "DEVELOPER_ERROR" on Android
@@ -211,12 +210,7 @@ keytool -genkey -v -keystore ~/key.jks -keyalg RSA -keysize 2048 -validity 10000
 
 ## What Gets Synced?
 
-The app syncs these files to `appDataFolder` in Google Drive:
-
-- `favorites.json` - User's favorite channels
-- `playlists.json` - M3U playlist URLs and Xtream credentials
-- `watch_history.json` - Recently watched content
-- `settings.json` - App preferences
+Historically, the app synced these files to a provider-specific application folder (archival). The mainline repository no longer performs provider-specific syncs.
 
 All data is stored as JSON in the hidden `appDataFolder` - users won't see it in their regular Drive files.
 
@@ -253,7 +247,7 @@ After setup:
 
 ---
 
-**Status**: OAuth setup required for Google Drive sync to work
+**Status**: OAuth setup required for provider-specific cloud sync (archival)
 **Time to setup**: ~15 minutes
 **Cost**: FREE (Google Cloud free tier)
 

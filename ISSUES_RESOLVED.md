@@ -102,7 +102,7 @@ While all critical issues are resolved, potential future improvements:
 
 1. **Enhanced EPG**: More EPG source options and better caching
 2. **Advanced AI Features**: Optional AI upscaling and transcription models
-3. **Cloud Sync**: Enhanced Google Drive integration
+3. **Cloud Sync**: Enhanced cloud sync integration (archival)
 4. **Performance**: Further optimization for lower-end Android TV devices
 
 ## 📝 Notes for Developers

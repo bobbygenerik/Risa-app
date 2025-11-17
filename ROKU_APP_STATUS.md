@@ -17,7 +17,7 @@ roku/
 │   ├── EPGService.brs             # Electronic Program Guide
 │   ├── SettingsScene.brs          # Settings/configuration
 │   ├── PlayerOverlay.brs          # Video player controls (todo)
-│   └── GoogleDriveService.brs     # Google Drive OAuth2 & sync
+│   └── cloud_sync_service.brs     # archived (cloud sync omitted)
 └── images/                        # UI assets (todo)
 ```
 
@@ -37,10 +37,7 @@ roku/
 - ✅ Voice search capability
 
 ### Cloud & Sync
-- ✅ Google OAuth2 authentication
-- ✅ Profile upload/download to Google Drive
-- ✅ Settings synchronization
-- ✅ Token refresh mechanism
+- Cloud sync: removed (use local export/import backups via Settings)
 
 ### Settings
 - ✅ Playlist URL configuration
@@ -58,7 +55,7 @@ roku/
 | EPG Fetching | ✅ Complete | XML parsing, current program lookup |
 | Video Playback | ✅ Ready | Uses native Roku video player |
 | Settings UI | ✅ Complete | Keyboard input for URLs |
-| Google Drive | ✅ Complete | OAuth2 flow, token management |
+| Drive | removed | Drive sync omitted in this build |
 | Transcription | ✅ Framework | Ready to integrate Roku STT API |
 | Translation | ✅ Framework | Ready to call translation service |
 
@@ -69,7 +66,7 @@ roku/
 - [ ] Verify M3U parsing with real playlists
 - [ ] Test EPG fetching and caching
 - [ ] Validate video playback across streams
-- [ ] Test OAuth2 flow and Google Drive sync
+  - [ ] Test OAuth2 flow and cloud sync (archived)
 
 ### Phase 2: Polish
 - [ ] Add player overlay controls (play, pause, seek)
@@ -100,7 +97,7 @@ All services are free:
 - ✅ M3U/EPG: User-provided URLs (no API cost)
 - ✅ Transcription: Roku built-in speech API (free)
 - ✅ Translation: On-device or free tier APIs
-- ✅ Google Drive: Free 15GB tier (typical app <1MB)
+- Drive cloud sync: removed (no built-in cloud storage in this build)
 - ✅ Video: Direct stream playback (no transcoding)
 
 ## Development Notes
@@ -124,7 +121,7 @@ Before device submission:
 - [ ] Verify EPG displays current/upcoming programs
 - [ ] Test video playback (2-10 Mbps streams)
 - [ ] Confirm transcription works with enabled stream
-- [ ] Verify Google Drive sync works
+  - [ ] Verify cloud sync archival behavior (no active Drive integration)
 - [ ] Test settings persistence across app restart
 - [ ] Confirm remote control navigation smooth
 - [ ] Check memory usage (target: <100MB)
@@ -172,7 +169,7 @@ Estimated final APK/package sizes:
 - Caches for 6 hours
 - Shows current/next program
 
-### Google Drive Sync
+### Cloud Sync (archived)
 - OAuth2 flow for authentication
 - Token refresh handling
 - Upload profile JSON to Drive
@@ -202,7 +199,7 @@ Estimated final APK/package sizes:
 2. Can load M3U with 100+ channels in <5 seconds
 3. Video playback works with 2-10 Mbps streams
 4. EPG displays current program info
-5. Google Drive sync works (OAuth flow complete)
+5. Cloud sync archival verified (OAuth endpoints removed from active build)
 6. All remote navigation is smooth and responsive
 7. Settings persist across app restarts
 8. Memory usage stays <100MB

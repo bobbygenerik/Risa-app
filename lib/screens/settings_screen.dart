@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:iptv_player/services/live_transcription_service.dart';
-import 'package:iptv_player/services/google_drive_sync_service.dart';
+// Drive sync removed: import omitted
 import 'package:iptv_player/services/opensubtitles_service.dart';
 import 'package:iptv_player/services/real_debrid_service.dart';
 import 'package:iptv_player/services/whisper_speech_service.dart';
@@ -450,268 +450,64 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Widget _buildAccountSettings() {
-    return Consumer<GoogleDriveSyncService>(
-      builder: (context, syncService, _) {
-        return FutureBuilder<Map<String, String?>>(
-          future: _loadProfileData(),
-          builder: (context, snapshot) {
-            final userName = snapshot.data?['name'] ?? 'User';
-            final userEmail = snapshot.data?['email'] ?? 'user@example.com';
-            final profileImagePath = snapshot.data?['imagePath'];
+    // Drive sync feature removed from the app. Only show profile section.
+    return FutureBuilder<Map<String, String?>>(
+      future: _loadProfileData(),
+      builder: (context, snapshot) {
+        final userName = snapshot.data?['name'] ?? 'User';
+        final userEmail = snapshot.data?['email'] ?? 'user@example.com';
+        final profileImagePath = snapshot.data?['imagePath'];
 
-            return _buildSettingsSection(
-              title: 'Account',
+        return _buildSettingsSection(
+          title: 'Account',
+          children: [
+            _buildSectionCard(
+              title: 'Profile',
               children: [
-                _buildSectionCard(
-                  title: 'Profile',
-                  children: [
-                    Center(
-                      child: Column(
-                        children: [
-                          CircleAvatar(
-                            radius: 50,
-                            backgroundColor: AppTheme.cardBackground,
-                            backgroundImage:
-                                profileImagePath != null &&
-                                    profileImagePath.isNotEmpty
-                                ? FileImage(File(profileImagePath))
-                                : null,
-                            child:
-                                profileImagePath == null || profileImagePath.isEmpty
-                                ? Icon(
-                                    Icons.person,
-                                    size: 50,
-                                    color: AppTheme.primaryBlue,
-                                  )
-                                : null,
-                          ),
-                          SizedBox(height: AppSizes.md),
-                          Text(
-                            userName,
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          Text(
-                            userEmail,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.textSecondary,
-                            ),
-                          ),
-                          SizedBox(height: AppSizes.md),
-                          ElevatedButton(
-                            onPressed: () async {
-                              final result = await context.push('/edit-profile');
-                              if (result == true) {
-                                // Profile was updated, refresh the UI
-                                setState(() {});
-                              }
-                            },
-                            child: Text('Edit Profile'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                _buildSectionCard(
-                  title: 'Google Drive Sync',
-                  subtitle: 'Backup your settings and profile to Google Drive',
-                  children: [
-                    // Info box about what gets synced
-                    Container(
-                      padding: EdgeInsets.all(AppSizes.sm),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                size: 18,
+                Center(
+                  child: Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundColor: AppTheme.cardBackground,
+                        backgroundImage: profileImagePath != null && profileImagePath.isNotEmpty
+                            ? FileImage(File(profileImagePath))
+                            : null,
+                        child: profileImagePath == null || profileImagePath.isEmpty
+                            ? Icon(
+                                Icons.person,
+                                size: 50,
                                 color: AppTheme.primaryBlue,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'What gets backed up:',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.primaryBlue,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            '✓ Profile, settings, playlists, watch history & favorites.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppTheme.textSecondary,
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            '⚠ Recordings are NOT backed up.',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: AppTheme.accentOrange,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ],
+                              )
+                            : null,
                       ),
-                    ),
-                    SizedBox(height: AppSizes.sm),
-                    if (!syncService.isSupported) ...[
-                      Center(
-                        child: Column(
-                          children: [
-                            Icon(
-                              Icons.desktop_access_disabled,
-                              size: 36,
-                              color: AppTheme.textSecondary,
-                            ),
-                            SizedBox(height: AppSizes.sm),
-                            Text(
-                              'Google Drive sync is unavailable on this platform.',
-                              textAlign: TextAlign.center,
-                            ),
-                            SizedBox(height: AppSizes.sm),
-                            Text(
-                              'Use an Android or iOS device to enable cloud sync.',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(color: AppTheme.textSecondary),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
+                      SizedBox(height: AppSizes.md),
+                      Text(
+                        userName,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      Text(
+                        userEmail,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.textSecondary,
                         ),
                       ),
-                    ] else if (!syncService.isSignedIn) ...[
-                      Center(
-                        child: Column(
-                          children: [
-                            Icon(
-                              Icons.cloud_off,
-                              size: 36,
-                              color: AppTheme.textSecondary,
-                            ),
-                            SizedBox(height: AppSizes.sm),
-                            Text('Sign in with Google to enable cloud sync.'),
-                            SizedBox(height: AppSizes.sm),
-                            ElevatedButton.icon(
-                              onPressed: syncService.isSyncing
-                                    ? null
-                                    : () async {
-                                        final messenger = ScaffoldMessenger.of(context);
-                                        try {
-                                          await syncService.signIn();
-                                          if (mounted) {
-                                            messenger.showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  'Successfully signed in!',
-                                                ),
-                                              ),
-                                            );
-                                          }
-                                        } catch (e) {
-                                          if (mounted) {
-                                            messenger.showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  'Sign in failed. Configure OAuth first.',
-                                                ),
-                                              ),
-                                            );
-                                          }
-                                        }
-                                      },
-                              icon: Icon(Icons.login),
-                              label: Text('Sign In with Google'),
-                            ),
-                          ],
-                        ),
+                      SizedBox(height: AppSizes.md),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final result = await context.push('/edit-profile');
+                          if (result == true) {
+                            setState(() {});
+                          }
+                        },
+                        child: Text('Edit Profile'),
                       ),
-                    ] else ...[
-                      _buildInfoRow(
-                        'Account',
-                        syncService.userEmail ?? 'Signed In',
-                      ),
-                      _buildInfoRow(
-                        'Last Sync',
-                        syncService.lastSyncTime != null
-                            ? _formatDateTime(syncService.lastSyncTime!)
-                            : 'Never',
-                      ),
-                      SizedBox(height: AppSizes.sm),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: syncService.isSyncing
-                                  ? null
-                                  : () async {
-                                      // Sync logic would go here
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Syncing to cloud...')),
-                                      );
-                                    },
-                              icon: Icon(Icons.cloud_upload),
-                              label: Text('Sync Now'),
-                            ),
-                          ),
-                          SizedBox(width: AppSizes.sm),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: syncService.isSyncing
-                                  ? null
-                                  : () async {
-                                      // Restore logic would go here
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Restoring from cloud...')),
-                                      );
-                                    },
-                              icon: Icon(Icons.cloud_download),
-                              label: Text('Restore'),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: AppSizes.sm),
-                      Center(
-                        child: TextButton(
-                          onPressed: () async {
-                            final messenger = ScaffoldMessenger.of(context);
-                            await syncService.signOut();
-                            if (mounted) {
-                              messenger.showSnackBar(
-                                SnackBar(
-                                  content: Text('Signed out successfully'),
-                                ),
-                              );
-                            }
-                          },
-                          child: Text('Sign Out'),
-                        ),
-                      ),
-                      if (syncService.isSyncing)
-                        Padding(
-                          padding: EdgeInsets.only(top: AppSizes.sm),
-                          child: LinearProgressIndicator(),
-                        ),
                     ],
-                  ],
+                  ),
                 ),
               ],
-            );
-          },
+            ),
+          ],
         );
       },
     );
@@ -1909,162 +1705,13 @@ class _SettingsScreenState extends State<SettingsScreen>
     return _buildSettingsSection(
       title: 'Cloud & AI',
       children: [
-        // Google Drive Sync
-        Consumer<GoogleDriveSyncService>(
-          builder: (context, driveService, child) {
-            return _buildSectionCard(
-              title: 'Google Drive Sync',
-              subtitle:
-                  'FREE - Sync favorites, playlists, and settings to your Google Drive',
-              children: [
-                if (!driveService.isSignedIn) ...[
-                  const Text(
-                    'Sign in with your Google account to enable cloud sync.',
-                    style: TextStyle(color: AppTheme.textSecondary),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: () async {
-                      final messenger = ScaffoldMessenger.of(context);
-                      final success = await driveService.signIn();
-                      if (mounted) {
-                        messenger.showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              success
-                                  ? 'Signed in successfully!'
-                                  : 'Sign-in failed',
-                            ),
-                            backgroundColor: success
-                                ? Colors.green
-                                : AppTheme.accentRed,
-                          ),
-                        );
-                      }
-                    },
-                    icon: const Icon(Icons.login),
-                    label: const Text('Sign in with Google'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryBlue,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 16,
-                      ),
-                    ),
-                  ),
-                ] else ...[
-                  ListTile(
-                    leading: const Icon(
-                      Icons.account_circle,
-                      color: AppTheme.primaryBlue,
-                    ),
-                    title: Text(driveService.userName ?? 'Signed In'),
-                    subtitle: Text(driveService.userEmail ?? ''),
-                  ),
-                  const Divider(),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: driveService.isSyncing
-                              ? null
-                              : () async {
-                                  final messenger = ScaffoldMessenger.of(context);
-                                  final success = await driveService
-                                      .syncToCloud(
-                                        favorites: {},
-                                        playlists: {},
-                                        watchHistory: {},
-                                        settings: {},
-                                      );
-                                  if (mounted) {
-                                    messenger.showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          success
-                                              ? 'Synced successfully!'
-                                              : 'Sync failed',
-                                        ),
-                                        backgroundColor: success
-                                            ? Colors.green
-                                            : AppTheme.accentRed,
-                                      ),
-                                    );
-                                  }
-                                },
-                          icon: driveService.isSyncing
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.cloud_upload),
-                          label: Text(
-                            driveService.isSyncing ? 'Syncing...' : 'Sync Now',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: driveService.isSyncing
-                              ? null
-                              : () async {
-                                  final messenger = ScaffoldMessenger.of(context);
-                                  final data = await driveService
-                                      .restoreFromCloud();
-                                  if (mounted) {
-                                    messenger.showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          data != null
-                                              ? 'Restored successfully!'
-                                              : 'Restore failed',
-                                        ),
-                                        backgroundColor: data != null
-                                            ? Colors.green
-                                            : AppTheme.accentRed,
-                                      ),
-                                    );
-                                  }
-                                },
-                          icon: const Icon(Icons.cloud_download),
-                          label: const Text('Restore'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  if (driveService.lastSyncTime != null)
-                    Text(
-                      'Last synced: ${driveService.lastSyncTime}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-                  TextButton.icon(
-                    onPressed: () async {
-                      final messenger = ScaffoldMessenger.of(context);
-                      await driveService.signOut();
-                      if (mounted) {
-                        messenger.showSnackBar(
-                          const SnackBar(
-                            content: Text('Signed out successfully'),
-                          ),
-                        );
-                      }
-                    },
-                    icon: const Icon(Icons.logout),
-                    label: const Text('Sign Out'),
-                  ),
-                ],
-              ],
-            );
-          },
+        // Drive sync feature removed from the app.
+        _buildSectionCard(
+          title: 'Cloud Sync',
+          subtitle: 'Removed',
+          children: [
+            Text('Cloud sync has been removed from this build.'),
+          ],
         ),
 
         // OpenSubtitles Integration

@@ -55,7 +55,8 @@ roku.zip
 │   ├── Main.brs                    (Entry point, Scene Graph init)
 │   ├── M3UParser.brs               (M3U playlist parsing)
 │   ├── EPGService.brs              (EPG/XMLTV parsing)
-│   └── GoogleDriveService.brs      (Google Drive OAuth)
+│   └── cloud_sync_service.brs      (archived - cloud sync omitted)
+│   └── cloud_sync_service.brs      (archived - cloud sync omitted)
 └── images/ (13 files)
     ├── Icons: icon_hd.png, icon_fhd.png
     │  Focus: mm_icon_focus_hd/sd.png
@@ -80,14 +81,14 @@ roku.zip
 - [ ] Remote control key handling (arrow keys, selection)
 - [ ] Video playback with proper stream format detection
 - [ ] User settings/preferences persistence
-- [ ] Google Drive cloud sync
+- [ ] cloud sync (removed)
 
 ### 📋 Known Limitations
 1. **Static channel list**: Currently using hardcoded example channels (6 tiles in MainScene.xml)
 2. **No real playlist loading**: Needs method to accept user-provided M3U URLs
 3. **Limited metadata**: EPG integration is a stub, needs full XML parsing
 4. **Basic error handling**: Should expand error messages and recovery
-5. **No authentication UI**: Google Drive login not implemented
+5. **No authentication UI**: cloud sync login not implemented (archival)
 6. **Single resolution**: Manifest references HD/FHD/4K but Scene Graph only built for FHD
 
 ### 📸 Assets Now Included
@@ -123,11 +124,10 @@ All required images have been generated:
 ### Compilation Results
 - ✅ **0 Errors** - All BrightScript files compile cleanly
 - ✅ **0 Warnings** - No diagnostic issues detected
-- ✅ **4 Service Files** Successfully transpiled:
+-- ✅ **3 Service Files** Successfully transpiled:
   - Main.brs (128 lines)
   - M3UParser.brs (106 lines)
   - EPGService.brs (106 lines)
-  - GoogleDriveService.brs (175 lines)
 
 ### Generated Package Contents (Updated)
 ```
@@ -153,12 +153,12 @@ roku.zip (~12 KB with image assets)
 │   ├── ChannelTile.xml
 │   └── ChannelTile.brs
 └── source/
-    ├── Main.brs                    (UPDATED - Scene Graph init)
-    ├── M3UParser.brs               (3180 bytes)
-    ├── EPGService.brs              (3337 bytes)
-    ├── GoogleDriveService.brs      (5060 bytes)
-    ├── bslib.brs                   (1416 bytes - runtime lib)
-    └── *.brs.map files             (source maps for debugging)
+  ├── Main.brs                    (UPDATED - Scene Graph init)
+  ├── M3UParser.brs               (3180 bytes)
+  ├── EPGService.brs              (3337 bytes)
+  ├── cloud_sync_service.brs      (archived)
+  ├── bslib.brs                   (1416 bytes - runtime lib)
+  └── *.brs.map files             (source maps for debugging)
 ```
 
 ### Compilation Timeline
@@ -191,11 +191,11 @@ roku.zip (~12 KB with image assets)
 - Current/upcoming program queries
 - HTTP XML parsing
 
-### 4. **GoogleDriveService.brs** - Cloud Integration
+### 4. **cloud_sync_service.brs** - Cloud Integration (archival)
 - OAuth 2.0 authentication flow
 - Access token management
 - Token refresh capability
-- File upload/download to Google Drive
+- File upload/download to external cloud (archival)
 - URL encoding and response parsing
 
 ---
@@ -249,7 +249,7 @@ roku-deploy --host 192.168.1.X --user rokudev --password PASSWORD --out roku.pkg
 4. **Search functionality** - Search channels by name or category
 
 ### Long-term (Polish)
-1. **Google Drive sync** - Cloud backup of playlists and settings
+1. **Cloud sync (archival)** - Cloud backup of playlists and settings
 2. **AI upscaling** (if possible) - Enhance video quality
 3. **Multi-language UI** - Localization support
 4. **Theme customization** - User-selected color schemes
@@ -265,7 +265,7 @@ roku/
 │   ├── Main.brs         # App entry point (Scene Graph init)
 │   ├── M3UParser.brs    # Playlist parsing
 │   ├── EPGService.brs   # Program guide
-│   └── GoogleDriveService.brs
+│   └── cloud_sync_service.brs (archived)
 ├── components/           # NEW - Scene Graph components
 │   ├── MainScene.xml    # Main UI layout
 │   ├── MainScene.brs    # Event handlers
@@ -322,7 +322,7 @@ roku/
 ## Compiler Warnings to Ignore
 The BrightScript compiler may show warnings about unused functions in service stubs. These are intentional:
 - `EPGService.brs:XX` - EPG parsing not yet fully integrated
-- `GoogleDriveService.brs:XX` - OAuth flow is scaffolding only
+-- `cloud_sync_service.brs:XX` - archived (cloud sync omitted)
 
 These warnings do not affect functionality and can be safely ignored during development.
 
@@ -349,17 +349,17 @@ These warnings do not affect functionality and can be safely ignored during deve
 ### Issue 1: Template Literal Syntax
 **Problem**: BrightScript doesn't support `${variable}` template literals  
 **Solution**: Changed to string concatenation  
-**Files Affected**: GoogleDriveService.brs
+**Files Affected**: cloud_sync_service.brs (archived)
 
 ### Issue 2: Unavailable Runtime Functions
 **Problem**: `GetTickCountMs()` not available in Roku API  
 **Solution**: Replaced with `CreateObject("roDateTime").asSeconds()`  
-**Files Affected**: GoogleDriveService.brs
+**Files Affected**: cloud_sync_service.brs (archived)
 
 ### Issue 3: Function Name Conflicts
 **Problem**: `ParseJSON()` conflicts with built-in function  
 **Solution**: Renamed to `ParseJSONResponse()`  
-**Files Affected**: GoogleDriveService.brs
+**Files Affected**: cloud_sync_service.brs (archived)
 
 ---
 
@@ -507,7 +507,7 @@ mm_icon_focus_sd=pkg:/images/icon_focus_sd.png
 4. **Configuration**
    - Set playlist URL
    - Set EPG URL
-   - Configure Google Drive credentials
+  - Configure cloud sync credentials
 
 ---
 

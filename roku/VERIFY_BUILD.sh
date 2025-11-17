@@ -11,7 +11,8 @@ echo "✓ Checking source files..."
 if [ -f "source/Main.brs" ]; then echo "  ✅ Main.brs"; else echo "  ❌ Main.brs MISSING"; fi
 if [ -f "source/M3UParser.brs" ]; then echo "  ✅ M3UParser.brs"; else echo "  ❌ M3UParser.brs MISSING"; fi
 if [ -f "source/EPGService.brs" ]; then echo "  ✅ EPGService.brs"; else echo "  ❌ EPGService.brs MISSING"; fi
-if [ -f "source/GoogleDriveService.brs" ]; then echo "  ✅ GoogleDriveService.brs"; else echo "  ❌ GoogleDriveService.brs MISSING"; fi
+# Cloud sync implementation removed from source; archived separately.
+if [ -f "source/cloud_sync_service.brs" ]; then echo "  ✅ cloud_sync_service.brs"; else echo "  ⚠ cloud_sync_service.brs (archived)"; fi
 echo ""
 
 echo "✓ Checking configuration files..."
@@ -39,8 +40,8 @@ echo "✓ Source code statistics..."
 echo "  Main.brs: $(wc -l < source/Main.brs) lines"
 echo "  M3UParser.brs: $(wc -l < source/M3UParser.brs) lines"
 echo "  EPGService.brs: $(wc -l < source/EPGService.brs) lines"
-echo "  GoogleDriveService.brs: $(wc -l < source/GoogleDriveService.brs) lines"
-TOTAL=$(($(wc -l < source/Main.brs) + $(wc -l < source/M3UParser.brs) + $(wc -l < source/EPGService.brs) + $(wc -l < source/GoogleDriveService.brs)))
+echo "  cloud_sync_service.brs: (archived)"
+TOTAL=$(($(wc -l < source/Main.brs) + $(wc -l < source/M3UParser.brs) + $(wc -l < source/EPGService.brs)))
 echo "  TOTAL: $TOTAL lines"
 echo ""
 

@@ -76,7 +76,8 @@ curl -F "mysubmit=Install" -F "archive=@roku.pkg" http://192.168.1.100:8060/plug
 The app needs:
 - **M3U Playlist URL**: Your IPTV playlist (M3U format)
 - **EPG XML URL**: Electronic Program Guide (XMLTV format)
-- **Google Drive** (optional): For cloud sync
+
+Note: cloud sync integration has been removed from this build. Use local backups, network shares, or external hosting for playlist and settings sync.
 
 ---
 
@@ -202,10 +203,11 @@ For program guide data (XMLTV format):
 http://example.com/guide.xml
 ```
 
-### 3. Enable Google Drive (Optional)
-For cloud sync of playlists and settings:
-- Configure OAuth credentials
-- Authenticate app with Google Drive
+### 3. Cloud Sync / Backups
+- Cloud sync integration has been removed. For syncing playlists and settings consider:
+- Local backup and restore via files on your development machine or network share
+- Hosting playlist and EPG files on a static web server or CDN
+- Using external storage solutions compatible with your deployment workflow
 
 ### 4. Test Playback
 - Select a channel

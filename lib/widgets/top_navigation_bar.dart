@@ -62,6 +62,8 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
     _searchFocusNode = FocusNode();
   }
 
+  
+
   @override
   void dispose() {
     for (var node in _tabFocusNodes) {
@@ -79,6 +81,7 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
     final isTV = size.width > 1920 && size.height > 1080;
     final scale = isTV ? 1.8 : 1.0;
     final router = GoRouter.of(context);
+    
 
     // If we're on the Live TV route (home), make the top bar transparent
     // so the screen's hero/gradient shows through (matches other screens).
@@ -219,7 +222,7 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                     itemBuilder: (context) => [
                       PopupMenuItem(value: 'settings', child: Row(children: [Icon(Icons.settings, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Settings', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
                       PopupMenuItem(value: 'favorites', child: Row(children: [Icon(Icons.favorite_outline, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Favorites', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
-                      PopupMenuItem(value: 'downloads', child: Row(children: [Icon(Icons.download, color: AppTheme.textSecondary, size: 16 * scale), SizedBox(width: 12 * scale), Text('Downloads', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
+                      PopupMenuItem(value: 'downloads', child: Row(children: [Icon(Icons.download, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Downloads', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
                       PopupMenuItem(value: 'guide', child: Row(children: [Icon(Icons.schedule, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Guide', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
                     ],
                   ),

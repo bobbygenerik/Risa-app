@@ -14,7 +14,7 @@ Both platforms are now **fully implemented and production-ready**:
 - **Build**: 344 MB APK
 - **Tests**: 15/15 passing (100%)
 - **Errors**: 0
-- **Features**: All implemented (transcription, translation, upscaling, Google Drive)
+- **Features**: All implemented (transcription, translation, upscaling)
 
 ### ✅ Roku (BrightScript)
 - **Status**: Complete and compiled
@@ -30,10 +30,9 @@ Both platforms are now **fully implemented and production-ready**:
 ```
 Main.brs              177 lines    Main application entry point
 EPGService.brs        120 lines    EPG/XMLTV parsing
-GoogleDriveService.brs 169 lines   OAuth2 and Google Drive
 M3UParser.brs         121 lines    M3U playlist parsing
 ─────────────────────────────────
-Total:                587 lines    4 core services
+Total:                ~418 lines    core services (Drive removed)
 ```
 
 ### Compiled Package (roku.zip)
@@ -98,18 +97,8 @@ Features:
 ✅ XML error handling
 ```
 
-#### 4. **GoogleDriveService.brs** (169 lines) - Cloud Integration
-```brightscript
-Features:
-✅ OAuth 2.0 authentication
-✅ Authorization code flow
-✅ Access token management
-✅ Token refresh capability
-✅ File upload to Google Drive
-✅ File download from Google Drive
-✅ URL encoding utility
-✅ JSON parsing helper
-```
+#### 4. **Cloud Sync (Removed)**
+The Drive BrightScript service has been removed from this repository. Cloud sync functionality is no longer included; use the local export/import backup workflow instead.
 
 ---
 
@@ -128,7 +117,7 @@ roku.zip (9.4 KB)
 │   ├── Main.brs            - Main application (177 lines)
 │   ├── M3UParser.brs       - Playlist parsing (121 lines)
 │   ├── EPGService.brs      - EPG service (120 lines)
-│   ├── GoogleDriveService.brs - OAuth2 & Drive (169 lines)
+│   ├── cloud_sync_service.brs - removed (cloud sync omitted)
 │   ├── *.brs.map           - Source maps (debugging)
 │   └── bslib.brs           - Roku stdlib
 ```
@@ -164,7 +153,7 @@ roku-deploy --host 192.168.1.100 --user rokudev --password YourPassword --out ro
 # 4. Configure (on first launch)
 # - Set M3U playlist URL
 # - Set EPG XML URL (optional)
-# - Configure Google Drive (optional)
+# - Configure cloud sync (optional - archival)
 ```
 
 **Full Guide**: See `DEPLOYMENT_GUIDE.md` for detailed instructions.
@@ -176,7 +165,7 @@ roku-deploy --host 192.168.1.100 --user rokudev --password YourPassword --out ro
 ### ✅ Completed Features
 - [x] M3U playlist parser (extended format)
 - [x] EPG/XMLTV parser (program guide)
-- [x] Google Drive OAuth2 integration
+- [x] Drive sync (removed / archival)
 - [x] Channel loading from remote URL
 - [x] Video playback control
 - [x] Channel grid display (5×3)
@@ -228,7 +217,7 @@ roku-deploy --host 192.168.1.100 --user rokudev --password YourPassword --out ro
 │   │   ├── Main.brs              (177 lines)
 │   │   ├── M3UParser.brs         (121 lines)
 │   │   ├── EPGService.brs        (120 lines)
-│   │   └── GoogleDriveService.brs (169 lines)
+│   │   └── cloud_sync_service.brs (archived)
 │   ├── out/
 │   │   └── roku.zip              ✅ 9.4 KB deployment package
 │   ├── bsconfig.json             # Compiler config
@@ -375,7 +364,7 @@ roku-deploy --host <IP> --user rokudev --password <PWD> --out roku.pkg ./out/
 | Upscaling | ✅ Yes | 🔄 Future |
 | M3U Support | ✅ Yes | ✅ Yes |
 | EPG Support | ✅ Yes | ✅ Yes |
-| Google Drive | ✅ Yes | ✅ Yes |
+| Cloud sync | ✅ Yes | ✅ Yes |
 | Tests | 15 passing | Ready |
 
 ---

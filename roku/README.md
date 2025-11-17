@@ -2,7 +2,7 @@
 
 **Status**: ✅ **READY FOR DEPLOYMENT**
 
-A native Roku channel for streaming IPTV content with M3U playlists, EPG program guides, and Google Drive integration.
+A native Roku channel for streaming IPTV content with M3U playlists and EPG program guides.
 
 ---
 
@@ -43,11 +43,9 @@ roku-deploy --host <YOUR_ROKU_IP> --user rokudev --password <PASSWORD> --out rok
 - [x] HTTP content fetching
 - [x] Error handling and fallbacks
 
-### Cloud Integration ✅
-- [x] Google Drive OAuth 2.0 authentication
-- [x] Playlist upload/download
-- [x] Settings synchronization
-- [x] Token refresh management
+### Cloud Integration (Removed)
+- The previous cloud sync integration has been removed from this project.
+- Use the local export/import backup workflow instead: `Settings > Account > Export/Import`.
 
 ### Future Features 🔄
 - [ ] Settings UI scene
@@ -62,11 +60,10 @@ roku-deploy --host <YOUR_ROKU_IP> --user rokudev --password <PASSWORD> --out rok
 
 ```
 roku/
-├── source/                    # BrightScript services (587 lines)
+├── source/                    # BrightScript services (legacy: Drive removed)
 │   ├── Main.brs              # Entry point & event loop (177 lines)
 │   ├── M3UParser.brs         # Playlist parsing (121 lines)
 │   ├── EPGService.brs        # Program guide (120 lines)
-│   └── GoogleDriveService.brs# Cloud sync (169 lines)
 ├── out/
 │   └── roku.zip              # Deployment package (9.4 KB) ✅
 ├── bsconfig.json             # Compiler configuration
@@ -139,15 +136,10 @@ Total Lines:         587 lines
 - Caches EPG data locally
 - XML parsing and extraction
 
-### GoogleDriveService.brs (169 lines)
-**Google Drive OAuth 2.0 and sync**
-- OAuth 2.0 authentication flow
-- Authorization code generation
-- Access token exchange
-- Token refresh capability
-- File upload to Google Drive
-- File download from Google Drive
-- URL encoding and JSON parsing helpers
+### cloud_sync_service.brs (archived)
+**Cloud sync service removed & archived**
+- The original cloud sync BrightScript service has been removed from this project and archived under `roku/archived/`.
+- Cloud sync is not included in this build; use local export/import backups via the app Settings.
 
 ---
 
@@ -181,7 +173,7 @@ Total Lines:         587 lines
 4. **Configure** (First Launch)
    - Set M3U playlist URL
    - Set EPG XML URL (optional)
-   - Configure Google Drive (optional)
+   - Cloud sync: removed (use local export/import instead)
 
 **See `DEPLOYMENT_GUIDE.md` for full instructions with troubleshooting.**
 
@@ -249,11 +241,7 @@ XMLTV format program guide:
 http://your-server.com/guide.xml
 ```
 
-### Google Drive (Optional)
-For cloud sync, configure OAuth credentials:
-- Client ID: `your-app-id.apps.googleusercontent.com`
-- Client Secret: Your secret key
-- Redirect URI: `urn:ietf:wg:oauth:2.0:oob`
+<!-- cloud sync integration removed -->
 
 ---
 
@@ -347,7 +335,7 @@ bsc
 - ✅ **Reliable** - 0 compilation errors
 - ✅ **Compatible** - Works on Roku 2+
 - ✅ **Maintainable** - Clean, well-documented code
-- ✅ **Secure** - OAuth 2.0 for Google Drive
+- ✅ **Secure** - OAuth 2.0 (cloud sync removed)
 
 ---
 

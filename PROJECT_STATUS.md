@@ -32,7 +32,7 @@ The IPTV Player project now has TWO fully functional versions:
 - ✅ Live transcription (Google Cloud Speech-to-Text)
 - ✅ Real-time translation (Google Cloud Translation)
 - ✅ AI upscaling (TensorFlow Lite)
-- ☑️ Cloud sync (Google Drive) — removed; replaced by Local Backup
+- ☑️ Cloud sync — removed; replaced by Local Backup
 - ✅ Persistent settings storage
 - ✅ Comprehensive testing (15 tests)
 - 📦 **Result**: 344 MB APK, 0 errors, 15/15 tests passing
@@ -44,7 +44,7 @@ The IPTV Player project now has TWO fully functional versions:
 - ✅ Core service implementations (4 files, 515 lines)
   - M3U playlist parser
   - EPG XML parser
-  - Google Drive OAuth2 integration
+   - Cloud sync (removed)
   - Main application entry point
 - ✅ BrightScript compilation (bsc)
 - ✅ Package creation (7.3 KB zip)
@@ -64,7 +64,7 @@ The IPTV Player project now has TWO fully functional versions:
 | **Transcription** | ✅ Integrated | On Roku in future |
 | **Translation** | ✅ Integrated | On Roku in future |
 | **AI Upscaling** | ✅ Integrated | On Roku in future |
-| **Google Drive** | ✅ OAuth2 | ✅ OAuth2 |
+| **Cloud sync** | Removed | Removed |
 | **Tests** | 15/15 passing | Ready for testing |
 
 ---
@@ -111,7 +111,7 @@ roku/
 │   ├── Main.brs              # App entry point & event loop
 │   ├── M3UParser.brs         # Playlist parsing
 │   ├── EPGService.brs        # Program guide
-│   └── GoogleDriveService.brs # Cloud sync
+│   └── cloud_sync_service.brs (archived)
 ├── build/
 │   ├── bsconfig.json         # Compiler config
 │   ├── manifest              # Channel metadata
@@ -141,7 +141,7 @@ roku/
 - Dynamic EPG caching
 
 #### 3. **Cloud Sync (Removed)**
-- Google Drive integration was previously implemented but has been removed. Use local export/import backups instead.
+Cloud sync integration was previously implemented but has been removed. Use local export/import backups instead.
 
 ### Android-Exclusive Services
 
@@ -198,8 +198,8 @@ Location: /root/iptv-player/roku/out/roku.zip
 - [x] XMLTV EPG parsing
 - [x] Channel display and navigation
 - [x] Video playback
-- [x] Google Drive integration
-- [x] OAuth2 authentication
+- [x] Cloud sync (removed)
+- [x] OAuth2 authentication (if re-enabled in fork)
 
 ### Android-Specific ✅
 - [x] Live transcription (Google Cloud)
@@ -214,7 +214,7 @@ Location: /root/iptv-player/roku/out/roku.zip
 - [x] Remote control support
 - [x] Channel grid UI (5×3)
 - [x] Device integration
-- [x] OAuth2 for Google Drive
+- [x] OAuth2 for cloud sync (removed)
 
 ### Pending (Future Enhancements)
 - [ ] Roku transcription (resource intensive)
@@ -248,11 +248,11 @@ Test Files:
 Status: Ready for deployment testing
 Test Approach: Device-based testing
 Manual verification needed:
-- Playlist loading
-- EPG display
-- Video playback
-- Remote navigation
-- Google Drive sync
+ - Playlist loading
+ - EPG display
+ - Video playback
+ - Remote navigation
+ - Cloud sync (archived) verification if required
 ```
 
 ---
@@ -326,7 +326,6 @@ google_mlkit_language_id: ^0.3.0
 tflite_flutter: ^0.9.0
 video_player: ^2.4.0
 share_plus: ^4.0.0
-google_sign_in: ^6.1.0
 intl: ^0.17.0
 sqflite: ^2.1.0
 path_provider: ^2.0.0
@@ -385,7 +384,7 @@ wakelock_plus: ^1.1.0
 3. **Configure URLs** on first launch
    - M3U playlist URL
    - XMLTV EPG URL
-   - Google Drive credentials (optional)
+   - Cloud sync credentials (optional)
 
 ### Short Term (1-2 weeks)
 1. **Testing on Real Hardware**
@@ -452,7 +451,7 @@ wakelock_plus: ^1.1.0
 - Android 5.0 or higher
 - 100 MB free storage
 - Stable internet connection
-- Google account (for transcription/translation/Drive)
+- Google account (for transcription/translation features only)
 
 ### Roku Deployment
 - Roku 2 or newer
