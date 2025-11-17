@@ -14,6 +14,7 @@ import 'package:iptv_player/services/google_drive_sync_service.dart';
 import 'package:iptv_player/services/ai_upscaling_service.dart';
 import 'package:iptv_player/services/mlkit_translation_service.dart';
 import 'package:iptv_player/services/live_transcription_service.dart';
+import 'package:iptv_player/services/whisper_speech_service.dart';
 import 'package:iptv_player/services/ai_model_manager.dart';
 import 'package:iptv_player/services/opensubtitles_service.dart';
 import 'package:iptv_player/services/real_debrid_service.dart';
@@ -396,6 +397,9 @@ class _MyAppState extends State<MyApp> {
           ),
           ChangeNotifierProvider(
             create: (_) => LiveTranscriptionService()..initialize(),
+          ),
+          ChangeNotifierProvider(
+            create: (_) => WhisperSpeechService()..initialize(),
           ),
           ChangeNotifierProvider(
             create: (_) => OpenSubtitlesService()..initialize(),
