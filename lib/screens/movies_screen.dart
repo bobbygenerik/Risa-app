@@ -491,8 +491,25 @@ class _MoviesScreenState extends State<MoviesScreen> {
       }
 
       if (mounted && curated.isNotEmpty) {
+        // Prefer items with backdrops, then posters, then higher rating
+        curated.sort((a, b) {
+          final aBackdrop = a.backdropUrl != null;
+          final bBackdrop = b.backdropUrl != null;
+          if (aBackdrop != bBackdrop) return aBackdrop ? -1 : 1;
+
+          final aPoster = a.imageUrl != null;
+          final bPoster = b.imageUrl != null;
+          if (aPoster != bPoster) return aPoster ? -1 : 1;
+
+          final aRating = a.rating ?? 0.0;
+          final bRating = b.rating ?? 0.0;
+          return bRating.compareTo(aRating);
+        });
+
+        final limited = curated.length > 12 ? curated.sublist(0, 12) : curated;
+
         setState(() {
-          _curatedMovies = curated;
+          _curatedMovies = limited;
         });
       }
     } catch (e) {

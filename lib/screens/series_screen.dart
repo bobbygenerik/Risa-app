@@ -382,7 +382,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
                           decoration: hasFocus
                               ? BoxDecoration(
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: AppTheme.accentOrange, width: 3),
+                                  border: Border.all(color: AppTheme.accentPink, width: 3),
                                 )
                               : null,
                           child: ElevatedButton.icon(
