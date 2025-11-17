@@ -15,7 +15,7 @@ import 'package:http/http.dart' as http;
 /// - No cloud APIs, no internet required (after download)
 /// - Multi-language support (99+ languages)
 /// - FREE - no usage costs
-class WhisperSpeechService extends ChangeNotifier {
+class MLKitSpeechService extends ChangeNotifier {
   Interpreter? _whisperInterpreter;
   final AudioRecorder _recorder = AudioRecorder();
   
