@@ -712,11 +712,13 @@ class _AppShellState extends State<AppShell>
   }
 
   Widget _buildAppBar(BuildContext context, String currentRoute) {
+    final isLiveRouteAppBar = currentRoute == '/' || currentRoute == '/home';
+
     final appBarContent = Container(
       height: AppSizes.appBarHeight,
       padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg),
       decoration: BoxDecoration(
-        color: AppTheme.darkBackgroundOpacity(0.55),
+        color: isLiveRouteAppBar ? Colors.transparent : AppTheme.darkBackgroundOpacity(0.55),
       ),
       child: Row(
         children: [

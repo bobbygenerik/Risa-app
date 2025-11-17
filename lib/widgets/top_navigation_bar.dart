@@ -78,10 +78,15 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
     final isTV = size.width > 1920 && size.height > 1080;
     final scale = isTV ? 1.8 : 1.0;
 
+    // If we're on the Live TV route (home), make the top bar transparent
+    // so the screen's hero/gradient shows through (matches other screens).
+    final location = GoRouterState.of(context).uri.path;
+    final isLiveRoute = location == '/' || location == '/home' || location.contains('/live');
+
     final navBar = Container(
       padding: EdgeInsets.symmetric(horizontal: 32 * scale, vertical: 24 * scale),
       decoration: BoxDecoration(
-        color: AppTheme.darkBackgroundOpacity(0.55),
+        color: isLiveRoute ? Colors.transparent : AppTheme.darkBackgroundOpacity(0.55),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
