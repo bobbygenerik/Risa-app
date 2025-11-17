@@ -78,6 +78,7 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
     final size = MediaQuery.of(context).size;
     final isTV = size.width > 1920 && size.height > 1080;
     final scale = isTV ? 1.8 : 1.0;
+    final router = GoRouter.of(context);
 
     // If we're on the Live TV route (home), make the top bar transparent
     // so the screen's hero/gradient shows through (matches other screens).
@@ -85,116 +86,161 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
 
     // Make the top nav transparent always and use a moving highlighter
     // under tabs for a cleaner, less-blocky look.
-    final navBar = Container(
-      padding: EdgeInsets.symmetric(horizontal: 32 * scale, vertical: 24 * scale),
-      decoration: const BoxDecoration(color: Colors.transparent),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Logo (if shown)
-          if (widget.showLogoAndTime) ...[
-            Image.asset(
-              'assets/images/croppedlogo2.png',
-              height: 40 * scale,
-              fit: BoxFit.contain,
-            ),
-            SizedBox(width: 20 * scale),
-          ],
-          // Navigation bar with tabs and search (centered, expanded)
-          Expanded(
-            child: LayoutBuilder(builder: (ctx, constraints) {
-              final tabCount = math.max(1, widget.tabs.length);
-              final tabWidth = constraints.maxWidth / tabCount;
-              final highlightWidth = math.min(56 * scale, tabWidth * 0.6);
-
-              // Determine which index to highlight: focused tab first, else active tab
-              int highlightedIndex = widget.tabs.indexWhere((t) => t.id == widget.activeTab);
-              for (int i = 0; i < _tabFocusNodes.length; i++) {
-                if (_tabFocusNodes[i].hasFocus) {
-                  highlightedIndex = i;
-                  break;
-                }
-              }
-
-              final left = (highlightedIndex.clamp(0, tabCount - 1)) * tabWidth + (tabWidth - highlightWidth) / 2;
-
-              return Stack(
-                fit: StackFit.loose,
-                children: [
-                  Row(
-                    children: List.generate(
-                      tabCount,
-                      (index) => SizedBox(width: tabWidth, child: _buildTabButton(index, scale)),
-                    ),
+    final navBar = SizedBox(
+      height: AppSizes.appBarHeight * scale,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: AppSizes.xxl * scale, vertical: AppSizes.sm * scale),
+        decoration: const BoxDecoration(color: Colors.transparent),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: <Widget>[
+            // Left: Logo area (fixed width)
+            if (widget.showLogoAndTime)
+              SizedBox(
+                width: 160 * scale,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Image.asset(
+                    'assets/images/croppedlogo2.png',
+                    height: 40 * scale,
+                    fit: BoxFit.contain,
                   ),
-                  // Sliding highlighter
-                  AnimatedPositioned(
-                    duration: const Duration(milliseconds: 260),
-                    curve: Curves.easeInOut,
-                    left: left,
-                    bottom: 10,
-                    child: Container(
-                      width: highlightWidth,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryBlue,
-                        borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+
+            // Center: Tabs
+            Expanded(
+              child: LayoutBuilder(
+                builder: (ctx, constraints) {
+                  final tabCount = math.max(1, widget.tabs.length);
+                  final tabWidth = constraints.maxWidth / tabCount;
+                  final highlightWidth = math.min(56 * scale, tabWidth * 0.6);
+
+                  // Determine which index to highlight: focused tab first, else active tab
+                  int highlightedIndex = widget.tabs.indexWhere((t) => t.id == widget.activeTab);
+                  for (int i = 0; i < _tabFocusNodes.length; i++) {
+                    if (_tabFocusNodes[i].hasFocus) {
+                      highlightedIndex = i;
+                      break;
+                    }
+                  }
+
+                  final left = (highlightedIndex.clamp(0, tabCount - 1)) * tabWidth + (tabWidth - highlightWidth) / 2;
+
+                  return Stack(
+                    fit: StackFit.loose,
+                    children: <Widget>[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: List.generate(
+                          tabCount,
+                          (index) => SizedBox(
+                            width: tabWidth,
+                            height: AppSizes.appBarHeight * scale,
+                            child: _buildTabButton(index, scale),
+                          ),
+                        ),
+                      ),
+                      // Sliding highlighter
+                      AnimatedPositioned(
+                        duration: const Duration(milliseconds: 260),
+                        curve: Curves.easeInOut,
+                        left: left,
+                        bottom: 10,
+                        child: Container(
+                          width: highlightWidth,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryBlue,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+
+            // Right: search/overflow/time
+            if (widget.showLogoAndTime)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: <Widget>[
+                  IconButton(
+                    onPressed: () {
+                      setState(() => _showSearchBox = !_showSearchBox);
+                      if (_showSearchBox) {
+                        widget.onSearch?.call();
+                        Future.microtask(() => _searchFocusNode.requestFocus());
+                      } else {
+                        _searchFocusNode.unfocus();
+                      }
+                    },
+                    icon: Icon(
+                      Icons.search,
+                      color: AppTheme.textSecondary,
+                    ),
+                    iconSize: 22 * scale,
+                    tooltip: 'Search',
+                  ),
+                  SizedBox(width: 8 * scale),
+                  // Restore the popup overflow menu with the app's navigation items
+                  PopupMenuButton<String>(
+                    color: Colors.black.withAlpha((0.85 * 255).round()),
+                    elevation: 20,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                        color: AppTheme.darkBackgroundOpacity(0.12),
+                        width: 1.0,
+                      ),
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8 * scale),
+                      child: Icon(
+                        Icons.more_vert,
+                        size: 22 * scale,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                    onSelected: (value) {
+                      // Slight delay to allow menu to dismiss before navigating
+                      Future.delayed(const Duration(milliseconds: 100), () {
+                        if (!mounted) return;
+                        if (value == 'settings') router.go('/settings');
+                        if (value == 'favorites') router.go('/favorites');
+                        if (value == 'downloads') router.go('/downloads');
+                        if (value == 'guide') router.go('/epg');
+                      });
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem(value: 'settings', child: Row(children: [Icon(Icons.settings, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Settings', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
+                      PopupMenuItem(value: 'favorites', child: Row(children: [Icon(Icons.favorite_outline, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Favorites', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
+                      PopupMenuItem(value: 'downloads', child: Row(children: [Icon(Icons.download, color: AppTheme.textSecondary, size: 16 * scale), SizedBox(width: 12 * scale), Text('Downloads', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
+                      PopupMenuItem(value: 'guide', child: Row(children: [Icon(Icons.schedule, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Guide', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
+                    ],
+                  ),
+                  SizedBox(width: 12 * scale),
+                  SizedBox(
+                    width: 120 * scale,
+                    child: Text(
+                      widget.currentTime,
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: 18 * scale,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.0,
                       ),
                     ),
                   ),
                 ],
-              );
-            }),
-          ),
-          // Right-side controls: search, overflow, time
-          if (widget.showLogoAndTime)
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                IconButton(
-                  onPressed: () {
-                    setState(() => _showSearchBox = !_showSearchBox);
-                    if (_showSearchBox) {
-                      widget.onSearch?.call();
-                      Future.microtask(() => _searchFocusNode.requestFocus());
-                    } else {
-                      _searchFocusNode.unfocus();
-                    }
-                  },
-                  icon: Icon(
-                    Icons.search,
-                    color: AppTheme.textSecondary,
-                  ),
-                  iconSize: 22 * scale,
-                  tooltip: 'Search',
-                ),
-                SizedBox(width: 8 * scale),
-                IconButton(
-                  onPressed: () {
-                    widget.onOverflow?.call();
-                  },
-                  icon: Icon(
-                    Icons.more_vert,
-                    color: AppTheme.textSecondary,
-                  ),
-                  iconSize: 22 * scale,
-                  tooltip: 'More',
-                ),
-                SizedBox(width: 12 * scale),
-                Text(
-                  widget.currentTime,
-                  style: TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: 18 * scale,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1.0,
-                  ),
-                ),
-              ],
-            ),
-        ],
+              ),
+          ],
+        ),
       ),
     );
 
