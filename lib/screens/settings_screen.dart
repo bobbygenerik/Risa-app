@@ -243,17 +243,25 @@ class _SettingsScreenState extends State<SettingsScreen>
                   }
                   return KeyEventResult.ignored;
                 },
-                child: IndexedStack(
-                  index: _tabController.index,
-                  children: [
-                    // Lazily build content per selected tab to avoid building
-                    // expensive consumers (AI models, services) for hidden tabs
-                    _buildGeneralSettings(),
-                    _buildAccountSettings(),
-                    _buildPlaybackSettings(),
-                    _buildCloudAndAISettings(),
-                    _buildRecordingsSettings(),
-                  ],
+                child: Builder(
+                  builder: (context) {
+                    // Build only the active tab to avoid constructing
+                    // heavy consumers for hidden tabs (reduces memory use)
+                    switch (_tabController.index) {
+                      case 0:
+                        return _buildGeneralSettings();
+                      case 1:
+                        return _buildAccountSettings();
+                      case 2:
+                        return _buildPlaybackSettings();
+                      case 3:
+                        return _buildCloudAndAISettings();
+                      case 4:
+                        return _buildRecordingsSettings();
+                      default:
+                        return _buildGeneralSettings();
+                    }
+                  },
                 ),
               ),
             ),
