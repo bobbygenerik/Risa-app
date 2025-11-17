@@ -251,7 +251,7 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
         AppTheme.useBackdropFilter(context)
             ? ClipRect(
                 child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 6.0, sigmaY: 6.0),
+                  filter: ImageFilter.blur(sigmaX: AppTheme.getBackdropSigma(context), sigmaY: AppTheme.getBackdropSigma(context)),
                   child: navBar,
                 ),
               )

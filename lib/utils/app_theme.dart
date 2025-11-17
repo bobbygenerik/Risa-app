@@ -52,6 +52,15 @@ class AppTheme {
   // Legacy toggle (keeps backward compatibility). If set to false, it forces off.
   static bool enableBackdropFilter = true;
 
+  // Transient multiplier applied to the base blur sigma. During transitions
+  // we can reduce this to make animations smoother (0.0 = no blur).
+  static double backdropBlurFactor = 1.0;
+
+  static double getBackdropSigma(BuildContext context, [double base = 6.0]) {
+    if (!useBackdropFilter(context)) return 0.0;
+    return base * backdropBlurFactor;
+  }
+
   // Decide at runtime whether to use BackdropFilter (true) or fallback (false).
   // Heuristic: if explicit mode set to on/off, obey it. For auto, use screen area
   // and basic platform checks as a proxy for device capability.

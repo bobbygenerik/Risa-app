@@ -34,6 +34,9 @@ class _AppShellState extends State<AppShell>
   final FocusNode _settingsButtonFocusNode = FocusNode(
     debugLabel: 'SettingsBtn',
   );
+  // Transition controller used to smoothly reduce blur during main-screen fades
+  late final AnimationController _screenTransitionController;
+  String? _lastMainRoute;
 
   @override
   void initState() {
@@ -71,6 +74,22 @@ class _AppShellState extends State<AppShell>
         });
       }
     });
+
+    _screenTransitionController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 240),
+    )..addListener(() {
+        // Ramp blur factor from 0.5 -> 1.0 while animating; this reduces
+        // expensive blur work at the start of the transition.
+        final t = _screenTransitionController.value;
+        AppTheme.backdropBlurFactor = (0.5 + (0.5 * t));
+        // Rebuild so widgets that use AppTheme.getBackdropSigma rebuild
+        if (mounted) setState(() {});
+      })..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          AppTheme.backdropBlurFactor = 1.0;
+        }
+      });
   }
 
   @override
@@ -83,6 +102,7 @@ class _AppShellState extends State<AppShell>
     _contentScopeNode.dispose();
     _searchButtonFocusNode.dispose();
     _settingsButtonFocusNode.dispose();
+    _screenTransitionController.dispose();
     super.dispose();
   }
 
@@ -416,6 +436,16 @@ class _AppShellState extends State<AppShell>
                         final mainRoutes = ['/', '/home', '/movies', '/series'];
                         final route = currentRoute;
 
+                        // If the main route changed, start the transition controller
+                        if (mainRoutes.contains(route) && route != _lastMainRoute) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            try {
+                              _screenTransitionController.forward(from: 0.0);
+                            } catch (_) {}
+                          });
+                          _lastMainRoute = route;
+                        }
+
                         if (mainRoutes.contains(route) || route == '/home' || route == '/') {
                           int index = 0;
                           if (route.startsWith('/movies')) index = 1;
@@ -439,7 +469,12 @@ class _AppShellState extends State<AppShell>
                                   opacity: visible ? 1.0 : 0.0,
                                   duration: const Duration(milliseconds: 240),
                                   curve: Curves.easeInOut,
-                                  child: screens[i],
+                                  child: AnimatedSlide(
+                                    offset: visible ? Offset.zero : const Offset(0.0, 0.02),
+                                    duration: const Duration(milliseconds: 240),
+                                    curve: Curves.easeInOut,
+                                    child: screens[i],
+                                  ),
                                 ),
                               );
                             }).toList(),
