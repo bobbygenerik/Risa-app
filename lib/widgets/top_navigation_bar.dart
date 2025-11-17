@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
@@ -102,127 +103,49 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
           ],
           // Navigation bar with tabs and search (centered, expanded)
           Expanded(
-            child: Container(
-              height: 56 * scale,
-              // keep transparent container; tabs render inline with an underline/highlighter
-              decoration: BoxDecoration(borderRadius: BorderRadius.circular(28)),
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12 * scale),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    ...List.generate(
-                      widget.tabs.length,
-                      (index) => Expanded(child: _buildTabButton(index, scale)),
+            child: LayoutBuilder(builder: (ctx, constraints) {
+              final tabCount = math.max(1, widget.tabs.length);
+              final tabWidth = constraints.maxWidth / tabCount;
+              final highlightWidth = math.min(56 * scale, tabWidth * 0.6);
+
+              // Determine which index to highlight: focused tab first, else active tab
+              int highlightedIndex = widget.tabs.indexWhere((t) => t.id == widget.activeTab);
+              for (int i = 0; i < _tabFocusNodes.length; i++) {
+                if (_tabFocusNodes[i].hasFocus) {
+                  highlightedIndex = i;
+                  break;
+                }
+              }
+
+              final left = (highlightedIndex.clamp(0, tabCount - 1)) * tabWidth + (tabWidth - highlightWidth) / 2;
+
+              return Stack(
+                fit: StackFit.loose,
+                children: [
+                  Row(
+                    children: List.generate(
+                      tabCount,
+                      (index) => SizedBox(width: tabWidth, child: _buildTabButton(index, scale)),
                     ),
-                    // Search icon in nav bar
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () {
-                          setState(() => _showSearchBox = !_showSearchBox);
-                          if (_showSearchBox) {
-                            Future.delayed(const Duration(milliseconds: 100), () {
-                              _searchFocusNode.requestFocus();
-                            });
-                          }
-                        },
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 8 * scale),
-                          child: Icon(
-                            Icons.search_outlined,
-                            size: 18 * scale,
-                            color: AppTheme.textSecondary,
-                          ),
-                        ),
+                  ),
+                  // Sliding highlighter
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 260),
+                    curve: Curves.easeInOut,
+                    left: left,
+                    bottom: 10,
+                    child: Container(
+                      width: highlightWidth,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryBlue,
+                        borderRadius: BorderRadius.circular(4),
                       ),
                     ),
-                    // Overflow menu button (more options)
-                    PopupMenuButton(
-                      color: Colors.black.withAlpha((0.85 * 255).round()),
-                      elevation: 24,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(
-                          color: AppTheme.darkBackgroundOpacity(0.12),
-                          width: 1.0,
-                        ),
-                      ),
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 8 * scale),
-                        child: Icon(
-                          Icons.more_vert,
-                          size: 18 * scale,
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                      itemBuilder: (context) => [
-                        PopupMenuItem(
-                          child: Row(
-                            children: [
-                              Icon(Icons.settings, color: AppTheme.primaryBlue, size: 16 * scale),
-                              SizedBox(width: 12 * scale),
-                              Text('Settings', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500)),
-                            ],
-                          ),
-                          onTap: () {
-                            final router = GoRouter.of(context);
-                            Future.delayed(const Duration(milliseconds: 100), () {
-                              if (mounted) router.go('/settings');
-                            });
-                          },
-                        ),
-                        PopupMenuItem(
-                          child: Row(
-                            children: [
-                              Icon(Icons.favorite_outline, color: AppTheme.primaryBlue, size: 16 * scale),
-                              SizedBox(width: 12 * scale),
-                              Text('Favorites', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500)),
-                            ],
-                          ),
-                          onTap: () {
-                            final router = GoRouter.of(context);
-                            Future.delayed(const Duration(milliseconds: 100), () {
-                              if (mounted) router.go('/favorites');
-                            });
-                          },
-                        ),
-                        PopupMenuItem(
-                          child: Row(
-                            children: [
-                              Icon(Icons.download, color: AppTheme.primaryBlue, size: 16 * scale),
-                              SizedBox(width: 12 * scale),
-                              Text('Downloads', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500)),
-                            ],
-                          ),
-                          onTap: () {
-                            final router = GoRouter.of(context);
-                            Future.delayed(const Duration(milliseconds: 100), () {
-                              if (mounted) router.go('/downloads');
-                            });
-                          },
-                        ),
-                        PopupMenuItem(
-                          child: Row(
-                            children: [
-                              Icon(Icons.schedule, color: AppTheme.primaryBlue, size: 16 * scale),
-                              SizedBox(width: 12 * scale),
-                              Text('Guide', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500)),
-                            ],
-                          ),
-                          onTap: () {
-                            final router = GoRouter.of(context);
-                            Future.delayed(const Duration(milliseconds: 100), () {
-                              if (mounted) router.go('/epg');
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
+                  ),
+                ],
+              );
+            }),
           ),
           SizedBox(width: 20 * scale),
           // Time (if shown)
