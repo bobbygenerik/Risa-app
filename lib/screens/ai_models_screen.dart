@@ -51,11 +51,14 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
       appBar: _buildGlassAppBar(),
       body: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF050710), Color(0xFF0d1140)],
-          ),
+          gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              )
         ),
         child: Consumer<AIModelManager>(
           builder: (context, modelManager, _) {

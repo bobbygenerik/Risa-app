@@ -14,14 +14,14 @@ class ModernHomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
                   Color(0xFF050710),
                   Color(0xFF0d1140),
                 ],
-              ),
+              )
       ),
       child: Consumer<ChannelProvider>(
         builder: (context, channelProvider, _) {
@@ -117,14 +117,14 @@ class ModernHomeScreen extends StatelessWidget {
             height: 400,
             width: double.infinity,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
                 colors: [
-                  Colors.black.withOpacity(0.3),
-                  Colors.black.withOpacity(0.7),
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
                 ],
-              ),
+              )
             ),
             child: Stack(
               children: [
@@ -150,14 +150,14 @@ class ModernHomeScreen extends StatelessWidget {
                   child: Container(
                     padding: EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withOpacity(0.9),
-                        ],
-                      ),
+                      gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              )
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -205,14 +205,14 @@ class ModernHomeScreen extends StatelessWidget {
       height: 400,
       width: double.infinity,
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
                   Color(0xFF050710),
                   Color(0xFF0d1140),
                 ],
-              ),
+              )
       ),
       child: Center(
         child: Column(
@@ -237,14 +237,14 @@ class ModernHomeScreen extends StatelessWidget {
   Widget _buildPlaceholderGradient() {
     return Container(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
                   Color(0xFF050710),
                   Color(0xFF0d1140),
                 ],
-              ),
+              )
       ),
     );
   }
@@ -316,14 +316,14 @@ class ModernHomeScreen extends StatelessWidget {
                             child: Container(
                               padding: EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Colors.transparent,
-                                    Colors.black.withOpacity(0.8),
-                                  ],
-                                ),
+                                gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              )
                                 borderRadius: BorderRadius.only(
                                   bottomLeft: Radius.circular(12),
                                   bottomRight: Radius.circular(12),

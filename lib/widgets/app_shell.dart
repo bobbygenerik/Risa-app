@@ -642,14 +642,14 @@ class _AppShellState extends State<AppShell>
         // Main AppBar container
         Container(
           height: AppSizes.appBarHeight,
-          decoration: const gradient: LinearGradient(
+          decoration: const gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
                   Color(0xFF050710),
                   Color(0xFF0d1140),
                 ],
-              ),,
+              ),
           padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg),
           child: Row(
             children: [

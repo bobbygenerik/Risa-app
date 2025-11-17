@@ -69,14 +69,14 @@ class SeriesScreen extends StatelessWidget {
       backgroundColor: const Color(0xFF050710),
       body: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFF050710),
-              const Color(0xFF0d1140),
-            ],
-          ),
+          gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              )
         ),
         child: Center(
           child: Column(
@@ -297,14 +297,14 @@ class SeriesScreen extends StatelessWidget {
   Widget _buildHeroBannerBackground(Content featuredSeries) {
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.black.withOpacity(0.3),
-            Colors.black.withOpacity(0.7),
-          ],
-        ),
+        gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              )
       ),
       child: Container(
         color: AppTheme.cardBackground,
@@ -329,14 +329,14 @@ class SeriesScreen extends StatelessWidget {
       child: Container(
         height: 300,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.transparent,
-              Colors.black.withOpacity(0.9),
-            ],
-          ),
+          gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              )
         ),
         child: Align(
           alignment: Alignment.bottomLeft,
@@ -394,14 +394,14 @@ class SeriesScreen extends StatelessWidget {
   Widget _buildBannerPlaceholder() {
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppTheme.primaryBlue.withOpacity(0.2),
-            AppTheme.accentOrange.withOpacity(0.2),
-          ],
-        ),
+        gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              )
       ),
     );
   }

@@ -282,11 +282,14 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
         backgroundColor: Colors.transparent,
         body: Container(
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF050710), Color(0xFF0d1140)],
-            ),
+            gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              )
           ),
           child: Center(
             child: CircularProgressIndicator(color: AppTheme.primaryBlue),
@@ -320,11 +323,14 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
       ),
       body: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF050710), Color(0xFF0d1140)],
-          ),
+          gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              )
         ),
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(AppSizes.lg),

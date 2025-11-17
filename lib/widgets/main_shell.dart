@@ -54,14 +54,14 @@ class _MainShellState extends State<MainShell> {
       backgroundColor: Colors.transparent,
       body: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFF050710),
-              const Color(0xFF0d1140),
-            ],
-          ),
+          gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              )
         ),
         child: Column(
           children: [

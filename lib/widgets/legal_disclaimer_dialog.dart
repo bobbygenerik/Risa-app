@@ -39,14 +39,14 @@ class _LegalDisclaimerDialogState extends State<LegalDisclaimerDialog> {
               height: 300,
               padding: const EdgeInsets.all(AppSizes.md),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
+                gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
                   Color(0xFF050710),
                   Color(0xFF0d1140),
                 ],
-              ),
+              )
                 borderRadius: BorderRadius.circular(AppSizes.radiusMd),
                 border: Border.all(color: AppTheme.divider),
               ),

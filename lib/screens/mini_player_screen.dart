@@ -368,17 +368,14 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withAlpha((0.7 * 255).round()),
-                    Colors.transparent,
-                    Colors.transparent,
-                    Colors.black.withAlpha((0.7 * 255).round()),
-                  ],
-                  stops: [0.0, 0.2, 0.8, 1.0],
-                ),
+                gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              )
               ),
             ),
           ),
@@ -480,14 +477,14 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
+                  gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
                   Color(0xFF050710),
                   Color(0xFF0d1140),
                 ],
-              ),
+              )
                   borderRadius: BorderRadius.circular(AppSizes.radiusSm),
                 ),
                 child: Icon(Icons.tv, color: AppTheme.primaryBlue, size: 32),

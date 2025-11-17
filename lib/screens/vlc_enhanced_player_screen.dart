@@ -683,11 +683,14 @@ class _VlcEnhancedPlayerScreenState extends State<VlcEnhancedPlayerScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Colors.black.withAlpha((0.7 * 255).round()), Colors.transparent],
-        ),
+        gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              )
       ),
       child: Row(
         children: [
@@ -782,11 +785,14 @@ class _VlcEnhancedPlayerScreenState extends State<VlcEnhancedPlayerScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.bottomCenter,
-          end: Alignment.topCenter,
-          colors: [Colors.black.withAlpha((0.7 * 255).round()), Colors.transparent],
-        ),
+        gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              )
       ),
       child: Wrap(
         spacing: 16,

@@ -844,16 +844,14 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   Widget _buildControlsOverlay() {
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.black.withAlpha((0.7 * 255).round()),
-            Colors.transparent,
-            Colors.transparent,
-            Colors.black.withAlpha((0.7 * 255).round()),
-          ],
-        ),
+        gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              )
       ),
       child: Column(
         children: [

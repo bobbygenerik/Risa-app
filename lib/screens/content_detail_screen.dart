@@ -47,16 +47,14 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
               // Placeholder image with gradient overlay
               Container(
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      AppTheme.darkBackground.withAlpha((0.5 * 255).round()),
-                      AppTheme.darkBackground,
-                    ],
-                    stops: const [0.0, 0.7, 1.0],
-                  ),
+                  gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              )
                 ),
                 child: Center(
                   child: Icon(
@@ -78,11 +76,14 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
           child: Container(
             padding: const EdgeInsets.all(AppSizes.md),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Colors.black.withAlpha((0.7 * 255).round()), Colors.transparent],
-              ),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              )
             ),
             child: Row(
               children: [

@@ -168,11 +168,14 @@ class _EPGScreenState extends State<EPGScreen> {
 
           return Container(
             decoration: BoxDecoration(
-              gradient: LinearGradient(
+              gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF050710), Color(0xFF0d1140)],
-              ),
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              )
             ),
             child: Stack(
               children: [
@@ -394,14 +397,14 @@ class _EPGScreenState extends State<EPGScreen> {
                       height: 18,
                       decoration: isSelected
                           ? const BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  AppTheme.primaryBlue,
-                                  AppTheme.accentPink,
-                                ],
-                              ),
+                              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              )
                             )
                           : null,
                     ),
@@ -501,14 +504,14 @@ class _EPGScreenState extends State<EPGScreen> {
                     child: Container(
                       padding: EdgeInsets.all(AppSizes.sm),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black.withAlpha((0.7 * 255).round()),
-                            Colors.transparent,
-                          ],
-                        ),
+                        gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              )
                       ),
                       child: Row(
                         children: [
@@ -1073,14 +1076,14 @@ class _EPGScreenState extends State<EPGScreen> {
                     errorBuilder: (context, error, stackTrace) {
                       return Container(
                         height: 200,
-                        gradient: LinearGradient(
+                        gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
                   Color(0xFF050710),
                   Color(0xFF0d1140),
                 ],
-              ),
+              )
                         child: Icon(Icons.tv, size: 64),
                       );
                     },

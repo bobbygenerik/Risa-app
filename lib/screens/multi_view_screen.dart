@@ -302,14 +302,14 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
     if (index >= widget.channels.length) {
       return Container(
         margin: const EdgeInsets.all(1),
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
                   Color(0xFF050710),
                   Color(0xFF0d1140),
                 ],
-              ),
+              )
         child: const Center(
           child: Text('No channel', style: TextStyle(color: Colors.white54)),
         ),
@@ -396,14 +396,14 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withAlpha((0.7 * 255).round()),
-                        Colors.transparent,
-                      ],
-                    ),
+                    gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              )
                   ),
                   child: Row(
                     children: [
@@ -512,11 +512,14 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Colors.black.withAlpha((0.7 * 255).round()), Colors.transparent],
-              ),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              )
             ),
             child: Row(
               children: [
@@ -554,11 +557,14 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-                colors: [Colors.black.withAlpha((0.7 * 255).round()), Colors.transparent],
-              ),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              )
             ),
             child: Wrap(
               spacing: 12,

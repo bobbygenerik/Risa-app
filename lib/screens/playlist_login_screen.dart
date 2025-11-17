@@ -378,14 +378,14 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppTheme.darkBackground,
-              AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
-            ],
-          ),
+          gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              )
         ),
         child: SafeArea(
           child: LayoutBuilder(

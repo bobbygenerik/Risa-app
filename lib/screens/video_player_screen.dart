@@ -247,11 +247,14 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 child: Container(
                   height: 3,
                   decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      colors: [AppTheme.primaryBlue, AppTheme.accentPink],
-                    ),
+                    gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              )
                   ),
                 ),
               ),
@@ -379,14 +382,14 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 right: 0,
                 child: Container(
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                          Colors.black.withAlpha((0.7 * 255).round()),
-                          Colors.transparent,
-                        ],
-                    ),
+                    gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF050710),
+                  Color(0xFF0d1140),
+                ],
+              )
                   ),
                   padding: const EdgeInsets.all(24),
                   child: Column(
