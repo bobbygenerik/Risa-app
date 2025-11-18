@@ -102,8 +102,8 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
             if (widget.showLogoAndTime)
               SizedBox(
                 width: 160 * scale,
-                child: Align(
-                  alignment: Alignment.centerLeft,
+                height: AppSizes.appBarHeight * scale,
+                child: Center(
                   child: Image.asset(
                     'assets/images/croppedlogo2.png',
                     height: 40 * scale,
@@ -182,11 +182,11 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                         _searchFocusNode.unfocus();
                       }
                     },
-                    icon: Icon(
-                      Icons.search,
-                      color: AppTheme.textSecondary,
-                    ),
+                    icon: Icon(Icons.search, color: AppTheme.textSecondary),
                     iconSize: 22 * scale,
+                    padding: EdgeInsets.symmetric(horizontal: 8 * scale),
+                    constraints: BoxConstraints(minWidth: 40 * scale, minHeight: AppSizes.appBarHeight * scale),
+                    alignment: Alignment.center,
                     tooltip: 'Search',
                   ),
                   SizedBox(width: 8 * scale),
@@ -201,12 +201,15 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                         width: 1.0,
                       ),
                     ),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 8 * scale),
-                      child: Icon(
-                        Icons.more_vert,
-                        size: 22 * scale,
-                        color: AppTheme.textSecondary,
+                    child: SizedBox(
+                      width: 40 * scale,
+                      height: AppSizes.appBarHeight * scale,
+                      child: Center(
+                        child: Icon(
+                          Icons.more_vert,
+                          size: 22 * scale,
+                          color: AppTheme.textSecondary,
+                        ),
                       ),
                     ),
                     onSelected: (value) {
@@ -229,14 +232,18 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                   SizedBox(width: 12 * scale),
                   SizedBox(
                     width: 120 * scale,
-                    child: Text(
-                      widget.currentTime,
-                      textAlign: TextAlign.right,
-                      style: TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontSize: 18 * scale,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 1.0,
+                    height: AppSizes.appBarHeight * scale,
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        widget.currentTime,
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                          color: AppTheme.textPrimary,
+                          fontSize: 18 * scale,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1.0,
+                        ),
                       ),
                     ),
                   ),
