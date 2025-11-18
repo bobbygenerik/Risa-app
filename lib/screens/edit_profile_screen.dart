@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
+import 'package:iptv_player/widgets/compat_pop_scope.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
@@ -125,7 +125,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     // Simplified layout to avoid syntax/paren mismatches during build.
     // Keeps essential fields and save functionality.
-    return WillPopScope(
+    return CompatPopScope(
       onWillPop: () async {
         context.go('/home');
         return false;
@@ -143,11 +143,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const SizedBox(height: 12),
-                  CircleAvatar(
-                    radius: 64,
-                    backgroundColor: AppTheme.cardBackground,
-                    backgroundImage: _profileImagePath != null ? FileImage(File(_profileImagePath!)) : null,
-                    child: _profileImagePath == null ? const Icon(Icons.person, size: 64, color: AppTheme.primaryBlue) : null,
+                  GestureDetector(
+                    onTap: _pickProfileImage,
+                    child: CircleAvatar(
+                      radius: 64,
+                      backgroundColor: AppTheme.cardBackground,
+                      backgroundImage: _profileImagePath != null ? FileImage(File(_profileImagePath!)) : null,
+                      child: _profileImagePath == null ? const Icon(Icons.person, size: 64, color: AppTheme.primaryBlue) : null,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   TextField(
@@ -185,7 +188,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   AppBar _buildGlassAppBar() {
     return AppBar(
       title: Text('Edit Profile'),
-      backgroundColor: Colors.white.withOpacity(0.08),
+      backgroundColor: Colors.white.withAlpha((0.08 * 255).round()),
       elevation: 0,
       actions: [
         if (_isLoading)
