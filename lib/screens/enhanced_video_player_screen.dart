@@ -14,6 +14,7 @@ import 'package:iptv_player/widgets/native_exoplayer.dart';
 import 'package:iptv_player/services/ai_upscaling_service.dart';
 import 'package:iptv_player/services/live_transcription_service.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'dart:io' as io;
@@ -526,14 +527,14 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
   Future<void> _toggleLiveTranscription() async {
     final transcriptionService = Provider.of<LiveTranscriptionService>(context, listen: false);
-    final messenger = ScaffoldMessenger.of(context);
     
     if (!_liveTranscriptionEnabled) {
       // Start live transcription
       await transcriptionService.startTranscription();
-      if (mounted) {
+        if (mounted) {
         setState(() => _liveTranscriptionEnabled = true);
-        messenger.showSnackBar(
+        showAppSnackBar(
+          context,
           const SnackBar(
             content: Text('Live transcription enabled — press Y to toggle'),
             duration: Duration(seconds: 2),
@@ -543,9 +544,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     } else {
       // Stop live transcription
       await transcriptionService.stopTranscription();
-      if (mounted) {
+        if (mounted) {
         setState(() => _liveTranscriptionEnabled = false);
-        messenger.showSnackBar(
+        showAppSnackBar(
+          context,
           SnackBar(
             content: const Text('Live transcription disabled — press Y to toggle'),
             duration: const Duration(seconds: 4),
@@ -555,9 +557,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                 try {
                   final srt = transcriptionService.exportAsSRT();
                   await Clipboard.setData(ClipboardData(text: srt));
-                  messenger.showSnackBar(const SnackBar(content: Text('Transcript copied to clipboard')));
+                  showAppSnackBar(context, const SnackBar(content: Text('Transcript copied to clipboard')));
                 } catch (e) {
-                  messenger.showSnackBar(const SnackBar(content: Text('Failed to export transcript')));
+                  showAppSnackBar(context, const SnackBar(content: Text('Failed to export transcript')));
                 }
               },
             ),
@@ -570,7 +572,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   Future<void> _togglePip() async {
     if (!_isPipSupported) return;
 
-    final messenger = ScaffoldMessenger.of(context);
+    
 
     try {
       if (_isPipActive) {
@@ -582,15 +584,13 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         if (Platform.isAndroid) {
           final ok = await _enterAndroidPip();
           if (!ok) {
-            messenger.showSnackBar(const SnackBar(content: Text('Picture-in-Picture not available')));
+            showAppSnackBar(context, const SnackBar(content: Text('Picture-in-Picture not available')));
           }
         }
       }
-    } catch (e) {
+      } catch (e) {
       debugPrint('PiP error: $e');
-      messenger.showSnackBar(
-        SnackBar(content: Text('Picture-in-Picture not available: $e')),
-      );
+      showAppSnackBar(context, SnackBar(content: Text('Picture-in-Picture not available: $e')));
     }
   }
 
@@ -802,13 +802,12 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                       icon: const Icon(Icons.download, color: Colors.white, size: 18),
                       tooltip: 'Export transcript (copy SRT to clipboard)',
                       onPressed: () async {
-                        final messenger = ScaffoldMessenger.of(context);
                         try {
                           final srt = transcriptionService.exportAsSRT();
                           await Clipboard.setData(ClipboardData(text: srt));
-                          messenger.showSnackBar(const SnackBar(content: Text('Transcript copied to clipboard')));
+                          showAppSnackBar(context, const SnackBar(content: Text('Transcript copied to clipboard')));
                         } catch (e) {
-                          messenger.showSnackBar(const SnackBar(content: Text('Failed to export transcript')));
+                          showAppSnackBar(context, const SnackBar(content: Text('Failed to export transcript')));
                         }
                       },
                     ),
@@ -818,7 +817,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                       tooltip: 'Clear transcript',
                       onPressed: () {
                         transcriptionService.clearTranscriptions();
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Transcripts cleared')));
+                        showAppSnackBar(context, const SnackBar(content: Text('Transcripts cleared')));
                       },
                     ),
                   ],
@@ -942,11 +941,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                                   ElevatedButton(
                                     onPressed: () async {
                                       Navigator.of(context).pop();
-                                      final messenger = ScaffoldMessenger.of(context);
-                                      messenger.showSnackBar(const SnackBar(content: Text('Initializing AI model...')));
+                                      showAppSnackBar(context, const SnackBar(content: Text('Initializing AI model...')));
                                       await aiService.initialize();
                                       if (aiService.isModelLoaded) {
-                                        messenger.showSnackBar(const SnackBar(content: Text('AI model loaded')));
+                                        showAppSnackBar(context, const SnackBar(content: Text('AI model loaded')));
                                         // If native controller exists and a downloaded model is present, ask native to load it
                                         if (Platform.isAndroid && _nativeController != null) {
                                           try {
@@ -959,7 +957,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                                           }
                                         }
                                       } else {
-                                        messenger.showSnackBar(const SnackBar(content: Text('AI model not available; try download')));
+                                        showAppSnackBar(context, const SnackBar(content: Text('AI model not available; try download')));
                                       }
                                     },
                                     child: const Text('Load AI Model'),
@@ -968,14 +966,13 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                                   ElevatedButton(
                                     onPressed: aiService.isDownloading ? null : () async {
                                       Navigator.of(context).pop();
-                                      final messenger = ScaffoldMessenger.of(context);
-                                      messenger.showSnackBar(const SnackBar(
+                                      showAppSnackBar(context, const SnackBar(
                                         content: Text('Downloading AI model (with automatic retry)...'),
                                         duration: Duration(seconds: 3),
                                       ));
                                       final ok = await aiService.downloadModel();
                                       if (ok && aiService.isModelLoaded) {
-                                        messenger.showSnackBar(const SnackBar(content: Text('AI model downloaded and loaded')));
+                                        showAppSnackBar(context, const SnackBar(content: Text('AI model downloaded and loaded')));
                                         // Instruct native controller to load the downloaded model
                                         if (Platform.isAndroid && _nativeController != null) {
                                           try {
@@ -989,7 +986,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                                           }
                                         }
                                       } else {
-                                        messenger.showSnackBar(const SnackBar(
+                                        showAppSnackBar(context, const SnackBar(
                                           content: Text('Failed to download AI model. Check network and try again.'),
                                           duration: Duration(seconds: 4),
                                         ));
@@ -1035,17 +1032,16 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                                       // local download (Option A): automatically download
                                       // the model if it's not present, then initialize.
                                       if (v && !aiService.isModelLoaded) {
-                                        final messenger = ScaffoldMessenger.of(context);
-                                        messenger.showSnackBar(const SnackBar(content: Text('Preparing AI model...')));
+                                        showAppSnackBar(context, const SnackBar(content: Text('Preparing AI model...')));
 
                                         try {
                                           final local = await aiService.getLocalModelPath();
-                                          if (local == null) {
+                                            if (local == null) {
                                             // No local model: download it automatically (Option A)
                                             // Uses built-in retry/backoff for robustness
                                             final ok = await aiService.downloadModel();
                                             if (!ok) {
-                                              messenger.showSnackBar(const SnackBar(
+                                              showAppSnackBar(context, const SnackBar(
                                                 content: Text('Failed to download AI model after retries. Check network and try again.'),
                                                 duration: Duration(seconds: 4),
                                               ));
@@ -1056,7 +1052,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                                           }
                                         } catch (e) {
                                           debugPrint('AI model prepare error: $e');
-                                          messenger.showSnackBar(const SnackBar(content: Text('Error preparing AI model')));
+                                          showAppSnackBar(context, const SnackBar(content: Text('Error preparing AI model')));
                                         }
                                       }
 
@@ -1709,7 +1705,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   /// Attempt to switch audio track. Platforms without an implementation will
   /// gracefully fall back to a no-op with a user-facing message.
   Future<void> _switchAudioTrack(int index) async {
-    final messenger = ScaffoldMessenger.of(context);
 
     // VLC backend disabled - audio track switching not available
     
@@ -1719,11 +1714,11 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       const platform = MethodChannel('com.streamhub.iptv/audio');
       final result = await platform.invokeMethod('switchAudioTrack', {'trackIndex': index});
       debugPrint('Audio track switch result (platform): $result');
-      messenger.showSnackBar(const SnackBar(content: Text('Audio track changed')));
+      showAppSnackBar(context, const SnackBar(content: Text('Audio track changed')));
     } catch (e) {
       debugPrint('Audio track switching not implemented on this platform: $e');
       // Friendly fallback: notify user we registered their selection.
-      messenger.showSnackBar(const SnackBar(content: Text('Audio track change requested')));
+      showAppSnackBar(context, const SnackBar(content: Text('Audio track change requested')));
     }
   }
 }

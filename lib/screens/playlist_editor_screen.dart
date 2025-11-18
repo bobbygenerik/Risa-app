@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/channel_provider.dart';
 import '../utils/app_theme.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
+import 'package:iptv_player/utils/snackbar_helper.dart';
 
 class PlaylistEditorScreen extends StatefulWidget {
   const PlaylistEditorScreen({super.key});
@@ -95,7 +96,8 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
     }
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      showAppSnackBar(
+        context,
         const SnackBar(
           content: Text('Settings saved successfully'),
           backgroundColor: AppTheme.accentGreen,
@@ -128,7 +130,8 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        showAppSnackBar(
+          context,
           SnackBar(
             content: Text('Playlist updated! ${provider.channels.length} channels found.'),
             backgroundColor: AppTheme.accentGreen,
@@ -137,7 +140,8 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        showAppSnackBar(
+          context,
           SnackBar(
             content: Text('Failed to update playlist: ${e.toString()}'),
             backgroundColor: AppTheme.accentRed,
@@ -184,7 +188,8 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
       await prefs.remove('playlist_update_frequency');
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        showAppSnackBar(
+          context,
           const SnackBar(
             content: Text('Playlist deleted'),
             backgroundColor: AppTheme.accentGreen,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
@@ -69,7 +70,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        showAppSnackBar(
+          context,
           const SnackBar(
             content: Text('Profile updated successfully!'),
             backgroundColor: AppTheme.accentGreen,
@@ -79,7 +81,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        showAppSnackBar(
+          context,
           SnackBar(
             content: Text('Failed to save profile: $e'),
             backgroundColor: AppTheme.accentRed,
@@ -107,7 +110,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        showAppSnackBar(
+          context,
           SnackBar(
             content: Text('Failed to pick image: $e'),
             backgroundColor: AppTheme.accentRed,

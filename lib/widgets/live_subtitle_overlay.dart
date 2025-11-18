@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/services/integrated_transcription_service.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/snackbar_helper.dart';
 
 /// Live subtitle overlay widget
 /// Displays real-time transcription and translation on video
@@ -182,7 +183,8 @@ class TranscriptionControlPanel extends StatelessWidget {
                           ? null
                           : () {
                               service.clearSubtitles();
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              showAppSnackBar(
+                                context,
                                 const SnackBar(
                                   content: Text('Subtitles cleared'),
                                 ),
@@ -199,7 +201,8 @@ class TranscriptionControlPanel extends StatelessWidget {
                               final srt = service.exportAsSRT();
                               debugPrint('Exported SRT:\n$srt');
                               // TODO: Save to file or share
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              showAppSnackBar(
+                                context,
                                 SnackBar(
                                   content: Text(
                                     'Exported ${service.subtitles.length} subtitles',

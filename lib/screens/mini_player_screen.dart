@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/screens/enhanced_video_player_screen.dart';
@@ -567,9 +568,9 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
   }
 
   void _launchFullscreenPlayer() {
-    final messenger = ScaffoldMessenger.of(context);
     if (_currentChannel == null) {
-      messenger.showSnackBar(
+      showAppSnackBar(
+        context,
         const SnackBar(content: Text('Please select a channel first')),
       );
       return;
@@ -589,9 +590,7 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
       );
     } catch (e) {
       debugPrint('Error initializing mini player: $e');
-      messenger.showSnackBar(
-        SnackBar(content: Text('Error opening player: $e')),
-      );
+      showAppSnackBar(context, SnackBar(content: Text('Error opening player: $e')));
     }
   }
 }

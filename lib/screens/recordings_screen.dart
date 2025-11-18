@@ -1,6 +1,7 @@
 // ignore_for_file: todo
 import 'package:flutter/material.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:path/path.dart' as path;
@@ -134,7 +135,8 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
         await file.delete();
         _loadRecordings(); // Reload list
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          showAppSnackBar(
+            context,
             const SnackBar(
               content: Text('Recording deleted'),
               backgroundColor: AppTheme.accentGreen,
@@ -143,7 +145,8 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          showAppSnackBar(
+            context,
             SnackBar(
               content: Text('Failed to delete: $e'),
               backgroundColor: AppTheme.accentRed,
@@ -421,9 +424,10 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
                     Icons.play_arrow,
                     color: AppTheme.primaryBlue,
                   ),
-                  onPressed: () {
+                    onPressed: () {
                     // TODO: Play recording
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    showAppSnackBar(
+                      context,
                       const SnackBar(content: Text('Playing recording...')),
                     );
                   },

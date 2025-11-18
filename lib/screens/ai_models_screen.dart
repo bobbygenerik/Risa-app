@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/services/ai_model_manager.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 
 class AIModelsScreen extends StatefulWidget {
@@ -491,13 +492,11 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
-          ElevatedButton(
+              ElevatedButton(
             onPressed: () {
               modelManager.deleteModel(model.id);
               Navigator.pop(context);
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text('${model.name} deleted')));
+              showAppSnackBar(context, SnackBar(content: Text('${model.name} deleted')));
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.accentRed,

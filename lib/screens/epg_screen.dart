@@ -11,6 +11,7 @@ import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/services/epg_service.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
+import 'package:iptv_player/utils/snackbar_helper.dart';
 
 class EPGScreen extends StatefulWidget {
   const EPGScreen({super.key});
@@ -280,7 +281,7 @@ class _EPGScreenState extends State<EPGScreen> {
             onPressed: epgService.isLoading
                 ? null
                 : () async {
-                    final messenger = ScaffoldMessenger.of(context);
+                    
                     final prefs = await SharedPreferences.getInstance();
                     final epgUrl = prefs.getString('epg_url') ?? 
                                    prefs.getString('custom_epg_url');
@@ -288,7 +289,8 @@ class _EPGScreenState extends State<EPGScreen> {
                     if (epgUrl != null && epgUrl.isNotEmpty) {
                       await epgService.refresh(epgUrl);
                       if (mounted) {
-                        messenger.showSnackBar(
+                        showAppSnackBar(
+                          context,
                           SnackBar(
                             content: Text(
                               epgService.error != null
@@ -1179,11 +1181,12 @@ class _EPGScreenState extends State<EPGScreen> {
                           _playLive(program);
                         } else if (program.isFutureProgram) {
                           // Show message for future programs
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('This program hasn\'t aired yet'),
-                            ),
-                          );
+                            showAppSnackBar(
+                              context,
+                              SnackBar(
+                                content: Text('This program hasn\'t aired yet'),
+                              ),
+                            );
                         }
                       },
                       icon: Icon(
@@ -1211,7 +1214,8 @@ class _EPGScreenState extends State<EPGScreen> {
                       child: OutlinedButton.icon(
                         onPressed: () {
                           // Record functionality
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          showAppSnackBar(
+                            context,
                             SnackBar(
                               content: Text(
                                 'Recording scheduled for ${program.title}',
@@ -1234,7 +1238,8 @@ class _EPGScreenState extends State<EPGScreen> {
                       child: OutlinedButton.icon(
                         onPressed: () {
                           // Set reminder
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          showAppSnackBar(
+                            context,
                             SnackBar(
                               content: Text(
                                 'Reminder set for ${program.title}',
@@ -1335,7 +1340,8 @@ class _EPGScreenState extends State<EPGScreen> {
     } else {
       channelProvider.addToFavorites(channel);
     }
-    ScaffoldMessenger.of(context).showSnackBar(
+    showAppSnackBar(
+      context,
       SnackBar(
         content: Text(
           channel.isFavorite == true
@@ -1348,7 +1354,8 @@ class _EPGScreenState extends State<EPGScreen> {
 
   void _hideChannel(Channel channel) {
     // This would update the channel provider to mark channel as hidden
-    ScaffoldMessenger.of(context).showSnackBar(
+    showAppSnackBar(
+      context,
       SnackBar(
         content: Text('${channel.name} has been hidden'),
         action: SnackBarAction(
@@ -1388,9 +1395,7 @@ class _EPGScreenState extends State<EPGScreen> {
             onPressed: () {
               Navigator.pop(context);
               // Update channel number
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text('Channel number updated')));
+              showAppSnackBar(context, SnackBar(content: Text('Channel number updated')));
             },
             child: Text('Save'),
           ),
@@ -1433,9 +1438,7 @@ class _EPGScreenState extends State<EPGScreen> {
             onPressed: () {
               Navigator.pop(context);
               // Update EPG source
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text('EPG source assigned')));
+              showAppSnackBar(context, SnackBar(content: Text('EPG source assigned')));
             },
             child: Text('Save'),
           ),
@@ -1480,9 +1483,7 @@ class _EPGScreenState extends State<EPGScreen> {
     if (channel.url.isNotEmpty) {
       context.push('/player', extra: channel);
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Channel not available')));
+      showAppSnackBar(context, SnackBar(content: Text('Channel not available')));
     }
   }
 }

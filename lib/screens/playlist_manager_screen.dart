@@ -6,6 +6,7 @@ import 'package:iptv_player/models/saved_playlist.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
+import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:go_router/go_router.dart';
 
 class PlaylistManagerScreen extends StatefulWidget {
@@ -90,7 +91,8 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        showAppSnackBar(
+          context,
           SnackBar(
             content: Text('Playlist "${playlist.name}" deleted'),
             backgroundColor: AppTheme.accentGreen,
@@ -129,7 +131,8 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        showAppSnackBar(
+          context,
           SnackBar(
             content: Text(
               '✓ Loaded "${playlist.name}" - ${channelProvider.channels.length} channels',
@@ -142,7 +145,8 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        showAppSnackBar(
+          context,
           SnackBar(
             content: Text('Failed to load playlist: $e'),
             backgroundColor: AppTheme.accentRed,
@@ -200,7 +204,8 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
       await _savePlaylists();
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        showAppSnackBar(
+          context,
           SnackBar(
             content: Text('Playlist renamed to "$result"'),
             backgroundColor: AppTheme.accentGreen,

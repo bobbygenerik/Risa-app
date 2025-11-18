@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
+import 'package:iptv_player/utils/snackbar_helper.dart';
 
 class ContentDetailScreen extends StatefulWidget {
   final Content content;
@@ -171,7 +172,6 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                         // Navigate to VLC player with content details
                         // Capture messenger (safe even without awaits) to avoid
                         // using BuildContext across potential async gaps.
-                        final messenger = ScaffoldMessenger.of(context);
                         if (widget.content.videoUrl != null) {
                           context.push('/vlc-player', extra: {
                             'videoUrl': widget.content.videoUrl,
@@ -180,7 +180,8 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                             'isLive': false,
                           });
                         } else {
-                          messenger.showSnackBar(
+                          showAppSnackBar(
+                            context,
                             const SnackBar(content: Text('Video URL not available')),
                           );
                         }

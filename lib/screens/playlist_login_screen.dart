@@ -8,6 +8,7 @@ import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
+import 'package:iptv_player/utils/snackbar_helper.dart';
 // import 'dart:convert';
 
 /// Playlist login screen - allows users to choose between M3U URL or Xtream Codes
@@ -95,7 +96,8 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
         if (channelCount == 0 && movieCount == 0 && seriesCount == 0) {
           // No content found - show detailed error with option to view content
           final hasContent = channelProvider.lastM3UContent != null;
-          ScaffoldMessenger.of(context).showSnackBar(
+          showAppSnackBar(
+            context,
             SnackBar(
               content: Text(
                 hasContent
@@ -122,7 +124,8 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
           if (movieCount > 0) parts.add('$movieCount movies');
           if (seriesCount > 0) parts.add('$seriesCount series');
 
-          ScaffoldMessenger.of(context).showSnackBar(
+          showAppSnackBar(
+            context,
             SnackBar(
               content: Text('✓ Loaded: ${parts.join(", ")}'),
               backgroundColor: AppTheme.accentGreen,
@@ -190,7 +193,8 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
               channelProvider.lastM3UContent != null &&
               channelProvider.lastM3UContent!.isNotEmpty;
 
-          ScaffoldMessenger.of(context).showSnackBar(
+          showAppSnackBar(
+            context,
             SnackBar(
               content: Text(
                 hasContent
@@ -217,7 +221,8 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
           if (movieCount > 0) parts.add('$movieCount movies');
           if (seriesCount > 0) parts.add('$seriesCount series');
 
-          ScaffoldMessenger.of(context).showSnackBar(
+          showAppSnackBar(
+            context,
             SnackBar(
               content: Text('✓ Loaded: ${parts.join(", ")}'),
               backgroundColor: AppTheme.accentGreen,
@@ -247,7 +252,8 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
 
   void _showError(String message) {
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      showAppSnackBar(
+        context,
         SnackBar(
           content: Text(message),
           backgroundColor: AppTheme.accentRed,

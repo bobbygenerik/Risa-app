@@ -14,6 +14,7 @@ import 'package:iptv_player/services/ai_upscaling_service.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
+import 'package:iptv_player/utils/snackbar_helper.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -822,11 +823,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                   suffixIcon: IconButton(
                     icon: Icon(Icons.save),
                     onPressed: () async {
-                      final messenger = ScaffoldMessenger.of(context);
                       final prefs = await SharedPreferences.getInstance();
                       await prefs.setString('custom_epg_url', customEpgController.text);
                       if (mounted) {
-                        messenger.showSnackBar(
+                        showAppSnackBar(
+                          context,
                           SnackBar(
                             content: Text('Custom EPG URL saved'),
                             backgroundColor: AppTheme.accentGreen,
@@ -838,12 +839,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                     tooltip: 'Save EPG URL',
                   ),
                 ),
-                onSubmitted: (value) async {
-                  final messenger = ScaffoldMessenger.of(context);
+                  onSubmitted: (value) async {
                   final prefs = await SharedPreferences.getInstance();
                   await prefs.setString('custom_epg_url', value);
                   if (mounted) {
-                    messenger.showSnackBar(
+                    showAppSnackBar(
+                      context,
                       SnackBar(
                         content: Text('Custom EPG URL saved'),
                         backgroundColor: AppTheme.accentGreen,
@@ -1042,7 +1043,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      showAppSnackBar(
+                        context,
                         SnackBar(
                           content: Text('Updating EPG data...'),
                           backgroundColor: AppTheme.primaryBlue,
@@ -1062,7 +1064,6 @@ class _SettingsScreenState extends State<SettingsScreen>
                   child: ElevatedButton.icon(
                     onPressed: () async {
                       // Show confirmation dialog
-                      final messenger = ScaffoldMessenger.of(context);
                       final confirm = await showDialog<bool>(
                         context: context,
                         builder: (context) => AlertDialog(
@@ -1084,7 +1085,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                       if (confirm == true) {
                         // TODO: Implement EPG data clearing
                         if (mounted) {
-                          messenger.showSnackBar(
+                          showAppSnackBar(
+                            context,
                             SnackBar(
                               content: Text('EPG data cleared'),
                               backgroundColor: AppTheme.accentGreen,
@@ -1140,16 +1142,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                 // Load M3U playlist from URL
                 final url = _m3uUrlController.text.trim();
                 if (url.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Please enter a valid M3U URL')),
-                  );
+                  showAppSnackBar(context, SnackBar(content: Text('Please enter a valid M3U URL')));
                   return;
                 }
 
-                final messenger = ScaffoldMessenger.of(context);
-                messenger.showSnackBar(
-                  SnackBar(content: Text('Loading playlist from URL...')),
-                );
+                showAppSnackBar(context, SnackBar(content: Text('Loading playlist from URL...')));
 
                 try {
                   final provider = Provider.of<ChannelProvider>(
@@ -1163,27 +1160,29 @@ class _SettingsScreenState extends State<SettingsScreen>
                   await prefs.setString('m3u_url', url);
                   await prefs.setString('playlist_type', 'm3u');
 
-                  if (mounted) {
-                    messenger.showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Playlist loaded successfully! ${provider.channels.length} channels found.',
+                    if (mounted) {
+                      showAppSnackBar(
+                        context,
+                        SnackBar(
+                          content: Text(
+                            'Playlist loaded successfully! ${provider.channels.length} channels found.',
+                          ),
+                          backgroundColor: AppTheme.accentGreen,
                         ),
-                        backgroundColor: AppTheme.accentGreen,
-                      ),
-                    );
-                  }
+                      );
+                    }
                 } catch (e) {
-                  if (mounted) {
-                    messenger.showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Failed to load playlist: ${e.toString()}',
+                    if (mounted) {
+                      showAppSnackBar(
+                        context,
+                        SnackBar(
+                          content: Text(
+                            'Failed to load playlist: ${e.toString()}',
+                          ),
+                          backgroundColor: AppTheme.accentRed,
                         ),
-                        backgroundColor: AppTheme.accentRed,
-                      ),
-                    );
-                  }
+                      );
+                    }
                 }
               },
               icon: Icon(Icons.download),
@@ -1256,8 +1255,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 SizedBox(width: AppSizes.sm),
                 ElevatedButton.icon(
                   onPressed: () async {
-                    final messenger = ScaffoldMessenger.of(context);
-                    // Load Xtream playlist
+                      // Load Xtream playlist
                     final server = _xtreamServerController.text.trim();
                     final username = _xtreamUsernameController.text.trim();
                     final password = _xtreamPasswordController.text.trim();
@@ -1265,21 +1263,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                     if (server.isEmpty ||
                         username.isEmpty ||
                         password.isEmpty) {
-                      messenger.showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Please fill in all Xtream Codes fields',
-                          ),
-                        ),
-                      );
+                      showAppSnackBar(context, SnackBar(content: Text('Please fill in all Xtream Codes fields')));
                       return;
                     }
 
-                    messenger.showSnackBar(
-                      SnackBar(
-                        content: Text('Loading Xtream Codes playlist...'),
-                      ),
-                    );
+                    showAppSnackBar(context, SnackBar(content: Text('Loading Xtream Codes playlist...')));
 
                     // Build Xtream API URL for getting live streams
                     // Format: http://server:port/get.php?username=xxx&password=xxx&type=m3u_plus&output=ts
@@ -1301,7 +1289,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                       await prefs.setString('playlist_type', 'xtream');
 
                       if (mounted) {
-                        messenger.showSnackBar(
+                        showAppSnackBar(
+                          context,
                           SnackBar(
                             content: Text(
                               'Xtream playlist loaded! ${provider.channels.length} channels found.',
@@ -1312,7 +1301,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                       }
                     } catch (e) {
                       if (mounted) {
-                        messenger.showSnackBar(
+                        showAppSnackBar(
+                          context,
                           SnackBar(
                             content: Text(
                               'Failed to load Xtream playlist: ${e.toString()}',
@@ -1516,12 +1506,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                           setState(() {
                             _aiUpscalingEnabled = value;
                           });
-                          final messenger = ScaffoldMessenger.of(context);
                           final prefs = await SharedPreferences.getInstance();
                           await prefs.setBool('ai_upscaling', value);
                           aiService.setEnabled(value);
                           if (mounted) {
-                            messenger.showSnackBar(
+                            showAppSnackBar(
+                              context,
                               SnackBar(
                                 content: Text(
                                   value
@@ -1786,10 +1776,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                   const SizedBox(height: 8),
                   ElevatedButton.icon(
                     onPressed: () async {
-                      final messenger = ScaffoldMessenger.of(context);
                       final success = await subtitleService.authenticate();
                       if (mounted) {
-                        messenger.showSnackBar(
+                        showAppSnackBar(
+                          context,
                           SnackBar(
                             content: Text(
                               success
@@ -1873,10 +1863,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                   const SizedBox(height: 8),
                   ElevatedButton.icon(
                     onPressed: () async {
-                      final messenger = ScaffoldMessenger.of(context);
                       final success = await rdService.testConnection();
                       if (mounted) {
-                        messenger.showSnackBar(
+                        showAppSnackBar(
+                          context,
                           SnackBar(
                             content: Text(
                               success
@@ -2309,7 +2299,6 @@ class _SettingsScreenState extends State<SettingsScreen>
                     SizedBox(width: AppSizes.sm),
                     ElevatedButton.icon(
                       onPressed: () async {
-                        final messenger = ScaffoldMessenger.of(context);
                         try {
                           final result = await FilePicker.platform
                               .getDirectoryPath();
@@ -2321,7 +2310,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                             );
                             setState(() {});
                             if (mounted) {
-                              messenger.showSnackBar(
+                              showAppSnackBar(
+                                context,
                                 SnackBar(
                                   content: Text('Recording location updated'),
                                   backgroundColor: AppTheme.accentGreen,
@@ -2331,7 +2321,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                           }
                         } catch (e) {
                           if (mounted) {
-                            messenger.showSnackBar(
+                            showAppSnackBar(
+                              context,
                               SnackBar(
                                 content: Text('Failed to select folder: $e'),
                                 backgroundColor: AppTheme.accentRed,
@@ -2396,9 +2387,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               children: [
                 ElevatedButton.icon(
                   onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Updating EPG data...')),
-                    );
+                    showAppSnackBar(context, SnackBar(content: Text('Updating EPG data...')));
                     // TODO: Implement EPG update functionality
                   },
                   icon: Icon(Icons.refresh),
@@ -2980,9 +2969,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () {
               service.clearTranscriptions();
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Transcriptions cleared')),
-              );
+              showAppSnackBar(context, const SnackBar(content: Text('Transcriptions cleared')));
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.accentRed,

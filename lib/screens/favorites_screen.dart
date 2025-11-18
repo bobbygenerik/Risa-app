@@ -6,6 +6,7 @@ import 'package:iptv_player/utils/app_theme.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
+import 'package:iptv_player/utils/snackbar_helper.dart';
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -281,7 +282,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                         ),
                         onPressed: () {
                           channelProvider.removeFromFavorites(channel);
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          showAppSnackBar(
+                            context,
                             SnackBar(
                               content: Text(
                                 '${channel.name} removed from favorites',

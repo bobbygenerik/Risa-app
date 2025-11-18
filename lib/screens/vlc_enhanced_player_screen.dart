@@ -12,6 +12,7 @@ import 'package:iptv_player/services/opensubtitles_service.dart';
 import 'package:iptv_player/services/whisper_transcription_service.dart';
 import 'package:iptv_player/services/epg_service.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/snackbar_helper.dart';
 
 /// VLC-powered enhanced video player with full settings integration
 /// Supports: Live TV, VOD, Catchup, Subtitles, Transcription, AI Upscaling
@@ -347,7 +348,8 @@ class _VlcEnhancedPlayerScreenState extends State<VlcEnhancedPlayerScreen> {
     } catch (e) {
       debugPrint('PiP error: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        showAppSnackBar(
+          context,
           SnackBar(content: Text('Picture-in-Picture not available: $e')),
         );
       }
@@ -438,7 +440,8 @@ class _VlcEnhancedPlayerScreenState extends State<VlcEnhancedPlayerScreen> {
         whisperService.startTranscription();
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          showAppSnackBar(
+            context,
             const SnackBar(
               content: Text('Live transcription started'),
               duration: Duration(seconds: 2),
@@ -451,7 +454,8 @@ class _VlcEnhancedPlayerScreenState extends State<VlcEnhancedPlayerScreen> {
         service.startTranscription();
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          showAppSnackBar(
+            context,
             const SnackBar(
               content: Text('Live transcription started (online mode)'),
               duration: Duration(seconds: 2),
@@ -462,7 +466,8 @@ class _VlcEnhancedPlayerScreenState extends State<VlcEnhancedPlayerScreen> {
     } catch (e) {
       debugPrint('Error starting transcription: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        showAppSnackBar(
+          context,
           SnackBar(
             content: Text('Failed to start transcription: $e'),
             backgroundColor: AppTheme.accentRed,
