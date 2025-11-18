@@ -569,10 +569,13 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
 
   void _launchFullscreenPlayer() {
     if (_currentChannel == null) {
-      showAppSnackBar(
-        context,
-        const SnackBar(content: Text('Please select a channel first')),
-      );
+      final localContext = context;
+      if (localContext.mounted) {
+        showAppSnackBar(
+          localContext,
+          const SnackBar(content: Text('Please select a channel first')),
+        );
+      }
       return;
     }
 
@@ -590,7 +593,10 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
       );
     } catch (e) {
       debugPrint('Error initializing mini player: $e');
-      showAppSnackBar(context, SnackBar(content: Text('Error opening player: $e')));
+      final localContext = context;
+      if (localContext.mounted) {
+        showAppSnackBar(localContext, SnackBar(content: Text('Error opening player: $e')));
+      }
     }
   }
 }

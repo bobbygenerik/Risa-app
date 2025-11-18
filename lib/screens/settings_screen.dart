@@ -497,6 +497,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ElevatedButton(
                         onPressed: () async {
                           final result = await context.push('/edit-profile');
+                          if (!mounted) return;
                           if (result == true) {
                             setState(() {});
                           }
@@ -823,35 +824,36 @@ class _SettingsScreenState extends State<SettingsScreen>
                   suffixIcon: IconButton(
                     icon: Icon(Icons.save),
                     onPressed: () async {
+                      final localContext = context;
                       final prefs = await SharedPreferences.getInstance();
                       await prefs.setString('custom_epg_url', customEpgController.text);
-                      if (mounted) {
-                        showAppSnackBar(
-                          context,
-                          SnackBar(
-                            content: Text('Custom EPG URL saved'),
-                            backgroundColor: AppTheme.accentGreen,
-                          ),
-                        );
-                        setState(() {}); // Refresh to show saved URL
-                      }
+                      if (!localContext.mounted) return;
+                      showAppSnackBar(
+                        localContext,
+                        SnackBar(
+                          content: Text('Custom EPG URL saved'),
+                          backgroundColor: AppTheme.accentGreen,
+                        ),
+                      );
+                      // Refresh to show saved URL
+                      if (localContext.mounted) setState(() {});
                     },
                     tooltip: 'Save EPG URL',
                   ),
                 ),
                   onSubmitted: (value) async {
+                  final localContext = context;
                   final prefs = await SharedPreferences.getInstance();
                   await prefs.setString('custom_epg_url', value);
-                  if (mounted) {
-                    showAppSnackBar(
-                      context,
-                      SnackBar(
-                        content: Text('Custom EPG URL saved'),
-                        backgroundColor: AppTheme.accentGreen,
-                      ),
-                    );
-                    setState(() {}); // Refresh to show saved URL
-                  }
+                  if (!localContext.mounted) return;
+                  showAppSnackBar(
+                    localContext,
+                    SnackBar(
+                      content: Text('Custom EPG URL saved'),
+                      backgroundColor: AppTheme.accentGreen,
+                    ),
+                  );
+                  if (localContext.mounted) setState(() {}); // Refresh to show saved URL
                 },
               ),
             ),
@@ -1084,9 +1086,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                       
                       if (confirm == true) {
                         // TODO: Implement EPG data clearing
-                        if (mounted) {
+                        final localContext = context;
+                        if (localContext.mounted) {
                           showAppSnackBar(
-                            context,
+                            localContext,
                             SnackBar(
                               content: Text('EPG data cleared'),
                               backgroundColor: AppTheme.accentGreen,
@@ -1142,11 +1145,18 @@ class _SettingsScreenState extends State<SettingsScreen>
                 // Load M3U playlist from URL
                 final url = _m3uUrlController.text.trim();
                 if (url.isEmpty) {
-                  showAppSnackBar(context, SnackBar(content: Text('Please enter a valid M3U URL')));
+                  final localContext = context;
+                  if (!localContext.mounted) return;
+                  showAppSnackBar(localContext, SnackBar(content: Text('Please enter a valid M3U URL')));
                   return;
                 }
 
-                showAppSnackBar(context, SnackBar(content: Text('Loading playlist from URL...')));
+                {
+                  final localContext = context;
+                  if (localContext.mounted) {
+                    showAppSnackBar(localContext, SnackBar(content: Text('Loading playlist from URL...')));
+                  }
+                }
 
                 try {
                   final provider = Provider.of<ChannelProvider>(
@@ -1159,18 +1169,17 @@ class _SettingsScreenState extends State<SettingsScreen>
                   final prefs = await SharedPreferences.getInstance();
                   await prefs.setString('m3u_url', url);
                   await prefs.setString('playlist_type', 'm3u');
-
-                    if (mounted) {
-                      showAppSnackBar(
-                        context,
-                        SnackBar(
-                          content: Text(
-                            'Playlist loaded successfully! ${provider.channels.length} channels found.',
-                          ),
-                          backgroundColor: AppTheme.accentGreen,
-                        ),
-                      );
-                    }
+                  final localContext = context;
+                  if (!localContext.mounted) return;
+                  showAppSnackBar(
+                    localContext,
+                    SnackBar(
+                      content: Text(
+                        'Playlist loaded successfully! ${provider.channels.length} channels found.',
+                      ),
+                      backgroundColor: AppTheme.accentGreen,
+                    ),
+                  );
                 } catch (e) {
                     if (mounted) {
                       showAppSnackBar(
@@ -1263,11 +1272,18 @@ class _SettingsScreenState extends State<SettingsScreen>
                     if (server.isEmpty ||
                         username.isEmpty ||
                         password.isEmpty) {
-                      showAppSnackBar(context, SnackBar(content: Text('Please fill in all Xtream Codes fields')));
+                      final localContext = context;
+                      if (!localContext.mounted) return;
+                      showAppSnackBar(localContext, SnackBar(content: Text('Please fill in all Xtream Codes fields')));
                       return;
                     }
 
-                    showAppSnackBar(context, SnackBar(content: Text('Loading Xtream Codes playlist...')));
+                    {
+                      final localContext = context;
+                      if (localContext.mounted) {
+                        showAppSnackBar(localContext, SnackBar(content: Text('Loading Xtream Codes playlist...')));
+                      }
+                    }
 
                     // Build Xtream API URL for getting live streams
                     // Format: http://server:port/get.php?username=xxx&password=xxx&type=m3u_plus&output=ts
@@ -1287,18 +1303,17 @@ class _SettingsScreenState extends State<SettingsScreen>
                       await prefs.setString('xtream_username', username);
                       await prefs.setString('xtream_password', password);
                       await prefs.setString('playlist_type', 'xtream');
-
-                      if (mounted) {
-                        showAppSnackBar(
-                          context,
-                          SnackBar(
-                            content: Text(
-                              'Xtream playlist loaded! ${provider.channels.length} channels found.',
-                            ),
-                            backgroundColor: AppTheme.accentGreen,
+                      final localContext = context;
+                      if (!localContext.mounted) return;
+                      showAppSnackBar(
+                        localContext,
+                        SnackBar(
+                          content: Text(
+                            'Xtream playlist loaded! ${provider.channels.length} channels found.',
                           ),
-                        );
-                      }
+                          backgroundColor: AppTheme.accentGreen,
+                        ),
+                      );
                     } catch (e) {
                       if (mounted) {
                         showAppSnackBar(
@@ -2301,24 +2316,24 @@ class _SettingsScreenState extends State<SettingsScreen>
                       onPressed: () async {
                         try {
                           final result = await FilePicker.platform
-                              .getDirectoryPath();
-                          if (result != null) {
-                            final prefs = await SharedPreferences.getInstance();
-                            await prefs.setString(
-                              'recording_storage_path',
-                              result,
-                            );
-                            setState(() {});
-                            if (mounted) {
-                              showAppSnackBar(
-                                context,
-                                SnackBar(
-                                  content: Text('Recording location updated'),
-                                  backgroundColor: AppTheme.accentGreen,
-                                ),
-                              );
-                            }
-                          }
+                                  .getDirectoryPath();
+                              if (result != null) {
+                                final prefs = await SharedPreferences.getInstance();
+                                await prefs.setString(
+                                  'recording_storage_path',
+                                  result,
+                                );
+                                setState(() {});
+                                final localContext = context;
+                                if (!localContext.mounted) return;
+                                showAppSnackBar(
+                                  localContext,
+                                  SnackBar(
+                                    content: Text('Recording location updated'),
+                                    backgroundColor: AppTheme.accentGreen,
+                                  ),
+                                );
+                              }
                         } catch (e) {
                           if (mounted) {
                             showAppSnackBar(
@@ -2387,7 +2402,10 @@ class _SettingsScreenState extends State<SettingsScreen>
               children: [
                 ElevatedButton.icon(
                   onPressed: () {
-                    showAppSnackBar(context, SnackBar(content: Text('Updating EPG data...')));
+                    final localContext = context;
+                    if (localContext.mounted) {
+                      showAppSnackBar(localContext, SnackBar(content: Text('Updating EPG data...')));
+                    }
                     // TODO: Implement EPG update functionality
                   },
                   icon: Icon(Icons.refresh),
@@ -2969,7 +2987,10 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () {
               service.clearTranscriptions();
               Navigator.pop(context);
-              showAppSnackBar(context, const SnackBar(content: Text('Transcriptions cleared')));
+              final localContext = context;
+              if (localContext.mounted) {
+                showAppSnackBar(localContext, const SnackBar(content: Text('Transcriptions cleared')));
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.accentRed,
@@ -3027,6 +3048,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     }
   }
 
+  // ignore: unused_element
   String _formatDateTime(DateTime dateTime) {
     return '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
   }

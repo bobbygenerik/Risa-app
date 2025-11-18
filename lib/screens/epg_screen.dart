@@ -1395,7 +1395,10 @@ class _EPGScreenState extends State<EPGScreen> {
             onPressed: () {
               Navigator.pop(context);
               // Update channel number
-              showAppSnackBar(context, SnackBar(content: Text('Channel number updated')));
+              final localContext = context;
+              if (localContext.mounted) {
+                showAppSnackBar(localContext, SnackBar(content: Text('Channel number updated')));
+              }
             },
             child: Text('Save'),
           ),
@@ -1438,7 +1441,10 @@ class _EPGScreenState extends State<EPGScreen> {
             onPressed: () {
               Navigator.pop(context);
               // Update EPG source
-              showAppSnackBar(context, SnackBar(content: Text('EPG source assigned')));
+              final localContext = context;
+              if (localContext.mounted) {
+                showAppSnackBar(localContext, SnackBar(content: Text('EPG source assigned')));
+              }
             },
             child: Text('Save'),
           ),
@@ -1483,7 +1489,10 @@ class _EPGScreenState extends State<EPGScreen> {
     if (channel.url.isNotEmpty) {
       context.push('/player', extra: channel);
     } else {
-      showAppSnackBar(context, SnackBar(content: Text('Channel not available')));
+      final localContext = context;
+      if (localContext.mounted) {
+        showAppSnackBar(localContext, SnackBar(content: Text('Channel not available')));
+      }
     }
   }
 }

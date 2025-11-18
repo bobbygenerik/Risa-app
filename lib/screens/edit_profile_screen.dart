@@ -19,8 +19,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final TextEditingController _emailController = TextEditingController();
   String? _profileImagePath;
   bool _isLoading = false;
-  bool _nameEditable = false;
-  bool _emailEditable = false;
+  
 
   final FocusNode _nameFocusNode = FocusNode();
   final FocusNode _emailFocusNode = FocusNode();
@@ -119,22 +118,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         );
       }
     }
-  }
 
-  void _removeProfileImage() {
-    setState(() {
-      _profileImagePath = null;
-    });
-  }
-
-  KeyEventResult _handleFocusKey(FocusNode node, KeyEvent event, VoidCallback onActivate) {
-    if (event is! KeyDownEvent) return KeyEventResult.ignored;
-    final key = event.logicalKey;
-    if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
-      onActivate();
-      return KeyEventResult.handled;
-    }
-    return KeyEventResult.ignored;
   }
 
   @override

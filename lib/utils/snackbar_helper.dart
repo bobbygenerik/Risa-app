@@ -1,4 +1,3 @@
-import 'package:flutter/widgets.dart';
 import 'package:flutter/material.dart';
 
 /// Safely show a SnackBar. If the provided [context] has a [ScaffoldMessenger],

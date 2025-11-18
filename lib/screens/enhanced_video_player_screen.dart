@@ -556,10 +556,12 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
               onPressed: () async {
                 try {
                   final srt = transcriptionService.exportAsSRT();
-                  await Clipboard.setData(ClipboardData(text: srt));
-                  showAppSnackBar(context, const SnackBar(content: Text('Transcript copied to clipboard')));
+                      await Clipboard.setData(ClipboardData(text: srt));
+                      if (!mounted) return;
+                      showAppSnackBar(context, const SnackBar(content: Text('Transcript copied to clipboard')));
                 } catch (e) {
-                  showAppSnackBar(context, const SnackBar(content: Text('Failed to export transcript')));
+                      if (!mounted) return;
+                      showAppSnackBar(context, const SnackBar(content: Text('Failed to export transcript')));
                 }
               },
             ),
@@ -583,13 +585,15 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         // Enter PiP mode
         if (Platform.isAndroid) {
           final ok = await _enterAndroidPip();
+          if (!mounted) return;
           if (!ok) {
             showAppSnackBar(context, const SnackBar(content: Text('Picture-in-Picture not available')));
           }
         }
       }
-      } catch (e) {
+    } catch (e) {
       debugPrint('PiP error: $e');
+      if (!mounted) return;
       showAppSnackBar(context, SnackBar(content: Text('Picture-in-Picture not available: $e')));
     }
   }
@@ -803,11 +807,15 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                       tooltip: 'Export transcript (copy SRT to clipboard)',
                       onPressed: () async {
                         try {
+                          final clipContext = context;
                           final srt = transcriptionService.exportAsSRT();
                           await Clipboard.setData(ClipboardData(text: srt));
-                          showAppSnackBar(context, const SnackBar(content: Text('Transcript copied to clipboard')));
+                          if (!clipContext.mounted) return;
+                          showAppSnackBar(clipContext, const SnackBar(content: Text('Transcript copied to clipboard')));
                         } catch (e) {
-                          showAppSnackBar(context, const SnackBar(content: Text('Failed to export transcript')));
+                          final clipContext = context;
+                          if (!clipContext.mounted) return;
+                          showAppSnackBar(clipContext, const SnackBar(content: Text('Failed to export transcript')));
                         }
                       },
                     ),
@@ -940,11 +948,13 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                                   const SizedBox(height: 12),
                                   ElevatedButton(
                                     onPressed: () async {
-                                      Navigator.of(context).pop();
-                                      showAppSnackBar(context, const SnackBar(content: Text('Initializing AI model...')));
+                                      final dialogContext = context;
+                                      Navigator.of(dialogContext).pop();
+                                      showAppSnackBar(dialogContext, const SnackBar(content: Text('Initializing AI model...')));
                                       await aiService.initialize();
+                                      if (!dialogContext.mounted) return;
                                       if (aiService.isModelLoaded) {
-                                        showAppSnackBar(context, const SnackBar(content: Text('AI model loaded')));
+                                        showAppSnackBar(dialogContext, const SnackBar(content: Text('AI model loaded')));
                                         // If native controller exists and a downloaded model is present, ask native to load it
                                         if (Platform.isAndroid && _nativeController != null) {
                                           try {
@@ -957,7 +967,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                                           }
                                         }
                                       } else {
-                                        showAppSnackBar(context, const SnackBar(content: Text('AI model not available; try download')));
+                                        if (dialogContext.mounted) {
+                                          showAppSnackBar(dialogContext, const SnackBar(content: Text('AI model not available; try download')));
+                                        }
                                       }
                                     },
                                     child: const Text('Load AI Model'),
@@ -965,14 +977,16 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                                   const SizedBox(height: 8),
                                   ElevatedButton(
                                     onPressed: aiService.isDownloading ? null : () async {
-                                      Navigator.of(context).pop();
-                                      showAppSnackBar(context, const SnackBar(
+                                      final dialogContext = context;
+                                      Navigator.of(dialogContext).pop();
+                                      showAppSnackBar(dialogContext, const SnackBar(
                                         content: Text('Downloading AI model (with automatic retry)...'),
                                         duration: Duration(seconds: 3),
                                       ));
                                       final ok = await aiService.downloadModel();
+                                      if (!dialogContext.mounted) return;
                                       if (ok && aiService.isModelLoaded) {
-                                        showAppSnackBar(context, const SnackBar(content: Text('AI model downloaded and loaded')));
+                                        showAppSnackBar(dialogContext, const SnackBar(content: Text('AI model downloaded and loaded')));
                                         // Instruct native controller to load the downloaded model
                                         if (Platform.isAndroid && _nativeController != null) {
                                           try {
@@ -986,10 +1000,12 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                                           }
                                         }
                                       } else {
-                                        showAppSnackBar(context, const SnackBar(
-                                          content: Text('Failed to download AI model. Check network and try again.'),
-                                          duration: Duration(seconds: 4),
-                                        ));
+                                        if (dialogContext.mounted) {
+                                          showAppSnackBar(dialogContext, const SnackBar(
+                                            content: Text('Failed to download AI model. Check network and try again.'),
+                                            duration: Duration(seconds: 4),
+                                          ));
+                                        }
                                       }
                                     },
                                     child: Text(aiService.isDownloading ? 'Downloading...' : 'Download Model'),
@@ -1027,33 +1043,37 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                                   SwitchListTile(
                                     title: const Text('Enable AI Upscaling'),
                                     value: aiService.isEnabled,
-                                    onChanged: (v) async {
+                                      onChanged: (v) async {
                                       // If enabling, ensure a model is available. Prefer a
                                       // local download (Option A): automatically download
                                       // the model if it's not present, then initialize.
                                       if (v && !aiService.isModelLoaded) {
-                                        showAppSnackBar(context, const SnackBar(content: Text('Preparing AI model...')));
+                                          final dialogContext = context;
+                                          showAppSnackBar(dialogContext, const SnackBar(content: Text('Preparing AI model...')));
 
-                                        try {
-                                          final local = await aiService.getLocalModelPath();
+                                          try {
+                                            final local = await aiService.getLocalModelPath();
                                             if (local == null) {
-                                            // No local model: download it automatically (Option A)
-                                            // Uses built-in retry/backoff for robustness
-                                            final ok = await aiService.downloadModel();
-                                            if (!ok) {
-                                              showAppSnackBar(context, const SnackBar(
-                                                content: Text('Failed to download AI model after retries. Check network and try again.'),
-                                                duration: Duration(seconds: 4),
-                                              ));
+                                              // No local model: download it automatically (Option A)
+                                              // Uses built-in retry/backoff for robustness
+                                              final ok = await aiService.downloadModel();
+                                              if (!dialogContext.mounted) return;
+                                              if (!ok) {
+                                                showAppSnackBar(dialogContext, const SnackBar(
+                                                  content: Text('Failed to download AI model after retries. Check network and try again.'),
+                                                  duration: Duration(seconds: 4),
+                                                ));
+                                              }
+                                            } else {
+                                              // Local model exists - initialize/interpreter
+                                              await aiService.initialize();
+                                              if (!dialogContext.mounted) return;
                                             }
-                                          } else {
-                                            // Local model exists - initialize/interpreter
-                                            await aiService.initialize();
+                                          } catch (e) {
+                                            debugPrint('AI model prepare error: $e');
+                                            if (!dialogContext.mounted) return;
+                                            showAppSnackBar(dialogContext, const SnackBar(content: Text('Error preparing AI model')));
                                           }
-                                        } catch (e) {
-                                          debugPrint('AI model prepare error: $e');
-                                          showAppSnackBar(context, const SnackBar(content: Text('Error preparing AI model')));
-                                        }
                                       }
 
                                       aiService.setEnabled(v);
@@ -1714,11 +1734,12 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       const platform = MethodChannel('com.streamhub.iptv/audio');
       final result = await platform.invokeMethod('switchAudioTrack', {'trackIndex': index});
       debugPrint('Audio track switch result (platform): $result');
+      if (!mounted) return;
       showAppSnackBar(context, const SnackBar(content: Text('Audio track changed')));
     } catch (e) {
       debugPrint('Audio track switching not implemented on this platform: $e');
       // Friendly fallback: notify user we registered their selection.
-      showAppSnackBar(context, const SnackBar(content: Text('Audio track change requested')));
+      if (mounted) showAppSnackBar(context, const SnackBar(content: Text('Audio track change requested')));
     }
   }
 }

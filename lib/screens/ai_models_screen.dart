@@ -496,7 +496,10 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
             onPressed: () {
               modelManager.deleteModel(model.id);
               Navigator.pop(context);
-              showAppSnackBar(context, SnackBar(content: Text('${model.name} deleted')));
+              final localContext = context;
+              if (localContext.mounted) {
+                showAppSnackBar(localContext, SnackBar(content: Text('${model.name} deleted')));
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.accentRed,
