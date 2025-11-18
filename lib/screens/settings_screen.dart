@@ -1524,18 +1524,16 @@ class _SettingsScreenState extends State<SettingsScreen>
                           final prefs = await SharedPreferences.getInstance();
                           await prefs.setBool('ai_upscaling', value);
                           aiService.setEnabled(value);
-                          if (mounted) {
-                            showAppSnackBar(
-                              context,
-                              SnackBar(
-                                content: Text(
-                                  value
-                                      ? 'AI Upscaling enabled'
-                                      : 'AI Upscaling disabled',
-                                ),
+                          final localContext = context;
+                          if (!localContext.mounted) return;
+                          showAppSnackBar(
+                            localContext,
+                            SnackBar(
+                              content: Text(
+                                value ? 'AI Upscaling enabled' : 'AI Upscaling disabled',
                               ),
-                            );
-                          }
+                            ),
+                          );
                         }
                       : null,
                 ),
@@ -1791,23 +1789,19 @@ class _SettingsScreenState extends State<SettingsScreen>
                   const SizedBox(height: 8),
                   ElevatedButton.icon(
                     onPressed: () async {
-                      final success = await subtitleService.authenticate();
-                      if (mounted) {
+                        final localContext = context;
+                        final success = await subtitleService.authenticate();
+                        if (!localContext.mounted) return;
                         showAppSnackBar(
-                          context,
+                          localContext,
                           SnackBar(
                             content: Text(
-                              success
-                                  ? 'Connected successfully!'
-                                  : 'Connection failed',
+                              success ? 'Connected successfully!' : 'Connection failed',
                             ),
-                            backgroundColor: success
-                                ? Colors.green
-                                : AppTheme.accentRed,
+                            backgroundColor: success ? Colors.green : AppTheme.accentRed,
                           ),
                         );
-                      }
-                    },
+                      },
                     icon: const Icon(Icons.check_circle),
                     label: const Text('Test Connection'),
                   ),
@@ -1878,22 +1872,20 @@ class _SettingsScreenState extends State<SettingsScreen>
                   const SizedBox(height: 8),
                   ElevatedButton.icon(
                     onPressed: () async {
+                      final localContext = context;
                       final success = await rdService.testConnection();
-                      if (mounted) {
-                        showAppSnackBar(
-                          context,
-                          SnackBar(
-                            content: Text(
-                              success
-                                  ? 'Connected! Premium until ${rdService.premiumExpiryDate}'
-                                  : 'Connection failed',
-                            ),
-                            backgroundColor: success
-                                ? Colors.green
-                                : AppTheme.accentRed,
+                      if (!localContext.mounted) return;
+                      showAppSnackBar(
+                        localContext,
+                        SnackBar(
+                          content: Text(
+                            success
+                                ? 'Connected! Premium until ${rdService.premiumExpiryDate}'
+                                : 'Connection failed',
                           ),
-                        );
-                      }
+                          backgroundColor: success ? Colors.green : AppTheme.accentRed,
+                        ),
+                      );
                     },
                     icon: const Icon(Icons.check_circle),
                     label: const Text('Test Connection'),
@@ -2314,36 +2306,34 @@ class _SettingsScreenState extends State<SettingsScreen>
                     SizedBox(width: AppSizes.sm),
                     ElevatedButton.icon(
                       onPressed: () async {
+                        final localContext = context;
                         try {
-                          final result = await FilePicker.platform
-                                  .getDirectoryPath();
-                              if (result != null) {
-                                final prefs = await SharedPreferences.getInstance();
-                                await prefs.setString(
-                                  'recording_storage_path',
-                                  result,
-                                );
-                                setState(() {});
-                                final localContext = context;
-                                if (!localContext.mounted) return;
-                                showAppSnackBar(
-                                  localContext,
-                                  SnackBar(
-                                    content: Text('Recording location updated'),
-                                    backgroundColor: AppTheme.accentGreen,
-                                  ),
-                                );
-                              }
-                        } catch (e) {
-                          if (mounted) {
+                          final result = await FilePicker.platform.getDirectoryPath();
+                          if (result != null) {
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.setString(
+                              'recording_storage_path',
+                              result,
+                            );
+                            setState(() {});
+                            if (!localContext.mounted) return;
                             showAppSnackBar(
-                              context,
+                              localContext,
                               SnackBar(
-                                content: Text('Failed to select folder: $e'),
-                                backgroundColor: AppTheme.accentRed,
+                                content: Text('Recording location updated'),
+                                backgroundColor: AppTheme.accentGreen,
                               ),
                             );
                           }
+                        } catch (e) {
+                          if (!localContext.mounted) return;
+                          showAppSnackBar(
+                            localContext,
+                            SnackBar(
+                              content: Text('Failed to select folder: $e'),
+                              backgroundColor: AppTheme.accentRed,
+                            ),
+                          );
                         }
                       },
                       icon: Icon(Icons.create_new_folder),
