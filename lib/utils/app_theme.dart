@@ -8,7 +8,7 @@ class AppTheme {
   // Using deep blue from logo palette
   static const Color primaryBlue = Color(0xFF2E3192);
   static const Color darkBackground = Color(0xFF1C1C1E);
-  static const Color cardBackground = Color(0xFF2C2C2E);
+  static const Color cardBackground = Color(0x00000000); // fully transparent
   static const Color sidebarBackground = Color(0xFF141414);
   static const Color textPrimary = Color(0xFFE8E8E8); // Softer off-white for better theme cohesion
   static const Color textSecondary = Color(0xFFB3B3B3);
