@@ -4,6 +4,8 @@ import 'package:xml/xml.dart';
 import 'package:iptv_player/models/program.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 // Removed unused imports: channel.dart and dart:convert
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 class EpgService with ChangeNotifier {
   final Dio _dio = Dio(BaseOptions(
@@ -19,7 +21,7 @@ class EpgService with ChangeNotifier {
   String? _error;
   
   // Cache settings
-  static const String _cacheKey = 'epg_cache';
+  static const String _cacheFileName = 'epg_cache.xml';
   static const String _cacheTimeKey = 'epg_cache_time';
   static const Duration _cacheValidity = Duration(hours: 6);
   static const int _maxRetries = 3;
@@ -99,6 +101,8 @@ class EpgService with ChangeNotifier {
   /// Parse EPG XML data with comprehensive error handling
   Future<void> _parseEpgData(String xmlData) async {
     try {
+      // Run parsing in a separate isolate or just be careful with large strings
+      // For now, we'll keep it simple but catch errors
       final document = XmlDocument.parse(xmlData);
       final programmes = document.findAllElements('programme');
 
@@ -235,26 +239,29 @@ class EpgService with ChangeNotifier {
     return result;
   }
 
-  /// Save EPG data to cache
+  /// Save EPG data to file cache
   Future<void> _saveToCache(String xmlData) async {
     try {
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/$_cacheFileName');
+      await file.writeAsString(xmlData);
+      
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_cacheKey, xmlData);
       await prefs.setString(_cacheTimeKey, DateTime.now().toIso8601String());
-      debugPrint('EPG saved to cache');
+      
+      debugPrint('EPG saved to file cache: ${file.path}');
     } catch (e) {
       debugPrint('Failed to save EPG cache: $e');
     }
   }
 
-  /// Load EPG data from cache
+  /// Load EPG data from file cache
   Future<bool> _loadFromCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final cachedData = prefs.getString(_cacheKey);
       final cacheTimeStr = prefs.getString(_cacheTimeKey);
 
-      if (cachedData == null || cacheTimeStr == null) {
+      if (cacheTimeStr == null) {
         return false;
       }
 
@@ -266,8 +273,17 @@ class EpgService with ChangeNotifier {
         return false;
       }
 
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/$_cacheFileName');
+      
+      if (!await file.exists()) {
+        return false;
+      }
+
+      final cachedData = await file.readAsString();
       await _parseEpgData(cachedData);
-      debugPrint('EPG loaded from cache (${age.inMinutes} minutes old)');
+      
+      debugPrint('EPG loaded from file cache (${age.inMinutes} minutes old)');
       return true;
     } catch (e) {
       debugPrint('Failed to load EPG from cache: $e');
@@ -278,9 +294,15 @@ class EpgService with ChangeNotifier {
   /// Clear cache
   Future<void> clearCache() async {
     try {
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/$_cacheFileName');
+      if (await file.exists()) {
+        await file.delete();
+      }
+      
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_cacheKey);
       await prefs.remove(_cacheTimeKey);
+      
       _epgData.clear();
       _lastFetchTime = null;
       notifyListeners();

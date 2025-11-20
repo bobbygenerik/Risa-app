@@ -2229,6 +2229,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                                         .getTotalDownloadedSize(),
                                     builder: (context, sizeSnapshot) {
                                       if (sizeSnapshot.hasData &&
+                                          sizeSnapshot.data != null &&
                                           sizeSnapshot.data! > 0) {
                                         final sizeMB =
                                             (sizeSnapshot.data! / (1024 * 1024))
@@ -2414,7 +2415,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     builder: (context, snapshot) {
                       if (snapshot.hasData) {
                         return Text(
-                          snapshot.data!,
+                          snapshot.data ?? '',
                           style: TextStyle(
                             fontSize: 11,
                             color: AppTheme.primaryBlue,
