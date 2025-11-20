@@ -476,7 +476,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         radius: 50,
                         backgroundColor: AppTheme.cardBackground,
                         backgroundImage: profileImagePath != null && profileImagePath.isNotEmpty
-                            ? FileImage(File(profileImagePath))
+                            ? ResizeImage(FileImage(File(profileImagePath)), width: 100, height: 100)
                             : null,
                         child: profileImagePath == null || profileImagePath.isEmpty
                             ? Icon(
@@ -678,7 +678,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         };
       }(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
+        if (!snapshot.hasData || snapshot.data == null) {
           return Card(
             margin: EdgeInsets.only(bottom: AppSizes.lg),
             child: Padding(
@@ -2497,7 +2497,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         };
       }(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
+        if (!snapshot.hasData || snapshot.data == null) {
           return Card(
             margin: EdgeInsets.only(bottom: AppSizes.lg),
             child: Padding(
