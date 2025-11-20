@@ -52,14 +52,14 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
     super.dispose();
   }
 
-  // Called by AppShell when navigating RIGHT from sidebar on this screen
+  // Called by parent shell when navigating RIGHT from sidebar on this screen
   void requestFirstSecondaryFocus() {
     if (_tabFocusNodes.isNotEmpty) {
       _tabFocusNodes[_selectedTab.clamp(0, _tabFocusNodes.length - 1)].requestFocus();
     }
   }
 
-  // Fallback for AppShell to move into content if needed (scrollable body has no focusables by default)
+  // Fallback for parent shell to move into content if needed (scrollable body has no focusables by default)
   void requestFirstContentFocus() {
     // Keep focus on the active tab as primary interaction surface on this screen
     requestFirstSecondaryFocus();

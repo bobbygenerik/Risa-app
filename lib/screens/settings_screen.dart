@@ -35,6 +35,9 @@ class _SettingsScreenState extends State<SettingsScreen>
   final TextEditingController _xtreamPasswordController =
       TextEditingController();
 
+  // Playlist Input Method (0 = M3U, 1 = Xtream)
+  int _playlistInputMethod = 0;
+
   // Integration Settings
   final TextEditingController _realDebridApiKeyController =
       TextEditingController();
@@ -296,8 +299,9 @@ class _SettingsScreenState extends State<SettingsScreen>
         children: [
           // Settings header
           Container(
-            height: 80,
-            padding: EdgeInsets.all(16),
+            height: AppSizes.appBarHeight,
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            alignment: Alignment.centerLeft,
             decoration: BoxDecoration(
               border: Border(
                 bottom: BorderSide(
@@ -420,7 +424,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  // Allow AppShell to request focus into this screen's sidebar
+  // Allow parent shell to request focus into this screen's sidebar
   void requestFirstSidebarFocus() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_menuFocusNodes.isNotEmpty) {
@@ -1118,199 +1122,82 @@ class _SettingsScreenState extends State<SettingsScreen>
     return _buildSettingsSection(
       title: 'General',
       children: [
-        // M3U & Xtream Codes Section
         _buildSectionCard(
-          title: 'Playlist Sources',
-          subtitle: 'Use M3U URL OR Xtream Codes (choose one)',
+          title: 'Playlist Source',
+          subtitle: 'Select your playlist type and enter details',
           children: [
-            Text(
-              'Option 1: M3U Playlist URL',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: AppSizes.sm),
-            _buildTVTextField(
-              controller: _m3uUrlController,
-              focusNode: _m3uUrlFocusNode,
-              isEditable: _m3uUrlEditable,
-              onEditableChanged: (value) => setState(() => _m3uUrlEditable = value),
-              hintText: 'http://example.com/playlist.m3u',
-              helperText: 'Enter M3U URL and click Load',
-              prefixIcon: Icons.link,
-            ),
-            SizedBox(height: AppSizes.sm),
-            ElevatedButton.icon(
-              onPressed: () async {
-                // Load M3U playlist from URL
-                final url = _m3uUrlController.text.trim();
-                if (url.isEmpty) {
-                  final localContext = context;
-                  if (!localContext.mounted) return;
-                  showAppSnackBar(localContext, SnackBar(content: Text('Please enter a valid M3U URL')));
-                  return;
-                }
-
-                {
-                  final localContext = context;
-                  if (localContext.mounted) {
-                    showAppSnackBar(localContext, SnackBar(content: Text('Loading playlist from URL...')));
-                  }
-                }
-
-                try {
-                  final provider = Provider.of<ChannelProvider>(
-                    context,
-                    listen: false,
-                  );
-                  await provider.loadPlaylistFromUrl(url);
-
-                  // Save credentials
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setString('m3u_url', url);
-                  await prefs.setString('playlist_type', 'm3u');
-                  final localContext = context;
-                  if (!localContext.mounted) return;
-                  showAppSnackBar(
-                    localContext,
-                    SnackBar(
-                      content: Text(
-                        'Playlist loaded successfully! ${provider.channels.length} channels found.',
-                      ),
-                      backgroundColor: AppTheme.accentGreen,
+            // Input Method Tabs
+            Container(
+              height: 48,
+              padding: EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: AppTheme.highlight,
+                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildTabButton(
+                      title: 'M3U URL',
+                      icon: Icons.link,
+                      isSelected: _playlistInputMethod == 0,
+                      onTap: () => setState(() => _playlistInputMethod = 0),
                     ),
-                  );
-                } catch (e) {
-                    if (mounted) {
-                      showAppSnackBar(
-                        context,
-                        SnackBar(
-                          content: Text(
-                            'Failed to load playlist: ${e.toString()}',
-                          ),
-                          backgroundColor: AppTheme.accentRed,
-                        ),
-                      );
-                    }
-                }
-              },
-              icon: Icon(Icons.download),
-              label: Text('Load M3U Playlist'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryBlue,
+                  ),
+                  Expanded(
+                    child: _buildTabButton(
+                      title: 'Xtream Codes',
+                      icon: Icons.dns,
+                      isSelected: _playlistInputMethod == 1,
+                      onTap: () => setState(() => _playlistInputMethod = 1),
+                    ),
+                  ),
+                ],
               ),
             ),
             SizedBox(height: AppSizes.lg),
 
-            Divider(),
-            SizedBox(height: AppSizes.lg),
-
-            Text(
-              'Option 2: Xtream Codes API',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: AppSizes.sm),
-            _buildTVTextField(
-              controller: _xtreamServerController,
-              focusNode: _xtreamServerFocusNode,
-              isEditable: _xtreamServerEditable,
-              onEditableChanged: (value) => setState(() => _xtreamServerEditable = value),
-              labelText: 'Server URL',
-              hintText: 'http://example.com:8080',
-              helperText: 'Enter server, username, password and click Load',
-              prefixIcon: Icons.dns,
-            ),
-            SizedBox(height: AppSizes.md),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildTVTextField(
-                    controller: _xtreamUsernameController,
-                    focusNode: _xtreamUsernameFocusNode,
-                    isEditable: _xtreamUsernameEditable,
-                    onEditableChanged: (value) => setState(() => _xtreamUsernameEditable = value),
-                    labelText: 'Username',
-                    prefixIcon: Icons.person,
-                  ),
-                ),
-                SizedBox(width: AppSizes.md),
-                Expanded(
-                  child: _buildTVTextField(
-                    controller: _xtreamPasswordController,
-                    focusNode: _xtreamPasswordFocusNode,
-                    isEditable: _xtreamPasswordEditable,
-                    onEditableChanged: (value) => setState(() => _xtreamPasswordEditable = value),
-                    labelText: 'Password',
-                    prefixIcon: Icons.lock,
-                    obscureText: true,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: AppSizes.md),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () {
-                    _xtreamServerController.clear();
-                    _xtreamUsernameController.clear();
-                    _xtreamPasswordController.clear();
-                  },
-                  child: Text('Clear'),
-                ),
-                SizedBox(width: AppSizes.sm),
-                ElevatedButton.icon(
+            // M3U Content
+            if (_playlistInputMethod == 0) ...[
+              _buildTVTextField(
+                controller: _m3uUrlController,
+                focusNode: _m3uUrlFocusNode,
+                isEditable: _m3uUrlEditable,
+                onEditableChanged: (value) => setState(() => _m3uUrlEditable = value),
+                hintText: 'http://example.com/playlist.m3u',
+                helperText: 'Enter M3U URL and click Load',
+                prefixIcon: Icons.link,
+                onLeftArrow: requestFirstSidebarFocus,
+              ),
+              SizedBox(height: AppSizes.md),
+              Align(
+                alignment: Alignment.centerRight,
+                child: ElevatedButton.icon(
                   onPressed: () async {
-                      // Load Xtream playlist
-                    final server = _xtreamServerController.text.trim();
-                    final username = _xtreamUsernameController.text.trim();
-                    final password = _xtreamPasswordController.text.trim();
-
-                    if (server.isEmpty ||
-                        username.isEmpty ||
-                        password.isEmpty) {
-                      final localContext = context;
-                      if (!localContext.mounted) return;
-                      showAppSnackBar(localContext, SnackBar(content: Text('Please fill in all Xtream Codes fields')));
+                    final url = _m3uUrlController.text.trim();
+                    if (url.isEmpty) {
+                      if (!mounted) return;
+                      showAppSnackBar(context, SnackBar(content: Text('Please enter a valid M3U URL')));
                       return;
                     }
 
-                    {
-                      final localContext = context;
-                      if (localContext.mounted) {
-                        showAppSnackBar(localContext, SnackBar(content: Text('Loading Xtream Codes playlist...')));
-                      }
+                    if (mounted) {
+                      showAppSnackBar(context, SnackBar(content: Text('Loading playlist from URL...')));
                     }
 
-                    // Build Xtream API URL for getting live streams
-                    // Format: http://server:port/get.php?username=xxx&password=xxx&type=m3u_plus&output=ts
-                    final url =
-                        '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
-
                     try {
-                      final provider = Provider.of<ChannelProvider>(
-                        context,
-                        listen: false,
-                      );
+                      final provider = Provider.of<ChannelProvider>(context, listen: false);
                       await provider.loadPlaylistFromUrl(url);
 
-                      // Save credentials
                       final prefs = await SharedPreferences.getInstance();
-                      await prefs.setString('xtream_server', server);
-                      await prefs.setString('xtream_username', username);
-                      await prefs.setString('xtream_password', password);
-                      await prefs.setString('playlist_type', 'xtream');
-                      final localContext = context;
-                      if (!localContext.mounted) return;
+                      await prefs.setString('m3u_url', url);
+                      await prefs.setString('playlist_type', 'm3u');
+                      
+                      if (!mounted) return;
                       showAppSnackBar(
-                        localContext,
+                        context,
                         SnackBar(
-                          content: Text(
-                            'Xtream playlist loaded! ${provider.channels.length} channels found.',
-                          ),
+                          content: Text('Playlist loaded successfully! ${provider.channels.length} channels found.'),
                           backgroundColor: AppTheme.accentGreen,
                         ),
                       );
@@ -1319,9 +1206,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         showAppSnackBar(
                           context,
                           SnackBar(
-                            content: Text(
-                              'Failed to load Xtream playlist: ${e.toString()}',
-                            ),
+                            content: Text('Failed to load playlist: ${e.toString()}'),
                             backgroundColor: AppTheme.accentRed,
                           ),
                         );
@@ -1329,16 +1214,181 @@ class _SettingsScreenState extends State<SettingsScreen>
                     }
                   },
                   icon: Icon(Icons.download),
-                  label: Text('Load Playlist'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryBlue,
-                  ),
+                  label: Text('Load M3U Playlist'),
+                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue),
                 ),
-              ],
-            ),
+              ),
+            ],
+
+            // Xtream Content
+            if (_playlistInputMethod == 1) ...[
+              _buildTVTextField(
+                controller: _xtreamServerController,
+                focusNode: _xtreamServerFocusNode,
+                isEditable: _xtreamServerEditable,
+                onEditableChanged: (value) => setState(() => _xtreamServerEditable = value),
+                labelText: 'Server URL',
+                hintText: 'http://example.com:8080',
+                prefixIcon: Icons.dns,
+                onLeftArrow: requestFirstSidebarFocus,
+              ),
+              SizedBox(height: AppSizes.md),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildTVTextField(
+                      controller: _xtreamUsernameController,
+                      focusNode: _xtreamUsernameFocusNode,
+                      isEditable: _xtreamUsernameEditable,
+                      onEditableChanged: (value) => setState(() => _xtreamUsernameEditable = value),
+                      labelText: 'Username',
+                      prefixIcon: Icons.person,
+                      onLeftArrow: requestFirstSidebarFocus,
+                    ),
+                  ),
+                  SizedBox(width: AppSizes.md),
+                  Expanded(
+                    child: _buildTVTextField(
+                      controller: _xtreamPasswordController,
+                      focusNode: _xtreamPasswordFocusNode,
+                      isEditable: _xtreamPasswordEditable,
+                      onEditableChanged: (value) => setState(() => _xtreamPasswordEditable = value),
+                      labelText: 'Password',
+                      prefixIcon: Icons.lock,
+                      obscureText: true,
+                      onLeftArrow: requestFirstSidebarFocus,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: AppSizes.md),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      _xtreamServerController.clear();
+                      _xtreamUsernameController.clear();
+                      _xtreamPasswordController.clear();
+                    },
+                    child: Text('Clear'),
+                  ),
+                  SizedBox(width: AppSizes.sm),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      final server = _xtreamServerController.text.trim();
+                      final username = _xtreamUsernameController.text.trim();
+                      final password = _xtreamPasswordController.text.trim();
+
+                      if (server.isEmpty || username.isEmpty || password.isEmpty) {
+                        if (!mounted) return;
+                        showAppSnackBar(context, SnackBar(content: Text('Please fill in all Xtream Codes fields')));
+                        return;
+                      }
+
+                      if (mounted) {
+                        showAppSnackBar(context, SnackBar(content: Text('Loading Xtream Codes playlist...')));
+                      }
+
+                      final url = '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
+
+                      try {
+                        final provider = Provider.of<ChannelProvider>(context, listen: false);
+                        await provider.loadPlaylistFromUrl(url);
+
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setString('xtream_server', server);
+                        await prefs.setString('xtream_username', username);
+                        await prefs.setString('xtream_password', password);
+                        await prefs.setString('playlist_type', 'xtream');
+                        
+                        if (!mounted) return;
+                        showAppSnackBar(
+                          context,
+                          SnackBar(
+                            content: Text('Xtream playlist loaded! ${provider.channels.length} channels found.'),
+                            backgroundColor: AppTheme.accentGreen,
+                          ),
+                        );
+                      } catch (e) {
+                        if (mounted) {
+                          showAppSnackBar(
+                            context,
+                            SnackBar(
+                              content: Text('Failed to load Xtream playlist: ${e.toString()}'),
+                              backgroundColor: AppTheme.accentRed,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    icon: Icon(Icons.download),
+                    label: Text('Load Playlist'),
+                    style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildTabButton({
+    required String title,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Focus(
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        if (event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.select) {
+          onTap();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Builder(
+        builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
+          return GestureDetector(
+            onTap: onTap,
+            child: Container(
+              decoration: BoxDecoration(
+                color: isSelected 
+                    ? AppTheme.primaryBlue 
+                    : (isFocused ? AppTheme.primaryBlue.withAlpha((0.3 * 255).round()) : Colors.transparent),
+                borderRadius: BorderRadius.circular(AppSizes.radiusMd - 2),
+                border: isFocused 
+                    ? Border.all(color: Colors.white, width: 1.5)
+                    : null,
+              ),
+              alignment: Alignment.center,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    icon, 
+                    color: isSelected ? Colors.white : AppTheme.textSecondary,
+                    size: 18,
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : AppTheme.textSecondary,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+      ),
     );
   }
 
@@ -1753,6 +1803,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     labelText: 'Username',
                     helperText: 'Create free account at opensubtitles.com',
                     prefixIcon: Icons.person,
+                    onLeftArrow: requestFirstSidebarFocus,
                   ),
                   const SizedBox(height: 16),
                   _buildTVTextField(
@@ -1771,6 +1822,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     labelText: 'Password',
                     prefixIcon: Icons.lock,
                     obscureText: true,
+                    onLeftArrow: requestFirstSidebarFocus,
                   ),
                   const SizedBox(height: 16),
                   SwitchListTile(
@@ -1847,6 +1899,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     hintText: 'Enter your Real-Debrid API key',
                     helperText: 'Get API key from real-debrid.com/apitoken',
                     prefixIcon: Icons.vpn_key,
+                    onLeftArrow: requestFirstSidebarFocus,
                   ),
                   const SizedBox(height: 16),
                   CheckboxListTile(
@@ -2775,6 +2828,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     TextInputType? keyboardType,
     bool obscureText = false,
     int? maxLines = 1,
+    VoidCallback? onLeftArrow,
   }) {
     return Focus(
       focusNode: focusNode,
@@ -2796,6 +2850,22 @@ class _SettingsScreenState extends State<SettingsScreen>
             });
           }
           return KeyEventResult.handled;
+        }
+        
+        // On BACK/ESCAPE, stop editing
+        if (isEditable && (key == LogicalKeyboardKey.escape || key == LogicalKeyboardKey.goBack)) {
+          onEditableChanged(false);
+          // Keep focus on the node but exit edit mode
+          focusNode.requestFocus();
+          return KeyEventResult.handled;
+        }
+        
+        // On LEFT arrow, if not editing
+        if (!isEditable && key == LogicalKeyboardKey.arrowLeft) {
+          if (onLeftArrow != null) {
+             onLeftArrow();
+             return KeyEventResult.handled;
+          }
         }
         return KeyEventResult.ignored;
       },

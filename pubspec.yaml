@@ -69,8 +69,8 @@ flutter:
 
   # Assets for AI Upscaling
   assets:
-    - assets/models/
     - assets/images/
+    - assets/models/
 
 
 

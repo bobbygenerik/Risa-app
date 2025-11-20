@@ -323,12 +323,15 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
                     ),
                   ),
 
-                if (status == ModelDownloadStatus.downloaded) ...[
+                if (status == ModelDownloadStatus.downloaded || status == ModelDownloadStatus.bundled) ...[
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: null,
-                      icon: const Icon(Icons.check_circle, size: 18),
-                      label: const Text('Downloaded'),
+                      icon: Icon(
+                        status == ModelDownloadStatus.bundled ? Icons.check_circle_outline : Icons.check_circle,
+                        size: 18,
+                      ),
+                      label: Text(status == ModelDownloadStatus.bundled ? 'Built-in' : 'Downloaded'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.accentGreen.withAlpha((0.2 * 255).round()),
                         foregroundColor: AppTheme.accentGreen,
@@ -337,19 +340,20 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  OutlinedButton.icon(
-                    onPressed: () =>
-                        _confirmDelete(context, modelManager, model),
-                    icon: const Icon(Icons.delete_outline, size: 18),
-                    label: const Text('Delete'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.accentRed,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 12,
-                        horizontal: 16,
+                  if (status != ModelDownloadStatus.bundled)
+                    OutlinedButton.icon(
+                      onPressed: () =>
+                          _confirmDelete(context, modelManager, model),
+                      icon: const Icon(Icons.delete_outline, size: 18),
+                      label: const Text('Delete'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.accentRed,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 16,
+                        ),
                       ),
                     ),
-                  ),
                 ],
 
                 if (status == ModelDownloadStatus.downloading)
@@ -408,6 +412,11 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
         color = AppTheme.textSecondary;
         icon = Icons.cloud_download;
         label = 'Not Downloaded';
+        break;
+      case ModelDownloadStatus.bundled:
+        color = AppTheme.accentGreen;
+        icon = Icons.check_circle_outline;
+        label = 'Bundled';
         break;
     }
 

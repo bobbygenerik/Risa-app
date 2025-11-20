@@ -370,11 +370,11 @@ class _MoviesScreenState extends State<MoviesScreen> {
         height: 300,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
             colors: [
+              Colors.transparent,
               Color(0xFF050710),
-              Color(0xFF0d1140),
             ],
           ),
         ),

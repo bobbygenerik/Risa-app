@@ -89,168 +89,153 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
 
     // Make the top nav transparent always and use a moving highlighter
     // under tabs for a cleaner, less-blocky look.
-    final navBar = SizedBox(
+    final navBar = Container(
       height: AppSizes.appBarHeight * scale,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: AppSizes.xxl * scale, vertical: AppSizes.sm * scale),
-        decoration: const BoxDecoration(color: Colors.transparent),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: <Widget>[
-            // Left: Logo area (fixed width)
-            if (widget.showLogoAndTime)
-              SizedBox(
-                width: 160 * scale,
-                height: AppSizes.appBarHeight * scale,
-                child: Center(
-                  child: Image.asset(
-                    'assets/images/croppedlogo2.png',
-                    height: 40 * scale,
-                    fit: BoxFit.contain,
-                  ),
-                ),
+      padding: EdgeInsets.symmetric(horizontal: AppSizes.xl * scale, vertical: AppSizes.sm * scale),
+      decoration: const BoxDecoration(color: Colors.transparent),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: <Widget>[
+          // Left: Logo area (balanced width with time)
+          if (widget.showLogoAndTime)
+            SizedBox(
+              width: 140 * scale,
+              child: Image.asset(
+                'assets/images/croppedlogo2.png',
+                height: 40 * scale,
+                fit: BoxFit.contain,
               ),
+            ),
 
-            // Center: Tabs
-            Expanded(
-              child: LayoutBuilder(
-                builder: (ctx, constraints) {
-                  final tabCount = math.max(1, widget.tabs.length);
-                  final tabWidth = constraints.maxWidth / tabCount;
-                  final highlightWidth = math.min(56 * scale, tabWidth * 0.6);
+          // Center: Tabs
+          Expanded(
+            child: LayoutBuilder(
+              builder: (ctx, constraints) {
+                final tabCount = math.max(1, widget.tabs.length);
+                final tabWidth = constraints.maxWidth / tabCount;
+                final highlightWidth = math.min(56 * scale, tabWidth * 0.6);
 
-                  // Determine which index to highlight: focused tab first, else active tab
-                  int highlightedIndex = widget.tabs.indexWhere((t) => t.id == widget.activeTab);
-                  for (int i = 0; i < _tabFocusNodes.length; i++) {
-                    if (_tabFocusNodes[i].hasFocus) {
-                      highlightedIndex = i;
-                      break;
-                    }
+                // Determine which index to highlight: focused tab first, else active tab
+                int highlightedIndex = widget.tabs.indexWhere((t) => t.id == widget.activeTab);
+                for (int i = 0; i < _tabFocusNodes.length; i++) {
+                  if (_tabFocusNodes[i].hasFocus) {
+                    highlightedIndex = i;
+                    break;
                   }
+                }
 
-                  final left = (highlightedIndex.clamp(0, tabCount - 1)) * tabWidth + (tabWidth - highlightWidth) / 2;
+                final left = (highlightedIndex.clamp(0, tabCount - 1)) * tabWidth + (tabWidth - highlightWidth) / 2;
 
-                  return Stack(
-                    fit: StackFit.loose,
-                    children: <Widget>[
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: List.generate(
-                          tabCount,
-                          (index) => SizedBox(
-                            width: tabWidth,
-                            height: AppSizes.appBarHeight * scale,
+                return Stack(
+                  fit: StackFit.loose,
+                  children: <Widget>[
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: List.generate(
+                        tabCount,
+                        (index) => SizedBox(
+                          width: tabWidth,
                             child: _buildTabButton(index, scale),
                           ),
                         ),
                       ),
-                      // Sliding highlighter
-                      AnimatedPositioned(
-                        duration: const Duration(milliseconds: 260),
-                        curve: Curves.easeInOut,
-                        left: left,
-                        bottom: 10,
-                        child: Container(
-                          width: highlightWidth,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryBlue,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
+                    // Sliding highlighter (scaled for TV)
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 260),
+                      curve: Curves.easeInOut,
+                      left: left,
+                      bottom: 8 * scale,
+                      child: Container(
+                        width: highlightWidth,
+                        height: 4 * scale,
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryBlue,
+                          borderRadius: BorderRadius.circular(4),
                         ),
                       ),
-                    ],
-                  );
-                },
-              ),
+                    ),
+                  ],
+                );
+              },
             ),
+          ),
 
-            // Right: search/overflow/time
-            if (widget.showLogoAndTime)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: <Widget>[
-                  IconButton(
-                    onPressed: () {
-                      setState(() => _showSearchBox = !_showSearchBox);
-                      if (_showSearchBox) {
-                        widget.onSearch?.call();
-                        Future.microtask(() => _searchFocusNode.requestFocus());
-                      } else {
-                        _searchFocusNode.unfocus();
-                      }
-                    },
-                    icon: Icon(Icons.search, color: AppTheme.textSecondary),
-                    iconSize: 22 * scale,
-                    padding: EdgeInsets.symmetric(horizontal: 8 * scale),
-                    constraints: BoxConstraints(minWidth: 40 * scale, minHeight: AppSizes.appBarHeight * scale),
-                    alignment: Alignment.center,
-                    tooltip: 'Search',
-                  ),
-                  SizedBox(width: 8 * scale),
-                  // Restore the popup overflow menu with the app's navigation items
-                  PopupMenuButton<String>(
-                    color: Colors.black.withAlpha((0.85 * 255).round()),
-                    elevation: 20,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(
-                        color: AppTheme.darkBackgroundOpacity(0.12),
-                        width: 1.0,
-                      ),
-                    ),
-                    child: SizedBox(
-                      width: 40 * scale,
-                      height: AppSizes.appBarHeight * scale,
-                      child: Center(
-                        child: Icon(
-                          Icons.more_vert,
-                          size: 22 * scale,
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                    ),
-                    onSelected: (value) {
-                      // Slight delay to allow menu to dismiss before navigating
-                      Future.delayed(const Duration(milliseconds: 100), () {
-                        if (!mounted) return;
-                        if (value == 'settings') router.go('/settings');
-                        if (value == 'favorites') router.go('/favorites');
-                        if (value == 'downloads') router.go('/downloads');
-                        if (value == 'guide') router.go('/epg');
-                      });
-                    },
-                    itemBuilder: (context) => [
-                      PopupMenuItem(value: 'settings', child: Row(children: [Icon(Icons.settings, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Settings', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
-                      PopupMenuItem(value: 'favorites', child: Row(children: [Icon(Icons.favorite_outline, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Favorites', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
-                      PopupMenuItem(value: 'downloads', child: Row(children: [Icon(Icons.download, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Downloads', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
-                      PopupMenuItem(value: 'guide', child: Row(children: [Icon(Icons.schedule, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Guide', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
-                    ],
-                  ),
-                  SizedBox(width: 12 * scale),
-                  SizedBox(
-                    width: 120 * scale,
-                    height: AppSizes.appBarHeight * scale,
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: Text(
-                        widget.currentTime,
-                        textAlign: TextAlign.right,
-                        style: TextStyle(
-                          color: AppTheme.textPrimary,
-                          fontSize: 18 * scale,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 1.0,
-                        ),
-                      ),
+          // Right: search/overflow/time (reordered for better UX)
+          if (widget.showLogoAndTime)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: <Widget>[
+                IconButton(
+                  onPressed: () {
+                    setState(() => _showSearchBox = !_showSearchBox);
+                    if (_showSearchBox) {
+                      widget.onSearch?.call();
+                      Future.microtask(() => _searchFocusNode.requestFocus());
+                    } else {
+                      _searchFocusNode.unfocus();
+                    }
+                  },
+                  icon: Icon(Icons.search, color: AppTheme.textSecondary),
+                  iconSize: 22 * scale,
+                  padding: EdgeInsets.symmetric(horizontal: 8 * scale),
+                  constraints: BoxConstraints(minWidth: 40 * scale),
+                  alignment: Alignment.center,
+                  tooltip: 'Search',
+                ),
+                SizedBox(width: 12 * scale),
+                // Overflow menu
+                PopupMenuButton<String>(
+                  color: Colors.black.withAlpha((0.85 * 255).round()),
+                  elevation: 20,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: AppTheme.darkBackgroundOpacity(0.12),
+                      width: 1.0,
                     ),
                   ),
-                ],
-              ),
-          ],
-        ),
+                  child: Icon(
+                    Icons.more_vert,
+                    size: 22 * scale,
+                    color: AppTheme.textSecondary,
+                  ),
+                  onSelected: (value) {
+                    // Slight delay to allow menu to dismiss before navigating
+                    Future.delayed(const Duration(milliseconds: 100), () {
+                      if (!mounted) return;
+                      if (value == 'settings') router.go('/settings');
+                      if (value == 'favorites') router.go('/favorites');
+                      if (value == 'downloads') router.go('/downloads');
+                      if (value == 'guide') router.go('/epg');
+                    });
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(value: 'settings', child: Row(children: [Icon(Icons.settings, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Settings', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
+                    PopupMenuItem(value: 'favorites', child: Row(children: [Icon(Icons.favorite_outline, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Favorites', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
+                    PopupMenuItem(value: 'downloads', child: Row(children: [Icon(Icons.download, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Downloads', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
+                    PopupMenuItem(value: 'guide', child: Row(children: [Icon(Icons.schedule, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Guide', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
+                  ],
+                ),
+                SizedBox(width: 20 * scale),
+                // Time display (balanced width with logo)
+                SizedBox(
+                  width: 140 * scale,
+                  child: Text(
+                    widget.currentTime,
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontSize: 18 * scale,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+        ],
       ),
     );
 
@@ -359,21 +344,15 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
           child: Builder(builder: (context) {
             final isFocused = Focus.of(context).hasFocus;
             final showHighlight = isActive || isFocused;
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  tab.label,
-                  style: TextStyle(
-                    color: showHighlight ? AppTheme.primaryBlue : AppTheme.textSecondary,
-                    fontSize: 14 * scale,
-                    fontWeight: showHighlight ? FontWeight.w700 : FontWeight.w600,
-                  ),
+            return Center(
+              child: Text(
+                tab.label,
+                style: TextStyle(
+                  color: showHighlight ? AppTheme.primaryBlue : AppTheme.textSecondary,
+                  fontSize: 14 * scale,
+                  fontWeight: showHighlight ? FontWeight.w700 : FontWeight.w600,
                 ),
-                // Removed per-tab underline in favor of the single sliding highlighter
-                SizedBox(height: 12 * scale),
-              ],
+              ),
             );
           }),
         ),

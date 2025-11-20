@@ -36,7 +36,8 @@ class AIModelManager extends ChangeNotifier {
 
   /// Check if model is downloaded
   bool isModelDownloaded(String modelId) {
-    return _modelStatus[modelId] == ModelDownloadStatus.downloaded;
+    return _modelStatus[modelId] == ModelDownloadStatus.downloaded ||
+           _modelStatus[modelId] == ModelDownloadStatus.bundled;
   }
 
   /// Check if model is downloading
@@ -72,6 +73,12 @@ class AIModelManager extends ChangeNotifier {
 
   /// Check if a specific model is downloaded
   Future<void> _checkModelStatus(AIModel model) async {
+    if (model.isBundled) {
+      _modelStatus[model.id] = ModelDownloadStatus.bundled;
+      notifyListeners();
+      return;
+    }
+
     try {
       final path = await _getModelPath(model);
       final file = File(path);
@@ -98,6 +105,12 @@ class AIModelManager extends ChangeNotifier {
   Future<bool> _downloadModelInternal(AIModel model) async {
     if (_modelStatus[model.id] == ModelDownloadStatus.downloading) {
       return false; // Already downloading
+    }
+    
+    if (model.isBundled) {
+      _modelStatus[model.id] = ModelDownloadStatus.bundled;
+      notifyListeners();
+      return true;
     }
 
     try {
@@ -178,6 +191,15 @@ class AIModelManager extends ChangeNotifier {
   /// Get public path for a model (for other services)
   Future<String> getModelPath(String modelId) async {
     final model = AIModel.allModels.firstWhere((m) => m.id == modelId);
+    
+    if (model.isBundled) {
+      // Return asset path for bundled models
+      // Note: TFLite Flutter plugin handles asset paths automatically if they are in assets/
+      // But we might need to copy it to a temp file if the plugin requires a File object
+      // For now, we'll return the asset key which tflite_flutter supports
+      return 'assets/models/${model.fileName}';
+    }
+    
     return await _getModelPath(model);
   }
 
@@ -207,6 +229,7 @@ enum ModelDownloadStatus {
   downloaded,
   corrupted,
   error,
+  bundled, // New status for models included in assets
 }
 
 /// AI Model definition
@@ -229,7 +252,10 @@ class AIModel {
     required this.sizeBytes,
     required this.category,
     required this.usedBy,
+    this.isBundled = false, // Flag to indicate if model is bundled
   });
+
+  final bool isBundled;
 
   /// Get human-readable size
   String get sizeFormatted {
@@ -254,6 +280,7 @@ class AIModel {
     sizeBytes: 20 * 1024, // 20 KB
     category: ModelCategory.videoUpscaling,
     usedBy: ['AI Video Enhancement'],
+    isBundled: true,
   );
 
   static const fsrcnn = AIModel(
@@ -268,6 +295,7 @@ class AIModel {
     sizeBytes: 40 * 1024, // 40 KB
     category: ModelCategory.videoUpscaling,
     usedBy: ['AI Video Enhancement'],
+    isBundled: true,
   );
 
   static const esrgan = AIModel(

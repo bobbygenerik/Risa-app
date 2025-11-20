@@ -21,6 +21,7 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
   Timer? _carouselTimer;
   int _featuredIndex = 0;
   final FocusNode _watchFocus = FocusNode();
+  final FocusNode _settingsButtonFocus = FocusNode();
 
   @override
   void initState() {
@@ -33,7 +34,17 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
   void dispose() {
     _carouselTimer?.cancel();
     _watchFocus.dispose();
+    _settingsButtonFocus.dispose();
     super.dispose();
+  }
+
+  void requestFirstContentFocus() {
+    final channelProvider = Provider.of<ChannelProvider>(context, listen: false);
+    if (channelProvider.channels.isEmpty) {
+      _settingsButtonFocus.requestFocus();
+    } else {
+      _watchFocus.requestFocus();
+    }
   }
 
   void _startCarouselIfNeeded() {
@@ -85,6 +96,7 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
                   Text('Load a playlist with Live TV channels from Settings', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary), textAlign: TextAlign.center),
                   const SizedBox(height: 32),
                   ElevatedButton.icon(
+                    focusNode: _settingsButtonFocus,
                     onPressed: () {
                       final router = GoRouter.of(context);
                       Future.delayed(const Duration(milliseconds: 100), () {
