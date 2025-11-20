@@ -51,15 +51,10 @@ class NavTab {
 
 class _TopNavigationBarState extends State<TopNavigationBar> {
   late List<FocusNode> _tabFocusNodes;
-  late FocusNode _searchFocusNode;
-  final TextEditingController _searchController = TextEditingController();
-  bool _showSearchBox = false;
-
   @override
   void initState() {
     super.initState();
     _tabFocusNodes = List.generate(widget.tabs.length, (_) => FocusNode());
-    _searchFocusNode = FocusNode();
   }
 
   
@@ -69,8 +64,6 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
     for (var node in _tabFocusNodes) {
       node.dispose();
     }
-    _searchFocusNode.dispose();
-    _searchController.dispose();
     super.dispose();
   }
 
@@ -168,15 +161,7 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
                 IconButton(
-                  onPressed: () {
-                    setState(() => _showSearchBox = !_showSearchBox);
-                    if (_showSearchBox) {
-                      widget.onSearch?.call();
-                      Future.microtask(() => _searchFocusNode.requestFocus());
-                    } else {
-                      _searchFocusNode.unfocus();
-                    }
-                  },
+                  onPressed: widget.onSearch,
                   icon: Icon(Icons.search, color: AppTheme.textSecondary),
                   iconSize: 22 * scale,
                   padding: EdgeInsets.symmetric(horizontal: 8 * scale),
@@ -251,78 +236,6 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                 ),
               )
             : navBar,
-        // Search input field (appears when search icon is clicked)
-        if (_showSearchBox)
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 32 * scale, vertical: 16 * scale),
-            child: Container(
-              height: 48 * scale,
-              decoration: BoxDecoration(
-                color: Colors.white.withAlpha((0.08 * 255).round()),
-                border: Border.all(
-                  color: Colors.white.withAlpha((0.15 * 255).round()),
-                  width: 1.5,
-                ),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: TextField(
-                controller: _searchController,
-                focusNode: _searchFocusNode,
-                style: TextStyle(
-                  color: AppTheme.textPrimary,
-                  fontSize: 16 * scale,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'Search...',
-                  hintStyle: TextStyle(
-                    color: AppTheme.textSecondary,
-                    fontSize: 16 * scale,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide(
-                      color: AppTheme.primaryBlue,
-                      width: 2,
-                    ),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 20 * scale, vertical: 12 * scale),
-                  prefixIcon: Icon(
-                    Icons.search,
-                    color: AppTheme.textSecondary,
-                    size: 20 * scale,
-                  ),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? InkWell(
-                          onTap: () {
-                            _searchController.clear();
-                            setState(() {});
-                          },
-                          child: Icon(
-                            Icons.clear,
-                            color: AppTheme.textSecondary,
-                            size: 20 * scale,
-                          ),
-                        )
-                      : null,
-                ),
-                onChanged: (_) => setState(() {}),
-                onSubmitted: (query) {
-                  if (widget.onSearchSubmit != null) {
-                    widget.onSearchSubmit!(query);
-                  }
-                  context.go('/search?q=$query');
-                },
-              ),
-            ),
-          ),
       ],
     );
   }
@@ -335,7 +248,6 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
       color: Colors.transparent,
       child: InkWell(
         onTap: () {
-          setState(() => _showSearchBox = false);
           context.go(tab.route);
         },
         child: Focus(

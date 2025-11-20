@@ -30,7 +30,6 @@ import 'package:iptv_player/screens/live_tv_screen.dart';
 import 'package:iptv_player/screens/movies_screen.dart';
 import 'package:iptv_player/screens/series_screen.dart';
 import 'package:iptv_player/screens/enhanced_video_player_screen.dart';
-import 'package:iptv_player/screens/search_screen.dart';
 import 'package:iptv_player/screens/playlist_login_screen.dart';
 import 'package:iptv_player/screens/help_about_screen.dart';
 import 'package:iptv_player/screens/favorites_screen.dart';
@@ -659,11 +658,6 @@ final _router = GoRouter(
           ),
         ),
       ],
-    ),
-    GoRoute(
-      path: '/search',
-      pageBuilder: (context, state) =>
-          _fadeSlidePage(key: state.pageKey, child: const SearchScreen()),
     ),
     GoRoute(
       path: '/epg',

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:iptv_player/widgets/top_navigation_bar.dart';
+import 'package:iptv_player/widgets/search_popup.dart';
 
 /// Main shell that keeps the navigation bar fixed while content changes
 class MainShell extends StatefulWidget {
@@ -77,7 +77,12 @@ class _MainShellState extends State<MainShell> {
               ],
               currentTime: _currentTime,
               showLogoAndTime: true,
-              onSearch: () => context.go('/search'),
+              onSearch: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => const SearchPopup(),
+                );
+              },
             ),
             // Content area - changes when navigating between tabs
             Expanded(
