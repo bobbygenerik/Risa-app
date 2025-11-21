@@ -7,6 +7,7 @@ import 'package:video_player/video_player.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
+import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/services/epg_service.dart';
@@ -218,29 +219,125 @@ class _EPGScreenState extends State<EPGScreen> {
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.tv_off,
-            size: 80,
-            color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF050710),
+            Color(0xFF0d1140),
+          ],
+        ),
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSizes.xl,
+              vertical: AppSizes.xl,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha((0.05 * 255).round()),
+              borderRadius: BorderRadius.circular(AppSizes.radiusXl),
+              border: Border.all(
+                color: Colors.white.withAlpha((0.12 * 255).round()),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha((0.35 * 255).round()),
+                  blurRadius: 40,
+                  spreadRadius: 4,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(AppSizes.lg),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      colors: [
+                        AppTheme.primaryBlue,
+                        AppTheme.accentPink,
+                      ],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
+                        blurRadius: 20,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.tv_off_outlined,
+                    size: 42,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(height: AppSizes.xl),
+                Text(
+                  'Guide Not Set Up',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: AppSizes.sm),
+                Text(
+                  'Upload a playlist or EPG source to bring this screen to life. Your favorites, downloads, and guide will all share the same polished layout once data is loaded.',
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(color: AppTheme.textSecondary),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: AppSizes.lg),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: AppSizes.sm,
+                  runSpacing: AppSizes.sm,
+                  children: const [
+                    _EmptyStateChip(icon: Icons.playlist_add, label: 'Upload Playlist'),
+                    _EmptyStateChip(icon: Icons.calendar_today, label: 'Add EPG URL'),
+                    _EmptyStateChip(icon: Icons.settings, label: 'Configure Sources'),
+                  ],
+                ),
+                SizedBox(height: AppSizes.xl),
+                BrandPrimaryButton(
+                  icon: Icons.playlist_add_circle,
+                  label: 'Add Playlist or EPG',
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSizes.xl,
+                    vertical: AppSizes.md,
+                  ),
+                  onPressed: () => context.go('/playlist-login'),
+                ),
+                SizedBox(height: AppSizes.md),
+                OutlinedButton.icon(
+                  onPressed: () => context.go('/settings'),
+                  icon: const Icon(Icons.settings_outlined, color: AppTheme.textPrimary),
+                  label: const Text('Open Settings'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.textPrimary,
+                    side: BorderSide(color: Colors.white.withAlpha((0.2 * 255).round())),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSizes.lg,
+                      vertical: AppSizes.md,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          SizedBox(height: AppSizes.lg),
-          Text(
-            'No Channels Available',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          SizedBox(height: AppSizes.sm),
-          Text(
-            'Load a playlist in Settings to view EPG',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
-            textAlign: TextAlign.center,
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -1494,5 +1591,43 @@ class _EPGScreenState extends State<EPGScreen> {
         showAppSnackBar(localContext, SnackBar(content: Text('Channel not available')));
       }
     }
+  }
+}
+
+class _EmptyStateChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _EmptyStateChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSizes.md,
+        vertical: AppSizes.sm,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha((0.08 * 255).round()),
+        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+        border: Border.all(
+          color: Colors.white.withAlpha((0.16 * 255).round()),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: AppTheme.primaryBlue),
+          SizedBox(width: AppSizes.xs),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppTheme.textSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
+          ),
+        ],
+      ),
+    );
   }
 }

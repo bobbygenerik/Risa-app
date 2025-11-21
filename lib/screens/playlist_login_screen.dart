@@ -67,8 +67,26 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
     super.dispose();
   }
 
+  String _normalizeHttpUrl(String input) {
+    final trimmed = input.trim();
+    if (trimmed.isEmpty) return trimmed;
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    return 'http://$trimmed';
+  }
+
+  String _normalizeServerBase(String input) {
+    final normalized = _normalizeHttpUrl(input);
+    if (normalized.endsWith('/')) {
+      return normalized.substring(0, normalized.length - 1);
+    }
+    return normalized;
+  }
+
   Future<void> _loadM3UPlaylist() async {
-    final url = _m3uUrlController.text.trim();
+    final rawUrl = _m3uUrlController.text;
+    final url = _normalizeHttpUrl(rawUrl);
     if (url.isEmpty) {
       _showError('Please enter a valid M3U URL');
       return;
@@ -76,11 +94,12 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
 
     setState(() => _isLoading = true);
 
+    final channelProvider = Provider.of<ChannelProvider>(
+      context,
+      listen: false,
+    );
+
     try {
-      final channelProvider = Provider.of<ChannelProvider>(
-        context,
-        listen: false,
-      );
       await channelProvider.loadPlaylistFromUrl(url);
 
       final channelCount = channelProvider.channels.length;
@@ -143,7 +162,12 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
         }
       }
     } catch (e) {
-      _showError('Failed to load playlist: ${e.toString()}');
+      final friendly = channelProvider.errorMessage;
+      _showError(
+        (friendly != null && friendly.isNotEmpty)
+            ? friendly
+            : 'Failed to load playlist: ${e.toString()}',
+      );
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -152,7 +176,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
   }
 
   Future<void> _loadXtreamPlaylist() async {
-    final server = _xtreamServerController.text.trim();
+    final server = _normalizeServerBase(_xtreamServerController.text);
     final username = _xtreamUsernameController.text.trim();
     final password = _xtreamPasswordController.text.trim();
 
@@ -163,16 +187,17 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
 
     setState(() => _isLoading = true);
 
+    final channelProvider = Provider.of<ChannelProvider>(
+      context,
+      listen: false,
+    );
+
     try {
       // Build Xtream API URL for getting live streams
       // Format: http://server:port/get.php?username=xxx&password=xxx&type=m3u_plus&output=ts
-      final url =
+        final url =
           '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
 
-      final channelProvider = Provider.of<ChannelProvider>(
-        context,
-        listen: false,
-      );
       await channelProvider.loadPlaylistFromUrl(url);
 
       final channelCount = channelProvider.channels.length;
@@ -242,7 +267,12 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
         }
       }
     } catch (e) {
-      _showError('Failed to load Xtream playlist: ${e.toString()}');
+      final friendly = channelProvider.errorMessage;
+      _showError(
+        (friendly != null && friendly.isNotEmpty)
+            ? friendly
+            : 'Failed to load Xtream playlist: ${e.toString()}',
+      );
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);

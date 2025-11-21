@@ -78,10 +78,22 @@ class _SearchPopupState extends State<SearchPopup> {
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
     final keyboard = media.viewInsets.bottom;
-    final maxHeight = math.max(
-      360.0,
-      media.size.height - keyboard - (AppSizes.xl * 2),
-    );
+    const maxPreferredHeight = 600.0;
+    const minComfortHeight = 360.0;
+    final topPadding = AppSizes.xl;
+    final bottomPadding = AppSizes.xl + keyboard;
+    final availableHeight = media.size.height - topPadding - bottomPadding;
+    final hasComfortableSpace = availableHeight >= minComfortHeight;
+
+    double dialogHeight;
+    if (hasComfortableSpace) {
+      dialogHeight = math.min(availableHeight, maxPreferredHeight);
+    } else {
+      dialogHeight = math.max(availableHeight, 0);
+    }
+
+    const headerEstimate = 140.0; // approximate header + divider height
+    final scrollResultsHeight = math.max(dialogHeight - headerEstimate, 220.0);
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -90,20 +102,20 @@ class _SearchPopupState extends State<SearchPopup> {
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOut,
         padding: EdgeInsets.fromLTRB(
-          AppSizes.xl,
-          AppSizes.xl,
-          AppSizes.xl,
-          AppSizes.xl + keyboard,
+          topPadding,
+          topPadding,
+          topPadding,
+          bottomPadding,
         ),
         child: SafeArea(
           child: Align(
             alignment: Alignment.topCenter,
             child: ConstrainedBox(
-              constraints: BoxConstraints(
+              constraints: const BoxConstraints(
                 maxWidth: 800,
-                maxHeight: maxHeight,
               ),
               child: Container(
+                height: dialogHeight,
                 width: double.infinity,
                 decoration: BoxDecoration(
                   color: AppTheme.cardBackground.withAlpha((0.95 * 255).round()),
@@ -120,55 +132,75 @@ class _SearchPopupState extends State<SearchPopup> {
                     ),
                   ],
                 ),
-                child: Column(
-          children: [
-            // Search Header
-            Padding(
-              padding: const EdgeInsets.all(AppSizes.lg),
-              child: Row(
-                children: [
-                  const Icon(Icons.search, color: AppTheme.primaryBlue, size: 28),
-                  const SizedBox(width: AppSizes.md),
-                  Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      autofocus: true,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        color: AppTheme.textPrimary,
+                child: hasComfortableSpace
+                    ? _buildDialogContent(useExpandedResults: true)
+                    : SingleChildScrollView(
+                        padding: const EdgeInsets.only(bottom: AppSizes.lg),
+                        child: _buildDialogContent(
+                          useExpandedResults: false,
+                          resultsHeight: scrollResultsHeight,
+                        ),
                       ),
-                      decoration: const InputDecoration(
-                        hintText: 'Search channels, movies, series...',
-                        hintStyle: TextStyle(color: AppTheme.textSecondary),
-                        border: InputBorder.none,
-                      ),
-                      onChanged: _performSearch,
-                      onSubmitted: _performSearch,
-                      textInputAction: TextInputAction.search,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: AppTheme.textSecondary),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1, color: AppTheme.textSecondary),
-
-            // Results Area
-            Expanded(
-              child: _isSearching
-                  ? const Center(child: CircularProgressIndicator())
-                  : _buildResultsList(),
-            ),
-          ],
-                ),
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildDialogContent({
+    required bool useExpandedResults,
+    double? resultsHeight,
+  }) {
+    final Widget resultsWidget = _isSearching
+        ? const Center(child: CircularProgressIndicator())
+        : _buildResultsList();
+
+    final Widget expandedArea = useExpandedResults
+        ? Expanded(child: resultsWidget)
+        : SizedBox(
+            height: resultsHeight ?? 320,
+            child: resultsWidget,
+          );
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(AppSizes.lg),
+          child: Row(
+            children: [
+              const Icon(Icons.search, color: AppTheme.primaryBlue, size: 28),
+              const SizedBox(width: AppSizes.md),
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  autofocus: true,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    color: AppTheme.textPrimary,
+                  ),
+                  decoration: const InputDecoration(
+                    hintText: 'Search channels, movies, series...',
+                    hintStyle: TextStyle(color: AppTheme.textSecondary),
+                    border: InputBorder.none,
+                  ),
+                  onChanged: _performSearch,
+                  onSubmitted: _performSearch,
+                  textInputAction: TextInputAction.search,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close, color: AppTheme.textSecondary),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 1, color: AppTheme.textSecondary),
+        expandedArea,
+      ],
     );
   }
 

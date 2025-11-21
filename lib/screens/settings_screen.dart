@@ -2838,9 +2838,19 @@ class _SettingsScreenState extends State<SettingsScreen>
             enableScale: false,
             child: DropdownButtonFormField<String>(
               initialValue: value,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              dropdownColor: AppTheme.darkBackgroundOpacity(0.95),
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: AppTheme.highlight,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                  borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 2),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
               items: items.map((item) {
                 return DropdownMenuItem(value: item, child: Text(item));
