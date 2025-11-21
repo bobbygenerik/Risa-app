@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:iptv_player/screens/vlc_enhanced_player_screen.dart';
+import 'package:iptv_player/screens/enhanced_video_player_screen.dart';
 
 /// Compatibility wrapper: the project originally included a MediaKit-based
 /// player. To keep the app fully functional without adding extra native
-/// dependencies, this simply forwards to the existing VLC-based player.
+/// dependencies, this forwards to the ExoPlayer-based enhanced video player.
 class MediaKitPlayerScreen extends StatelessWidget {
   final String videoUrl;
   final String title;
@@ -20,7 +20,7 @@ class MediaKitPlayerScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return VlcEnhancedPlayerScreen(
+    return EnhancedVideoPlayerScreen(
       videoUrl: videoUrl,
       title: title,
       subtitle: subtitle,

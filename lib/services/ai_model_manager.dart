@@ -21,7 +21,8 @@ class AIModelManager extends ChangeNotifier {
   /// Initialize the model manager
   Future<void> initialize() async {
     await _checkAllModels();
-    notifyListeners();
+    // Don't notify during initialization to avoid rebuild storms
+    // Widgets will read initial state when they first build
   }
 
   /// Get status for a specific model
@@ -75,7 +76,7 @@ class AIModelManager extends ChangeNotifier {
   Future<void> _checkModelStatus(AIModel model) async {
     if (model.isBundled) {
       _modelStatus[model.id] = ModelDownloadStatus.bundled;
-      notifyListeners();
+      // Don't notify during bulk checks to avoid rebuild storms
       return;
     }
 
@@ -98,7 +99,7 @@ class AIModelManager extends ChangeNotifier {
       debugPrint('Error checking model ${model.id}: $e');
       _modelStatus[model.id] = ModelDownloadStatus.error;
     }
-    notifyListeners();
+    // Don't notify during bulk checks to avoid rebuild storms
   }
 
   /// Download a model

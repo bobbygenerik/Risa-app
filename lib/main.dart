@@ -390,15 +390,11 @@ class _MyAppState extends State<MyApp> {
           ChangeNotifierProvider(create: (_) => EpgService()),
           // Drive sync service removed.
           ChangeNotifierProvider(create: (_) => AIModelManager()..initialize()),
-          ChangeNotifierProvider(
-            create: (_) => AIUpscalingService(),
-          ),
+          ChangeNotifierProvider(create: (_) => AIUpscalingService()),
           ChangeNotifierProvider(
             create: (_) => MLKitTranslationService()..initialize(),
           ),
-          ChangeNotifierProvider(
-            create: (_) => LiveTranscriptionService(),
-          ),
+          ChangeNotifierProvider(create: (_) => LiveTranscriptionService()),
           ChangeNotifierProvider(
             create: (_) => WhisperSpeechService()..initialize(),
           ),
@@ -428,10 +424,7 @@ class _MyAppState extends State<MyApp> {
                 // larger migration to TextScaler is performed.
                 // ignore: deprecated_member_use
                 final mediaData = media.copyWith(textScaleFactor: 0.95);
-                return MediaQuery(
-                  data: mediaData,
-                  child: resolvedChild,
-                );
+                return MediaQuery(data: mediaData, child: resolvedChild);
               },
             );
           },
@@ -626,36 +619,27 @@ final _router = GoRouter(
         final activeTab = state.matchedLocation.contains('/movies')
             ? 'movies'
             : state.matchedLocation.contains('/series')
-                ? 'series'
-                : 'home';
-        
-        return MainShell(
-          activeTab: activeTab,
-          child: child,
-        );
+            ? 'series'
+            : 'home';
+
+        return MainShell(activeTab: activeTab, child: child);
       },
       routes: [
         GoRoute(
           path: '/home',
-          pageBuilder: (context, state) => _fadeSlidePage(
-            key: state.pageKey,
-            child: const LiveTVScreen(),
-          ),
+          pageBuilder: (context, state) =>
+              _fadeSlidePage(key: state.pageKey, child: const LiveTVScreen()),
         ),
         // (No /discover route — the three main tabs are Live TV, Movies, Series)
         GoRoute(
           path: '/movies',
-          pageBuilder: (context, state) => _fadeSlidePage(
-            key: state.pageKey,
-            child: const MoviesScreen(),
-          ),
+          pageBuilder: (context, state) =>
+              _fadeSlidePage(key: state.pageKey, child: const MoviesScreen()),
         ),
         GoRoute(
           path: '/series',
-          pageBuilder: (context, state) => _fadeSlidePage(
-            key: state.pageKey,
-            child: const SeriesScreen(),
-          ),
+          pageBuilder: (context, state) =>
+              _fadeSlidePage(key: state.pageKey, child: const SeriesScreen()),
         ),
       ],
     ),
@@ -666,18 +650,14 @@ final _router = GoRouter(
     ),
     GoRoute(
       path: '/recordings',
-      pageBuilder: (context, state) => _fadeSlidePage(
-        key: state.pageKey,
-        child: const RecordingsScreen(),
-      ),
+      pageBuilder: (context, state) =>
+          _fadeSlidePage(key: state.pageKey, child: const RecordingsScreen()),
     ),
-        GoRoute(
-          path: '/help',
-          pageBuilder: (context, state) => _fadeSlidePage(
-            key: state.pageKey,
-            child: const HelpAboutScreen(),
-          ),
-        ),
+    GoRoute(
+      path: '/help',
+      pageBuilder: (context, state) =>
+          _fadeSlidePage(key: state.pageKey, child: const HelpAboutScreen()),
+    ),
     GoRoute(
       path: '/settings',
       pageBuilder: (context, state) =>
@@ -702,10 +682,8 @@ final _router = GoRouter(
     ),
     GoRoute(
       path: '/edit-profile',
-      pageBuilder: (context, state) => _fadeSlidePage(
-        key: state.pageKey,
-        child: const EditProfileScreen(),
-      ),
+      pageBuilder: (context, state) =>
+          _fadeSlidePage(key: state.pageKey, child: const EditProfileScreen()),
     ),
     GoRoute(
       path: '/ai-models',
@@ -716,7 +694,8 @@ final _router = GoRouter(
       path: '/player',
       pageBuilder: (context, state) {
         final data = state.extra;
-        String videoUrl = 'https://commondatastorage.googleapis.com/gtv-videos-library/sample/BigBuckBunny.mp4';
+        String videoUrl =
+            'https://commondatastorage.googleapis.com/gtv-videos-library/sample/BigBuckBunny.mp4';
         String title = 'Video';
         Channel? channel;
         bool isLive = false;
@@ -745,18 +724,18 @@ final _router = GoRouter(
     GoRoute(
       path: '/vlc-player',
       pageBuilder: (context, state) {
-            final params = state.extra as Map<String, dynamic>?;
-            return _fadeSlidePage(
-              key: state.pageKey,
-              child: EnhancedVideoPlayerScreen(
-                videoUrl: params?['videoUrl'] ?? '',
-                title: params?['title'] ?? 'Video',
-                subtitle: params?['subtitle'],
-                isLive: params?['isLive'] ?? false,
-              ),
-            );
-          },
-        ),
+        final params = state.extra as Map<String, dynamic>?;
+        return _fadeSlidePage(
+          key: state.pageKey,
+          child: EnhancedVideoPlayerScreen(
+            videoUrl: params?['videoUrl'] ?? '',
+            title: params?['title'] ?? 'Video',
+            subtitle: params?['subtitle'],
+            isLive: params?['isLive'] ?? false,
+          ),
+        );
+      },
+    ),
   ],
 );
 
@@ -814,7 +793,11 @@ Widget _buildPlaceholder(BuildContext context, String title, IconData icon) {
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(icon, size: 80, color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round())),
+        Icon(
+          icon,
+          size: 80,
+          color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
+        ),
         const SizedBox(height: 16),
         Text(title, style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 8),

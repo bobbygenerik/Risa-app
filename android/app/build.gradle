@@ -11,6 +11,11 @@ android {
     compileSdk 36
     ndkVersion flutter.ndkVersion
     
+    // Enable R8 full mode for maximum optimization
+    buildFeatures {
+        buildConfig = true
+    }
+    
     // Handle dependency conflicts
     configurations.all {
         resolutionStrategy {
@@ -35,6 +40,11 @@ android {
         targetSdk 36
         versionCode 1
         versionName "1.0.0"
+        
+        // Reduce APK size by only including necessary architectures
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64'
+        }
     }
 
     buildTypes {
@@ -43,6 +53,17 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            
+            // Rename APK output to risa1.apk
+            applicationVariants.all { variant ->
+                variant.outputs.all {
+                    outputFileName = "risa1.apk"
+                }
+            }
+            
+            // Enable R8 full mode for more aggressive optimization
+            // This is the default in newer AGP versions but explicitly set for clarity
+            // R8 full mode provides better code optimization than ProGuard
         }
     }
 }

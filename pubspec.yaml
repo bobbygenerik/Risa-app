@@ -56,7 +56,6 @@ dependencies:
   flutter_tts: ^4.2.0  # Text-to-speech for translated audio  
   google_mlkit_translation: ^0.11.0  # On-device translation (auto-downloads language packs) - TRUE OFFLINE
   record: ^6.0.0  # Audio recording for transcription
-  flutter_vlc_player: ^7.4.4
 
 dev_dependencies:
   flutter_test:
