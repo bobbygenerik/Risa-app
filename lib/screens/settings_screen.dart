@@ -114,9 +114,8 @@ class _SettingsScreenState extends State<SettingsScreen>
       _menuFocusNodes.add(FocusNode(debugLabel: 'SettingsMenu$i'));
     }
     // Rebuild when the active tab changes so we can lazily render tab content
-    _tabController.addListener(() {
-      if (mounted) setState(() {});
-    });
+    // Use a flag to prevent redundant rebuilds
+    _tabController.addListener(_onTabChange);
     // Load settings AFTER first frame to avoid initState setState issues
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -126,6 +125,17 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   final List<FocusNode> _menuFocusNodes = [];
+
+  // Tab change handler with guard to prevent rebuild loops
+  int _lastTabIndex = -1;
+  void _onTabChange() {
+    if (!mounted) return;
+    // Only rebuild if tab actually changed
+    if (_tabController.index != _lastTabIndex) {
+      _lastTabIndex = _tabController.index;
+      setState(() {});
+    }
+  }
 
   // Load settings from SharedPreferences
   Future<void> _loadSettings() async {
@@ -198,7 +208,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     for (var n in _menuFocusNodes) {
       n.dispose();
     }
-    _tabController.removeListener(() {});
+    _tabController.removeListener(_onTabChange);
     _tabController.dispose();
     _m3uUrlController.dispose();
     _m3uUrlFocusNode.dispose();
@@ -1404,9 +1414,10 @@ class _SettingsScreenState extends State<SettingsScreen>
       title: 'AI & Cloud Settings',
       children: [
         // Live Transcription
-        Consumer<LiveTranscriptionService>(
-          builder: (context, transcriptionService, _) {
+        Builder(
+          builder: (context) {
             try {
+              final transcriptionService = Provider.of<LiveTranscriptionService>(context, listen: false);
               return _buildSectionCard(
                 title: 'Live Transcription',
                 subtitle: 'Real-time speech-to-text from video audio',
@@ -1557,9 +1568,10 @@ class _SettingsScreenState extends State<SettingsScreen>
         ),
 
         // AI Video Enhancement
-        Consumer<AIUpscalingService>(
-          builder: (context, aiService, _) {
+        Builder(
+          builder: (context) {
             try {
+              final aiService = Provider.of<AIUpscalingService>(context, listen: false);
               return _buildSectionCard(
                 title: 'AI Video Enhancement',
                 subtitle: 'On-device upscaling for better quality (FREE)',
