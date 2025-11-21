@@ -104,6 +104,9 @@ class _SettingsScreenState extends State<SettingsScreen>
   // ignore: unused_field
   String _chromecastDevice = 'Chromecast';
 
+  // Flag to prevent builds before first frame completes
+  bool _isFirstFrameComplete = false;
+
   @override
   void initState() {
     super.initState();
@@ -119,6 +122,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     // Load settings AFTER first frame to avoid initState setState issues
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
+        _isFirstFrameComplete = true;
         _loadSettings();
       }
     });
@@ -229,6 +233,19 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Prevent building heavy content before first frame completes
+    // This avoids rebuild storms during initialization
+    if (!_isFirstFrameComplete) {
+      return Scaffold(
+        backgroundColor: const Color(0xFF050710),
+        body: Center(
+          child: CircularProgressIndicator(
+            color: Colors.blue,
+          ),
+        ),
+      );
+    }
+    
     return PopScope(
       canPop: false,
       // ignore: deprecated_member_use
