@@ -26,6 +26,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  late final FocusHighlightStrategy _previousHighlightStrategy;
 
   // Playlist Settings
   final TextEditingController _m3uUrlController = TextEditingController();
@@ -104,14 +105,22 @@ class _SettingsScreenState extends State<SettingsScreen>
   // ignore: unused_field
   String _chromecastDevice = 'Chromecast';
 
-  // Flag to prevent builds before first frame completes
-  bool _isFirstFrameComplete = false;
+  late final List<ScrollController> _tabScrollControllers;
+  late Future<Map<String, String?>> _profileFuture;
+  late Future<Map<String, String?>> _savedPlaylistsFuture;
+  late Future<Map<String, dynamic>> _epgFuture;
 
   @override
   void initState() {
     super.initState();
     
     _tabController = TabController(length: 5, vsync: this); // Reduced from 7 to 5
+    _previousHighlightStrategy = FocusManager.instance.highlightStrategy;
+    FocusManager.instance.highlightStrategy = FocusHighlightStrategy.alwaysTouch;
+    _tabScrollControllers = List.generate(5, (_) => ScrollController());
+    _profileFuture = _fetchProfileData();
+    _savedPlaylistsFuture = _fetchSavedPlaylists();
+    _epgFuture = _fetchEpgData();
     // Prepare focus nodes for the sidebar menu so external callers can request focus
     for (int i = 0; i < 5; i++) {
       _menuFocusNodes.add(FocusNode(debugLabel: 'SettingsMenu$i'));
@@ -122,9 +131,6 @@ class _SettingsScreenState extends State<SettingsScreen>
     // Load settings AFTER first frame to avoid initState setState issues
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        setState(() {
-          _isFirstFrameComplete = true;
-        });
         _loadSettings();
       }
     });
@@ -146,6 +152,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   // Load settings from SharedPreferences
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     setState(() {
       // Text controllers
       _m3uUrlController.text = prefs.getString('m3u_url') ?? '';
@@ -214,6 +221,10 @@ class _SettingsScreenState extends State<SettingsScreen>
     for (var n in _menuFocusNodes) {
       n.dispose();
     }
+    FocusManager.instance.highlightStrategy = _previousHighlightStrategy;
+    for (final controller in _tabScrollControllers) {
+      controller.dispose();
+    }
     _tabController.removeListener(_onTabChange);
     _tabController.dispose();
     _m3uUrlController.dispose();
@@ -235,19 +246,6 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Prevent building heavy content before first frame completes
-    // This avoids rebuild storms during initialization
-    if (!_isFirstFrameComplete) {
-      return Scaffold(
-        backgroundColor: const Color(0xFF050710),
-        body: Center(
-          child: CircularProgressIndicator(
-            color: Colors.blue,
-          ),
-        ),
-      );
-    }
-    
     return PopScope(
       canPop: false,
       // ignore: deprecated_member_use
@@ -492,7 +490,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget _buildAccountSettings() {
     // Drive sync feature removed from the app. Only show profile section.
     return FutureBuilder<Map<String, String?>>(
-      future: _loadProfileData(),
+      future: _profileFuture,
       builder: (context, snapshot) {
         final userName = snapshot.data?['name'] ?? 'User';
         final userEmail = snapshot.data?['email'] ?? 'user@example.com';
@@ -554,13 +552,58 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Future<Map<String, String?>> _loadProfileData() async {
+  Future<Map<String, String?>> _fetchProfileData() async {
     final prefs = await SharedPreferences.getInstance();
     return {
       'name': prefs.getString('user_name'),
       'email': prefs.getString('user_email'),
       'imagePath': prefs.getString('profile_image_path'),
     };
+  }
+
+  Future<Map<String, String?>> _fetchSavedPlaylists() async {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'type': prefs.getString('playlist_type'),
+      'name': prefs.getString('playlist_name'),
+      'm3u_url': prefs.getString('m3u_url'),
+      'xtream_server': prefs.getString('xtream_server'),
+      'xtream_username': prefs.getString('xtream_username'),
+    };
+  }
+
+  Future<Map<String, dynamic>> _fetchEpgData() async {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'epg_url': prefs.getString('epg_url'),
+      'custom_epg_url': prefs.getString('custom_epg_url'),
+      'playlist_type': prefs.getString('playlist_type'),
+      'm3u_url': prefs.getString('m3u_url'),
+      'xtream_server': prefs.getString('xtream_server'),
+      'epg_update_interval': prefs.getInt('epg_update_interval') ?? 12,
+      'epg_past_days': prefs.getInt('epg_past_days') ?? 1,
+      'store_descriptions': prefs.getBool('store_program_descriptions') ?? true,
+      'show_channel_logos': prefs.getBool('show_channel_logos') ?? true,
+      'show_program_images': prefs.getBool('show_program_images') ?? true,
+    };
+  }
+
+  void _refreshProfileData() {
+    setState(() {
+      _profileFuture = _fetchProfileData();
+    });
+  }
+
+  void _refreshSavedPlaylists() {
+    setState(() {
+      _savedPlaylistsFuture = _fetchSavedPlaylists();
+    });
+  }
+
+  void _refreshEpgData() {
+    setState(() {
+      _epgFuture = _fetchEpgData();
+    });
   }
 
   Widget _buildPlaybackSettings() {
@@ -697,21 +740,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   Widget _buildEPGSourceSection() {
     return FutureBuilder<Map<String, dynamic>>(
-      future: () async {
-        final prefs = await SharedPreferences.getInstance();
-        return {
-          'epg_url': prefs.getString('epg_url'),
-          'custom_epg_url': prefs.getString('custom_epg_url'),
-          'playlist_type': prefs.getString('playlist_type'),
-          'm3u_url': prefs.getString('m3u_url'),
-          'xtream_server': prefs.getString('xtream_server'),
-          'epg_update_interval': prefs.getInt('epg_update_interval') ?? 12,
-          'epg_past_days': prefs.getInt('epg_past_days') ?? 1,
-          'store_descriptions': prefs.getBool('store_program_descriptions') ?? true,
-          'show_channel_logos': prefs.getBool('show_channel_logos') ?? true,
-          'show_program_images': prefs.getBool('show_program_images') ?? true,
-        };
-      }(),
+      future: _epgFuture,
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data == null) {
           return Card(
@@ -2559,16 +2588,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   Widget _buildSavedPlaylistsSection() {
     return FutureBuilder<Map<String, String?>>(
-      future: () async {
-        final prefs = await SharedPreferences.getInstance();
-        return {
-          'type': prefs.getString('playlist_type'),
-          'name': prefs.getString('playlist_name'),
-          'm3u_url': prefs.getString('m3u_url'),
-          'xtream_server': prefs.getString('xtream_server'),
-          'xtream_username': prefs.getString('xtream_username'),
-        };
-      }(),
+      future: _savedPlaylistsFuture,
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data == null) {
           return Card(
@@ -2633,18 +2653,19 @@ class _SettingsScreenState extends State<SettingsScreen>
                     ),
                   )
                 else
-                  Focus(
-                    onKeyEvent: (node, event) {
-                      if (event is! KeyDownEvent) return KeyEventResult.ignored;
-                      if (event.logicalKey == LogicalKeyboardKey.select ||
-                          event.logicalKey == LogicalKeyboardKey.enter) {
-                        context.go('/playlist-editor');
-                        return KeyEventResult.handled;
-                      }
-                      return KeyEventResult.ignored;
-                    },
-                    child: GestureDetector(
-                      onTap: () => context.go('/playlist-editor'),
+                  GestureDetector(
+                    onTap: () => context.go('/playlist-editor'),
+                    child: Focus(
+                      skipTraversal: true,
+                      onKeyEvent: (node, event) {
+                        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                        if (event.logicalKey == LogicalKeyboardKey.select ||
+                            event.logicalKey == LogicalKeyboardKey.enter) {
+                          context.go('/playlist-editor');
+                          return KeyEventResult.handled;
+                        }
+                        return KeyEventResult.ignored;
+                      },
                       child: Container(
                         padding: EdgeInsets.all(AppSizes.md),
                         decoration: BoxDecoration(
@@ -2886,7 +2907,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 vertical: AppSizes.sm,
               ),
             ),
-            dropdownColor: AppTheme.cardBackground,
+            dropdownColor: AppTheme.darkBackgroundOpacity(0.95),
             style: TextStyle(color: Colors.white),
             items: items.map((item) {
               return DropdownMenuItem(
