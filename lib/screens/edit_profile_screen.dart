@@ -130,10 +130,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         context.go('/home');
         return false;
       },
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: _buildGlassAppBar(),
-        body: Padding(
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF050710),
+              Color(0xFF0d1140),
+            ],
+          ),
+        ),
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: _buildGlassAppBar(),
+          body: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Center(
             child: ConstrainedBox(
@@ -180,6 +191,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
             ),
           ),
+        ),
         ),
       ),
     );

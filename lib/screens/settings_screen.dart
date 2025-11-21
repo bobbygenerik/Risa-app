@@ -122,7 +122,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     // Load settings AFTER first frame to avoid initState setState issues
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        _isFirstFrameComplete = true;
+        setState(() {
+          _isFirstFrameComplete = true;
+        });
         _loadSettings();
       }
     });
@@ -2868,16 +2870,29 @@ class _SettingsScreenState extends State<SettingsScreen>
           Text(label, style: Theme.of(context).textTheme.bodyMedium),
           SizedBox(height: AppSizes.sm),
           DropdownButtonFormField<String>(
-            initialValue: value,
+            value: value,
             decoration: InputDecoration(
-              border: OutlineInputBorder(),
+              border: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.white.withAlpha((0.2 * 255).round())),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.white.withAlpha((0.2 * 255).round())),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
+              ),
               contentPadding: EdgeInsets.symmetric(
                 horizontal: AppSizes.md,
                 vertical: AppSizes.sm,
               ),
             ),
+            dropdownColor: AppTheme.cardBackground,
+            style: TextStyle(color: Colors.white),
             items: items.map((item) {
-              return DropdownMenuItem(value: item, child: Text(item));
+              return DropdownMenuItem(
+                value: item,
+                child: Text(item, style: TextStyle(color: Colors.white)),
+              );
             }).toList(),
             onChanged: onChanged,
           ),
