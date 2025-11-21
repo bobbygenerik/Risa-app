@@ -17,7 +17,6 @@ import 'package:iptv_player/services/whisper_speech_service.dart';
 import 'package:iptv_player/services/ai_model_manager.dart';
 import 'package:iptv_player/services/opensubtitles_service.dart';
 import 'package:iptv_player/services/real_debrid_service.dart';
-import 'package:iptv_player/providers/settings_provider.dart';
 import 'package:iptv_player/widgets/main_shell.dart';
 import 'package:iptv_player/widgets/legal_disclaimer_dialog.dart';
 import 'package:iptv_player/screens/epg_screen.dart';
@@ -405,9 +404,6 @@ class _MyAppState extends State<MyApp> {
           ChangeNotifierProvider(
             create: (_) => RealDebridService()..initialize(),
           ),
-          ChangeNotifierProvider(
-            create: (_) => SettingsProvider()..initialize(),
-          ),
         ],
         child: Builder(
           builder: (context) {
@@ -464,7 +460,7 @@ class _MyAppState extends State<MyApp> {
       } finally {
         // Ensure the scheduled flag is cleared regardless of mounted state.
         _profileDialogScheduled = false;
-        if (mounted) {
+        if (mounted && !profileProviderRef.isDisposed) {
           final stillMissingProfile = profileProviderRef.activeProfile == null;
           if (stillMissingProfile) {
             setState(() {});
@@ -508,6 +504,11 @@ class _MyAppState extends State<MyApp> {
         return;
       }
 
+      if (provider.isDisposed) {
+        _creatingDefaultProfile = false;
+        return;
+      }
+
       try {
         final id = DateTime.now().millisecondsSinceEpoch.toString();
         final profile = UserProfile(
@@ -515,6 +516,10 @@ class _MyAppState extends State<MyApp> {
           name: 'Default Profile',
           avatarUrl: '',
         );
+        if (provider.isDisposed) {
+          _creatingDefaultProfile = false;
+          return;
+        }
         await provider.addProfile(profile);
         debugPrint('Default profile created: ${profile.id}');
       } catch (error, stack) {

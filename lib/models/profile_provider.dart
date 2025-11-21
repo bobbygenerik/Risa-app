@@ -28,9 +28,11 @@ class ProfileProvider extends ChangeNotifier {
 
   List<UserProfile> _profiles = [];
   UserProfile? _activeProfile;
+  bool _isDisposed = false;
 
   List<UserProfile> get profiles => _profiles;
   UserProfile? get activeProfile => _activeProfile;
+  bool get isDisposed => _isDisposed;
 
   Future<void> loadProfiles() async {
     final prefs = await SharedPreferences.getInstance();
@@ -43,7 +45,7 @@ class ProfileProvider extends ChangeNotifier {
     }
     final activeId = prefs.getString(_activeProfileKey);
     _activeProfile = _findProfile(activeId) ?? (_profiles.isNotEmpty ? _profiles.first : null);
-    notifyListeners();
+    _notifyIfActive();
   }
 
   Future<void> addProfile(UserProfile profile) async {
@@ -61,13 +63,13 @@ class ProfileProvider extends ChangeNotifier {
       _activeProfile = null;
       await _saveActiveProfileId(null);
     }
-    notifyListeners();
+    _notifyIfActive();
   }
 
   Future<void> setActiveProfile(String? id) async {
     _activeProfile = _findProfile(id);
     await _saveActiveProfileId(_activeProfile?.id);
-    notifyListeners();
+    _notifyIfActive();
   }
 
   UserProfile? _findProfile(String? id) {
@@ -94,5 +96,17 @@ class ProfileProvider extends ChangeNotifier {
     } else {
       await prefs.remove(_activeProfileKey);
     }
+  }
+  
+  void _notifyIfActive() {
+    if (!_isDisposed) {
+      notifyListeners();
+    }
+  }
+  
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
   }
 }
