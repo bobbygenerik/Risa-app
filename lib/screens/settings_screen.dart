@@ -66,22 +66,10 @@ class _SettingsScreenState extends State<SettingsScreen>
   final FocusNode _openSubtitlesUsernameFocusNode = FocusNode();
   final FocusNode _openSubtitlesPasswordFocusNode = FocusNode();
 
-  // Real-Debrid Settings
-  bool _realDebridEnabled = false;
-  bool _realDebridForCatchup = true;
-  bool _realDebridForVOD = true;
-
-  // OpenSubtitles Settings
-  bool _openSubtitlesEnabled = false;
-
-  // AI Upscaling settings
-  bool _aiUpscalingEnabled = false;
-  String _aiQuality = 'Balanced';
-  bool _autoDownloadSubtitles = true;
+  // Legacy settings mirrors (deprecated by provider usage)
   // ignore: unused_field
   String _preferredSubtitleLanguage = 'English';
 
-  // Other Settings
   // ignore: unused_field
   String _selectedLanguage = 'English';
   // ignore: unused_field
@@ -142,16 +130,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       _openSubtitlesPasswordController.text =
           prefs.getString('opensubtitles_password') ?? '';
 
-      // Boolean settings
-      _realDebridEnabled = prefs.getBool('realdebrid_enabled') ?? false;
-      _realDebridForCatchup = prefs.getBool('realdebrid_catchup') ?? true;
-      _realDebridForVOD = prefs.getBool('realdebrid_vod') ?? true;
-      _openSubtitlesEnabled = prefs.getBool('opensubtitles_enabled') ?? false;
-      _aiUpscalingEnabled = prefs.getBool('ai_upscaling') ?? false;
-      _autoDownloadSubtitles = prefs.getBool('auto_download_subtitles') ?? true;
-
-      // String settings
-      _aiQuality = prefs.getString('ai_quality') ?? 'Balanced';
+        // String settings
       _preferredSubtitleLanguage =
           prefs.getString('subtitle_language') ?? 'English';
       _selectedLanguage = prefs.getString('app_language') ?? 'English';
@@ -190,7 +169,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: false,
+          canPop: false,
       // ignore: deprecated_member_use
       onPopInvoked: (didPop) {
         if (didPop) return;
@@ -1429,400 +1408,13 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  // ignore: unused_element
-  Widget _buildAISettingsSection() {
-    return _buildSettingsSection(
-      title: 'AI & Cloud Settings',
-      children: [
-        // Live Transcription
-        Builder(
-          builder: (context) {
-            try {
-              final transcriptionService = Provider.of<LiveTranscriptionService>(context, listen: false);
-              return _buildSectionCard(
-                title: 'Live Transcription',
-                subtitle: 'Real-time speech-to-text from video audio',
-                children: [
-                  SwitchListTile(
-                    value: transcriptionService.isTranscribing,
-                    onChanged: (value) async {
-                      if (value) {
-                        await transcriptionService.startTranscription();
-                      } else {
-                        await transcriptionService.stopTranscription();
-                      }
-                    },
-                  ),
-                  if (transcriptionService.isTranscribing) ...[
-                    SwitchListTile(
-                      title: const Text('Enable Translation'),
-                      subtitle: const Text(
-                        'Translate transcribed text to another language',
-                      ),
-                      value: transcriptionService.isTranslating,
-                      onChanged: transcriptionService.setTranslationEnabled,
-                    ),
-
-                    ListTile(
-                      leading: const Icon(Icons.record_voice_over),
-                      title: const Text('Source Language'),
-                      subtitle: Text(transcriptionService.sourceLanguage),
-                      trailing: const Icon(
-                        Icons.arrow_forward_ios,
-                        size: 16,
-                      ),
-                      onTap: () => _showSourceLanguageSelector(
-                        context,
-                        transcriptionService,
-                      ),
-                    ),
-
-                    if (transcriptionService.isTranslating) ...[
-                      ListTile(
-                        leading: const Icon(Icons.language),
-                        title: const Text('Target Language'),
-                        subtitle: Text(
-                          transcriptionService.targetLanguage,
-                        ),
-                        trailing: const Icon(
-                          Icons.arrow_forward_ios,
-                          size: 16,
-                        ),
-                        onTap: () => _showTargetLanguageSelector(
-                          context,
-                          transcriptionService,
-                        ),
-                      ),
-
-                      SwitchListTile(
-                        title: const Text('Text-to-Speech'),
-                        subtitle: const Text(
-                          'Speak translated text aloud',
-                        ),
-                        value: transcriptionService.isTTSEnabled,
-                        onChanged: transcriptionService.setTTSEnabled,
-                      ),
-                    ],
-
-                    const Divider(),
-
-                    if (transcriptionService.transcriptions.isNotEmpty) ...[
-                      ListTile(
-                        leading: const Icon(Icons.download),
-                        title: const Text('Export Transcriptions'),
-                        subtitle: Text(
-                          '${transcriptionService.transcriptions.length} entries available',
-                        ),
-                        trailing: ElevatedButton(
-                          onPressed: () => _exportTranscriptions(
-                            context,
-                            transcriptionService,
-                          ),
-                          child: const Text('Export as SRT'),
-                        ),
-                      ),
-
-                      ListTile(
-                        leading: const Icon(Icons.delete_outline),
-                        title: const Text('Clear Transcriptions'),
-                        subtitle: const Text(
-                          'Remove all saved transcriptions',
-                        ),
-                        trailing: TextButton(
-                          onPressed: () => _confirmClearTranscriptions(
-                            context,
-                            transcriptionService,
-                          ),
-                          child: const Text('Clear All'),
-                        ),
-                      ),
-                    ],
-
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: EdgeInsets.all(AppSizes.md),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                size: 20,
-                                color: AppTheme.primaryBlue,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'About Live Transcription',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'Live transcription uses on-device speech recognition to convert video audio to text in real-time. '
-                            'Translation and text-to-speech are also processed on your device for privacy and performance.',
-                            style: TextStyle(fontSize: 12, height: 1.4),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              );
-            } catch (e, st) {
-              debugPrint('Settings: LiveTranscription builder error: $e\n$st');
-              return _buildSectionCard(
-                title: 'Live Transcription',
-                children: [
-                  Text('Unavailable on this device', style: TextStyle(color: AppTheme.textSecondary)),
-                ],
-              );
-            }
-          },
-        ),
-
-        // AI Video Enhancement
-        Builder(
-          builder: (context) {
-            try {
-              final aiService = Provider.of<AIUpscalingService>(context, listen: false);
-              return _buildSectionCard(
-                title: 'AI Video Enhancement',
-                subtitle: 'On-device upscaling for better quality (FREE)',
-                children: [
-                SwitchListTile(
-                  title: Text('Enable AI Upscaling'),
-                  subtitle: Text(
-                    aiService.isModelLoaded
-                        ? 'Upscale video to 2x resolution using AI'
-                        : 'Model not loaded - See AI_MODEL_SETUP_GUIDE.md',
-                  ),
-                  value: _aiUpscalingEnabled && aiService.isModelLoaded,
-                  onChanged: aiService.isModelLoaded
-                      ? (value) async {
-                          setState(() {
-                            _aiUpscalingEnabled = value;
-                          });
-                          final prefs = await SharedPreferences.getInstance();
-                          await prefs.setBool('ai_upscaling', value);
-                          aiService.setEnabled(value);
-                          final localContext = context;
-                          if (!localContext.mounted) return;
-                          showAppSnackBar(
-                            localContext,
-                            SnackBar(
-                              content: Text(
-                                value ? 'AI Upscaling enabled' : 'AI Upscaling disabled',
-                              ),
-                            ),
-                          );
-                        }
-                      : null,
-                ),
-                if (_aiUpscalingEnabled && aiService.isModelLoaded) ...[
-                  _buildDropdown(
-                    'Quality Preset',
-                    _aiQuality,
-                    ['Fast', 'Balanced', 'Quality'],
-                    (value) async {
-                      if (value == null) return;
-                      setState(() {
-                        _aiQuality = value;
-                      });
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setString('ai_quality', value);
-                      aiService.setQualityPreset(value);
-                    },
-                  ),
-                  Padding(
-                    padding: EdgeInsets.all(AppSizes.md),
-                    child: Container(
-                      padding: EdgeInsets.all(AppSizes.md),
-                      decoration: BoxDecoration(
-                        color: AppTheme.highlight,
-                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.info_outline, size: 16),
-                              SizedBox(width: 8),
-                              Text(
-                                'AI Enhancement Info',
-                                style: TextStyle(fontWeight: FontWeight.w600),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            '• GPU Acceleration: ${aiService.isGPUAvailable ? "✓ Available" : "✗ CPU Only"}',
-                          ),
-                          Text('• Upscales video to 2x resolution'),
-                          Text('• Quality: $_aiQuality'),
-                          if (aiService.isGPUAvailable)
-                            Text(
-                              '• Est. Performance: ${_getAIPerformanceText(_aiQuality, true)}',
-                            ),
-                          if (!aiService.isGPUAvailable)
-                            Text(
-                              '• Est. Performance: ${_getAIPerformanceText(_aiQuality, false)}',
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-                if (!aiService.isModelLoaded)
-                  Padding(
-                    padding: EdgeInsets.all(AppSizes.md),
-                    child: Container(
-                      padding: EdgeInsets.all(AppSizes.md),
-                      decoration: BoxDecoration(
-                        color: AppTheme.accentOrange.withAlpha((0.1 * 255).round()),
-                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                        border: Border.all(
-                          color: AppTheme.accentOrange.withAlpha((0.3 * 255).round()),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.warning_amber,
-                                size: 16,
-                                color: AppTheme.accentOrange,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Model Not Found',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.accentOrange,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'To enable AI upscaling:',
-                          ),
-                          Text(
-                            '1. Download a TFLite model (FSRCNN recommended)',
-                          ),
-                          Text('2. Place in assets/models/esrgan_x2.tflite'),
-                          Text('3. Rebuild the app'),
-                          SizedBox(height: 8),
-                          Text(
-                            'See AI_MODEL_SETUP_GUIDE.md for details',
-                            style: TextStyle(fontStyle: FontStyle.italic),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
-              );
-            } catch (e, st) {
-              debugPrint('Settings: AIUpscaling builder error: $e\n$st');
-              return _buildSectionCard(
-                title: 'AI Video Enhancement',
-                children: [Text('Unavailable on this device', style: TextStyle(color: AppTheme.textSecondary))],
-              );
-            }
-          },
-        ),
-
-        Consumer<SettingsProvider>(
-          builder: (context, settings, _) {
-            if (!settings.isInitialized) {
-              return _buildSectionCard(
-                title: 'Playback Options',
-                children: const [Center(child: CircularProgressIndicator())],
-              );
-            }
-
-            return Column(
-              children: [
-                _buildSectionCard(
-                  title: 'Playback Options',
-                  children: [
-                    _buildSwitchTile(
-                      'Auto-play Next Episode',
-                      settings.autoPlayNextEpisode,
-                      settings.setAutoPlayNextEpisode,
-                    ),
-                    _buildSwitchTile(
-                      'Remember Playback Position',
-                      settings.rememberPlaybackPosition,
-                      settings.setRememberPlaybackPosition,
-                    ),
-                    _buildSwitchTile(
-                      'Skip Intro (if available)',
-                      settings.skipIntro,
-                      settings.setSkipIntro,
-                    ),
-                    _buildDropdown(
-                      'Preferred Video Quality',
-                      settings.playbackQuality,
-                      ['Auto', '4K', '1080p', '720p', '480p'],
-                      (value) {
-                        if (value != null) {
-                          settings.setPlaybackQuality(value);
-                        }
-                      },
-                    ),
-                  ],
-                ),
-                _buildSectionCard(
-                  title: 'Buffer Settings',
-                  children: [
-                    Text('Video Buffer Size: ${settings.videoBufferSize.round()}%'),
-                    Slider(
-                      value: settings.videoBufferSize,
-                      min: 0,
-                      max: 100,
-                      divisions: 20,
-                      label: '${settings.videoBufferSize.round()}%',
-                      onChanged: (value) => settings.setVideoBufferSize(value),
-                    ),
-                    Text(
-                      'Higher buffer reduces stuttering but increases memory usage',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.textTertiary,
-                          ),
-                    ),
-                  ],
-                ),
-              ],
-            );
-          },
-        ),
-        
-        // Saved Playlists Section
-        _buildSavedPlaylistsSection(),
-        
-        // EPG Source Section
-        _buildEPGSourceSection(),
-      ],
-    );
-  }
-
   Widget _buildCloudAndAISettings() {
-    return _buildSettingsSection(
-      title: 'AI Features',
-      controller: _tabScrollControllers[3],
-      children: [
+    return Consumer<SettingsProvider>(
+      builder: (context, settings, _) {
+        return _buildSettingsSection(
+          title: 'AI Features',
+          controller: _tabScrollControllers[3],
+          children: [
         // OpenSubtitles Integration - Use Builder with Provider.of instead of Consumer
         Builder(
           builder: (context) {
@@ -1835,15 +1427,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                   SwitchListTile(
                     title: const Text('Enable OpenSubtitles'),
                     subtitle: const Text('Automatically download subtitles'),
-                    value: _openSubtitlesEnabled,
-                    onChanged: (value) {
-                      setState(() {
-                        _openSubtitlesEnabled = value;
-                      });
+                    value: settings.openSubtitlesEnabled,
+                    onChanged: (value) async {
+                      await settings.setOpenSubtitlesEnabled(value);
                       subtitleService.setEnabled(value);
                     },
                   ),
-                  if (_openSubtitlesEnabled) ...[
+                  if (settings.openSubtitlesEnabled) ...[
                     const SizedBox(height: 16),
                     _buildTVTextField(
                       controller: _openSubtitlesUsernameController,
@@ -1886,11 +1476,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                     SwitchListTile(
                       title: const Text('Auto-download subtitles'),
                       subtitle: const Text('Download subtitles automatically when playing'),
-                      value: _autoDownloadSubtitles,
-                      onChanged: (value) {
-                        setState(() {
-                          _autoDownloadSubtitles = value;
-                        });
+                      value: settings.autoDownloadSubtitles,
+                      onChanged: (value) async {
+                        await settings.setAutoDownloadSubtitles(value);
                         subtitleService.setAutoDownload(value);
                       },
                     ),
@@ -1938,15 +1526,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                   SwitchListTile(
                     title: const Text('Enable Real-Debrid'),
                     subtitle: const Text('Use your Real-Debrid account for premium links'),
-                    value: _realDebridEnabled,
-                    onChanged: (value) {
-                      setState(() {
-                        _realDebridEnabled = value;
-                      });
+                    value: settings.realDebridEnabled,
+                    onChanged: (value) async {
+                      await settings.setRealDebridEnabled(value);
                       rdService.setEnabled(value);
                     },
                   ),
-                  if (_realDebridEnabled) ...[
+                  if (settings.realDebridEnabled) ...[
                     const SizedBox(height: 16),
                     _buildTVTextField(
                       controller: _realDebridApiKeyController,
@@ -1967,22 +1553,20 @@ class _SettingsScreenState extends State<SettingsScreen>
                     const SizedBox(height: 16),
                     CheckboxListTile(
                       title: const Text('Use for Catch-up TV'),
-                      value: _realDebridForCatchup,
-                      onChanged: (value) {
-                        setState(() {
-                          _realDebridForCatchup = value ?? true;
-                        });
-                        rdService.setEnableForCatchup(value ?? true);
+                      value: settings.realDebridForCatchup,
+                      onChanged: (value) async {
+                        final newValue = value ?? true;
+                        await settings.setRealDebridForCatchup(newValue);
+                        rdService.setEnableForCatchup(newValue);
                       },
                     ),
                     CheckboxListTile(
                       title: const Text('Use for VOD/Movies'),
-                      value: _realDebridForVOD,
-                      onChanged: (value) {
-                        setState(() {
-                          _realDebridForVOD = value ?? true;
-                        });
-                        rdService.setEnableForVOD(value ?? true);
+                      value: settings.realDebridForVod,
+                      onChanged: (value) async {
+                        final newValue = value ?? true;
+                        await settings.setRealDebridForVod(newValue);
+                        rdService.setEnableForVOD(newValue);
                       },
                     ),
                     const SizedBox(height: 8),
@@ -2044,12 +1628,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                   SwitchListTile(
                     title: const Text('Enable AI Upscaling'),
                     subtitle: const Text('Enhance video quality with AI (2x upscaling)'),
-                    value: _aiUpscalingEnabled,
+                    value: settings.aiUpscalingEnabled,
                     onChanged: aiService.isModelLoaded
                         ? (value) {
-                            setState(() {
-                              _aiUpscalingEnabled = value;
-                            });
+                            settings.setAiUpscalingEnabled(value);
                             aiService.setEnabled(value);
                           }
                         : null,
@@ -2061,7 +1643,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       style: TextStyle(color: AppTheme.accentRed, fontSize: 12),
                     ),
                   ],
-                  if (_aiUpscalingEnabled) ...[
+                  if (settings.aiUpscalingEnabled) ...[
                     const SizedBox(height: 16),
                     const Text(
                       'Quality Preset',
@@ -2074,12 +1656,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                         ButtonSegment(value: 'Balanced', label: Text('Balanced')),
                         ButtonSegment(value: 'Quality', label: Text('Quality')),
                       ],
-                      selected: {_aiQuality},
+                      selected: {settings.aiQualityPreset},
                       onSelectionChanged: (Set<String> selection) {
-                        setState(() {
-                          _aiQuality = selection.first;
-                        });
-                        aiService.setQuality(selection.first);
+                        final quality = selection.first;
+                        settings.setAiQualityPreset(quality);
+                        aiService.setQuality(quality);
                       },
                     ),
                     const SizedBox(height: 16),
@@ -2366,6 +1947,8 @@ class _SettingsScreenState extends State<SettingsScreen>
           },
         ),
       ],
+    );
+      },
     );
   }
 

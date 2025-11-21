@@ -27,6 +27,13 @@ class SettingsProvider extends ChangeNotifier {
   String _videoQuality = 'Auto';
   String _playbackQuality = 'Auto';
   double _videoBufferSize = 50;
+  bool _openSubtitlesEnabled = false;
+  bool _autoDownloadSubtitles = true;
+  bool _realDebridEnabled = false;
+  bool _realDebridForCatchup = true;
+  bool _realDebridForVod = true;
+  bool _aiUpscalingEnabled = false;
+  String _aiQualityPreset = 'Balanced';
   Map<String, String?>? _profileCache;
   Map<String, String?>? _savedPlaylistsCache;
   Map<String, dynamic>? _epgCache;
@@ -50,6 +57,13 @@ class SettingsProvider extends ChangeNotifier {
   String get videoQuality => _videoQuality;
   String get playbackQuality => _playbackQuality;
   double get videoBufferSize => _videoBufferSize;
+  bool get openSubtitlesEnabled => _openSubtitlesEnabled;
+  bool get autoDownloadSubtitles => _autoDownloadSubtitles;
+  bool get realDebridEnabled => _realDebridEnabled;
+  bool get realDebridForCatchup => _realDebridForCatchup;
+  bool get realDebridForVod => _realDebridForVod;
+  bool get aiUpscalingEnabled => _aiUpscalingEnabled;
+  String get aiQualityPreset => _aiQualityPreset;
 
   Future<void> initialize() async {
     if (_isInitialized) return;
@@ -92,6 +106,13 @@ class SettingsProvider extends ChangeNotifier {
     _videoQuality = prefs.getString('video_quality') ?? 'Auto';
     _playbackQuality = prefs.getString('playback_quality') ?? 'Auto';
     _videoBufferSize = prefs.getDouble('video_buffer_size') ?? 50;
+    _openSubtitlesEnabled = prefs.getBool('opensubtitles_enabled') ?? false;
+    _autoDownloadSubtitles = prefs.getBool('auto_download_subtitles') ?? true;
+    _realDebridEnabled = prefs.getBool('realdebrid_enabled') ?? false;
+    _realDebridForCatchup = prefs.getBool('realdebrid_catchup') ?? true;
+    _realDebridForVod = prefs.getBool('realdebrid_vod') ?? true;
+    _aiUpscalingEnabled = prefs.getBool('ai_upscaling') ?? false;
+    _aiQualityPreset = prefs.getString('ai_quality') ?? 'Balanced';
   }
 
   Future<void> setHardwareAcceleration(bool value) async {
@@ -218,6 +239,55 @@ class SettingsProvider extends ChangeNotifier {
     if ((_videoBufferSize - clamped).abs() < 0.01) return;
     _videoBufferSize = clamped;
     await _prefs?.setDouble('video_buffer_size', clamped);
+    notifyListeners();
+  }
+
+  Future<void> setOpenSubtitlesEnabled(bool value) async {
+    if (_openSubtitlesEnabled == value) return;
+    _openSubtitlesEnabled = value;
+    await _prefs?.setBool('opensubtitles_enabled', value);
+    notifyListeners();
+  }
+
+  Future<void> setAutoDownloadSubtitles(bool value) async {
+    if (_autoDownloadSubtitles == value) return;
+    _autoDownloadSubtitles = value;
+    await _prefs?.setBool('auto_download_subtitles', value);
+    notifyListeners();
+  }
+
+  Future<void> setRealDebridEnabled(bool value) async {
+    if (_realDebridEnabled == value) return;
+    _realDebridEnabled = value;
+    await _prefs?.setBool('realdebrid_enabled', value);
+    notifyListeners();
+  }
+
+  Future<void> setRealDebridForCatchup(bool value) async {
+    if (_realDebridForCatchup == value) return;
+    _realDebridForCatchup = value;
+    await _prefs?.setBool('realdebrid_catchup', value);
+    notifyListeners();
+  }
+
+  Future<void> setRealDebridForVod(bool value) async {
+    if (_realDebridForVod == value) return;
+    _realDebridForVod = value;
+    await _prefs?.setBool('realdebrid_vod', value);
+    notifyListeners();
+  }
+
+  Future<void> setAiUpscalingEnabled(bool value) async {
+    if (_aiUpscalingEnabled == value) return;
+    _aiUpscalingEnabled = value;
+    await _prefs?.setBool('ai_upscaling', value);
+    notifyListeners();
+  }
+
+  Future<void> setAiQualityPreset(String value) async {
+    if (_aiQualityPreset == value) return;
+    _aiQualityPreset = value;
+    await _prefs?.setString('ai_quality', value);
     notifyListeners();
   }
 

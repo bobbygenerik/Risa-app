@@ -127,8 +127,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     // Keeps essential fields and save functionality.
     return CompatPopScope(
       onWillPop: () async {
-        context.go('/home');
-        return false;
+        if (Navigator.of(context).canPop()) {
+          context.pop(false);
+          return false;
+        }
+        return true;
       },
       child: Container(
         decoration: const BoxDecoration(
@@ -144,54 +147,78 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         child: Scaffold(
           backgroundColor: Colors.transparent,
           appBar: _buildGlassAppBar(),
-          body: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 600),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(height: 12),
-                  GestureDetector(
-                    onTap: _pickProfileImage,
-                    child: CircleAvatar(
-                      radius: 64,
-                      backgroundColor: AppTheme.cardBackground,
-                      backgroundImage: _profileImagePath != null ? FileImage(File(_profileImagePath!)) : null,
-                      child: _profileImagePath == null ? const Icon(Icons.person, size: 64, color: AppTheme.primaryBlue) : null,
+          body: SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 640),
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSizes.lg,
+                    vertical: AppSizes.xl,
+                  ),
+                  child: Container(
+                    padding: EdgeInsets.all(AppSizes.xl),
+                    decoration: BoxDecoration(
+                      color: AppTheme.cardBackground,
+                      borderRadius: BorderRadius.circular(AppSizes.radiusXl),
+                      border: Border.all(color: AppTheme.divider),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Align(
+                          alignment: Alignment.center,
+                          child: GestureDetector(
+                            onTap: _pickProfileImage,
+                            child: CircleAvatar(
+                              radius: 72,
+                              backgroundColor: AppTheme.highlight,
+                              backgroundImage: _profileImagePath != null
+                                  ? FileImage(File(_profileImagePath!))
+                                  : null,
+                              child: _profileImagePath == null
+                                  ? const Icon(Icons.person, size: 72, color: AppTheme.primaryBlue)
+                                  : null,
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: AppSizes.xl),
+                        _buildLinedTextField(
+                          controller: _nameController,
+                          focusNode: _nameFocusNode,
+                          label: 'Name',
+                          hint: 'Enter your display name',
+                        ),
+                        SizedBox(height: AppSizes.lg),
+                        _buildLinedTextField(
+                          controller: _emailController,
+                          focusNode: _emailFocusNode,
+                          label: 'Email',
+                          hint: 'name@example.com',
+                          keyboardType: TextInputType.emailAddress,
+                        ),
+                        SizedBox(height: AppSizes.xl),
+                        ElevatedButton(
+                          onPressed: _isLoading ? null : _saveProfile,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryBlue,
+                            padding: EdgeInsets.symmetric(vertical: AppSizes.md),
+                          ),
+                          child: _isLoading
+                              ? SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: const CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Text('Save Changes'),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _nameController,
-                    decoration: InputDecoration(
-                      labelText: 'Name',
-                      filled: true,
-                      fillColor: AppTheme.cardBackground,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _emailController,
-                    decoration: InputDecoration(
-                      labelText: 'Email',
-                      filled: true,
-                      fillColor: AppTheme.cardBackground,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _saveProfile,
-                    style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue),
-                    child: _isLoading ? const CircularProgressIndicator() : const Text('Save Changes'),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
         ),
       ),
     );
@@ -199,8 +226,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   AppBar _buildGlassAppBar() {
     return AppBar(
-      title: Text('Edit Profile'),
-      backgroundColor: Colors.white.withAlpha((0.08 * 255).round()),
+      title: const Text('Edit Profile'),
+      backgroundColor: Colors.white.withAlpha((0.04 * 255).round()),
       elevation: 0,
       actions: [
         if (_isLoading)
@@ -219,10 +246,41 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ),
       ],
       bottom: PreferredSize(
-        preferredSize: Size.fromHeight(2),
-        child: Container(
-          color: AppTheme.accentPink,
-          height: 2,
+        preferredSize: Size.zero,
+        child: const SizedBox.shrink(),
+      ),
+    );
+  }
+
+  Widget _buildLinedTextField({
+    required TextEditingController controller,
+    required FocusNode focusNode,
+    required String label,
+    required String hint,
+    TextInputType? keyboardType,
+  }) {
+    return Focus(
+      focusNode: focusNode,
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hint,
+          filled: true,
+          fillColor: AppTheme.highlight,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+            borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 3),
+          ),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: AppSizes.lg,
+            vertical: AppSizes.md,
+          ),
         ),
       ),
     );
