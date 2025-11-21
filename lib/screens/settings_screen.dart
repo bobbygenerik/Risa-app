@@ -107,6 +107,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   @override
   void initState() {
     super.initState();
+    
     _tabController = TabController(length: 5, vsync: this); // Reduced from 7 to 5
     // Prepare focus nodes for the sidebar menu so external callers can request focus
     for (int i = 0; i < 5; i++) {
@@ -116,7 +117,12 @@ class _SettingsScreenState extends State<SettingsScreen>
     _tabController.addListener(() {
       if (mounted) setState(() {});
     });
-    _loadSettings();
+    // Load settings AFTER first frame to avoid initState setState issues
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadSettings();
+      }
+    });
   }
 
   final List<FocusNode> _menuFocusNodes = [];
@@ -1767,10 +1773,12 @@ class _SettingsScreenState extends State<SettingsScreen>
           ],
         ),
 
-        // OpenSubtitles Integration
-        Consumer<OpenSubtitlesService>(
-          builder: (context, subtitleService, child) {
-            return _buildSectionCard(
+        // OpenSubtitles Integration - Use Builder with Provider.of instead of Consumer
+        Builder(
+          builder: (context) {
+            try {
+              final subtitleService = Provider.of<OpenSubtitlesService>(context, listen: false);
+              return _buildSectionCard(
               title: 'OpenSubtitles Integration',
               subtitle: 'FREE API - Automatic subtitle downloading',
               children: [
@@ -1853,20 +1861,31 @@ class _SettingsScreenState extends State<SettingsScreen>
                             backgroundColor: success ? Colors.green : AppTheme.accentRed,
                           ),
                         );
-                      },
-                    icon: const Icon(Icons.check_circle),
-                    label: const Text('Test Connection'),
-                  ),
-                ],
+                    },
+                  icon: const Icon(Icons.check_circle),
+                  label: const Text('Test Connection'),
+                ),
               ],
-            );
+            ],
+          );
+            } catch (e) {
+              debugPrint('OpenSubtitles service error: $e');
+              return _buildSectionCard(
+                title: 'OpenSubtitles Integration',
+                children: [
+                  Text('Service unavailable', style: TextStyle(color: AppTheme.textSecondary)),
+                ],
+              );
+            }
           },
         ),
 
-        // Real-Debrid Integration
-        Consumer<RealDebridService>(
-          builder: (context, rdService, child) {
-            return _buildSectionCard(
+        // Real-Debrid Integration - Use Builder with Provider.of instead of Consumer
+        Builder(
+          builder: (context) {
+            try {
+              final rdService = Provider.of<RealDebridService>(context, listen: false);
+              return _buildSectionCard(
               title: 'Real-Debrid Integration',
               subtitle: 'FREE API - Enhanced streaming for VOD and Catch-up',
               children: [
@@ -1956,16 +1975,26 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ),
                     ),
                   ],
+                  ],
                 ],
-              ],
-            );
+              );
+            } catch (e) {
+              debugPrint('Real-Debrid service error: $e');
+              return _buildSectionCard(
+                title: 'Real-Debrid Integration',
+                children: [
+                  Text('Service unavailable', style: TextStyle(color: AppTheme.textSecondary)),
+                ],
+              );
+            }
           },
         ),
 
-        // AI Upscaling
-        Consumer<AIUpscalingService>(
-          builder: (context, aiService, child) {
+        // AI Upscaling - Use Builder with Provider.of instead of Consumer
+        Builder(
+          builder: (context) {
             try {
+              final aiService = Provider.of<AIUpscalingService>(context, listen: false);
               return _buildSectionCard(
                 title: 'AI Video Upscaling',
                 subtitle: 'FREE - On-device AI upscaling (no cloud costs)',
@@ -2039,10 +2068,11 @@ class _SettingsScreenState extends State<SettingsScreen>
           },
         ),
 
-        // Whisper On-Device Transcription
-        Consumer<WhisperSpeechService>(
-          builder: (context, whisperService, child) {
+        // Whisper On-Device Transcription - Use Builder with Provider.of instead of Consumer
+        Builder(
+          builder: (context) {
             try {
+              final whisperService = Provider.of<WhisperSpeechService>(context, listen: false);
               return _buildSectionCard(
                 title: '🎙️ On-Device Transcription (Whisper)',
                 subtitle: '100% OFFLINE - AUTO-DOWNLOAD - NO COSTS - TRUE AI',
@@ -2190,10 +2220,12 @@ class _SettingsScreenState extends State<SettingsScreen>
           },
         ),
 
-        // AI Model Downloads
-        Consumer<AIModelManager>(
-          builder: (context, modelManager, _) {
-            return _buildSectionCard(
+        // AI Model Downloads - Use Builder with Provider.of instead of Consumer
+        Builder(
+          builder: (context) {
+            try {
+              final modelManager = Provider.of<AIModelManager>(context, listen: false);
+              return _buildSectionCard(
               title: 'AI Model Downloads',
               subtitle: 'Download and manage on-device AI models',
               children: [
@@ -2282,6 +2314,15 @@ class _SettingsScreenState extends State<SettingsScreen>
                 ),
               ],
             );
+            } catch (e) {
+              debugPrint('AI Model Manager error: $e');
+              return _buildSectionCard(
+                title: 'AI Model Downloads',
+                children: [
+                  Text('Service unavailable', style: TextStyle(color: AppTheme.textSecondary)),
+                ],
+              );
+            }
           },
         ),
       ],
