@@ -15,6 +15,7 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:iptv_player/utils/snackbar_helper.dart';
+import 'package:iptv_player/widgets/tv_focusable.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -70,6 +71,10 @@ class _SettingsScreenState extends State<SettingsScreen>
   String _renderingEngine = 'Auto';
   double _videoBufferSize = 50;
   String _videoQuality = 'Auto';
+  bool _rememberPlaybackPosition = true;
+  bool _skipIntro = true;
+  bool _showChannelLogos = true;
+  bool _showProgramImages = true;
   
   // Audio Settings
   String _audioDecoderType = 'Auto';
@@ -152,6 +157,10 @@ class _SettingsScreenState extends State<SettingsScreen>
     _openSubtitlesEnabled = prefs.getBool('opensubtitles_enabled') ?? false;
     _aiUpscalingEnabled = prefs.getBool('ai_upscaling') ?? false;
     _autoDownloadSubtitles = prefs.getBool('auto_download_subtitles') ?? true;
+    _rememberPlaybackPosition = prefs.getBool('remember_playback_position') ?? true;
+    _skipIntro = prefs.getBool('skip_intro_available') ?? true;
+    _showChannelLogos = prefs.getBool('show_channel_logos') ?? true;
+    _showProgramImages = prefs.getBool('show_program_images') ?? true;
 
     // String settings
     _decoderType = prefs.getString('decoder_type') ?? 'Auto';
@@ -238,6 +247,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 )
           ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildSidebarMenu(),
               VerticalDivider(width: 1, color: Colors.white.withAlpha((0.1 * 255).round())),
@@ -287,7 +297,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       {'title': 'General', 'icon': Icons.settings_outlined},
       {'title': 'Account', 'icon': Icons.person_outline},
       {'title': 'Playback', 'icon': Icons.play_circle_outline},
-      {'title': 'Cloud & AI', 'icon': Icons.cloud_outlined},
+      {'title': 'AI Features', 'icon': Icons.auto_awesome},
       {'title': 'Recordings', 'icon': Icons.fiber_manual_record},
     ];
 
@@ -451,7 +461,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           _realDebridApiKeyFocusNode.requestFocus();
           break;
         case 2: // Playback
-        case 3: // Cloud & AI
+        case 3: // AI Features
         case 4: // Recordings
         default:
           // For tabs without specific focus nodes, just request focus on content scope
@@ -1652,52 +1662,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 if (!aiService.isModelLoaded)
                   Padding(
                     padding: EdgeInsets.all(AppSizes.md),
-                    child: Container(
-                      padding: EdgeInsets.all(AppSizes.md),
-                      decoration: BoxDecoration(
-                        color: AppTheme.accentOrange.withAlpha((0.1 * 255).round()),
-                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                        border: Border.all(
-                          color: AppTheme.accentOrange.withAlpha((0.3 * 255).round()),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.warning_amber,
-                                size: 16,
-                                color: AppTheme.accentOrange,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Model Not Found',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.accentOrange,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'To enable AI upscaling:',
-                          ),
-                          Text(
-                            '1. Download a TFLite model (FSRCNN recommended)',
-                          ),
-                          Text('2. Place in assets/models/esrgan_x2.tflite'),
-                          Text('3. Rebuild the app'),
-                          SizedBox(height: 8),
-                          Text(
-                            'See AI_MODEL_SETUP_GUIDE.md for details',
-                            style: TextStyle(fontStyle: FontStyle.italic),
-                          ),
-                        ],
-                      ),
-                    ),
+                    child: _buildAIModelDownloadCard(aiService),
                   ),
               ],
               );
@@ -1715,8 +1680,8 @@ class _SettingsScreenState extends State<SettingsScreen>
           title: 'Playback Options',
           children: [
             _buildSwitchTile('Auto-play Next Episode', _autoPlayNextEpisode),
-            _buildSwitchTile('Remember Playback Position', true),
-            _buildSwitchTile('Skip Intro (if available)', true),
+            _buildSwitchTile('Remember Playback Position', _rememberPlaybackPosition),
+            _buildSwitchTile('Skip Intro (if available)', _skipIntro),
             _buildDropdown('Video Quality', 'Auto', [
               'Auto',
               '4K',
@@ -1763,17 +1728,8 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   Widget _buildCloudAndAISettings() {
     return _buildSettingsSection(
-      title: 'Cloud & AI',
+      title: 'AI Features',
       children: [
-        // Drive sync feature removed from the app.
-        _buildSectionCard(
-          title: 'Cloud Sync',
-          subtitle: 'Removed',
-          children: [
-            Text('Cloud sync has been removed from this build.'),
-          ],
-        ),
-
         // OpenSubtitles Integration
         Consumer<OpenSubtitlesService>(
           builder: (context, subtitleService, child) {
@@ -1993,11 +1949,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       : null,
                 ),
                 if (!aiService.isModelLoaded) ...[
-                  const SizedBox(height: 8),
-                  const Text(
-                    'AI model not found. Place esrgan_x2.tflite in assets/models/',
-                    style: TextStyle(color: AppTheme.accentRed, fontSize: 12),
-                  ),
+                  _buildAIModelDownloadCard(aiService),
                 ],
                 if (_aiUpscalingEnabled) ...[
                   const SizedBox(height: 16),
@@ -2444,8 +2396,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                   'UTC+0 (GMT)',
                   'UTC+1 (CET)',
                 ], (value) {}),
-                _buildSwitchTile('Show Channel Logos', true),
-                _buildSwitchTile('Show Program Images', true),
+                _buildSwitchTile('Show Channel Logos', _showChannelLogos),
+                _buildSwitchTile('Show Program Images', _showProgramImages),
               ],
             ),
             _buildSectionCard(
@@ -2738,56 +2690,133 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Widget _buildSwitchTile(String title, bool value, {String? subtitle}) {
-    return SwitchListTile(
-      title: Text(title),
-      subtitle: subtitle != null ? Text(subtitle, style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)) : null,
-      value: value,
-      onChanged: (newValue) async {
-        setState(() {
-          if (title == 'Auto-play Next Episode') {
-            _autoPlayNextEpisode = newValue;
-          } else if (title == 'Auto Frame Rate Matching') {
-            _autoFrameRate = newValue;
-          }
-        });
-        
-        // Save to SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
-        if (title == 'Auto-play Next Episode') {
-          await prefs.setBool('auto_play_next', newValue);
-        } else if (title == 'Auto Frame Rate Matching') {
-          await prefs.setBool('auto_frame_rate', newValue);
-        }
-      },
+    return Padding(
+      padding: EdgeInsets.only(bottom: AppSizes.sm),
+      child: TVFocusable(
+        borderRadius: BorderRadius.circular(12),
+        child: SwitchListTile(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          title: Text(title),
+          subtitle: subtitle != null
+              ? Text(subtitle, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary))
+              : null,
+          value: value,
+          onChanged: (newValue) {
+            _handleSwitchTileChange(title, newValue);
+          },
+        ),
+      ),
     );
   }
 
+  Future<void> _handleSwitchTileChange(String title, bool newValue) async {
+    bool handled = true;
+
+    setState(() {
+      switch (title) {
+        case 'Hardware Acceleration':
+          _hardwareAcceleration = newValue;
+          break;
+        case 'Hardware Decoding':
+          _hardwareDecoding = newValue;
+          break;
+        case 'Hardware Post-Processing':
+          _hardwarePostProcessing = newValue;
+          break;
+        case 'Auto Frame Rate Matching':
+          _autoFrameRate = newValue;
+          break;
+        case 'Auto-play Next Episode':
+          _autoPlayNextEpisode = newValue;
+          break;
+        case 'Remember Playback Position':
+          _rememberPlaybackPosition = newValue;
+          break;
+        case 'Skip Intro (if available)':
+          _skipIntro = newValue;
+          break;
+        case 'Show Channel Logos':
+          _showChannelLogos = newValue;
+          break;
+        case 'Show Program Images':
+          _showProgramImages = newValue;
+          break;
+        default:
+          handled = false;
+          break;
+      }
+    });
+
+    if (!handled) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    switch (title) {
+      case 'Hardware Acceleration':
+        await prefs.setBool('hardware_acceleration', newValue);
+        break;
+      case 'Hardware Decoding':
+        await prefs.setBool('hardware_decoding', newValue);
+        break;
+      case 'Hardware Post-Processing':
+        await prefs.setBool('hardware_postprocessing', newValue);
+        break;
+      case 'Auto Frame Rate Matching':
+        await prefs.setBool('auto_frame_rate', newValue);
+        break;
+      case 'Auto-play Next Episode':
+        await prefs.setBool('auto_play_next', newValue);
+        break;
+      case 'Remember Playback Position':
+        await prefs.setBool('remember_playback_position', newValue);
+        break;
+      case 'Skip Intro (if available)':
+        await prefs.setBool('skip_intro_available', newValue);
+        break;
+      case 'Show Channel Logos':
+        await prefs.setBool('show_channel_logos', newValue);
+        break;
+      case 'Show Program Images':
+        await prefs.setBool('show_program_images', newValue);
+        break;
+      default:
+        break;
+    }
+  }
+
   Widget _buildAudioSwitchTile(String title, bool value, {String? subtitle}) {
-    return SwitchListTile(
-      title: Text(title),
-      subtitle: subtitle != null ? Text(subtitle, style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)) : null,
-      value: value,
-      onChanged: (newValue) async {
-        setState(() {
-          if (title == 'Audio Passthrough') {
-            _audioPassthrough = newValue;
-          } else if (title == 'Audio Boost') {
-            _audioBoost = newValue;
-          } else if (title == 'Normalize Audio') {
-            _normalizeAudio = newValue;
-          }
-        });
-        
-        // Save to SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
-        if (title == 'Audio Passthrough') {
-          await prefs.setBool('audio_passthrough', newValue);
-        } else if (title == 'Audio Boost') {
-          await prefs.setBool('audio_boost', newValue);
-        } else if (title == 'Normalize Audio') {
-          await prefs.setBool('normalize_audio', newValue);
-        }
-      },
+    return Padding(
+      padding: EdgeInsets.only(bottom: AppSizes.sm),
+      child: TVFocusable(
+        borderRadius: BorderRadius.circular(12),
+        child: SwitchListTile(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          title: Text(title),
+          subtitle: subtitle != null
+              ? Text(subtitle, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary))
+              : null,
+          value: value,
+          onChanged: (newValue) async {
+            setState(() {
+              if (title == 'Audio Passthrough') {
+                _audioPassthrough = newValue;
+              } else if (title == 'Audio Boost') {
+                _audioBoost = newValue;
+              } else if (title == 'Normalize Audio') {
+                _normalizeAudio = newValue;
+              }
+            });
+
+            final prefs = await SharedPreferences.getInstance();
+            if (title == 'Audio Passthrough') {
+              await prefs.setBool('audio_passthrough', newValue);
+            } else if (title == 'Audio Boost') {
+              await prefs.setBool('audio_boost', newValue);
+            } else if (title == 'Normalize Audio') {
+              await prefs.setBool('normalize_audio', newValue);
+            }
+          },
+        ),
+      ),
     );
   }
 
@@ -2804,19 +2833,20 @@ class _SettingsScreenState extends State<SettingsScreen>
         children: [
           Text(label, style: Theme.of(context).textTheme.bodyMedium),
           SizedBox(height: AppSizes.sm),
-          DropdownButtonFormField<String>(
-            initialValue: value,
-            decoration: InputDecoration(
-              border: OutlineInputBorder(),
-              contentPadding: EdgeInsets.symmetric(
-                horizontal: AppSizes.md,
-                vertical: AppSizes.sm,
+          TVFocusable(
+            borderRadius: BorderRadius.circular(10),
+            enableScale: false,
+            child: DropdownButtonFormField<String>(
+              initialValue: value,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
+              items: items.map((item) {
+                return DropdownMenuItem(value: item, child: Text(item));
+              }).toList(),
+              onChanged: onChanged,
             ),
-            items: items.map((item) {
-              return DropdownMenuItem(value: item, child: Text(item));
-            }).toList(),
-            onChanged: onChanged,
           ),
         ],
       ),
@@ -2838,41 +2868,54 @@ class _SettingsScreenState extends State<SettingsScreen>
     int? maxLines = 1,
     VoidCallback? onLeftArrow,
   }) {
-    focusNode.onKeyEvent = (node, event) {
-      if (event is! KeyDownEvent) return KeyEventResult.ignored;
-      final key = event.logicalKey;
+    final bool isDirectionalNavigation = MediaQuery.of(context).navigationMode == NavigationMode.directional;
 
-      if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
-        if (!isEditable) {
-          onEditableChanged(true);
-          Future.delayed(const Duration(milliseconds: 50), () {
-            focusNode.requestFocus();
-          });
-        }
-        return KeyEventResult.handled;
+    if (!isDirectionalNavigation) {
+      if (!isEditable) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            onEditableChanged(true);
+          }
+        });
       }
 
-      if (isEditable && (key == LogicalKeyboardKey.escape || key == LogicalKeyboardKey.goBack)) {
-        onEditableChanged(false);
-        focusNode.requestFocus();
-        return KeyEventResult.handled;
-      }
+      return TextField(
+        controller: controller,
+        focusNode: focusNode,
+        autofocus: false,
+        readOnly: false,
+        obscureText: obscureText,
+        keyboardType: keyboardType,
+        maxLines: obscureText ? 1 : maxLines,
+        decoration: InputDecoration(
+          hintText: hintText,
+          helperText: helperText,
+          labelText: labelText,
+          prefixIcon: prefixIcon != null ? Icon(prefixIcon) : null,
+          filled: true,
+          fillColor: AppTheme.highlight,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: AppTheme.primaryBlue, width: 3),
+          ),
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        ),
+      );
+    }
 
-      if (!isEditable && key == LogicalKeyboardKey.arrowLeft) {
-        if (onLeftArrow != null) {
-          onLeftArrow();
-          return KeyEventResult.handled;
-        }
-      }
-
-      return KeyEventResult.ignored;
-    };
-
-    final listener = () {
+    void listener() {
       if (!focusNode.hasFocus) {
         onEditableChanged(false);
       }
-    };
+    }
     final previousListener = _focusNodeListeners[focusNode];
     if (previousListener != null) {
       focusNode.removeListener(previousListener);
@@ -2880,34 +2923,91 @@ class _SettingsScreenState extends State<SettingsScreen>
     focusNode.addListener(listener);
     _focusNodeListeners[focusNode] = listener;
 
-    return TextField(
-      controller: controller,
-      focusNode: focusNode,
-      autofocus: false,
-      readOnly: !isEditable,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      maxLines: obscureText ? 1 : maxLines,
-      decoration: InputDecoration(
-        hintText: hintText,
-        helperText: helperText,
-        labelText: labelText,
-        prefixIcon: prefixIcon != null ? Icon(prefixIcon) : null,
-        filled: true,
-        fillColor: AppTheme.highlight,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide.none,
+    final shortcutMap = <ShortcutActivator, Intent>{
+      LogicalKeySet(LogicalKeyboardKey.select): const _ToggleEditIntent(),
+      LogicalKeySet(LogicalKeyboardKey.enter): const _ToggleEditIntent(),
+      LogicalKeySet(LogicalKeyboardKey.escape): const _ExitEditIntent(),
+      LogicalKeySet(LogicalKeyboardKey.goBack): const _ExitEditIntent(),
+    };
+    if (!isEditable && onLeftArrow != null) {
+      shortcutMap[LogicalKeySet(LogicalKeyboardKey.arrowLeft)] = const _NavigateLeftIntent();
+    }
+
+    return Shortcuts(
+      shortcuts: shortcutMap,
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          _ToggleEditIntent: CallbackAction<_ToggleEditIntent>(
+            onInvoke: (intent) {
+              if (!isEditable) {
+                onEditableChanged(true);
+                Future.delayed(const Duration(milliseconds: 50), () {
+                  if (!focusNode.hasPrimaryFocus) {
+                    focusNode.requestFocus();
+                  }
+                  SystemChannels.textInput.invokeMethod('TextInput.show');
+                });
+              }
+              return null;
+            },
+          ),
+          _ExitEditIntent: CallbackAction<_ExitEditIntent>(
+            onInvoke: (intent) {
+              if (isEditable) {
+                onEditableChanged(false);
+                focusNode.requestFocus();
+              }
+              return null;
+            },
+          ),
+          _NavigateLeftIntent: CallbackAction<_NavigateLeftIntent>(
+            onInvoke: (intent) {
+              if (!isEditable && onLeftArrow != null) {
+                onLeftArrow();
+              }
+              return null;
+            },
+          ),
+        },
+        child: TextField(
+          controller: controller,
+          focusNode: focusNode,
+          autofocus: false,
+          readOnly: !isEditable,
+          obscureText: obscureText,
+          keyboardType: keyboardType,
+          maxLines: obscureText ? 1 : maxLines,
+          onTap: () {
+            if (!isEditable) {
+              onEditableChanged(true);
+              Future.delayed(const Duration(milliseconds: 50), () {
+                focusNode.requestFocus();
+                SystemChannels.textInput.invokeMethod('TextInput.show');
+              });
+            }
+          },
+          decoration: InputDecoration(
+            hintText: hintText,
+            helperText: helperText,
+            labelText: labelText,
+            prefixIcon: prefixIcon != null ? Icon(prefixIcon) : null,
+            filled: true,
+            fillColor: AppTheme.highlight,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: AppTheme.primaryBlue, width: 3),
+            ),
+            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          ),
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: AppTheme.primaryBlue, width: 3),
-        ),
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
     );
   }
@@ -3036,6 +3136,106 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
+  Widget _buildAIModelDownloadCard(AIUpscalingService aiService) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round())),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.science, color: AppTheme.primaryBlue),
+              SizedBox(width: 8),
+              Text(
+                'AI Upscaling Model Missing',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Download ESRGAN (esrgan_x2.tflite) for true on-device video enhancement. This is a one-time download hosted on Hugging Face.',
+            style: TextStyle(fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          if (aiService.isDownloading) ...[
+            LinearProgressIndicator(
+              value: aiService.downloadProgress,
+              backgroundColor: AppTheme.highlight,
+              color: AppTheme.primaryBlue,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Downloading... ${(aiService.downloadProgress * 100).toStringAsFixed(0)}%',
+              style: const TextStyle(fontSize: 12),
+            ),
+          ] else ...[
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      final success = await aiService.downloadModel();
+                      if (!mounted) return;
+                      showAppSnackBar(
+                        context,
+                        SnackBar(
+                          content: Text(
+                            success
+                                ? 'ESRGAN model downloaded and ready!'
+                                : 'Download failed. Check connection and retry.',
+                          ),
+                          backgroundColor: success ? AppTheme.accentGreen : AppTheme.accentRed,
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.download),
+                    label: const Text('Download ESRGAN Model'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryBlue,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton(
+                  onPressed: () async {
+                    final success = await aiService.initialize();
+                    if (!mounted) return;
+                    showAppSnackBar(
+                      context,
+                      SnackBar(
+                        content: Text(
+                          success
+                              ? 'Model detected successfully.'
+                              : 'Model still not found. Place esrgan_x2.tflite in assets/models/',
+                        ),
+                        backgroundColor: success ? AppTheme.accentGreen : AppTheme.accentRed,
+                      ),
+                    );
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.primaryBlue,
+                    side: BorderSide(color: AppTheme.primaryBlue.withAlpha((0.7 * 255).round())),
+                  ),
+                  child: const Text('Already Have Model'),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   void _confirmClearTranscriptions(
     BuildContext context,
     LiveTranscriptionService service,
@@ -3148,4 +3348,16 @@ class _SettingsScreenState extends State<SettingsScreen>
       return '⚠ Unable to access: ${e.toString()}';
     }
   }
+}
+
+class _ToggleEditIntent extends Intent {
+  const _ToggleEditIntent();
+}
+
+class _ExitEditIntent extends Intent {
+  const _ExitEditIntent();
+}
+
+class _NavigateLeftIntent extends Intent {
+  const _NavigateLeftIntent();
 }

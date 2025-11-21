@@ -21,8 +21,7 @@ class AIModelManager extends ChangeNotifier {
   /// Initialize the model manager
   Future<void> initialize() async {
     await _checkAllModels();
-    // Don't notify during initialization to avoid rebuild storms
-    // Widgets will read initial state when they first build
+    notifyListeners();
   }
 
   /// Get status for a specific model
@@ -76,7 +75,7 @@ class AIModelManager extends ChangeNotifier {
   Future<void> _checkModelStatus(AIModel model) async {
     if (model.isBundled) {
       _modelStatus[model.id] = ModelDownloadStatus.bundled;
-      // Don't notify during bulk checks to avoid rebuild storms
+      notifyListeners();
       return;
     }
 
@@ -99,7 +98,7 @@ class AIModelManager extends ChangeNotifier {
       debugPrint('Error checking model ${model.id}: $e');
       _modelStatus[model.id] = ModelDownloadStatus.error;
     }
-    // Don't notify during bulk checks to avoid rebuild storms
+    notifyListeners();
   }
 
   /// Download a model
@@ -125,28 +124,34 @@ class AIModelManager extends ChangeNotifier {
       // Create directory if it doesn't exist
       await file.parent.create(recursive: true);
 
-      // Download with progress tracking
-      final request = http.Request('GET', Uri.parse(model.downloadUrl));
-      final response = await request.send();
+      final client = http.Client();
+      try {
+        final response = await _sendWithRedirects(
+          client,
+          Uri.parse(model.downloadUrl),
+        );
 
-      if (response.statusCode != 200) {
-        throw Exception('Failed to download: ${response.statusCode}');
+        if (response.statusCode != 200) {
+          throw Exception('Failed to download: ${response.statusCode}');
+        }
+
+        final contentLength = response.contentLength ?? model.sizeBytes;
+        var downloadedBytes = 0;
+        final sink = file.openWrite();
+
+        await for (final chunk in response.stream) {
+          downloadedBytes += chunk.length;
+          sink.add(chunk);
+          _downloadProgress[model.id] = contentLength > 0
+              ? downloadedBytes / contentLength
+              : 0.0;
+          notifyListeners();
+        }
+
+        await sink.close();
+      } finally {
+        client.close();
       }
-
-      final contentLength = response.contentLength ?? model.sizeBytes;
-      var downloadedBytes = 0;
-      final chunks = <List<int>>[];
-
-      await for (final chunk in response.stream) {
-        chunks.add(chunk);
-        downloadedBytes += chunk.length;
-        _downloadProgress[model.id] = downloadedBytes / contentLength;
-        notifyListeners();
-      }
-
-      // Write to file
-      final bytes = chunks.expand((x) => x).toList();
-      await file.writeAsBytes(bytes);
 
       _modelStatus[model.id] = ModelDownloadStatus.downloaded;
       _downloadProgress[model.id] = 1.0;
@@ -160,6 +165,44 @@ class AIModelManager extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  Future<http.StreamedResponse> _sendWithRedirects(
+    http.Client client,
+    Uri uri, {
+    int maxRedirects = 5,
+  }) async {
+    var currentUri = uri;
+
+    for (var attempt = 0; attempt <= maxRedirects; attempt++) {
+      final request = http.Request('GET', currentUri);
+      request.headers['Accept'] = 'application/octet-stream';
+
+      final response = await client.send(request);
+
+      final isRedirect =
+          response.statusCode == 301 ||
+          response.statusCode == 302 ||
+          response.statusCode == 303 ||
+          response.statusCode == 307 ||
+          response.statusCode == 308;
+
+      if (isRedirect) {
+        final location = response.headers['location'];
+        if (location == null) {
+          throw Exception('Redirect without location header');
+        }
+
+        currentUri = currentUri.resolve(location);
+        // Drain the current stream before next request
+        await response.stream.drain<void>();
+        continue;
+      }
+
+      return response;
+    }
+
+    throw Exception('Too many redirects while downloading $uri');
   }
 
   /// Delete a model

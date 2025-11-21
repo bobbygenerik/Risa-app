@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -75,29 +76,51 @@ class _SearchPopupState extends State<SearchPopup> {
 
   @override
   Widget build(BuildContext context) {
-    // Use a Dialog with a transparent background to show the glass effect
+    final media = MediaQuery.of(context);
+    final keyboard = media.viewInsets.bottom;
+    final maxHeight = math.max(
+      360.0,
+      media.size.height - keyboard - (AppSizes.xl * 2),
+    );
+
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(AppSizes.xl),
-      child: Container(
-        width: 800, // Max width for TV
-        height: 600, // Max height
-        decoration: BoxDecoration(
-          color: AppTheme.cardBackground.withAlpha((0.95 * 255).round()),
-          borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-          border: Border.all(
-            color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
-            width: 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha((0.5 * 255).round()),
-              blurRadius: 20,
-              spreadRadius: 5,
-            ),
-          ],
+      insetPadding: EdgeInsets.zero,
+      child: AnimatedPadding(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        padding: EdgeInsets.fromLTRB(
+          AppSizes.xl,
+          AppSizes.xl,
+          AppSizes.xl,
+          AppSizes.xl + keyboard,
         ),
-        child: Column(
+        child: SafeArea(
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 800,
+                maxHeight: maxHeight,
+              ),
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppTheme.cardBackground.withAlpha((0.95 * 255).round()),
+                  borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                  border: Border.all(
+                    color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha((0.5 * 255).round()),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                child: Column(
           children: [
             // Search Header
             Padding(
@@ -140,6 +163,10 @@ class _SearchPopupState extends State<SearchPopup> {
                   : _buildResultsList(),
             ),
           ],
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );

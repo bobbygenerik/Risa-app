@@ -94,10 +94,14 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
           if (widget.showLogoAndTime)
             SizedBox(
               width: 140 * scale,
-              child: Image.asset(
-                'assets/images/croppedlogo2.png',
-                height: 40 * scale,
-                fit: BoxFit.contain,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Image.asset(
+                  'assets/images/croppedlogo2.png',
+                  height: 40 * scale,
+                  fit: BoxFit.contain,
+                  alignment: Alignment.centerLeft,
+                ),
               ),
             ),
 

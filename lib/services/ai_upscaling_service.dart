@@ -175,7 +175,7 @@ class AIUpscalingService extends ChangeNotifier {
         
         // Initialize with the downloaded model
         await initialize();
-        
+        _resetDownloadState();
         return true;
       } catch (e) {
         lastError = Exception(e);
@@ -191,7 +191,14 @@ class AIUpscalingService extends ChangeNotifier {
     }
 
     debugPrint('AI model download failed after $maxAttempts attempts: $lastError');
+    _resetDownloadState();
     return false;
+  }
+
+  void _resetDownloadState({bool notify = true}) {
+    _isDownloading = false;
+    _downloadProgress = 0.0;
+    if (notify) notifyListeners();
   }
 
   /// Enable/disable AI upscaling

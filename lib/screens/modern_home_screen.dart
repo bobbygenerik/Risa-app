@@ -6,6 +6,7 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/content.dart';
+import 'package:iptv_player/widgets/tv_focusable.dart';
 
 class ModernHomeScreen extends StatelessWidget {
   const ModernHomeScreen({super.key});
@@ -111,88 +112,95 @@ class ModernHomeScreen extends StatelessWidget {
         }
 
         final featured = movies.first;
-        return GestureDetector(
-          onTap: () => context.push('/player', extra: featured),
-          child: Container(
-            height: 400,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF050710),
-                  Color(0xFF0d1140),
-                ],
-              )
-            ),
-            child: Stack(
-              children: [
-                // Background image or gradient
-                Container(
-                  color: AppTheme.cardBackground,
-                  child: featured.backdropUrl != null
-                      ? Image.network(
-                          featured.backdropUrl!,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          height: double.infinity,
-                          errorBuilder: (_, __, ___) =>
-                              _buildPlaceholderGradient(),
-                        )
-                      : _buildPlaceholderGradient(),
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          child: TVFocusable(
+            borderRadius: BorderRadius.circular(24),
+            onPressed: () => context.push('/player', extra: featured),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: Container(
+                height: 400,
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF050710),
+                      Color(0xFF0d1140),
+                    ],
+                  ),
                 ),
-                // Content overlay
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    padding: EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF050710),
-                  Color(0xFF0d1140),
-                ],
-              )
+                child: Stack(
+                  children: [
+                    // Background image or gradient
+                    Container(
+                      color: AppTheme.cardBackground,
+                      child: featured.backdropUrl != null
+                          ? Image.network(
+                              featured.backdropUrl!,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                              errorBuilder: (_, __, ___) =>
+                                  _buildPlaceholderGradient(),
+                            )
+                          : _buildPlaceholderGradient(),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          featured.title,
-                          style: TextStyle(
-                            color: AppTheme.textPrimary,
-                            fontSize: 28,
-                            fontWeight: FontWeight.w700,
+                    // Content overlay
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Color(0xFF050710),
+                              Color(0xFF0d1140),
+                            ],
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                        SizedBox(height: 12),
-                        Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.play_circle,
-                                color: AppTheme.accentOrange, size: 20),
-                            SizedBox(width: 8),
                             Text(
-                              'Continue Watching',
+                              featured.title,
                               style: TextStyle(
-                                color: AppTheme.textSecondary,
-                                fontSize: 14,
+                                color: AppTheme.textPrimary,
+                                fontSize: 28,
+                                fontWeight: FontWeight.w700,
                               ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Icon(Icons.play_circle,
+                                    color: AppTheme.accentOrange, size: 20),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Continue Watching',
+                                  style: TextStyle(
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         );
@@ -275,77 +283,79 @@ class ModernHomeScreen extends StatelessWidget {
             ),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: movies.take(6).map((content) {
-                  return GestureDetector(
-                    onTap: () => onTap(content),
-                    child: Container(
-                      width: 180,
-                      height: 280,
-                      margin: EdgeInsets.only(right: 16),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: AppTheme.cardBackground,
-                        border: Border.all(
-                          color: Colors.white.withAlpha((0.1 * 255).round()),
-                          width: 1,
-                        ),
-                      ),
-                      child: Stack(
-                        children: [
-                          // Poster image
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: content.imageUrl != null
-                                ? Image.network(
-                                    content.imageUrl!,
-                                    fit: BoxFit.cover,
-                                    width: double.infinity,
-                                    height: double.infinity,
-                                    errorBuilder: (_, __, ___) =>
-                                        _buildCardPlaceholder(),
-                                  )
-                                : _buildCardPlaceholder(),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: FocusTraversalGroup(
+                policy: WidgetOrderTraversalPolicy(),
+                child: Row(
+                  children: movies.take(6).map((content) {
+                    return TVFocusable(
+                      focusMargin: const EdgeInsets.only(right: 16),
+                      borderRadius: BorderRadius.circular(12),
+                      onPressed: () => onTap(content),
+                      child: Container(
+                        width: 180,
+                        height: 280,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          color: AppTheme.cardBackground,
+                          border: Border.all(
+                            color: Colors.white.withAlpha((0.1 * 255).round()),
+                            width: 1,
                           ),
-                          // Overlay with title
-                          Positioned(
-                            bottom: 0,
-                            left: 0,
-                            right: 0,
-                            child: Container(
-                              padding: EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    Color(0xFF050710),
-                                    Color(0xFF0d1140),
-                                  ],
+                        ),
+                        child: Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: content.imageUrl != null
+                                  ? Image.network(
+                                      content.imageUrl!,
+                                      fit: BoxFit.cover,
+                                      width: double.infinity,
+                                      height: double.infinity,
+                                      errorBuilder: (_, __, ___) =>
+                                          _buildCardPlaceholder(),
+                                    )
+                                  : _buildCardPlaceholder(),
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: const BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      Color(0xFF050710),
+                                      Color(0xFF0d1140),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.only(
+                                    bottomLeft: Radius.circular(12),
+                                    bottomRight: Radius.circular(12),
+                                  ),
                                 ),
-                                borderRadius: BorderRadius.only(
-                                  bottomLeft: Radius.circular(12),
-                                  bottomRight: Radius.circular(12),
+                                child: Text(
+                                  content.title,
+                                  style: TextStyle(
+                                    color: AppTheme.textPrimary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
-                              child: Text(
-                                content.title,
-                                style: TextStyle(
-                                  color: AppTheme.textPrimary,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                }).toList(),
+                    );
+                  }).toList(),
+                ),
               ),
             ),
             SizedBox(height: 24),
@@ -382,39 +392,43 @@ class ModernHomeScreen extends StatelessWidget {
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               padding: EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: channels.map((channel) {
-                  return GestureDetector(
-                    onTap: () => onTap(channel),
-                    child: Container(
-                      width: 200,
-                      height: 120,
-                      margin: EdgeInsets.only(right: 16),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: AppTheme.cardBackground,
-                        border: Border.all(
-                          color: Colors.white.withAlpha((0.1 * 255).round()),
-                          width: 1,
+              child: FocusTraversalGroup(
+                policy: WidgetOrderTraversalPolicy(),
+                child: Row(
+                  children: channels.map((channel) {
+                    return TVFocusable(
+                      focusMargin: const EdgeInsets.only(right: 16),
+                      borderRadius: BorderRadius.circular(12),
+                      onPressed: () => onTap(channel),
+                      child: Container(
+                        width: 200,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          color: AppTheme.cardBackground,
+                          border: Border.all(
+                            color: Colors.white.withAlpha((0.1 * 255).round()),
+                            width: 1,
+                          ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: channel.logoUrl != null &&
+                                  channel.logoUrl!.isNotEmpty
+                              ? Image.network(
+                                  channel.logoUrl!,
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  errorBuilder: (_, __, ___) =>
+                                      _buildChannelPlaceholder(channel.name),
+                                )
+                              : _buildChannelPlaceholder(channel.name),
                         ),
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: channel.logoUrl != null &&
-                                channel.logoUrl!.isNotEmpty
-                            ? Image.network(
-                                channel.logoUrl!,
-                                fit: BoxFit.cover,
-                                width: double.infinity,
-                                height: double.infinity,
-                                errorBuilder: (_, __, ___) =>
-                                    _buildChannelPlaceholder(channel.name),
-                              )
-                            : _buildChannelPlaceholder(channel.name),
-                      ),
-                    ),
-                  );
-                }).toList(),
+                    );
+                  }).toList(),
+                ),
               ),
             ),
             SizedBox(height: 24),
