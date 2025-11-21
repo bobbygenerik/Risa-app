@@ -12,6 +12,7 @@ import 'package:iptv_player/utils/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/services/ai_upscaling_service.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
+import 'package:iptv_player/providers/settings_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:iptv_player/utils/snackbar_helper.dart';
@@ -65,25 +66,6 @@ class _SettingsScreenState extends State<SettingsScreen>
   final FocusNode _openSubtitlesUsernameFocusNode = FocusNode();
   final FocusNode _openSubtitlesPasswordFocusNode = FocusNode();
 
-  // Playback Settings
-  bool _autoPlayNextEpisode = true;
-  bool _hardwareAcceleration = true;
-  bool _hardwareDecoding = true;
-  bool _hardwarePostProcessing = true;
-  bool _autoFrameRate = true;
-  String _decoderType = 'Auto';
-  String _renderingEngine = 'Auto';
-  double _videoBufferSize = 50;
-  String _videoQuality = 'Auto';
-  
-  // Audio Settings
-  String _audioDecoderType = 'Auto';
-  bool _audioPassthrough = false;
-  bool _audioBoost = false;
-  String _preferredAudioLanguage = 'Default';
-  bool _normalizeAudio = false;
-  int _audioChannels = 0; // 0 = Auto, 2 = Stereo, 6 = 5.1, 8 = 7.1
-
   // Real-Debrid Settings
   bool _realDebridEnabled = false;
   bool _realDebridForCatchup = true;
@@ -106,9 +88,6 @@ class _SettingsScreenState extends State<SettingsScreen>
   String _chromecastDevice = 'Chromecast';
 
   late final List<ScrollController> _tabScrollControllers;
-  late Future<Map<String, String?>> _profileFuture;
-  late Future<Map<String, String?>> _savedPlaylistsFuture;
-  late Future<Map<String, dynamic>> _epgFuture;
 
   @override
   void initState() {
@@ -118,9 +97,6 @@ class _SettingsScreenState extends State<SettingsScreen>
     _previousHighlightStrategy = FocusManager.instance.highlightStrategy;
     FocusManager.instance.highlightStrategy = FocusHighlightStrategy.alwaysTouch;
     _tabScrollControllers = List.generate(5, (_) => ScrollController());
-    _profileFuture = _fetchProfileData();
-    _savedPlaylistsFuture = _fetchSavedPlaylists();
-    _epgFuture = _fetchEpgData();
     // Prepare focus nodes for the sidebar menu so external callers can request focus
     for (int i = 0; i < 5; i++) {
       _menuFocusNodes.add(FocusNode(debugLabel: 'SettingsMenu$i'));
@@ -167,12 +143,6 @@ class _SettingsScreenState extends State<SettingsScreen>
           prefs.getString('opensubtitles_password') ?? '';
 
       // Boolean settings
-      _autoPlayNextEpisode = prefs.getBool('auto_play_next') ?? true;
-      _hardwareAcceleration = prefs.getBool('hardware_acceleration') ?? true;
-      _hardwareDecoding = prefs.getBool('hardware_decoding') ?? true;
-      _hardwarePostProcessing =
-          prefs.getBool('hardware_postprocessing') ?? true;
-      _autoFrameRate = prefs.getBool('auto_frame_rate') ?? true;
       _realDebridEnabled = prefs.getBool('realdebrid_enabled') ?? false;
       _realDebridForCatchup = prefs.getBool('realdebrid_catchup') ?? true;
       _realDebridForVOD = prefs.getBool('realdebrid_vod') ?? true;
@@ -181,39 +151,12 @@ class _SettingsScreenState extends State<SettingsScreen>
       _autoDownloadSubtitles = prefs.getBool('auto_download_subtitles') ?? true;
 
       // String settings
-      _decoderType = prefs.getString('decoder_type') ?? 'Auto';
-      _renderingEngine = prefs.getString('rendering_engine') ?? 'Auto';
-      _videoQuality = prefs.getString('video_quality') ?? 'Auto';
       _aiQuality = prefs.getString('ai_quality') ?? 'Balanced';
       _preferredSubtitleLanguage =
           prefs.getString('subtitle_language') ?? 'English';
       _selectedLanguage = prefs.getString('app_language') ?? 'English';
       _chromecastDevice = prefs.getString('chromecast_device') ?? 'Chromecast';
-      
-      // Audio settings
-      _audioDecoderType = prefs.getString('audio_decoder_type') ?? 'Auto';
-      _preferredAudioLanguage = prefs.getString('preferred_audio_language') ?? 'Default';
-      _audioPassthrough = prefs.getBool('audio_passthrough') ?? false;
-      _audioBoost = prefs.getBool('audio_boost') ?? false;
-      _normalizeAudio = prefs.getBool('normalize_audio') ?? false;
-      _audioChannels = prefs.getInt('audio_channels') ?? 0;
-
-      // Double settings
-      _videoBufferSize = prefs.getDouble('video_buffer_size') ?? 50;
     });
-  }
-
-  // Save individual setting
-  // ignore: unused_element
-  Future<void> _saveSetting(String key, dynamic value) async {
-    final prefs = await SharedPreferences.getInstance();
-    if (value is String) {
-      await prefs.setString(key, value);
-    } else if (value is bool) {
-      await prefs.setBool(key, value);
-    } else if (value is double) {
-      await prefs.setDouble(key, value);
-    }
   }
 
   @override
@@ -313,7 +256,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       {'title': 'General', 'icon': Icons.settings_outlined},
       {'title': 'Account', 'icon': Icons.person_outline},
       {'title': 'Playback', 'icon': Icons.play_circle_outline},
-      {'title': 'Cloud & AI', 'icon': Icons.cloud_outlined},
+      {'title': 'AI Features', 'icon': Icons.auto_awesome},
       {'title': 'Recordings', 'icon': Icons.fiber_manual_record},
     ];
 
@@ -489,60 +432,278 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   Widget _buildAccountSettings() {
     // Drive sync feature removed from the app. Only show profile section.
-    return FutureBuilder<Map<String, String?>>(
-      future: _profileFuture,
-      builder: (context, snapshot) {
-        final userName = snapshot.data?['name'] ?? 'User';
-        final userEmail = snapshot.data?['email'] ?? 'user@example.com';
-        final profileImagePath = snapshot.data?['imagePath'];
+    return Consumer<SettingsProvider>(
+      builder: (context, settings, _) {
+        return FutureBuilder<Map<String, String?>>(
+          future: settings.getProfileData(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+              return _buildSettingsSection(
+                title: 'Account',
+                controller: _tabScrollControllers[1],
+                children: const [
+                  Center(child: CircularProgressIndicator()),
+                ],
+              );
+            }
+
+            final data = snapshot.data ?? const {};
+            final userName = data['name'] ?? 'User';
+            final userEmail = data['email'] ?? 'user@example.com';
+            final profileImagePath = data['imagePath'];
+
+            return _buildSettingsSection(
+              title: 'Account',
+              controller: _tabScrollControllers[1],
+              children: [
+                _buildSectionCard(
+                  title: 'Profile',
+                  children: [
+                    Center(
+                      child: Column(
+                        children: [
+                          CircleAvatar(
+                            radius: 50,
+                            backgroundColor: AppTheme.cardBackground,
+                            backgroundImage: profileImagePath != null && profileImagePath.isNotEmpty
+                                ? ResizeImage(
+                                    FileImage(File(profileImagePath)),
+                                    width: 100,
+                                    height: 100,
+                                  )
+                                : null,
+                            child: profileImagePath == null || profileImagePath.isEmpty
+                                ? Icon(
+                                    Icons.person,
+                                    size: 50,
+                                    color: AppTheme.primaryBlue,
+                                  )
+                                : null,
+                          ),
+                          SizedBox(height: AppSizes.md),
+                          Text(
+                            userName,
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          Text(
+                            userEmail,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: AppTheme.textSecondary,
+                                ),
+                          ),
+                          SizedBox(height: AppSizes.md),
+                          ElevatedButton(
+                            onPressed: () async {
+                              final result = await context.push('/edit-profile');
+                              if (!mounted) return;
+                              if (result == true) {
+                                await settings.refreshProfileData();
+                              }
+                            },
+                            child: const Text('Edit Profile'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildPlaybackSettings() {
+    return Consumer<SettingsProvider>(
+      builder: (context, settings, _) {
+        if (!settings.isInitialized) {
+          return _buildSettingsSection(
+            title: 'Playback',
+            controller: _tabScrollControllers[2],
+            children: const [
+              Center(child: CircularProgressIndicator()),
+            ],
+          );
+        }
+
+        String channelLabel(int value) {
+          switch (value) {
+            case 2:
+              return 'Stereo';
+            case 6:
+              return '5.1 Surround';
+            case 8:
+              return '7.1 Surround';
+            default:
+              return 'Auto';
+          }
+        }
 
         return _buildSettingsSection(
-          title: 'Account',
+          title: 'Playback',
+          controller: _tabScrollControllers[2],
           children: [
             _buildSectionCard(
-              title: 'Profile',
+              title: 'Video Settings',
               children: [
-                Center(
-                  child: Column(
-                    children: [
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundColor: AppTheme.cardBackground,
-                        backgroundImage: profileImagePath != null && profileImagePath.isNotEmpty
-                            ? ResizeImage(FileImage(File(profileImagePath)), width: 100, height: 100)
-                            : null,
-                        child: profileImagePath == null || profileImagePath.isEmpty
-                            ? Icon(
-                                Icons.person,
-                                size: 50,
-                                color: AppTheme.primaryBlue,
-                              )
-                            : null,
+                _buildSwitchTile(
+                  'Hardware Acceleration',
+                  settings.hardwareAcceleration,
+                  settings.setHardwareAcceleration,
+                ),
+                _buildSwitchTile(
+                  'Hardware Decoding',
+                  settings.hardwareDecoding,
+                  settings.setHardwareDecoding,
+                ),
+                _buildSwitchTile(
+                  'Hardware Post-Processing',
+                  settings.hardwarePostProcessing,
+                  settings.setHardwarePostProcessing,
+                ),
+                _buildSwitchTile(
+                  'Auto Frame Rate Matching',
+                  settings.autoFrameRate,
+                  settings.setAutoFrameRate,
+                  subtitle:
+                      'Match display refresh rate to video frame rate for smoother playback',
+                ),
+                _buildDropdown(
+                  'Decoder Type',
+                  settings.decoderType,
+                  ['Auto', 'MediaCodec', 'FFmpeg', 'Software'],
+                  (value) {
+                    if (value != null) {
+                      settings.setDecoderType(value);
+                    }
+                  },
+                ),
+                _buildDropdown(
+                  'Rendering Engine',
+                  settings.renderingEngine,
+                  ['Auto', 'SurfaceView', 'TextureView'],
+                  (value) {
+                    if (value != null) {
+                      settings.setRenderingEngine(value);
+                    }
+                  },
+                ),
+              ],
+            ),
+            _buildSectionCard(
+              title: 'Audio Settings',
+              children: [
+                _buildDropdown(
+                  'Audio Decoder',
+                  settings.audioDecoderType,
+                  ['Auto', 'MediaCodec', 'FFmpeg', 'OpenSL ES'],
+                  (value) {
+                    if (value != null) {
+                      settings.setAudioDecoderType(value);
+                    }
+                  },
+                ),
+                _buildDropdown(
+                  'Audio Channels',
+                  channelLabel(settings.audioChannels),
+                  ['Auto', 'Stereo', '5.1 Surround', '7.1 Surround'],
+                  (value) {
+                    if (value == null) return;
+                    int channels = 0;
+                    if (value == 'Stereo') {
+                      channels = 2;
+                    } else if (value == '5.1 Surround') {
+                      channels = 6;
+                    } else if (value == '7.1 Surround') {
+                      channels = 8;
+                    }
+                    settings.setAudioChannels(channels);
+                  },
+                ),
+                _buildDropdown(
+                  'Preferred Audio Language',
+                  settings.preferredAudioLanguage,
+                  [
+                    'Default',
+                    'English',
+                    'Spanish',
+                    'French',
+                    'German',
+                    'Italian',
+                    'Portuguese',
+                    'Russian',
+                    'Chinese',
+                    'Japanese',
+                    'Korean',
+                    'Arabic',
+                  ],
+                  (value) {
+                    if (value != null) {
+                      settings.setPreferredAudioLanguage(value);
+                    }
+                  },
+                ),
+                _buildAudioSwitchTile(
+                  'Audio Passthrough',
+                  settings.audioPassthrough,
+                  settings.setAudioPassthrough,
+                  subtitle:
+                      'Send audio directly to receiver without decoding (for surround sound systems)',
+                ),
+                _buildAudioSwitchTile(
+                  'Audio Boost',
+                  settings.audioBoost,
+                  settings.setAudioBoost,
+                  subtitle: 'Increase audio volume for quiet content',
+                ),
+                _buildAudioSwitchTile(
+                  'Normalize Audio',
+                  settings.normalizeAudio,
+                  settings.setNormalizeAudio,
+                  subtitle:
+                      'Automatically adjust volume levels for consistent playback',
+                ),
+              ],
+            ),
+            _buildSectionCard(
+              title: 'Playback Options',
+              children: [
+                _buildSwitchTile(
+                  'Auto-play Next Episode',
+                  settings.autoPlayNextEpisode,
+                  settings.setAutoPlayNextEpisode,
+                ),
+                _buildDropdown(
+                  'Video Quality',
+                  settings.videoQuality,
+                  ['Auto', '4K', '1080p', '720p', '480p'],
+                  (value) {
+                    if (value != null) {
+                      settings.setVideoQuality(value);
+                    }
+                  },
+                ),
+              ],
+            ),
+            _buildSectionCard(
+              title: 'Buffer Settings',
+              children: [
+                Text('Video Buffer Size: ${settings.videoBufferSize.round()}%'),
+                Slider(
+                  value: settings.videoBufferSize,
+                  min: 0,
+                  max: 100,
+                  divisions: 20,
+                  label: '${settings.videoBufferSize.round()}%',
+                  onChanged: (value) => settings.setVideoBufferSize(value),
+                ),
+                Text(
+                  'Higher buffer reduces stuttering but increases memory usage',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.textSecondary,
                       ),
-                      SizedBox(height: AppSizes.md),
-                      Text(
-                        userName,
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      Text(
-                        userEmail,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                      SizedBox(height: AppSizes.md),
-                      ElevatedButton(
-                        onPressed: () async {
-                          final result = await context.push('/edit-profile');
-                          if (!mounted) return;
-                          if (result == true) {
-                            setState(() {});
-                          }
-                        },
-                        child: Text('Edit Profile'),
-                      ),
-                    ],
-                  ),
                 ),
               ],
             ),
@@ -552,207 +713,23 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Future<Map<String, String?>> _fetchProfileData() async {
-    final prefs = await SharedPreferences.getInstance();
-    return {
-      'name': prefs.getString('user_name'),
-      'email': prefs.getString('user_email'),
-      'imagePath': prefs.getString('profile_image_path'),
-    };
-  }
-
-  Future<Map<String, String?>> _fetchSavedPlaylists() async {
-    final prefs = await SharedPreferences.getInstance();
-    return {
-      'type': prefs.getString('playlist_type'),
-      'name': prefs.getString('playlist_name'),
-      'm3u_url': prefs.getString('m3u_url'),
-      'xtream_server': prefs.getString('xtream_server'),
-      'xtream_username': prefs.getString('xtream_username'),
-    };
-  }
-
-  Future<Map<String, dynamic>> _fetchEpgData() async {
-    final prefs = await SharedPreferences.getInstance();
-    return {
-      'epg_url': prefs.getString('epg_url'),
-      'custom_epg_url': prefs.getString('custom_epg_url'),
-      'playlist_type': prefs.getString('playlist_type'),
-      'm3u_url': prefs.getString('m3u_url'),
-      'xtream_server': prefs.getString('xtream_server'),
-      'epg_update_interval': prefs.getInt('epg_update_interval') ?? 12,
-      'epg_past_days': prefs.getInt('epg_past_days') ?? 1,
-      'store_descriptions': prefs.getBool('store_program_descriptions') ?? true,
-      'show_channel_logos': prefs.getBool('show_channel_logos') ?? true,
-      'show_program_images': prefs.getBool('show_program_images') ?? true,
-    };
-  }
-
-  void _refreshProfileData() {
-    setState(() {
-      _profileFuture = _fetchProfileData();
-    });
-  }
-
-  void _refreshSavedPlaylists() {
-    setState(() {
-      _savedPlaylistsFuture = _fetchSavedPlaylists();
-    });
-  }
-
-  void _refreshEpgData() {
-    setState(() {
-      _epgFuture = _fetchEpgData();
-    });
-  }
-
-  Widget _buildPlaybackSettings() {
-    return _buildSettingsSection(
-      title: 'Playback',
-      children: [
-        _buildSectionCard(
-          title: 'Video Settings',
-          children: [
-            _buildSwitchTile('Hardware Acceleration', _hardwareAcceleration),
-            _buildSwitchTile('Hardware Decoding', _hardwareDecoding),
-            _buildSwitchTile('Hardware Post-Processing', _hardwarePostProcessing),
-            _buildSwitchTile('Auto Frame Rate Matching', _autoFrameRate,
-              subtitle: 'Match display refresh rate to video frame rate for smoother playback'),
-            _buildDropdown(
-              'Decoder Type',
-              _decoderType,
-              ['Auto', 'MediaCodec', 'FFmpeg', 'Software'],
-              (value) {
-                if (value != null) {
-                  setState(() => _decoderType = value);
-                }
-              },
-            ),
-            _buildDropdown(
-              'Rendering Engine',
-              _renderingEngine,
-              ['Auto', 'SurfaceView', 'TextureView'],
-              (value) {
-                if (value != null) {
-                  setState(() => _renderingEngine = value);
-                }
-              },
-            ),
-          ],
-        ),
-        _buildSectionCard(
-          title: 'Audio Settings',
-          children: [
-            _buildDropdown(
-              'Audio Decoder',
-              _audioDecoderType,
-              ['Auto', 'MediaCodec', 'FFmpeg', 'OpenSL ES'],
-              (value) async {
-                if (value != null) {
-                  setState(() => _audioDecoderType = value);
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setString('audio_decoder_type', value);
-                }
-              },
-            ),
-            _buildDropdown(
-              'Audio Channels',
-              _audioChannels == 0 ? 'Auto' : _audioChannels == 2 ? 'Stereo' : _audioChannels == 6 ? '5.1 Surround' : '7.1 Surround',
-              ['Auto', 'Stereo', '5.1 Surround', '7.1 Surround'],
-              (value) async {
-                if (value != null) {
-                  int channels = 0;
-                  if (value == 'Stereo') {
-                    channels = 2;
-                  } else if (value == '5.1 Surround') {
-                    channels = 6;
-                  } else if (value == '7.1 Surround') {
-                    channels = 8;
-                  }
-                  
-                  setState(() => _audioChannels = channels);
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setInt('audio_channels', channels);
-                }
-              },
-            ),
-            _buildDropdown(
-              'Preferred Audio Language',
-              _preferredAudioLanguage,
-              ['Default', 'English', 'Spanish', 'French', 'German', 'Italian', 'Portuguese', 'Russian', 'Chinese', 'Japanese', 'Korean', 'Arabic'],
-              (value) async {
-                if (value != null) {
-                  setState(() => _preferredAudioLanguage = value);
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setString('preferred_audio_language', value);
-                }
-              },
-            ),
-            _buildAudioSwitchTile('Audio Passthrough', _audioPassthrough,
-              subtitle: 'Send audio directly to receiver without decoding (for surround sound systems)'),
-            _buildAudioSwitchTile('Audio Boost', _audioBoost,
-              subtitle: 'Increase audio volume for quiet content'),
-            _buildAudioSwitchTile('Normalize Audio', _normalizeAudio,
-              subtitle: 'Automatically adjust volume levels for consistent playback'),
-          ],
-        ),
-        _buildSectionCard(
-          title: 'Playback Options',
-          children: [
-            _buildSwitchTile('Auto-play Next Episode', _autoPlayNextEpisode),
-            _buildDropdown(
-              'Video Quality',
-              _videoQuality,
-              ['Auto', '4K', '1080p', '720p', '480p'],
-              (value) {
-                if (value != null) {
-                  setState(() => _videoQuality = value);
-                }
-              },
-            ),
-          ],
-        ),
-        _buildSectionCard(
-          title: 'Buffer Settings',
-          children: [
-            Text('Video Buffer Size: ${_videoBufferSize.round()}%'),
-            Slider(
-              value: _videoBufferSize,
-              min: 0,
-              max: 100,
-              divisions: 20,
-              label: '${_videoBufferSize.round()}%',
-              onChanged: (value) {
-                setState(() => _videoBufferSize = value);
-              },
-            ),
-            Text(
-              'Higher buffer reduces stuttering but increases memory usage',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppTheme.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
   Widget _buildEPGSourceSection() {
-    return FutureBuilder<Map<String, dynamic>>(
-      future: _epgFuture,
-      builder: (context, snapshot) {
-        if (!snapshot.hasData || snapshot.data == null) {
-          return Card(
-            margin: EdgeInsets.only(bottom: AppSizes.lg),
-            child: Padding(
-              padding: EdgeInsets.all(AppSizes.lg),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-          );
-        }
+    return Consumer<SettingsProvider>(
+      builder: (context, settings, _) {
+        return FutureBuilder<Map<String, dynamic>>(
+          future: settings.getEpgData(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return Card(
+                margin: EdgeInsets.only(bottom: AppSizes.lg),
+                child: Padding(
+                  padding: EdgeInsets.all(AppSizes.lg),
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
+              );
+            }
 
-        final data = snapshot.data!;
+            final data = snapshot.data!;
         final epgUrl = data['epg_url'] as String?;
         final customEpgUrl = data['custom_epg_url'] as String?;
         final playlistType = data['playlist_type'] as String?;
@@ -785,7 +762,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         final TextEditingController customEpgController = 
             TextEditingController(text: customEpgUrl ?? '');
 
-        return _buildSectionCard(
+          return _buildSectionCard(
           title: 'EPG (Electronic Program Guide)',
           subtitle: 'Configure TV guide information and display settings',
           children: [
@@ -893,8 +870,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     icon: Icon(Icons.save),
                     onPressed: () async {
                       final localContext = context;
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setString('custom_epg_url', customEpgController.text);
+                      await settings.setCustomEpgUrl(customEpgController.text);
                       if (!localContext.mounted) return;
                       showAppSnackBar(
                         localContext,
@@ -903,16 +879,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                           backgroundColor: AppTheme.accentGreen,
                         ),
                       );
-                      // Refresh to show saved URL
-                      if (localContext.mounted) setState(() {});
                     },
                     tooltip: 'Save EPG URL',
                   ),
                 ),
-                  onSubmitted: (value) async {
+                onSubmitted: (value) async {
                   final localContext = context;
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setString('custom_epg_url', value);
+                  await settings.setCustomEpgUrl(value);
                   if (!localContext.mounted) return;
                   showAppSnackBar(
                     localContext,
@@ -921,7 +894,6 @@ class _SettingsScreenState extends State<SettingsScreen>
                       backgroundColor: AppTheme.accentGreen,
                     ),
                   );
-                  if (localContext.mounted) setState(() {}); // Refresh to show saved URL
                 },
               ),
             ),
@@ -960,12 +932,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                 children: [
                   IconButton(
                     icon: Icon(Icons.remove_circle_outline),
-                    onPressed: epgUpdateInterval > 1 ? () async {
-                      final newValue = epgUpdateInterval - 1;
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setInt('epg_update_interval', newValue);
-                      setState(() {});
-                    } : null,
+                    onPressed: epgUpdateInterval > 1
+                        ? () async {
+                            final newValue = epgUpdateInterval - 1;
+                            await settings.setEpgUpdateInterval(newValue);
+                          }
+                        : null,
                   ),
                   Container(
                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -983,12 +955,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ),
                   IconButton(
                     icon: Icon(Icons.add_circle_outline),
-                    onPressed: epgUpdateInterval < 48 ? () async {
-                      final newValue = epgUpdateInterval + 1;
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setInt('epg_update_interval', newValue);
-                      setState(() {});
-                    } : null,
+                    onPressed: epgUpdateInterval < 48
+                        ? () async {
+                            final newValue = epgUpdateInterval + 1;
+                            await settings.setEpgUpdateInterval(newValue);
+                          }
+                        : null,
                   ),
                 ],
               ),
@@ -1020,12 +992,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                 children: [
                   IconButton(
                     icon: Icon(Icons.remove_circle_outline),
-                    onPressed: epgPastDays > 0 ? () async {
-                      final newValue = epgPastDays - 1;
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setInt('epg_past_days', newValue);
-                      setState(() {});
-                    } : null,
+                    onPressed: epgPastDays > 0
+                        ? () async {
+                            final newValue = epgPastDays - 1;
+                            await settings.setEpgPastDays(newValue);
+                          }
+                        : null,
                   ),
                   Container(
                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1043,12 +1015,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ),
                   IconButton(
                     icon: Icon(Icons.add_circle_outline),
-                    onPressed: epgPastDays < 30 ? () async {
-                      final newValue = epgPastDays + 1;
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setInt('epg_past_days', newValue);
-                      setState(() {});
-                    } : null,
+                    onPressed: epgPastDays < 30
+                        ? () async {
+                            final newValue = epgPastDays + 1;
+                            await settings.setEpgPastDays(newValue);
+                          }
+                        : null,
                   ),
                 ],
               ),
@@ -1061,9 +1033,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               subtitle: Text('Save detailed program information (uses more storage)'),
               value: storeDescriptions,
               onChanged: (value) async {
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setBool('store_program_descriptions', value);
-                setState(() {});
+                await settings.setStoreProgramDescriptions(value);
               },
             ),
             
@@ -1087,21 +1057,17 @@ class _SettingsScreenState extends State<SettingsScreen>
               subtitle: Text('Display channel logos in EPG grid'),
               value: showChannelLogos,
               onChanged: (value) async {
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setBool('show_channel_logos', value);
-                setState(() {});
+                await settings.setShowChannelLogos(value);
               },
             ),
-            
+
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: Text('Show Program Images'),
               subtitle: Text('Display program thumbnails and posters'),
               value: showProgramImages,
               onChanged: (value) async {
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setBool('show_program_images', value);
-                setState(() {});
+                await settings.setShowProgramImages(value);
               },
             ),
             
@@ -1112,14 +1078,18 @@ class _SettingsScreenState extends State<SettingsScreen>
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      showAppSnackBar(
-                        context,
-                        SnackBar(
-                          content: Text('Updating EPG data...'),
-                          backgroundColor: AppTheme.primaryBlue,
-                        ),
-                      );
+                    onPressed: () async {
+                      final localContext = context;
+                      if (localContext.mounted) {
+                        showAppSnackBar(
+                          localContext,
+                          SnackBar(
+                            content: Text('Refreshing EPG configuration...'),
+                            backgroundColor: AppTheme.primaryBlue,
+                          ),
+                        );
+                      }
+                      await settings.refreshEpgData();
                     },
                     icon: Icon(Icons.refresh),
                     label: Text('Update EPG'),
@@ -1153,7 +1123,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       );
                       
                       if (confirm == true) {
-                        // TODO: Implement EPG data clearing
+                        await settings.clearEpgData();
                         final localContext = context;
                         if (localContext.mounted) {
                           showAppSnackBar(
@@ -1177,6 +1147,8 @@ class _SettingsScreenState extends State<SettingsScreen>
               ],
             ),
           ],
+            );
+          },
         );
       },
     );
@@ -1185,6 +1157,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget _buildGeneralSettings() {
     return _buildSettingsSection(
       title: 'General',
+      controller: _tabScrollControllers[0],
       children: [
         _buildSectionCard(
           title: 'Playlist Source',
@@ -1770,45 +1743,70 @@ class _SettingsScreenState extends State<SettingsScreen>
           },
         ),
 
-        _buildSectionCard(
-          title: 'Playback Options',
-          children: [
-            _buildSwitchTile('Auto-play Next Episode', _autoPlayNextEpisode),
-            _buildSwitchTile('Remember Playback Position', true),
-            _buildSwitchTile('Skip Intro (if available)', true),
-            _buildDropdown('Video Quality', 'Auto', [
-              'Auto',
-              '4K',
-              '1080p',
-              '720p',
-              '480p',
-            ], (value) {}),
-          ],
-        ),
+        Consumer<SettingsProvider>(
+          builder: (context, settings, _) {
+            if (!settings.isInitialized) {
+              return _buildSectionCard(
+                title: 'Playback Options',
+                children: const [Center(child: CircularProgressIndicator())],
+              );
+            }
 
-        _buildSectionCard(
-          title: 'Buffer Settings',
-          children: [
-            Text('Video Buffer Size: ${_videoBufferSize.round()}%'),
-            Slider(
-              value: _videoBufferSize,
-              min: 0,
-              max: 100,
-              divisions: 20,
-              label: '${_videoBufferSize.round()}%',
-              onChanged: (value) {
-                setState(() {
-                  _videoBufferSize = value;
-                });
-              },
-            ),
-            Text(
-              'Higher buffer reduces stuttering but increases memory usage',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppTheme.textTertiary),
-            ),
-          ],
+            return Column(
+              children: [
+                _buildSectionCard(
+                  title: 'Playback Options',
+                  children: [
+                    _buildSwitchTile(
+                      'Auto-play Next Episode',
+                      settings.autoPlayNextEpisode,
+                      settings.setAutoPlayNextEpisode,
+                    ),
+                    _buildSwitchTile(
+                      'Remember Playback Position',
+                      settings.rememberPlaybackPosition,
+                      settings.setRememberPlaybackPosition,
+                    ),
+                    _buildSwitchTile(
+                      'Skip Intro (if available)',
+                      settings.skipIntro,
+                      settings.setSkipIntro,
+                    ),
+                    _buildDropdown(
+                      'Preferred Video Quality',
+                      settings.playbackQuality,
+                      ['Auto', '4K', '1080p', '720p', '480p'],
+                      (value) {
+                        if (value != null) {
+                          settings.setPlaybackQuality(value);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+                _buildSectionCard(
+                  title: 'Buffer Settings',
+                  children: [
+                    Text('Video Buffer Size: ${settings.videoBufferSize.round()}%'),
+                    Slider(
+                      value: settings.videoBufferSize,
+                      min: 0,
+                      max: 100,
+                      divisions: 20,
+                      label: '${settings.videoBufferSize.round()}%',
+                      onChanged: (value) => settings.setVideoBufferSize(value),
+                    ),
+                    Text(
+                      'Higher buffer reduces stuttering but increases memory usage',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppTheme.textTertiary,
+                          ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
         ),
         
         // Saved Playlists Section
@@ -1822,112 +1820,100 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   Widget _buildCloudAndAISettings() {
     return _buildSettingsSection(
-      title: 'Cloud & AI',
+      title: 'AI Features',
+      controller: _tabScrollControllers[3],
       children: [
-        // Drive sync feature removed from the app.
-        _buildSectionCard(
-          title: 'Cloud Sync',
-          subtitle: 'Removed',
-          children: [
-            Text('Cloud sync has been removed from this build.'),
-          ],
-        ),
-
         // OpenSubtitles Integration - Use Builder with Provider.of instead of Consumer
         Builder(
           builder: (context) {
             try {
               final subtitleService = Provider.of<OpenSubtitlesService>(context, listen: false);
               return _buildSectionCard(
-              title: 'OpenSubtitles Integration',
-              subtitle: 'FREE API - Automatic subtitle downloading',
-              children: [
-                SwitchListTile(
-                  title: const Text('Enable OpenSubtitles'),
-                  subtitle: const Text('Automatically download subtitles'),
-                  value: _openSubtitlesEnabled,
-                  onChanged: (value) {
-                    setState(() {
-                      _openSubtitlesEnabled = value;
-                    });
-                    subtitleService.setEnabled(value);
-                  },
-                ),
-                if (_openSubtitlesEnabled) ...[
-                  const SizedBox(height: 16),
-                  _buildTVTextField(
-                    controller: _openSubtitlesUsernameController,
-                    focusNode: _openSubtitlesUsernameFocusNode,
-                    isEditable: _openSubtitlesUsernameEditable,
-                    onEditableChanged: (value) {
-                      setState(() => _openSubtitlesUsernameEditable = value);
-                      if (!value) {
-                        subtitleService.setCredentials(
-                          _openSubtitlesUsernameController.text,
-                          _openSubtitlesPasswordController.text,
-                        );
-                      }
-                    },
-                    labelText: 'Username',
-                    helperText: 'Create free account at opensubtitles.com',
-                    prefixIcon: Icons.person,
-                    onLeftArrow: requestFirstSidebarFocus,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTVTextField(
-                    controller: _openSubtitlesPasswordController,
-                    focusNode: _openSubtitlesPasswordFocusNode,
-                    isEditable: _openSubtitlesPasswordEditable,
-                    onEditableChanged: (value) {
-                      setState(() => _openSubtitlesPasswordEditable = value);
-                      if (!value) {
-                        subtitleService.setCredentials(
-                          _openSubtitlesUsernameController.text,
-                          _openSubtitlesPasswordController.text,
-                        );
-                      }
-                    },
-                    labelText: 'Password',
-                    prefixIcon: Icons.lock,
-                    obscureText: true,
-                    onLeftArrow: requestFirstSidebarFocus,
-                  ),
-                  const SizedBox(height: 16),
+                title: 'OpenSubtitles Integration',
+                subtitle: 'Free subtitles. No cloud dependency.',
+                children: [
                   SwitchListTile(
-                    title: const Text('Auto-download subtitles'),
-                    subtitle: const Text(
-                      'Download subtitles automatically when playing',
-                    ),
-                    value: _autoDownloadSubtitles,
+                    title: const Text('Enable OpenSubtitles'),
+                    subtitle: const Text('Automatically download subtitles'),
+                    value: _openSubtitlesEnabled,
                     onChanged: (value) {
                       setState(() {
-                        _autoDownloadSubtitles = value;
+                        _openSubtitlesEnabled = value;
                       });
-                      subtitleService.setAutoDownload(value);
+                      subtitleService.setEnabled(value);
                     },
                   ),
-                  const SizedBox(height: 8),
-                  ElevatedButton.icon(
-                    onPressed: () async {
+                  if (_openSubtitlesEnabled) ...[
+                    const SizedBox(height: 16),
+                    _buildTVTextField(
+                      controller: _openSubtitlesUsernameController,
+                      focusNode: _openSubtitlesUsernameFocusNode,
+                      isEditable: _openSubtitlesUsernameEditable,
+                      onEditableChanged: (value) {
+                        setState(() => _openSubtitlesUsernameEditable = value);
+                        if (!value) {
+                          subtitleService.setCredentials(
+                            _openSubtitlesUsernameController.text,
+                            _openSubtitlesPasswordController.text,
+                          );
+                        }
+                      },
+                      labelText: 'Username',
+                      helperText: 'Create free account at opensubtitles.com',
+                      prefixIcon: Icons.person,
+                      onLeftArrow: requestFirstSidebarFocus,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTVTextField(
+                      controller: _openSubtitlesPasswordController,
+                      focusNode: _openSubtitlesPasswordFocusNode,
+                      isEditable: _openSubtitlesPasswordEditable,
+                      onEditableChanged: (value) {
+                        setState(() => _openSubtitlesPasswordEditable = value);
+                        if (!value) {
+                          subtitleService.setCredentials(
+                            _openSubtitlesUsernameController.text,
+                            _openSubtitlesPasswordController.text,
+                          );
+                        }
+                      },
+                      labelText: 'Password',
+                      prefixIcon: Icons.lock,
+                      obscureText: true,
+                      onLeftArrow: requestFirstSidebarFocus,
+                    ),
+                    const SizedBox(height: 16),
+                    SwitchListTile(
+                      title: const Text('Auto-download subtitles'),
+                      subtitle: const Text('Download subtitles automatically when playing'),
+                      value: _autoDownloadSubtitles,
+                      onChanged: (value) {
+                        setState(() {
+                          _autoDownloadSubtitles = value;
+                        });
+                        subtitleService.setAutoDownload(value);
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton.icon(
+                      onPressed: () async {
                         final localContext = context;
                         final success = await subtitleService.authenticate();
                         if (!localContext.mounted) return;
                         showAppSnackBar(
                           localContext,
                           SnackBar(
-                            content: Text(
-                              success ? 'Connected successfully!' : 'Connection failed',
-                            ),
+                            content: Text(success ? 'Connected successfully!' : 'Connection failed'),
                             backgroundColor: success ? Colors.green : AppTheme.accentRed,
                           ),
                         );
-                    },
-                  icon: const Icon(Icons.check_circle),
-                  label: const Text('Test Connection'),
-                ),
-              ],
-            ],
-          );
+                      },
+                      icon: const Icon(Icons.check_circle),
+                      label: const Text('Test Connection'),
+                    ),
+                  ],
+                ],
+              );
             } catch (e) {
               debugPrint('OpenSubtitles service error: $e');
               return _buildSectionCard(
@@ -1946,95 +1932,91 @@ class _SettingsScreenState extends State<SettingsScreen>
             try {
               final rdService = Provider.of<RealDebridService>(context, listen: false);
               return _buildSectionCard(
-              title: 'Real-Debrid Integration',
-              subtitle: 'FREE API - Enhanced streaming for VOD and Catch-up',
-              children: [
-                SwitchListTile(
-                  title: const Text('Enable Real-Debrid'),
-                  subtitle: const Text(
-                    'Use your Real-Debrid account for premium links',
-                  ),
-                  value: _realDebridEnabled,
-                  onChanged: (value) {
-                    setState(() {
-                      _realDebridEnabled = value;
-                    });
-                    rdService.setEnabled(value);
-                  },
-                ),
-                if (_realDebridEnabled) ...[
-                  const SizedBox(height: 16),
-                  _buildTVTextField(
-                    controller: _realDebridApiKeyController,
-                    focusNode: _realDebridApiKeyFocusNode,
-                    isEditable: _realDebridApiKeyEditable,
-                    onEditableChanged: (value) {
-                      setState(() => _realDebridApiKeyEditable = value);
-                      if (!value) {
-                        rdService.setApiKey(_realDebridApiKeyController.text);
-                      }
-                    },
-                    labelText: 'API Key',
-                    hintText: 'Enter your Real-Debrid API key',
-                    helperText: 'Get API key from real-debrid.com/apitoken',
-                    prefixIcon: Icons.vpn_key,
-                    onLeftArrow: requestFirstSidebarFocus,
-                  ),
-                  const SizedBox(height: 16),
-                  CheckboxListTile(
-                    title: const Text('Use for Catch-up TV'),
-                    value: _realDebridForCatchup,
+                title: 'Real-Debrid Integration',
+                subtitle: 'FREE API - Enhanced streaming for VOD and Catch-up',
+                children: [
+                  SwitchListTile(
+                    title: const Text('Enable Real-Debrid'),
+                    subtitle: const Text('Use your Real-Debrid account for premium links'),
+                    value: _realDebridEnabled,
                     onChanged: (value) {
                       setState(() {
-                        _realDebridForCatchup = value ?? true;
+                        _realDebridEnabled = value;
                       });
-                      rdService.setEnableForCatchup(value ?? true);
+                      rdService.setEnabled(value);
                     },
                   ),
-                  CheckboxListTile(
-                    title: const Text('Use for VOD/Movies'),
-                    value: _realDebridForVOD,
-                    onChanged: (value) {
-                      setState(() {
-                        _realDebridForVOD = value ?? true;
-                      });
-                      rdService.setEnableForVOD(value ?? true);
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  ElevatedButton.icon(
-                    onPressed: () async {
-                      final localContext = context;
-                      final success = await rdService.testConnection();
-                      if (!localContext.mounted) return;
-                      showAppSnackBar(
-                        localContext,
-                        SnackBar(
-                          content: Text(
-                            success
-                                ? 'Connected! Premium until ${rdService.premiumExpiryDate}'
-                                : 'Connection failed',
-                          ),
-                          backgroundColor: success ? Colors.green : AppTheme.accentRed,
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.check_circle),
-                    label: const Text('Test Connection'),
-                  ),
-                  if (rdService.isAuthenticated) ...[
+                  if (_realDebridEnabled) ...[
                     const SizedBox(height: 16),
-                    ListTile(
-                      leading: const Icon(
-                        Icons.account_circle,
-                        color: AppTheme.primaryBlue,
-                      ),
-                      title: Text(rdService.username ?? 'Premium Account'),
-                      subtitle: Text(
-                        'Premium until: ${rdService.premiumExpiryDate}',
-                      ),
+                    _buildTVTextField(
+                      controller: _realDebridApiKeyController,
+                      focusNode: _realDebridApiKeyFocusNode,
+                      isEditable: _realDebridApiKeyEditable,
+                      onEditableChanged: (value) {
+                        setState(() => _realDebridApiKeyEditable = value);
+                        if (!value) {
+                          rdService.setApiKey(_realDebridApiKeyController.text);
+                        }
+                      },
+                      labelText: 'API Key',
+                      hintText: 'Enter your Real-Debrid API key',
+                      helperText: 'Get API key from real-debrid.com/apitoken',
+                      prefixIcon: Icons.vpn_key,
+                      onLeftArrow: requestFirstSidebarFocus,
                     ),
-                  ],
+                    const SizedBox(height: 16),
+                    CheckboxListTile(
+                      title: const Text('Use for Catch-up TV'),
+                      value: _realDebridForCatchup,
+                      onChanged: (value) {
+                        setState(() {
+                          _realDebridForCatchup = value ?? true;
+                        });
+                        rdService.setEnableForCatchup(value ?? true);
+                      },
+                    ),
+                    CheckboxListTile(
+                      title: const Text('Use for VOD/Movies'),
+                      value: _realDebridForVOD,
+                      onChanged: (value) {
+                        setState(() {
+                          _realDebridForVOD = value ?? true;
+                        });
+                        rdService.setEnableForVOD(value ?? true);
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        final localContext = context;
+                        final success = await rdService.testConnection();
+                        if (!localContext.mounted) return;
+                        showAppSnackBar(
+                          localContext,
+                          SnackBar(
+                            content: Text(
+                              success
+                                  ? 'Connected! Premium until ${rdService.premiumExpiryDate}'
+                                  : 'Connection failed',
+                            ),
+                            backgroundColor: success ? Colors.green : AppTheme.accentRed,
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.check_circle),
+                      label: const Text('Test Connection'),
+                    ),
+                    if (rdService.isAuthenticated) ...[
+                      const SizedBox(height: 16),
+                      ListTile(
+                        leading: const Icon(
+                          Icons.account_circle,
+                          color: AppTheme.primaryBlue,
+                        ),
+                        title: Text(rdService.username ?? 'Premium Account'),
+                        subtitle: Text('Premium until: ${rdService.premiumExpiryDate}'),
+                      ),
+                    ],
                   ],
                 ],
               );
@@ -2059,64 +2041,62 @@ class _SettingsScreenState extends State<SettingsScreen>
                 title: 'AI Video Upscaling',
                 subtitle: 'FREE - On-device AI upscaling (no cloud costs)',
                 children: [
-                SwitchListTile(
-                  title: const Text('Enable AI Upscaling'),
-                  subtitle: const Text(
-                    'Enhance video quality with AI (2x upscaling)',
+                  SwitchListTile(
+                    title: const Text('Enable AI Upscaling'),
+                    subtitle: const Text('Enhance video quality with AI (2x upscaling)'),
+                    value: _aiUpscalingEnabled,
+                    onChanged: aiService.isModelLoaded
+                        ? (value) {
+                            setState(() {
+                              _aiUpscalingEnabled = value;
+                            });
+                            aiService.setEnabled(value);
+                          }
+                        : null,
                   ),
-                  value: _aiUpscalingEnabled,
-                  onChanged: aiService.isModelLoaded
-                      ? (value) {
-                          setState(() {
-                            _aiUpscalingEnabled = value;
-                          });
-                          aiService.setEnabled(value);
-                        }
-                      : null,
-                ),
-                if (!aiService.isModelLoaded) ...[
-                  const SizedBox(height: 8),
-                  const Text(
-                    'AI model not found. Place esrgan_x2.tflite in assets/models/',
-                    style: TextStyle(color: AppTheme.accentRed, fontSize: 12),
-                  ),
+                  if (!aiService.isModelLoaded) ...[
+                    const SizedBox(height: 8),
+                    const Text(
+                      'AI model not found. Place esrgan_x2.tflite in assets/models/',
+                      style: TextStyle(color: AppTheme.accentRed, fontSize: 12),
+                    ),
+                  ],
+                  if (_aiUpscalingEnabled) ...[
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Quality Preset',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 8),
+                    SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(value: 'Fast', label: Text('Fast')),
+                        ButtonSegment(value: 'Balanced', label: Text('Balanced')),
+                        ButtonSegment(value: 'Quality', label: Text('Quality')),
+                      ],
+                      selected: {_aiQuality},
+                      onSelectionChanged: (Set<String> selection) {
+                        setState(() {
+                          _aiQuality = selection.first;
+                        });
+                        aiService.setQuality(selection.first);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    ListTile(
+                      leading: const Icon(
+                        Icons.info_outline,
+                        color: AppTheme.primaryBlue,
+                      ),
+                      title: Text(
+                        'GPU Available: ${aiService.gpuAvailable ? "Yes" : "No"}',
+                      ),
+                      subtitle: const Text(
+                        'GPU acceleration provides better performance',
+                      ),
+                    ),
+                  ],
                 ],
-                if (_aiUpscalingEnabled) ...[
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Quality Preset',
-                    style: TextStyle(fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 8),
-                  SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'Fast', label: Text('Fast')),
-                      ButtonSegment(value: 'Balanced', label: Text('Balanced')),
-                      ButtonSegment(value: 'Quality', label: Text('Quality')),
-                    ],
-                    selected: {_aiQuality},
-                    onSelectionChanged: (Set<String> selection) {
-                      setState(() {
-                        _aiQuality = selection.first;
-                      });
-                      aiService.setQuality(selection.first);
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  ListTile(
-                    leading: const Icon(
-                      Icons.info_outline,
-                      color: AppTheme.primaryBlue,
-                    ),
-                    title: Text(
-                      'GPU Available: ${aiService.gpuAvailable ? "Yes" : "No"}',
-                    ),
-                    subtitle: const Text(
-                      'GPU acceleration provides better performance',
-                    ),
-                  ),
-                ],
-              ],
               );
             } catch (e, st) {
               debugPrint('Settings: AIUpscaling (secondary) builder error: $e\n$st');
@@ -2400,6 +2380,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
         return _buildSettingsSection(
           title: 'Recordings',
+          controller: _tabScrollControllers[4],
           children: [
             _buildSectionCard(
               title: 'Recording Storage',
@@ -2538,20 +2519,21 @@ class _SettingsScreenState extends State<SettingsScreen>
                   'UTC+0 (GMT)',
                   'UTC+1 (CET)',
                 ], (value) {}),
-                _buildSwitchTile('Show Channel Logos', true),
-                _buildSwitchTile('Show Program Images', true),
+                _buildSwitchTile('Show Channel Logos', true, (_) {}),
+                _buildSwitchTile('Show Program Images', true, (_) {}),
               ],
             ),
             _buildSectionCard(
               title: 'Actions',
               children: [
                 ElevatedButton.icon(
-                  onPressed: () {
+                  onPressed: () async {
                     final localContext = context;
                     if (localContext.mounted) {
-                      showAppSnackBar(localContext, SnackBar(content: Text('Updating EPG data...')));
+                      showAppSnackBar(localContext, SnackBar(content: Text('Refreshing EPG configuration...')));
                     }
-                    // TODO: Implement EPG update functionality
+                    final settings = Provider.of<SettingsProvider>(context, listen: false);
+                    await settings.refreshEpgData();
                   },
                   icon: Icon(Icons.refresh),
                   label: Text('Update EPG Now'),
@@ -2567,189 +2549,197 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget _buildSettingsSection({
     required String title,
     required List<Widget> children,
+    ScrollController? controller,
   }) {
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(AppSizes.lg),  // Reduced from xl
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),  // Changed from headlineMedium
-          ),
-          SizedBox(height: AppSizes.md),  // Reduced from lg
-          ...children,
-        ],
+    return ScrollConfiguration(
+      behavior: const ScrollBehavior().copyWith(scrollbars: false),
+      child: SingleChildScrollView(
+        controller: controller,
+        padding: EdgeInsets.all(AppSizes.lg),  // Reduced from xl
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),  // Changed from headlineMedium
+            ),
+            SizedBox(height: AppSizes.md),  // Reduced from lg
+            ...children,
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildSavedPlaylistsSection() {
-    return FutureBuilder<Map<String, String?>>(
-      future: _savedPlaylistsFuture,
-      builder: (context, snapshot) {
-        if (!snapshot.hasData || snapshot.data == null) {
-          return Card(
-            margin: EdgeInsets.only(bottom: AppSizes.lg),
-            child: Padding(
-              padding: EdgeInsets.all(AppSizes.lg),
-              child: Text('Loading saved playlists...'),
-            ),
-          );
-        }
+    return Consumer<SettingsProvider>(
+      builder: (context, settings, _) {
+        return FutureBuilder<Map<String, String?>>(
+          future: settings.getSavedPlaylists(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return Card(
+                margin: EdgeInsets.only(bottom: AppSizes.lg),
+                child: Padding(
+                  padding: EdgeInsets.all(AppSizes.lg),
+                  child: const Text('Loading saved playlists...'),
+                ),
+              );
+            }
 
-        final data = snapshot.data!;
-        final hasPlaylist = data['type'] != null;
-        final playlistName = data['name'] ?? 'My Playlist';
+            final data = snapshot.data!;
+            final hasPlaylist = data['type'] != null;
+            final playlistName = data['name'] ?? 'My Playlist';
 
-        return Card(
-          margin: EdgeInsets.only(bottom: AppSizes.lg),
-          child: Padding(
-            padding: EdgeInsets.all(AppSizes.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+            return Card(
+              margin: EdgeInsets.only(bottom: AppSizes.lg),
+              child: Padding(
+                padding: EdgeInsets.all(AppSizes.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.playlist_play, color: AppTheme.primaryBlue),
-                    SizedBox(width: AppSizes.sm),
-                    Text(
-                      'Saved Playlists',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ],
-                ),
-                SizedBox(height: AppSizes.sm),
-                Text(
-                  'Manage your saved playlist credentials',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: AppTheme.textSecondary),
-                ),
-                SizedBox(height: AppSizes.lg),
-
-                if (!hasPlaylist)
-                  Container(
-                    padding: EdgeInsets.all(AppSizes.md),
-                    decoration: BoxDecoration(
-                      color: AppTheme.cardBackground,
-                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                      border: Border.all(color: AppTheme.divider),
-                    ),
-                    child: Row(
+                    Row(
                       children: [
-                        Icon(Icons.info_outline, color: AppTheme.textSecondary),
-                        SizedBox(width: AppSizes.md),
-                        Expanded(
-                          child: Text(
-                            'No saved playlist found. Use the fields above to add a playlist.',
-                            style: TextStyle(color: AppTheme.textSecondary),
-                          ),
+                        Icon(Icons.playlist_play, color: AppTheme.primaryBlue),
+                        SizedBox(width: AppSizes.sm),
+                        Text(
+                          'Saved Playlists',
+                          style: Theme.of(context).textTheme.titleLarge,
                         ),
                       ],
                     ),
-                  )
-                else
-                  GestureDetector(
-                    onTap: () => context.go('/playlist-editor'),
-                    child: Focus(
-                      skipTraversal: true,
-                      onKeyEvent: (node, event) {
-                        if (event is! KeyDownEvent) return KeyEventResult.ignored;
-                        if (event.logicalKey == LogicalKeyboardKey.select ||
-                            event.logicalKey == LogicalKeyboardKey.enter) {
-                          context.go('/playlist-editor');
-                          return KeyEventResult.handled;
-                        }
-                        return KeyEventResult.ignored;
-                      },
-                      child: Container(
+                    SizedBox(height: AppSizes.sm),
+                    Text(
+                      'Manage your saved playlist credentials',
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: AppTheme.textSecondary),
+                    ),
+                    SizedBox(height: AppSizes.lg),
+
+                    if (!hasPlaylist)
+                      Container(
                         padding: EdgeInsets.all(AppSizes.md),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
+                          color: AppTheme.cardBackground,
                           borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                          border: Border.all(color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round())),
+                          border: Border.all(color: AppTheme.divider),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
                           children: [
-                            Row(
-                              children: [
-                                Icon(Icons.playlist_play, color: AppTheme.primaryBlue, size: 24),
-                                SizedBox(width: AppSizes.sm),
-                                Expanded(
-                                  child: Text(
-                                    playlistName,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.primaryBlue,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    data['type'] == 'm3u' ? 'M3U' : 'Xtream',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(width: AppSizes.sm),
-                                Icon(Icons.chevron_right, color: AppTheme.textSecondary),
-                              ],
-                            ),
-                            SizedBox(height: AppSizes.md),
-                            if (data['type'] == 'm3u') ...[
-                              _buildInfoRow('URL', data['m3u_url'] ?? 'N/A'),
-                            ] else if (data['type'] == 'xtream') ...[
-                              _buildInfoRow('Server', data['xtream_server'] ?? 'N/A'),
-                              SizedBox(height: AppSizes.xs),
-                              _buildInfoRow('Username', data['xtream_username'] ?? 'N/A'),
-                            ],
-                            SizedBox(height: AppSizes.md),
-                            Container(
-                              padding: EdgeInsets.all(AppSizes.sm),
-                              decoration: BoxDecoration(
-                                color: AppTheme.cardBackground,
-                                borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.edit, size: 14, color: AppTheme.textSecondary),
-                                  SizedBox(width: 6),
-                                  Text(
-                                    'Tap to edit playlist settings',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: AppTheme.textSecondary,
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
-                                ],
+                            Icon(Icons.info_outline, color: AppTheme.textSecondary),
+                            SizedBox(width: AppSizes.md),
+                            Expanded(
+                              child: Text(
+                                'No saved playlist found. Use the fields above to add a playlist.',
+                                style: TextStyle(color: AppTheme.textSecondary),
                               ),
                             ),
                           ],
                         ),
+                      )
+                    else
+                      GestureDetector(
+                        onTap: () => context.go('/playlist-editor'),
+                        child: Focus(
+                          skipTraversal: true,
+                          onKeyEvent: (node, event) {
+                            if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                            if (event.logicalKey == LogicalKeyboardKey.select ||
+                                event.logicalKey == LogicalKeyboardKey.enter) {
+                              context.go('/playlist-editor');
+                              return KeyEventResult.handled;
+                            }
+                            return KeyEventResult.ignored;
+                          },
+                          child: Container(
+                            padding: EdgeInsets.all(AppSizes.md),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              border: Border.all(
+                                color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.playlist_play, color: AppTheme.primaryBlue, size: 24),
+                                    SizedBox(width: AppSizes.sm),
+                                    Expanded(
+                                      child: Text(
+                                        playlistName,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.primaryBlue,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        data['type'] == 'm3u' ? 'M3U' : 'Xtream',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(width: AppSizes.sm),
+                                    Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+                                  ],
+                                ),
+                                SizedBox(height: AppSizes.md),
+                                if (data['type'] == 'm3u') ...[
+                                  _buildInfoRow('URL', data['m3u_url'] ?? 'N/A'),
+                                ] else if (data['type'] == 'xtream') ...[
+                                  _buildInfoRow('Server', data['xtream_server'] ?? 'N/A'),
+                                  SizedBox(height: AppSizes.xs),
+                                  _buildInfoRow('Username', data['xtream_username'] ?? 'N/A'),
+                                ],
+                                SizedBox(height: AppSizes.md),
+                                Container(
+                                  padding: EdgeInsets.all(AppSizes.sm),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.cardBackground,
+                                    borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.edit, size: 14, color: AppTheme.textSecondary),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        'Tap to edit playlist settings',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: AppTheme.textSecondary,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
+                  ],
+                ),
+              ),
+            );
+          },
         );
       },
     );
@@ -2823,57 +2813,35 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildSwitchTile(String title, bool value, {String? subtitle}) {
+  Widget _buildSwitchTile(
+    String title,
+    bool value,
+    ValueChanged<bool> onChanged, {
+    String? subtitle,
+  }) {
     return SwitchListTile(
       title: Text(title),
-      subtitle: subtitle != null ? Text(subtitle, style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)) : null,
+        subtitle: subtitle != null
+          ? Text(subtitle, style: TextStyle(fontSize: 12, color: AppTheme.textSecondary))
+          : null,
       value: value,
-      onChanged: (newValue) async {
-        setState(() {
-          if (title == 'Auto-play Next Episode') {
-            _autoPlayNextEpisode = newValue;
-          } else if (title == 'Auto Frame Rate Matching') {
-            _autoFrameRate = newValue;
-          }
-        });
-        
-        // Save to SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
-        if (title == 'Auto-play Next Episode') {
-          await prefs.setBool('auto_play_next', newValue);
-        } else if (title == 'Auto Frame Rate Matching') {
-          await prefs.setBool('auto_frame_rate', newValue);
-        }
-      },
+      onChanged: onChanged,
     );
   }
 
-  Widget _buildAudioSwitchTile(String title, bool value, {String? subtitle}) {
+  Widget _buildAudioSwitchTile(
+    String title,
+    bool value,
+    ValueChanged<bool> onChanged, {
+    String? subtitle,
+  }) {
     return SwitchListTile(
       title: Text(title),
-      subtitle: subtitle != null ? Text(subtitle, style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)) : null,
+        subtitle: subtitle != null
+          ? Text(subtitle, style: TextStyle(fontSize: 12, color: AppTheme.textSecondary))
+          : null,
       value: value,
-      onChanged: (newValue) async {
-        setState(() {
-          if (title == 'Audio Passthrough') {
-            _audioPassthrough = newValue;
-          } else if (title == 'Audio Boost') {
-            _audioBoost = newValue;
-          } else if (title == 'Normalize Audio') {
-            _normalizeAudio = newValue;
-          }
-        });
-        
-        // Save to SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
-        if (title == 'Audio Passthrough') {
-          await prefs.setBool('audio_passthrough', newValue);
-        } else if (title == 'Audio Boost') {
-          await prefs.setBool('audio_boost', newValue);
-        } else if (title == 'Normalize Audio') {
-          await prefs.setBool('normalize_audio', newValue);
-        }
-      },
+      onChanged: onChanged,
     );
   }
 
@@ -2891,7 +2859,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           Text(label, style: Theme.of(context).textTheme.bodyMedium),
           SizedBox(height: AppSizes.sm),
           DropdownButtonFormField<String>(
-            value: value,
+            initialValue: value,
             decoration: InputDecoration(
               border: OutlineInputBorder(
                 borderSide: BorderSide(color: Colors.white.withAlpha((0.2 * 255).round())),
