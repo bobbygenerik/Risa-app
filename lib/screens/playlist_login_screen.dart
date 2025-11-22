@@ -70,10 +70,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
   String _normalizeHttpUrl(String input) {
     final trimmed = input.trim();
     if (trimmed.isEmpty) return trimmed;
-    // Allow uppercase/lowercase schemes from TV keyboards without
-    // re-prefixing the URL (HTTP://example → keep as-is).
-    final lower = trimmed.toLowerCase();
-    if (lower.startsWith('http://') || lower.startsWith('https://')) {
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
       return trimmed;
     }
     return 'http://$trimmed';

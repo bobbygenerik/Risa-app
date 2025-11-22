@@ -238,11 +238,10 @@ class _SettingsScreenState extends State<SettingsScreen>
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: PopScope(
-        canPop: true,
-        // Let system back pop the route; fall back to home if Navigator denies.
+        canPop: false,
+        // ignore: deprecated_member_use
         onPopInvoked: (didPop) {
           if (didPop) return;
-          if (!context.mounted) return;
           context.go('/home');
         },
         child: Container(
@@ -744,7 +743,6 @@ class _SettingsScreenState extends State<SettingsScreen>
       future: () async {
         final prefs = await SharedPreferences.getInstance();
         return {
-          'epg_url': prefs.getString('epg_url'),
           'custom_epg_url': prefs.getString('custom_epg_url'),
           'playlist_type': prefs.getString('playlist_type'),
           'm3u_url': prefs.getString('m3u_url'),
@@ -1238,7 +1236,6 @@ class _SettingsScreenState extends State<SettingsScreen>
       title: 'General',
       children: [
         _buildPlaylistStatusCard(),
-        SizedBox(height: AppSizes.md),
         _buildSectionCard(
           title: 'Playlist Source',
           subtitle: 'Select your playlist type and enter details',
@@ -1491,6 +1488,8 @@ class _SettingsScreenState extends State<SettingsScreen>
             ],
           ],
         ),
+        _buildSavedPlaylistsSection(),
+        _buildEPGSourceSection(),
       ],
     );
   }

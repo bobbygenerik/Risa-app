@@ -170,8 +170,8 @@ class M3UParserService {
 
         final groupTitle =
             currentAttributes['group-title']?.toLowerCase() ?? '';
-        final looksSeries = _looksLikeSeries(channelName, groupTitle);
-        final looksMovie = _looksLikeMovie(groupTitle);
+        final looksSeries = _looksLikeSeries(channelName, groupTitle, line);
+        final looksMovie = !looksSeries && _looksLikeMovie(groupTitle, line);
 
         if (looksSeries) {
           series.add(
@@ -296,17 +296,12 @@ class M3UParserService {
         final groupTitle =
             currentAttributes['group-title']?.toLowerCase() ?? '';
         final title = _extractChannelName(currentInfo);
+        final looksSeries = _looksLikeSeries(title, groupTitle, line);
+        final looksMovie = !looksSeries && _looksLikeMovie(groupTitle, line);
 
-        // Check if it's a series (has S##E## pattern or in series group)
-        final isSeries =
-            title.contains(RegExp(r'S\d+E\d+', caseSensitive: false)) ||
-            groupTitle.contains('series') ||
-            groupTitle.contains('tv shows') ||
-            groupTitle.contains('episodes');
-
-        if (isSeries) {
+        if (looksSeries) {
           series.add(_createSeriesContent(title, line, currentAttributes, i));
-        } else if (groupTitle.contains('movie') || groupTitle.contains('vod')) {
+        } else if (looksMovie) {
           movies.add(_createMovieContent(title, line, currentAttributes, i));
         }
 
@@ -422,14 +417,69 @@ class M3UParserService {
     return genres.isNotEmpty ? genres : null;
   }
 
-  bool _looksLikeSeries(String title, String lowerGroupTitle) {
+  bool _looksLikeSeries(String title, String lowerGroupTitle, String url) {
+    final lowerUrl = url.toLowerCase();
+    if (_isLikelyLiveUrl(lowerUrl)) return false;
+
+    if (_hasSeriesPathKeyword(lowerUrl)) return true;
+
     return title.contains(RegExp(r'S\d+E\d+', caseSensitive: false)) ||
         lowerGroupTitle.contains('series') ||
         lowerGroupTitle.contains('tv shows') ||
         lowerGroupTitle.contains('episodes');
   }
 
-  bool _looksLikeMovie(String lowerGroupTitle) {
-    return lowerGroupTitle.contains('movie') || lowerGroupTitle.contains('vod');
+  bool _looksLikeMovie(String lowerGroupTitle, String url) {
+    final lowerUrl = url.toLowerCase();
+    final hasMoviePath = _hasMoviePathKeyword(lowerUrl);
+    final hasFileExtension = _hasVodFileExtension(lowerUrl);
+
+    if (_isLikelyLiveUrl(lowerUrl) && !hasMoviePath && !hasFileExtension) {
+      return false;
+    }
+
+    if (hasMoviePath || hasFileExtension) return true;
+
+    final looksMovieByGroup =
+        lowerGroupTitle.contains('vod') ||
+        lowerGroupTitle.contains('video on demand') ||
+        lowerGroupTitle.contains('film') ||
+        (lowerGroupTitle.contains('movie') && !_isLikelyLiveUrl(lowerUrl));
+
+    return looksMovieByGroup;
+  }
+
+  bool _isLikelyLiveUrl(String lowerUrl) {
+    return lowerUrl.contains('/live/') ||
+        lowerUrl.endsWith('.m3u8') ||
+        lowerUrl.endsWith('.ts');
+  }
+
+  bool _hasVodFileExtension(String lowerUrl) {
+    const extensions = [
+      '.mp4',
+      '.mkv',
+      '.avi',
+      '.mov',
+      '.wmv',
+      '.flv',
+      '.mpg',
+      '.mpeg',
+      '.m4v',
+    ];
+    return extensions.any(lowerUrl.endsWith);
+  }
+
+  bool _hasMoviePathKeyword(String lowerUrl) {
+    return lowerUrl.contains('/movie/') ||
+        lowerUrl.contains('/movies/') ||
+        lowerUrl.contains('/vod/') ||
+        lowerUrl.contains('/film/');
+  }
+
+  bool _hasSeriesPathKeyword(String lowerUrl) {
+    return lowerUrl.contains('/series/') ||
+        lowerUrl.contains('/episodes/') ||
+        lowerUrl.contains('/tvshows/');
   }
 }
