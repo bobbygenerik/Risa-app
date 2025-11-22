@@ -31,6 +31,7 @@ import 'package:iptv_player/screens/movies_screen.dart';
 import 'package:iptv_player/screens/series_screen.dart';
 import 'package:iptv_player/screens/enhanced_video_player_screen.dart';
 import 'package:iptv_player/screens/playlist_login_screen.dart';
+import 'package:iptv_player/screens/content_detail_screen.dart';
 import 'package:iptv_player/screens/help_about_screen.dart';
 import 'package:iptv_player/screens/favorites_screen.dart';
 import 'package:iptv_player/screens/downloads_screen.dart';
@@ -698,6 +699,81 @@ final _router = GoRouter(
       path: '/ai-models',
       pageBuilder: (context, state) =>
           _fadeSlidePage(key: state.pageKey, child: const AIModelsScreen()),
+    ),
+    GoRoute(
+      path: '/content/:id',
+      pageBuilder: (context, state) {
+        Content? content;
+        final extra = state.extra;
+        if (extra is Content) {
+          content = extra;
+        } else {
+          final contentId = state.pathParameters['id'];
+          if (contentId != null) {
+            final contentProvider = Provider.of<ContentProvider>(
+              context,
+              listen: false,
+            );
+            final combined = [
+              ...contentProvider.movies,
+              ...contentProvider.series,
+              ...contentProvider.continueWatching,
+              ...contentProvider.highlights,
+            ];
+            for (final item in combined) {
+              if (item.id == contentId) {
+                content = item;
+                break;
+              }
+            }
+          }
+        }
+
+        if (content == null) {
+          return _fadeSlidePage(
+            key: state.pageKey,
+            child: Scaffold(
+              backgroundColor: AppTheme.cardBackground,
+              body: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.movie_outlined,
+                      size: 64,
+                      color: AppTheme.accentOrange,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Content unavailable',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'We could not find that movie or series',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.textSecondary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () => context.go('/home'),
+                      icon: const Icon(Icons.home),
+                      label: const Text('Back to Home'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        return _fadeSlidePage(
+          key: state.pageKey,
+          child: ContentDetailScreen(content: content),
+        );
+      },
     ),
     GoRoute(
       path: '/player',

@@ -27,7 +27,9 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
   void initState() {
     super.initState();
     // Start carousel once the widget is built — will be updated when channels load
-    WidgetsBinding.instance.addPostFrameCallback((_) => _startCarouselIfNeeded());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _startCarouselIfNeeded(),
+    );
   }
 
   @override
@@ -39,7 +41,10 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
   }
 
   void requestFirstContentFocus() {
-    final channelProvider = Provider.of<ChannelProvider>(context, listen: false);
+    final channelProvider = Provider.of<ChannelProvider>(
+      context,
+      listen: false,
+    );
     if (channelProvider.channels.isEmpty) {
       _settingsButtonFocus.requestFocus();
     } else {
@@ -52,7 +57,10 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
     _carouselTimer?.cancel();
     // Start a timer that advances featured index every 8 seconds
     _carouselTimer = Timer.periodic(const Duration(seconds: 8), (_) {
-      final channelProvider = Provider.of<ChannelProvider>(context, listen: false);
+      final channelProvider = Provider.of<ChannelProvider>(
+        context,
+        listen: false,
+      );
       final channels = channelProvider.channels;
       if (channels.isEmpty) return;
       setState(() {
@@ -74,10 +82,7 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF050710),
-            Color(0xFF0d1140),
-          ],
+          colors: [Color(0xFF050710), Color(0xFF0d1140)],
         ),
       ),
       child: Consumer2<ChannelProvider, EpgService>(
@@ -89,11 +94,24 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.live_tv, size: 80, color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round())),
+                  Icon(
+                    Icons.live_tv,
+                    size: 80,
+                    color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
+                  ),
                   const SizedBox(height: 24),
-                  Text('No Live TV Available', style: Theme.of(context).textTheme.headlineMedium),
+                  Text(
+                    'No Live TV Available',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
                   const SizedBox(height: 8),
-                  Text('Load a playlist with Live TV channels from Settings', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary), textAlign: TextAlign.center),
+                  Text(
+                    'Load a playlist with Live TV channels from Settings',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                   const SizedBox(height: 32),
                   ElevatedButton.icon(
                     focusNode: _settingsButtonFocus,
@@ -105,7 +123,9 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
                     },
                     icon: const Icon(Icons.settings),
                     label: const Text('Go to Settings'),
-                    style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryBlue,
+                    ),
                   ),
                 ],
               ),
@@ -116,13 +136,19 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
           if (_featuredIndex >= channels.length) _featuredIndex = 0;
 
           final featuredChannel = channels[_featuredIndex];
-          final currentProgram = epgService.getCurrentProgram(featuredChannel.id);
+          final currentProgram = epgService.getCurrentProgram(
+            featuredChannel.id,
+          );
 
           return SingleChildScrollView(
             child: Column(
               children: [
                 _buildHero(context, featuredChannel, currentProgram),
-                _buildChannelSection(context, 'Featured Channels', channels.take(6).toList()),
+                _buildChannelSection(
+                  context,
+                  'Featured Channels',
+                  channels.take(6).toList(),
+                ),
                 const SizedBox(height: 24),
                 _buildChannelSection(context, 'All Channels', channels),
                 const SizedBox(height: 40),
@@ -156,7 +182,12 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
             // Background image if available
             if (program?.imageUrl != null)
               Positioned.fill(
-                child: Image.network(program!.imageUrl!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: AppTheme.cardBackground)),
+                child: Image.network(
+                  program!.imageUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) =>
+                      Container(color: AppTheme.cardBackground),
+                ),
               ),
             // Dark gradient overlay
             Positioned.fill(
@@ -182,11 +213,19 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      if (channel.logoUrl != null && channel.logoUrl!.isNotEmpty)
+                      if (channel.logoUrl != null &&
+                          channel.logoUrl!.isNotEmpty)
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: Image.network(channel.logoUrl!, height: 64, width: 120, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const SizedBox.shrink()),
-                      ),
+                          child: Image.network(
+                            channel.logoUrl!,
+                            height: 64,
+                            width: 120,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) =>
+                                const SizedBox.shrink(),
+                          ),
+                        ),
                       const SizedBox(width: 16),
                       Expanded(
                         child: Column(
@@ -196,15 +235,31 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
                               children: [
                                 if (program != null)
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(color: Colors.redAccent, borderRadius: BorderRadius.circular(8)),
-                                    child: const Text('LIVE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.redAccent,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Text(
+                                      'LIVE',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
                                   ),
                                 const SizedBox(width: 8),
                                 Flexible(
                                   child: Text(
                                     title,
-                                    style: const TextStyle(color: AppTheme.textPrimary, fontSize: 26, fontWeight: FontWeight.w800),
+                                    style: const TextStyle(
+                                      color: AppTheme.textPrimary,
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.w800,
+                                    ),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -212,16 +267,34 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
                               ],
                             ),
                             const SizedBox(height: 8),
-                            Text(subtitle, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+                            Text(
+                              subtitle,
+                              style: const TextStyle(
+                                color: AppTheme.textSecondary,
+                                fontSize: 14,
+                              ),
+                            ),
                             const SizedBox(height: 12),
                             // Progress bar
                             if (program != null)
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  LinearProgressIndicator(value: progress, color: AppTheme.accentOrange, backgroundColor: Colors.white.withAlpha((0.08 * 255).round())),
+                                  LinearProgressIndicator(
+                                    value: progress,
+                                    color: AppTheme.accentOrange,
+                                    backgroundColor: Colors.white.withAlpha(
+                                      (0.08 * 255).round(),
+                                    ),
+                                  ),
                                   const SizedBox(height: 8),
-                                  Text('${(progress * 100).round()}% elapsed', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                                  Text(
+                                    '${(progress * 100).round()}% elapsed',
+                                    style: const TextStyle(
+                                      color: AppTheme.textSecondary,
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                 ],
                               ),
                           ],
@@ -235,42 +308,80 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
                       // Watch button with larger focus outline
                       Focus(
                         focusNode: _watchFocus,
-                        child: Builder(builder: (ctx) {
-                          final hasFocus = Focus.of(ctx).hasFocus;
-                          return Container(
-                            decoration: hasFocus
-                                ? BoxDecoration(
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(color: AppTheme.primaryBlue, width: 3),
-                                        boxShadow: [BoxShadow(color: AppTheme.primaryBlue.withAlpha((0.15 * 255).round()), blurRadius: 16, offset: const Offset(0, 6))],
-                                      )
-                                    : null,
-                            child: ElevatedButton.icon(
-                              onPressed: () => context.push('/player', extra: channel),
-                              icon: const Icon(Icons.play_arrow),
-                              label: const Text('Watch'),
-                              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14), textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                            ),
-                          );
-                        }),
+                        child: Builder(
+                          builder: (ctx) {
+                            final hasFocus = Focus.of(ctx).hasFocus;
+                            return Container(
+                              decoration: hasFocus
+                                  ? BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: AppTheme.primaryBlue,
+                                        width: 3,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: AppTheme.primaryBlue.withAlpha(
+                                            (0.15 * 255).round(),
+                                          ),
+                                          blurRadius: 16,
+                                          offset: const Offset(0, 6),
+                                        ),
+                                      ],
+                                    )
+                                  : null,
+                              child: ElevatedButton.icon(
+                                onPressed: () =>
+                                    context.push('/player', extra: channel),
+                                icon: const Icon(Icons.play_arrow),
+                                label: const Text('Watch'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primaryBlue,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 14,
+                                  ),
+                                  textStyle: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ),
                       const SizedBox(width: 12),
                       // Guide button with stronger contrast when focused
                       FocusableActionDetector(
                         mouseCursor: SystemMouseCursors.click,
-                        child: Builder(builder: (ctx) {
-                          final f = Focus.of(ctx).hasFocus;
-                          return OutlinedButton.icon(
-                            onPressed: () => context.go('/epg'),
-                            icon: const Icon(Icons.schedule),
-                            label: const Text('Guide'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: f ? Colors.white : AppTheme.textPrimary,
-                              side: BorderSide(color: f ? AppTheme.primaryBlue : AppTheme.primaryBlue.withAlpha((0.4 * 255).round()), width: f ? 2 : 1),
-                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                            ),
-                          );
-                        }),
+                        child: Builder(
+                          builder: (ctx) {
+                            final f = Focus.of(ctx).hasFocus;
+                            return OutlinedButton.icon(
+                              onPressed: () => context.go('/epg'),
+                              icon: const Icon(Icons.schedule),
+                              label: const Text('Guide'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: f
+                                    ? Colors.white
+                                    : AppTheme.textPrimary,
+                                side: BorderSide(
+                                  color: f
+                                      ? AppTheme.primaryBlue
+                                      : AppTheme.primaryBlue.withAlpha(
+                                          (0.4 * 255).round(),
+                                        ),
+                                  width: f ? 2 : 1,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 18,
+                                  vertical: 14,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ],
                   ),
@@ -283,7 +394,11 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
     );
   }
 
-  Widget _buildChannelSection(BuildContext context, String title, List<Channel> channels) {
+  Widget _buildChannelSection(
+    BuildContext context,
+    String title,
+    List<Channel> channels,
+  ) {
     if (channels.isEmpty) return const SizedBox.shrink();
 
     return Column(
@@ -291,29 +406,54 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.all(24),
-          child: Text(title, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w700)),
+          child: Text(
+            title,
+            style: const TextStyle(
+              color: AppTheme.textPrimary,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Row(
-            children: channels.map((channel) {
+        SizedBox(
+          height: 140,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            itemCount: channels.length,
+            itemBuilder: (context, index) {
+              final channel = channels[index];
               return GestureDetector(
                 onTap: () => context.push('/player', extra: channel),
                 child: Container(
                   width: 200,
                   height: 120,
                   margin: const EdgeInsets.only(right: 16),
-                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: AppTheme.cardBackground, border: Border.all(color: Colors.white.withAlpha((0.1 * 255).round()), width: 1)),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: AppTheme.cardBackground,
+                    border: Border.all(
+                      color: Colors.white.withAlpha((0.1 * 255).round()),
+                      width: 1,
+                    ),
+                  ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: channel.logoUrl != null && channel.logoUrl!.isNotEmpty
-                        ? Image.network(channel.logoUrl!, fit: BoxFit.cover, width: double.infinity, height: double.infinity, errorBuilder: (_, __, ___) => _buildChannelPlaceholder(channel.name))
+                    child:
+                        channel.logoUrl != null && channel.logoUrl!.isNotEmpty
+                        ? Image.network(
+                            channel.logoUrl!,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                            errorBuilder: (_, __, ___) =>
+                                _buildChannelPlaceholder(channel.name),
+                          )
                         : _buildChannelPlaceholder(channel.name),
                   ),
                 ),
               );
-            }).toList(),
+            },
           ),
         ),
         const SizedBox(height: 24),
@@ -328,9 +468,22 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.live_tv, size: 40, color: AppTheme.textSecondary.withAlpha((0.5 * 255).round())),
+            Icon(
+              Icons.live_tv,
+              size: 40,
+              color: AppTheme.textSecondary.withAlpha((0.5 * 255).round()),
+            ),
             const SizedBox(height: 8),
-            Text(name.length > 20 ? name.substring(0, 20) : name, style: TextStyle(color: AppTheme.textSecondary.withAlpha((0.7 * 255).round()), fontSize: 10), textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text(
+              name.length > 20 ? name.substring(0, 20) : name,
+              style: TextStyle(
+                color: AppTheme.textSecondary.withAlpha((0.7 * 255).round()),
+                fontSize: 10,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ],
         ),
       ),

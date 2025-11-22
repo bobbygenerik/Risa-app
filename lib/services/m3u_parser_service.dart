@@ -1,23 +1,39 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../models/channel.dart';
 import '../models/content.dart';
 
+class M3UParseResult {
+  final List<Channel> channels;
+  final List<Content> movies;
+  final List<Content> series;
+
+  const M3UParseResult({
+    required this.channels,
+    required this.movies,
+    required this.series,
+  });
+}
+
 class M3UParserService {
   String? _epgUrl; // Store EPG URL from M3U header
-  
+
   /// Gets the EPG URL extracted from the last parsed M3U
   String? get epgUrl => _epgUrl;
-  
+
   /// Parses M3U playlist content and returns a list of channels
   List<Channel> parseM3U(String content) {
     final List<Channel> channels = [];
     final rawLines = content.split('\n');
-    
+
     _epgUrl = null; // Reset EPG URL
-    
-  debugPrint('M3UParser: Parsing ${rawLines.length} raw lines');
-  debugPrint('M3UParser: First line: ${rawLines.isNotEmpty ? rawLines[0] : "EMPTY"}');
-    
+
+    debugPrint('M3UParser: Parsing ${rawLines.length} raw lines');
+    debugPrint(
+      'M3UParser: First line: ${rawLines.isNotEmpty ? rawLines[0] : "EMPTY"}',
+    );
+
     // Check for EPG URL in M3U header (x-tvg-url attribute)
     if (rawLines.isNotEmpty && rawLines[0].contains('x-tvg-url=')) {
       final firstLine = rawLines[0];
@@ -32,9 +48,9 @@ class M3UParserService {
     final List<String> lines = [];
     for (int i = 0; i < rawLines.length; i++) {
       final line = rawLines[i].trimRight(); // Keep leading spaces for detection
-      
+
       if (line.isEmpty) continue;
-      
+
       // If line starts with # or http, it's a new line
       if (line.startsWith('#') || line.startsWith('http')) {
         lines.add(line.trim());
@@ -43,8 +59,8 @@ class M3UParserService {
         lines[lines.length - 1] += line.trim();
       }
     }
-    
-  debugPrint('M3UParser: Reassembled into ${lines.length} logical lines');
+
+    debugPrint('M3UParser: Reassembled into ${lines.length} logical lines');
 
     String? currentInfo;
     Map<String, String> currentAttributes = {};
@@ -60,7 +76,9 @@ class M3UParserService {
         currentInfo = line.substring(8); // Remove '#EXTINF:'
         currentAttributes = _parseAttributes(currentInfo);
         if (channelCount < 3) {
-          debugPrint('M3UParser: Found EXTINF: ${currentInfo.length > 100 ? '${currentInfo.substring(0, 100)}...' : currentInfo}');
+          debugPrint(
+            'M3UParser: Found EXTINF: ${currentInfo.length > 100 ? '${currentInfo.substring(0, 100)}...' : currentInfo}',
+          );
         }
       } else if (!line.startsWith('#') && currentInfo != null) {
         // This is a stream URL
@@ -84,9 +102,130 @@ class M3UParserService {
         currentAttributes = {};
       }
     }
-    
-  debugPrint('M3UParser: Total channels parsed: ${channels.length}');
+
+    debugPrint('M3UParser: Total channels parsed: ${channels.length}');
     return channels;
+  }
+
+  /// Parses an M3U playlist from a byte stream without buffering the entire
+  /// payload into memory (prevents OOM on very large playlists).
+  Future<M3UParseResult> parseM3UStream(Stream<List<int>> byteStream) async {
+    final List<Channel> channels = [];
+    final List<Content> movies = [];
+    final List<Content> series = [];
+    final lineStream = byteStream
+        .transform(utf8.decoder)
+        .transform(const LineSplitter());
+
+    _epgUrl = null; // Reset between parses
+    String? pendingLine;
+    String? currentInfo;
+    Map<String, String> currentAttributes = {};
+    int channelCount = 0;
+    int logicalIndex = 0;
+    bool headerProcessed = false;
+
+    void processLogicalLine(String line) {
+      if (line.isEmpty) return;
+
+      if (!headerProcessed) {
+        headerProcessed = true;
+        if (line.contains('x-tvg-url=')) {
+          final urlMatch = RegExp(r'x-tvg-url="([^"]+)"').firstMatch(line);
+          if (urlMatch != null) {
+            _epgUrl = urlMatch.group(1);
+            debugPrint('M3UParser: (stream) Found EPG URL: $_epgUrl');
+          }
+        }
+      }
+
+      if (line.startsWith('#EXTINF:')) {
+        currentInfo = line.substring(8);
+        currentAttributes = _parseAttributes(currentInfo!);
+        if (channelCount < 3) {
+          debugPrint(
+            'M3UParser: (stream) Found EXTINF: ${currentInfo!.length > 100 ? '${currentInfo!.substring(0, 100)}...' : currentInfo}',
+          );
+        }
+      } else if (!line.startsWith('#') && currentInfo != null) {
+        final channelName = _extractChannelName(currentInfo!);
+        final channel = Channel(
+          id:
+              DateTime.now().millisecondsSinceEpoch.toString() +
+              logicalIndex.toString(),
+          name: channelName,
+          url: line,
+          logoUrl: currentAttributes['tvg-logo'],
+          groupTitle: currentAttributes['group-title'],
+          tvgId: currentAttributes['tvg-id'],
+          attributes: currentAttributes,
+        );
+        channels.add(channel);
+        channelCount++;
+        if (channelCount <= 3) {
+          debugPrint(
+            'M3UParser: (stream) Added channel #$channelCount: $channelName',
+          );
+        }
+
+        final groupTitle =
+            currentAttributes['group-title']?.toLowerCase() ?? '';
+        final looksSeries = _looksLikeSeries(channelName, groupTitle);
+        final looksMovie = _looksLikeMovie(groupTitle);
+
+        if (looksSeries) {
+          series.add(
+            _createSeriesContent(
+              channelName,
+              line,
+              currentAttributes,
+              logicalIndex,
+            ),
+          );
+        } else if (looksMovie) {
+          movies.add(
+            _createMovieContent(
+              channelName,
+              line,
+              currentAttributes,
+              logicalIndex,
+            ),
+          );
+        }
+
+        currentInfo = null;
+        currentAttributes = {};
+      }
+
+      logicalIndex++;
+    }
+
+    await for (final rawLine in lineStream) {
+      final line = rawLine.trimRight();
+      if (line.isEmpty) continue;
+      final trimmed = line.trim();
+
+      if (trimmed.startsWith('#') || trimmed.startsWith('http')) {
+        if (pendingLine != null) {
+          processLogicalLine(pendingLine.trim());
+        }
+        pendingLine = trimmed;
+      } else if (pendingLine != null) {
+        pendingLine = pendingLine + trimmed;
+      } else {
+        pendingLine = trimmed;
+      }
+    }
+
+    if (pendingLine != null) {
+      processLogicalLine(pendingLine.trim());
+    }
+
+    debugPrint('M3UParser: (stream) Total channels parsed: ${channels.length}');
+    debugPrint(
+      'M3UParser: (stream) Movies detected: ${movies.length}, Series detected: ${series.length}',
+    );
+    return M3UParseResult(channels: channels, movies: movies, series: series);
   }
 
   /// Extracts channel name from EXTINF line
@@ -281,5 +420,16 @@ class M3UParserService {
     }
 
     return genres.isNotEmpty ? genres : null;
+  }
+
+  bool _looksLikeSeries(String title, String lowerGroupTitle) {
+    return title.contains(RegExp(r'S\d+E\d+', caseSensitive: false)) ||
+        lowerGroupTitle.contains('series') ||
+        lowerGroupTitle.contains('tv shows') ||
+        lowerGroupTitle.contains('episodes');
+  }
+
+  bool _looksLikeMovie(String lowerGroupTitle) {
+    return lowerGroupTitle.contains('movie') || lowerGroupTitle.contains('vod');
   }
 }

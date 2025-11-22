@@ -13,6 +13,7 @@ import 'package:iptv_player/widgets/native_exoplayer.dart';
 // import 'package:subtitle_wrapper_package/subtitle_wrapper_package.dart';
 import 'package:iptv_player/services/ai_upscaling_service.dart';
 import 'package:iptv_player/services/live_transcription_service.dart';
+import 'package:iptv_player/services/native_capabilities_service.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/models/channel.dart';
@@ -49,7 +50,8 @@ class EnhancedVideoPlayerScreen extends StatefulWidget {
   });
 
   @override
-  State<EnhancedVideoPlayerScreen> createState() => _EnhancedVideoPlayerScreenState();
+  State<EnhancedVideoPlayerScreen> createState() =>
+      _EnhancedVideoPlayerScreenState();
 }
 
 class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
@@ -63,16 +65,16 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   List<Map<String, dynamic>> _nativeAudioTracks = [];
   // Subtitle support disabled - causes UnimplementedError
   // SubtitleController? _subtitleController;
-  
+
   bool _isInitialized = false;
   bool _hasError = false;
   String? _errorMessage;
-  
+
   // TV Remote control
   final FocusNode _playerFocusNode = FocusNode();
   bool _controlsVisible = true;
   Timer? _controlsTimer;
-  
+
   // Subtitle & Audio
   int _selectedSubtitleIndex = -1; // -1 = no subtitles
   List<_SubtitleCue> _subtitleCues = [];
@@ -84,21 +86,34 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   // Labels discovered from VLC when using the VLC backend and no external
   // audioTracks list was provided by the caller.
   final List<String> _vlcAudioTrackLabels = [];
-  
+
   // Live Transcription
   bool _liveTranscriptionEnabled = false;
   // translation flag removed (unused)
-  
+
   // Picture-in-Picture
   bool _isPipSupported = false;
   bool _isPipActive = false;
+  bool _nativeExoAvailable = false;
+  bool _nativeExoCapabilityResolved = false;
 
   @override
   void initState() {
     super.initState();
     _checkPipSupport();
+    _probeNativeExoAvailability();
     _initializePlayer();
     _startControlsTimer();
+  }
+
+  void _probeNativeExoAvailability() {
+    NativeCapabilitiesService.supportsNativeExoPlayer().then((available) {
+      if (!mounted) return;
+      setState(() {
+        _nativeExoAvailable = available;
+        _nativeExoCapabilityResolved = true;
+      });
+    });
   }
 
   Future<void> _checkPipSupport() async {
@@ -108,7 +123,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       return;
     }
 
-    _isPipSupported = true; // assume true on Android, then verify via platform channel
+    _isPipSupported =
+        true; // assume true on Android, then verify via platform channel
     try {
       const platform = MethodChannel('com.streamhub.iptv/pip');
       final available = await platform.invokeMethod<bool>('isPipAvailable');
@@ -131,7 +147,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       // which supports real audio-track switching via setAudioTrack().
       // VLC DISABLED: flutter_vlc_player causes build errors
       _useVlcBackend = false;
-      
+
       // Initialize video player
       _videoPlayerController = VideoPlayerController.networkUrl(
         Uri.parse(widget.videoUrl),
@@ -140,20 +156,21 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           allowBackgroundPlayback: false,
         ),
         httpHeaders: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
           'Referer': widget.videoUrl,
         },
       );
 
-  debugPrint('VideoPlayer: Awaiting initialization...');
+      debugPrint('VideoPlayer: Awaiting initialization...');
       await _videoPlayerController.initialize();
-  debugPrint('VideoPlayer: Initialized successfully');
+      debugPrint('VideoPlayer: Initialized successfully');
 
       // Skip subtitle controller initialization - causes UnimplementedError
       // Only initialize if subtitles are explicitly provided and needed
       // _subtitleController = null;
 
-  debugPrint('VideoPlayer: Creating Chewie controller...');
+      debugPrint('VideoPlayer: Creating Chewie controller...');
       // If a previous Chewie controller exists, dispose it to avoid leaks
       if (_chewieController != null) {
         try {
@@ -174,9 +191,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         showControlsOnInitialize: true,
         placeholder: Container(
           color: Colors.black,
-          child: const Center(
-            child: CircularProgressIndicator(),
-          ),
+          child: const Center(child: CircularProgressIndicator()),
         ),
         errorBuilder: (context, errorMessage) {
           return Center(
@@ -206,9 +221,11 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         },
       );
 
-  debugPrint('VideoPlayer: Chewie controller created');
-  debugPrint('VideoPlayer: Duration: ${_videoPlayerController.value.duration}');
-  debugPrint('VideoPlayer: Size: ${_videoPlayerController.value.size}');
+      debugPrint('VideoPlayer: Chewie controller created');
+      debugPrint(
+        'VideoPlayer: Duration: ${_videoPlayerController.value.duration}',
+      );
+      debugPrint('VideoPlayer: Size: ${_videoPlayerController.value.size}');
 
       if (mounted) {
         setState(() {
@@ -216,18 +233,21 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         });
       }
       // If a subtitle was selected before initialization, attempt to load it
-      if (_selectedSubtitleIndex >= 0 && widget.subtitleOptions != null && widget.subtitleOptions!.length > _selectedSubtitleIndex) {
+      if (_selectedSubtitleIndex >= 0 &&
+          widget.subtitleOptions != null &&
+          widget.subtitleOptions!.length > _selectedSubtitleIndex) {
         _loadSubtitle(widget.subtitleOptions![_selectedSubtitleIndex]);
       }
-      
-  debugPrint('VideoPlayer: Player initialized and ready');
+
+      debugPrint('VideoPlayer: Player initialized and ready');
     } catch (e, stackTrace) {
       debugPrint('VideoPlayer: Error initializing player: $e');
       debugPrint('VideoPlayer: Stack trace: $stackTrace');
       if (mounted) {
         setState(() {
           _hasError = true;
-          _errorMessage = 'Failed to initialize video player:\n\n$e\n\nURL: ${widget.videoUrl}';
+          _errorMessage =
+              'Failed to initialize video player:\n\n$e\n\nURL: ${widget.videoUrl}';
         });
       }
     }
@@ -285,7 +305,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         try {
           final currentPosition = _videoPlayerController.value.position;
           final newPosition = currentPosition - const Duration(seconds: 10);
-          _videoPlayerController.seekTo(newPosition > Duration.zero ? newPosition : Duration.zero);
+          _videoPlayerController.seekTo(
+            newPosition > Duration.zero ? newPosition : Duration.zero,
+          );
         } catch (_) {}
         break;
 
@@ -295,7 +317,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           final currentPosition = _videoPlayerController.value.position;
           final duration = _videoPlayerController.value.duration;
           final newPosition = currentPosition + const Duration(seconds: 10);
-          _videoPlayerController.seekTo(newPosition < duration ? newPosition : duration);
+          _videoPlayerController.seekTo(
+            newPosition < duration ? newPosition : duration,
+          );
         } catch (_) {}
         break;
 
@@ -320,7 +344,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           // the native audio track list for display.
           if (!_showAudioSelector && Platform.isAndroid) {
             // was open, now closed - do nothing
-          } else if (_showAudioSelector && _nativeController != null && Platform.isAndroid) {
+          } else if (_showAudioSelector &&
+              _nativeController != null &&
+              Platform.isAndroid) {
             _loadNativeAudioTracks();
           }
         }
@@ -329,9 +355,12 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       case LogicalKeyboardKey.mediaTrackNext:
       case LogicalKeyboardKey.channelUp:
         // Next audio track (cycle and switch)
-        if ((widget.audioTracks != null && widget.audioTracks!.isNotEmpty) || (_useVlcBackend && _vlcAudioTrackLabels.isNotEmpty)) {
+        if ((widget.audioTracks != null && widget.audioTracks!.isNotEmpty) ||
+            (_useVlcBackend && _vlcAudioTrackLabels.isNotEmpty)) {
           setState(() {
-            final total = _useVlcBackend ? _vlcAudioTrackLabels.length : widget.audioTracks!.length;
+            final total = _useVlcBackend
+                ? _vlcAudioTrackLabels.length
+                : widget.audioTracks!.length;
             _selectedAudioTrack = (_selectedAudioTrack + 1) % total;
           });
           _switchAudioTrack(_selectedAudioTrack);
@@ -341,9 +370,12 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       case LogicalKeyboardKey.mediaTrackPrevious:
       case LogicalKeyboardKey.channelDown:
         // Previous audio track (cycle and switch)
-        if ((widget.audioTracks != null && widget.audioTracks!.isNotEmpty) || (_useVlcBackend && _vlcAudioTrackLabels.isNotEmpty)) {
+        if ((widget.audioTracks != null && widget.audioTracks!.isNotEmpty) ||
+            (_useVlcBackend && _vlcAudioTrackLabels.isNotEmpty)) {
           setState(() {
-            final total = _useVlcBackend ? _vlcAudioTrackLabels.length : widget.audioTracks!.length;
+            final total = _useVlcBackend
+                ? _vlcAudioTrackLabels.length
+                : widget.audioTracks!.length;
             _selectedAudioTrack = (_selectedAudioTrack - 1) % total;
             if (_selectedAudioTrack < 0) {
               _selectedAudioTrack = total - 1;
@@ -380,7 +412,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         // Exit player - navigate to EPG with mini player if this is live TV
         if (widget.isLive && widget.channel != null) {
           // For live TV, go back to EPG with mini player
-          context.go('/epg', extra: {'channel': widget.channel, 'continuePlayback': true});
+          context.go(
+            '/epg',
+            extra: {'channel': widget.channel, 'continuePlayback': true},
+          );
         } else {
           // For VOD, just pop
           Navigator.of(context).pop();
@@ -393,7 +428,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     setState(() {
       if (_selectedSubtitleIndex == -1) {
         // Enable first subtitle
-        if (widget.subtitleOptions != null && widget.subtitleOptions!.isNotEmpty) {
+        if (widget.subtitleOptions != null &&
+            widget.subtitleOptions!.isNotEmpty) {
           _selectedSubtitleIndex = 0;
           _loadSubtitle(widget.subtitleOptions![0]);
         }
@@ -486,19 +522,24 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   // Removed _getSubtitleType - subtitle support disabled
 
   void _switchToNextChannel() {
-    final channelProvider = Provider.of<ChannelProvider>(context, listen: false);
+    final channelProvider = Provider.of<ChannelProvider>(
+      context,
+      listen: false,
+    );
     final channels = channelProvider.channels;
-    
+
     if (channels.isEmpty || widget.channel == null) return;
-    
+
     // Find current channel index
-    final currentIndex = channels.indexWhere((ch) => ch.id == widget.channel!.id);
+    final currentIndex = channels.indexWhere(
+      (ch) => ch.id == widget.channel!.id,
+    );
     if (currentIndex == -1) return;
-    
+
     // Get next channel (wrap around to first if at end)
     final nextIndex = (currentIndex + 1) % channels.length;
     final nextChannel = channels[nextIndex];
-    
+
     // Navigate to next channel with mini player support
     if (mounted) {
       context.go('/player', extra: nextChannel);
@@ -506,19 +547,26 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   void _switchToPreviousChannel() {
-    final channelProvider = Provider.of<ChannelProvider>(context, listen: false);
+    final channelProvider = Provider.of<ChannelProvider>(
+      context,
+      listen: false,
+    );
     final channels = channelProvider.channels;
-    
+
     if (channels.isEmpty || widget.channel == null) return;
-    
+
     // Find current channel index
-    final currentIndex = channels.indexWhere((ch) => ch.id == widget.channel!.id);
+    final currentIndex = channels.indexWhere(
+      (ch) => ch.id == widget.channel!.id,
+    );
     if (currentIndex == -1) return;
-    
+
     // Get previous channel (wrap around to last if at start)
-    final previousIndex = (currentIndex - 1) < 0 ? channels.length - 1 : (currentIndex - 1);
+    final previousIndex = (currentIndex - 1) < 0
+        ? channels.length - 1
+        : (currentIndex - 1);
     final previousChannel = channels[previousIndex];
-    
+
     // Navigate to previous channel with mini player support
     if (mounted) {
       context.go('/player', extra: previousChannel);
@@ -526,12 +574,15 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   Future<void> _toggleLiveTranscription() async {
-    final transcriptionService = Provider.of<LiveTranscriptionService>(context, listen: false);
-    
+    final transcriptionService = Provider.of<LiveTranscriptionService>(
+      context,
+      listen: false,
+    );
+
     if (!_liveTranscriptionEnabled) {
       // Start live transcription
       await transcriptionService.startTranscription();
-        if (mounted) {
+      if (mounted) {
         setState(() => _liveTranscriptionEnabled = true);
         showAppSnackBar(
           context,
@@ -544,24 +595,36 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     } else {
       // Stop live transcription
       await transcriptionService.stopTranscription();
-        if (mounted) {
+      if (mounted) {
         setState(() => _liveTranscriptionEnabled = false);
         showAppSnackBar(
           context,
           SnackBar(
-            content: const Text('Live transcription disabled — press Y to toggle'),
+            content: const Text(
+              'Live transcription disabled — press Y to toggle',
+            ),
             duration: const Duration(seconds: 4),
             action: SnackBarAction(
               label: 'Save',
               onPressed: () async {
                 try {
                   final srt = transcriptionService.exportAsSRT();
-                      await Clipboard.setData(ClipboardData(text: srt));
-                      if (!mounted) return;
-                      showAppSnackBar(context, const SnackBar(content: Text('Transcript copied to clipboard')));
+                  await Clipboard.setData(ClipboardData(text: srt));
+                  if (!mounted) return;
+                  showAppSnackBar(
+                    context,
+                    const SnackBar(
+                      content: Text('Transcript copied to clipboard'),
+                    ),
+                  );
                 } catch (e) {
-                      if (!mounted) return;
-                      showAppSnackBar(context, const SnackBar(content: Text('Failed to export transcript')));
+                  if (!mounted) return;
+                  showAppSnackBar(
+                    context,
+                    const SnackBar(
+                      content: Text('Failed to export transcript'),
+                    ),
+                  );
                 }
               },
             ),
@@ -574,8 +637,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   Future<void> _togglePip() async {
     if (!_isPipSupported) return;
 
-    
-
     try {
       if (_isPipActive) {
         // Exit PiP mode
@@ -587,14 +648,20 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           final ok = await _enterAndroidPip();
           if (!mounted) return;
           if (!ok) {
-            showAppSnackBar(context, const SnackBar(content: Text('Picture-in-Picture not available')));
+            showAppSnackBar(
+              context,
+              const SnackBar(content: Text('Picture-in-Picture not available')),
+            );
           }
         }
       }
     } catch (e) {
       debugPrint('PiP error: $e');
       if (!mounted) return;
-      showAppSnackBar(context, SnackBar(content: Text('Picture-in-Picture not available: $e')));
+      showAppSnackBar(
+        context,
+        SnackBar(content: Text('Picture-in-Picture not available: $e')),
+      );
     }
   }
 
@@ -633,29 +700,22 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           child: Stack(
             children: [
               // Video Player
-              Center(
-                child: _buildVideoPlayer(),
-              ),
+              Center(child: _buildVideoPlayer()),
 
               // Subtitle Overlay (in-widget simple renderer)
-              if (_currentSubtitleText.isNotEmpty)
-                _buildSubtitleOverlay(),
+              if (_currentSubtitleText.isNotEmpty) _buildSubtitleOverlay(),
 
               // Live Transcription Overlay
-              if (_liveTranscriptionEnabled)
-                _buildLiveTranscriptionOverlay(),
+              if (_liveTranscriptionEnabled) _buildLiveTranscriptionOverlay(),
 
               // Custom Controls Overlay
-              if (_controlsVisible)
-                _buildControlsOverlay(),
+              if (_controlsVisible) _buildControlsOverlay(),
 
               // Subtitle Selector
-              if (_showSubtitleSelector)
-                _buildSubtitleSelector(),
+              if (_showSubtitleSelector) _buildSubtitleSelector(),
 
               // Audio Selector
-              if (_showAudioSelector)
-                _buildAudioSelector(),
+              if (_showAudioSelector) _buildAudioSelector(),
             ],
           ),
         ),
@@ -669,7 +729,11 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: AppTheme.accentRed),
+            const Icon(
+              Icons.error_outline,
+              size: 64,
+              color: AppTheme.accentRed,
+            ),
             const SizedBox(height: 16),
             const Text(
               'Playback Error',
@@ -688,30 +752,33 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     }
 
     if (!_isInitialized) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     // VLC backend disabled - use standard video player
-    
+
     // On Android, prefer the native ExoPlayer platform view for better native
     // audio-track support and performance. This will be a no-op on other platforms.
     if (Platform.isAndroid) {
-      return AspectRatio(
-        aspectRatio: 16 / 9,
-        child: NativeExoPlayer(
-          videoUrl: widget.videoUrl,
-          autoPlay: true,
-          onCreated: (controller) {
-            // Keep selected audio track in sync if needed and retain controller
-            _nativeController = controller;
-            if (_selectedAudioTrack != 0) {
-              controller.switchAudioTrack(_selectedAudioTrack);
-            }
-          },
-        ),
-      );
+      if (!_nativeExoCapabilityResolved) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      if (_nativeExoAvailable) {
+        return AspectRatio(
+          aspectRatio: 16 / 9,
+          child: NativeExoPlayer(
+            videoUrl: widget.videoUrl,
+            autoPlay: true,
+            onCreated: (controller) {
+              // Keep selected audio track in sync if needed and retain controller
+              _nativeController = controller;
+              if (_selectedAudioTrack != 0) {
+                controller.switchAudioTrack(_selectedAudioTrack);
+              }
+            },
+          ),
+        );
+      }
     }
     // Default: Chewie/video_player
     if (_chewieController == null) {
@@ -724,7 +791,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     );
   }
 
-// Subtitle overlay removed (subtitle support disabled to avoid platform plugin issues)
+  // Subtitle overlay removed (subtitle support disabled to avoid platform plugin issues)
 
   Widget _buildLiveTranscriptionOverlay() {
     return Positioned(
@@ -734,7 +801,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       child: Consumer<LiveTranscriptionService>(
         builder: (context, transcriptionService, _) {
           final text = transcriptionService.latestSubtitles;
-          
+
           if (text.isEmpty) {
             return Container(
               padding: const EdgeInsets.all(8),
@@ -756,17 +823,14 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                   const SizedBox(width: 8),
                   Text(
                     'Listening...',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
+                    style: const TextStyle(color: Colors.white70, fontSize: 14),
                   ),
                 ],
               ),
             );
           }
-          
-                return Container(
+
+          return Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.black.withAlpha((0.8 * 255).round()),
@@ -781,7 +845,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                     Icon(Icons.mic, color: AppTheme.primaryBlue, size: 16),
                     const SizedBox(width: 8),
                     Text(
-                      transcriptionService.isTranslating ? 'LIVE TRANSLATION' : 'LIVE TRANSCRIPTION',
+                      transcriptionService.isTranslating
+                          ? 'LIVE TRANSLATION'
+                          : 'LIVE TRANSCRIPTION',
                       style: TextStyle(
                         color: AppTheme.primaryBlue,
                         fontSize: 12,
@@ -792,18 +858,30 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                     // Translation toggle
                     IconButton(
                       icon: Icon(
-                        transcriptionService.isTranslating ? Icons.translate : Icons.translate_outlined,
-                        color: transcriptionService.isTranslating ? AppTheme.primaryBlue : Colors.white,
+                        transcriptionService.isTranslating
+                            ? Icons.translate
+                            : Icons.translate_outlined,
+                        color: transcriptionService.isTranslating
+                            ? AppTheme.primaryBlue
+                            : Colors.white,
                         size: 18,
                       ),
-                      tooltip: transcriptionService.isTranslating ? 'Disable translation' : 'Enable translation',
+                      tooltip: transcriptionService.isTranslating
+                          ? 'Disable translation'
+                          : 'Enable translation',
                       onPressed: () {
-                        transcriptionService.setTranslationEnabled(!transcriptionService.isTranslating);
+                        transcriptionService.setTranslationEnabled(
+                          !transcriptionService.isTranslating,
+                        );
                       },
                     ),
                     // Export / Save
                     IconButton(
-                      icon: const Icon(Icons.download, color: Colors.white, size: 18),
+                      icon: const Icon(
+                        Icons.download,
+                        color: Colors.white,
+                        size: 18,
+                      ),
                       tooltip: 'Export transcript (copy SRT to clipboard)',
                       onPressed: () async {
                         try {
@@ -811,21 +889,38 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                           final srt = transcriptionService.exportAsSRT();
                           await Clipboard.setData(ClipboardData(text: srt));
                           if (!clipContext.mounted) return;
-                          showAppSnackBar(clipContext, const SnackBar(content: Text('Transcript copied to clipboard')));
+                          showAppSnackBar(
+                            clipContext,
+                            const SnackBar(
+                              content: Text('Transcript copied to clipboard'),
+                            ),
+                          );
                         } catch (e) {
                           final clipContext = context;
                           if (!clipContext.mounted) return;
-                          showAppSnackBar(clipContext, const SnackBar(content: Text('Failed to export transcript')));
+                          showAppSnackBar(
+                            clipContext,
+                            const SnackBar(
+                              content: Text('Failed to export transcript'),
+                            ),
+                          );
                         }
                       },
                     ),
                     // Clear
                     IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.white, size: 18),
+                      icon: const Icon(
+                        Icons.delete,
+                        color: Colors.white,
+                        size: 18,
+                      ),
                       tooltip: 'Clear transcript',
                       onPressed: () {
                         transcriptionService.clearTranscriptions();
-                        showAppSnackBar(context, const SnackBar(content: Text('Transcripts cleared')));
+                        showAppSnackBar(
+                          context,
+                          const SnackBar(content: Text('Transcripts cleared')),
+                        );
                       },
                     ),
                   ],
@@ -852,13 +947,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF050710),
-                  Color(0xFF0d1140),
-                ],
-              )
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF050710), Color(0xFF0d1140)],
+        ),
       ),
       child: Column(
         children: [
@@ -911,7 +1003,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
             // Status indicators
             if (widget.isLive)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: AppTheme.accentRed,
                   borderRadius: BorderRadius.circular(4),
@@ -931,7 +1026,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                 if (!aiService.isModelLoaded && !aiService.isDownloading) {
                   // If model isn't loaded, show a subtle indicator inviting user to configure AI
                   return IconButton(
-                    icon: const Icon(Icons.auto_awesome_outlined, color: Colors.white),
+                    icon: const Icon(
+                      Icons.auto_awesome_outlined,
+                      color: Colors.white,
+                    ),
                     tooltip: 'AI upscaling (configure)',
                     onPressed: () {
                       showDialog<void>(
@@ -950,25 +1048,49 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                                     onPressed: () async {
                                       final dialogContext = context;
                                       Navigator.of(dialogContext).pop();
-                                      showAppSnackBar(dialogContext, const SnackBar(content: Text('Initializing AI model...')));
+                                      showAppSnackBar(
+                                        dialogContext,
+                                        const SnackBar(
+                                          content: Text(
+                                            'Initializing AI model...',
+                                          ),
+                                        ),
+                                      );
                                       await aiService.initialize();
                                       if (!dialogContext.mounted) return;
                                       if (aiService.isModelLoaded) {
-                                        showAppSnackBar(dialogContext, const SnackBar(content: Text('AI model loaded')));
+                                        showAppSnackBar(
+                                          dialogContext,
+                                          const SnackBar(
+                                            content: Text('AI model loaded'),
+                                          ),
+                                        );
                                         // If native controller exists and a downloaded model is present, ask native to load it
-                                        if (Platform.isAndroid && _nativeController != null) {
+                                        if (Platform.isAndroid &&
+                                            _nativeController != null) {
                                           try {
-                                            final modelPath = await aiService.getLocalModelPath();
+                                            final modelPath = await aiService
+                                                .getLocalModelPath();
                                             if (modelPath != null) {
-                                              await _nativeController!.loadAIModel(modelPath);
+                                              await _nativeController!
+                                                  .loadAIModel(modelPath);
                                             }
                                           } catch (e) {
-                                            debugPrint('Failed to instruct native to load model: $e');
+                                            debugPrint(
+                                              'Failed to instruct native to load model: $e',
+                                            );
                                           }
                                         }
                                       } else {
                                         if (dialogContext.mounted) {
-                                          showAppSnackBar(dialogContext, const SnackBar(content: Text('AI model not available; try download')));
+                                          showAppSnackBar(
+                                            dialogContext,
+                                            const SnackBar(
+                                              content: Text(
+                                                'AI model not available; try download',
+                                              ),
+                                            ),
+                                          );
                                         }
                                       }
                                     },
@@ -976,45 +1098,85 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   ElevatedButton(
-                                    onPressed: aiService.isDownloading ? null : () async {
-                                      final dialogContext = context;
-                                      Navigator.of(dialogContext).pop();
-                                      showAppSnackBar(dialogContext, const SnackBar(
-                                        content: Text('Downloading AI model (with automatic retry)...'),
-                                        duration: Duration(seconds: 3),
-                                      ));
-                                      final ok = await aiService.downloadModel();
-                                      if (!dialogContext.mounted) return;
-                                      if (ok && aiService.isModelLoaded) {
-                                        showAppSnackBar(dialogContext, const SnackBar(content: Text('AI model downloaded and loaded')));
-                                        // Instruct native controller to load the downloaded model
-                                        if (Platform.isAndroid && _nativeController != null) {
-                                          try {
-                                            final modelPath = await aiService.getLocalModelPath();
-                                            if (modelPath != null) {
-                                              final res = await _nativeController!.loadAIModel(modelPath);
-                                              debugPrint('Native loadAIModel result: $res');
+                                    onPressed: aiService.isDownloading
+                                        ? null
+                                        : () async {
+                                            final dialogContext = context;
+                                            Navigator.of(dialogContext).pop();
+                                            showAppSnackBar(
+                                              dialogContext,
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Downloading AI model (with automatic retry)...',
+                                                ),
+                                                duration: Duration(seconds: 3),
+                                              ),
+                                            );
+                                            final ok = await aiService
+                                                .downloadModel();
+                                            if (!dialogContext.mounted) return;
+                                            if (ok && aiService.isModelLoaded) {
+                                              showAppSnackBar(
+                                                dialogContext,
+                                                const SnackBar(
+                                                  content: Text(
+                                                    'AI model downloaded and loaded',
+                                                  ),
+                                                ),
+                                              );
+                                              // Instruct native controller to load the downloaded model
+                                              if (Platform.isAndroid &&
+                                                  _nativeController != null) {
+                                                try {
+                                                  final modelPath =
+                                                      await aiService
+                                                          .getLocalModelPath();
+                                                  if (modelPath != null) {
+                                                    final res =
+                                                        await _nativeController!
+                                                            .loadAIModel(
+                                                              modelPath,
+                                                            );
+                                                    debugPrint(
+                                                      'Native loadAIModel result: $res',
+                                                    );
+                                                  }
+                                                } catch (e) {
+                                                  debugPrint(
+                                                    'Failed to load model on native side: $e',
+                                                  );
+                                                }
+                                              }
+                                            } else {
+                                              if (dialogContext.mounted) {
+                                                showAppSnackBar(
+                                                  dialogContext,
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Failed to download AI model. Check network and try again.',
+                                                    ),
+                                                    duration: Duration(
+                                                      seconds: 4,
+                                                    ),
+                                                  ),
+                                                );
+                                              }
                                             }
-                                          } catch (e) {
-                                            debugPrint('Failed to load model on native side: $e');
-                                          }
-                                        }
-                                      } else {
-                                        if (dialogContext.mounted) {
-                                          showAppSnackBar(dialogContext, const SnackBar(
-                                            content: Text('Failed to download AI model. Check network and try again.'),
-                                            duration: Duration(seconds: 4),
-                                          ));
-                                        }
-                                      }
-                                    },
-                                    child: Text(aiService.isDownloading ? 'Downloading...' : 'Download Model'),
+                                          },
+                                    child: Text(
+                                      aiService.isDownloading
+                                          ? 'Downloading...'
+                                          : 'Download Model',
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
                             actions: [
-                              TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('Close'),
+                              ),
                             ],
                           );
                         },
@@ -1025,217 +1187,314 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
                 // When model is available, show status and settings
                 return IconButton(
-                  icon: Icon(Icons.auto_awesome, color: aiService.isEnabled ? AppTheme.primaryBlue : Colors.white),
+                  icon: Icon(
+                    Icons.auto_awesome,
+                    color: aiService.isEnabled
+                        ? AppTheme.primaryBlue
+                        : Colors.white,
+                  ),
                   tooltip: 'AI upscaling settings',
                   onPressed: () {
                     showDialog<void>(
                       context: context,
                       builder: (context) {
-                        return StatefulBuilder(builder: (context, setStateDialog) {
-                          return AlertDialog(
-                            title: const Text('AI Upscaling'),
-                            content: SizedBox(
-                              width: 400,
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  SwitchListTile(
-                                    title: const Text('Enable AI Upscaling'),
-                                    value: aiService.isEnabled,
+                        return StatefulBuilder(
+                          builder: (context, setStateDialog) {
+                            return AlertDialog(
+                              title: const Text('AI Upscaling'),
+                              content: SizedBox(
+                                width: 400,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    SwitchListTile(
+                                      title: const Text('Enable AI Upscaling'),
+                                      value: aiService.isEnabled,
                                       onChanged: (v) async {
-                                      // If enabling, ensure a model is available. Prefer a
-                                      // local download (Option A): automatically download
-                                      // the model if it's not present, then initialize.
-                                      if (v && !aiService.isModelLoaded) {
+                                        // If enabling, ensure a model is available. Prefer a
+                                        // local download (Option A): automatically download
+                                        // the model if it's not present, then initialize.
+                                        if (v && !aiService.isModelLoaded) {
                                           final dialogContext = context;
-                                          showAppSnackBar(dialogContext, const SnackBar(content: Text('Preparing AI model...')));
+                                          showAppSnackBar(
+                                            dialogContext,
+                                            const SnackBar(
+                                              content: Text(
+                                                'Preparing AI model...',
+                                              ),
+                                            ),
+                                          );
 
                                           try {
-                                            final local = await aiService.getLocalModelPath();
+                                            final local = await aiService
+                                                .getLocalModelPath();
                                             if (local == null) {
                                               // No local model: download it automatically (Option A)
                                               // Uses built-in retry/backoff for robustness
-                                              final ok = await aiService.downloadModel();
-                                              if (!dialogContext.mounted) return;
+                                              final ok = await aiService
+                                                  .downloadModel();
+                                              if (!dialogContext.mounted)
+                                                return;
                                               if (!ok) {
-                                                showAppSnackBar(dialogContext, const SnackBar(
-                                                  content: Text('Failed to download AI model after retries. Check network and try again.'),
-                                                  duration: Duration(seconds: 4),
-                                                ));
+                                                showAppSnackBar(
+                                                  dialogContext,
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Failed to download AI model after retries. Check network and try again.',
+                                                    ),
+                                                    duration: Duration(
+                                                      seconds: 4,
+                                                    ),
+                                                  ),
+                                                );
                                               }
                                             } else {
                                               // Local model exists - initialize/interpreter
                                               await aiService.initialize();
-                                              if (!dialogContext.mounted) return;
+                                              if (!dialogContext.mounted)
+                                                return;
                                             }
                                           } catch (e) {
-                                            debugPrint('AI model prepare error: $e');
+                                            debugPrint(
+                                              'AI model prepare error: $e',
+                                            );
                                             if (!dialogContext.mounted) return;
-                                            showAppSnackBar(dialogContext, const SnackBar(content: Text('Error preparing AI model')));
+                                            showAppSnackBar(
+                                              dialogContext,
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Error preparing AI model',
+                                                ),
+                                              ),
+                                            );
                                           }
-                                      }
-
-                                      aiService.setEnabled(v);
-
-                                      // If we're using the native ExoPlayer on Android, proxy
-                                      // the upscaler enable/disable to the native view so the
-                                      // platform can wire into the rendering pipeline.
-                                      if (Platform.isAndroid && _nativeController != null) {
-                                        try {
-                                          if (v) {
-                                            // Attempt to load the downloaded model into native view
-                                            try {
-                                              final modelPath = await aiService.getLocalModelPath();
-                                              if (modelPath != null) {
-                                                await _nativeController!.loadAIModel(modelPath);
-                                              }
-                                            } catch (e) {
-                                              debugPrint('Failed to load model into native controller: $e');
-                                            }
-
-                                            await _nativeController!.enableAIUpscaling();
-                                            // Ensure native quality reflects service setting
-                                            await _nativeController!.setAIQuality(aiService.quality);
-                                          } else {
-                                            await _nativeController!.disableAIUpscaling();
-                                          }
-                                        } catch (e) {
-                                          debugPrint('Native upscaler call failed: $e');
                                         }
-                                      }
 
-                                      setStateDialog(() {});
-                                    },
-                                  ),
-                                  const SizedBox(height: 8),
-                                  const Text('Quality'),
-                                  const SizedBox(height: 6),
-                                  DropdownButton<String>(
-                                    value: aiService.quality,
-                                    items: const [
-                                      DropdownMenuItem(value: 'Fast', child: Text('Fast')),
-                                      DropdownMenuItem(value: 'Balanced', child: Text('Balanced')),
-                                      DropdownMenuItem(value: 'Quality', child: Text('Quality')),
-                                    ],
-                                    onChanged: (val) async {
-                                      if (val != null) {
-                                        aiService.setQuality(val);
-                                        // Propagate quality to native player if available
-                                        if (Platform.isAndroid && _nativeController != null) {
+                                        aiService.setEnabled(v);
+
+                                        // If we're using the native ExoPlayer on Android, proxy
+                                        // the upscaler enable/disable to the native view so the
+                                        // platform can wire into the rendering pipeline.
+                                        if (Platform.isAndroid &&
+                                            _nativeController != null) {
                                           try {
-                                            await _nativeController!.setAIQuality(val);
+                                            if (v) {
+                                              // Attempt to load the downloaded model into native view
+                                              try {
+                                                final modelPath =
+                                                    await aiService
+                                                        .getLocalModelPath();
+                                                if (modelPath != null) {
+                                                  await _nativeController!
+                                                      .loadAIModel(modelPath);
+                                                }
+                                              } catch (e) {
+                                                debugPrint(
+                                                  'Failed to load model into native controller: $e',
+                                                );
+                                              }
+
+                                              await _nativeController!
+                                                  .enableAIUpscaling();
+                                              // Ensure native quality reflects service setting
+                                              await _nativeController!
+                                                  .setAIQuality(
+                                                    aiService.quality,
+                                                  );
+                                            } else {
+                                              await _nativeController!
+                                                  .disableAIUpscaling();
+                                            }
                                           } catch (e) {
-                                            debugPrint('Setting native AI quality failed: $e');
+                                            debugPrint(
+                                              'Native upscaler call failed: $e',
+                                            );
                                           }
                                         }
+
                                         setStateDialog(() {});
-                                      }
-                                    },
-                                  ),
-                                  const SizedBox(height: 12),
-                                  // Native tuning controls (only shown when native controller present)
-                                  if (Platform.isAndroid && _nativeController != null) ...[
-                                    const SizedBox(height: 12),
-                                    SwitchListTile(
-                                      title: const Text('Adaptive overlap tuning'),
-                                      subtitle: const Text('Automatically adjust tile overlap to meet target latency'),
-                                      value: true, // default shown as on; reflect service/native state would require additional plumbing
+                                      },
+                                    ),
+                                    const SizedBox(height: 8),
+                                    const Text('Quality'),
+                                    const SizedBox(height: 6),
+                                    DropdownButton<String>(
+                                      value: aiService.quality,
+                                      items: const [
+                                        DropdownMenuItem(
+                                          value: 'Fast',
+                                          child: Text('Fast'),
+                                        ),
+                                        DropdownMenuItem(
+                                          value: 'Balanced',
+                                          child: Text('Balanced'),
+                                        ),
+                                        DropdownMenuItem(
+                                          value: 'Quality',
+                                          child: Text('Quality'),
+                                        ),
+                                      ],
                                       onChanged: (val) async {
-                                        try {
-                                          await _nativeController!.setAdaptiveEnabled(val);
-                                        } catch (e) {
-                                          debugPrint('Failed to set adaptiveEnabled: $e');
+                                        if (val != null) {
+                                          aiService.setQuality(val);
+                                          // Propagate quality to native player if available
+                                          if (Platform.isAndroid &&
+                                              _nativeController != null) {
+                                            try {
+                                              await _nativeController!
+                                                  .setAIQuality(val);
+                                            } catch (e) {
+                                              debugPrint(
+                                                'Setting native AI quality failed: $e',
+                                              );
+                                            }
+                                          }
+                                          setStateDialog(() {});
                                         }
-                                        setStateDialog(() {});
                                       },
                                     ),
-                                    Row(
-                                      children: [
-                                        const Text('Target latency (ms)'),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: StatefulBuilder(builder: (c, s) {
-                                            int current = 150; // reasonable default
-                                            return Slider(
-                                              value: current.toDouble(),
-                                              min: 50,
-                                              max: 1000,
-                                              divisions: 19,
-                                              label: '$current ms',
-                                              onChanged: (v) {
-                                                s(() => current = v.round());
-                                              },
-                                              onChangeEnd: (v) async {
-                                                try {
-                                                  await _nativeController!.setAdaptiveTargetMs(current);
-                                                } catch (e) {
-                                                  debugPrint('Failed to set adaptive target: $e');
-                                                }
-                                              },
-                                            );
-                                          }),
+                                    const SizedBox(height: 12),
+                                    // Native tuning controls (only shown when native controller present)
+                                    if (Platform.isAndroid &&
+                                        _nativeController != null) ...[
+                                      const SizedBox(height: 12),
+                                      SwitchListTile(
+                                        title: const Text(
+                                          'Adaptive overlap tuning',
                                         ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      children: [
-                                        const Text('Overlap percent'),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: StatefulBuilder(builder: (c, s) {
-                                            double pct = 0.5;
-                                            return Slider(
-                                              value: pct,
-                                              min: 0.0,
-                                              max: 0.9,
-                                              divisions: 9,
-                                              label: '${(pct * 100).round()}%',
-                                              onChanged: (v) => s(() => pct = v),
-                                              onChangeEnd: (v) async {
-                                                try {
-                                                  await _nativeController!.setOverlapPercent(v);
-                                                } catch (e) {
-                                                  debugPrint('Failed to set overlap percent: $e');
-                                                }
-                                              },
-                                            );
-                                          }),
+                                        subtitle: const Text(
+                                          'Automatically adjust tile overlap to meet target latency',
                                         ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    SwitchListTile(
-                                      title: const Text('Use GPU delegate (if available)'),
-                                      subtitle: const Text('Attempt to use device GPU for faster inference'),
-                                      value: true,
-                                      onChanged: (v) async {
-                                        try {
-                                          await _nativeController!.setGPUDelegateEnabled(v);
-                                        } catch (e) {
-                                          debugPrint('Failed to set GPU delegate: $e');
-                                        }
-                                        setStateDialog(() {});
-                                      },
-                                    ),
-                                  ]
-                                  else if (aiService.isDownloading)
-                                    Column(
-                                      children: [
-                                        LinearProgressIndicator(value: aiService.downloadProgress),
-                                        const SizedBox(height: 8),
-                                        const Text('Downloading model...'),
-                                      ],
-                                    ),
-                                ],
+                                        value:
+                                            true, // default shown as on; reflect service/native state would require additional plumbing
+                                        onChanged: (val) async {
+                                          try {
+                                            await _nativeController!
+                                                .setAdaptiveEnabled(val);
+                                          } catch (e) {
+                                            debugPrint(
+                                              'Failed to set adaptiveEnabled: $e',
+                                            );
+                                          }
+                                          setStateDialog(() {});
+                                        },
+                                      ),
+                                      Row(
+                                        children: [
+                                          const Text('Target latency (ms)'),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: StatefulBuilder(
+                                              builder: (c, s) {
+                                                int current =
+                                                    150; // reasonable default
+                                                return Slider(
+                                                  value: current.toDouble(),
+                                                  min: 50,
+                                                  max: 1000,
+                                                  divisions: 19,
+                                                  label: '$current ms',
+                                                  onChanged: (v) {
+                                                    s(
+                                                      () => current = v.round(),
+                                                    );
+                                                  },
+                                                  onChangeEnd: (v) async {
+                                                    try {
+                                                      await _nativeController!
+                                                          .setAdaptiveTargetMs(
+                                                            current,
+                                                          );
+                                                    } catch (e) {
+                                                      debugPrint(
+                                                        'Failed to set adaptive target: $e',
+                                                      );
+                                                    }
+                                                  },
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        children: [
+                                          const Text('Overlap percent'),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: StatefulBuilder(
+                                              builder: (c, s) {
+                                                double pct = 0.5;
+                                                return Slider(
+                                                  value: pct,
+                                                  min: 0.0,
+                                                  max: 0.9,
+                                                  divisions: 9,
+                                                  label:
+                                                      '${(pct * 100).round()}%',
+                                                  onChanged: (v) =>
+                                                      s(() => pct = v),
+                                                  onChangeEnd: (v) async {
+                                                    try {
+                                                      await _nativeController!
+                                                          .setOverlapPercent(v);
+                                                    } catch (e) {
+                                                      debugPrint(
+                                                        'Failed to set overlap percent: $e',
+                                                      );
+                                                    }
+                                                  },
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      SwitchListTile(
+                                        title: const Text(
+                                          'Use GPU delegate (if available)',
+                                        ),
+                                        subtitle: const Text(
+                                          'Attempt to use device GPU for faster inference',
+                                        ),
+                                        value: true,
+                                        onChanged: (v) async {
+                                          try {
+                                            await _nativeController!
+                                                .setGPUDelegateEnabled(v);
+                                          } catch (e) {
+                                            debugPrint(
+                                              'Failed to set GPU delegate: $e',
+                                            );
+                                          }
+                                          setStateDialog(() {});
+                                        },
+                                      ),
+                                    ] else if (aiService.isDownloading)
+                                      Column(
+                                        children: [
+                                          LinearProgressIndicator(
+                                            value: aiService.downloadProgress,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          const Text('Downloading model...'),
+                                        ],
+                                      ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            actions: [
-                              TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
-                            ],
-                          );
-                        });
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  child: const Text('Close'),
+                                ),
+                              ],
+                            );
+                          },
+                        );
                       },
                     );
                   },
@@ -1249,9 +1508,13 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                 return IconButton(
                   icon: Icon(
                     ltService.isTranslating ? Icons.mic : Icons.mic_none,
-                    color: ltService.isTranslating ? AppTheme.primaryBlue : Colors.white,
+                    color: ltService.isTranslating
+                        ? AppTheme.primaryBlue
+                        : Colors.white,
                   ),
-                  tooltip: ltService.isTranslating ? 'Disable live transcription (Y)' : 'Enable live transcription (Y)',
+                  tooltip: ltService.isTranslating
+                      ? 'Disable live transcription (Y)'
+                      : 'Enable live transcription (Y)',
                   onPressed: _toggleLiveTranscription,
                 );
               },
@@ -1267,7 +1530,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
               ),
             if (_isPipSupported)
               IconButton(
-                icon: const Icon(Icons.picture_in_picture_alt, color: Colors.white),
+                icon: const Icon(
+                  Icons.picture_in_picture_alt,
+                  color: Colors.white,
+                ),
                 onPressed: _togglePip,
               ),
           ],
@@ -1307,17 +1573,14 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   Widget _buildHint(String key, String action) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.white.withAlpha((0.2 * 255).round()),
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: Colors.white.withAlpha((0.3 * 255).round())),
-        ),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha((0.2 * 255).round()),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: Colors.white.withAlpha((0.3 * 255).round())),
+      ),
       child: Text(
         '$key: $action',
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-        ),
+        style: const TextStyle(color: Colors.white, fontSize: 12),
       ),
     );
   }
@@ -1345,7 +1608,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: AppTheme.primaryBlue,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(10),
+                ),
               ),
               child: Row(
                 children: [
@@ -1362,7 +1627,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => setState(() => _showSubtitleSelector = false),
+                    onPressed: () =>
+                        setState(() => _showSubtitleSelector = false),
                   ),
                 ],
               ),
@@ -1374,10 +1640,12 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
               itemBuilder: (context, index) {
                 final option = options[index];
                 final isSelected = index == _selectedSubtitleIndex + 1;
-                
+
                 return ListTile(
                   selected: isSelected,
-                  selectedTileColor: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
+                  selectedTileColor: AppTheme.primaryBlue.withAlpha(
+                    (0.3 * 255).round(),
+                  ),
                   leading: Icon(
                     isSelected ? Icons.check_circle : Icons.circle_outlined,
                     color: isSelected ? AppTheme.primaryBlue : Colors.white70,
@@ -1390,9 +1658,11 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                     setState(() {
                       _selectedSubtitleIndex = index - 1;
                       _showSubtitleSelector = false;
-                      
+
                       if (_selectedSubtitleIndex >= 0) {
-                        _loadSubtitle(widget.subtitleOptions![_selectedSubtitleIndex]);
+                        _loadSubtitle(
+                          widget.subtitleOptions![_selectedSubtitleIndex],
+                        );
                       }
                     });
                   },
@@ -1427,24 +1697,44 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                       final trackIndex = t['trackIndex'];
 
                       return ListTile(
-                        title: Text('$label ${language.isNotEmpty ? '($language)' : ''}'),
-                        subtitle: Text('group: $groupIndex, track: $trackIndex'),
+                        title: Text(
+                          '$label ${language.isNotEmpty ? '($language)' : ''}',
+                        ),
+                        subtitle: Text(
+                          'group: $groupIndex, track: $trackIndex',
+                        ),
                         onTap: () async {
                           try {
                             if (_nativeController != null) {
-                              final rIdx = (t['rendererIndex'] is int) ? t['rendererIndex'] : -1;
-                              final gIdx = (groupIndex is int) ? groupIndex : -1;
-                              final trIdx = (trackIndex is int) ? trackIndex : index;
+                              final rIdx = (t['rendererIndex'] is int)
+                                  ? t['rendererIndex']
+                                  : -1;
+                              final gIdx = (groupIndex is int)
+                                  ? groupIndex
+                                  : -1;
+                              final trIdx = (trackIndex is int)
+                                  ? trackIndex
+                                  : index;
                               bool success = false;
                               if (rIdx >= 0) {
-                                final res = await _nativeController!.switchAudioByIndices(rendererIndex: rIdx, groupIndex: gIdx, trackIndex: trIdx);
+                                final res = await _nativeController!
+                                    .switchAudioByIndices(
+                                      rendererIndex: rIdx,
+                                      groupIndex: gIdx,
+                                      trackIndex: trIdx,
+                                    );
                                 success = res['success'] == true;
                                 if (!success) {
-                                  debugPrint('Native override failed: ${res['message'] ?? 'unknown'}');
+                                  debugPrint(
+                                    'Native override failed: ${res['message'] ?? 'unknown'}',
+                                  );
                                 }
                               } else {
                                 // Fallback to existing method
-                                await _nativeController!.switchAudioTrack(trIdx, groupIndex: gIdx >= 0 ? gIdx : null);
+                                await _nativeController!.switchAudioTrack(
+                                  trIdx,
+                                  groupIndex: gIdx >= 0 ? gIdx : null,
+                                );
                                 success = true;
                               }
 
@@ -1456,7 +1746,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                           } catch (e) {
                             debugPrint('Native switch failed: $e');
                           }
-                          if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                          if (dialogContext.mounted)
+                            Navigator.of(dialogContext).pop();
                         },
                       );
                     },
@@ -1476,10 +1767,16 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   Widget _buildAudioSelector() {
     // If native audio tracks are available (Android native ExoPlayer), prefer
     // presenting those to the user for accurate selection.
-    final usingNative = Platform.isAndroid && _nativeAudioTracks.isNotEmpty && _nativeController != null && !_useVlcBackend;
+    final usingNative =
+        Platform.isAndroid &&
+        _nativeAudioTracks.isNotEmpty &&
+        _nativeController != null &&
+        !_useVlcBackend;
     final availableCount = usingNative
         ? _nativeAudioTracks.length
-        : (_useVlcBackend ? _vlcAudioTrackLabels.length : (widget.audioTracks?.length ?? 0));
+        : (_useVlcBackend
+              ? _vlcAudioTrackLabels.length
+              : (widget.audioTracks?.length ?? 0));
 
     if (availableCount == 0) {
       return Center(
@@ -1515,7 +1812,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: AppTheme.primaryBlue,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(10),
+                ),
               ),
               child: Row(
                 children: [
@@ -1552,8 +1851,12 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                   title = (info['label'] as String?) ?? 'Audio ${index + 1}';
                   final lang = (info['language'] as String?) ?? '';
                   subtitleText = lang.isNotEmpty ? lang : '';
-                } else if (_useVlcBackend && (widget.audioTracks == null || widget.audioTracks!.isEmpty)) {
-                  title = _vlcAudioTrackLabels.length > index ? _vlcAudioTrackLabels[index] : 'Audio ${index + 1}';
+                } else if (_useVlcBackend &&
+                    (widget.audioTracks == null ||
+                        widget.audioTracks!.isEmpty)) {
+                  title = _vlcAudioTrackLabels.length > index
+                      ? _vlcAudioTrackLabels[index]
+                      : 'Audio ${index + 1}';
                 } else {
                   final track = widget.audioTracks![index];
                   title = track.name;
@@ -1562,7 +1865,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
                 return ListTile(
                   selected: isSelected,
-                  selectedTileColor: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
+                  selectedTileColor: AppTheme.primaryBlue.withAlpha(
+                    (0.3 * 255).round(),
+                  ),
                   leading: Icon(
                     isSelected ? Icons.check_circle : Icons.circle_outlined,
                     color: isSelected ? AppTheme.primaryBlue : Colors.white70,
@@ -1572,7 +1877,13 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                     style: const TextStyle(color: Colors.white),
                   ),
                   subtitle: subtitleText.isNotEmpty
-                      ? Text(subtitleText, style: const TextStyle(color: Colors.white70, fontSize: 12))
+                      ? Text(
+                          subtitleText,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
+                        )
                       : null,
                   onTap: () async {
                     setState(() {
@@ -1587,7 +1898,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                       final t = info['trackIndex'] as int?;
                       try {
                         if (g != null && t != null) {
-                          await _nativeController?.switchAudioTrack(t, groupIndex: g);
+                          await _nativeController?.switchAudioTrack(
+                            t,
+                            groupIndex: g,
+                          );
                         } else {
                           await _nativeController?.switchAudioTrack(index);
                         }
@@ -1633,18 +1947,25 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     if (data.trim().isEmpty) return cues;
 
     // Normalize line endings
-    final normalized = data.replaceAll('\r\n', '\n').replaceAll('\r', '\n').trim();
+    final normalized = data
+        .replaceAll('\r\n', '\n')
+        .replaceAll('\r', '\n')
+        .trim();
 
     // Split into blocks separated by blank lines
     final blocks = normalized.split(RegExp(r'\n\s*\n'));
 
     for (var block in blocks) {
-      final lines = block.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
+      final lines = block
+          .split('\n')
+          .map((l) => l.trim())
+          .where((l) => l.isNotEmpty)
+          .toList();
       if (lines.isEmpty) continue;
 
       int idx = 0;
-  // If first line is a numeric index, skip it
-  if (RegExp(r'^\d+$').hasMatch(lines[0])) idx = 1;
+      // If first line is a numeric index, skip it
+      if (RegExp(r'^\d+$').hasMatch(lines[0])) idx = 1;
       if (idx >= lines.length) continue;
 
       final timeLine = lines[idx];
@@ -1692,7 +2013,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
     return Duration(milliseconds: (seconds * 1000).round());
   }
-  
 
   Widget _buildSubtitleOverlay() {
     return Positioned(
@@ -1725,21 +2045,29 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   /// Attempt to switch audio track. Platforms without an implementation will
   /// gracefully fall back to a no-op with a user-facing message.
   Future<void> _switchAudioTrack(int index) async {
-
     // VLC backend disabled - audio track switching not available
-    
+
     // Fallback: attempt platform method (MainActivity stub) so older setups
     // still get an acknowledgement instead of an exception.
     try {
       const platform = MethodChannel('com.streamhub.iptv/audio');
-      final result = await platform.invokeMethod('switchAudioTrack', {'trackIndex': index});
+      final result = await platform.invokeMethod('switchAudioTrack', {
+        'trackIndex': index,
+      });
       debugPrint('Audio track switch result (platform): $result');
       if (!mounted) return;
-      showAppSnackBar(context, const SnackBar(content: Text('Audio track changed')));
+      showAppSnackBar(
+        context,
+        const SnackBar(content: Text('Audio track changed')),
+      );
     } catch (e) {
       debugPrint('Audio track switching not implemented on this platform: $e');
       // Friendly fallback: notify user we registered their selection.
-      if (mounted) showAppSnackBar(context, const SnackBar(content: Text('Audio track change requested')));
+      if (mounted)
+        showAppSnackBar(
+          context,
+          const SnackBar(content: Text('Audio track change requested')),
+        );
     }
   }
 }
@@ -1759,11 +2087,7 @@ class SubtitleOption {
   final String url;
   final String format; // 'srt', 'vtt', 'webvtt'
 
-  SubtitleOption({
-    required this.name,
-    required this.url,
-    required this.format,
-  });
+  SubtitleOption({required this.name, required this.url, required this.format});
 }
 
 /// Audio track option model
@@ -1817,11 +2141,18 @@ List<Map<String, dynamic>> parseSubtitlesPublic(String data) {
   final cues = <Map<String, dynamic>>[];
   if (data.trim().isEmpty) return cues;
 
-  final normalized = data.replaceAll('\r\n', '\n').replaceAll('\r', '\n').trim();
+  final normalized = data
+      .replaceAll('\r\n', '\n')
+      .replaceAll('\r', '\n')
+      .trim();
   final blocks = normalized.split(RegExp(r'\n\s*\n'));
 
   for (var block in blocks) {
-    final lines = block.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
+    final lines = block
+        .split('\n')
+        .map((l) => l.trim())
+        .where((l) => l.isNotEmpty)
+        .toList();
     if (lines.isEmpty) continue;
 
     int idx = 0;

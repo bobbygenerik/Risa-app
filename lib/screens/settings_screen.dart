@@ -75,7 +75,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool _skipIntro = true;
   bool _showChannelLogos = true;
   bool _showProgramImages = true;
-  
+
   // Audio Settings
   String _audioDecoderType = 'Auto';
   bool _audioPassthrough = false;
@@ -108,7 +108,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   @override
   void initState() {
     super.initState();
-    
+
     // Initialize text controllers
     _m3uUrlController = TextEditingController();
     _xtreamServerController = TextEditingController();
@@ -117,8 +117,11 @@ class _SettingsScreenState extends State<SettingsScreen>
     _realDebridApiKeyController = TextEditingController();
     _openSubtitlesUsernameController = TextEditingController();
     _openSubtitlesPasswordController = TextEditingController();
-    
-    _tabController = TabController(length: 5, vsync: this); // Reduced from 7 to 5
+
+    _tabController = TabController(
+      length: 5,
+      vsync: this,
+    ); // Reduced from 7 to 5
     // Prepare focus nodes for the sidebar menu so external callers can request focus
     for (int i = 0; i < 5; i++) {
       _menuFocusNodes.add(FocusNode(debugLabel: 'SettingsMenu$i'));
@@ -141,9 +144,12 @@ class _SettingsScreenState extends State<SettingsScreen>
     _xtreamServerController.text = prefs.getString('xtream_server') ?? '';
     _xtreamUsernameController.text = prefs.getString('xtream_username') ?? '';
     _xtreamPasswordController.text = prefs.getString('xtream_password') ?? '';
-    _realDebridApiKeyController.text = prefs.getString('realdebrid_api_key') ?? '';
-    _openSubtitlesUsernameController.text = prefs.getString('opensubtitles_username') ?? '';
-    _openSubtitlesPasswordController.text = prefs.getString('opensubtitles_password') ?? '';
+    _realDebridApiKeyController.text =
+        prefs.getString('realdebrid_api_key') ?? '';
+    _openSubtitlesUsernameController.text =
+        prefs.getString('opensubtitles_username') ?? '';
+    _openSubtitlesPasswordController.text =
+        prefs.getString('opensubtitles_password') ?? '';
 
     // Boolean settings
     _autoPlayNextEpisode = prefs.getBool('auto_play_next') ?? true;
@@ -157,7 +163,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     _openSubtitlesEnabled = prefs.getBool('opensubtitles_enabled') ?? false;
     _aiUpscalingEnabled = prefs.getBool('ai_upscaling') ?? false;
     _autoDownloadSubtitles = prefs.getBool('auto_download_subtitles') ?? true;
-    _rememberPlaybackPosition = prefs.getBool('remember_playback_position') ?? true;
+    _rememberPlaybackPosition =
+        prefs.getBool('remember_playback_position') ?? true;
     _skipIntro = prefs.getBool('skip_intro_available') ?? true;
     _showChannelLogos = prefs.getBool('show_channel_logos') ?? true;
     _showProgramImages = prefs.getBool('show_program_images') ?? true;
@@ -167,13 +174,15 @@ class _SettingsScreenState extends State<SettingsScreen>
     _renderingEngine = prefs.getString('rendering_engine') ?? 'Auto';
     _videoQuality = prefs.getString('video_quality') ?? 'Auto';
     _aiQuality = prefs.getString('ai_quality') ?? 'Balanced';
-    _preferredSubtitleLanguage = prefs.getString('subtitle_language') ?? 'English';
+    _preferredSubtitleLanguage =
+        prefs.getString('subtitle_language') ?? 'English';
     _selectedLanguage = prefs.getString('app_language') ?? 'English';
     _chromecastDevice = prefs.getString('chromecast_device') ?? 'Chromecast';
-    
+
     // Audio settings
     _audioDecoderType = prefs.getString('audio_decoder_type') ?? 'Auto';
-    _preferredAudioLanguage = prefs.getString('preferred_audio_language') ?? 'Default';
+    _preferredAudioLanguage =
+        prefs.getString('preferred_audio_language') ?? 'Default';
     _audioPassthrough = prefs.getBool('audio_passthrough') ?? false;
     _audioBoost = prefs.getBool('audio_boost') ?? false;
     _normalizeAudio = prefs.getBool('normalize_audio') ?? false;
@@ -229,28 +238,29 @@ class _SettingsScreenState extends State<SettingsScreen>
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: PopScope(
-        canPop: false,
-        // ignore: deprecated_member_use
+        canPop: true,
+        // Let system back pop the route; fall back to home if Navigator denies.
         onPopInvoked: (didPop) {
           if (didPop) return;
+          if (!context.mounted) return;
           context.go('/home');
         },
         child: Container(
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF050710),
-                    Color(0xFF0d1140),
-                  ],
-                )
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF050710), Color(0xFF0d1140)],
+            ),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildSidebarMenu(),
-              VerticalDivider(width: 1, color: Colors.white.withAlpha((0.1 * 255).round())),
+              VerticalDivider(
+                width: 1,
+                color: Colors.white.withAlpha((0.1 * 255).round()),
+              ),
               Expanded(
                 child: Focus(
                   canRequestFocus: false,
@@ -321,10 +331,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             alignment: Alignment.centerLeft,
             decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(
-                  color: AppTheme.primaryBlue,
-                  width: 2,
-                ),
+                bottom: BorderSide(color: AppTheme.primaryBlue, width: 2),
               ),
             ),
             child: Align(
@@ -391,18 +398,25 @@ class _SettingsScreenState extends State<SettingsScreen>
                       margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? AppTheme.primaryBlue.withAlpha((0.3 * 255).round())
+                            ? AppTheme.primaryBlue.withAlpha(
+                                (0.3 * 255).round(),
+                              )
                             : Colors.transparent,
                         border: Border.all(
                           color: isSelected
-                              ? AppTheme.primaryBlue.withAlpha((0.5 * 255).round())
+                              ? AppTheme.primaryBlue.withAlpha(
+                                  (0.5 * 255).round(),
+                                )
                               : Colors.transparent,
                           width: 1.5,
                         ),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
                         child: Row(
                           children: [
                             Icon(
@@ -445,7 +459,11 @@ class _SettingsScreenState extends State<SettingsScreen>
   void requestFirstSidebarFocus() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_menuFocusNodes.isNotEmpty) {
-        _menuFocusNodes[_tabController!.index.clamp(0, _menuFocusNodes.length - 1)].requestFocus();
+        _menuFocusNodes[_tabController!.index.clamp(
+              0,
+              _menuFocusNodes.length - 1,
+            )]
+            .requestFocus();
       }
     });
   }
@@ -492,10 +510,17 @@ class _SettingsScreenState extends State<SettingsScreen>
                       CircleAvatar(
                         radius: 50,
                         backgroundColor: AppTheme.cardBackground,
-                        backgroundImage: profileImagePath != null && profileImagePath.isNotEmpty
-                            ? ResizeImage(FileImage(File(profileImagePath)), width: 100, height: 100)
+                        backgroundImage:
+                            profileImagePath != null &&
+                                profileImagePath.isNotEmpty
+                            ? ResizeImage(
+                                FileImage(File(profileImagePath)),
+                                width: 100,
+                                height: 100,
+                              )
                             : null,
-                        child: profileImagePath == null || profileImagePath.isEmpty
+                        child:
+                            profileImagePath == null || profileImagePath.isEmpty
                             ? Icon(
                                 Icons.person,
                                 size: 50,
@@ -554,9 +579,16 @@ class _SettingsScreenState extends State<SettingsScreen>
           children: [
             _buildSwitchTile('Hardware Acceleration', _hardwareAcceleration),
             _buildSwitchTile('Hardware Decoding', _hardwareDecoding),
-            _buildSwitchTile('Hardware Post-Processing', _hardwarePostProcessing),
-            _buildSwitchTile('Auto Frame Rate Matching', _autoFrameRate,
-              subtitle: 'Match display refresh rate to video frame rate for smoother playback'),
+            _buildSwitchTile(
+              'Hardware Post-Processing',
+              _hardwarePostProcessing,
+            ),
+            _buildSwitchTile(
+              'Auto Frame Rate Matching',
+              _autoFrameRate,
+              subtitle:
+                  'Match display refresh rate to video frame rate for smoother playback',
+            ),
             _buildDropdown(
               'Decoder Type',
               _decoderType,
@@ -596,7 +628,13 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             _buildDropdown(
               'Audio Channels',
-              _audioChannels == 0 ? 'Auto' : _audioChannels == 2 ? 'Stereo' : _audioChannels == 6 ? '5.1 Surround' : '7.1 Surround',
+              _audioChannels == 0
+                  ? 'Auto'
+                  : _audioChannels == 2
+                  ? 'Stereo'
+                  : _audioChannels == 6
+                  ? '5.1 Surround'
+                  : '7.1 Surround',
               ['Auto', 'Stereo', '5.1 Surround', '7.1 Surround'],
               (value) async {
                 if (value != null) {
@@ -608,7 +646,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   } else if (value == '7.1 Surround') {
                     channels = 8;
                   }
-                  
+
                   setState(() => _audioChannels = channels);
                   final prefs = await SharedPreferences.getInstance();
                   await prefs.setInt('audio_channels', channels);
@@ -618,7 +656,20 @@ class _SettingsScreenState extends State<SettingsScreen>
             _buildDropdown(
               'Preferred Audio Language',
               _preferredAudioLanguage,
-              ['Default', 'English', 'Spanish', 'French', 'German', 'Italian', 'Portuguese', 'Russian', 'Chinese', 'Japanese', 'Korean', 'Arabic'],
+              [
+                'Default',
+                'English',
+                'Spanish',
+                'French',
+                'German',
+                'Italian',
+                'Portuguese',
+                'Russian',
+                'Chinese',
+                'Japanese',
+                'Korean',
+                'Arabic',
+              ],
               (value) async {
                 if (value != null) {
                   setState(() => _preferredAudioLanguage = value);
@@ -627,12 +678,23 @@ class _SettingsScreenState extends State<SettingsScreen>
                 }
               },
             ),
-            _buildAudioSwitchTile('Audio Passthrough', _audioPassthrough,
-              subtitle: 'Send audio directly to receiver without decoding (for surround sound systems)'),
-            _buildAudioSwitchTile('Audio Boost', _audioBoost,
-              subtitle: 'Increase audio volume for quiet content'),
-            _buildAudioSwitchTile('Normalize Audio', _normalizeAudio,
-              subtitle: 'Automatically adjust volume levels for consistent playback'),
+            _buildAudioSwitchTile(
+              'Audio Passthrough',
+              _audioPassthrough,
+              subtitle:
+                  'Send audio directly to receiver without decoding (for surround sound systems)',
+            ),
+            _buildAudioSwitchTile(
+              'Audio Boost',
+              _audioBoost,
+              subtitle: 'Increase audio volume for quiet content',
+            ),
+            _buildAudioSwitchTile(
+              'Normalize Audio',
+              _normalizeAudio,
+              subtitle:
+                  'Automatically adjust volume levels for consistent playback',
+            ),
           ],
         ),
         _buildSectionCard(
@@ -667,9 +729,9 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             Text(
               'Higher buffer reduces stuttering but increases memory usage',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppTheme.textSecondary,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
             ),
           ],
         ),
@@ -689,7 +751,8 @@ class _SettingsScreenState extends State<SettingsScreen>
           'xtream_server': prefs.getString('xtream_server'),
           'epg_update_interval': prefs.getInt('epg_update_interval') ?? 12,
           'epg_past_days': prefs.getInt('epg_past_days') ?? 1,
-          'store_descriptions': prefs.getBool('store_program_descriptions') ?? true,
+          'store_descriptions':
+              prefs.getBool('store_program_descriptions') ?? true,
           'show_channel_logos': prefs.getBool('show_channel_logos') ?? true,
           'show_program_images': prefs.getBool('show_program_images') ?? true,
         };
@@ -716,7 +779,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         final storeDescriptions = data['store_descriptions'] as bool;
         final showChannelLogos = data['show_channel_logos'] as bool;
         final showProgramImages = data['show_program_images'] as bool;
-        
+
         // Determine provider name
         String providerName = 'No Playlist Loaded';
         if (playlistType == 'm3u' && m3uUrl != null) {
@@ -734,9 +797,10 @@ class _SettingsScreenState extends State<SettingsScreen>
             providerName = 'Xtream Codes';
           }
         }
-        
-        final TextEditingController customEpgController = 
-            TextEditingController(text: customEpgUrl ?? '');
+
+        final TextEditingController customEpgController = TextEditingController(
+          text: customEpgUrl ?? '',
+        );
 
         return _buildSectionCard(
           title: 'EPG (Electronic Program Guide)',
@@ -751,14 +815,16 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
             ),
             SizedBox(height: AppSizes.md),
-            
+
             // Current Provider Info
             Container(
               padding: EdgeInsets.all(AppSizes.md),
               decoration: BoxDecoration(
                 color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
                 borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                border: Border.all(color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round())),
+                border: Border.all(
+                  color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -788,7 +854,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                     SizedBox(height: 12),
                     Row(
                       children: [
-                        Icon(Icons.check_circle, color: AppTheme.accentGreen, size: 16),
+                        Icon(
+                          Icons.check_circle,
+                          color: AppTheme.accentGreen,
+                          size: 16,
+                        ),
                         SizedBox(width: 6),
                         Expanded(
                           child: Text(
@@ -807,21 +877,24 @@ class _SettingsScreenState extends State<SettingsScreen>
                       epgUrl,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                   ],
                 ],
               ),
             ),
-            
+
             SizedBox(height: AppSizes.lg),
-            
+
             // Custom EPG URL Input
             Text(
               'Custom EPG URL',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
             SizedBox(height: AppSizes.sm),
             Focus(
@@ -840,14 +913,20 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: AppTheme.primaryBlue, width: 3),
+                    borderSide: BorderSide(
+                      color: AppTheme.primaryBlue,
+                      width: 3,
+                    ),
                   ),
                   suffixIcon: IconButton(
                     icon: Icon(Icons.save),
                     onPressed: () async {
                       final localContext = context;
                       final prefs = await SharedPreferences.getInstance();
-                      await prefs.setString('custom_epg_url', customEpgController.text);
+                      await prefs.setString(
+                        'custom_epg_url',
+                        customEpgController.text,
+                      );
                       if (!localContext.mounted) return;
                       showAppSnackBar(
                         localContext,
@@ -862,7 +941,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     tooltip: 'Save EPG URL',
                   ),
                 ),
-                  onSubmitted: (value) async {
+                onSubmitted: (value) async {
                   final localContext = context;
                   final prefs = await SharedPreferences.getInstance();
                   await prefs.setString('custom_epg_url', value);
@@ -874,7 +953,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                       backgroundColor: AppTheme.accentGreen,
                     ),
                   );
-                  if (localContext.mounted) setState(() {}); // Refresh to show saved URL
+                  if (localContext.mounted)
+                    setState(() {}); // Refresh to show saved URL
                 },
               ),
             ),
@@ -887,11 +967,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                 fontStyle: FontStyle.italic,
               ),
             ),
-            
+
             SizedBox(height: AppSizes.md),
             Divider(),
             SizedBox(height: AppSizes.lg),
-            
+
             // === 3. UPDATE SETTINGS ===
             Text(
               'Update Settings',
@@ -901,7 +981,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
             ),
             SizedBox(height: AppSizes.md),
-            
+
             // Update Interval
             ListTile(
               contentPadding: EdgeInsets.zero,
@@ -913,17 +993,21 @@ class _SettingsScreenState extends State<SettingsScreen>
                 children: [
                   IconButton(
                     icon: Icon(Icons.remove_circle_outline),
-                    onPressed: epgUpdateInterval > 1 ? () async {
-                      final newValue = epgUpdateInterval - 1;
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setInt('epg_update_interval', newValue);
-                      setState(() {});
-                    } : null,
+                    onPressed: epgUpdateInterval > 1
+                        ? () async {
+                            final newValue = epgUpdateInterval - 1;
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.setInt('epg_update_interval', newValue);
+                            setState(() {});
+                          }
+                        : null,
                   ),
                   Container(
                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
+                      color: AppTheme.primaryBlue.withAlpha(
+                        (0.1 * 255).round(),
+                      ),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -936,22 +1020,23 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ),
                   IconButton(
                     icon: Icon(Icons.add_circle_outline),
-                    onPressed: epgUpdateInterval < 48 ? () async {
-                      final newValue = epgUpdateInterval + 1;
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setInt('epg_update_interval', newValue);
-                      setState(() {});
-                    } : null,
+                    onPressed: epgUpdateInterval < 48
+                        ? () async {
+                            final newValue = epgUpdateInterval + 1;
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.setInt('epg_update_interval', newValue);
+                            setState(() {});
+                          }
+                        : null,
                   ),
                 ],
               ),
             ),
-            
-            
+
             SizedBox(height: AppSizes.md),
             Divider(),
             SizedBox(height: AppSizes.lg),
-            
+
             // === 2. DATA MANAGEMENT ===
             Text(
               'Data Management',
@@ -961,7 +1046,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
             ),
             SizedBox(height: AppSizes.md),
-            
+
             // 2. Past Days to Keep
             ListTile(
               contentPadding: EdgeInsets.zero,
@@ -973,17 +1058,21 @@ class _SettingsScreenState extends State<SettingsScreen>
                 children: [
                   IconButton(
                     icon: Icon(Icons.remove_circle_outline),
-                    onPressed: epgPastDays > 0 ? () async {
-                      final newValue = epgPastDays - 1;
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setInt('epg_past_days', newValue);
-                      setState(() {});
-                    } : null,
+                    onPressed: epgPastDays > 0
+                        ? () async {
+                            final newValue = epgPastDays - 1;
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.setInt('epg_past_days', newValue);
+                            setState(() {});
+                          }
+                        : null,
                   ),
                   Container(
                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
+                      color: AppTheme.primaryBlue.withAlpha(
+                        (0.1 * 255).round(),
+                      ),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -996,22 +1085,26 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ),
                   IconButton(
                     icon: Icon(Icons.add_circle_outline),
-                    onPressed: epgPastDays < 30 ? () async {
-                      final newValue = epgPastDays + 1;
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setInt('epg_past_days', newValue);
-                      setState(() {});
-                    } : null,
+                    onPressed: epgPastDays < 30
+                        ? () async {
+                            final newValue = epgPastDays + 1;
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.setInt('epg_past_days', newValue);
+                            setState(() {});
+                          }
+                        : null,
                   ),
                 ],
               ),
             ),
-            
+
             // 3. STORE PROGRAM DESCRIPTIONS TOGGLE
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: Text('Store Program Descriptions'),
-              subtitle: Text('Save detailed program information (uses more storage)'),
+              subtitle: Text(
+                'Save detailed program information (uses more storage)',
+              ),
               value: storeDescriptions,
               onChanged: (value) async {
                 final prefs = await SharedPreferences.getInstance();
@@ -1019,11 +1112,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                 setState(() {});
               },
             ),
-            
+
             SizedBox(height: AppSizes.md),
             Divider(),
             SizedBox(height: AppSizes.lg),
-            
+
             // === 7. DISPLAY OPTIONS ===
             Text(
               'Display Options',
@@ -1033,7 +1126,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
             ),
             SizedBox(height: AppSizes.sm),
-            
+
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: Text('Show Channel Logos'),
@@ -1045,7 +1138,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 setState(() {});
               },
             ),
-            
+
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: Text('Show Program Images'),
@@ -1057,9 +1150,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                 setState(() {});
               },
             ),
-            
+
             SizedBox(height: AppSizes.lg),
-            
+
             // Update EPG & Clear EPG Buttons
             Row(
               children: [
@@ -1091,7 +1184,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                         context: context,
                         builder: (context) => AlertDialog(
                           title: Text('Clear EPG Data'),
-                          content: Text('Are you sure you want to clear all EPG data? This cannot be undone.'),
+                          content: Text(
+                            'Are you sure you want to clear all EPG data? This cannot be undone.',
+                          ),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(context, false),
@@ -1099,12 +1194,15 @@ class _SettingsScreenState extends State<SettingsScreen>
                             ),
                             TextButton(
                               onPressed: () => Navigator.pop(context, true),
-                              child: Text('Clear', style: TextStyle(color: Colors.red)),
+                              child: Text(
+                                'Clear',
+                                style: TextStyle(color: Colors.red),
+                              ),
                             ),
                           ],
                         ),
                       );
-                      
+
                       if (confirm == true) {
                         // TODO: Implement EPG data clearing
                         final localContext = context;
@@ -1139,6 +1237,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     return _buildSettingsSection(
       title: 'General',
       children: [
+        _buildPlaylistStatusCard(),
+        SizedBox(height: AppSizes.md),
         _buildSectionCard(
           title: 'Playlist Source',
           subtitle: 'Select your playlist type and enter details',
@@ -1180,7 +1280,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                 controller: _m3uUrlController,
                 focusNode: _m3uUrlFocusNode,
                 isEditable: _m3uUrlEditable,
-                onEditableChanged: (value) => setState(() => _m3uUrlEditable = value),
+                onEditableChanged: (value) =>
+                    setState(() => _m3uUrlEditable = value),
                 hintText: 'http://example.com/playlist.m3u',
                 helperText: 'Enter M3U URL and click Load',
                 prefixIcon: Icons.link,
@@ -1194,27 +1295,38 @@ class _SettingsScreenState extends State<SettingsScreen>
                     final url = _m3uUrlController.text.trim();
                     if (url.isEmpty) {
                       if (!mounted) return;
-                      showAppSnackBar(context, SnackBar(content: Text('Please enter a valid M3U URL')));
+                      showAppSnackBar(
+                        context,
+                        SnackBar(content: Text('Please enter a valid M3U URL')),
+                      );
                       return;
                     }
 
                     if (mounted) {
-                      showAppSnackBar(context, SnackBar(content: Text('Loading playlist from URL...')));
+                      showAppSnackBar(
+                        context,
+                        SnackBar(content: Text('Loading playlist from URL...')),
+                      );
                     }
 
                     try {
-                      final provider = Provider.of<ChannelProvider>(context, listen: false);
+                      final provider = Provider.of<ChannelProvider>(
+                        context,
+                        listen: false,
+                      );
                       await provider.loadPlaylistFromUrl(url);
 
                       final prefs = await SharedPreferences.getInstance();
                       await prefs.setString('m3u_url', url);
                       await prefs.setString('playlist_type', 'm3u');
-                      
+
                       if (!mounted) return;
                       showAppSnackBar(
                         context,
                         SnackBar(
-                          content: Text('Playlist loaded successfully! ${provider.channels.length} channels found.'),
+                          content: Text(
+                            'Playlist loaded successfully! ${provider.channels.length} channels found.',
+                          ),
                           backgroundColor: AppTheme.accentGreen,
                         ),
                       );
@@ -1223,7 +1335,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                         showAppSnackBar(
                           context,
                           SnackBar(
-                            content: Text('Failed to load playlist: ${e.toString()}'),
+                            content: Text(
+                              'Failed to load playlist: ${e.toString()}',
+                            ),
                             backgroundColor: AppTheme.accentRed,
                           ),
                         );
@@ -1232,7 +1346,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                   },
                   icon: Icon(Icons.download),
                   label: Text('Load M3U Playlist'),
-                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryBlue,
+                  ),
                 ),
               ),
             ],
@@ -1243,7 +1359,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                 controller: _xtreamServerController,
                 focusNode: _xtreamServerFocusNode,
                 isEditable: _xtreamServerEditable,
-                onEditableChanged: (value) => setState(() => _xtreamServerEditable = value),
+                onEditableChanged: (value) =>
+                    setState(() => _xtreamServerEditable = value),
                 labelText: 'Server URL',
                 hintText: 'http://example.com:8080',
                 prefixIcon: Icons.dns,
@@ -1257,7 +1374,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                       controller: _xtreamUsernameController,
                       focusNode: _xtreamUsernameFocusNode,
                       isEditable: _xtreamUsernameEditable,
-                      onEditableChanged: (value) => setState(() => _xtreamUsernameEditable = value),
+                      onEditableChanged: (value) =>
+                          setState(() => _xtreamUsernameEditable = value),
                       labelText: 'Username',
                       prefixIcon: Icons.person,
                       onLeftArrow: requestFirstSidebarFocus,
@@ -1269,7 +1387,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                       controller: _xtreamPasswordController,
                       focusNode: _xtreamPasswordFocusNode,
                       isEditable: _xtreamPasswordEditable,
-                      onEditableChanged: (value) => setState(() => _xtreamPasswordEditable = value),
+                      onEditableChanged: (value) =>
+                          setState(() => _xtreamPasswordEditable = value),
                       labelText: 'Password',
                       prefixIcon: Icons.lock,
                       obscureText: true,
@@ -1297,20 +1416,38 @@ class _SettingsScreenState extends State<SettingsScreen>
                       final username = _xtreamUsernameController.text.trim();
                       final password = _xtreamPasswordController.text.trim();
 
-                      if (server.isEmpty || username.isEmpty || password.isEmpty) {
+                      if (server.isEmpty ||
+                          username.isEmpty ||
+                          password.isEmpty) {
                         if (!mounted) return;
-                        showAppSnackBar(context, SnackBar(content: Text('Please fill in all Xtream Codes fields')));
+                        showAppSnackBar(
+                          context,
+                          SnackBar(
+                            content: Text(
+                              'Please fill in all Xtream Codes fields',
+                            ),
+                          ),
+                        );
                         return;
                       }
 
                       if (mounted) {
-                        showAppSnackBar(context, SnackBar(content: Text('Loading Xtream Codes playlist...')));
+                        showAppSnackBar(
+                          context,
+                          SnackBar(
+                            content: Text('Loading Xtream Codes playlist...'),
+                          ),
+                        );
                       }
 
-                      final url = '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
+                      final url =
+                          '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
 
                       try {
-                        final provider = Provider.of<ChannelProvider>(context, listen: false);
+                        final provider = Provider.of<ChannelProvider>(
+                          context,
+                          listen: false,
+                        );
                         await provider.loadPlaylistFromUrl(url);
 
                         final prefs = await SharedPreferences.getInstance();
@@ -1318,12 +1455,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                         await prefs.setString('xtream_username', username);
                         await prefs.setString('xtream_password', password);
                         await prefs.setString('playlist_type', 'xtream');
-                        
+
                         if (!mounted) return;
                         showAppSnackBar(
                           context,
                           SnackBar(
-                            content: Text('Xtream playlist loaded! ${provider.channels.length} channels found.'),
+                            content: Text(
+                              'Xtream playlist loaded! ${provider.channels.length} channels found.',
+                            ),
                             backgroundColor: AppTheme.accentGreen,
                           ),
                         );
@@ -1332,7 +1471,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                           showAppSnackBar(
                             context,
                             SnackBar(
-                              content: Text('Failed to load Xtream playlist: ${e.toString()}'),
+                              content: Text(
+                                'Failed to load Xtream playlist: ${e.toString()}',
+                              ),
                               backgroundColor: AppTheme.accentRed,
                             ),
                           );
@@ -1341,7 +1482,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                     },
                     icon: Icon(Icons.download),
                     label: Text('Load Playlist'),
-                    style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryBlue,
+                    ),
                   ),
                 ],
               ),
@@ -1349,6 +1492,66 @@ class _SettingsScreenState extends State<SettingsScreen>
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildPlaylistStatusCard() {
+    return Consumer<ChannelProvider>(
+      builder: (context, provider, _) {
+        final hasChannels = provider.channels.isNotEmpty;
+        final statusText = hasChannels
+            ? 'Loaded ${provider.channels.length} live channels'
+            : provider.isLoading
+            ? 'Loading playlist...'
+            : 'No playlist loaded';
+        final previewLine =
+            provider.lastM3UContent?.split('\n').first ?? 'Unavailable';
+        final subtitle = hasChannels
+            ? 'Last response preview: $previewLine'
+            : 'Add an M3U or Xtream login below';
+
+        return _buildSectionCard(
+          title: 'Playlist Status',
+          subtitle: subtitle,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  hasChannels ? Icons.check_circle : Icons.cloud_off,
+                  color: hasChannels
+                      ? AppTheme.accentGreen
+                      : AppTheme.accentOrange,
+                ),
+                SizedBox(width: AppSizes.sm),
+                Expanded(
+                  child: Text(
+                    statusText,
+                    style: TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                if (hasChannels)
+                  TextButton(
+                    onPressed: () {
+                      showAppSnackBar(
+                        context,
+                        SnackBar(
+                          content: Text(
+                            'First channel: ${provider.channels.first.name}',
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Text('Inspect'),
+                  ),
+              ],
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -1361,7 +1564,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     return Focus(
       onKeyEvent: (node, event) {
         if (event is! KeyDownEvent) return KeyEventResult.ignored;
-        if (event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.select) {
+        if (event.logicalKey == LogicalKeyboardKey.enter ||
+            event.logicalKey == LogicalKeyboardKey.select) {
           onTap();
           return KeyEventResult.handled;
         }
@@ -1374,11 +1578,13 @@ class _SettingsScreenState extends State<SettingsScreen>
             onTap: onTap,
             child: Container(
               decoration: BoxDecoration(
-                color: isSelected 
-                    ? AppTheme.primaryBlue 
-                    : (isFocused ? AppTheme.primaryBlue.withAlpha((0.3 * 255).round()) : Colors.transparent),
+                color: isSelected
+                    ? AppTheme.primaryBlue
+                    : (isFocused
+                          ? AppTheme.primaryBlue.withAlpha((0.3 * 255).round())
+                          : Colors.transparent),
                 borderRadius: BorderRadius.circular(AppSizes.radiusMd - 2),
-                border: isFocused 
+                border: isFocused
                     ? Border.all(color: Colors.white, width: 1.5)
                     : null,
               ),
@@ -1387,7 +1593,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    icon, 
+                    icon,
                     color: isSelected ? Colors.white : AppTheme.textSecondary,
                     size: 18,
                   ),
@@ -1396,7 +1602,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                     title,
                     style: TextStyle(
                       color: isSelected ? Colors.white : AppTheme.textSecondary,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                       fontSize: 13,
                     ),
                   ),
@@ -1404,7 +1612,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
             ),
           );
-        }
+        },
       ),
     );
   }
@@ -1446,10 +1654,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       leading: const Icon(Icons.record_voice_over),
                       title: const Text('Source Language'),
                       subtitle: Text(transcriptionService.sourceLanguage),
-                      trailing: const Icon(
-                        Icons.arrow_forward_ios,
-                        size: 16,
-                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                       onTap: () => _showSourceLanguageSelector(
                         context,
                         transcriptionService,
@@ -1460,13 +1665,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ListTile(
                         leading: const Icon(Icons.language),
                         title: const Text('Target Language'),
-                        subtitle: Text(
-                          transcriptionService.targetLanguage,
-                        ),
-                        trailing: const Icon(
-                          Icons.arrow_forward_ios,
-                          size: 16,
-                        ),
+                        subtitle: Text(transcriptionService.targetLanguage),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                         onTap: () => _showTargetLanguageSelector(
                           context,
                           transcriptionService,
@@ -1475,9 +1675,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
                       SwitchListTile(
                         title: const Text('Text-to-Speech'),
-                        subtitle: const Text(
-                          'Speak translated text aloud',
-                        ),
+                        subtitle: const Text('Speak translated text aloud'),
                         value: transcriptionService.isTTSEnabled,
                         onChanged: transcriptionService.setTTSEnabled,
                       ),
@@ -1504,9 +1702,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ListTile(
                         leading: const Icon(Icons.delete_outline),
                         title: const Text('Clear Transcriptions'),
-                        subtitle: const Text(
-                          'Remove all saved transcriptions',
-                        ),
+                        subtitle: const Text('Remove all saved transcriptions'),
                         trailing: TextButton(
                           onPressed: () => _confirmClearTranscriptions(
                             context,
@@ -1521,7 +1717,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                     Container(
                       padding: EdgeInsets.all(AppSizes.md),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
+                        color: AppTheme.primaryBlue.withAlpha(
+                          (0.1 * 255).round(),
+                        ),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Column(
@@ -1537,9 +1735,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                               SizedBox(width: 8),
                               Text(
                                 'About Live Transcription',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: TextStyle(fontWeight: FontWeight.bold),
                               ),
                             ],
                           ),
@@ -1560,7 +1756,10 @@ class _SettingsScreenState extends State<SettingsScreen>
               return _buildSectionCard(
                 title: 'Live Transcription',
                 children: [
-                  Text('Unavailable on this device', style: TextStyle(color: AppTheme.textSecondary)),
+                  Text(
+                    'Unavailable on this device',
+                    style: TextStyle(color: AppTheme.textSecondary),
+                  ),
                 ],
               );
             }
@@ -1575,102 +1774,111 @@ class _SettingsScreenState extends State<SettingsScreen>
                 title: 'AI Video Enhancement',
                 subtitle: 'On-device upscaling for better quality (FREE)',
                 children: [
-                SwitchListTile(
-                  title: Text('Enable AI Upscaling'),
-                  subtitle: Text(
-                    aiService.isModelLoaded
-                        ? 'Upscale video to 2x resolution using AI'
-                        : 'Model not loaded - See AI_MODEL_SETUP_GUIDE.md',
-                  ),
-                  value: _aiUpscalingEnabled && aiService.isModelLoaded,
-                  onChanged: aiService.isModelLoaded
-                      ? (value) async {
-                          setState(() {
-                            _aiUpscalingEnabled = value;
-                          });
-                          final prefs = await SharedPreferences.getInstance();
-                          await prefs.setBool('ai_upscaling', value);
-                          aiService.setEnabled(value);
-                          final localContext = context;
-                          if (!localContext.mounted) return;
-                          showAppSnackBar(
-                            localContext,
-                            SnackBar(
-                              content: Text(
-                                value ? 'AI Upscaling enabled' : 'AI Upscaling disabled',
+                  SwitchListTile(
+                    title: Text('Enable AI Upscaling'),
+                    subtitle: Text(
+                      aiService.isModelLoaded
+                          ? 'Upscale video to 2x resolution using AI'
+                          : 'Model not loaded - See AI_MODEL_SETUP_GUIDE.md',
+                    ),
+                    value: _aiUpscalingEnabled && aiService.isModelLoaded,
+                    onChanged: aiService.isModelLoaded
+                        ? (value) async {
+                            setState(() {
+                              _aiUpscalingEnabled = value;
+                            });
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.setBool('ai_upscaling', value);
+                            aiService.setEnabled(value);
+                            final localContext = context;
+                            if (!localContext.mounted) return;
+                            showAppSnackBar(
+                              localContext,
+                              SnackBar(
+                                content: Text(
+                                  value
+                                      ? 'AI Upscaling enabled'
+                                      : 'AI Upscaling disabled',
+                                ),
                               ),
-                            ),
-                          );
-                        }
-                      : null,
-                ),
-                if (_aiUpscalingEnabled && aiService.isModelLoaded) ...[
-                  _buildDropdown(
-                    'Quality Preset',
-                    _aiQuality,
-                    ['Fast', 'Balanced', 'Quality'],
-                    (value) async {
-                      if (value == null) return;
-                      setState(() {
-                        _aiQuality = value;
-                      });
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setString('ai_quality', value);
-                      aiService.setQualityPreset(value);
-                    },
+                            );
+                          }
+                        : null,
                   ),
-                  Padding(
-                    padding: EdgeInsets.all(AppSizes.md),
-                    child: Container(
+                  if (_aiUpscalingEnabled && aiService.isModelLoaded) ...[
+                    _buildDropdown(
+                      'Quality Preset',
+                      _aiQuality,
+                      ['Fast', 'Balanced', 'Quality'],
+                      (value) async {
+                        if (value == null) return;
+                        setState(() {
+                          _aiQuality = value;
+                        });
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setString('ai_quality', value);
+                        aiService.setQualityPreset(value);
+                      },
+                    ),
+                    Padding(
                       padding: EdgeInsets.all(AppSizes.md),
-                      decoration: BoxDecoration(
-                        color: AppTheme.highlight,
-                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.info_outline, size: 16),
-                              SizedBox(width: 8),
+                      child: Container(
+                        padding: EdgeInsets.all(AppSizes.md),
+                        decoration: BoxDecoration(
+                          color: AppTheme.highlight,
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusMd,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.info_outline, size: 16),
+                                SizedBox(width: 8),
+                                Text(
+                                  'AI Enhancement Info',
+                                  style: TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              '• GPU Acceleration: ${aiService.isGPUAvailable ? "✓ Available" : "✗ CPU Only"}',
+                            ),
+                            Text('• Upscales video to 2x resolution'),
+                            Text('• Quality: $_aiQuality'),
+                            if (aiService.isGPUAvailable)
                               Text(
-                                'AI Enhancement Info',
-                                style: TextStyle(fontWeight: FontWeight.w600),
+                                '• Est. Performance: ${_getAIPerformanceText(_aiQuality, true)}',
                               ),
-                            ],
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            '• GPU Acceleration: ${aiService.isGPUAvailable ? "✓ Available" : "✗ CPU Only"}',
-                          ),
-                          Text('• Upscales video to 2x resolution'),
-                          Text('• Quality: $_aiQuality'),
-                          if (aiService.isGPUAvailable)
-                            Text(
-                              '• Est. Performance: ${_getAIPerformanceText(_aiQuality, true)}',
-                            ),
-                          if (!aiService.isGPUAvailable)
-                            Text(
-                              '• Est. Performance: ${_getAIPerformanceText(_aiQuality, false)}',
-                            ),
-                        ],
+                            if (!aiService.isGPUAvailable)
+                              Text(
+                                '• Est. Performance: ${_getAIPerformanceText(_aiQuality, false)}',
+                              ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
+                  ],
+                  if (!aiService.isModelLoaded)
+                    Padding(
+                      padding: EdgeInsets.all(AppSizes.md),
+                      child: _buildAIModelDownloadCard(aiService),
+                    ),
                 ],
-                if (!aiService.isModelLoaded)
-                  Padding(
-                    padding: EdgeInsets.all(AppSizes.md),
-                    child: _buildAIModelDownloadCard(aiService),
-                  ),
-              ],
               );
             } catch (e, st) {
               debugPrint('Settings: AIUpscaling builder error: $e\n$st');
               return _buildSectionCard(
                 title: 'AI Video Enhancement',
-                children: [Text('Unavailable on this device', style: TextStyle(color: AppTheme.textSecondary))],
+                children: [
+                  Text(
+                    'Unavailable on this device',
+                    style: TextStyle(color: AppTheme.textSecondary),
+                  ),
+                ],
               );
             }
           },
@@ -1680,7 +1888,10 @@ class _SettingsScreenState extends State<SettingsScreen>
           title: 'Playback Options',
           children: [
             _buildSwitchTile('Auto-play Next Episode', _autoPlayNextEpisode),
-            _buildSwitchTile('Remember Playback Position', _rememberPlaybackPosition),
+            _buildSwitchTile(
+              'Remember Playback Position',
+              _rememberPlaybackPosition,
+            ),
             _buildSwitchTile('Skip Intro (if available)', _skipIntro),
             _buildDropdown('Video Quality', 'Auto', [
               'Auto',
@@ -1716,10 +1927,10 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
           ],
         ),
-        
+
         // Saved Playlists Section
         _buildSavedPlaylistsSection(),
-        
+
         // EPG Source Section
         _buildEPGSourceSection(),
       ],
@@ -1804,19 +2015,23 @@ class _SettingsScreenState extends State<SettingsScreen>
                   const SizedBox(height: 8),
                   ElevatedButton.icon(
                     onPressed: () async {
-                        final localContext = context;
-                        final success = await subtitleService.authenticate();
-                        if (!localContext.mounted) return;
-                        showAppSnackBar(
-                          localContext,
-                          SnackBar(
-                            content: Text(
-                              success ? 'Connected successfully!' : 'Connection failed',
-                            ),
-                            backgroundColor: success ? Colors.green : AppTheme.accentRed,
+                      final localContext = context;
+                      final success = await subtitleService.authenticate();
+                      if (!localContext.mounted) return;
+                      showAppSnackBar(
+                        localContext,
+                        SnackBar(
+                          content: Text(
+                            success
+                                ? 'Connected successfully!'
+                                : 'Connection failed',
                           ),
-                        );
-                      },
+                          backgroundColor: success
+                              ? Colors.green
+                              : AppTheme.accentRed,
+                        ),
+                      );
+                    },
                     icon: const Icon(Icons.check_circle),
                     label: const Text('Test Connection'),
                   ),
@@ -1899,7 +2114,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                                 ? 'Connected! Premium until ${rdService.premiumExpiryDate}'
                                 : 'Connection failed',
                           ),
-                          backgroundColor: success ? Colors.green : AppTheme.accentRed,
+                          backgroundColor: success
+                              ? Colors.green
+                              : AppTheme.accentRed,
                         ),
                       );
                     },
@@ -1933,66 +2150,76 @@ class _SettingsScreenState extends State<SettingsScreen>
                 title: 'AI Video Upscaling',
                 subtitle: 'FREE - On-device AI upscaling (no cloud costs)',
                 children: [
-                SwitchListTile(
-                  title: const Text('Enable AI Upscaling'),
-                  subtitle: const Text(
-                    'Enhance video quality with AI (2x upscaling)',
-                  ),
-                  value: _aiUpscalingEnabled,
-                  onChanged: aiService.isModelLoaded
-                      ? (value) {
-                          setState(() {
-                            _aiUpscalingEnabled = value;
-                          });
-                          aiService.setEnabled(value);
-                        }
-                      : null,
-                ),
-                if (!aiService.isModelLoaded) ...[
-                  _buildAIModelDownloadCard(aiService),
-                ],
-                if (_aiUpscalingEnabled) ...[
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Quality Preset',
-                    style: TextStyle(fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 8),
-                  SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'Fast', label: Text('Fast')),
-                      ButtonSegment(value: 'Balanced', label: Text('Balanced')),
-                      ButtonSegment(value: 'Quality', label: Text('Quality')),
-                    ],
-                    selected: {_aiQuality},
-                    onSelectionChanged: (Set<String> selection) {
-                      setState(() {
-                        _aiQuality = selection.first;
-                      });
-                      aiService.setQuality(selection.first);
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  ListTile(
-                    leading: const Icon(
-                      Icons.info_outline,
-                      color: AppTheme.primaryBlue,
-                    ),
-                    title: Text(
-                      'GPU Available: ${aiService.gpuAvailable ? "Yes" : "No"}',
-                    ),
+                  SwitchListTile(
+                    title: const Text('Enable AI Upscaling'),
                     subtitle: const Text(
-                      'GPU acceleration provides better performance',
+                      'Enhance video quality with AI (2x upscaling)',
                     ),
+                    value: _aiUpscalingEnabled,
+                    onChanged: aiService.isModelLoaded
+                        ? (value) {
+                            setState(() {
+                              _aiUpscalingEnabled = value;
+                            });
+                            aiService.setEnabled(value);
+                          }
+                        : null,
                   ),
+                  if (!aiService.isModelLoaded) ...[
+                    _buildAIModelDownloadCard(aiService),
+                  ],
+                  if (_aiUpscalingEnabled) ...[
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Quality Preset',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 8),
+                    SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(value: 'Fast', label: Text('Fast')),
+                        ButtonSegment(
+                          value: 'Balanced',
+                          label: Text('Balanced'),
+                        ),
+                        ButtonSegment(value: 'Quality', label: Text('Quality')),
+                      ],
+                      selected: {_aiQuality},
+                      onSelectionChanged: (Set<String> selection) {
+                        setState(() {
+                          _aiQuality = selection.first;
+                        });
+                        aiService.setQuality(selection.first);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    ListTile(
+                      leading: const Icon(
+                        Icons.info_outline,
+                        color: AppTheme.primaryBlue,
+                      ),
+                      title: Text(
+                        'GPU Available: ${aiService.gpuAvailable ? "Yes" : "No"}',
+                      ),
+                      subtitle: const Text(
+                        'GPU acceleration provides better performance',
+                      ),
+                    ),
+                  ],
                 ],
-              ],
               );
             } catch (e, st) {
-              debugPrint('Settings: AIUpscaling (secondary) builder error: $e\n$st');
+              debugPrint(
+                'Settings: AIUpscaling (secondary) builder error: $e\n$st',
+              );
               return _buildSectionCard(
                 title: 'AI Video Upscaling',
-                children: [Text('Unavailable on this device', style: TextStyle(color: AppTheme.textSecondary))],
+                children: [
+                  Text(
+                    'Unavailable on this device',
+                    style: TextStyle(color: AppTheme.textSecondary),
+                  ),
+                ],
               );
             }
           },
@@ -2010,7 +2237,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
+                        color: AppTheme.primaryBlue.withAlpha(
+                          (0.1 * 255).round(),
+                        ),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: AppTheme.primaryBlue),
                       ),
@@ -2083,7 +2312,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: AppTheme.accentGreen.withAlpha((0.1 * 255).round()),
+                        color: AppTheme.accentGreen.withAlpha(
+                          (0.1 * 255).round(),
+                        ),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: AppTheme.accentGreen),
                       ),
@@ -2143,7 +2374,12 @@ class _SettingsScreenState extends State<SettingsScreen>
               debugPrint('Settings: Whisper builder error: $e\n$st');
               return _buildSectionCard(
                 title: 'On-Device Transcription (Whisper)',
-                children: [Text('Unavailable on this device', style: TextStyle(color: AppTheme.textSecondary))],
+                children: [
+                  Text(
+                    'Unavailable on this device',
+                    style: TextStyle(color: AppTheme.textSecondary),
+                  ),
+                ],
               );
             }
           },
@@ -2270,7 +2506,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                     color: AppTheme.accentOrange.withAlpha((0.1 * 255).round()),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: AppTheme.accentOrange.withAlpha((0.3 * 255).round()),
+                      color: AppTheme.accentOrange.withAlpha(
+                        (0.3 * 255).round(),
+                      ),
                     ),
                   ),
                   child: Row(
@@ -2321,7 +2559,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                       onPressed: () async {
                         final localContext = context;
                         try {
-                          final result = await FilePicker.platform.getDirectoryPath();
+                          final result = await FilePicker.platform
+                              .getDirectoryPath();
                           if (result != null) {
                             final prefs = await SharedPreferences.getInstance();
                             await prefs.setString(
@@ -2407,7 +2646,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                   onPressed: () {
                     final localContext = context;
                     if (localContext.mounted) {
-                      showAppSnackBar(localContext, SnackBar(content: Text('Updating EPG data...')));
+                      showAppSnackBar(
+                        localContext,
+                        SnackBar(content: Text('Updating EPG data...')),
+                      );
                     }
                     // TODO: Implement EPG update functionality
                   },
@@ -2427,17 +2669,17 @@ class _SettingsScreenState extends State<SettingsScreen>
     required List<Widget> children,
   }) {
     return SingleChildScrollView(
-      padding: EdgeInsets.all(AppSizes.lg),  // Reduced from xl
+      padding: EdgeInsets.all(AppSizes.lg), // Reduced from xl
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),  // Changed from headlineMedium
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ), // Changed from headlineMedium
           ),
-          SizedBox(height: AppSizes.md),  // Reduced from lg
+          SizedBox(height: AppSizes.md), // Reduced from lg
           ...children,
         ],
       ),
@@ -2491,10 +2733,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                 SizedBox(height: AppSizes.sm),
                 Text(
                   'Manage your saved playlist credentials',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: AppTheme.textSecondary),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
                 SizedBox(height: AppSizes.lg),
 
@@ -2535,16 +2776,28 @@ class _SettingsScreenState extends State<SettingsScreen>
                       child: Container(
                         padding: EdgeInsets.all(AppSizes.md),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
-                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                          border: Border.all(color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round())),
+                          color: AppTheme.primaryBlue.withAlpha(
+                            (0.1 * 255).round(),
+                          ),
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusMd,
+                          ),
+                          border: Border.all(
+                            color: AppTheme.primaryBlue.withAlpha(
+                              (0.3 * 255).round(),
+                            ),
+                          ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
                               children: [
-                                Icon(Icons.playlist_play, color: AppTheme.primaryBlue, size: 24),
+                                Icon(
+                                  Icons.playlist_play,
+                                  color: AppTheme.primaryBlue,
+                                  size: 24,
+                                ),
                                 SizedBox(width: AppSizes.sm),
                                 Expanded(
                                   child: Text(
@@ -2574,28 +2827,43 @@ class _SettingsScreenState extends State<SettingsScreen>
                                   ),
                                 ),
                                 SizedBox(width: AppSizes.sm),
-                                Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+                                Icon(
+                                  Icons.chevron_right,
+                                  color: AppTheme.textSecondary,
+                                ),
                               ],
                             ),
                             SizedBox(height: AppSizes.md),
                             if (data['type'] == 'm3u') ...[
                               _buildInfoRow('URL', data['m3u_url'] ?? 'N/A'),
                             ] else if (data['type'] == 'xtream') ...[
-                              _buildInfoRow('Server', data['xtream_server'] ?? 'N/A'),
+                              _buildInfoRow(
+                                'Server',
+                                data['xtream_server'] ?? 'N/A',
+                              ),
                               SizedBox(height: AppSizes.xs),
-                              _buildInfoRow('Username', data['xtream_username'] ?? 'N/A'),
+                              _buildInfoRow(
+                                'Username',
+                                data['xtream_username'] ?? 'N/A',
+                              ),
                             ],
                             SizedBox(height: AppSizes.md),
                             Container(
                               padding: EdgeInsets.all(AppSizes.sm),
                               decoration: BoxDecoration(
                                 color: AppTheme.cardBackground,
-                                borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                                borderRadius: BorderRadius.circular(
+                                  AppSizes.radiusSm,
+                                ),
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.edit, size: 14, color: AppTheme.textSecondary),
+                                  Icon(
+                                    Icons.edit,
+                                    size: 14,
+                                    color: AppTheme.textSecondary,
+                                  ),
                                   SizedBox(width: 6),
                                   Text(
                                     'Tap to edit playlist settings',
@@ -2629,10 +2897,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           width: 80,
           child: Text(
             label,
-            style: TextStyle(
-              color: AppTheme.textSecondary,
-              fontSize: 13,
-            ),
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
           ),
         ),
         Expanded(
@@ -2657,31 +2922,30 @@ class _SettingsScreenState extends State<SettingsScreen>
     required List<Widget> children,
   }) {
     return Card(
-      margin: EdgeInsets.only(bottom: AppSizes.md),  // Reduced from lg
+      margin: EdgeInsets.only(bottom: AppSizes.md), // Reduced from lg
       child: Padding(
-        padding: EdgeInsets.all(AppSizes.md),  // Reduced from lg
+        padding: EdgeInsets.all(AppSizes.md), // Reduced from lg
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              title, 
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(  // Changed from titleLarge
+              title,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                // Changed from titleLarge
                 fontWeight: FontWeight.bold,
               ),
             ),
             if (subtitle != null) ...[
-              SizedBox(height: 3),  // Reduced spacing
+              SizedBox(height: 3), // Reduced spacing
               Text(
                 subtitle,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: AppTheme.textSecondary,
-                  fontSize: 11,  // Smaller subtitle
+                  fontSize: 11, // Smaller subtitle
                 ),
               ),
             ],
-            SizedBox(height: AppSizes.sm),  // Reduced from md
+            SizedBox(height: AppSizes.sm), // Reduced from md
             ...children,
           ],
         ),
@@ -2695,10 +2959,18 @@ class _SettingsScreenState extends State<SettingsScreen>
       child: TVFocusable(
         borderRadius: BorderRadius.circular(12),
         child: SwitchListTile(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           title: Text(title),
           subtitle: subtitle != null
-              ? Text(subtitle, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary))
+              ? Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.textSecondary,
+                  ),
+                )
               : null,
           value: value,
           onChanged: (newValue) {
@@ -2789,10 +3061,18 @@ class _SettingsScreenState extends State<SettingsScreen>
       child: TVFocusable(
         borderRadius: BorderRadius.circular(12),
         child: SwitchListTile(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           title: Text(title),
           subtitle: subtitle != null
-              ? Text(subtitle, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary))
+              ? Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.textSecondary,
+                  ),
+                )
               : null,
           value: value,
           onChanged: (newValue) async {
@@ -2848,9 +3128,15 @@ class _SettingsScreenState extends State<SettingsScreen>
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                  borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 2),
+                  borderSide: const BorderSide(
+                    color: AppTheme.primaryBlue,
+                    width: 2,
+                  ),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
               items: items.map((item) {
                 return DropdownMenuItem(value: item, child: Text(item));
@@ -2878,7 +3164,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     int? maxLines = 1,
     VoidCallback? onLeftArrow,
   }) {
-    final bool isDirectionalNavigation = MediaQuery.of(context).navigationMode == NavigationMode.directional;
+    final bool isDirectionalNavigation =
+        MediaQuery.of(context).navigationMode == NavigationMode.directional;
 
     if (!isDirectionalNavigation) {
       if (!isEditable) {
@@ -2926,6 +3213,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         onEditableChanged(false);
       }
     }
+
     final previousListener = _focusNodeListeners[focusNode];
     if (previousListener != null) {
       focusNode.removeListener(previousListener);
@@ -2940,7 +3228,8 @@ class _SettingsScreenState extends State<SettingsScreen>
       LogicalKeySet(LogicalKeyboardKey.goBack): const _ExitEditIntent(),
     };
     if (!isEditable && onLeftArrow != null) {
-      shortcutMap[LogicalKeySet(LogicalKeyboardKey.arrowLeft)] = const _NavigateLeftIntent();
+      shortcutMap[LogicalKeySet(LogicalKeyboardKey.arrowLeft)] =
+          const _NavigateLeftIntent();
     }
 
     return Shortcuts(
@@ -3153,7 +3442,9 @@ class _SettingsScreenState extends State<SettingsScreen>
       decoration: BoxDecoration(
         color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round())),
+        border: Border.all(
+          color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3164,10 +3455,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               SizedBox(width: 8),
               Text(
                 'AI Upscaling Model Missing',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
               ),
             ],
           ),
@@ -3204,7 +3492,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                                 ? 'ESRGAN model downloaded and ready!'
                                 : 'Download failed. Check connection and retry.',
                           ),
-                          backgroundColor: success ? AppTheme.accentGreen : AppTheme.accentRed,
+                          backgroundColor: success
+                              ? AppTheme.accentGreen
+                              : AppTheme.accentRed,
                         ),
                       );
                     },
@@ -3228,13 +3518,19 @@ class _SettingsScreenState extends State<SettingsScreen>
                               ? 'Model detected successfully.'
                               : 'Model still not found. Place esrgan_x2.tflite in assets/models/',
                         ),
-                        backgroundColor: success ? AppTheme.accentGreen : AppTheme.accentRed,
+                        backgroundColor: success
+                            ? AppTheme.accentGreen
+                            : AppTheme.accentRed,
                       ),
                     );
                   },
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.primaryBlue,
-                    side: BorderSide(color: AppTheme.primaryBlue.withAlpha((0.7 * 255).round())),
+                    side: BorderSide(
+                      color: AppTheme.primaryBlue.withAlpha(
+                        (0.7 * 255).round(),
+                      ),
+                    ),
                   ),
                   child: const Text('Already Have Model'),
                 ),
@@ -3269,7 +3565,10 @@ class _SettingsScreenState extends State<SettingsScreen>
               Navigator.pop(context);
               final localContext = context;
               if (localContext.mounted) {
-                showAppSnackBar(localContext, const SnackBar(content: Text('Transcriptions cleared')));
+                showAppSnackBar(
+                  localContext,
+                  const SnackBar(content: Text('Transcriptions cleared')),
+                );
               }
             },
             style: ElevatedButton.styleFrom(
