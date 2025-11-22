@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:tflite_flutter/tflite_flutter.dart' if (dart.library.html) 'ai_upscaling_web_stub.dart';
 
 /// On-Device AI Upscaling Service
-/// Uses TensorFlow Lite for real-time video upscaling (FREE - no cloud costs)
+/// Uses TensorFlow Lite for real-time video upscaling without any external services
 /// Requires GPU acceleration for smooth performance
 class AIUpscalingService extends ChangeNotifier {
   Interpreter? _interpreter;

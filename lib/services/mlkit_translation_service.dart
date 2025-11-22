@@ -10,7 +10,7 @@ import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 /// Features:
 /// - 59 languages supported
 /// - Truly offline (no API calls)
-/// - Free (no cloud costs)
+/// - Free (no recurring costs)
 /// - Auto-downloads language packs
 class MLKitTranslationService extends ChangeNotifier {
   OnDeviceTranslator? _translator;
@@ -288,6 +288,26 @@ class MLKitTranslationService extends ChangeNotifier {
     }
   }
 
+  Future<void> setLanguagePairByCode({
+    required String sourceCode,
+    required String targetCode,
+  }) async {
+    final source = _languageFromCode(sourceCode);
+    final target = _languageFromCode(targetCode);
+
+    if (source != null) {
+      await setSourceLanguage(source);
+    } else {
+      debugPrint('Unknown source language code: $sourceCode');
+    }
+
+    if (target != null) {
+      await setTargetLanguage(target);
+    } else {
+      debugPrint('Unknown target language code: $targetCode');
+    }
+  }
+
   /// Get available languages
   List<LanguageOption> getAvailableLanguages() {
     return TranslateLanguage.values.map((lang) {
@@ -368,6 +388,26 @@ class MLKitTranslationService extends ChangeNotifier {
   /// Get model size estimate
   String getModelSize() {
     return '~50 MB per language';
+  }
+
+  TranslateLanguage? _languageFromCode(String code) {
+    final normalized = code.replaceAll('_', '-').toLowerCase();
+
+    for (final lang in TranslateLanguage.values) {
+      if (lang.bcpCode.toLowerCase() == normalized) {
+        return lang;
+      }
+    }
+
+    final shortCode = normalized.split('-').first;
+    if (shortCode != normalized) {
+      for (final lang in TranslateLanguage.values) {
+        if (lang.bcpCode.toLowerCase() == shortCode) {
+          return lang;
+        }
+      }
+    }
+    return null;
   }
 
   @override

@@ -28,11 +28,13 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
   final FocusNode _screenFocusNode = FocusNode();
 
   // Settings loaded from SharedPreferences
+  // These fields are persisted for future playback tuning but not yet applied
+  // in the multi-view UI, so silence lint until the implementation lands.
+  // ignore: unused_field
   double _videoBufferSize = 50;
-  // This field is stored for settings persistence but currently not read by
-  // any rendering code. Keep for future use and silence the analyzer.
   // ignore: unused_field
   String _videoQuality = 'Auto';
+  // ignore: unused_field
   bool _hardwareAcceleration = true;
 
   // Layout options

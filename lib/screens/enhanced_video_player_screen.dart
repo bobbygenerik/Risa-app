@@ -11,7 +11,6 @@ import 'package:go_router/go_router.dart';
 import 'package:iptv_player/widgets/native_exoplayer.dart';
 // Disabled - causes UnimplementedError
 // import 'package:subtitle_wrapper_package/subtitle_wrapper_package.dart';
-import 'package:iptv_player/services/ai_upscaling_service.dart';
 import 'package:iptv_player/services/live_transcription_service.dart';
 import 'package:iptv_player/services/native_capabilities_service.dart';
 import 'package:iptv_player/utils/app_theme.dart';
@@ -622,7 +621,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     }
 
     if (shouldEnable) {
-      await transcriptionService.startTranscription();
+      await transcriptionService.startTranscription(
+        channelLanguageCode: widget.channel?.language,
+      );
       if (mounted) {
         setState(() {
           _liveTranscriptionEnabled = true;
@@ -632,8 +633,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         showAppSnackBar(
           context,
           const SnackBar(
-            content: Text('Live transcription enabled — press Y to toggle'),
-            duration: Duration(seconds: 2),
+            content: Text(
+              'Live transcription enabled — detecting spoken language...',
+            ),
+            duration: Duration(seconds: 3),
           ),
         );
       }
@@ -849,34 +852,21 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       right: 16,
       child: Consumer<LiveTranscriptionService>(
         builder: (context, transcriptionService, _) {
+          final detectedLanguage = transcriptionService.detectedLanguageLabel;
+
+          if (transcriptionService.isDetectingLanguage) {
+            return _buildTranscriptionStatusPill(
+              message: 'Detecting spoken language...',
+            );
+          }
+
           final text = transcriptionService.latestSubtitles;
 
           if (text.isEmpty) {
-            return Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.black.withAlpha((0.7 * 255).round()),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Listening...',
-                    style: const TextStyle(color: Colors.white70, fontSize: 14),
-                  ),
-                ],
-              ),
-            );
+            final listeningLabel = detectedLanguage == null
+                ? 'Listening...'
+                : 'Listening in $detectedLanguage...';
+            return _buildTranscriptionStatusPill(message: listeningLabel);
           }
 
           return Container(
@@ -903,6 +893,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                    if (detectedLanguage != null) ...[
+                      const SizedBox(width: 8),
+                      _buildLanguageChip(detectedLanguage),
+                    ],
                     const SizedBox(width: 12),
                     // Translation toggle
                     IconButton(
@@ -992,6 +986,48 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     );
   }
 
+  Widget _buildLanguageChip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white12,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        'Detected: $label',
+        style: const TextStyle(fontSize: 10, color: Colors.white70),
+      ),
+    );
+  }
+
+  Widget _buildTranscriptionStatusPill({required String message}) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.black.withAlpha((0.7 * 255).round()),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            message,
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildControlsOverlay() {
     return Container(
       decoration: BoxDecoration(
@@ -1069,487 +1105,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                   ),
                 ),
               ),
-            const SizedBox(width: 8),
-            Consumer<AIUpscalingService>(
-              builder: (context, aiService, _) {
-                if (!aiService.isModelLoaded && !aiService.isDownloading) {
-                  // If model isn't loaded, show a subtle indicator inviting user to configure AI
-                  return IconButton(
-                    icon: const Icon(
-                      Icons.auto_awesome_outlined,
-                      color: Colors.white,
-                    ),
-                    tooltip: 'AI upscaling (configure)',
-                    onPressed: () {
-                      showDialog<void>(
-                        context: context,
-                        builder: (context) {
-                          return AlertDialog(
-                            title: const Text('AI Upscaling'),
-                            content: SizedBox(
-                              width: 360,
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Text('AI upscaling model not loaded.'),
-                                  const SizedBox(height: 12),
-                                  ElevatedButton(
-                                    onPressed: () async {
-                                      final dialogContext = context;
-                                      Navigator.of(dialogContext).pop();
-                                      showAppSnackBar(
-                                        dialogContext,
-                                        const SnackBar(
-                                          content: Text(
-                                            'Initializing AI model...',
-                                          ),
-                                        ),
-                                      );
-                                      await aiService.initialize();
-                                      if (!dialogContext.mounted) return;
-                                      if (aiService.isModelLoaded) {
-                                        showAppSnackBar(
-                                          dialogContext,
-                                          const SnackBar(
-                                            content: Text('AI model loaded'),
-                                          ),
-                                        );
-                                        // If native controller exists and a downloaded model is present, ask native to load it
-                                        if (Platform.isAndroid &&
-                                            _nativeController != null) {
-                                          try {
-                                            final modelPath = await aiService
-                                                .getLocalModelPath();
-                                            if (modelPath != null) {
-                                              await _nativeController!
-                                                  .loadAIModel(modelPath);
-                                            }
-                                          } catch (e) {
-                                            debugPrint(
-                                              'Failed to instruct native to load model: $e',
-                                            );
-                                          }
-                                        }
-                                      } else {
-                                        if (dialogContext.mounted) {
-                                          showAppSnackBar(
-                                            dialogContext,
-                                            const SnackBar(
-                                              content: Text(
-                                                'AI model not available; try download',
-                                              ),
-                                            ),
-                                          );
-                                        }
-                                      }
-                                    },
-                                    child: const Text('Load AI Model'),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  ElevatedButton(
-                                    onPressed: aiService.isDownloading
-                                        ? null
-                                        : () async {
-                                            final dialogContext = context;
-                                            Navigator.of(dialogContext).pop();
-                                            showAppSnackBar(
-                                              dialogContext,
-                                              const SnackBar(
-                                                content: Text(
-                                                  'Downloading AI model (with automatic retry)...',
-                                                ),
-                                                duration: Duration(seconds: 3),
-                                              ),
-                                            );
-                                            final ok = await aiService
-                                                .downloadModel();
-                                            if (!dialogContext.mounted) return;
-                                            if (ok && aiService.isModelLoaded) {
-                                              showAppSnackBar(
-                                                dialogContext,
-                                                const SnackBar(
-                                                  content: Text(
-                                                    'AI model downloaded and loaded',
-                                                  ),
-                                                ),
-                                              );
-                                              // Instruct native controller to load the downloaded model
-                                              if (Platform.isAndroid &&
-                                                  _nativeController != null) {
-                                                try {
-                                                  final modelPath =
-                                                      await aiService
-                                                          .getLocalModelPath();
-                                                  if (modelPath != null) {
-                                                    final res =
-                                                        await _nativeController!
-                                                            .loadAIModel(
-                                                              modelPath,
-                                                            );
-                                                    debugPrint(
-                                                      'Native loadAIModel result: $res',
-                                                    );
-                                                  }
-                                                } catch (e) {
-                                                  debugPrint(
-                                                    'Failed to load model on native side: $e',
-                                                  );
-                                                }
-                                              }
-                                            } else {
-                                              if (dialogContext.mounted) {
-                                                showAppSnackBar(
-                                                  dialogContext,
-                                                  const SnackBar(
-                                                    content: Text(
-                                                      'Failed to download AI model. Check network and try again.',
-                                                    ),
-                                                    duration: Duration(
-                                                      seconds: 4,
-                                                    ),
-                                                  ),
-                                                );
-                                              }
-                                            }
-                                          },
-                                    child: Text(
-                                      aiService.isDownloading
-                                          ? 'Downloading...'
-                                          : 'Download Model',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.of(context).pop(),
-                                child: const Text('Close'),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                    },
-                  );
-                }
-
-                // When model is available, show status and settings
-                return IconButton(
-                  icon: Icon(
-                    Icons.auto_awesome,
-                    color: aiService.isEnabled
-                        ? AppTheme.primaryBlue
-                        : Colors.white,
-                  ),
-                  tooltip: 'AI upscaling settings',
-                  onPressed: () {
-                    showDialog<void>(
-                      context: context,
-                      builder: (context) {
-                        return StatefulBuilder(
-                          builder: (context, setStateDialog) {
-                            return AlertDialog(
-                              title: const Text('AI Upscaling'),
-                              content: SizedBox(
-                                width: 400,
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    SwitchListTile(
-                                      title: const Text('Enable AI Upscaling'),
-                                      value: aiService.isEnabled,
-                                      onChanged: (v) async {
-                                        // If enabling, ensure a model is available. Prefer a
-                                        // local download (Option A): automatically download
-                                        // the model if it's not present, then initialize.
-                                        if (v && !aiService.isModelLoaded) {
-                                          final dialogContext = context;
-                                          showAppSnackBar(
-                                            dialogContext,
-                                            const SnackBar(
-                                              content: Text(
-                                                'Preparing AI model...',
-                                              ),
-                                            ),
-                                          );
-
-                                          try {
-                                            final local = await aiService
-                                                .getLocalModelPath();
-                                            if (local == null) {
-                                              // No local model: download it automatically (Option A)
-                                              // Uses built-in retry/backoff for robustness
-                                              final ok = await aiService
-                                                  .downloadModel();
-                                              if (!dialogContext.mounted)
-                                                return;
-                                              if (!ok) {
-                                                showAppSnackBar(
-                                                  dialogContext,
-                                                  const SnackBar(
-                                                    content: Text(
-                                                      'Failed to download AI model after retries. Check network and try again.',
-                                                    ),
-                                                    duration: Duration(
-                                                      seconds: 4,
-                                                    ),
-                                                  ),
-                                                );
-                                              }
-                                            } else {
-                                              // Local model exists - initialize/interpreter
-                                              await aiService.initialize();
-                                              if (!dialogContext.mounted)
-                                                return;
-                                            }
-                                          } catch (e) {
-                                            debugPrint(
-                                              'AI model prepare error: $e',
-                                            );
-                                            if (!dialogContext.mounted) return;
-                                            showAppSnackBar(
-                                              dialogContext,
-                                              const SnackBar(
-                                                content: Text(
-                                                  'Error preparing AI model',
-                                                ),
-                                              ),
-                                            );
-                                          }
-                                        }
-
-                                        aiService.setEnabled(v);
-
-                                        // If we're using the native ExoPlayer on Android, proxy
-                                        // the upscaler enable/disable to the native view so the
-                                        // platform can wire into the rendering pipeline.
-                                        if (Platform.isAndroid &&
-                                            _nativeController != null) {
-                                          try {
-                                            if (v) {
-                                              // Attempt to load the downloaded model into native view
-                                              try {
-                                                final modelPath =
-                                                    await aiService
-                                                        .getLocalModelPath();
-                                                if (modelPath != null) {
-                                                  await _nativeController!
-                                                      .loadAIModel(modelPath);
-                                                }
-                                              } catch (e) {
-                                                debugPrint(
-                                                  'Failed to load model into native controller: $e',
-                                                );
-                                              }
-
-                                              await _nativeController!
-                                                  .enableAIUpscaling();
-                                              // Ensure native quality reflects service setting
-                                              await _nativeController!
-                                                  .setAIQuality(
-                                                    aiService.quality,
-                                                  );
-                                            } else {
-                                              await _nativeController!
-                                                  .disableAIUpscaling();
-                                            }
-                                          } catch (e) {
-                                            debugPrint(
-                                              'Native upscaler call failed: $e',
-                                            );
-                                          }
-                                        }
-
-                                        setStateDialog(() {});
-                                      },
-                                    ),
-                                    const SizedBox(height: 8),
-                                    const Text('Quality'),
-                                    const SizedBox(height: 6),
-                                    DropdownButton<String>(
-                                      value: aiService.quality,
-                                      items: const [
-                                        DropdownMenuItem(
-                                          value: 'Fast',
-                                          child: Text('Fast'),
-                                        ),
-                                        DropdownMenuItem(
-                                          value: 'Balanced',
-                                          child: Text('Balanced'),
-                                        ),
-                                        DropdownMenuItem(
-                                          value: 'Quality',
-                                          child: Text('Quality'),
-                                        ),
-                                      ],
-                                      onChanged: (val) async {
-                                        if (val != null) {
-                                          aiService.setQuality(val);
-                                          // Propagate quality to native player if available
-                                          if (Platform.isAndroid &&
-                                              _nativeController != null) {
-                                            try {
-                                              await _nativeController!
-                                                  .setAIQuality(val);
-                                            } catch (e) {
-                                              debugPrint(
-                                                'Setting native AI quality failed: $e',
-                                              );
-                                            }
-                                          }
-                                          setStateDialog(() {});
-                                        }
-                                      },
-                                    ),
-                                    const SizedBox(height: 12),
-                                    // Native tuning controls (only shown when native controller present)
-                                    if (Platform.isAndroid &&
-                                        _nativeController != null) ...[
-                                      const SizedBox(height: 12),
-                                      SwitchListTile(
-                                        title: const Text(
-                                          'Adaptive overlap tuning',
-                                        ),
-                                        subtitle: const Text(
-                                          'Automatically adjust tile overlap to meet target latency',
-                                        ),
-                                        value:
-                                            true, // default shown as on; reflect service/native state would require additional plumbing
-                                        onChanged: (val) async {
-                                          try {
-                                            await _nativeController!
-                                                .setAdaptiveEnabled(val);
-                                          } catch (e) {
-                                            debugPrint(
-                                              'Failed to set adaptiveEnabled: $e',
-                                            );
-                                          }
-                                          setStateDialog(() {});
-                                        },
-                                      ),
-                                      Row(
-                                        children: [
-                                          const Text('Target latency (ms)'),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: StatefulBuilder(
-                                              builder: (c, s) {
-                                                int current =
-                                                    150; // reasonable default
-                                                return Slider(
-                                                  value: current.toDouble(),
-                                                  min: 50,
-                                                  max: 1000,
-                                                  divisions: 19,
-                                                  label: '$current ms',
-                                                  onChanged: (v) {
-                                                    s(
-                                                      () => current = v.round(),
-                                                    );
-                                                  },
-                                                  onChangeEnd: (v) async {
-                                                    try {
-                                                      await _nativeController!
-                                                          .setAdaptiveTargetMs(
-                                                            current,
-                                                          );
-                                                    } catch (e) {
-                                                      debugPrint(
-                                                        'Failed to set adaptive target: $e',
-                                                      );
-                                                    }
-                                                  },
-                                                );
-                                              },
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Row(
-                                        children: [
-                                          const Text('Overlap percent'),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: StatefulBuilder(
-                                              builder: (c, s) {
-                                                double pct = 0.5;
-                                                return Slider(
-                                                  value: pct,
-                                                  min: 0.0,
-                                                  max: 0.9,
-                                                  divisions: 9,
-                                                  label:
-                                                      '${(pct * 100).round()}%',
-                                                  onChanged: (v) =>
-                                                      s(() => pct = v),
-                                                  onChangeEnd: (v) async {
-                                                    try {
-                                                      await _nativeController!
-                                                          .setOverlapPercent(v);
-                                                    } catch (e) {
-                                                      debugPrint(
-                                                        'Failed to set overlap percent: $e',
-                                                      );
-                                                    }
-                                                  },
-                                                );
-                                              },
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 8),
-                                      SwitchListTile(
-                                        title: const Text(
-                                          'Use GPU delegate (if available)',
-                                        ),
-                                        subtitle: const Text(
-                                          'Attempt to use device GPU for faster inference',
-                                        ),
-                                        value: true,
-                                        onChanged: (v) async {
-                                          try {
-                                            await _nativeController!
-                                                .setGPUDelegateEnabled(v);
-                                          } catch (e) {
-                                            debugPrint(
-                                              'Failed to set GPU delegate: $e',
-                                            );
-                                          }
-                                          setStateDialog(() {});
-                                        },
-                                      ),
-                                    ] else if (aiService.isDownloading)
-                                      Column(
-                                        children: [
-                                          LinearProgressIndicator(
-                                            value: aiService.downloadProgress,
-                                          ),
-                                          const SizedBox(height: 8),
-                                          const Text('Downloading model...'),
-                                        ],
-                                      ),
-                                  ],
-                                ),
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.of(context).pop(),
-                                  child: const Text('Close'),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-                      },
-                    );
-                  },
-                );
-              },
-            ),
             if (Platform.isAndroid && _nativeController != null)
               IconButton(
                 icon: const Icon(Icons.list, color: Colors.white),
@@ -1608,9 +1163,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: Colors.white.withOpacity(0.12)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
         boxShadow: const [
           BoxShadow(
             color: Colors.black26,
@@ -1704,8 +1259,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
-        color: Colors.white.withOpacity(0.08),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        color: Colors.white.withValues(alpha: 0.08),
       ),
       child: Text(
         '$key · $action',
@@ -1734,8 +1289,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
             : null);
 
     final backgroundColor = isPrimary
-        ? null
-        : Colors.white.withOpacity(isActive ? 0.18 : 0.08);
+      ? null
+      : Colors.white.withValues(alpha: isActive ? 0.18 : 0.08);
 
     return Opacity(
       opacity: isDisabled ? 0.45 : 1.0,
@@ -1755,7 +1310,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
               gradient: gradient,
               color: backgroundColor,
               border: Border.all(
-                color: Colors.white.withOpacity(isPrimary ? 0.0 : 0.15),
+                color: Colors.white.withValues(alpha: isPrimary ? 0.0 : 0.15),
               ),
               boxShadow: isPrimary || isActive
                   ? const [
@@ -2022,8 +1577,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                           } catch (e) {
                             debugPrint('Native switch failed: $e');
                           }
-                          if (dialogContext.mounted)
+                          if (dialogContext.mounted) {
                             Navigator.of(dialogContext).pop();
+                          }
                         },
                       );
                     },
@@ -2339,11 +1895,12 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     } catch (e) {
       debugPrint('Audio track switching not implemented on this platform: $e');
       // Friendly fallback: notify user we registered their selection.
-      if (mounted)
+      if (mounted) {
         showAppSnackBar(
           context,
           const SnackBar(content: Text('Audio track change requested')),
         );
+      }
     }
   }
 }

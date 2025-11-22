@@ -55,6 +55,7 @@ dependencies:
   # For TRUE on-device: manually add vosk_flutter (requires downgrading dependencies)
   flutter_tts: ^4.2.0  # Text-to-speech for translated audio  
   google_mlkit_translation: ^0.11.0  # On-device translation (auto-downloads language packs) - TRUE OFFLINE
+  google_mlkit_language_id: ^0.11.0  # On-device text language identification
   record: ^6.0.0  # Audio recording for transcription
 
 dev_dependencies:

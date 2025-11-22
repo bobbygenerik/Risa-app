@@ -402,7 +402,15 @@ class _MyAppState extends State<MyApp> {
           ChangeNotifierProvider(
             create: (_) => MLKitTranslationService()..initialize(),
           ),
-          ChangeNotifierProvider(create: (_) => LiveTranscriptionService()),
+          ChangeNotifierProxyProvider<MLKitTranslationService,
+              LiveTranscriptionService>(
+            create: (_) => LiveTranscriptionService(),
+            update: (_, translationService, transcriptionService) {
+              transcriptionService ??= LiveTranscriptionService();
+              transcriptionService.attachTranslationService(translationService);
+              return transcriptionService;
+            },
+          ),
           ChangeNotifierProvider(
             create: (_) => WhisperSpeechService()..initialize(),
           ),

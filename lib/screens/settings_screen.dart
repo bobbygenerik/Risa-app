@@ -284,7 +284,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         case 2:
                           return _buildPlaybackSettings();
                         case 3:
-                          return _buildCloudAndAISettings();
+                          return _buildAISettings();
                         case 4:
                           return _buildRecordingsSettings();
                         default:
@@ -934,7 +934,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                         ),
                       );
                       // Refresh to show saved URL
-                      if (localContext.mounted) setState(() {});
+                      if (localContext.mounted) {
+                        setState(() {});
+                      }
                     },
                     tooltip: 'Save EPG URL',
                   ),
@@ -951,8 +953,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                       backgroundColor: AppTheme.accentGreen,
                     ),
                   );
-                  if (localContext.mounted)
+                  if (localContext.mounted) {
                     setState(() {}); // Refresh to show saved URL
+                  }
                 },
               ),
             ),
@@ -1516,7 +1519,9 @@ class _SettingsScreenState extends State<SettingsScreen>
             Row(
               children: [
                 Icon(
-                  hasChannels ? Icons.check_circle : Icons.cloud_off,
+                  hasChannels
+                      ? Icons.check_circle
+                      : Icons.warning_amber_outlined,
                   color: hasChannels
                       ? AppTheme.accentGreen
                       : AppTheme.accentOrange,
@@ -1619,7 +1624,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   // ignore: unused_element
   Widget _buildAISettingsSection() {
     return _buildSettingsSection(
-      title: 'AI & Cloud Settings',
+      title: 'AI Settings',
       children: [
         // Live Transcription
         Consumer<LiveTranscriptionService>(
@@ -1639,6 +1644,29 @@ class _SettingsScreenState extends State<SettingsScreen>
                       }
                     },
                   ),
+                  Builder(
+                    builder: (context) {
+                      final targets =
+                          transcriptionService.getAvailableTargetLanguages();
+                      final selected = targets.firstWhere(
+                        (lang) =>
+                            lang.code == transcriptionService.targetLanguage,
+                        orElse: () => targets.first,
+                      );
+                      return ListTile(
+                        leading: const Icon(Icons.language),
+                        title: const Text('Translation Target'),
+                        subtitle:
+                            Text('${selected.name} (${selected.code})'),
+                        trailing:
+                            const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () => _showTargetLanguageSelector(
+                          context,
+                          transcriptionService,
+                        ),
+                      );
+                    },
+                  ),
                   if (transcriptionService.isTranscribing) ...[
                     SwitchListTile(
                       title: const Text('Enable Translation'),
@@ -1647,17 +1675,6 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ),
                       value: transcriptionService.isTranslating,
                       onChanged: transcriptionService.setTranslationEnabled,
-                    ),
-
-                    ListTile(
-                      leading: const Icon(Icons.record_voice_over),
-                      title: const Text('Source Language'),
-                      subtitle: Text(transcriptionService.sourceLanguage),
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                      onTap: () => _showSourceLanguageSelector(
-                        context,
-                        transcriptionService,
-                      ),
                     ),
 
                     if (transcriptionService.isTranslating) ...[
@@ -1741,6 +1758,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                           SizedBox(height: 8),
                           Text(
                             'Live transcription uses on-device speech recognition to convert video audio to text in real-time. '
+                            'It automatically detects the spoken language when you enable it, then keeps everything on-device for translation or playback. '
                             'Translation and text-to-speech are also processed on your device for privacy and performance.',
                             style: TextStyle(fontSize: 12, height: 1.4),
                           ),
@@ -1936,7 +1954,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildCloudAndAISettings() {
+  Widget _buildAISettings() {
     return _buildSettingsSection(
       title: 'AI Features',
       children: [
@@ -2147,7 +2165,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             try {
               return _buildSectionCard(
                 title: 'AI Video Upscaling',
-                subtitle: 'FREE - On-device AI upscaling (no cloud costs)',
+                subtitle: 'FREE - On-device AI upscaling',
                 children: [
                   SwitchListTile(
                     title: const Text('Enable AI Upscaling'),
@@ -2248,7 +2266,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                           Row(
                             children: const [
                               Icon(
-                                Icons.cloud_download,
+                                Icons.download,
                                 color: AppTheme.primaryBlue,
                               ),
                               SizedBox(width: 8),
@@ -2271,7 +2289,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                             '• Never needs re-downloading\n\n'
                             'Benefits:\n'
                             '• TRUE on-device AI (both Android & iOS)\n'
-                            '• No cloud costs - completely free\n'
+                            '• Completely free and self-contained\n'
                             '• Private - no data sent to servers\n'
                             '• Supports 99+ languages',
                             style: TextStyle(fontSize: 12),
@@ -2341,7 +2359,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ),
                       title: const Text('Status: 100% Offline'),
                       subtitle: const Text(
-                        'Works without internet • No cloud APIs ever',
+                        'Works without internet • Everything stays on device',
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -2403,7 +2421,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         Row(
                           children: [
                             const Icon(
-                              Icons.cloud_download,
+                              Icons.download,
                               color: AppTheme.primaryBlue,
                             ),
                             const SizedBox(width: 12),
@@ -3304,44 +3322,6 @@ class _SettingsScreenState extends State<SettingsScreen>
               borderSide: BorderSide(color: AppTheme.primaryBlue, width: 3),
             ),
             contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showSourceLanguageSelector(
-    BuildContext context,
-    LiveTranscriptionService service,
-  ) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.cardBackground,
-        title: const Text('Select Source Language'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: service.getAvailableSourceLanguages().length,
-            itemBuilder: (context, index) {
-              final lang = service.getAvailableSourceLanguages()[index];
-              final isSelected = service.sourceLanguage == lang.code;
-
-              return ListTile(
-                leading: Icon(
-                  isSelected ? Icons.check_circle : Icons.circle_outlined,
-                  color: isSelected ? AppTheme.primaryBlue : null,
-                ),
-                title: Text(lang.name),
-                subtitle: Text(lang.code),
-                selected: isSelected,
-                onTap: () {
-                  service.setSourceLanguage(lang.code);
-                  Navigator.pop(context);
-                },
-              );
-            },
           ),
         ),
       ),

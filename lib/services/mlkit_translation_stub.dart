@@ -10,6 +10,10 @@ class MLKitTranslationService extends ChangeNotifier {
   Future<String> translate(String text) async => text;
   void setEnabled(bool enabled) {}
   Future<bool> downloadLanguageModels() async => false;
+  Future<void> setLanguagePairByCode({
+    required String sourceCode,
+    required String targetCode,
+  }) async {}
   List<LanguageOption> getAvailableLanguages() => [];
 }
 

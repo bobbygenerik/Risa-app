@@ -9,12 +9,12 @@ import 'dart:io';
 
 /// TRUE On-Device Transcription Service using Whisper TFLite
 ///
-/// 100% OFFLINE - NO CLOUD COSTS - NO INTERNET REQUIRED
+/// 100% OFFLINE - NO SERVER COSTS - NO INTERNET REQUIRED
 ///
 /// Uses Whisper Tiny model converted to TFLite (~40MB)
 /// Combined with ML Kit for on-device translation
 ///
-/// NO DATA SENT TO CLOUD - ALL PROCESSING ON DEVICE
+/// NO DATA LEAVES THE DEVICE - ALL PROCESSING LOCAL
 class WhisperTranscriptionService extends ChangeNotifier {
   // Whisper TFLite model for speech recognition
   Interpreter? _whisperInterpreter;
@@ -236,7 +236,9 @@ class WhisperTranscriptionService extends ChangeNotifier {
           (_) => _processAudioBuffer(),
         );
 
-        debugPrint('WhisperTranscription: Started (100% ON-DEVICE - NO CLOUD)');
+        debugPrint(
+          'WhisperTranscription: Started (100% ON-DEVICE - NO REMOTE SERVICES)',
+        );
         return true;
       } else {
         debugPrint('WhisperTranscription: Microphone permission denied');

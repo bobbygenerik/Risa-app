@@ -12,7 +12,7 @@ import 'package:http/http.dart' as http;
 /// - 100% on-device processing using Whisper TFLite model
 /// - Auto-downloads Whisper model on first use (~40MB)
 /// - Works completely offline after model download
-/// - No cloud APIs, no internet required (after download)
+/// - No external APIs, no internet required (after download)
 /// - Multi-language support (99+ languages)
 /// - FREE - no usage costs
 class MLKitSpeechService extends ChangeNotifier {

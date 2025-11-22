@@ -13,11 +13,11 @@ import 'dart:io';
 /// TRUE On-Device Transcription and Translation Service
 ///
 /// 100% offline after model download:
-/// - Speech-to-text: Vosk (truly on-device, no cloud APIs)
+/// - Speech-to-text: Vosk (truly on-device, no external APIs)
 /// - Translation: ML Kit (on-device after model download)
 /// - Text-to-speech: Platform TTS
 ///
-/// NO CLOUD COSTS, NO INTERNET REQUIRED (after initial setup)
+/// NO SERVER COSTS, NO INTERNET REQUIRED (after initial setup)
 class TrueOnDeviceTranscriptionService extends ChangeNotifier {
   // Vosk speech recognition (TRUE on-device)
   VoskFlutterPlugin? _vosk;
