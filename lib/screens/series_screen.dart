@@ -41,10 +41,10 @@ class _SeriesScreenState extends State<SeriesScreen> {
         }
       });
       _prepareCuratedSeriesList();
-                  final focusNode = _watchFocus;
-                  Future.delayed(const Duration(milliseconds: 100), () {
-                    if (mounted) focusNode.requestFocus();
-                  });
+      final focusNode = _watchFocus;
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) focusNode.requestFocus();
+      });
     });
   }
 
@@ -52,7 +52,9 @@ class _SeriesScreenState extends State<SeriesScreen> {
     _carouselTimer?.cancel();
     _carouselTimer = Timer.periodic(const Duration(seconds: 8), (_) {
       final provider = Provider.of<ContentProvider>(context, listen: false);
-      final series = _curatedSeries.isNotEmpty ? _curatedSeries : provider.series;
+      final series = _curatedSeries.isNotEmpty
+          ? _curatedSeries
+          : provider.series;
       if (series.isEmpty) return;
       if (mounted) {
         setState(() {
@@ -74,7 +76,10 @@ class _SeriesScreenState extends State<SeriesScreen> {
       if (ServiceValidator.isTmdbAvailable) {
         for (final s in candidates) {
           try {
-            final details = await TMDBService.getTVDetails(s.title, year: s.year);
+            final details = await TMDBService.getTVDetails(
+              s.title,
+              year: s.year,
+            );
             if (details != null) {
               final patched = s.copyWith(
                 backdropUrl: details['backdrop'] ?? s.backdropUrl,
@@ -92,7 +97,9 @@ class _SeriesScreenState extends State<SeriesScreen> {
           if (curated.length >= 12) break;
         }
       } else {
-        curated.addAll(series.where((s) => s.backdropUrl != null || s.imageUrl != null));
+        curated.addAll(
+          series.where((s) => s.backdropUrl != null || s.imageUrl != null),
+        );
       }
 
       if (mounted && curated.isNotEmpty) {
@@ -144,7 +151,16 @@ class _SeriesScreenState extends State<SeriesScreen> {
           children: [
             // Full-height hero banner background
             Positioned.fill(
-              child: _buildHeroBannerBackground((_curatedSeries.isNotEmpty ? _curatedSeries : series)[_featuredIndex >= (_curatedSeries.isNotEmpty ? _curatedSeries.length : series.length) ? 0 : _featuredIndex]),
+              child: _buildHeroBannerBackground(
+                (_curatedSeries.isNotEmpty
+                    ? _curatedSeries
+                    : series)[_featuredIndex >=
+                        (_curatedSeries.isNotEmpty
+                            ? _curatedSeries.length
+                            : series.length)
+                    ? 0
+                    : _featuredIndex],
+              ),
             ),
             // Content on top
             SingleChildScrollView(
@@ -152,7 +168,17 @@ class _SeriesScreenState extends State<SeriesScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Hero banner with content overlay
-                  _buildHeroBannerOverlay(context, (_curatedSeries.isNotEmpty ? _curatedSeries : series)[_featuredIndex >= (_curatedSeries.isNotEmpty ? _curatedSeries.length : series.length) ? 0 : _featuredIndex]),
+                  _buildHeroBannerOverlay(
+                    context,
+                    (_curatedSeries.isNotEmpty
+                        ? _curatedSeries
+                        : series)[_featuredIndex >=
+                            (_curatedSeries.isNotEmpty
+                                ? _curatedSeries.length
+                                : series.length)
+                        ? 0
+                        : _featuredIndex],
+                  ),
                   SizedBox(height: AppSizes.lg),
 
                   Container(
@@ -164,7 +190,10 @@ class _SeriesScreenState extends State<SeriesScreen> {
                         children: [
                           // Recently Added Series
                           if (recentSeries.isNotEmpty) ...[
-                            _buildSectionHeader(context, 'Recently Added Series'),
+                            _buildSectionHeader(
+                              context,
+                              'Recently Added Series',
+                            ),
                             SizedBox(height: AppSizes.md),
                             _buildSeriesRow(context, recentSeries),
                             SizedBox(height: AppSizes.xl),
@@ -191,13 +220,10 @@ class _SeriesScreenState extends State<SeriesScreen> {
       body: Container(
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF050710),
-                  Color(0xFF0d1140),
-                ],
-              )
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF050710), Color(0xFF0d1140)],
+          ),
         ),
         child: Center(
           child: Column(
@@ -283,7 +309,8 @@ class _SeriesScreenState extends State<SeriesScreen> {
       margin: EdgeInsets.only(right: AppSizes.md),
       child: InkWell(
         onTap: () {
-          context.push('/content/${firstEpisode.id}', extra: firstEpisode);
+          final encodedId = Uri.encodeComponent(firstEpisode.id);
+          context.push('/content/$encodedId', extra: firstEpisode);
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -417,107 +444,132 @@ class _SeriesScreenState extends State<SeriesScreen> {
 
   Widget _buildHeroBannerBackground(Content featuredSeries) {
     return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF050710),
-                  Color(0xFF0d1140),
-                ],
-              )
-      ),
-      child: Container(
-        color: AppTheme.cardBackground,
-        child: featuredSeries.backdropUrl != null
-            ? Image.network(
-                featuredSeries.backdropUrl!,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
-                errorBuilder: (_, __, ___) => _buildBannerPlaceholder(),
-              )
-            : _buildBannerPlaceholder(),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF050710), Color(0xFF0d1140)],
+        ),
       ),
     );
   }
 
   Widget _buildHeroBannerOverlay(BuildContext context, Content featuredSeries) {
+    final heroImage = featuredSeries.backdropUrl ?? featuredSeries.imageUrl;
     return GestureDetector(
       onTap: () {
-        context.push('/content/${featuredSeries.id}', extra: featuredSeries);
+        final encodedId = Uri.encodeComponent(featuredSeries.id);
+        context.push('/content/$encodedId', extra: featuredSeries);
       },
-      child: Container(
+      child: SizedBox(
         height: 300,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.transparent,
-              Color(0xFF050710),
-            ],
-          ),
-        ),
-        child: Align(
-          alignment: Alignment.bottomLeft,
-          child: Padding(
-            padding: EdgeInsets.all(AppSizes.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  featuredSeries.title,
-                  style: TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (heroImage != null)
+              Positioned.fill(
+                child: Image.network(
+                  heroImage,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => _buildBannerPlaceholder(),
                 ),
-                SizedBox(height: 8),
-                Row(
+              )
+            else
+              Positioned.fill(child: _buildBannerPlaceholder()),
+            Positioned.fill(
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Color(0xFF050710)],
+                  ),
+                ),
+              ),
+            ),
+            Align(
+              alignment: Alignment.bottomLeft,
+              child: Padding(
+                padding: EdgeInsets.all(AppSizes.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Watch button with focus outline
-                    Focus(
-                      focusNode: _watchFocus,
-                      child: Builder(builder: (ctx) {
-                        final hasFocus = Focus.of(ctx).hasFocus;
-                        return Container(
-                          decoration: hasFocus
-                              ? BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: AppTheme.primaryBlue, width: 3),
-                                )
-                              : null,
-                          child: ElevatedButton.icon(
-                            onPressed: () => context.push('/content/${featuredSeries.id}', extra: featuredSeries),
-                            icon: const Icon(Icons.play_arrow),
-                            label: const Text('Watch'),
-                            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12), textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-                          ),
-                        );
-                      }),
-                    ),
-                    if (featuredSeries.rating != null) ...[
-                      SizedBox(width: 16),
-                      Icon(Icons.star, color: Colors.amber, size: 16),
-                      SizedBox(width: 4),
-                      Text(
-                        featuredSeries.ratingDisplay,
-                        style: TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 14,
-                        ),
+                    Text(
+                      featuredSeries.title,
+                      style: const TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
                       ),
-                    ],
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Focus(
+                          focusNode: _watchFocus,
+                          child: Builder(
+                            builder: (ctx) {
+                              final hasFocus = Focus.of(ctx).hasFocus;
+                              return Container(
+                                decoration: hasFocus
+                                    ? BoxDecoration(
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: AppTheme.primaryBlue,
+                                          width: 3,
+                                        ),
+                                      )
+                                    : null,
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    final encodedId = Uri.encodeComponent(
+                                      featuredSeries.id,
+                                    );
+                                    context.push(
+                                      '/content/$encodedId',
+                                      extra: featuredSeries,
+                                    );
+                                  },
+                                  icon: const Icon(Icons.play_arrow),
+                                  label: const Text('Watch'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.primaryBlue,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 18,
+                                      vertical: 12,
+                                    ),
+                                    textStyle: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        if (featuredSeries.rating != null) ...[
+                          const SizedBox(width: 16),
+                          const Icon(Icons.star, color: Colors.amber, size: 16),
+                          const SizedBox(width: 4),
+                          Text(
+                            featuredSeries.ratingDisplay,
+                            style: const TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ],
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -527,13 +579,10 @@ class _SeriesScreenState extends State<SeriesScreen> {
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF050710),
-                  Color(0xFF0d1140),
-                ],
-              )
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF050710), Color(0xFF0d1140)],
+        ),
       ),
     );
   }

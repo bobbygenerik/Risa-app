@@ -21,7 +21,6 @@ class _MoviesScreenState extends State<MoviesScreen> {
   final FocusNode _playFocus = FocusNode();
   List<Content> _curatedMovies = [];
 
-
   @override
   void dispose() {
     _carouselTimer?.cancel();
@@ -33,7 +32,9 @@ class _MoviesScreenState extends State<MoviesScreen> {
     _carouselTimer?.cancel();
     _carouselTimer = Timer.periodic(const Duration(seconds: 8), (_) {
       final provider = Provider.of<ContentProvider>(context, listen: false);
-      final movies = _curatedMovies.isNotEmpty ? _curatedMovies : provider.movies;
+      final movies = _curatedMovies.isNotEmpty
+          ? _curatedMovies
+          : provider.movies;
       if (movies.isEmpty) return;
       if (mounted) {
         setState(() {
@@ -42,6 +43,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
       }
     });
   }
+
   @override
   void initState() {
     super.initState();
@@ -76,16 +78,16 @@ class _MoviesScreenState extends State<MoviesScreen> {
           return _buildEmptyState(context);
         }
 
-        final displayMovies = _curatedMovies.isNotEmpty ? _curatedMovies : movies;
+        final displayMovies = _curatedMovies.isNotEmpty
+            ? _curatedMovies
+            : movies;
         if (_featuredIndex >= displayMovies.length) _featuredIndex = 0;
         final featured = displayMovies[_featuredIndex];
 
         return Stack(
           children: [
             // Full-height hero banner background
-            Positioned.fill(
-              child: _buildHeroBannerBackground(featured),
-            ),
+            Positioned.fill(child: _buildHeroBannerBackground(featured)),
             // Content on top
             SingleChildScrollView(
               child: Column(
@@ -131,13 +133,10 @@ class _MoviesScreenState extends State<MoviesScreen> {
       body: Container(
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF050710),
-                  Color(0xFF0d1140),
-                ],
-              )
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF050710), Color(0xFF0d1140)],
+          ),
         ),
         child: Center(
           child: Column(
@@ -210,12 +209,12 @@ class _MoviesScreenState extends State<MoviesScreen> {
       margin: EdgeInsets.only(right: AppSizes.md),
       child: InkWell(
         onTap: () {
-          context.push('/content/${movie.id}', extra: movie);
+          final encodedId = Uri.encodeComponent(movie.id);
+          context.push('/content/$encodedId', extra: movie);
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Movie Poster
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(AppSizes.radiusMd),
@@ -235,7 +234,6 @@ class _MoviesScreenState extends State<MoviesScreen> {
                             )
                           : _buildPlaceholder(movie.title),
                     ),
-                    // Watch progress indicator
                     if (movie.watchProgress != null &&
                         movie.watchProgress! > 0) ...[
                       Positioned(
@@ -255,7 +253,6 @@ class _MoviesScreenState extends State<MoviesScreen> {
               ),
             ),
             SizedBox(height: AppSizes.xs),
-            // Movie Title
             Text(
               movie.title,
               style: Theme.of(
@@ -264,7 +261,6 @@ class _MoviesScreenState extends State<MoviesScreen> {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            // Year and Rating
             if (movie.year != null || movie.rating != null)
               Text(
                 '${movie.year ?? ''} ${movie.rating != null ? '★${movie.ratingDisplay}' : ''}',
@@ -338,106 +334,131 @@ class _MoviesScreenState extends State<MoviesScreen> {
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF050710),
-                  Color(0xFF0d1140),
-                ],
-              )
-      ),
-      child: Container(
-        color: AppTheme.cardBackground,
-        child: featuredMovie.backdropUrl != null
-            ? Image.network(
-                featuredMovie.backdropUrl!,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
-                errorBuilder: (_, __, ___) => _buildBannerPlaceholder(),
-              )
-            : _buildBannerPlaceholder(),
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF050710), Color(0xFF0d1140)],
+        ),
       ),
     );
   }
 
   Widget _buildHeroBannerOverlay(BuildContext context, Content featuredMovie) {
+    final heroImage = featuredMovie.backdropUrl ?? featuredMovie.imageUrl;
     return GestureDetector(
       onTap: () {
-        context.push('/content/${featuredMovie.id}', extra: featuredMovie);
+        final encodedId = Uri.encodeComponent(featuredMovie.id);
+        context.push('/content/$encodedId', extra: featuredMovie);
       },
-      child: Container(
+      child: SizedBox(
         height: 300,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.transparent,
-              Color(0xFF050710),
-            ],
-          ),
-        ),
-        child: Align(
-          alignment: Alignment.bottomLeft,
-          child: Padding(
-            padding: EdgeInsets.all(AppSizes.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  featuredMovie.title,
-                  style: const TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (heroImage != null)
+              Positioned.fill(
+                child: Image.network(
+                  heroImage,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => _buildBannerPlaceholder(),
                 ),
-                const SizedBox(height: 8),
-                Row(
+              )
+            else
+              Positioned.fill(child: _buildBannerPlaceholder()),
+            Positioned.fill(
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Color(0xFF050710)],
+                  ),
+                ),
+              ),
+            ),
+            Align(
+              alignment: Alignment.bottomLeft,
+              child: Padding(
+                padding: EdgeInsets.all(AppSizes.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Play button with focus outline
-                    Focus(
-                      focusNode: _playFocus,
-                      child: Builder(builder: (ctx) {
-                        final hasFocus = Focus.of(ctx).hasFocus;
-                        return Container(
-                          decoration: hasFocus
-                              ? BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: AppTheme.primaryBlue, width: 3),
-                                )
-                              : null,
-                          child: ElevatedButton.icon(
-                            onPressed: () => context.push('/content/${featuredMovie.id}', extra: featuredMovie),
-                            icon: const Icon(Icons.play_arrow),
-                            label: const Text('Play'),
-                            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12), textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-                          ),
-                        );
-                      }),
-                    ),
-                    const SizedBox(width: 12),
-                    if (featuredMovie.rating != null) ...[
-                      const SizedBox(width: 4),
-                      const Icon(Icons.star, color: Colors.amber, size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        featuredMovie.ratingDisplay,
-                        style: const TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 14,
-                        ),
+                    Text(
+                      featuredMovie.title,
+                      style: const TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
                       ),
-                    ],
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Focus(
+                          focusNode: _playFocus,
+                          child: Builder(
+                            builder: (ctx) {
+                              final hasFocus = Focus.of(ctx).hasFocus;
+                              return Container(
+                                decoration: hasFocus
+                                    ? BoxDecoration(
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: AppTheme.primaryBlue,
+                                          width: 3,
+                                        ),
+                                      )
+                                    : null,
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    final encodedId = Uri.encodeComponent(
+                                      featuredMovie.id,
+                                    );
+                                    context.push(
+                                      '/content/$encodedId',
+                                      extra: featuredMovie,
+                                    );
+                                  },
+                                  icon: const Icon(Icons.play_arrow),
+                                  label: const Text('Play'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.primaryBlue,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 18,
+                                      vertical: 12,
+                                    ),
+                                    textStyle: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        if (featuredMovie.rating != null) ...[
+                          const SizedBox(width: 4),
+                          const Icon(Icons.star, color: Colors.amber, size: 16),
+                          const SizedBox(width: 4),
+                          Text(
+                            featuredMovie.ratingDisplay,
+                            style: const TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ],
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -447,13 +468,10 @@ class _MoviesScreenState extends State<MoviesScreen> {
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF050710),
-                  Color(0xFF0d1140),
-                ],
-              )
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF050710), Color(0xFF0d1140)],
+        ),
       ),
     );
   }
@@ -470,7 +488,10 @@ class _MoviesScreenState extends State<MoviesScreen> {
       if (ServiceValidator.isTmdbAvailable) {
         for (final m in candidates) {
           try {
-            final details = await TMDBService.getMovieDetails(m.title, year: m.year);
+            final details = await TMDBService.getMovieDetails(
+              m.title,
+              year: m.year,
+            );
             if (details != null) {
               final patched = m.copyWith(
                 backdropUrl: details['backdrop'] ?? m.backdropUrl,
@@ -488,7 +509,9 @@ class _MoviesScreenState extends State<MoviesScreen> {
           if (curated.length >= 12) break;
         }
       } else {
-        curated.addAll(movies.where((m) => m.backdropUrl != null || m.imageUrl != null));
+        curated.addAll(
+          movies.where((m) => m.backdropUrl != null || m.imageUrl != null),
+        );
       }
 
       if (mounted && curated.isNotEmpty) {

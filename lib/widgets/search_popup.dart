@@ -17,7 +17,7 @@ class SearchPopup extends StatefulWidget {
 
 class _SearchPopupState extends State<SearchPopup> {
   final TextEditingController _searchController = TextEditingController();
-  
+
   List<Channel> _liveTvResults = [];
   List<Content> _movieResults = [];
   List<Content> _seriesResults = [];
@@ -52,19 +52,29 @@ class _SearchPopupState extends State<SearchPopup> {
     // Let's do instant search but maybe we should debounce it slightly in a real app.
     // For now, direct search.
 
-    final channelProvider = Provider.of<ChannelProvider>(context, listen: false);
-    final contentProvider = Provider.of<ContentProvider>(context, listen: false);
+    final channelProvider = Provider.of<ChannelProvider>(
+      context,
+      listen: false,
+    );
+    final contentProvider = Provider.of<ContentProvider>(
+      context,
+      listen: false,
+    );
 
     final liveTv = channelProvider.searchChannels(query);
-    
+
     // ContentProvider search returns mixed movies and series, we need to separate them
     // But ContentProvider.searchContent returns a mixed list.
     // Let's use the raw lists from ContentProvider to filter manually for better control
     // or just filter the results.
-    
+
     final allContent = contentProvider.searchContent(query);
-    final movies = allContent.where((c) => c.type == ContentType.movie).toList();
-    final series = allContent.where((c) => c.type == ContentType.series).toList();
+    final movies = allContent
+        .where((c) => c.type == ContentType.movie)
+        .toList();
+    final series = allContent
+        .where((c) => c.type == ContentType.series)
+        .toList();
 
     setState(() {
       _liveTvResults = liveTv;
@@ -111,14 +121,14 @@ class _SearchPopupState extends State<SearchPopup> {
           child: Align(
             alignment: Alignment.topCenter,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: 800,
-              ),
+              constraints: const BoxConstraints(maxWidth: 800),
               child: Container(
                 height: dialogHeight,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: AppTheme.cardBackground.withAlpha((0.95 * 255).round()),
+                  color: AppTheme.cardBackground.withAlpha(
+                    (0.95 * 255).round(),
+                  ),
                   borderRadius: BorderRadius.circular(AppSizes.radiusLg),
                   border: Border.all(
                     color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
@@ -159,10 +169,7 @@ class _SearchPopupState extends State<SearchPopup> {
 
     final Widget expandedArea = useExpandedResults
         ? Expanded(child: resultsWidget)
-        : SizedBox(
-            height: resultsHeight ?? 320,
-            child: resultsWidget,
-          );
+        : SizedBox(height: resultsHeight ?? 320, child: resultsWidget);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -225,7 +232,9 @@ class _SearchPopupState extends State<SearchPopup> {
       );
     }
 
-    if (_liveTvResults.isEmpty && _movieResults.isEmpty && _seriesResults.isEmpty) {
+    if (_liveTvResults.isEmpty &&
+        _movieResults.isEmpty &&
+        _seriesResults.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -249,17 +258,32 @@ class _SearchPopupState extends State<SearchPopup> {
       padding: const EdgeInsets.all(AppSizes.lg),
       children: [
         if (_liveTvResults.isNotEmpty) ...[
-          _buildSectionHeader('Live TV', Icons.live_tv, _liveTvResults.length),
+          _buildSectionHeader(
+            'Live TV',
+            Icons.live_tv,
+            _liveTvResults.length,
+            iconColor: AppTheme.accentPink,
+          ),
           _buildLiveTvGrid(),
           const SizedBox(height: AppSizes.xl),
         ],
         if (_movieResults.isNotEmpty) ...[
-          _buildSectionHeader('Movies', Icons.movie, _movieResults.length),
+          _buildSectionHeader(
+            'Movies',
+            Icons.movie,
+            _movieResults.length,
+            iconColor: AppTheme.accentPink,
+          ),
           _buildContentGrid(_movieResults),
           const SizedBox(height: AppSizes.xl),
         ],
         if (_seriesResults.isNotEmpty) ...[
-          _buildSectionHeader('Series', Icons.tv, _seriesResults.length),
+          _buildSectionHeader(
+            'Series',
+            Icons.tv,
+            _seriesResults.length,
+            iconColor: AppTheme.accentPink,
+          ),
           _buildContentGrid(_seriesResults),
           const SizedBox(height: AppSizes.xl),
         ],
@@ -267,12 +291,17 @@ class _SearchPopupState extends State<SearchPopup> {
     );
   }
 
-  Widget _buildSectionHeader(String title, IconData icon, int count) {
+  Widget _buildSectionHeader(
+    String title,
+    IconData icon,
+    int count, {
+    Color iconColor = AppTheme.accentOrange,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSizes.md),
       child: Row(
         children: [
-          Icon(icon, color: AppTheme.accentOrange, size: 20),
+          Icon(icon, color: iconColor, size: 20),
           const SizedBox(width: AppSizes.sm),
           Text(
             title,
@@ -313,7 +342,9 @@ class _SearchPopupState extends State<SearchPopup> {
         crossAxisSpacing: AppSizes.md,
         mainAxisSpacing: AppSizes.md,
       ),
-      itemCount: _liveTvResults.length > 8 ? 8 : _liveTvResults.length, // Limit to 8
+      itemCount: _liveTvResults.length > 8
+          ? 8
+          : _liveTvResults.length, // Limit to 8
       itemBuilder: (context, index) {
         final channel = _liveTvResults[index];
         return InkWell(
@@ -340,17 +371,30 @@ class _SearchPopupState extends State<SearchPopup> {
                       child: Image.network(
                         channel.logoUrl!,
                         fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => const Icon(Icons.tv, size: 32, color: AppTheme.textSecondary),
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.tv,
+                          size: 32,
+                          color: AppTheme.textSecondary,
+                        ),
                       ),
                     ),
                   )
                 else
-                  const Expanded(child: Icon(Icons.tv, size: 32, color: AppTheme.textSecondary)),
+                  const Expanded(
+                    child: Icon(
+                      Icons.tv,
+                      size: 32,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
                 Padding(
                   padding: const EdgeInsets.all(AppSizes.xs),
                   child: Text(
                     channel.name,
-                    style: const TextStyle(fontSize: 12, color: AppTheme.textPrimary),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textPrimary,
+                    ),
                     textAlign: TextAlign.center,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -393,23 +437,23 @@ class _SearchPopupState extends State<SearchPopup> {
             // Let's check main.dart routes again.
             // It seems /player is for channels.
             // Let's check MoviesScreen to see how it opens content.
-            
-            // For now, I'll just print or show a snackbar if route is unknown, 
+
+            // For now, I'll just print or show a snackbar if route is unknown,
             // but actually I should check how MoviesScreen does it.
             // Assuming I can just push a route.
-            
+
             // Re-checking main.dart routes...
             // It seems we might not have a dedicated details route visible in the snippet.
             // But typically it would be something like /movie/:id
-            
+
             // Let's use a safe fallback or just try to play it if it's a movie.
             // If it's a series, we might need to show episodes.
-            
+
             // For this task, I'll assume we can navigate to a player or details.
             // Let's just use a placeholder action or try to find the right route.
             // Actually, let's look at how `MoviesScreen` does it.
             // I'll add a TODO or generic navigation.
-            
+
             // Update: I'll check `MoviesScreen` in a moment.
             // For now, I'll just close the popup.
           },
@@ -430,14 +474,22 @@ class _SearchPopupState extends State<SearchPopup> {
                         : null,
                   ),
                   child: item.imageUrl == null
-                      ? const Center(child: Icon(Icons.movie, color: AppTheme.textSecondary))
+                      ? const Center(
+                          child: Icon(
+                            Icons.movie,
+                            color: AppTheme.textSecondary,
+                          ),
+                        )
                       : null,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 item.title,
-                style: const TextStyle(fontSize: 12, color: AppTheme.textPrimary),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppTheme.textPrimary,
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

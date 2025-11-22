@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
@@ -31,10 +32,10 @@ import 'package:iptv_player/screens/movies_screen.dart';
 import 'package:iptv_player/screens/series_screen.dart';
 import 'package:iptv_player/screens/enhanced_video_player_screen.dart';
 import 'package:iptv_player/screens/playlist_login_screen.dart';
-import 'package:iptv_player/screens/content_detail_screen.dart';
 import 'package:iptv_player/screens/help_about_screen.dart';
 import 'package:iptv_player/screens/favorites_screen.dart';
 import 'package:iptv_player/screens/downloads_screen.dart';
+import 'package:iptv_player/screens/content_detail_screen.dart';
 
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/models/channel.dart';
@@ -51,6 +52,10 @@ void main() {
       // the guarded zone can cause a "bindings initialized in a
       // different zone" error when the framework is used later.
       WidgetsFlutterBinding.ensureInitialized();
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
 
       FlutterError.onError = (FlutterErrorDetails details) {
         FlutterError.presentError(details);
@@ -391,7 +396,9 @@ class _MyAppState extends State<MyApp> {
           ChangeNotifierProvider(create: (_) => EpgService()),
           // Drive sync service removed.
           ChangeNotifierProvider(create: (_) => AIModelManager()..initialize()),
-          ChangeNotifierProvider(create: (_) => AIUpscalingService()),
+          ChangeNotifierProvider(
+            create: (_) => AIUpscalingService()..initialize(),
+          ),
           ChangeNotifierProvider(
             create: (_) => MLKitTranslationService()..initialize(),
           ),
@@ -704,25 +711,28 @@ final _router = GoRouter(
       path: '/content/:id',
       pageBuilder: (context, state) {
         Content? content;
-        final extra = state.extra;
-        if (extra is Content) {
-          content = extra;
+
+        if (state.extra is Content) {
+          content = state.extra as Content;
         } else {
-          final contentId = state.pathParameters['id'];
+          final encodedId = state.pathParameters['id'];
+          final contentId = encodedId != null
+              ? Uri.decodeComponent(encodedId)
+              : null;
           if (contentId != null) {
             final contentProvider = Provider.of<ContentProvider>(
               context,
               listen: false,
             );
-            final combined = [
+            final catalog = [
               ...contentProvider.movies,
               ...contentProvider.series,
               ...contentProvider.continueWatching,
               ...contentProvider.highlights,
             ];
-            for (final item in combined) {
-              if (item.id == contentId) {
-                content = item;
+            for (final entry in catalog) {
+              if (entry.id == contentId) {
+                content = entry;
                 break;
               }
             }
@@ -733,37 +743,9 @@ final _router = GoRouter(
           return _fadeSlidePage(
             key: state.pageKey,
             child: Scaffold(
-              backgroundColor: AppTheme.cardBackground,
-              body: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.movie_outlined,
-                      size: 64,
-                      color: AppTheme.accentOrange,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Content unavailable',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'We could not find that movie or series',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.textSecondary,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton.icon(
-                      onPressed: () => context.go('/home'),
-                      icon: const Icon(Icons.home),
-                      label: const Text('Back to Home'),
-                    ),
-                  ],
-                ),
+              appBar: AppBar(title: const Text('Content not found')),
+              body: const Center(
+                child: Text('We could not locate the requested item.'),
               ),
             ),
           );
