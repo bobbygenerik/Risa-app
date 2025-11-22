@@ -76,7 +76,11 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   Timer? _controlsTimer;
 
   // Subtitle & Audio
-  int _selectedSubtitleIndex = -1; // -1 = no subtitles
+  static const int _subtitleIndexNone = -1;
+  static const int _subtitleIndexTranscription = -2;
+
+  // Tracks currently selected subtitle or transcription state.
+  int _selectedSubtitleIndex = _subtitleIndexNone;
   List<_SubtitleCue> _subtitleCues = [];
   Timer? _subtitleTimer;
   String _currentSubtitleText = '';
@@ -267,6 +271,52 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     _startControlsTimer();
   }
 
+  void _togglePlayPause() {
+    if (!_isInitialized) return;
+    try {
+      if (_videoPlayerController.value.isPlaying) {
+        _videoPlayerController.pause();
+      } else {
+        _videoPlayerController.play();
+      }
+    } catch (_) {}
+  }
+
+  void _seekRelative(Duration offset) {
+    if (!_isInitialized) return;
+    try {
+      final current = _videoPlayerController.value.position;
+      final duration = _videoPlayerController.value.duration;
+      var target = current + offset;
+      if (target < Duration.zero) target = Duration.zero;
+      if (target > duration) target = duration;
+      _videoPlayerController.seekTo(target);
+    } catch (_) {}
+  }
+
+  void _openSubtitleSelector() {
+    setState(() => _showSubtitleSelector = true);
+  }
+
+  void _openAudioSelector() {
+    final hasTracks = (widget.audioTracks?.isNotEmpty ?? false) ||
+        _nativeAudioTracks.isNotEmpty ||
+        (_useVlcBackend && _vlcAudioTrackLabels.isNotEmpty);
+    if (!hasTracks) return;
+
+    setState(() => _showAudioSelector = true);
+
+    if (Platform.isAndroid && _nativeController != null) {
+      _loadNativeAudioTracks();
+    }
+  }
+
+  void _clearSubtitleCues() {
+    _subtitleCues = [];
+    _currentSubtitleText = '';
+    _subtitleTimer?.cancel();
+  }
+
   Future<void> _retryPlayback() async {
     setState(() {
       _hasError = false;
@@ -283,6 +333,15 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     // If player not ready yet, ignore key presses to avoid accessing
     // the controller before initialization.
     if (!_isInitialized) return;
+
+    final bool isBackKey = event.logicalKey == LogicalKeyboardKey.escape ||
+        event.logicalKey == LogicalKeyboardKey.goBack;
+
+    // First back press reveals the overlay instead of exiting immediately.
+    if (!_controlsVisible && isBackKey) {
+      _showControls();
+      return;
+    }
 
     _showControls();
 
@@ -385,12 +444,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         }
         break;
 
-      case LogicalKeyboardKey.keyC:
-      case LogicalKeyboardKey.closedCaptionToggle:
-        // Toggle subtitles
-        _toggleSubtitles();
-        break;
-
       case LogicalKeyboardKey.keyT:
         // Toggle live transcription
         _toggleLiveTranscription();
@@ -422,22 +475,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         }
         break;
     }
-  }
-
-  void _toggleSubtitles() {
-    setState(() {
-      if (_selectedSubtitleIndex == -1) {
-        // Enable first subtitle
-        if (widget.subtitleOptions != null &&
-            widget.subtitleOptions!.isNotEmpty) {
-          _selectedSubtitleIndex = 0;
-          _loadSubtitle(widget.subtitleOptions![0]);
-        }
-      } else {
-        // Disable subtitles
-        _selectedSubtitleIndex = -1;
-      }
-    });
   }
 
   void _loadSubtitle(SubtitleOption option) {
@@ -573,17 +610,25 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     }
   }
 
-  Future<void> _toggleLiveTranscription() async {
+  Future<void> _toggleLiveTranscription({bool? forceEnable}) async {
     final transcriptionService = Provider.of<LiveTranscriptionService>(
       context,
       listen: false,
     );
 
-    if (!_liveTranscriptionEnabled) {
-      // Start live transcription
+    final bool shouldEnable = forceEnable ?? !_liveTranscriptionEnabled;
+    if (shouldEnable == _liveTranscriptionEnabled) {
+      return;
+    }
+
+    if (shouldEnable) {
       await transcriptionService.startTranscription();
       if (mounted) {
-        setState(() => _liveTranscriptionEnabled = true);
+        setState(() {
+          _liveTranscriptionEnabled = true;
+          _selectedSubtitleIndex = _subtitleIndexTranscription;
+          _clearSubtitleCues();
+        });
         showAppSnackBar(
           context,
           const SnackBar(
@@ -593,10 +638,14 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         );
       }
     } else {
-      // Stop live transcription
       await transcriptionService.stopTranscription();
       if (mounted) {
-        setState(() => _liveTranscriptionEnabled = false);
+        setState(() {
+          _liveTranscriptionEnabled = false;
+          if (_selectedSubtitleIndex == _subtitleIndexTranscription) {
+            _selectedSubtitleIndex = _subtitleIndexNone;
+          }
+        });
         showAppSnackBar(
           context,
           SnackBar(
@@ -1501,24 +1550,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                 );
               },
             ),
-            // Live transcription indicator & toggle
-            Consumer<LiveTranscriptionService>(
-              builder: (context, ltService, _) {
-                // Always show a small mic button so the user can toggle quickly
-                return IconButton(
-                  icon: Icon(
-                    ltService.isTranslating ? Icons.mic : Icons.mic_none,
-                    color: ltService.isTranslating
-                        ? AppTheme.primaryBlue
-                        : Colors.white,
-                  ),
-                  tooltip: ltService.isTranslating
-                      ? 'Disable live transcription (Y)'
-                      : 'Enable live transcription (Y)',
-                  onPressed: _toggleLiveTranscription,
-                );
-              },
-            ),
             if (Platform.isAndroid && _nativeController != null)
               IconButton(
                 icon: const Icon(Icons.list, color: Colors.white),
@@ -1528,14 +1559,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                   _showNativeTracksDialog();
                 },
               ),
-            if (_isPipSupported)
-              IconButton(
-                icon: const Icon(
-                  Icons.picture_in_picture_alt,
-                  color: Colors.white,
-                ),
-                onPressed: _togglePip,
-              ),
           ],
         ),
       ),
@@ -1543,52 +1566,241 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   Widget _buildBottomBar() {
+    final bool isPlaying =
+        _isInitialized && _videoPlayerController.value.isPlaying;
+
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Remote control hints
-            Wrap(
-              spacing: 16,
-              runSpacing: 8,
-              alignment: WrapAlignment.center,
-              children: [
-                _buildHint('SELECT', 'Play/Pause'),
-                _buildHint('←→', 'Seek'),
-                _buildHint('↑', 'Subtitles'),
-                _buildHint('↓', 'Audio'),
-                _buildHint('C', 'CC Toggle'),
-                _buildHint('T', 'Transcription'),
-                if (_isPipSupported) _buildHint('P', 'PiP'),
-                _buildHint('BACK', 'Exit'),
-              ],
-            ),
+            _buildControlDeck(isPlaying),
+            const SizedBox(height: 14),
+            _buildHintWrap(),
           ],
         ),
       ),
     );
   }
 
+  Widget _buildControlDeck(bool isPlaying) {
+    final hasSubtitleTracks = widget.subtitleOptions?.isNotEmpty ?? false;
+    final hasAudioTracks = (widget.audioTracks?.isNotEmpty ?? false) ||
+        _nativeAudioTracks.isNotEmpty ||
+        (_useVlcBackend && _vlcAudioTrackLabels.isNotEmpty);
+
+    final bool subtitleActive =
+        _selectedSubtitleIndex >= 0 ||
+        _selectedSubtitleIndex == _subtitleIndexTranscription;
+
+    final String subtitleLabel;
+    if (_selectedSubtitleIndex == _subtitleIndexTranscription) {
+      subtitleLabel = 'Transcription';
+    } else if (_selectedSubtitleIndex >= 0) {
+      subtitleLabel = 'Subtitles On';
+    } else if (hasSubtitleTracks) {
+      subtitleLabel = 'Subtitles';
+    } else {
+      subtitleLabel = 'Transcription';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: Colors.white.withOpacity(0.12)),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 24,
+            offset: Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 12,
+        runSpacing: 12,
+        children: [
+          _buildControlButton(
+            icon: Icons.replay_10,
+            label: '-10s',
+            onTap: () => _seekRelative(const Duration(seconds: -10)),
+          ),
+          _buildControlButton(
+            icon: isPlaying ? Icons.pause : Icons.play_arrow,
+            label: isPlaying ? 'Pause' : 'Play',
+            onTap: _togglePlayPause,
+            isPrimary: true,
+          ),
+          _buildControlButton(
+            icon: Icons.forward_10,
+            label: '+10s',
+            onTap: () => _seekRelative(const Duration(seconds: 10)),
+          ),
+          _buildControlButton(
+            icon: Icons.subtitles,
+            label: subtitleLabel,
+            onTap: _openSubtitleSelector,
+            isActive: subtitleActive,
+          ),
+          _buildControlButton(
+            icon: Icons.headset,
+            label: hasAudioTracks ? 'Audio Tracks' : 'Audio Unavailable',
+            onTap: hasAudioTracks ? _openAudioSelector : null,
+            isActive: _showAudioSelector,
+            isDisabled: !hasAudioTracks,
+          ),
+          _buildControlButton(
+            icon: Icons.logout,
+            label: 'Exit',
+            onTap: () {
+              if (widget.isLive && widget.channel != null) {
+                context.go(
+                  '/epg',
+                  extra: {
+                    'channel': widget.channel,
+                    'continuePlayback': true,
+                  },
+                );
+              } else {
+                Navigator.of(context).pop();
+              }
+            },
+          ),
+          if (_isPipSupported)
+            _buildControlButton(
+              icon: Icons.picture_in_picture_alt,
+              label: 'PiP Mode',
+              onTap: _togglePip,
+              isActive: _isPipActive,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHintWrap() {
+    return Wrap(
+      spacing: 12,
+      runSpacing: 8,
+      alignment: WrapAlignment.center,
+      children: [
+        _buildHint('SELECT', 'Play/Pause'),
+        _buildHint('←→', 'Seek'),
+        _buildHint('↑', 'Subtitles'),
+        _buildHint('↓', 'Audio'),
+        _buildHint('T/Y', 'Transcription'),
+        if (_isPipSupported) _buildHint('P', 'PiP'),
+        _buildHint('BACK', 'Exit'),
+      ],
+    );
+  }
+
   Widget _buildHint(String key, String action) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withAlpha((0.2 * 255).round()),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: Colors.white.withAlpha((0.3 * 255).round())),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        color: Colors.white.withOpacity(0.08),
       ),
       child: Text(
-        '$key: $action',
+        '$key · $action',
         style: const TextStyle(color: Colors.white, fontSize: 12),
       ),
     );
   }
 
+  Widget _buildControlButton({
+    required IconData icon,
+    required String label,
+    VoidCallback? onTap,
+    bool isPrimary = false,
+    bool isActive = false,
+    bool isDisabled = false,
+  }) {
+    final borderRadius = BorderRadius.circular(18);
+    final gradient = isPrimary
+        ? const LinearGradient(
+            colors: [Color(0xFF6F5BFF), Color(0xFFB86BFF)],
+          )
+        : (isActive
+            ? const LinearGradient(
+                colors: [Color(0xFF0057FF), Color(0xFF00C9FF)],
+              )
+            : null);
+
+    final backgroundColor = isPrimary
+        ? null
+        : Colors.white.withOpacity(isActive ? 0.18 : 0.08);
+
+    return Opacity(
+      opacity: isDisabled ? 0.45 : 1.0,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: borderRadius,
+          onTap: isDisabled ? null : onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: EdgeInsets.symmetric(
+              horizontal: isPrimary ? 22 : 16,
+              vertical: 12,
+            ),
+            decoration: BoxDecoration(
+              borderRadius: borderRadius,
+              gradient: gradient,
+              color: backgroundColor,
+              border: Border.all(
+                color: Colors.white.withOpacity(isPrimary ? 0.0 : 0.15),
+              ),
+              boxShadow: isPrimary || isActive
+                  ? const [
+                      BoxShadow(
+                        color: Color(0x550057FF),
+                        blurRadius: 18,
+                        offset: Offset(0, 6),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  color: Colors.white,
+                  size: isPrimary ? 26 : 22,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: isPrimary ? 16 : 14,
+                    fontWeight: isPrimary ? FontWeight.w600 : FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSubtitleSelector() {
-    final options = [
-      SubtitleOption(name: 'Off', url: '', format: 'none'),
-      ...(widget.subtitleOptions ?? []),
+    final subtitleTracks = widget.subtitleOptions ?? [];
+    final entries = <_SubtitleSelectorEntry>[
+      const _SubtitleSelectorEntry.transcription(),
+      const _SubtitleSelectorEntry.off(),
+      ...List.generate(
+        subtitleTracks.length,
+        (index) => _SubtitleSelectorEntry.track(subtitleTracks[index], index),
+      ),
     ];
 
     return Center(
@@ -1636,10 +1848,40 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
             // Options list
             ListView.builder(
               shrinkWrap: true,
-              itemCount: options.length,
+              itemCount: entries.length,
               itemBuilder: (context, index) {
-                final option = options[index];
-                final isSelected = index == _selectedSubtitleIndex + 1;
+                final entry = entries[index];
+                final isSelected = switch (entry.type) {
+                  _SubtitleSelectorEntryType.transcription =>
+                      _selectedSubtitleIndex == _subtitleIndexTranscription,
+                  _SubtitleSelectorEntryType.off =>
+                      _selectedSubtitleIndex == _subtitleIndexNone,
+                  _SubtitleSelectorEntryType.track =>
+                      _selectedSubtitleIndex == entry.optionIndex,
+                };
+
+                IconData leadingIcon;
+                String title;
+                String? subtitle;
+
+                switch (entry.type) {
+                  case _SubtitleSelectorEntryType.transcription:
+                    leadingIcon = Icons.mic;
+                    title = 'Live Transcription';
+                    subtitle = 'Generate captions on-device';
+                    break;
+                  case _SubtitleSelectorEntryType.off:
+                    leadingIcon = Icons.visibility_off;
+                    title = 'Off';
+                    subtitle = 'Hide subtitles';
+                    break;
+                  case _SubtitleSelectorEntryType.track:
+                    leadingIcon =
+                        isSelected ? Icons.check_circle : Icons.circle_outlined;
+                    title = entry.option?.name ?? 'Track';
+                    subtitle = entry.option?.format;
+                    break;
+                }
 
                 return ListTile(
                   selected: isSelected,
@@ -1647,25 +1889,23 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                     (0.3 * 255).round(),
                   ),
                   leading: Icon(
-                    isSelected ? Icons.check_circle : Icons.circle_outlined,
+                    leadingIcon,
                     color: isSelected ? AppTheme.primaryBlue : Colors.white70,
                   ),
                   title: Text(
-                    option.name,
+                    title,
                     style: const TextStyle(color: Colors.white),
                   ),
-                  onTap: () {
-                    setState(() {
-                      _selectedSubtitleIndex = index - 1;
-                      _showSubtitleSelector = false;
-
-                      if (_selectedSubtitleIndex >= 0) {
-                        _loadSubtitle(
-                          widget.subtitleOptions![_selectedSubtitleIndex],
-                        );
-                      }
-                    });
-                  },
+                  subtitle: subtitle != null
+                      ? Text(
+                          subtitle,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
+                        )
+                      : null,
+                  onTap: () => _handleSubtitleEntryTap(entry),
                 );
               },
             ),
@@ -1673,6 +1913,42 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _handleSubtitleEntryTap(
+    _SubtitleSelectorEntry entry,
+  ) async {
+    setState(() => _showSubtitleSelector = false);
+
+    switch (entry.type) {
+      case _SubtitleSelectorEntryType.transcription:
+        setState(() {
+          _selectedSubtitleIndex = _subtitleIndexTranscription;
+          _clearSubtitleCues();
+        });
+        await _toggleLiveTranscription(forceEnable: true);
+        break;
+      case _SubtitleSelectorEntryType.off:
+        setState(() {
+          _selectedSubtitleIndex = _subtitleIndexNone;
+          _clearSubtitleCues();
+        });
+        await _toggleLiveTranscription(forceEnable: false);
+        break;
+      case _SubtitleSelectorEntryType.track:
+        await _toggleLiveTranscription(forceEnable: false);
+        if (!mounted) return;
+        final optionIndex = entry.optionIndex ?? _subtitleIndexNone;
+        setState(() {
+          _selectedSubtitleIndex = optionIndex;
+        });
+        final tracks = widget.subtitleOptions ?? [];
+        if (_selectedSubtitleIndex >= 0 &&
+            _selectedSubtitleIndex < tracks.length) {
+          _loadSubtitle(tracks[_selectedSubtitleIndex]);
+        }
+        break;
+    }
   }
 
   void _showNativeTracksDialog() {
@@ -2082,6 +2358,29 @@ class _SubtitleCue {
 }
 
 /// Subtitle option model
+enum _SubtitleSelectorEntryType { transcription, off, track }
+
+class _SubtitleSelectorEntry {
+  final _SubtitleSelectorEntryType type;
+  final SubtitleOption? option;
+  final int? optionIndex;
+
+  const _SubtitleSelectorEntry._(this.type, {this.option, this.optionIndex});
+
+  const _SubtitleSelectorEntry.transcription()
+    : this._(_SubtitleSelectorEntryType.transcription);
+
+  const _SubtitleSelectorEntry.off()
+    : this._(_SubtitleSelectorEntryType.off);
+
+  const _SubtitleSelectorEntry.track(SubtitleOption option, int optionIndex)
+    : this._(
+      _SubtitleSelectorEntryType.track,
+      option: option,
+      optionIndex: optionIndex,
+    );
+}
+
 class SubtitleOption {
   final String name;
   final String url;
