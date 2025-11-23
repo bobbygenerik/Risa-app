@@ -34,8 +34,8 @@
 
 **Steps:**
 1. Enable Live Transcription in Settings
-2. Play any video stream (IPTV, YouTube, etc.)
-3. Speak clearly near device
+2. Play any video stream (IPTV, YouTube, etc.) that includes spoken dialogue
+3. Approve the Android "Start capturing audio" permission prompt if it appears
 4. Check for transcription text at bottom of screen
 
 **Expected Results:**
@@ -49,9 +49,9 @@
 
 **Notes:**
 ```
-- Quality depends on microphone and audio quality
-- Accent/dialect affects accuracy
-- Background noise may reduce accuracy
+- Quality depends on stream audio clarity
+- Accent/dialect in the broadcast affects accuracy
+- Background noise inside the source video may reduce accuracy
 ```
 
 ---
@@ -251,11 +251,10 @@ I'm doing well, thanks!
 **Notes:**
 ```
 Quality depends on:
-- Microphone sensitivity
-- Audio quality of stream
-- Background noise level
-- Accent/dialect
-- Speech rate
+- Audio quality of the stream (bitrate, compression)
+- Mixing/background noise within the source content
+- Accent/dialect present in the broadcast
+- Speech rate of the speaker(s)
 ```
 
 ---
@@ -402,10 +401,10 @@ _________________________________________________
 ## 📞 Support
 
 **Issues with Transcription?**
-- Check microphone permissions in Android Settings
+- Check the Android "capture audio" (MediaProjection) permission in Settings → Apps → IPTV Player → Display over other apps / Capture audio
 - Ensure WiFi for model download
 - Check device has sufficient storage (>500 MB free)
-- See `LiveTranscriptionService` logs
+- See `WhisperTranscriptionService` logs
 
 **Issues with Translation?**
 - Ensure WiFi during first model download

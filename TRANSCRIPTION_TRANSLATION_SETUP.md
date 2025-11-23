@@ -3,13 +3,12 @@
 
 /// TRANSCRIPTION SETUP
 
-// The app uses platform speech-to-text APIs:
-// - Android: Google Speech Recognition API (free, built-in)
-// - iOS: Speech Framework (free, built-in)
-// - Web: Web Speech API
+// The app uses on-device Whisper TFLite models for speech-to-text:
+// - Android: Audio playback capture (MediaProjection + AudioRecord) streams PCM into Dart
+// - WhisperTranscriptionService converts PCM to mel spectrogram + decodes tokens
+// - Translation + TTS remain 100% on-device after initial downloads
 
-// Audio is captured from the video stream (not microphone)
-// Path: Video Player → System Audio Path → Platform STT
+// Audio path: Video Player → Android playback capture → EventChannel stream → WhisperTranscriptionService
 
 // Configuration Options (in Settings Screen):
 const TranscriptionConfig = {
@@ -26,99 +25,71 @@ const TranscriptionConfig = {
 // ✅ Automatic subtitle generation
 // ✅ Text-to-speech output
 // ✅ Transcript export (JSON/TXT)
-// ✅ Cleanup old transcriptions (30 second intervals)
-
-/// TRANSLATION SETUP
-
-// The app uses Google ML Kit for on-device translation
-// - 59 languages supported
-// - Models downloaded on-demand (15-50 MB per language)
-// - 100% offline after model download
-// - Zero cloud API costs
-
-// Configuration Options (in Settings Screen):
-const TranslationConfig = {
-  'enabled': false,           // Enable/disable translation
-  'sourceLanguage': 'english', // TranslateLanguage enum
-  'targetLanguage': 'spanish', // TranslateLanguage enum
-  'autoTranslate': true,      // Auto-translate as text arrives
-  'translateSubtitles': true, // Translate generated subtitles
-};
-
-// Supported Languages (59 total):
-// Afrikaans, Albanian, Arabic, Belarusian, Bengali, Bosnian,
-// Bulgarian, Catalan, Chinese Simplified, Chinese Traditional,
-// Croatian, Czech, Danish, Dutch, English, Estonian, Finnish,
-// French, German, Greek, Gujarati, Haitian Creole, Hebrew,
-// Hindi, Hungarian, Icelandic, Indonesian, Irish, Italian,
-// Japanese, Kannada, Korean, Latvian, Lithuanian, Macedonian,
-// Malayalam, Marathi, Nepali, Norwegian, Odia, Persian, Polish,
-// Portuguese, Punjabi, Romanian, Russian, Slovak, Slovenian,
-// Spanish, Swedish, Tagalog, Tamil, Telugu, Thai, Turkish,
-// Ukrainian, Urdu, Vietnamese
-
-// Features:
-// ✅ True on-device (no internet required after model download)
-// ✅ 59 languages
-// ✅ Auto-download language models
-// ✅ Real-time text translation
-// ✅ Subtitle translation
-// ✅ Automatic model caching
-
-/// INTEGRATION POINTS
-
-// 1. Live Transcription is integrated in:
-//    - Enhanced Video Player (settings overlay)
-//    - Settings Screen (enable/disable, language selection)
-//    - Subtitle display (on-video overlay)
-
-// 2. Translation is integrated in:
-//    - Settings Screen (source/target language selection)
-//    - Live Transcription (auto-translate transcripts)
-//    - Subtitle display (show translated subtitles)
-
-// 3. Both services share:
-//    - Subtitle management (storage, display, export)
-//    - State management via Provider
-//    - Error handling and user feedback
-//    - Cleanup timers (remove old entries)
-
-/// USAGE EXAMPLES
-
-// In UI (Flutter):
-Consumer<LiveTranscriptionService>(
+Consumer<WhisperTranscriptionService>(
   builder: (context, transcription, _) {
     return Column(
       children: [
-        // Enable/disable
         SwitchListTile(
-          title: const Text('Live Transcription'),
+          title: const Text('Whisper Live Captions'),
+          subtitle: Text(
+            transcription.isWhisperLoaded
+                ? 'Runs 100% on-device once the Whisper model is downloaded.'
+                : 'Download a Whisper model in AI Settings to enable captions.',
+          ),
           value: transcription.isTranscribing,
+          onChanged: transcription.isWhisperLoaded
+              ? (value) async {
+                  if (value) {
+                    await transcription.startTranscription();
+                  } else {
+                    await transcription.stopTranscription();
+                  }
+                }
+              : null,
+        ),
+        SwitchListTile(
+          title: const Text('Translate captions'),
+          value: transcription.isTranslating,
           onChanged: (value) async {
+            transcription.setTranslationEnabled(value);
             if (value) {
-              await transcription.startTranscription();
-            } else {
-              await transcription.stopTranscription();
+              await transcription.downloadTranslationModels();
             }
           },
         ),
         
-        // Language selection
-        DropdownButton<String>(
+        // Source language (spoken audio)
+        DropdownButton<TranslateLanguage>(
           value: transcription.sourceLanguage,
-          items: ['en-US', 'es-ES', 'fr-FR', 'de-DE']
+          items: TranslateLanguage.values
               .map((lang) => DropdownMenuItem(
-                value: lang,
-                child: Text(lang),
-              ))
+                    value: lang,
+                    child: Text(lang.name),
+                  ))
               .toList(),
-          onChanged: (lang) {
+          onChanged: (lang) async {
             if (lang != null) {
-              transcription.setLanguage(lang);
+              await transcription.setSourceLanguage(lang);
             }
           },
         ),
         
+        // Target language (translated captions)
+        DropdownButton<TranslateLanguage>(
+          value: transcription.targetLanguage,
+          items: TranslateLanguage.values
+              .map((lang) => DropdownMenuItem(
+                    value: lang,
+                    child: Text(lang.name),
+                  ))
+              .toList(),
+          onChanged: (lang) async {
+            if (lang != null) {
+              await transcription.setTargetLanguage(lang);
+            }
+          },
+        ),
+
         // Display current transcription
         if (transcription.currentText.isNotEmpty)
           Container(
@@ -128,80 +99,11 @@ Consumer<LiveTranscriptionService>(
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
-              transcription.currentText,
+              transcription.isTranslating
+                  ? transcription.currentTranslatedText
+                  : transcription.currentText,
               style: const TextStyle(color: Colors.white),
             ),
-          ),
-      ],
-    );
-  },
-);
-
-// Translation setup:
-Consumer<MLKitTranslationService>(
-  builder: (context, translation, _) {
-    return Column(
-      children: [
-        SwitchListTile(
-          title: const Text('Translation'),
-          value: translation.isEnabled,
-          onChanged: (value) {
-            translation.setEnabled(value);
-          },
-        ),
-        
-        // Source language
-        DropdownButton<TranslateLanguage>(
-          value: translation.sourceLanguage,
-          items: [
-            TranslateLanguage.english,
-            TranslateLanguage.spanish,
-            TranslateLanguage.french,
-            TranslateLanguage.german,
-          ]
-              .map((lang) => DropdownMenuItem(
-                value: lang,
-                child: Text(lang.name),
-              ))
-              .toList(),
-          onChanged: (lang) async {
-            if (lang != null) {
-              await translation.setSourceLanguage(lang);
-            }
-          },
-        ),
-        
-        // Target language
-        DropdownButton<TranslateLanguage>(
-          value: translation.targetLanguage,
-          items: [
-            TranslateLanguage.english,
-            TranslateLanguage.spanish,
-            TranslateLanguage.french,
-            TranslateLanguage.german,
-          ]
-              .map((lang) => DropdownMenuItem(
-                value: lang,
-                child: Text(lang.name),
-              ))
-              .toList(),
-          onChanged: (lang) async {
-            if (lang != null) {
-              await translation.setTargetLanguage(lang);
-            }
-          },
-        ),
-        
-        // Show download progress
-        if (translation.isDownloading)
-          Column(
-            children: [
-              const Text('Downloading language models...'),
-              LinearProgressIndicator(
-                value: translation.downloadProgress,
-              ),
-              Text('${(translation.downloadProgress * 100).toStringAsFixed(0)}%'),
-            ],
           ),
       ],
     );
@@ -241,9 +143,9 @@ Consumer<MLKitTranslationService>(
 /// ERROR HANDLING
 
 // Transcription errors:
-// - Device doesn't support speech recognition
-// - Microphone permission denied
-// - No internet (for cloud-based STT fallback)
+// - Device below Android 10 cannot grant playback capture
+// - Audio capture (MediaProjection) permission denied
+// - Whisper model missing or failed to load
 
 // Translation errors:
 // - Language model not available

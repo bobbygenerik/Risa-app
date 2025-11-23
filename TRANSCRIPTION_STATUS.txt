@@ -14,11 +14,11 @@ BUILD: app-debug.apk (344 MB) - Successfully compiled
 ────────────────────────────────────────────────────────────────────────────
 
 ✅ Service Implementation:
-   • Platform channel integration (com.streamhub.iptv/transcription)
-   • Audio routing from video stream (NOT microphone)
-   • Real-time speech-to-text processing
-   • Multi-language support
-   • Automatic cleanup (30-second intervals)
+   • Whisper TFLite models (Tiny/Base/Small) loaded via `tflite_flutter`
+   • 16 kHz PCM capture via Android audio-playback capture (MediaProjection + AudioRecord)
+   • On-device mel spectrogram + Whisper decoding loop
+   • Multi-language support aligned with active Whisper model
+   • Automatic cleanup (rolling transcript window)
 
 ✅ UI Integration:
    • Settings → Cloud & AI Tab
@@ -35,9 +35,9 @@ BUILD: app-debug.apk (344 MB) - Successfully compiled
    • Full error handling
 
 📝 Configuration:
-   File: lib/services/live_transcription_service.dart (101 lines)
+   File: lib/services/whisper_transcription_service.dart (600+ lines)
    Settings Persistence: SharedPreferences
-   Platform Channel: MethodChannel('com.streamhub.iptv/transcription')
+   Dependencies: tflite_flutter, google_mlkit_translation, flutter_tts
 
 🔧 Status: Production Ready ✅
 
@@ -91,23 +91,17 @@ BUILD: app-debug.apk (344 MB) - Successfully compiled
 
 Audio Flow:
 ┌─────────────────────────────────────────────────────────────┐
-│ Video Player (video_player plugin)                          │
-│    ↓                                                         │
-│ Video Stream Audio Output                                   │
-│    ↓                                                         │
-│ Platform Channel (com.streamhub.iptv/transcription)         │
-│    ↓                                                         │
-│ Android Native: startAudioCapture/stopAudioCapture          │
-│    ↓                                                         │
-│ System Audio Path                                           │
-│    ↓                                                         │
-│ Platform STT (Google Speech Recognition)                    │
-│    ↓                                                         │
-│ LiveTranscriptionService (Dart)                             │
-│    ↓                                                         │
-│ [Optional] MLKitTranslationService (on-device)              │
-│    ↓                                                         │
-│ Enhanced Video Player UI (Subtitle Display)                 │
+│ Android playback capture (MediaProjection prompt)            │
+│    ↓                                                        │
+│ EventChannel stream → WhisperTranscriptionService           │
+│    ↓                                                        │
+│ Whisper TFLite Interpreter (Tiny/Base/Small)                │
+│    ↓                                                        │
+│ On-device decoding → transcript text                        │
+│    ↓                                                        │
+│ Optional ML Kit translation (offline packs)                 │
+│    ↓                                                        │
+│ Enhanced Video Player / Settings overlay                    │
 └─────────────────────────────────────────────────────────────┘
 
 Data Flow:
@@ -122,8 +116,8 @@ Data Flow:
 │         ↓                                 │
 │ SharedPreferences (Settings Storage)     │
 │         ↓                                 │
-│ LiveTranscriptionService                 │
-│ MLKitTranslationService                  │
+│ WhisperTranscriptionService              │
+│ (handles transcription + translation)    │
 │         ↓                                 │
 │ Enhanced Video Player (Display)          │
 └──────────────────────────────────────────┘

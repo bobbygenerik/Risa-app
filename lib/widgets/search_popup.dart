@@ -7,6 +7,7 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/content.dart';
+import 'package:iptv_player/widgets/voice_search_button.dart';
 
 class SearchPopup extends StatefulWidget {
   const SearchPopup({super.key});
@@ -28,6 +29,14 @@ class _SearchPopupState extends State<SearchPopup> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _handleVoiceResult(String query) {
+    if (!mounted) return;
+    setState(() {
+      _searchController.text = query;
+    });
+    _performSearch(query);
   }
 
   void _performSearch(String query) {
@@ -179,6 +188,12 @@ class _SearchPopupState extends State<SearchPopup> {
           child: Row(
             children: [
               const Icon(Icons.search, color: AppTheme.primaryBlue, size: 28),
+              const SizedBox(width: AppSizes.md),
+              VoiceSearchButton(
+                usePillStyle: true,
+                label: 'Voice',
+                onSearchResult: _handleVoiceResult,
+              ),
               const SizedBox(width: AppSizes.md),
               Expanded(
                 child: TextField(

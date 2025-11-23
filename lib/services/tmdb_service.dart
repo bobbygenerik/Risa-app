@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'package:http/http.dart' as http;
 import 'package:iptv_player/config/tmdb_config.dart';
 import 'package:path_provider/path_provider.dart';
@@ -19,17 +20,13 @@ class TMDBService {
   static final Map<String, _CacheItem> _cache = {};
   static const Duration _defaultTtl = Duration(hours: 24);
   static const int _maxCacheEntries = 200;
+  static Future<void>? _cacheLoadFuture;
 
   static String _cacheKey(String prefix, String query, {int? year}) {
     return '$prefix:${query.toLowerCase().trim()}:${year ?? ''}';
   }
 
   static Map<String, dynamic>? _getFromCache(String key) {
-    // lazy-load disk cache once
-    if (!_cacheLoaded) {
-      _loadCacheFromDisk();
-    }
-
     final item = _cache[key];
     if (item == null) return null;
     if (item.isExpired) {
@@ -39,7 +36,11 @@ class TMDBService {
     return item.data;
   }
 
-  static void _setCache(String key, Map<String, dynamic> data, {Duration? ttl}) {
+  static void _setCache(
+    String key,
+    Map<String, dynamic> data, {
+    Duration? ttl,
+  }) {
     if (_cache.length >= _maxCacheEntries) {
       // remove oldest entry
       final firstKey = _cache.keys.first;
@@ -56,17 +57,19 @@ class TMDBService {
   static Future<void> _loadCacheFromDisk() async {
     try {
       final dir = await getApplicationSupportDirectory();
-      final file = File('${dir.path}/$_cacheFileName');
-      if (!await file.exists()) {
-        _cacheLoaded = true;
-        return;
-      }
-      final contents = await file.readAsString();
-      final Map<String, dynamic> jsonMap = json.decode(contents) as Map<String, dynamic>;
-      jsonMap.forEach((key, value) {
+      final cachePath = '${dir.path}/$_cacheFileName';
+      final rawCache = await Isolate.run<Map<String, dynamic>>(
+        () => _readCacheFile(cachePath),
+      );
+      rawCache.forEach((key, value) {
         try {
-          final data = Map<String, dynamic>.from(value['data'] ?? {});
-          final expiryMs = value['expiry'] as int? ?? 0;
+          final entry = value is Map<String, dynamic>
+              ? value
+              : Map<String, dynamic>.from(value as Map);
+          final data = entry['data'] is Map
+              ? Map<String, dynamic>.from(entry['data'] as Map)
+              : <String, dynamic>{};
+          final expiryMs = entry['expiry'] as int? ?? 0;
           final expiry = DateTime.fromMillisecondsSinceEpoch(expiryMs);
           if (DateTime.now().isBefore(expiry)) {
             _cache[key] = _CacheItem(data, expiry);
@@ -79,6 +82,7 @@ class TMDBService {
       // ignore disk load errors
     } finally {
       _cacheLoaded = true;
+      _cacheLoadFuture = null;
     }
   }
 
@@ -98,8 +102,9 @@ class TMDBService {
       // ignore disk write errors
     }
   }
-  
+
   static Future<double?> getMovieRating(String title, {int? year}) async {
+    await init();
     try {
       final cachedKey = _cacheKey('rating:movie', title, year: year);
       final cached = _getFromCache(cachedKey);
@@ -107,17 +112,18 @@ class TMDBService {
         return (cached['rating'] as num?)?.toDouble();
       }
       // Search for movie by title
-      var searchUrl = '$_baseUrl/search/movie?api_key=$_apiKey&query=${Uri.encodeComponent(title)}';
+      var searchUrl =
+          '$_baseUrl/search/movie?api_key=$_apiKey&query=${Uri.encodeComponent(title)}';
       if (year != null) {
         searchUrl += '&year=$year';
       }
-      
+
       final response = await http.get(Uri.parse(searchUrl));
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final results = data['results'] as List;
-        
+
         if (results.isNotEmpty) {
           final movie = results.first;
           final rating = movie['vote_average'] as double?;
@@ -129,11 +135,12 @@ class TMDBService {
     } catch (e) {
       print('TMDB API error: $e');
     }
-    
+
     return null;
   }
-  
+
   static Future<double?> getTVShowRating(String title, {int? year}) async {
+    await init();
     try {
       final cachedKey = _cacheKey('rating:tv', title, year: year);
       final cached = _getFromCache(cachedKey);
@@ -141,17 +148,18 @@ class TMDBService {
         return (cached['rating'] as num?)?.toDouble();
       }
       // Search for TV show by title
-      var searchUrl = '$_baseUrl/search/tv?api_key=$_apiKey&query=${Uri.encodeComponent(title)}';
+      var searchUrl =
+          '$_baseUrl/search/tv?api_key=$_apiKey&query=${Uri.encodeComponent(title)}';
       if (year != null) {
         searchUrl += '&first_air_date_year=$year';
       }
-      
+
       final response = await http.get(Uri.parse(searchUrl));
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final results = data['results'] as List;
-        
+
         if (results.isNotEmpty) {
           final show = results.first;
           final rating = show['vote_average'] as double?;
@@ -162,29 +170,34 @@ class TMDBService {
     } catch (e) {
       print('TMDB API error: $e');
     }
-    
+
     return null;
   }
-  
-  static Future<Map<String, dynamic>?> getMovieDetails(String title, {int? year}) async {
+
+  static Future<Map<String, dynamic>?> getMovieDetails(
+    String title, {
+    int? year,
+  }) async {
+    await init();
     try {
       final cacheKey = _cacheKey('movie:details', title, year: year);
       final cached = _getFromCache(cacheKey);
       if (cached != null) return cached;
 
-      final searchUrl = '$_baseUrl/search/movie?api_key=$_apiKey&query=${Uri.encodeComponent(title)}';
-      
+      final searchUrl =
+          '$_baseUrl/search/movie?api_key=$_apiKey&query=${Uri.encodeComponent(title)}';
+
       final response = await http.get(Uri.parse(searchUrl));
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final results = data['results'] as List;
-        
+
         if (results.isNotEmpty) {
           final movie = results.first;
           final result = {
             'rating': movie['vote_average'] as double?,
-            'poster': movie['poster_path'] != null 
+            'poster': movie['poster_path'] != null
                 ? 'https://image.tmdb.org/t/p/w500${movie['poster_path']}'
                 : null,
             'backdrop': movie['backdrop_path'] != null
@@ -200,17 +213,22 @@ class TMDBService {
     } catch (e) {
       print('TMDB API error: $e');
     }
-    
+
     return null;
   }
 
-  static Future<Map<String, dynamic>?> getTVDetails(String title, {int? year}) async {
+  static Future<Map<String, dynamic>?> getTVDetails(
+    String title, {
+    int? year,
+  }) async {
+    await init();
     try {
       final cacheKey = _cacheKey('tv:details', title, year: year);
       final cached = _getFromCache(cacheKey);
       if (cached != null) return cached;
 
-      var searchUrl = '$_baseUrl/search/tv?api_key=$_apiKey&query=${Uri.encodeComponent(title)}';
+      var searchUrl =
+          '$_baseUrl/search/tv?api_key=$_apiKey&query=${Uri.encodeComponent(title)}';
       if (year != null) {
         searchUrl += '&first_air_date_year=$year';
       }
@@ -245,10 +263,52 @@ class TMDBService {
     return null;
   }
 
+  /// Returns the best available backdrop/poster URL for a given title.
+  /// Prefers TV results first, falling back to movie matches.
+  static Future<String?> getBestBackdrop(String title, {int? year}) async {
+    await init();
+    final cacheKey = _cacheKey('art:best', title, year: year);
+    final cached = _getFromCache(cacheKey);
+    if (cached != null && cached.containsKey('image')) {
+      return (cached['image'] as String?)?.isNotEmpty == true
+          ? cached['image'] as String
+          : null;
+    }
+
+    Map<String, dynamic>? details;
+    details = await getTVDetails(title, year: year);
+    details ??= await getMovieDetails(title, year: year);
+
+    final image =
+        (details?['backdrop'] as String?) ?? (details?['poster'] as String?);
+    // Cache both hits and misses (shorter TTL for misses) to avoid spamming TMDB
+    _setCache(cacheKey, {
+      'image': image,
+    }, ttl: image == null ? const Duration(hours: 1) : null);
+    return image;
+  }
+
   /// Initialize TMDBService (loads disk cache). Call once during app startup.
   static Future<void> init() async {
-    if (!_cacheLoaded) {
-      await _loadCacheFromDisk();
-    }
+    if (_cacheLoaded) return;
+    _cacheLoadFuture ??= _loadCacheFromDisk();
+    await _cacheLoadFuture;
   }
+}
+
+Map<String, dynamic> _readCacheFile(String path) {
+  try {
+    final file = File(path);
+    if (!file.existsSync()) {
+      return {};
+    }
+    final contents = file.readAsStringSync();
+    final decoded = json.decode(contents);
+    if (decoded is Map<String, dynamic>) {
+      return decoded;
+    }
+  } catch (_) {
+    // ignore read/parse errors
+  }
+  return {};
 }

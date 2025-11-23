@@ -7,6 +7,8 @@ import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/service_validator.dart';
 import 'package:go_router/go_router.dart';
+import 'package:iptv_player/widgets/content_focus_provider.dart';
+import 'package:iptv_player/widgets/tv_focusable.dart';
 
 class SeriesScreen extends StatefulWidget {
   const SeriesScreen({super.key});
@@ -15,7 +17,8 @@ class SeriesScreen extends StatefulWidget {
   State<SeriesScreen> createState() => _SeriesScreenState();
 }
 
-class _SeriesScreenState extends State<SeriesScreen> {
+class _SeriesScreenState extends State<SeriesScreen>
+  with ContentFocusRegistrant<SeriesScreen> {
   Timer? _carouselTimer;
   int _featuredIndex = 0;
   final FocusNode _watchFocus = FocusNode();
@@ -26,6 +29,17 @@ class _SeriesScreenState extends State<SeriesScreen> {
     _carouselTimer?.cancel();
     _watchFocus.dispose();
     super.dispose();
+  }
+
+  @override
+  bool handleContentFocusRequest() {
+    if (!mounted) return false;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _watchFocus.requestFocus();
+      }
+    });
+    return true;
   }
 
   @override
@@ -283,16 +297,24 @@ class _SeriesScreenState extends State<SeriesScreen> {
       seriesMap.putIfAbsent(episode.title, () => []).add(episode);
     }
 
+    if (seriesMap.isEmpty) return const SizedBox.shrink();
+
     return SizedBox(
       height: 220,
-      child: ListView.builder(
+      child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        itemCount: seriesMap.length,
-        itemBuilder: (context, index) {
-          final seriesTitle = seriesMap.keys.elementAt(index);
-          final episodes = seriesMap[seriesTitle]!;
-          return _buildSeriesCard(context, seriesTitle, episodes);
-        },
+        child: FocusTraversalGroup(
+          policy: WidgetOrderTraversalPolicy(),
+          child: Row(
+            children: seriesMap.entries
+                .map((entry) => _buildSeriesCard(
+                      context,
+                      entry.key,
+                      entry.value,
+                    ))
+                .toList(),
+          ),
+        ),
       ),
     );
   }
@@ -304,18 +326,19 @@ class _SeriesScreenState extends State<SeriesScreen> {
   ) {
     final firstEpisode = episodes.first;
 
-    return Container(
-      width: 140,
-      margin: EdgeInsets.only(right: AppSizes.md),
-      child: InkWell(
-        onTap: () {
-          final encodedId = Uri.encodeComponent(firstEpisode.id);
-          context.push('/content/$encodedId', extra: firstEpisode);
-        },
+    return TVFocusable(
+      focusMargin: EdgeInsets.only(right: AppSizes.md),
+      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+      onPressed: () {
+        final encodedId = Uri.encodeComponent(firstEpisode.id);
+        context.push('/content/$encodedId', extra: firstEpisode);
+      },
+      child: SizedBox(
+        width: 140,
+        height: 220,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Series Poster
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(AppSizes.radiusMd),
@@ -335,7 +358,6 @@ class _SeriesScreenState extends State<SeriesScreen> {
                             )
                           : _buildPlaceholder(title),
                     ),
-                    // Episode count badge
                     Positioned(
                       top: 8,
                       right: 8,
@@ -350,7 +372,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
                         ),
                         child: Text(
                           '${episodes.length} EP',
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
@@ -363,7 +385,6 @@ class _SeriesScreenState extends State<SeriesScreen> {
               ),
             ),
             SizedBox(height: AppSizes.xs),
-            // Series Title
             Text(
               title,
               style: Theme.of(
@@ -372,7 +393,6 @@ class _SeriesScreenState extends State<SeriesScreen> {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            // Year and Rating
             if (firstEpisode.year != null || firstEpisode.rating != null)
               Text(
                 '${firstEpisode.year ?? ''} ${firstEpisode.rating != null ? '★${firstEpisode.ratingDisplay}' : ''}',

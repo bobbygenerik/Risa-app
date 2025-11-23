@@ -29,7 +29,7 @@ void main() async {
   results['Content Provider'] = await testServiceFile('lib/providers/content_provider.dart');
   results['AI Model Manager'] = await testServiceFile('lib/services/ai_model_manager.dart');
   results['Voice Search'] = await testServiceFile('lib/services/voice_search_service.dart');
-  results['Live Transcription'] = await testServiceFile('lib/services/live_transcription_service.dart');
+  results['Whisper Transcription'] = await testServiceFile('lib/services/whisper_transcription_service.dart');
   results['ML Kit Translation'] = await testServiceFile('lib/services/mlkit_translation_service.dart');
   results['Local Backup Service'] = await testServiceFile('lib/services/local_backup_service.dart');
   results['OpenSubtitles'] = await testServiceFile('lib/services/opensubtitles_service.dart');

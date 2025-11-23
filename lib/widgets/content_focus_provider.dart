@@ -1,4 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+
+void _logContentFocus(String message) {
+  debugPrint('content_focus: $message');
+}
 
 /// Signature for callbacks that move focus into the active content area.
 typedef ContentFocusCallback = bool Function();
@@ -39,6 +44,10 @@ mixin ContentFocusRegistrant<T extends StatefulWidget> on State<T> {
   /// primary content area. Return true if a focus target was found.
   bool handleContentFocusRequest();
 
+  /// Override to provide a more descriptive label for focus debug logging.
+  @protected
+  String get focusDebugLabel => T.toString();
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -49,11 +58,20 @@ mixin ContentFocusRegistrant<T extends StatefulWidget> on State<T> {
     }
     _focusRegistrationToken =
         provider.registerFocusCallback(_onContentFocusRequested);
+    _logContentFocus(
+      'Registered content focus: ${focusDebugLabel} '
+      '(token: $_focusRegistrationToken)',
+    );
   }
 
   bool _onContentFocusRequested() {
     if (!mounted) return false;
-    return handleContentFocusRequest();
+    final handled = handleContentFocusRequest();
+    _logContentFocus(
+      'Focus request ${handled ? 'succeeded' : 'failed'} for '
+      '${focusDebugLabel}',
+    );
+    return handled;
   }
 
   @override
@@ -62,6 +80,9 @@ mixin ContentFocusRegistrant<T extends StatefulWidget> on State<T> {
     final token = _focusRegistrationToken;
     if (provider != null && token != null) {
       provider.unregisterFocusCallback(token);
+      _logContentFocus(
+        'Unregistered content focus: ${focusDebugLabel} (token: $token)',
+      );
     }
     super.dispose();
   }

@@ -290,23 +290,22 @@ Navigate to **Settings → Subtitles** to configure:
 
 ### Dependencies:
 ```yaml
-# Subtitle support
-subtitle_wrapper_package: ^2.0.2
-
-# On-device transcription & translation
-speech_to_text: ^7.0.0  # Already installed
-translator: ^1.0.0      # Google Translate API
-flutter_tts: ^4.2.0     # Text-to-speech
+# Whisper + AI stack
+tflite_flutter: ^0.11.0            # Runs Whisper Tiny/Base/Small models
+record: ^6.0.0                     # Low-latency audio capture
+google_mlkit_translation: ^0.11.0  # Offline translation packs
+google_mlkit_language_id: ^0.11.0  # Helper utilities for ML Kit
+flutter_tts: ^4.2.0                # Text-to-speech for translated captions
 ```
 
 ### Services:
 
-**LiveTranscriptionService** (`lib/services/live_transcription_service.dart`)
-- Manages speech recognition
-- Handles translation requests
+**WhisperTranscriptionService** (`lib/services/whisper_transcription_service.dart`)
+- Manages Whisper TFLite interpreter + audio recorder
+- Handles on-device translation via ML Kit
 - Controls TTS output
-- Exports SRT format
-- Automatic cleanup
+- Exports SRT format + maintains transcript history
+- Automatic cleanup + translation pack downloads
 
 **EnhancedVideoPlayerScreen** (`lib/screens/enhanced_video_player_screen.dart`)
 - Full-screen video player
@@ -373,21 +372,19 @@ EnhancedVideoPlayerScreen(
 ## Privacy & Performance
 
 ### Privacy:
-- **Live transcription**: 100% on-device, no cloud
-- **Translation**: Uses Google Translate free tier (network required)
+- **Live transcription**: Whisper inference is 100% on-device (no audio leaves device)
+- **Translation**: ML Kit packs download once, then run offline
 - **TTS**: Uses device system voices, no cloud
 - **Subtitles**: Downloaded directly from URL, no tracking
 
-### Performance:
-- **Transcription**: Real-time on modern devices (2019+)
-- **Translation**: ~500ms latency per request
+- **Transcription**: Real-time on modern devices (2019+) when using Tiny/Base models
+- **Translation**: Local inference once packs cached (~100-200ms)
 - **TTS**: Instant, platform-native
 - **PiP**: Minimal overhead, GPU-accelerated
 - **Memory**: Transcriptions auto-cleanup after 5 minutes
 
-### Battery Impact:
-- **Transcription**: Moderate (continuous microphone access)
-- **Translation**: Low (only when text changes)
+- **Transcription**: Moderate (continuous playback-capture stream + Whisper inference)
+- **Translation**: Low (runs locally when text changes)
 - **TTS**: Low (only during speech)
 - **PiP**: Minimal (same as normal playback)
 
@@ -405,9 +402,9 @@ EnhancedVideoPlayerScreen(
 
 ### Live Transcription Not Working:
 1. Go to Settings → Subtitles → Enable Live Transcription
-2. Grant microphone permission when prompted
+2. Accept the Android "Start capturing audio" permission prompt (MediaProjection)
 3. Select correct source language
-4. Ensure device microphone is not muted
+4. Confirm the permission dialog was approved (Settings → Apps → IPTV Player → Display over other apps / Capture audio)
 5. Check device is 2019 or newer (older devices may struggle)
 
 ### Translation Errors:

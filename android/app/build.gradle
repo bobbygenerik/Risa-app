@@ -9,7 +9,7 @@ android {
     // Use an explicit compileSdk to satisfy newer AndroidX library requirements
     // (some updated plugins require compileSdk 34+). Set to 36 to be safe.
     compileSdk 36
-    ndkVersion flutter.ndkVersion
+    ndkVersion "27.0.12077973"
     
     // Enable R8 full mode for maximum optimization
     buildFeatures {
@@ -35,7 +35,7 @@ android {
 
     defaultConfig {
         applicationId "com.risa.app"
-        minSdkVersion flutter.minSdkVersion
+        minSdkVersion 26
         // Match compileSdk with a modern target to satisfy updated dependencies.
         targetSdk 36
         versionCode 1
@@ -43,7 +43,15 @@ android {
         
         // Reduce APK size by only including necessary architectures
         ndk {
-            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64'
+            // Include x86 for emulator compatibility while keeping release ABIs slim
+            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+        }
+    }
+
+    packagingOptions {
+        jniLibs {
+            // Force legacy extraction so ndk-translation can load ARM libs on x86 emulators
+            useLegacyPackaging true
         }
     }
 

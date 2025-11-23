@@ -114,10 +114,10 @@ All transcription and translation documentation and guides are located in the pr
 
 **Transcription Service:**
 ```
-File: lib/services/live_transcription_service.dart (101 lines)
-Platform Channel: com.streamhub.iptv/transcription
-Settings Keys: transcription_enabled, transcription_language, tts_enabled
-UI Location: Settings → Cloud & AI Tab
+File: lib/services/whisper_transcription_service.dart (600+ lines)
+Model Loader: WhisperSpeechService + AIModelManager
+Settings Keys: transcription_enabled, source_language, target_language, tts_enabled
+UI Location: Settings → Cloud & AI Tab (Whisper Live Captions)
 ```
 
 **Translation Service:**
@@ -129,11 +129,11 @@ Settings Keys: translation_enabled, source_language, target_language
 UI Location: Settings → Cloud & AI Tab
 ```
 
-**Android Native Integration:**
+**Whisper Model Management:**
 ```
-File: android/app/src/main/kotlin/com/streamhub/iptv/MainActivity.kt
-Methods: startAudioCapture(), stopAudioCapture()
-Audio Source: Video stream (NOT microphone)
+File: lib/services/whisper_speech_service.dart
+Models: Tiny/Base/Small (bundled + downloadable)
+Storage: Application documents directory (one-time download)
 ```
 
 ---
@@ -159,25 +159,24 @@ Audio Source: Video stream (NOT microphone)
 - Total with 5 languages: ~544 MB
 
 **Languages:**
-- Transcription: Device-dependent (platform STT)
-- Translation: 59 languages supported
+- Transcription: Whisper Tiny/Base/Small (best for English, usable for many languages)
+- Translation: 59+ languages supported via ML Kit packs
 
 ---
 
 ## 🎙️ Audio Flow (One-Minute Explanation)
 
-**Without Microphone Capture:**
-1. Video plays on screen
-2. Audio plays through device speakers/headphones
-3. Platform channel captures the video stream audio
-4. Google Speech Recognition processes the audio
-5. Transcription appears as subtitle on screen
-6. (Optional) Translation service translates to another language
+**Current Whisper Flow:**
+1. Active video playback audio is mirrored via Android's audio-playback capture API (MediaProjection)
+2. A background EventChannel streams 16 kHz PCM chunks into `WhisperTranscriptionService`
+3. Audio converts to mel spectrogram and feeds the Whisper TFLite model
+4. Text appears instantly in overlay
+5. (Optional) ML Kit translates locally + TTS speaks result
 
 This means:
-- ✅ Real audio from video is transcribed (not microphone)
-- ✅ Works even on TV devices without microphones
-- ✅ Captures everything: dialogue, music, ambient sound
+- ✅ 100% offline transcription once models download
+- ✅ No external APIs or platform STT dependency
+- ⚠️ Requires Android 10+ playback-capture permission (system "Start capturing audio" prompt)
 
 ---
 
@@ -199,19 +198,19 @@ Quick verification that everything is working:
 ## ❓ FAQ
 
 **Q: Do I need internet for transcription?**
-A: For transcription: Yes (platform STT uses cloud). For translation: Only for first model download, then offline.
+A: Only to download Whisper + translation models the first time. After that everything runs offline.
 
 **Q: Which languages are supported?**
-A: See full list in TRANSCRIPTION_TRANSLATION_READY.md. 59 for translation, device-dependent for transcription.
+A: Whisper models cover dozens of languages (best accuracy in English). Translation supports 59+ ML Kit languages—see TRANSCRIPTION_TRANSLATION_READY.md for details.
 
 **Q: How much storage do I need?**
 A: ~200-300 MB for app + models. Base is 344 MB APK, each language model adds 15-50 MB.
 
 **Q: What about privacy?**
-A: Transcription uses platform APIs (Android/Google). Translation is 100% on-device after model download. No data collection.
+A: Whisper + ML Kit run entirely on-device after the initial downloads. No audio/ text leaves the device.
 
 **Q: Will it work on Android TV?**
-A: Yes! Perfect for Android TV (no microphone needed, uses video stream audio).
+A: Yes—grant the one-time "capture audio" permission (MediaProjection) when the system dialog appears. No microphone is required for live captions.
 
 **Q: How do I test this?**
 A: Follow TRANSCRIPTION_TRANSLATION_TESTING.md for complete test suite.
@@ -243,7 +242,7 @@ A: All error handling is built-in with recovery logic. See error documentation i
 ├── TRANSCRIPTION_AND_TRANSLATION_INDEX.md        ← This file
 │
 ├── lib/services/
-│   ├── live_transcription_service.dart           ← Transcription implementation
+│   ├── whisper_transcription_service.dart        ← Whisper implementation
 │   └── mlkit_translation_service.dart            ← Translation implementation
 │
 ├── lib/screens/settings_screen.dart              ← UI integration (Cloud & AI tab)

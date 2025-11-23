@@ -1,73 +1,116 @@
 import 'package:flutter/foundation.dart';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
-import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:iptv_player/services/ai_model_manager.dart';
 
 /// Whisper Speech Service for downloading and managing Whisper models
 class WhisperSpeechService extends ChangeNotifier {
-  bool _isModelDownloaded = false;
-  bool _isDownloading = false;
-  double _downloadProgress = 0.0;
-  
-  bool get isModelDownloaded => _isModelDownloaded;
-  bool get isDownloading => _isDownloading;
-  double get downloadProgress => _downloadProgress;
+  static const _preferredModelKey = 'whisper_active_model';
+
+  AIModelManager? _modelManager;
+  String _selectedModelId = AIModel.whisperTiny.id;
+  bool _prefsLoaded = false;
+
+  List<AIModel> get speechModels =>
+      AIModel.byCategory(ModelCategory.speechRecognition);
+
+  String get selectedModelId => _selectedModelId;
+  AIModel get selectedModel => speechModels.firstWhere(
+        (model) => model.id == _selectedModelId,
+        orElse: () => speechModels.first,
+      );
+
+  bool get isModelDownloaded =>
+      _modelManager?.isModelDownloaded(_selectedModelId) ?? false;
+  bool get isDownloading =>
+      _modelManager?.isDownloading(_selectedModelId) ?? false;
+  double get downloadProgress =>
+      _modelManager?.getDownloadProgress(_selectedModelId) ?? 0.0;
+  ModelDownloadStatus get selectedModelStatus =>
+      _modelManager?.getModelStatus(_selectedModelId) ??
+      ModelDownloadStatus.notDownloaded;
 
   Future<void> initialize() async {
-    await _checkModelExists();
-  }
-
-  Future<void> _checkModelExists() async {
-    try {
-      final appDir = await getApplicationDocumentsDirectory();
-      final modelPath = '${appDir.path}/whisper_tiny.tflite';
-      _isModelDownloaded = await File(modelPath).exists();
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Error checking model: $e');
+    if (_prefsLoaded) return;
+    final prefs = await SharedPreferences.getInstance();
+    final savedModelId = prefs.getString(_preferredModelKey);
+    if (savedModelId != null &&
+        speechModels.any((model) => model.id == savedModelId)) {
+      _selectedModelId = savedModelId;
     }
-  }
-
-  Future<void> downloadModelIfNeeded() async {
-    if (_isModelDownloaded || _isDownloading) return;
-
-    _isDownloading = true;
-    _downloadProgress = 0.0;
+    _prefsLoaded = true;
     notifyListeners();
+  }
 
-    try {
-      final appDir = await getApplicationDocumentsDirectory();
-      final modelPath = '${appDir.path}/whisper_tiny.tflite';
-      
-      // Model URL - you'll need to host this or use a CDN
-      const modelUrl = 'https://huggingface.co/UsefulSensors/whisper-tiny-en/resolve/main/whisper_tiny.tflite';
-      
-      final request = http.Request('GET', Uri.parse(modelUrl));
-      final response = await request.send();
-      
-      final contentLength = response.contentLength ?? 0;
-      final file = File(modelPath);
-      final sink = file.openWrite();
-      
-      var received = 0;
-      await for (final chunk in response.stream) {
-        received += chunk.length;
-        sink.add(chunk);
-        
-        if (contentLength > 0) {
-          _downloadProgress = received / contentLength;
-          notifyListeners();
-        }
-      }
-      
-      await sink.close();
-      _isModelDownloaded = true;
-    } catch (e) {
-      debugPrint('Error downloading model: $e');
-    } finally {
-      _isDownloading = false;
-      notifyListeners();
-    }
+  void attachModelManager(AIModelManager? manager) {
+    if (identical(_modelManager, manager)) return;
+    _modelManager?.removeListener(_handleManagerChange);
+    _modelManager = manager;
+    _modelManager?.addListener(_handleManagerChange);
+    notifyListeners();
+  }
+
+  void _handleManagerChange() {
+    notifyListeners();
+  }
+
+  Future<void> setSelectedModel(String modelId) async {
+    if (_selectedModelId == modelId) return;
+    final exists = speechModels.any((model) => model.id == modelId);
+    if (!exists) return;
+    _selectedModelId = modelId;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_preferredModelKey, modelId);
+    notifyListeners();
+  }
+
+  Future<bool> downloadModel(String modelId) async {
+    final manager = _modelManager;
+    if (manager == null) return false;
+    return manager.downloadModel(modelId);
+  }
+
+  Future<bool> deleteModel(String modelId) async {
+    final manager = _modelManager;
+    if (manager == null) return false;
+    return manager.deleteModel(modelId);
+  }
+
+  Future<bool> downloadModelIfNeeded({String? modelId}) async {
+    final targetId = modelId ?? _selectedModelId;
+    final manager = _modelManager;
+    if (manager == null) return false;
+    if (manager.isModelDownloaded(targetId)) return true;
+    return manager.downloadModel(targetId);
+  }
+
+  Future<String?> getSelectedModelPath() async {
+    final manager = _modelManager;
+    if (manager == null) return null;
+    return manager.getModelPath(_selectedModelId);
+  }
+
+  bool isModelReady(String modelId) {
+    final manager = _modelManager;
+    if (manager == null) return false;
+    return manager.isModelDownloaded(modelId);
+  }
+
+  double getDownloadProgressFor(String modelId) {
+    final manager = _modelManager;
+    if (manager == null) return 0.0;
+    return manager.getDownloadProgress(modelId);
+  }
+
+  ModelDownloadStatus getStatusFor(String modelId) {
+    final manager = _modelManager;
+    if (manager == null) return ModelDownloadStatus.notDownloaded;
+    return manager.getModelStatus(modelId);
+  }
+
+  @override
+  void dispose() {
+    _modelManager?.removeListener(_handleManagerChange);
+    super.dispose();
   }
 
   // No additional resources to dispose at this time.

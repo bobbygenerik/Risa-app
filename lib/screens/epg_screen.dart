@@ -766,13 +766,6 @@ class _EPGScreenState extends State<EPGScreen> {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              SizedBox(height: 4),
-              LinearProgressIndicator(
-                value: currentProgram.progressPercentage,
-                backgroundColor: AppTheme.highlight,
-                color: AppTheme.primaryBlue,
-                minHeight: 3,
-              ),
               SizedBox(height: 8),
               if (currentProgram.description != null)
                 Text(
@@ -1140,13 +1133,6 @@ class _EPGScreenState extends State<EPGScreen> {
                   '${DateFormat.Hm().format(program.startTime)} - ${DateFormat.Hm().format(program.endTime)}',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
-                if (isLive)
-                  LinearProgressIndicator(
-                    value: program.progressPercentage,
-                    backgroundColor: AppTheme.textPrimary.withAlpha((0.3 * 255).round()),
-                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.textPrimary),
-                    minHeight: 2,
-                  ),
               ],
             ),
           ),

@@ -33,40 +33,33 @@ All features from **Option 3** (Subtitles, Multiple Audio Tracks, Picture-in-Pic
 - `_toggleLiveTranscription()` - Start/stop transcription
 - `_handleKeyPress()` - Process all remote control inputs
 
-### 2. **LiveTranscriptionService** (`lib/services/live_transcription_service.dart`)
-- **430 lines** of on-device transcription and translation service
-- Uses `speech_to_text` for recognition + Google Translate for translation
-- Fully integrated with Provider for state management
+### 2. **WhisperTranscriptionService** (`lib/services/whisper_transcription_service.dart`)
+- **600+ lines** of Whisper-powered transcription and translation
+- Runs entirely on-device via `tflite_flutter`, `record`, and `google_mlkit_translation`
+- Attaches to `WhisperSpeechService` for dynamic model management
 
 **Features:**
-- ✅ Real-time speech-to-text (15+ languages)
-- ✅ On-device processing (100% private)
-- ✅ Live translation to any language
-- ✅ Text-to-speech for translated audio
-- ✅ Export transcriptions as SRT subtitle files
-- ✅ Automatic cleanup (5-minute retention)
-- ✅ Subtitle history management
+- ✅ Real-time Whisper transcription (Tiny/Base/Small models)
+- ✅ 100% offline processing (no server round trips)
+- ✅ Optional on-device translation using ML Kit packs
+- ✅ Text-to-speech for translated captions
+- ✅ Export captions as SRT files + transcript history
+- ✅ Automatic cleanup timer + translation pack management
 
 **Key Properties:**
-- `isTranscribing` - Currently listening to audio
-- `isTranslating` - Translation enabled
-- `isTTSEnabled` - Text-to-speech active
-- `sourceLanguage` - Language spoken in video
-- `targetLanguage` - Language to translate to
-- `currentText` - Live transcription text
-- `currentTranslatedText` - Live translated text
-- `transcriptions` - History of all entries
-- `latestSubtitles` - Last 3 entries for display
+- `isWhisperLoaded` - Active Whisper model ready for inference
+- `isTranscribing` / `isTranslating` / `isTTSEnabled`
+- `sourceLanguage` / `targetLanguage` (`TranslateLanguage` enums)
+- `downloadProgress` / `isDownloadingModels` for ML Kit packs
+- `latestSubtitles`, `transcriptions`, `currentText`, `currentTranslatedText`
 
 **Key Methods:**
-- `initialize()` - Set up speech recognition and TTS
-- `startTranscription()` - Begin listening to audio
-- `stopTranscription()` - Stop listening
-- `setTranslationEnabled()` - Toggle translation
-- `setSourceLanguage()` - Change input language
-- `setTargetLanguage()` - Change output language
-- `exportAsSRT()` - Generate SRT subtitle file
-- `clearTranscriptions()` - Remove all history
+- `initialize()` / `_loadWhisperModel()` - Prepare interpreter + timers
+- `attachSpeechService()` - React to model downloads/selections
+- `startTranscription()` / `stopTranscription()` - Manage recorder + timers
+- `setTranslationEnabled()` / `downloadTranslationModels()` - Control ML Kit packs
+- `setSourceLanguage()` / `setTargetLanguage()` - Update translation languages
+- `exportAsSRT()` / `clearTranscriptions()` - Manage transcript history
 
 ### 3. **MainActivity.kt** (Updated)
 - **90 lines** of Kotlin code for Android PiP platform channel
@@ -107,10 +100,26 @@ All features from **Option 3** (Subtitles, Multiple Audio Tracks, Picture-in-Pic
 ### 1. **main.dart**
 **Added:**
 ```dart
-import 'package:iptv_player/services/live_transcription_service.dart';
+import 'package:iptv_player/services/whisper_speech_service.dart';
+import 'package:iptv_player/services/whisper_transcription_service.dart';
 
-// In providers list:
-ChangeNotifierProvider(create: (_) => LiveTranscriptionService()..initialize()),
+ChangeNotifierProxyProvider<AIModelManager, WhisperSpeechService>(
+   create: (_) => WhisperSpeechService()..initialize(),
+   update: (_, modelManager, whisperService) {
+      final service = whisperService ?? (WhisperSpeechService()..initialize());
+      service.attachModelManager(modelManager);
+      return service;
+   },
+),
+ChangeNotifierProxyProvider<WhisperSpeechService, WhisperTranscriptionService>(
+   create: (_) => WhisperTranscriptionService()..initialize(),
+   update: (_, speechService, transcriptionService) {
+      final service = transcriptionService ??
+            (WhisperTranscriptionService()..initialize());
+      service.attachSpeechService(speechService);
+      return service;
+   },
+),
 ```
 
 ### 2. **mini_player_screen.dart**
@@ -122,12 +131,14 @@ ChangeNotifierProvider(create: (_) => LiveTranscriptionService()..initialize()),
 ### 3. **pubspec.yaml**
 **Added Dependencies:**
 ```yaml
-subtitle_wrapper_package: ^2.0.2  # Subtitle rendering
-translator: ^1.0.0                # Google Translate API
-flutter_tts: ^4.2.0               # Text-to-speech
+tflite_flutter: ^0.11.0           # Whisper model runtime
+record: ^6.0.0                    # 16 kHz audio capture
+google_mlkit_translation: ^0.11.0 # Offline translation packs
+google_mlkit_language_id: ^0.11.0 # Fallback language utilities
+flutter_tts: ^4.2.0               # Text-to-speech for captions
 ```
 
-**Note:** Already had `speech_to_text` for voice search, now also used for transcription.
+**Note:** Whisper no longer depends on `speech_to_text` or remote APIs—everything runs through the Whisper/ML Kit stack.
 
 ### 4. **AndroidManifest.xml**
 **Added PiP Support:**
@@ -191,12 +202,12 @@ flutter_tts: ^4.2.0               # Text-to-speech
 7. Close PiP to stop playback
 
 ### Translation Flow:
-1. Transcription service captures speech → text
-2. Text sent to Google Translate API
-3. Translation returned in target language
-4. Translated text replaces original in subtitle display
-5. If TTS enabled, translated text spoken aloud
-6. Creates real-time dubbing effect
+1. Whisper pipeline records 30-second PCM chunks at 16 kHz
+2. Audio converted to a mel spectrogram and passed through the TFLite Whisper model
+3. Recognized text emitted to the overlay immediately
+4. If translation is enabled, ML Kit translates locally using downloaded packs (no internet during inference)
+5. Translated text replaces the overlay and, if TTS is enabled, is spoken aloud
+6. Result is a fully offline caption+translation loop once packs are cached
 
 ---
 
@@ -204,15 +215,17 @@ flutter_tts: ^4.2.0               # Text-to-speech
 
 ### Packages Installed:
 ```bash
-flutter pub add subtitle_wrapper_package  # Subtitle rendering
-flutter pub add translator                # Google Translate
-flutter pub add flutter_tts               # Text-to-speech
+flutter pub add tflite_flutter
+flutter pub add record
+flutter pub add google_mlkit_translation
+flutter pub add google_mlkit_language_id
+flutter pub add flutter_tts
 ```
 
 ### Total Package Count:
 - **Before:** 22 dependencies
-- **After:** 25 dependencies
-- **Size Impact:** +2.5 MB (minimal)
+- **After:** 27 dependencies (Whisper + ML Kit stack)
+- **Size Impact:** ~+45 MB once Whisper models are downloaded (one-time, stored on device)
 
 ---
 
@@ -244,7 +257,7 @@ flutter pub add flutter_tts               # Text-to-speech
 ### Live Transcription:
 - [ ] Go to Settings → Subtitles
 - [ ] Enable Live Transcription
-- [ ] Grant microphone permission
+- [ ] Approve the Android "capture audio" permission prompt (MediaProjection)
 - [ ] Select source language
 - [ ] Play video with clear speech
 - [ ] Verify text appears in real-time
@@ -307,8 +320,9 @@ flutter pub add flutter_tts               # Text-to-speech
 - ✅ **Video playback** - Direct streaming, no proxy
 
 ### Network Required:
-- ⚠️ **Translation** - Google Translate API (free tier)
+- ⚠️ **Translation packs** - One-time ML Kit language model download per language
 - ⚠️ **Subtitles** - Downloaded from provided URL
+- ✅ Whisper inference + translation run offline once models are local
 
 ### Data Collection:
 - ❌ **No analytics** - No tracking or telemetry
@@ -333,15 +347,12 @@ flutter pub add flutter_tts               # Text-to-speech
 - ✅ Text-to-speech (free, system voices)
 
 ### Potentially Paid:
-- ⚠️ **Google Translate API** - Free tier: 500,000 chars/month
-  - After free tier: $20 per million characters
-  - Average usage: ~100 chars per minute of video
-  - **Recommendation:** Should stay within free tier for personal use
+- ⚠️ **None** for speech/translation—Whisper + ML Kit are fully offline once models download (data usage only)
+- ⚠️ **Optional CDN/storage** if you host large SRT libraries or custom Whisper models
 
 ### Total Monthly Cost:
-- **Expected:** $0 (within free tier)
-- **Worst Case:** $1-2 if heavy translation usage
-- **Enterprise:** Consider self-hosted translation models
+- **Expected:** $0 (model downloads occur over standard internet, no API billing)
+- **Enterprise:** Budget only for content hosting/bandwidth, not AI APIs
 
 ---
 
@@ -420,7 +431,7 @@ Flutter Analyze: 0 errors, 85 info/warnings
 
 ### Lines of Code:
 - **EnhancedVideoPlayerScreen:** 920 lines
-- **LiveTranscriptionService:** 430 lines
+- **WhisperTranscriptionService:** 600+ lines
 - **MainActivity.kt:** 90 lines
 - **Settings UI additions:** ~300 lines
 - **Total new code:** ~1,740 lines
@@ -439,8 +450,8 @@ Flutter Analyze: 0 errors, 85 info/warnings
 ### Current Limitations:
 1. **Audio Track Switching** - UI ready, platform implementation pending
 2. **Subtitle Sync** - No manual timing adjustment yet
-3. **Translation Offline** - Requires internet connection
-4. **Transcription Languages** - Limited to speech_to_text supported languages
+3. **Translation Packs** - Users must download ML Kit language packs before captions can be translated offline
+4. **Transcription Languages** - Accuracy best in languages supported by the selected Whisper model (Tiny/Base tuned for English)
 5. **PiP Controls** - Basic controls only (platform limitation)
 
 ### Future Improvements:
@@ -461,8 +472,8 @@ Flutter Analyze: 0 errors, 85 info/warnings
 
 ### Troubleshooting:
 - Check device meets minimum requirements (Android 7.0+)
-- Verify microphone permission for transcription
-- Ensure internet connection for translation
+- Verify the Android audio-capture permission was granted (MediaProjection prompt)
+- Ensure ML Kit translation packs are downloaded (first-time internet required)
 - Check video format compatibility (HLS/DASH/MP4)
 
 ### Community:
@@ -479,8 +490,8 @@ Flutter Analyze: 0 errors, 85 info/warnings
 - Subtitles (SRT, VTT, WebVTT)
 - Multiple audio tracks (UI ready)
 - Picture-in-Picture (Android 8.0+)
-- Live transcription (15+ languages)
-- Live translation (15+ languages)
+- Live transcription (Whisper Tiny/Base/Small)
+- Live translation (ML Kit language packs)
 - Text-to-speech (system voices)
 
 ✅ **Integration complete:**

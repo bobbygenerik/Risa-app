@@ -1,8 +1,14 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:iptv_player/widgets/top_navigation_bar.dart';
 import 'package:iptv_player/widgets/search_popup.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
+
+const bool kForceSearchPopup = bool.fromEnvironment(
+  'FORCE_SEARCH_POPUP',
+  defaultValue: false,
+);
 
 /// Main shell that keeps the navigation bar fixed while content changes
 class MainShell extends StatefulWidget {
@@ -25,6 +31,7 @@ class _MainShellState extends State<MainShell> {
   ContentFocusCallback? _contentFocusCallback;
   int _nextFocusToken = 0;
   int? _activeFocusToken;
+  bool _autoSearchTriggered = false;
 
   @override
   void initState() {
@@ -35,6 +42,14 @@ class _MainShellState extends State<MainShell> {
         setState(() => _updateTime());
       }
     });
+
+    if (kForceSearchPopup) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _autoSearchTriggered) return;
+        _autoSearchTriggered = true;
+        _showSearchDialog();
+      });
+    }
   }
 
   @override
@@ -81,12 +96,7 @@ class _MainShellState extends State<MainShell> {
               ],
               currentTime: _currentTime,
               showLogoAndTime: true,
-              onSearch: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => const SearchPopup(),
-                );
-              },
+              onSearch: _showSearchDialog,
               onFocusContent: _requestContentFocus,
             ),
             // Content area - changes when navigating between tabs
@@ -103,10 +113,18 @@ class _MainShellState extends State<MainShell> {
     );
   }
 
+  void _showSearchDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => const SearchPopup(),
+    );
+  }
+
   int _registerContentFocusCallback(ContentFocusCallback callback) {
     final token = ++_nextFocusToken;
     _contentFocusCallback = callback;
     _activeFocusToken = token;
+    debugPrint('content_focus: Shell registered focus callback token=$token');
     _scheduleContentFocusRequest();
     return token;
   }
@@ -115,18 +133,22 @@ class _MainShellState extends State<MainShell> {
     if (_activeFocusToken == token) {
       _activeFocusToken = null;
       _contentFocusCallback = null;
+      debugPrint('content_focus: Shell unregistered focus callback token=$token');
     }
   }
 
   bool _requestContentFocus() {
     final callback = _contentFocusCallback;
     if (callback == null) return false;
-    return callback();
+    final handled = callback();
+    debugPrint('content_focus: Shell focus request ${handled ? 'succeeded' : 'failed'}');
+    return handled;
   }
 
   void _scheduleContentFocusRequest() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      debugPrint('content_focus: Shell scheduling post-frame focus request');
       _contentFocusCallback?.call();
     });
   }

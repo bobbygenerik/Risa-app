@@ -114,7 +114,7 @@
 ## 🐛 Troubleshooting
 
 **Transcription not working?**
-- Check microphone permission
+- Check the Android audio-capture permission (MediaProjection prompt)
 - Verify device isn't too old (2019+)
 - Select correct source language
 

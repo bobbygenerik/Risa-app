@@ -8,21 +8,21 @@ Both **Live Transcription** and **ML Kit Translation** are fully configured and 
 
 ## ✅ What's Implemented
 
-### 1. Live Transcription Service
-**File:** `lib/services/live_transcription_service.dart`
+### 1. Whisper Transcription Service
+**File:** `lib/services/whisper_transcription_service.dart`
 
 **Features:**
-- ✅ Platform channel audio routing from video stream (NOT microphone)
-- ✅ Real-time speech-to-text processing
-- ✅ Multiple language support
+- ✅ Whisper Tiny/Base/Small (TFLite) inference via `tflite_flutter`
+- ✅ 16 kHz audio playback capture via Android's MediaProjection + `AudioRecord`
+- ✅ Multi-language support (per Whisper model) with rolling transcript window
+- ✅ On-device translation toggle powered by ML Kit
 - ✅ Text-to-speech (TTS) output support
-- ✅ Automatic transcription cleanup (30-second intervals)
 - ✅ Transcription export to SRT/JSON
-- ✅ Full error handling and recovery
+- ✅ Comprehensive error handling + cleanup timers
 
 **Audio Source:**
 ```
-Video Player → System Audio Path → Platform STT
+Video output → Android audio playback capture → EventChannel stream → WhisperTranscriptionService → Whisper TFLite
 ```
 
 ### 2. ML Kit Translation Service
@@ -96,6 +96,7 @@ During playback:
 - Real-time transcription appears at bottom of screen
 - If translation enabled, shows translated subtitle
 - TTS reads translations aloud (if enabled)
+- On Android 10+, accept the one-time "capture audio" permission prompt so playback audio can feed Whisper (no microphone needed)
 
 ### Step 5: Export Transcriptions
 - Button: "Export Transcriptions" in settings
@@ -114,7 +115,7 @@ Enhanced Video Player Screen
     │   └── Settings Button
     │       └── Settings Screen
     │           └── Cloud & AI Tab
-    │               ├── Live Transcription Service
+    │               ├── Whisper Transcription Service
     │               │   ├── startTranscription()
     │               │   ├── stopTranscription()
     │               │   ├── setSourceLanguage()
@@ -129,8 +130,8 @@ Enhanced Video Player Screen
     │                   ├── downloadLanguageModel()
     │                   └── getAvailableLanguages()
     │
-    └── Platform Channel (com.streamhub.iptv/transcription)
-        └── Audio Capture from Video Stream
+    └── Whisper Model Runner (TFLite Interpreter)
+      └── Stream Audio Capture + mel spectrogram pipeline
 ```
 
 ---
@@ -167,7 +168,7 @@ Before deploying to devices:
 
 - [ ] **Transcription**
   - [ ] Can enable/disable in Settings
-  - [ ] Detects speech from video (not microphone)
+  - [ ] Captures audio directly from active video playback (Android 10+ permission prompt)
   - [ ] Displays subtitle in real-time
   - [ ] Language selection works
   - [ ] Export to SRT format works

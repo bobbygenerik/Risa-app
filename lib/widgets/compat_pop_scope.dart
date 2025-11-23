@@ -24,12 +24,11 @@ class CompatPopScope extends StatelessWidget {
     // call `onPopInvokedWithResult` where we trigger the provided
     // `onWillPop` callback. This preserves the original semantics used in
     // this codebase (navigate somewhere and return false).
-    return PopScope<dynamic>(
+    return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
-        // Fire the user-provided handler asynchronously.
+      onPopInvoked: (didPop) {
+        if (didPop) return;
         if (onWillPop != null) {
-          // Fire-and-forget; handler can perform navigation or other work.
           Future.microtask(() => onWillPop!());
         }
       },

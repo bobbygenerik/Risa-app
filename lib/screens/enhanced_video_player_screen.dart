@@ -11,7 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iptv_player/widgets/native_exoplayer.dart';
 // Disabled - causes UnimplementedError
 // import 'package:subtitle_wrapper_package/subtitle_wrapper_package.dart';
-import 'package:iptv_player/services/live_transcription_service.dart';
+import 'package:iptv_player/services/whisper_transcription_service.dart';
 import 'package:iptv_player/services/native_capabilities_service.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
@@ -190,8 +190,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         aspectRatio: 16 / 9,
         allowFullScreen: true,
         allowMuting: true,
-        showControls: true,
-        showControlsOnInitialize: true,
+        showControls: false,
+        showControlsOnInitialize: false,
         placeholder: Container(
           color: Colors.black,
           child: const Center(child: CircularProgressIndicator()),
@@ -610,7 +610,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   Future<void> _toggleLiveTranscription({bool? forceEnable}) async {
-    final transcriptionService = Provider.of<LiveTranscriptionService>(
+    final transcriptionService = Provider.of<WhisperTranscriptionService>(
       context,
       listen: false,
     );
@@ -621,9 +621,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     }
 
     if (shouldEnable) {
-      await transcriptionService.startTranscription(
-        channelLanguageCode: widget.channel?.language,
-      );
+      await transcriptionService.startTranscription();
       if (mounted) {
         setState(() {
           _liveTranscriptionEnabled = true;
@@ -634,7 +632,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           context,
           const SnackBar(
             content: Text(
-              'Live transcription enabled — detecting spoken language...',
+              'Live transcription enabled — Whisper is listening...',
             ),
             duration: Duration(seconds: 3),
           ),
@@ -850,23 +848,26 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       bottom: 80,
       left: 16,
       right: 16,
-      child: Consumer<LiveTranscriptionService>(
+      child: Consumer<WhisperTranscriptionService>(
         builder: (context, transcriptionService, _) {
-          final detectedLanguage = transcriptionService.detectedLanguageLabel;
-
-          if (transcriptionService.isDetectingLanguage) {
+          if (!transcriptionService.isWhisperLoaded) {
             return _buildTranscriptionStatusPill(
-              message: 'Detecting spoken language...',
+              message: 'Download a Whisper model in AI Settings to enable live captions.',
             );
           }
 
           final text = transcriptionService.latestSubtitles;
 
+          if (!transcriptionService.isTranscribing) {
+            return _buildTranscriptionStatusPill(
+              message: 'Whisper ready – start transcription to show live captions.',
+            );
+          }
+
           if (text.isEmpty) {
-            final listeningLabel = detectedLanguage == null
-                ? 'Listening...'
-                : 'Listening in $detectedLanguage...';
-            return _buildTranscriptionStatusPill(message: listeningLabel);
+            return _buildTranscriptionStatusPill(
+              message: 'Listening for speech...',
+            );
           }
 
           return Container(
@@ -885,20 +886,15 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                     const SizedBox(width: 8),
                     Text(
                       transcriptionService.isTranslating
-                          ? 'LIVE TRANSLATION'
-                          : 'LIVE TRANSCRIPTION',
+                          ? 'WHISPER LIVE TRANSLATION'
+                          : 'WHISPER LIVE TRANSCRIPTION',
                       style: TextStyle(
                         color: AppTheme.primaryBlue,
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    if (detectedLanguage != null) ...[
-                      const SizedBox(width: 8),
-                      _buildLanguageChip(detectedLanguage),
-                    ],
                     const SizedBox(width: 12),
-                    // Translation toggle
                     IconButton(
                       icon: Icon(
                         transcriptionService.isTranslating
@@ -910,15 +906,14 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                         size: 18,
                       ),
                       tooltip: transcriptionService.isTranslating
-                          ? 'Disable translation'
-                          : 'Enable translation',
+                          ? 'Disable on-device translation'
+                          : 'Enable on-device translation',
                       onPressed: () {
                         transcriptionService.setTranslationEnabled(
                           !transcriptionService.isTranslating,
                         );
                       },
                     ),
-                    // Export / Save
                     IconButton(
                       icon: const Icon(
                         Icons.download,
@@ -927,8 +922,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                       ),
                       tooltip: 'Export transcript (copy SRT to clipboard)',
                       onPressed: () async {
+                        final clipContext = context;
                         try {
-                          final clipContext = context;
                           final srt = transcriptionService.exportAsSRT();
                           await Clipboard.setData(ClipboardData(text: srt));
                           if (!clipContext.mounted) return;
@@ -939,7 +934,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                             ),
                           );
                         } catch (e) {
-                          final clipContext = context;
                           if (!clipContext.mounted) return;
                           showAppSnackBar(
                             clipContext,
@@ -950,7 +944,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                         }
                       },
                     ),
-                    // Clear
                     IconButton(
                       icon: const Icon(
                         Icons.delete,
@@ -982,20 +975,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
             ),
           );
         },
-      ),
-    );
-  }
-
-  Widget _buildLanguageChip(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white12,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        'Detected: $label',
-        style: const TextStyle(fontSize: 10, color: Colors.white70),
       ),
     );
   }
@@ -1131,8 +1110,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             _buildControlDeck(isPlaying),
-            const SizedBox(height: 14),
-            _buildHintWrap(),
           ],
         ),
       ),
@@ -1163,9 +1140,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        border: Border.all(color: Colors.white.withOpacity(0.12)),
         boxShadow: const [
           BoxShadow(
             color: Colors.black26,
@@ -1237,38 +1214,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     );
   }
 
-  Widget _buildHintWrap() {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 8,
-      alignment: WrapAlignment.center,
-      children: [
-        _buildHint('SELECT', 'Play/Pause'),
-        _buildHint('←→', 'Seek'),
-        _buildHint('↑', 'Subtitles'),
-        _buildHint('↓', 'Audio'),
-        _buildHint('T/Y', 'Transcription'),
-        if (_isPipSupported) _buildHint('P', 'PiP'),
-        _buildHint('BACK', 'Exit'),
-      ],
-    );
-  }
-
-  Widget _buildHint(String key, String action) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-        color: Colors.white.withValues(alpha: 0.08),
-      ),
-      child: Text(
-        '$key · $action',
-        style: const TextStyle(color: Colors.white, fontSize: 12),
-      ),
-    );
-  }
-
   Widget _buildControlButton({
     required IconData icon,
     required String label,
@@ -1290,7 +1235,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
     final backgroundColor = isPrimary
       ? null
-      : Colors.white.withValues(alpha: isActive ? 0.18 : 0.08);
+      : Colors.white.withOpacity(isActive ? 0.18 : 0.08);
 
     return Opacity(
       opacity: isDisabled ? 0.45 : 1.0,
@@ -1310,7 +1255,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
               gradient: gradient,
               color: backgroundColor,
               border: Border.all(
-                color: Colors.white.withValues(alpha: isPrimary ? 0.0 : 0.15),
+                color: Colors.white.withOpacity(isPrimary ? 0.0 : 0.15),
               ),
               boxShadow: isPrimary || isActive
                   ? const [

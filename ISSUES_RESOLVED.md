@@ -8,14 +8,14 @@ All major issues identified in the GitHub issues have been successfully addresse
 
 **Solution Applied**:
 - ✅ Removed all `dependency_overrides` from `pubspec.yaml`
-- ✅ Vosk integration is properly guarded with adapter pattern in `lib/services/vosk_adapter.dart`
-- ✅ App compiles and runs without Vosk, with graceful fallback behavior
+- ✅ Deprecated Vosk pathway fully retired (service + adapter unused)
+- ✅ App now relies on Whisper-only on-device transcription
 - ✅ No forced downgrades of other packages
 
 **Files Modified**:
 - `pubspec.yaml` - Removed dependency overrides
-- `lib/services/vosk_adapter.dart` - Already properly stubbed
-- `lib/services/true_ondevice_transcription_service.dart` - Already properly guarded
+- `lib/services/vosk_adapter.dart` - **Removed** along with the deprecated service
+- `lib/services/true_ondevice_transcription_service.dart` - **Removed** to simplify the stack
 
 ## ✅ Issue 2: Deprecation Cleanups (RESOLVED)
 **Problem**: Usage of deprecated `textScaleFactor` API causing analyzer warnings.
@@ -65,7 +65,7 @@ All major issues identified in the GitHub issues have been successfully addresse
 - ✅ **Settings Screen**: Complete TV-friendly interface with crash-free text editing
 - ✅ **Dependencies**: Clean dependency tree without overrides or conflicts
 - ✅ **Modern APIs**: All deprecated Flutter APIs updated to current standards
-- ✅ **Vosk Integration**: Optional and properly guarded (no forced dependencies)
+- ✅ **On-Device Captions**: Whisper-based pipeline without redundant Vosk fallback
 
 ### Testing Recommendations:
 1. **Android TV**: Test settings navigation with remote control

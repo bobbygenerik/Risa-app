@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
+import 'package:iptv_player/utils/startup_probe.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
@@ -45,6 +46,7 @@ import 'package:iptv_player/utils/snackbar_helper.dart';
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
+  StartupProbe.mark('main() entry');
   runZonedGuarded(
     () {
       // Ensure the Flutter bindings are created inside the same Zone
@@ -52,10 +54,12 @@ void main() {
       // the guarded zone can cause a "bindings initialized in a
       // different zone" error when the framework is used later.
       WidgetsFlutterBinding.ensureInitialized();
+      StartupProbe.mark('Flutter bindings initialized');
       SystemChrome.setPreferredOrientations([
         DeviceOrientation.landscapeLeft,
         DeviceOrientation.landscapeRight,
       ]);
+      StartupProbe.mark('Preferred orientations locked');
 
       FlutterError.onError = (FlutterErrorDetails details) {
         FlutterError.presentError(details);
@@ -66,6 +70,7 @@ void main() {
       };
 
       // Show a short startup loader while TMDB disk cache loads
+      StartupProbe.mark('Launching StartupLoader');
       runApp(const StartupLoader());
     },
     (error, stack) {
@@ -88,22 +93,38 @@ class _StartupLoaderState extends State<StartupLoader> {
   @override
   void initState() {
     super.initState();
+    StartupProbe.mark('StartupLoader initState');
     _initialize();
   }
 
   Future<void> _initialize() async {
-    try {
-      // Load disk cache so lookups hit cache immediately. Errors are safe to ignore.
-      await TMDBService.init();
-    } catch (e) {
-      debugPrint('TMDBService.init() failed during startup: $e');
-    } finally {
-      if (mounted) {
-        // Small delay so the indicator is visible briefly on very fast devices
-        await Future.delayed(const Duration(milliseconds: 150));
-        setState(() => _ready = true);
-      }
+    StartupProbe.mark('StartupLoader: TMDB init start');
+    const tmdbBudget = Duration(milliseconds: 600);
+    final tmdbFuture = TMDBService.init()
+        .then<bool>((_) {
+          StartupProbe.mark('StartupLoader: TMDB init finished');
+          return true;
+        })
+        .catchError((error, stack) {
+          debugPrint('TMDBService.init() failed during startup: $error');
+          return true;
+        });
+
+    final completedWithinBudget = await Future.any<bool>([
+      tmdbFuture,
+      Future.delayed(tmdbBudget, () => false),
+    ]);
+
+    if (!mounted) return;
+
+    if (!completedWithinBudget) {
+      StartupProbe.mark('StartupLoader: continuing without TMDB init');
     }
+
+    // Small delay so the indicator is visible briefly on very fast devices
+    await Future.delayed(const Duration(milliseconds: 150));
+    StartupProbe.mark('StartupLoader: ready to enter MyApp');
+    setState(() => _ready = true);
   }
 
   @override
@@ -133,11 +154,30 @@ class _StartupLoaderState extends State<StartupLoader> {
 /// Global error handler for reporting and displaying errors
 class _ErrorHandler {
   static final _errorNotifier = ValueNotifier<_AppError?>(null);
+  static _AppError? _pendingError;
+  static bool _errorDispatchScheduled = false;
 
   static void reportError(Object error, StackTrace stack) {
     debugPrint('Unhandled app error: $error');
     debugPrint(stack.toString());
-    _errorNotifier.value = _AppError(error, stack);
+    _pendingError = _AppError(error, stack);
+
+    final binding = WidgetsBinding.instance;
+
+    if (_errorDispatchScheduled) {
+      return;
+    }
+
+    _errorDispatchScheduled = true;
+    binding.addPostFrameCallback((_) {
+      _errorDispatchScheduled = false;
+      final pending = _pendingError;
+      if (pending == null) {
+        return;
+      }
+      _pendingError = null;
+      _errorNotifier.value = pending;
+    });
     // TODO: Optionally send error to analytics/crash service
   }
 
@@ -227,20 +267,43 @@ class _MyAppState extends State<MyApp> {
   bool _creatingDefaultProfile = false;
   late final ProfileProvider _profileProvider;
 
+  void _runDeferred(
+    FutureOr<void> Function() action, {
+    Duration delay = Duration.zero,
+  }) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (delay == Duration.zero) {
+        Future.microtask(action);
+      } else {
+        Future.delayed(delay, action);
+      }
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     _profileProvider = ProfileProvider();
+    StartupProbe.mark('MyAppState initState');
     _initialize();
   }
 
   Future<void> _initialize() async {
     try {
+      StartupProbe.mark('MyApp initialization: clear old playlists');
       await _clearOldPlaylists();
+      StartupProbe.mark('MyApp initialization: playlists cleared');
+      StartupProbe.mark('MyApp initialization: check disclaimer');
       await _checkDisclaimer();
+      StartupProbe.mark('MyApp initialization: disclaimer checked');
+      StartupProbe.mark('MyApp initialization: check/load playlist');
       await _checkAndLoadPlaylist();
+      StartupProbe.mark('MyApp initialization: playlist check finished');
 
+      StartupProbe.mark('MyApp initialization: load profiles');
       await _profileProvider.loadProfiles();
+      StartupProbe.mark('MyApp initialization: profiles loaded');
     } catch (error, stack) {
       debugPrint('Initialization error: $error');
       debugPrint('$stack');
@@ -250,6 +313,7 @@ class _MyAppState extends State<MyApp> {
           _profileReady = true;
           _loading = false;
         });
+        StartupProbe.mark('MyApp initialization: complete');
       }
     }
   }
@@ -306,34 +370,38 @@ class _MyAppState extends State<MyApp> {
     final prefs = await SharedPreferences.getInstance();
     final playlistType = prefs.getString('playlist_type');
 
-    if (playlistType != null) {
-      // Try to auto-load the saved playlist
-      try {
-        String? playlistUrl;
+    if (playlistType == null) {
+      await prefs.remove('cached_playlist');
+      await prefs.remove('cache_timestamp');
+      return;
+    }
 
-        if (playlistType == 'm3u') {
-          playlistUrl = prefs.getString('m3u_url');
-        } else if (playlistType == 'xtream') {
-          final server = prefs.getString('xtream_server');
-          final username = prefs.getString('xtream_username');
-          final password = prefs.getString('xtream_password');
+    // Try to auto-load the saved playlist
+    try {
+      String? playlistUrl;
 
-          if (server != null && username != null && password != null) {
-            playlistUrl =
-                '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
-          }
+      if (playlistType == 'm3u') {
+        playlistUrl = prefs.getString('m3u_url');
+      } else if (playlistType == 'xtream') {
+        final server = prefs.getString('xtream_server');
+        final username = prefs.getString('xtream_username');
+        final password = prefs.getString('xtream_password');
+
+        if (server != null && username != null && password != null) {
+          playlistUrl =
+              '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
         }
-
-        if (playlistUrl != null && playlistUrl.isNotEmpty) {
-          // Will be loaded by ChannelProvider after it's created
-          setState(() {
-            _hasPlaylist = true;
-          });
-        }
-      } catch (error, stack) {
-        debugPrint('Failed to auto-load playlist: $error');
-        debugPrint('$stack');
       }
+
+      if (playlistUrl != null && playlistUrl.isNotEmpty) {
+        // Will be loaded by ChannelProvider after it's created
+        setState(() {
+          _hasPlaylist = true;
+        });
+      }
+    } catch (error, stack) {
+      debugPrint('Failed to auto-load playlist: $error');
+      debugPrint('$stack');
     }
   }
 
@@ -381,9 +449,16 @@ class _MyAppState extends State<MyApp> {
             create: (context) {
               final provider = ChannelProvider();
               // Auto-load playlist after a short delay to ensure initialization
-              Future.delayed(const Duration(milliseconds: 500), () {
-                provider.autoLoadPlaylist();
-              });
+              if (_hasPlaylist) {
+                _runDeferred(
+                  provider.autoLoadPlaylist,
+                  delay: const Duration(milliseconds: 500),
+                );
+              } else {
+                StartupProbe.mark(
+                  'ChannelProvider.autoLoadPlaylist skipped (no saved playlist)',
+                );
+              }
               return provider;
             },
             update: (context, contentProvider, channelProvider) {
@@ -392,16 +467,34 @@ class _MyAppState extends State<MyApp> {
             },
           ),
           ChangeNotifierProvider(
-            create: (_) => VoiceSearchService()..initialize(),
+            create: (_) {
+              final service = VoiceSearchService();
+              _runDeferred(service.initialize);
+              return service;
+            },
           ),
           ChangeNotifierProvider(create: (_) => EpgService()),
           // Drive sync service removed.
-          ChangeNotifierProvider(create: (_) => AIModelManager()..initialize()),
           ChangeNotifierProvider(
-            create: (_) => AIUpscalingService()..initialize(),
+            create: (_) {
+              final manager = AIModelManager();
+              _runDeferred(manager.initialize);
+              return manager;
+            },
+          ),
+          ChangeNotifierProvider(
+            create: (_) {
+              final service = AIUpscalingService();
+              _runDeferred(service.initialize);
+              return service;
+            },
           ),
           ChangeNotifierProxyProvider<AIModelManager, WhisperSpeechService>(
-            create: (_) => WhisperSpeechService()..initialize(),
+            create: (_) {
+              final service = WhisperSpeechService();
+              _runDeferred(service.initialize);
+              return service;
+            },
             update: (_, modelManager, whisperService) {
               final service =
                   whisperService ?? (WhisperSpeechService()..initialize());
@@ -409,21 +502,36 @@ class _MyAppState extends State<MyApp> {
               return service;
             },
           ),
-          ChangeNotifierProxyProvider<WhisperSpeechService,
-              WhisperTranscriptionService>(
-            create: (_) => WhisperTranscriptionService()..initialize(),
+          ChangeNotifierProxyProvider<
+            WhisperSpeechService,
+            WhisperTranscriptionService
+          >(
+            create: (_) {
+              final service = WhisperTranscriptionService();
+              _runDeferred(service.initialize);
+              return service;
+            },
             update: (_, speechService, transcriptionService) {
-              final service = transcriptionService ??
+              final service =
+                  transcriptionService ??
                   (WhisperTranscriptionService()..initialize());
               service.attachSpeechService(speechService);
               return service;
             },
           ),
           ChangeNotifierProvider(
-            create: (_) => OpenSubtitlesService()..initialize(),
+            create: (_) {
+              final service = OpenSubtitlesService();
+              _runDeferred(service.initialize);
+              return service;
+            },
           ),
           ChangeNotifierProvider(
-            create: (_) => RealDebridService()..initialize(),
+            create: (_) {
+              final service = RealDebridService();
+              _runDeferred(service.initialize);
+              return service;
+            },
           ),
         ],
         child: Builder(

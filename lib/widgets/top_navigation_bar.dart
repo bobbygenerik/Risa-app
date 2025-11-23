@@ -180,7 +180,10 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
                 IconButton(
-                  onPressed: widget.onSearch,
+                  onPressed: () {
+                    debugPrint('top_nav: search button pressed');
+                    widget.onSearch?.call();
+                  },
                   icon: Icon(Icons.search, color: AppTheme.textSecondary),
                   iconSize: 22 * scale,
                   padding: EdgeInsets.symmetric(horizontal: 8 * scale),

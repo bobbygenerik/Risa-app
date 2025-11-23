@@ -113,7 +113,7 @@ class AppTheme {
         ),
       ),
       
-      cardTheme: CardThemeData(
+      cardTheme: CardTheme(
         color: cardBackground,
         elevation: 0,
         shape: RoundedRectangleBorder(
@@ -187,14 +187,14 @@ class AppTheme {
           elevation: 0,
         ).copyWith(
           // Android TV focus support - pink border on focus
-          overlayColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.focused)) {
+          overlayColor: MaterialStateProperty.resolveWith((states) {
+            if (states.contains(MaterialState.focused)) {
               return primaryBlue.withAlpha((0.2 * 255).round());
             }
             return null;
           }),
-          side: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.focused)) {
+          side: MaterialStateProperty.resolveWith((states) {
+            if (states.contains(MaterialState.focused)) {
               return const BorderSide(color: primaryBlue, width: 3);
             }
             return null;
@@ -208,14 +208,14 @@ class AppTheme {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ).copyWith(
           // Pink border on focus
-          overlayColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.focused)) {
+          overlayColor: MaterialStateProperty.resolveWith((states) {
+            if (states.contains(MaterialState.focused)) {
               return primaryBlue.withAlpha((0.1 * 255).round());
             }
             return null;
           }),
-          side: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.focused)) {
+          side: MaterialStateProperty.resolveWith((states) {
+            if (states.contains(MaterialState.focused)) {
               return const BorderSide(color: primaryBlue, width: 3);
             }
             return null;
@@ -234,14 +234,14 @@ class AppTheme {
       ),
       
       switchTheme: SwitchThemeData(
-        thumbColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
+        thumbColor: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) {
             return textPrimary;
           }
           return textTertiary;
         }),
-        trackColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
+        trackColor: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) {
             return primaryBlue;
           }
           return highlight;
@@ -267,6 +267,20 @@ class AppTheme {
           borderSide: const BorderSide(color: tvFocusHighlight, width: 3),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      ),
+
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: darkBackgroundOpacity(0.95),
+        contentTextStyle: const TextStyle(
+          color: textPrimary,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+        actionTextColor: accentOrange,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:iptv_player/utils/startup_probe.dart';
 import '../models/channel.dart';
 import '../models/content.dart';
 import '../services/m3u_parser_service.dart';
@@ -46,11 +47,13 @@ class ChannelProvider with ChangeNotifier {
   Future<void> autoLoadPlaylist() async {
     if (_hasLoadedPlaylist) return; // Already loaded
 
+    StartupProbe.mark('ChannelProvider.autoLoadPlaylist invoked');
     debugPrint('ChannelProvider: Auto-loading playlist...');
     final prefs = await SharedPreferences.getInstance();
     final playlistType = prefs.getString('playlist_type');
 
     if (playlistType == null) {
+      StartupProbe.mark('ChannelProvider.autoLoadPlaylist: no saved playlist');
       debugPrint('ChannelProvider: No saved playlist found');
       if (_channels.isNotEmpty || _movies.isNotEmpty || _series.isNotEmpty) {
         _channels = [];
@@ -76,12 +79,14 @@ class ChannelProvider with ChangeNotifier {
       debugPrint(
         'ChannelProvider: Loading from cache (${(cacheAge / 60000).round()} minutes old)',
       );
+      StartupProbe.mark('ChannelProvider.autoLoadPlaylist: using cache');
       try {
         loadPlaylistFromString(cachedPlaylist);
         _hasLoadedPlaylist = true;
         debugPrint(
           'ChannelProvider: Cache loaded successfully with ${_channels.length} channels',
         );
+        StartupProbe.mark('ChannelProvider.autoLoadPlaylist: cache load finished');
 
         // Load from network in background to update cache
         _refreshCacheInBackground(prefs, playlistType);
@@ -90,6 +95,7 @@ class ChannelProvider with ChangeNotifier {
         debugPrint(
           'ChannelProvider: Cache load failed: $e, loading from network',
         );
+        StartupProbe.mark('ChannelProvider.autoLoadPlaylist: cache load failed, fallback network');
       }
     } else {
       debugPrint(
@@ -121,15 +127,19 @@ class ChannelProvider with ChangeNotifier {
 
       if (playlistUrl != null && playlistUrl.isNotEmpty) {
         debugPrint('ChannelProvider: Loading playlist URL: $playlistUrl');
+        StartupProbe.mark('ChannelProvider.autoLoadPlaylist: downloading playlist');
         await loadPlaylistFromUrl(playlistUrl);
         _hasLoadedPlaylist = true;
         debugPrint('ChannelProvider: Auto-load completed successfully');
+        StartupProbe.mark('ChannelProvider.autoLoadPlaylist: network load finished');
       } else {
         debugPrint('ChannelProvider: Playlist URL is empty');
+        StartupProbe.mark('ChannelProvider.autoLoadPlaylist: playlist url empty');
       }
     } catch (e) {
       // Silently fail - user can manually load from settings
       debugPrint('ChannelProvider: Auto-load playlist failed: $e');
+      StartupProbe.mark('ChannelProvider.autoLoadPlaylist: failed ($e)');
     }
   }
 

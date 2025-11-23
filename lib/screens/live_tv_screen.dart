@@ -7,6 +7,10 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/services/epg_service.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/program.dart';
+import 'package:iptv_player/widgets/content_focus_provider.dart';
+import 'package:iptv_player/widgets/tv_focusable.dart';
+import 'package:iptv_player/services/tmdb_service.dart';
+import 'package:iptv_player/services/service_validator.dart';
 
 /// A focused Live TV screen. Shows a hero for the currently airing program
 /// on a featured channel, plus channel rows below.
@@ -17,15 +21,20 @@ class LiveTVScreen extends StatefulWidget {
   State<LiveTVScreen> createState() => _LiveTVScreenState();
 }
 
-class _LiveTVScreenState extends State<LiveTVScreen> {
+class _LiveTVScreenState extends State<LiveTVScreen>
+  with ContentFocusRegistrant<LiveTVScreen> {
   Timer? _carouselTimer;
   int _featuredIndex = 0;
   final FocusNode _watchFocus = FocusNode();
   final FocusNode _settingsButtonFocus = FocusNode();
+  final Map<String, String?> _programArtwork = {};
+  final Set<String> _artworkRequests = {};
+  late final bool _tmdbEnabled;
 
   @override
   void initState() {
     super.initState();
+    _tmdbEnabled = ServiceValidator.isTmdbAvailable;
     // Start carousel once the widget is built — will be updated when channels load
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => _startCarouselIfNeeded(),
@@ -40,16 +49,33 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
     super.dispose();
   }
 
-  void requestFirstContentFocus() {
-    final channelProvider = Provider.of<ChannelProvider>(
-      context,
-      listen: false,
-    );
-    if (channelProvider.channels.isEmpty) {
-      _settingsButtonFocus.requestFocus();
-    } else {
-      _watchFocus.requestFocus();
-    }
+  @override
+  bool handleContentFocusRequest() {
+    return requestFirstContentFocus();
+  }
+
+  bool requestFirstContentFocus() {
+    if (!mounted) return false;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final channelProvider = Provider.of<ChannelProvider>(
+        context,
+        listen: false,
+      );
+      if (channelProvider.channels.isEmpty) {
+        _settingsButtonFocus.requestFocus();
+      } else {
+        _watchFocus.requestFocus();
+      }
+    });
+    return true;
+  }
+
+  void _goToSettings() {
+    final router = GoRouter.of(context);
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) router.go('/settings');
+    });
   }
 
   void _startCarouselIfNeeded() {
@@ -113,18 +139,35 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 32),
-                  ElevatedButton.icon(
+                  TVFocusable(
                     focusNode: _settingsButtonFocus,
-                    onPressed: () {
-                      final router = GoRouter.of(context);
-                      Future.delayed(const Duration(milliseconds: 100), () {
-                        if (mounted) router.go('/settings');
-                      });
-                    },
-                    icon: const Icon(Icons.settings),
-                    label: const Text('Go to Settings'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryBlue,
+                    onPressed: _goToSettings,
+                    borderRadius: BorderRadius.circular(16),
+                    focusMargin: const EdgeInsets.only(top: 8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 14,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryBlue,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.settings, color: Colors.white),
+                          SizedBox(width: 10),
+                          Text(
+                            'Go to Settings',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -168,6 +211,8 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
 
     final progress = program?.progressPercentage ?? 0.0;
 
+    final heroImage = _resolveHeroImage(program);
+
     return GestureDetector(
       onTap: () => context.push('/player', extra: channel),
       child: Container(
@@ -180,10 +225,10 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
         child: Stack(
           children: [
             // Background image if available
-            if (program?.imageUrl != null)
+            if (heroImage != null && heroImage.isNotEmpty)
               Positioned.fill(
                 child: Image.network(
-                  program!.imageUrl!,
+                  heroImage,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) =>
                       Container(color: AppTheme.cardBackground),
@@ -305,82 +350,75 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      // Watch button with larger focus outline
-                      Focus(
+                      // TV-friendly watch button with consistent focus cues
+                      TVFocusable(
                         focusNode: _watchFocus,
-                        child: Builder(
-                          builder: (ctx) {
-                            final hasFocus = Focus.of(ctx).hasFocus;
-                            return Container(
-                              decoration: hasFocus
-                                  ? BoxDecoration(
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: AppTheme.primaryBlue,
-                                        width: 3,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: AppTheme.primaryBlue.withAlpha(
-                                            (0.15 * 255).round(),
-                                          ),
-                                          blurRadius: 16,
-                                          offset: const Offset(0, 6),
-                                        ),
-                                      ],
-                                    )
-                                  : null,
-                              child: ElevatedButton.icon(
-                                onPressed: () =>
-                                    context.push('/player', extra: channel),
-                                icon: const Icon(Icons.play_arrow),
-                                label: const Text('Watch'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppTheme.primaryBlue,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                    vertical: 14,
-                                  ),
-                                  textStyle: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                        focusMargin: const EdgeInsets.only(right: 12),
+                        borderRadius: BorderRadius.circular(12),
+                        onPressed: () => context.push('/player', extra: channel),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryBlue,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 14,
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.play_arrow, color: Colors.white),
+                              SizedBox(width: 8),
+                              Text(
+                                'Watch',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
-                            );
-                          },
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 12),
                       // Guide button with stronger contrast when focused
-                      FocusableActionDetector(
-                        mouseCursor: SystemMouseCursors.click,
-                        child: Builder(
-                          builder: (ctx) {
-                            final f = Focus.of(ctx).hasFocus;
-                            return OutlinedButton.icon(
-                              onPressed: () => context.go('/epg'),
-                              icon: const Icon(Icons.schedule),
-                              label: const Text('Guide'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: f
-                                    ? Colors.white
-                                    : AppTheme.textPrimary,
-                                side: BorderSide(
-                                  color: f
-                                      ? AppTheme.primaryBlue
-                                      : AppTheme.primaryBlue.withAlpha(
-                                          (0.4 * 255).round(),
-                                        ),
-                                  width: f ? 2 : 1,
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 18,
-                                  vertical: 14,
+                      TVFocusable(
+                        borderRadius: BorderRadius.circular(12),
+                        focusColor: AppTheme.primaryBlue,
+                        onPressed: () => context.go('/epg'),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: AppTheme.primaryBlue.withAlpha(
+                                (0.7 * 255).round(),
+                              ),
+                              width: 1.5,
+                            ),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 22,
+                            vertical: 14,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.schedule,
+                                color: AppTheme.textPrimary,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Guide',
+                                style: TextStyle(
+                                  color: AppTheme.textPrimary,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
-                            );
-                          },
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -392,6 +430,43 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
         ),
       ),
     );
+  }
+
+  String? _resolveHeroImage(Program? program) {
+    if (program == null) return null;
+    final direct = program.imageUrl;
+    if (direct != null && direct.isNotEmpty) return direct;
+
+    final cached = _programArtwork[program.id];
+    if (cached != null) {
+      return cached.isNotEmpty ? cached : null;
+    }
+
+    if (_tmdbEnabled) {
+      _fetchProgramArtwork(program);
+    }
+    return null;
+  }
+
+  Future<void> _fetchProgramArtwork(Program program) async {
+    if (_artworkRequests.contains(program.id)) return;
+    _artworkRequests.add(program.id);
+    try {
+      final image = await TMDBService.getBestBackdrop(program.title);
+      if (!mounted) return;
+      setState(() {
+        _programArtwork[program.id] = image ?? '';
+      });
+    } catch (e) {
+      debugPrint('TMDB artwork fetch failed for ${program.title}: $e');
+      if (mounted) {
+        setState(() {
+          _programArtwork[program.id] = '';
+        });
+      }
+    } finally {
+      _artworkRequests.remove(program.id);
+    }
   }
 
   Widget _buildChannelSection(
@@ -417,43 +492,48 @@ class _LiveTVScreenState extends State<LiveTVScreen> {
         ),
         SizedBox(
           height: 140,
-          child: ListView.builder(
+          child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            itemCount: channels.length,
-            itemBuilder: (context, index) {
-              final channel = channels[index];
-              return GestureDetector(
-                onTap: () => context.push('/player', extra: channel),
-                child: Container(
-                  width: 200,
-                  height: 120,
-                  margin: const EdgeInsets.only(right: 16),
-                  decoration: BoxDecoration(
+            child: FocusTraversalGroup(
+              policy: WidgetOrderTraversalPolicy(),
+              child: Row(
+                children: channels.map((channel) {
+                  return TVFocusable(
+                    focusMargin: const EdgeInsets.only(right: 16),
                     borderRadius: BorderRadius.circular(12),
-                    color: AppTheme.cardBackground,
-                    border: Border.all(
-                      color: Colors.white.withAlpha((0.1 * 255).round()),
-                      width: 1,
+                    onPressed: () => context.push('/player', extra: channel),
+                    child: Container(
+                      width: 200,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: AppTheme.cardBackground,
+                        border: Border.all(
+                          color:
+                              Colors.white.withAlpha((0.1 * 255).round()),
+                          width: 1,
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: channel.logoUrl != null &&
+                                channel.logoUrl!.isNotEmpty
+                            ? Image.network(
+                                channel.logoUrl!,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity,
+                                errorBuilder: (_, __, ___) =>
+                                    _buildChannelPlaceholder(channel.name),
+                              )
+                            : _buildChannelPlaceholder(channel.name),
+                      ),
                     ),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child:
-                        channel.logoUrl != null && channel.logoUrl!.isNotEmpty
-                        ? Image.network(
-                            channel.logoUrl!,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: double.infinity,
-                            errorBuilder: (_, __, ___) =>
-                                _buildChannelPlaceholder(channel.name),
-                          )
-                        : _buildChannelPlaceholder(channel.name),
-                  ),
-                ),
-              );
-            },
+                  );
+                }).toList(),
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 24),

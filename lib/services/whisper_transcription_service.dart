@@ -1,11 +1,15 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
-import 'package:tflite_flutter/tflite_flutter.dart' if (dart.library.html) '../services/ai_upscaling_web_stub.dart';
+import 'package:flutter/services.dart';
 import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
-import 'package:record/record.dart';
+import 'package:http/http.dart' as http;
+import 'package:iptv_player/services/whisper_speech_service.dart';
 import 'package:path_provider/path_provider.dart';
-import 'dart:io';
+import 'package:tflite_flutter/tflite_flutter.dart' if (dart.library.html) '../services/ai_upscaling_web_stub.dart';
 
 /// TRUE On-Device Transcription Service using Whisper TFLite
 ///
@@ -16,17 +20,21 @@ import 'dart:io';
 ///
 /// NO DATA LEAVES THE DEVICE - ALL PROCESSING LOCAL
 class WhisperTranscriptionService extends ChangeNotifier {
+  static const MethodChannel _transcriptionChannel =
+      MethodChannel('com.streamhub.iptv/transcription');
+  static const EventChannel _audioStreamChannel =
+      EventChannel('com.streamhub.iptv/transcription_audio');
+
   // Whisper TFLite model for speech recognition
   Interpreter? _whisperInterpreter;
   bool _isWhisperLoaded = false;
-
-  // Audio recording
-  final AudioRecorder _recorder = AudioRecorder();
 
   // Translation (ON-DEVICE)
   OnDeviceTranslator? _translator;
   final OnDeviceTranslatorModelManager _modelManager =
       OnDeviceTranslatorModelManager();
+  WhisperSpeechService? _speechService;
+  String? _loadedModelId;
 
   // Text-to-speech
   final FlutterTts _tts = FlutterTts();
@@ -38,6 +46,10 @@ class WhisperTranscriptionService extends ChangeNotifier {
   bool _isTTSEnabled = false;
   bool _isDownloadingModels = false;
   double _downloadProgress = 0.0;
+  bool _isLocalModelDownloading = false;
+  bool _isLocalModelDownloaded = false;
+  double _whisperDownloadProgress = 0.0;
+  String _lastError = '';
 
   // Languages
   TranslateLanguage _sourceLanguage = TranslateLanguage.english;
@@ -50,13 +62,18 @@ class WhisperTranscriptionService extends ChangeNotifier {
 
   Timer? _cleanupTimer;
   Timer? _audioProcessTimer;
-  String? _currentAudioPath;
+  StreamSubscription<dynamic>? _audioStreamSubscription;
+  final List<int> _pcmBuffer = <int>[];
 
   // Audio processing constants
   static const int _sampleRate = 16000;
   static const int _audioChunkDuration = 30; // seconds
   static const int _melBins = 80;
   static const int _modelInputSize = 3000; // Whisper input size
+  static const int _bytesPerSample = 2;
+  static const String _fallbackModelUrl =
+      'https://huggingface.co/usefulsensors/whisper_tiny_tflite/resolve/main/whisper_tiny.tflite';
+  static const String _fallbackModelId = 'local_whisper_tiny';
 
   // Getters
   bool get isInitialized => _isInitialized;
@@ -66,11 +83,41 @@ class WhisperTranscriptionService extends ChangeNotifier {
   bool get isDownloadingModels => _isDownloadingModels;
   bool get isWhisperLoaded => _isWhisperLoaded;
   double get downloadProgress => _downloadProgress;
+  bool get isLocalModelDownloading => _isLocalModelDownloading;
+  bool get isLocalModelDownloaded => _isLocalModelDownloaded;
+  double get whisperDownloadProgress => _whisperDownloadProgress;
+  String get lastError => _lastError;
   TranslateLanguage get sourceLanguage => _sourceLanguage;
   TranslateLanguage get targetLanguage => _targetLanguage;
   String get currentText => _currentText;
   String get currentTranslatedText => _currentTranslatedText;
   List<SubtitleEntry> get subtitles => List.unmodifiable(_subtitles);
+  List<SubtitleEntry> get transcriptions => List.unmodifiable(_subtitles);
+
+  void attachSpeechService(WhisperSpeechService? service) {
+    if (identical(_speechService, service)) return;
+    _speechService?.removeListener(_handleSpeechServiceChange);
+    _speechService = service;
+    _speechService?.addListener(_handleSpeechServiceChange);
+    if (_isInitialized) {
+      unawaited(_loadWhisperModel(forceReload: true));
+    }
+  }
+
+  void _handleSpeechServiceChange() {
+    final service = _speechService;
+    if (service == null) return;
+    final selectedId = service.selectedModelId;
+    final shouldReload =
+        (service.isModelDownloaded && selectedId != _loadedModelId) ||
+        (!service.isModelDownloaded && _isWhisperLoaded);
+
+    if (shouldReload) {
+      unawaited(_loadWhisperModel(forceReload: true));
+    } else {
+      notifyListeners();
+    }
+  }
 
   /// Get latest subtitles for display (last 3 entries)
   String get latestSubtitles {
@@ -114,24 +161,154 @@ class WhisperTranscriptionService extends ChangeNotifier {
     }
   }
 
-  /// Load Whisper TFLite model
-  Future<bool> _loadWhisperModel() async {
+  /// Expose fallback download so settings UI can trigger model download without AIModelManager.
+  Future<bool> downloadWhisperModelIfNeeded() async {
+    final path = await _getLocalWhisperModelPath();
+    final file = File(path);
+    if (await file.exists()) {
+      _isLocalModelDownloaded = true;
+      notifyListeners();
+      return true;
+    }
+    return _downloadLocalWhisperModel(targetPath: path);
+  }
+
+  Future<String?> _prepareLocalWhisperModel() async {
+    final path = await _getLocalWhisperModelPath();
+    final file = File(path);
+    if (await file.exists()) {
+      _isLocalModelDownloaded = true;
+      return path;
+    }
+    final downloaded = await _downloadLocalWhisperModel(targetPath: path);
+    if (downloaded) {
+      return path;
+    }
+    return null;
+  }
+
+  Future<String> _getLocalWhisperModelPath() async {
+    final dir = await getApplicationDocumentsDirectory();
+    return '${dir.path}/whisper_tiny.tflite';
+  }
+
+  Future<bool> _downloadLocalWhisperModel({String? targetPath}) async {
+    if (_isLocalModelDownloading) {
+      return false;
+    }
+
+    _isLocalModelDownloading = true;
+    _whisperDownloadProgress = 0.0;
+    notifyListeners();
+
+    final client = http.Client();
     try {
-      // Try to load whisper model from assets
-      _whisperInterpreter = await Interpreter.fromAsset(
-        'assets/models/whisper_tiny.tflite',
-        options: InterpreterOptions()..threads = 4,
+      final path = targetPath ?? await _getLocalWhisperModelPath();
+      final file = File(path);
+
+      final request = await client.send(
+        http.Request('GET', Uri.parse(_fallbackModelUrl)),
       );
+      final expectedLength = request.contentLength ?? 0;
+      final bytes = <int>[];
+      var downloaded = 0;
+
+      await for (final chunk in request.stream) {
+        bytes.addAll(chunk);
+        if (expectedLength > 0) {
+          downloaded += chunk.length;
+          _whisperDownloadProgress = downloaded / expectedLength;
+          notifyListeners();
+        }
+      }
+
+      await file.writeAsBytes(bytes, flush: true);
+      _isLocalModelDownloaded = true;
+      _lastError = '';
+      _whisperDownloadProgress = 1.0;
+      notifyListeners();
+      debugPrint('WhisperTranscription: Fallback Whisper model downloaded');
+      return true;
+    } catch (e) {
+      _isLocalModelDownloaded = false;
+      _whisperDownloadProgress = 0.0;
+      _lastError = 'Whisper model download failed: $e';
+      notifyListeners();
+      debugPrint('WhisperTranscription: Whisper download error - $e');
+      return false;
+    } finally {
+      client.close();
+      _isLocalModelDownloading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Load Whisper TFLite model
+  Future<bool> _loadWhisperModel({bool forceReload = false}) async {
+    if (_isWhisperLoaded && !forceReload) {
+      return true;
+    }
+
+    try {
+      String? modelPath;
+      var isAssetPath = false;
+      final options = InterpreterOptions()..threads = 4;
+
+      final speechService = _speechService;
+      if (speechService != null) {
+        await speechService.initialize();
+        await speechService.downloadModelIfNeeded();
+        if (speechService.isModelDownloaded) {
+          modelPath = await speechService.getSelectedModelPath();
+          _loadedModelId = speechService.selectedModelId;
+        }
+      }
+
+      if (modelPath == null) {
+        final localPath = await _prepareLocalWhisperModel();
+        if (localPath != null) {
+          modelPath = localPath;
+          _loadedModelId = _fallbackModelId;
+        }
+      }
+
+      modelPath ??= 'assets/models/whisper_tiny.tflite';
+      isAssetPath = modelPath.startsWith('assets/');
+      if (isAssetPath && _loadedModelId == null) {
+        _loadedModelId = 'asset_whisper_tiny';
+      }
+
+      _whisperInterpreter?.close();
+      _whisperInterpreter = null;
+
+      if (isAssetPath) {
+        _whisperInterpreter = await Interpreter.fromAsset(
+          modelPath,
+          options: options,
+        );
+        _isLocalModelDownloaded = false;
+        _whisperDownloadProgress = 0.0;
+      } else {
+        final file = File(modelPath);
+        if (!await file.exists()) {
+          debugPrint('WhisperTranscription: Model file missing at $modelPath');
+          _isWhisperLoaded = false;
+          notifyListeners();
+          return false;
+        }
+        _whisperInterpreter = Interpreter.fromFile(
+          file,
+          options: options,
+        );
+        _isLocalModelDownloaded = true;
+      }
 
       _isWhisperLoaded = true;
       notifyListeners();
       debugPrint('WhisperTranscription: Whisper model loaded (ON-DEVICE)');
       return true;
     } catch (e) {
-      debugPrint('WhisperTranscription: Whisper model not found - $e');
-      debugPrint(
-        'WhisperTranscription: Download from: https://github.com/openai/whisper',
-      );
+      debugPrint('WhisperTranscription: Whisper model load error - $e');
       _isWhisperLoaded = false;
       notifyListeners();
       return false;
@@ -188,15 +365,24 @@ class WhisperTranscriptionService extends ChangeNotifier {
 
   /// Start transcription (100% ON-DEVICE)
   Future<bool> startTranscription() async {
+    if (!Platform.isAndroid) {
+      _lastError = 'Live stream capture is available on Android devices only';
+      notifyListeners();
+      return false;
+    }
+
     if (!_isInitialized) {
       await initialize();
     }
 
     if (!_isWhisperLoaded) {
-      debugPrint(
-        'WhisperTranscription: Whisper model not loaded. Place whisper_tiny.tflite in assets/models/',
-      );
-      return false;
+      final loaded = await _loadWhisperModel(forceReload: true);
+      if (!loaded) {
+        debugPrint(
+          'WhisperTranscription: Whisper model not available. Download it from AI Settings > Speech Recognition.',
+        );
+        return false;
+      }
     }
 
     if (_isTranscribing) {
@@ -213,39 +399,41 @@ class WhisperTranscriptionService extends ChangeNotifier {
         );
       }
 
-      // Start audio recording
-      if (await _recorder.hasPermission()) {
-        final appDir = await getTemporaryDirectory();
-        _currentAudioPath =
-            '${appDir.path}/transcription_audio_${DateTime.now().millisecondsSinceEpoch}.wav';
+      _pcmBuffer.clear();
 
-        await _recorder.start(
-          RecordConfig(
-            encoder: AudioEncoder.wav,
-            sampleRate: _sampleRate,
-          ),
-          path: _currentAudioPath!,
-        );
+      _audioStreamSubscription ??=
+          _audioStreamChannel.receiveBroadcastStream().listen(
+                _handleIncomingAudioChunk,
+                onError: _handleAudioStreamError,
+              );
 
-        _isTranscribing = true;
+      final started = await _transcriptionChannel.invokeMethod<bool>(
+            'startAudioCapture',
+            {'sampleRate': _sampleRate, 'channels': 1},
+          ) ??
+          false;
+
+      if (!started) {
+        _lastError = 'Unable to capture audio from player output';
+        await _disposeAudioStream();
         notifyListeners();
-
-        // Process audio every 30 seconds
-        _audioProcessTimer = Timer.periodic(
-          const Duration(seconds: _audioChunkDuration),
-          (_) => _processAudioBuffer(),
-        );
-
-        debugPrint(
-          'WhisperTranscription: Started (100% ON-DEVICE - NO REMOTE SERVICES)',
-        );
-        return true;
-      } else {
-        debugPrint('WhisperTranscription: Microphone permission denied');
         return false;
       }
+
+      _isTranscribing = true;
+      notifyListeners();
+
+      _audioProcessTimer = Timer.periodic(
+        const Duration(seconds: _audioChunkDuration),
+        (_) => _processAudioBuffer(),
+      );
+
+      debugPrint('WhisperTranscription: Started (stream capture)');
+      return true;
     } catch (e) {
+      _lastError = 'Failed to start transcription: $e';
       debugPrint('WhisperTranscription: Start error - $e');
+      await _disposeAudioStream();
       return false;
     }
   }
@@ -255,14 +443,11 @@ class WhisperTranscriptionService extends ChangeNotifier {
     if (!_isTranscribing) return;
 
     try {
-      await _recorder.stop();
+      await _transcriptionChannel.invokeMethod('stopAudioCapture');
       _audioProcessTimer?.cancel();
-
-      // Process any remaining audio
-      if (_currentAudioPath != null) {
-        await _processAudioBuffer();
-      }
-
+      await _processAudioBuffer(force: true);
+      _pcmBuffer.clear();
+      await _disposeAudioStream();
       _isTranscribing = false;
       notifyListeners();
       debugPrint('WhisperTranscription: Stopped');
@@ -272,15 +457,25 @@ class WhisperTranscriptionService extends ChangeNotifier {
   }
 
   /// Process audio buffer with Whisper (ON-DEVICE)
-  Future<void> _processAudioBuffer() async {
-    if (_whisperInterpreter == null || _currentAudioPath == null) return;
+  Future<void> _processAudioBuffer({bool force = false}) async {
+    if (_whisperInterpreter == null) return;
+    if (_pcmBuffer.isEmpty) return;
+
+    final minBytes = _sampleRate * _audioChunkDuration * _bytesPerSample;
+    if (!force && _pcmBuffer.length < minBytes) {
+      return;
+    }
 
     try {
-      final audioFile = File(_currentAudioPath!);
-      if (!await audioFile.exists()) return;
+      final chunkLength = force
+          ? _pcmBuffer.length
+          : math.min(minBytes, _pcmBuffer.length);
+      if (chunkLength == 0) return;
 
-      // Read audio file
-      final audioBytes = await audioFile.readAsBytes();
+      final audioBytes = Uint8List.fromList(
+        _pcmBuffer.sublist(0, chunkLength),
+      );
+      _pcmBuffer.removeRange(0, chunkLength);
 
       // Convert WAV to mel spectrogram (simplified version)
       final melSpectrogram = _audioToMelSpectrogram(audioBytes);
@@ -326,26 +521,26 @@ class WhisperTranscriptionService extends ChangeNotifier {
         debugPrint('WhisperTranscription: Transcribed (ON-DEVICE): $text');
       }
 
-      // Clean up old audio file
-      await audioFile.delete();
-
-      // Start new recording
-      if (_isTranscribing) {
-        final appDir = await getTemporaryDirectory();
-        _currentAudioPath =
-            '${appDir.path}/transcription_audio_${DateTime.now().millisecondsSinceEpoch}.wav';
-
-        await _recorder.start(
-          RecordConfig(
-            encoder: AudioEncoder.wav,
-            sampleRate: _sampleRate,
-          ),
-          path: _currentAudioPath!,
-        );
-      }
     } catch (e) {
       debugPrint('WhisperTranscription: Audio processing error - $e');
     }
+  }
+
+  void _handleIncomingAudioChunk(dynamic event) {
+    if (!_isTranscribing) return;
+    if (event is! Uint8List || event.isEmpty) return;
+    _pcmBuffer.addAll(event);
+  }
+
+  void _handleAudioStreamError(Object error) {
+    _lastError = 'Audio capture error: $error';
+    notifyListeners();
+    debugPrint('WhisperTranscription: Audio stream error - $error');
+  }
+
+  Future<void> _disposeAudioStream() async {
+    await _audioStreamSubscription?.cancel();
+    _audioStreamSubscription = null;
   }
 
   /// Convert audio to mel spectrogram (simplified)
@@ -479,12 +674,14 @@ class WhisperTranscriptionService extends ChangeNotifier {
   }
 
   /// Clear all subtitles
-  void clearSubtitles() {
+  void clearTranscriptions() {
     _subtitles.clear();
     _currentText = '';
     _currentTranslatedText = '';
     notifyListeners();
   }
+
+  void clearSubtitles() => clearTranscriptions();
 
   /// Clean up old subtitles
   void _cleanupOldSubtitles() {
@@ -524,12 +721,14 @@ class WhisperTranscriptionService extends ChangeNotifier {
 
   @override
   void dispose() {
-    _recorder.dispose();
     _audioProcessTimer?.cancel();
-    _translator?.close();
     _cleanupTimer?.cancel();
+    unawaited(_transcriptionChannel.invokeMethod('stopAudioCapture'));
+    unawaited(_disposeAudioStream());
+    _translator?.close();
     _tts.stop();
     _whisperInterpreter?.close();
+    _speechService?.removeListener(_handleSpeechServiceChange);
     super.dispose();
   }
 }

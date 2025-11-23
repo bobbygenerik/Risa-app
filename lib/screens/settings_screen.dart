@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:iptv_player/services/live_transcription_service.dart';
+import 'package:iptv_player/services/whisper_transcription_service.dart';
+import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 // Drive sync removed: import omitted
 import 'package:iptv_player/services/opensubtitles_service.dart';
 import 'package:iptv_player/services/real_debrid_service.dart';
@@ -1626,152 +1627,232 @@ class _SettingsScreenState extends State<SettingsScreen>
     return _buildSettingsSection(
       title: 'AI Settings',
       children: [
-        // Live Transcription
-        Consumer<LiveTranscriptionService>(
+        // Whisper Live Captions
+        Consumer<WhisperTranscriptionService>(
           builder: (context, transcriptionService, _) {
             try {
+              final hasWhisperModel = transcriptionService.isWhisperLoaded;
+              final isTranscribing = transcriptionService.isTranscribing;
+              final transcripts = transcriptionService.transcriptions;
+              final statusText = hasWhisperModel
+                  ? (isTranscribing
+                      ? 'Listening and transcribing locally in real-time.'
+                      : 'Tap to convert audio to text entirely offline.')
+                  : 'Download a Whisper model in Speech Recognition to enable live captions.';
+
               return _buildSectionCard(
-                title: 'Live Transcription',
-                subtitle: 'Real-time speech-to-text from video audio',
+                title: 'Whisper Live Captions',
+                subtitle:
+                    'On-device speech-to-text and translation powered by Whisper.',
                 children: [
                   SwitchListTile(
-                    value: transcriptionService.isTranscribing,
-                    onChanged: (value) async {
-                      if (value) {
-                        await transcriptionService.startTranscription();
-                      } else {
-                        await transcriptionService.stopTranscription();
-                      }
-                    },
+                    title: const Text('Enable live captions'),
+                    subtitle: Text(statusText),
+                    value: isTranscribing,
+                    onChanged: hasWhisperModel
+                        ? (value) async {
+                            if (value) {
+                              final started =
+                                  await transcriptionService.startTranscription();
+                              if (!started) {
+                                if (!context.mounted) return;
+                                showAppSnackBar(
+                                  context,
+                                  const SnackBar(
+                                    content: Text(
+                                      'Unable to start transcription. Confirm the audio-capture permission ("Start capturing audio") was granted and that a Whisper model is downloaded.',
+                                    ),
+                                  ),
+                                );
+                              }
+                            } else {
+                              await transcriptionService.stopTranscription();
+                            }
+                          }
+                        : null,
                   ),
-                  Builder(
-                    builder: (context) {
-                      final targets =
-                          transcriptionService.getAvailableTargetLanguages();
-                      final selected = targets.firstWhere(
-                        (lang) =>
-                            lang.code == transcriptionService.targetLanguage,
-                        orElse: () => targets.first,
-                      );
-                      return ListTile(
-                        leading: const Icon(Icons.language),
-                        title: const Text('Translation Target'),
-                        subtitle:
-                            Text('${selected.name} (${selected.code})'),
-                        trailing:
-                            const Icon(Icons.arrow_forward_ios, size: 16),
-                        onTap: () => _showTargetLanguageSelector(
-                          context,
-                          transcriptionService,
+                  if (!hasWhisperModel)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: _buildWhisperModelReminder(),
+                    ),
+                  if (hasWhisperModel) ...[
+                    ListTile(
+                      leading: const Icon(Icons.record_voice_over),
+                      title: const Text('Source language'),
+                      subtitle: Text(
+                        _formatTranslateLanguage(
+                          transcriptionService.sourceLanguage,
                         ),
-                      );
-                    },
-                  ),
-                  if (transcriptionService.isTranscribing) ...[
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                      onTap: () => _showWhisperLanguageSelector(
+                        context,
+                        transcriptionService,
+                        isTarget: false,
+                      ),
+                    ),
                     SwitchListTile(
-                      title: const Text('Enable Translation'),
+                      title: const Text('Enable translation'),
                       subtitle: const Text(
-                        'Translate transcribed text to another language',
+                        'Translate captions to another language using offline models',
                       ),
                       value: transcriptionService.isTranslating,
-                      onChanged: transcriptionService.setTranslationEnabled,
+                      onChanged: (value) async {
+                        transcriptionService.setTranslationEnabled(value);
+                        if (value) {
+                          final success =
+                              await transcriptionService.downloadTranslationModels();
+                          if (!context.mounted) return;
+                          showAppSnackBar(
+                            context,
+                            SnackBar(
+                              content: Text(
+                                success
+                                    ? 'Translation packs ready for offline use.'
+                                    : 'Translation pack download failed.',
+                              ),
+                            ),
+                          );
+                        }
+                      },
                     ),
-
                     if (transcriptionService.isTranslating) ...[
                       ListTile(
-                        leading: const Icon(Icons.language),
-                        title: const Text('Target Language'),
-                        subtitle: Text(transcriptionService.targetLanguage),
+                        leading: const Icon(Icons.translate),
+                        title: const Text('Target language'),
+                        subtitle: Text(
+                          _formatTranslateLanguage(
+                            transcriptionService.targetLanguage,
+                          ),
+                        ),
                         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                        onTap: () => _showTargetLanguageSelector(
+                        onTap: () => _showWhisperLanguageSelector(
                           context,
                           transcriptionService,
+                          isTarget: true,
                         ),
                       ),
-
                       SwitchListTile(
-                        title: const Text('Text-to-Speech'),
-                        subtitle: const Text('Speak translated text aloud'),
+                        title: const Text('Speak translated text'),
+                        subtitle: const Text(
+                          'Text-to-speech reads translated captions aloud',
+                        ),
                         value: transcriptionService.isTTSEnabled,
                         onChanged: transcriptionService.setTTSEnabled,
                       ),
+                      if (transcriptionService.isDownloadingModels) ...[
+                        const SizedBox(height: 12),
+                        LinearProgressIndicator(
+                          value: transcriptionService.downloadProgress > 0
+                              ? transcriptionService.downloadProgress
+                              : null,
+                          backgroundColor: AppTheme.highlight,
+                          color: AppTheme.primaryBlue,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Downloading offline translation packs... '
+                          '${(transcriptionService.downloadProgress * 100).toStringAsFixed(0)}%',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ] else ...[
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: ElevatedButton.icon(
+                            onPressed: () async {
+                              final success = await transcriptionService
+                                  .downloadTranslationModels();
+                              if (!context.mounted) return;
+                              showAppSnackBar(
+                                context,
+                                SnackBar(
+                                  content: Text(
+                                    success
+                                        ? 'Translation packs downloaded'
+                                        : 'Could not download translation packs',
+                                  ),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.download),
+                            label: const Text('Download translation packs'),
+                          ),
+                        ),
+                      ],
                     ],
-
+                  ],
+                  if (transcripts.isNotEmpty) ...[
                     const Divider(),
-
-                    if (transcriptionService.transcriptions.isNotEmpty) ...[
-                      ListTile(
-                        leading: const Icon(Icons.download),
-                        title: const Text('Export Transcriptions'),
-                        subtitle: Text(
-                          '${transcriptionService.transcriptions.length} entries available',
-                        ),
-                        trailing: ElevatedButton(
-                          onPressed: () => _exportTranscriptions(
-                            context,
-                            transcriptionService,
-                          ),
-                          child: const Text('Export as SRT'),
-                        ),
+                    ListTile(
+                      leading: const Icon(Icons.download),
+                      title: const Text('Export transcriptions'),
+                      subtitle: Text(
+                        '${transcripts.length} entries available',
                       ),
-
-                      ListTile(
-                        leading: const Icon(Icons.delete_outline),
-                        title: const Text('Clear Transcriptions'),
-                        subtitle: const Text('Remove all saved transcriptions'),
-                        trailing: TextButton(
-                          onPressed: () => _confirmClearTranscriptions(
-                            context,
-                            transcriptionService,
-                          ),
-                          child: const Text('Clear All'),
+                      trailing: ElevatedButton(
+                        onPressed: () => _exportWhisperTranscriptions(
+                          context,
+                          transcriptionService,
                         ),
+                        child: const Text('Export as SRT'),
                       ),
-                    ],
-
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: EdgeInsets.all(AppSizes.md),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryBlue.withAlpha(
-                          (0.1 * 255).round(),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.delete_outline),
+                      title: const Text('Clear transcriptions'),
+                      subtitle: const Text('Remove all saved captions'),
+                      trailing: TextButton(
+                        onPressed: () => _confirmClearWhisperTranscriptions(
+                          context,
+                          transcriptionService,
                         ),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                size: 20,
-                                color: AppTheme.primaryBlue,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'About Live Transcription',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'Live transcription uses on-device speech recognition to convert video audio to text in real-time. '
-                            'It automatically detects the spoken language when you enable it, then keeps everything on-device for translation or playback. '
-                            'Translation and text-to-speech are also processed on your device for privacy and performance.',
-                            style: TextStyle(fontSize: 12, height: 1.4),
-                          ),
-                        ],
+                        child: const Text('Clear All'),
                       ),
                     ),
                   ],
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: EdgeInsets.all(AppSizes.md),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryBlue.withAlpha(
+                        (0.1 * 255).round(),
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.offline_bolt,
+                              size: 20,
+                              color: AppTheme.primaryBlue,
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'About Whisper Live Captions',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Captions run entirely on-device using Whisper TFLite. Audio never leaves your device and translations rely on offline ML Kit models for privacy.',
+                          style: TextStyle(fontSize: 12, height: 1.4),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               );
             } catch (e, st) {
-              debugPrint('Settings: LiveTranscription builder error: $e\n$st');
+              debugPrint(
+                'Settings: Whisper transcription builder error: $e\n$st',
+              );
               return _buildSectionCard(
-                title: 'Live Transcription',
+                title: 'Whisper Live Captions',
                 children: [
                   Text(
                     'Unavailable on this device',
@@ -2242,149 +2323,45 @@ class _SettingsScreenState extends State<SettingsScreen>
           },
         ),
 
-        // Whisper On-Device Transcription
-        Consumer<WhisperSpeechService>(
-          builder: (context, whisperService, child) {
+        // Whisper Speech Models
+        Consumer2<WhisperSpeechService, AIModelManager>(
+          builder: (context, whisperService, modelManager, _) {
             try {
-              return _buildSectionCard(
-                title: '🎙️ On-Device Transcription (Whisper)',
-                subtitle: '100% OFFLINE - AUTO-DOWNLOAD - NO COSTS - TRUE AI',
-                children: [
-                  if (!whisperService.isModelDownloaded) ...[
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryBlue.withAlpha(
-                          (0.1 * 255).round(),
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppTheme.primaryBlue),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: const [
-                              Icon(
-                                Icons.download,
-                                color: AppTheme.primaryBlue,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Model Not Downloaded Yet',
-                                style: TextStyle(
-                                  color: AppTheme.primaryBlue,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'Whisper model (~40MB) will automatically download on first use.\n\n'
-                            'This is a ONE-TIME download:\n'
-                            '• Downloads from Hugging Face (free hosting)\n'
-                            '• Takes ~30 seconds on WiFi\n'
-                            '• Works 100% offline after download\n'
-                            '• Never needs re-downloading\n\n'
-                            'Benefits:\n'
-                            '• TRUE on-device AI (both Android & iOS)\n'
-                            '• Completely free and self-contained\n'
-                            '• Private - no data sent to servers\n'
-                            '• Supports 99+ languages',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                          const SizedBox(height: 12),
-                          if (!whisperService.isDownloading)
-                            ElevatedButton.icon(
-                              onPressed: () async {
-                                await whisperService.downloadModelIfNeeded();
-                              },
-                              icon: const Icon(Icons.download),
-                              label: const Text('Download Now'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primaryBlue,
-                              ),
-                            ),
-                          if (whisperService.isDownloading) ...[
-                            Column(
-                              children: [
-                                LinearProgressIndicator(
-                                  value: whisperService.downloadProgress,
-                                  backgroundColor: AppTheme.highlight,
-                                  color: AppTheme.primaryBlue,
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Downloading... ${(whisperService.downloadProgress * 100).toInt()}%',
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ] else ...[
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppTheme.accentGreen.withAlpha(
-                          (0.1 * 255).round(),
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppTheme.accentGreen),
-                      ),
-                      child: Row(
-                        children: const [
-                          Icon(Icons.check_circle, color: AppTheme.accentGreen),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              '✅ Whisper model ready! True on-device transcription enabled.',
-                              style: TextStyle(
-                                color: AppTheme.accentGreen,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ListTile(
-                      leading: const Icon(
-                        Icons.offline_bolt,
-                        color: AppTheme.primaryBlue,
-                      ),
-                      title: const Text('Status: 100% Offline'),
-                      subtitle: const Text(
-                        'Works without internet • Everything stays on device',
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    ListTile(
-                      leading: const Icon(
-                        Icons.security,
-                        color: AppTheme.primaryBlue,
-                      ),
-                      title: const Text('Privacy: Complete'),
-                      subtitle: const Text(
-                        'All AI processing on your device • Zero data collection',
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    ListTile(
-                      leading: const Icon(
-                        Icons.language,
-                        color: AppTheme.primaryBlue,
-                      ),
-                      title: const Text('Languages: 99+'),
-                      subtitle: const Text(
-                        'Multilingual support built-in (no extra downloads)',
-                      ),
+              final speechModels = whisperService.speechModels;
+              if (speechModels.isEmpty) {
+                return _buildSectionCard(
+                  title: '🎙️ Speech Recognition (Whisper)',
+                  children: const [
+                    Text(
+                      'No Whisper models configured. Please check AI model settings.',
+                      style: TextStyle(color: AppTheme.textSecondary),
                     ),
                   ],
+                );
+              }
+
+              return _buildSectionCard(
+                title: '🎙️ Speech Recognition (Whisper)',
+                subtitle:
+                    'Choose a Whisper model for voice search and live transcription. Everything runs 100% on-device.',
+                children: [
+                  _buildSpeechModelSummary(whisperService, modelManager),
+                  const SizedBox(height: 16),
+                  ...speechModels.map(
+                    (model) => _buildSpeechModelTile(
+                      whisperService: whisperService,
+                      modelManager: modelManager,
+                      model: model,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'All speech features share the active Whisper download. Downloads stay on your device for privacy and offline reliability.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
                 ],
               );
             } catch (e, st) {
@@ -3134,7 +3111,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             borderRadius: BorderRadius.circular(10),
             enableScale: false,
             child: DropdownButtonFormField<String>(
-              initialValue: value,
+              value: value,
               dropdownColor: AppTheme.darkBackgroundOpacity(0.95),
               decoration: InputDecoration(
                 filled: true,
@@ -3328,35 +3305,73 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  void _showTargetLanguageSelector(
+  Widget _buildWhisperModelReminder() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.accentOrange.withAlpha((0.12 * 255).round()),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppTheme.accentOrange.withAlpha(160)),
+      ),
+      child: const Text(
+        'Whisper captions need a downloaded speech model. Scroll down to the Speech Recognition (Whisper) section and pick a model to enable this feature.',
+        style: TextStyle(fontSize: 12, color: AppTheme.accentOrange),
+      ),
+    );
+  }
+
+  String _formatTranslateLanguage(TranslateLanguage language) {
+    final parts = language.name.split('_');
+    return parts
+        .map(
+          (segment) => segment.isEmpty
+              ? segment
+              : segment[0].toUpperCase() + segment.substring(1),
+        )
+        .join(' ');
+  }
+
+  void _showWhisperLanguageSelector(
     BuildContext context,
-    LiveTranscriptionService service,
-  ) {
+    WhisperTranscriptionService service, {
+    required bool isTarget,
+  }) {
+    final languages = TranslateLanguage.values.toList()
+      ..sort(
+        (a, b) => _formatTranslateLanguage(a)
+            .compareTo(_formatTranslateLanguage(b)),
+      );
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.cardBackground,
-        title: const Text('Select Target Language'),
+        title: Text(isTarget ? 'Select Target Language' : 'Select Source Language'),
         content: SizedBox(
           width: double.maxFinite,
+          height: 420,
           child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: service.getAvailableTargetLanguages().length,
+            itemCount: languages.length,
             itemBuilder: (context, index) {
-              final lang = service.getAvailableTargetLanguages()[index];
-              final isSelected = service.targetLanguage == lang.code;
-
+              final lang = languages[index];
+              final isSelected = isTarget
+                  ? lang == service.targetLanguage
+                  : lang == service.sourceLanguage;
               return ListTile(
                 leading: Icon(
                   isSelected ? Icons.check_circle : Icons.circle_outlined,
                   color: isSelected ? AppTheme.primaryBlue : null,
                 ),
-                title: Text(lang.name),
-                subtitle: Text(lang.code),
+                title: Text(_formatTranslateLanguage(lang)),
+                subtitle: Text(lang.bcpCode),
                 selected: isSelected,
-                onTap: () {
-                  service.setTargetLanguage(lang.code);
+                onTap: () async {
                   Navigator.pop(context);
+                  if (isTarget) {
+                    await service.setTargetLanguage(lang);
+                  } else {
+                    await service.setSourceLanguage(lang);
+                  }
                 },
               );
             },
@@ -3366,9 +3381,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  void _exportTranscriptions(
+  void _exportWhisperTranscriptions(
     BuildContext context,
-    LiveTranscriptionService service,
+    WhisperTranscriptionService service,
   ) {
     final srtContent = service.exportAsSRT();
 
@@ -3410,6 +3425,402 @@ class _SettingsScreenState extends State<SettingsScreen>
             child: const Text('Close'),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSpeechModelSummary(
+    WhisperSpeechService whisperService,
+    AIModelManager modelManager,
+  ) {
+    final activeModel = whisperService.selectedModel;
+    final status = modelManager.getModelStatus(activeModel.id);
+    final isReady = status == ModelDownloadStatus.downloaded ||
+        status == ModelDownloadStatus.bundled;
+    final color = isReady ? AppTheme.accentGreen : AppTheme.primaryBlue;
+    final icon = isReady
+        ? Icons.offline_bolt
+        : Icons.download_for_offline_outlined;
+    final subtitle = isReady
+        ? 'Ready for offline speech features.'
+        : 'Download ${activeModel.sizeFormatted} to unlock voice features.';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withAlpha((0.12 * 255).round()),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 26),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Active model: ${activeModel.name}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(subtitle),
+                const SizedBox(height: 6),
+                Text(
+                  'Used by: ${activeModel.usedBy.join(", ")}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSpeechModelTile({
+    required WhisperSpeechService whisperService,
+    required AIModelManager modelManager,
+    required AIModel model,
+  }) {
+    final status = modelManager.getModelStatus(model.id);
+    final progress = modelManager.getDownloadProgress(model.id);
+    final isSelected = whisperService.selectedModelId == model.id;
+    final isReady = status == ModelDownloadStatus.downloaded ||
+        status == ModelDownloadStatus.bundled;
+    final needsDownload = status == ModelDownloadStatus.notDownloaded;
+    final needsRetry = status == ModelDownloadStatus.error ||
+        status == ModelDownloadStatus.corrupted;
+
+    final background = isSelected
+        ? AppTheme.primaryBlue.withAlpha((0.12 * 255).round())
+        : Colors.white.withAlpha((0.05 * 255).round());
+
+    final actionWidgets = <Widget>[];
+
+    if (isSelected) {
+      actionWidgets.add(_buildActiveSpeechModelChip());
+    } else {
+      actionWidgets.add(
+        OutlinedButton.icon(
+          onPressed: () {
+            whisperService.setSelectedModel(model.id);
+          },
+          icon: const Icon(Icons.radio_button_unchecked, size: 18),
+          label: const Text('Set Active'),
+        ),
+      );
+    }
+
+    if (status == ModelDownloadStatus.downloading) {
+      // Progress UI handled below.
+    } else if (isReady) {
+      actionWidgets.add(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppTheme.accentGreen.withAlpha((0.2 * 255).round()),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Icon(Icons.check_circle, color: AppTheme.accentGreen, size: 18),
+              SizedBox(width: 6),
+              Text(
+                'Ready',
+                style: TextStyle(
+                  color: AppTheme.accentGreen,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (status != ModelDownloadStatus.bundled) {
+        actionWidgets.add(
+          OutlinedButton.icon(
+            onPressed: () {
+              _deleteSpeechModel(whisperService, model);
+            },
+            icon: const Icon(Icons.delete_outline, size: 18),
+            label: const Text('Delete'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.accentRed,
+            ),
+          ),
+        );
+      }
+    } else if (needsDownload || needsRetry) {
+      actionWidgets.add(
+        ElevatedButton.icon(
+          onPressed: () {
+            _downloadSpeechModel(whisperService, model);
+          },
+          icon: Icon(needsRetry ? Icons.refresh : Icons.download),
+          label: Text(
+            needsRetry
+                ? 'Re-download ${model.sizeFormatted}'
+                : 'Download ${model.sizeFormatted}',
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.primaryBlue,
+          ),
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: () {
+        whisperService.setSelectedModel(model.id);
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color:
+                isSelected ? AppTheme.primaryBlue : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  isSelected
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                  color: AppTheme.primaryBlue,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        model.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        model.description,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                _buildSpeechModelStatusChip(status),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Size: ${model.sizeFormatted} • Used by: ${model.usedBy.join(", ")}',
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+            if (status == ModelDownloadStatus.downloading) ...[
+              const SizedBox(height: 12),
+              LinearProgressIndicator(
+                value: progress > 0 ? progress : null,
+                backgroundColor: AppTheme.highlight,
+                color: AppTheme.primaryBlue,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                progress > 0
+                    ? 'Downloading ${(progress * 100).toStringAsFixed(0)}%'
+                    : 'Downloading...',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              children: actionWidgets,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActiveSpeechModelChip() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryBlue.withAlpha((0.2 * 255).round()),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: const [
+          Icon(Icons.mic, size: 16, color: AppTheme.primaryBlue),
+          SizedBox(width: 6),
+          Text(
+            'Active model',
+            style: TextStyle(
+              color: AppTheme.primaryBlue,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSpeechModelStatusChip(ModelDownloadStatus status) {
+    Color color;
+    IconData icon;
+    String label;
+
+    switch (status) {
+      case ModelDownloadStatus.downloaded:
+        color = AppTheme.accentGreen;
+        icon = Icons.check_circle;
+        label = 'Ready';
+        break;
+      case ModelDownloadStatus.downloading:
+        color = AppTheme.primaryBlue;
+        icon = Icons.downloading;
+        label = 'Downloading';
+        break;
+      case ModelDownloadStatus.corrupted:
+        color = AppTheme.accentOrange;
+        icon = Icons.warning;
+        label = 'Corrupted';
+        break;
+      case ModelDownloadStatus.error:
+        color = AppTheme.accentRed;
+        icon = Icons.error;
+        label = 'Error';
+        break;
+      case ModelDownloadStatus.notDownloaded:
+        color = AppTheme.textSecondary;
+        icon = Icons.cloud_download;
+        label = 'Not downloaded';
+        break;
+      case ModelDownloadStatus.bundled:
+        color = AppTheme.accentGreen;
+        icon = Icons.offline_pin;
+        label = 'Built-in';
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withAlpha((0.15 * 255).round()),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _downloadSpeechModel(
+    WhisperSpeechService whisperService,
+    AIModel model,
+  ) async {
+    final success = await whisperService.downloadModel(model.id);
+    if (!mounted) return;
+    showAppSnackBar(
+      context,
+      SnackBar(
+        content: Text(
+          success
+              ? '${model.name} downloaded successfully'
+              : 'Failed to download ${model.name}',
+        ),
+        backgroundColor:
+            success ? AppTheme.accentGreen : AppTheme.accentRed,
+      ),
+    );
+  }
+
+  Future<void> _deleteSpeechModel(
+    WhisperSpeechService whisperService,
+    AIModel model,
+  ) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppTheme.cardBackground,
+        title: const Text('Delete model?'),
+        content: Text(
+          'Delete ${model.name}? This frees up ${model.sizeFormatted}. '
+          'You can re-download it later.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.accentRed,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    final success = await whisperService.deleteModel(model.id);
+    if (!mounted) return;
+    showAppSnackBar(
+      context,
+      SnackBar(
+        content: Text(
+          success
+              ? '${model.name} deleted'
+              : 'Could not delete ${model.name}',
+        ),
+        backgroundColor:
+            success ? AppTheme.accentGreen : AppTheme.accentRed,
       ),
     );
   }
@@ -3521,9 +3932,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  void _confirmClearTranscriptions(
+  void _confirmClearWhisperTranscriptions(
     BuildContext context,
-    LiveTranscriptionService service,
+    WhisperTranscriptionService service,
   ) {
     showDialog(
       context: context,

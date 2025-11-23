@@ -7,6 +7,8 @@ import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/service_validator.dart';
 import 'package:go_router/go_router.dart';
+import 'package:iptv_player/widgets/content_focus_provider.dart';
+import 'package:iptv_player/widgets/tv_focusable.dart';
 
 class MoviesScreen extends StatefulWidget {
   const MoviesScreen({super.key});
@@ -15,7 +17,8 @@ class MoviesScreen extends StatefulWidget {
   State<MoviesScreen> createState() => _MoviesScreenState();
 }
 
-class _MoviesScreenState extends State<MoviesScreen> {
+class _MoviesScreenState extends State<MoviesScreen>
+  with ContentFocusRegistrant<MoviesScreen> {
   Timer? _carouselTimer;
   int _featuredIndex = 0;
   final FocusNode _playFocus = FocusNode();
@@ -26,6 +29,17 @@ class _MoviesScreenState extends State<MoviesScreen> {
     _carouselTimer?.cancel();
     _playFocus.dispose();
     super.dispose();
+  }
+
+  @override
+  bool handleContentFocusRequest() {
+    if (!mounted) return false;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _playFocus.requestFocus();
+      }
+    });
+    return true;
   }
 
   void _startCarousel() {
@@ -190,28 +204,34 @@ class _MoviesScreenState extends State<MoviesScreen> {
   }
 
   Widget _buildMoviesRow(BuildContext context, List<Content> movies) {
+    if (movies.isEmpty) return const SizedBox.shrink();
+
     return SizedBox(
       height: 220,
-      child: ListView.builder(
+      child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        itemCount: movies.length,
-        itemBuilder: (context, index) {
-          final movie = movies[index];
-          return _buildMovieCard(context, movie);
-        },
+        child: FocusTraversalGroup(
+          policy: WidgetOrderTraversalPolicy(),
+          child: Row(
+            children:
+                movies.map((movie) => _buildMovieCard(context, movie)).toList(),
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildMovieCard(BuildContext context, Content movie) {
-    return Container(
-      width: 140,
-      margin: EdgeInsets.only(right: AppSizes.md),
-      child: InkWell(
-        onTap: () {
-          final encodedId = Uri.encodeComponent(movie.id);
-          context.push('/content/$encodedId', extra: movie);
-        },
+    return TVFocusable(
+      focusMargin: EdgeInsets.only(right: AppSizes.md),
+      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+      onPressed: () {
+        final encodedId = Uri.encodeComponent(movie.id);
+        context.push('/content/$encodedId', extra: movie);
+      },
+      child: SizedBox(
+        width: 140,
+        height: 220,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

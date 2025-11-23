@@ -39,7 +39,7 @@ Acceptance criteria to close this issue
 Files of interest
 
 - `pubspec.yaml` (current overrides)
-- `lib/services/true_ondevice_transcription_service.dart` (vosk usage)
+- `lib/services/true_ondevice_transcription_service.dart` (vosk usage) — **removed as of Nov 2025; retained here for historical context only**
 
 Estimated effort
 

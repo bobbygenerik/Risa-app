@@ -111,8 +111,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         aspectRatio: 16 / 9,
         allowFullScreen: true,
         allowMuting: true,
-        showControls: true,
-        showControlsOnInitialize: true,
+        showControls: false,
+        showControlsOnInitialize: false,
         placeholder: Container(
           color: Colors.black,
           child: const Center(
@@ -455,29 +455,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 ),
               ),
 
-            // TV Remote hints overlay
-            if (_isInitialized && _controlsVisible)
-              Positioned(
-                bottom: 80,
-                left: 0,
-                right: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(24),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildRemoteHint(Icons.keyboard_arrow_left, 'Back 10s'),
-                      const SizedBox(width: 32),
-                      _buildRemoteHint(Icons.play_arrow, 'Play/Pause'),
-                      const SizedBox(width: 32),
-                      _buildRemoteHint(Icons.keyboard_arrow_right, 'Forward 10s'),
-                      const SizedBox(width: 32),
-                      _buildRemoteHint(Icons.exit_to_app, 'Exit'),
-                    ],
-                  ),
-                ),
-              ),
-
             // AI Upscaling indicator
             Consumer<AIUpscalingService>(
               builder: (context, aiService, _) {
@@ -522,30 +499,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildRemoteHint(IconData icon, String label) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.black.withAlpha((0.7 * 255).round()),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: Colors.white, size: 24),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-            ),
-          ),
-        ],
       ),
     );
   }
