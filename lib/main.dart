@@ -12,8 +12,7 @@ import 'package:iptv_player/services/voice_search_service.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/epg_service.dart';
 import 'package:iptv_player/services/ai_upscaling_service.dart';
-import 'package:iptv_player/services/mlkit_translation_service.dart';
-import 'package:iptv_player/services/live_transcription_service.dart';
+import 'package:iptv_player/services/whisper_transcription_service.dart';
 import 'package:iptv_player/services/whisper_speech_service.dart';
 import 'package:iptv_player/services/ai_model_manager.dart';
 import 'package:iptv_player/services/opensubtitles_service.dart';
@@ -41,6 +40,7 @@ import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/profile_provider.dart';
 import 'package:iptv_player/services/background_task_manager.dart';
+import 'package:iptv_player/utils/snackbar_helper.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -225,10 +225,12 @@ class _MyAppState extends State<MyApp> {
   bool _profileReady = false;
   bool _profileDialogScheduled = false;
   bool _creatingDefaultProfile = false;
+  late final ProfileProvider _profileProvider;
 
   @override
   void initState() {
     super.initState();
+    _profileProvider = ProfileProvider();
     _initialize();
   }
 
@@ -238,8 +240,7 @@ class _MyAppState extends State<MyApp> {
       await _checkDisclaimer();
       await _checkAndLoadPlaylist();
 
-      final profileProvider = ProfileProvider();
-      await profileProvider.loadProfiles();
+      await _profileProvider.loadProfiles();
     } catch (error, stack) {
       debugPrint('Initialization error: $error');
       debugPrint('$stack');
@@ -372,7 +373,7 @@ class _MyAppState extends State<MyApp> {
     return _ErrorHandler.wrapWithErrorListener(
       MultiProvider(
         providers: [
-          ChangeNotifierProvider(create: (_) => ProfileProvider()),
+          ChangeNotifierProvider.value(value: _profileProvider),
           ChangeNotifierProvider(
             create: (_) => ContentProvider()..initialize(),
           ),
@@ -399,20 +400,24 @@ class _MyAppState extends State<MyApp> {
           ChangeNotifierProvider(
             create: (_) => AIUpscalingService()..initialize(),
           ),
-          ChangeNotifierProvider(
-            create: (_) => MLKitTranslationService()..initialize(),
-          ),
-          ChangeNotifierProxyProvider<MLKitTranslationService,
-              LiveTranscriptionService>(
-            create: (_) => LiveTranscriptionService(),
-            update: (_, translationService, transcriptionService) {
-              transcriptionService ??= LiveTranscriptionService();
-              transcriptionService.attachTranslationService(translationService);
-              return transcriptionService;
+          ChangeNotifierProxyProvider<AIModelManager, WhisperSpeechService>(
+            create: (_) => WhisperSpeechService()..initialize(),
+            update: (_, modelManager, whisperService) {
+              final service =
+                  whisperService ?? (WhisperSpeechService()..initialize());
+              service.attachModelManager(modelManager);
+              return service;
             },
           ),
-          ChangeNotifierProvider(
-            create: (_) => WhisperSpeechService()..initialize(),
+          ChangeNotifierProxyProvider<WhisperSpeechService,
+              WhisperTranscriptionService>(
+            create: (_) => WhisperTranscriptionService()..initialize(),
+            update: (_, speechService, transcriptionService) {
+              final service = transcriptionService ??
+                  (WhisperTranscriptionService()..initialize());
+              service.attachSpeechService(speechService);
+              return service;
+            },
           ),
           ChangeNotifierProvider(
             create: (_) => OpenSubtitlesService()..initialize(),
@@ -431,6 +436,7 @@ class _MyAppState extends State<MyApp> {
               debugShowCheckedModeBanner: false,
               theme: AppTheme.darkTheme,
               routerConfig: _router,
+              scaffoldMessengerKey: rootScaffoldMessengerKey,
               builder: (context, child) {
                 final media = MediaQuery.of(context);
                 final resolvedChild = child ?? const SizedBox.shrink();
@@ -548,6 +554,13 @@ class _MyAppState extends State<MyApp> {
         _creatingDefaultProfile = false;
       }
     });
+  }
+
+  @override
+  void dispose() {
+    BackgroundTaskManager.stop();
+    _profileProvider.dispose();
+    super.dispose();
   }
 }
 

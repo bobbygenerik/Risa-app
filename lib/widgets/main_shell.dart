@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:iptv_player/widgets/top_navigation_bar.dart';
 import 'package:iptv_player/widgets/search_popup.dart';
+import 'package:iptv_player/widgets/content_focus_provider.dart';
 
 /// Main shell that keeps the navigation bar fixed while content changes
 class MainShell extends StatefulWidget {
@@ -21,6 +22,9 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   late String _currentTime;
   late Timer _timeTimer;
+  ContentFocusCallback? _contentFocusCallback;
+  int _nextFocusToken = 0;
+  int? _activeFocusToken;
 
   @override
   void initState() {
@@ -83,14 +87,47 @@ class _MainShellState extends State<MainShell> {
                   builder: (context) => const SearchPopup(),
                 );
               },
+              onFocusContent: _requestContentFocus,
             ),
             // Content area - changes when navigating between tabs
             Expanded(
-              child: widget.child,
+              child: ContentFocusProvider(
+                registerFocusCallback: _registerContentFocusCallback,
+                unregisterFocusCallback: _unregisterContentFocusCallback,
+                child: widget.child,
+              ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  int _registerContentFocusCallback(ContentFocusCallback callback) {
+    final token = ++_nextFocusToken;
+    _contentFocusCallback = callback;
+    _activeFocusToken = token;
+    _scheduleContentFocusRequest();
+    return token;
+  }
+
+  void _unregisterContentFocusCallback(int token) {
+    if (_activeFocusToken == token) {
+      _activeFocusToken = null;
+      _contentFocusCallback = null;
+    }
+  }
+
+  bool _requestContentFocus() {
+    final callback = _contentFocusCallback;
+    if (callback == null) return false;
+    return callback();
+  }
+
+  void _scheduleContentFocusRequest() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _contentFocusCallback?.call();
+    });
   }
 }

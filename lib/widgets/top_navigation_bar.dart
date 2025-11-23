@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 
@@ -19,6 +20,7 @@ class TopNavigationBar extends StatefulWidget {
   final VoidCallback? onOverflow;
   final String currentTime;
   final bool showLogoAndTime;
+  final VoidCallback? onFocusContent;
 
   const TopNavigationBar({
     super.key,
@@ -29,6 +31,7 @@ class TopNavigationBar extends StatefulWidget {
     this.onOverflow,
     required this.currentTime,
     this.showLogoAndTime = true,
+    this.onFocusContent,
   });
 
   @override
@@ -51,13 +54,25 @@ class NavTab {
 
 class _TopNavigationBarState extends State<TopNavigationBar> {
   late List<FocusNode> _tabFocusNodes;
+  late int _activeTabIndex;
+
   @override
   void initState() {
     super.initState();
     _tabFocusNodes = List.generate(widget.tabs.length, (_) => FocusNode());
+    _activeTabIndex = _resolveActiveTabIndex(widget.activeTab);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _focusActiveTab());
   }
 
-  
+  @override
+  void didUpdateWidget(covariant TopNavigationBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final newIndex = _resolveActiveTabIndex(widget.activeTab);
+    if (newIndex != _activeTabIndex) {
+      _activeTabIndex = newIndex;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _focusActiveTab());
+    }
+  }
 
   @override
   void dispose() {
@@ -228,6 +243,20 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
       ),
     );
 
+    final navWithKeyHandler = Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+          widget.onFocusContent?.call();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: navBar,
+    );
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -236,42 +265,90 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
             ? ClipRect(
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: AppTheme.getBackdropSigma(context), sigmaY: AppTheme.getBackdropSigma(context)),
-                  child: navBar,
+                  child: navWithKeyHandler,
                 ),
               )
-            : navBar,
+            : navWithKeyHandler,
       ],
     );
+  }
+
+  int _resolveActiveTabIndex(String? activeId) {
+    final idx = widget.tabs.indexWhere((t) => t.id == activeId);
+    return idx >= 0 ? idx : 0;
+  }
+
+  void _focusActiveTab() {
+    if (_tabFocusNodes.isEmpty) return;
+    final index = _activeTabIndex.clamp(0, _tabFocusNodes.length - 1);
+    final node = _tabFocusNodes[index];
+    if (!node.hasFocus) {
+      node.requestFocus();
+    }
   }
 
   Widget _buildTabButton(int index, double scale) {
     final tab = widget.tabs[index];
     final isActive = widget.activeTab == tab.id;
+    final horizontalPadding = 12 * scale;
+    final verticalPadding = 10 * scale;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          context.go(tab.route);
-        },
-        child: Focus(
-          focusNode: _tabFocusNodes[index],
-          onFocusChange: (_) => setState(() {}),
-          child: Builder(builder: (context) {
-            final isFocused = Focus.of(context).hasFocus;
-            final showHighlight = isActive || isFocused;
-            return Center(
-              child: Text(
-                tab.label,
-                style: TextStyle(
-                  color: showHighlight ? AppTheme.primaryBlue : AppTheme.textSecondary,
-                  fontSize: 14 * scale,
-                  fontWeight: showHighlight ? FontWeight.w700 : FontWeight.w600,
+    return Focus(
+      focusNode: _tabFocusNodes[index],
+      onFocusChange: (_) => setState(() {}),
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+          final prev = (index - 1) < 0 ? widget.tabs.length - 1 : index - 1;
+          _tabFocusNodes[prev].requestFocus();
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+          final next = (index + 1) % widget.tabs.length;
+          _tabFocusNodes[next].requestFocus();
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+          widget.onFocusContent?.call();
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.enter ||
+            event.logicalKey == LogicalKeyboardKey.select ||
+            event.logicalKey == LogicalKeyboardKey.space) {
+          context.go(widget.tabs[index].route);
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Builder(
+        builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
+          final showHighlight = isActive || isFocused;
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => context.go(tab.route),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 140),
+              curve: Curves.easeOut,
+              padding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding,
+                vertical: verticalPadding,
+              ),
+              decoration: const BoxDecoration(),
+              child: Center(
+                child: Text(
+                  tab.label,
+                  style: TextStyle(
+                    color: showHighlight ? Colors.white : AppTheme.textSecondary,
+                    fontSize: showHighlight ? 17 * scale : 16 * scale,
+                    fontWeight: showHighlight ? FontWeight.w800 : FontWeight.w600,
+                    letterSpacing: 0.8,
+                  ),
                 ),
               ),
-            );
-          }),
-        ),
+            ),
+          );
+        },
       ),
     );
   }

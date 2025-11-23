@@ -13,20 +13,22 @@ class BackgroundTaskManager {
 
   /// Call this once at app startup, passing the BuildContext.
   static void start(BuildContext context) {
+    final epg = Provider.of<EpgService>(context, listen: false);
+    final channelProvider = Provider.of<ChannelProvider>(context, listen: false);
+
     // EPG refresh every 30 minutes
     _epgTimer?.cancel();
     _epgTimer = Timer.periodic(const Duration(minutes: 30), (_) async {
-      final epg = Provider.of<EpgService>(context, listen: false);
       final prefs = await SharedPreferences.getInstance();
       final epgUrl = prefs.getString('epg_url');
       if (epgUrl != null && epgUrl.isNotEmpty) {
         await epg.refresh(epgUrl);
       }
     });
+
     // Playlist sync every 60 minutes
     _playlistTimer?.cancel();
     _playlistTimer = Timer.periodic(const Duration(hours: 1), (_) {
-      final channelProvider = Provider.of<ChannelProvider>(context, listen: false);
       channelProvider.autoLoadPlaylist();
     });
   }
