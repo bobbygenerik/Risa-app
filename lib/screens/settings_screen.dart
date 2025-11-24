@@ -1673,11 +1673,11 @@ class _SettingsScreenState extends State<SettingsScreen>
               final hasWhisperModel = transcriptionService.isWhisperLoaded;
               final isTranscribing = transcriptionService.isTranscribing;
               final transcripts = transcriptionService.transcriptions;
-              final statusText = hasWhisperModel
+                final statusText = hasWhisperModel
                   ? (isTranscribing
                       ? 'Listening and transcribing locally in real-time.'
-                      : 'Tap to convert audio to text entirely offline.')
-                  : 'Download a Whisper model in Speech Recognition to enable live captions.';
+                    : 'Tap to convert audio to text entirely offline.')
+                  : 'Download a Whisper GGML model in Speech Recognition to enable live captions.';
 
               return _buildSectionCard(
                 title: 'Whisper Live Captions',
@@ -1699,7 +1699,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                                   context,
                                   const SnackBar(
                                     content: Text(
-                                      'Unable to start transcription. Confirm the audio-capture permission ("Start capturing audio") was granted and that a Whisper model is downloaded.',
+                                      'Unable to start transcription. Confirm the audio-capture permission ("Start capturing audio") was granted and that a Whisper GGML model is downloaded.',
                                     ),
                                   ),
                                 );
@@ -1878,7 +1878,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         ),
                         SizedBox(height: 8),
                         Text(
-                          'Captions run entirely on-device using Whisper TFLite. Audio never leaves your device and translations rely on offline ML Kit models for privacy.',
+                          'Captions run entirely on-device using Whisper GGML (whisper.cpp). Audio never leaves your device and translations rely on offline ML Kit models for privacy.',
                           style: TextStyle(fontSize: 12, height: 1.4),
                         ),
                       ],
@@ -2372,10 +2372,10 @@ class _SettingsScreenState extends State<SettingsScreen>
               final speechModels = whisperService.speechModels;
               if (speechModels.isEmpty) {
                 return _buildSectionCard(
-                  title: '🎙️ Speech Recognition (Whisper)',
+                  title: '🎙️ Speech Recognition (Whisper GGML)',
                   children: const [
                     Text(
-                      'No Whisper models configured. Please check AI model settings.',
+                      'No Whisper GGML models configured. Please check AI model settings.',
                       style: TextStyle(color: AppTheme.textSecondary),
                     ),
                   ],
@@ -2383,9 +2383,9 @@ class _SettingsScreenState extends State<SettingsScreen>
               }
 
               return _buildSectionCard(
-                title: '🎙️ Speech Recognition (Whisper)',
+                title: '🎙️ Speech Recognition (Whisper GGML)',
                 subtitle:
-                    'Choose a Whisper model for voice search and live transcription. Everything runs 100% on-device.',
+                  'Choose a Whisper GGML model (tiny, base, small) for voice search and live transcription. Everything runs 100% on-device.',
                 children: [
                   _buildSpeechModelSummary(whisperService, modelManager),
                   const SizedBox(height: 16),
@@ -2398,7 +2398,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'All speech features share the active Whisper download. Downloads stay on your device for privacy and offline reliability.',
+                    'All speech features share the active Whisper GGML download. Downloads stay on your device for privacy and offline reliability.',
                     style: TextStyle(
                       fontSize: 12,
                       color: AppTheme.textSecondary,
@@ -2485,7 +2485,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         const Text(
                           'Download AI models for:\n'
                           '• Video upscaling (ESRGAN, FSRCNN, SRCNN)\n'
-                          '• Speech recognition (Whisper)\n'
+                          '• Speech recognition (Whisper GGML)\n'
                           '• All models work offline after download',
                           style: TextStyle(
                             fontSize: 13,
@@ -3404,7 +3404,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         border: Border.all(color: AppTheme.accentOrange.withAlpha(160)),
       ),
       child: const Text(
-        'Whisper captions need a downloaded speech model. Scroll down to the Speech Recognition (Whisper) section and pick a model to enable this feature.',
+        'Whisper captions need a downloaded GGML speech model. Scroll down to the Speech Recognition (Whisper GGML) section and pick a model to enable this feature.',
         style: TextStyle(fontSize: 12, color: AppTheme.accentOrange),
       ),
     );
@@ -3531,8 +3531,8 @@ class _SettingsScreenState extends State<SettingsScreen>
         ? Icons.offline_bolt
         : Icons.download_for_offline_outlined;
     final subtitle = isReady
-        ? 'Ready for offline speech features.'
-        : 'Download ${activeModel.sizeFormatted} to unlock voice features.';
+      ? 'Ready for offline GGML speech features.'
+      : 'Download the ${activeModel.sizeFormatted} GGML binary to unlock voice features.';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -3551,7 +3551,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Active model: ${activeModel.name}',
+                  'Active GGML model: ${activeModel.name}',
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 16,

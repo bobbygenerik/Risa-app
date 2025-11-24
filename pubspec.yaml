@@ -57,6 +57,7 @@ dependencies:
   google_mlkit_translation: ^0.11.0  # On-device translation (auto-downloads language packs) - TRUE OFFLINE
   google_mlkit_language_id: ^0.11.0  # On-device text language identification
   record: ^5.0.0  # Audio recording for transcription
+  whisper_ggml: ^1.1.1  # GGML-based Whisper inference (on-device, offline)
 
 dev_dependencies:
   flutter_test:

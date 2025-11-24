@@ -5,6 +5,7 @@ import 'dart:io';
 // left without braces in a few places. Silence the analyzer info for now.
 // ignore_for_file: curly_braces_in_flow_control_structures
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
@@ -228,6 +229,9 @@ class AIModelManager extends ChangeNotifier {
 
   /// Get file path for a model
   Future<String> _getModelPath(AIModel model) async {
+    if (model.isBundled) {
+      return _cacheBundledModel(model);
+    }
     final appDir = await getApplicationDocumentsDirectory();
     return '${appDir.path}/ai_models/${model.fileName}';
   }
@@ -235,16 +239,26 @@ class AIModelManager extends ChangeNotifier {
   /// Get public path for a model (for other services)
   Future<String> getModelPath(String modelId) async {
     final model = AIModel.allModels.firstWhere((m) => m.id == modelId);
-    
-    if (model.isBundled) {
-      // Return asset path for bundled models
-      // Note: TFLite Flutter plugin handles asset paths automatically if they are in assets/
-      // But we might need to copy it to a temp file if the plugin requires a File object
-      // For now, we'll return the asset key which tflite_flutter supports
-      return 'assets/models/${model.fileName}';
+    return _getModelPath(model);
+  }
+
+  Future<String> _cacheBundledModel(AIModel model) async {
+    final appDir = await getApplicationDocumentsDirectory();
+    final file = File('${appDir.path}/ai_models/${model.fileName}');
+
+    if (await file.exists()) {
+      return file.path;
     }
-    
-    return await _getModelPath(model);
+
+    final assetKey = model.assetPath ?? 'assets/models/${model.fileName}';
+    final data = await rootBundle.load(assetKey);
+    await file.parent.create(recursive: true);
+    await file.writeAsBytes(
+      data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+      flush: true,
+    );
+
+    return file.path;
   }
 
   /// Calculate total downloaded size
@@ -286,6 +300,7 @@ class AIModel {
   final int sizeBytes;
   final ModelCategory category;
   final List<String> usedBy; // Which services use this model
+  final String? assetPath;
 
   const AIModel({
     required this.id,
@@ -297,6 +312,7 @@ class AIModel {
     required this.category,
     required this.usedBy,
     this.isBundled = false, // Flag to indicate if model is bundled
+    this.assetPath,
   });
 
   final bool isBundled;
@@ -325,6 +341,7 @@ class AIModel {
     category: ModelCategory.videoUpscaling,
     usedBy: ['AI Video Enhancement'],
     isBundled: true,
+    assetPath: 'assets/models/srcnn_x2.tflite',
   );
 
   static const fsrcnn = AIModel(
@@ -340,6 +357,7 @@ class AIModel {
     category: ModelCategory.videoUpscaling,
     usedBy: ['AI Video Enhancement'],
     isBundled: true,
+    assetPath: 'assets/models/fsrcnn_x2.tflite',
   );
 
   static const esrgan = AIModel(
@@ -362,11 +380,10 @@ class AIModel {
     id: 'whisper_tiny',
     name: 'Whisper Tiny (Fast)',
     description: 'Lightweight speech recognition. 99 languages, fast on CPU.',
-    fileName: 'whisper_tiny.tflite',
-    // HuggingFace Whisper TFLite models
+    fileName: 'ggml-tiny.bin',
     downloadUrl:
-        'https://huggingface.co/usefulsensors/whisper-tiny-tflite/resolve/main/whisper_tiny_int8.tflite',
-    sizeBytes: 40 * 1024 * 1024, // 40 MB
+        'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin',
+    sizeBytes: 75 * 1024 * 1024, // ~75 MB
     category: ModelCategory.speechRecognition,
     usedBy: ['Voice Search', 'Live Transcription'],
   );
@@ -375,11 +392,10 @@ class AIModel {
     id: 'whisper_base',
     name: 'Whisper Base (Balanced)',
     description: 'Standard Whisper model. Good accuracy, moderate size.',
-    fileName: 'whisper_base.tflite',
-    // HuggingFace Whisper Base model
+    fileName: 'ggml-base.bin',
     downloadUrl:
-        'https://huggingface.co/usefulsensors/whisper-base-tflite/resolve/main/whisper_base_int8.tflite',
-    sizeBytes: 74 * 1024 * 1024, // 74 MB
+        'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin',
+    sizeBytes: 142 * 1024 * 1024, // ~142 MB
     category: ModelCategory.speechRecognition,
     usedBy: ['Voice Search', 'Live Transcription'],
   );
@@ -388,11 +404,10 @@ class AIModel {
     id: 'whisper_small',
     name: 'Whisper Small (High Accuracy)',
     description: 'High-accuracy speech recognition. Best for transcription.',
-    fileName: 'whisper_small.tflite',
-    // HuggingFace Whisper Small model
+    fileName: 'ggml-small.bin',
     downloadUrl:
-        'https://huggingface.co/usefulsensors/whisper-small-tflite/resolve/main/whisper_small_int8.tflite',
-    sizeBytes: 244 * 1024 * 1024, // 244 MB
+        'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin',
+    sizeBytes: 466 * 1024 * 1024, // ~466 MB
     category: ModelCategory.speechRecognition,
     usedBy: ['Voice Search', 'Live Transcription'],
   );

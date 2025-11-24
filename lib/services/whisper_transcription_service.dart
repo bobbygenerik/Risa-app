@@ -1,21 +1,21 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
-import 'package:http/http.dart' as http;
 import 'package:iptv_player/services/whisper_speech_service.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:tflite_flutter/tflite_flutter.dart' if (dart.library.html) '../services/ai_upscaling_web_stub.dart';
+import 'package:iptv_player/services/whisper_ggml_service.dart';
+import 'package:whisper_ggml/whisper_ggml.dart' show WhisperModel;
 
-/// TRUE On-Device Transcription Service using Whisper TFLite
+/// TRUE On-Device Transcription Service using Whisper ggml binaries
 ///
 /// 100% OFFLINE - NO SERVER COSTS - NO INTERNET REQUIRED
 ///
-/// Uses Whisper Tiny model converted to TFLite (~40MB)
+/// Uses Whisper tiny/base/small ggml binaries (~40-90MB)
 /// Combined with ML Kit for on-device translation
 ///
 /// NO DATA LEAVES THE DEVICE - ALL PROCESSING LOCAL
@@ -25,8 +25,8 @@ class WhisperTranscriptionService extends ChangeNotifier {
   static const EventChannel _audioStreamChannel =
       EventChannel('com.streamhub.iptv/transcription_audio');
 
-  // Whisper TFLite model for speech recognition
-  Interpreter? _whisperInterpreter;
+  // Whisper ggml runner for speech recognition
+  final WhisperGgmlRunner _ggmlRunner = WhisperGgmlRunner();
   bool _isWhisperLoaded = false;
 
   // Translation (ON-DEVICE)
@@ -50,6 +50,7 @@ class WhisperTranscriptionService extends ChangeNotifier {
   bool _isLocalModelDownloaded = false;
   double _whisperDownloadProgress = 0.0;
   String _lastError = '';
+  bool _isProcessingChunk = false;
 
   // Languages
   TranslateLanguage _sourceLanguage = TranslateLanguage.english;
@@ -68,12 +69,7 @@ class WhisperTranscriptionService extends ChangeNotifier {
   // Audio processing constants
   static const int _sampleRate = 16000;
   static const int _audioChunkDuration = 30; // seconds
-  static const int _melBins = 80;
-  static const int _modelInputSize = 3000; // Whisper input size
   static const int _bytesPerSample = 2;
-  static const String _fallbackModelUrl =
-      'https://huggingface.co/usefulsensors/whisper_tiny_tflite/resolve/main/whisper_tiny.tflite';
-  static const String _fallbackModelId = 'local_whisper_tiny';
 
   // Getters
   bool get isInitialized => _isInitialized;
@@ -107,6 +103,9 @@ class WhisperTranscriptionService extends ChangeNotifier {
   void _handleSpeechServiceChange() {
     final service = _speechService;
     if (service == null) return;
+    _isLocalModelDownloaded = service.isModelDownloaded;
+    _isLocalModelDownloading = service.isDownloading;
+    _whisperDownloadProgress = service.downloadProgress;
     final selectedId = service.selectedModelId;
     final shouldReload =
         (service.isModelDownloaded && selectedId != _loadedModelId) ||
@@ -161,39 +160,16 @@ class WhisperTranscriptionService extends ChangeNotifier {
     }
   }
 
-  /// Expose fallback download so settings UI can trigger model download without AIModelManager.
+  /// Expose fallback preparation so settings UI can ensure a ggml model exists.
   Future<bool> downloadWhisperModelIfNeeded() async {
-    final path = await _getLocalWhisperModelPath();
-    final file = File(path);
-    if (await file.exists()) {
-      _isLocalModelDownloaded = true;
-      notifyListeners();
-      return true;
-    }
-    return _downloadLocalWhisperModel(targetPath: path);
-  }
-
-  Future<String?> _prepareLocalWhisperModel() async {
-    final path = await _getLocalWhisperModelPath();
-    final file = File(path);
-    if (await file.exists()) {
-      _isLocalModelDownloaded = true;
-      return path;
-    }
-    final downloaded = await _downloadLocalWhisperModel(targetPath: path);
-    if (downloaded) {
-      return path;
-    }
-    return null;
-  }
-
-  Future<String> _getLocalWhisperModelPath() async {
-    final dir = await getApplicationDocumentsDirectory();
-    return '${dir.path}/whisper_tiny.tflite';
-  }
-
-  Future<bool> _downloadLocalWhisperModel({String? targetPath}) async {
     if (_isLocalModelDownloading) {
+      return false;
+    }
+
+    final speechService = _speechService;
+    if (speechService == null) {
+      _lastError = 'Speech recognition settings not ready yet';
+      notifyListeners();
       return false;
     }
 
@@ -201,115 +177,84 @@ class WhisperTranscriptionService extends ChangeNotifier {
     _whisperDownloadProgress = 0.0;
     notifyListeners();
 
-    final client = http.Client();
     try {
-      final path = targetPath ?? await _getLocalWhisperModelPath();
-      final file = File(path);
-
-      final request = await client.send(
-        http.Request('GET', Uri.parse(_fallbackModelUrl)),
-      );
-      final expectedLength = request.contentLength ?? 0;
-      final bytes = <int>[];
-      var downloaded = 0;
-
-      await for (final chunk in request.stream) {
-        bytes.addAll(chunk);
-        if (expectedLength > 0) {
-          downloaded += chunk.length;
-          _whisperDownloadProgress = downloaded / expectedLength;
-          notifyListeners();
-        }
-      }
-
-      await file.writeAsBytes(bytes, flush: true);
-      _isLocalModelDownloaded = true;
-      _lastError = '';
-      _whisperDownloadProgress = 1.0;
-      notifyListeners();
-      debugPrint('WhisperTranscription: Fallback Whisper model downloaded');
-      return true;
+      await speechService.initialize();
+      final ready = await speechService.downloadModelIfNeeded();
+      _isLocalModelDownloaded = ready;
+      _whisperDownloadProgress = ready ? 1.0 : speechService.downloadProgress;
+      _lastError = ready ? '' : 'Unable to download selected Whisper model';
+      return ready;
     } catch (e) {
       _isLocalModelDownloaded = false;
       _whisperDownloadProgress = 0.0;
-      _lastError = 'Whisper model download failed: $e';
-      notifyListeners();
-      debugPrint('WhisperTranscription: Whisper download error - $e');
+      _lastError = 'Failed to download Whisper model: $e';
+      debugPrint('WhisperTranscription: GGML download error - $e');
       return false;
     } finally {
-      client.close();
       _isLocalModelDownloading = false;
       notifyListeners();
     }
   }
 
-  /// Load Whisper TFLite model
+  /// Load Whisper GGML model via the runner
   Future<bool> _loadWhisperModel({bool forceReload = false}) async {
     if (_isWhisperLoaded && !forceReload) {
       return true;
     }
 
     try {
-      String? modelPath;
-      var isAssetPath = false;
-      final options = InterpreterOptions()..threads = 4;
-
       final speechService = _speechService;
-      if (speechService != null) {
-        await speechService.initialize();
-        await speechService.downloadModelIfNeeded();
-        if (speechService.isModelDownloaded) {
-          modelPath = await speechService.getSelectedModelPath();
-          _loadedModelId = speechService.selectedModelId;
-        }
+      if (speechService == null) {
+        _lastError = 'Speech recognition service unavailable';
+        _isWhisperLoaded = false;
+        notifyListeners();
+        return false;
       }
 
+      await speechService.initialize();
+      final ready = await speechService.downloadModelIfNeeded();
+      if (!ready) {
+        _lastError =
+            'Selected Whisper model (${speechService.selectedModel.name}) is not downloaded yet';
+        _isWhisperLoaded = false;
+        notifyListeners();
+        return false;
+      }
+
+      final modelPath = await speechService.getSelectedModelPath();
       if (modelPath == null) {
-        final localPath = await _prepareLocalWhisperModel();
-        if (localPath != null) {
-          modelPath = localPath;
-          _loadedModelId = _fallbackModelId;
+        _lastError = 'Unable to resolve Whisper model path';
+        _isWhisperLoaded = false;
+        notifyListeners();
+        return false;
+      }
+
+      // Get model type for the selected model
+      final modelType = () {
+        switch (speechService.selectedModelId) {
+          case 'whisper_tiny':
+            return WhisperModel.tiny;
+          case 'whisper_base':
+            return WhisperModel.base;
+          case 'whisper_small':
+            return WhisperModel.small;
+          default:
+            return WhisperModel.tiny;
         }
-      }
-
-      modelPath ??= 'assets/models/whisper_tiny.tflite';
-      isAssetPath = modelPath.startsWith('assets/');
-      if (isAssetPath && _loadedModelId == null) {
-        _loadedModelId = 'asset_whisper_tiny';
-      }
-
-      _whisperInterpreter?.close();
-      _whisperInterpreter = null;
-
-      if (isAssetPath) {
-        _whisperInterpreter = await Interpreter.fromAsset(
-          modelPath,
-          options: options,
-        );
-        _isLocalModelDownloaded = false;
-        _whisperDownloadProgress = 0.0;
-      } else {
-        final file = File(modelPath);
-        if (!await file.exists()) {
-          debugPrint('WhisperTranscription: Model file missing at $modelPath');
-          _isWhisperLoaded = false;
-          notifyListeners();
-          return false;
-        }
-        _whisperInterpreter = Interpreter.fromFile(
-          file,
-          options: options,
-        );
-        _isLocalModelDownloaded = true;
-      }
-
+      }();
+      await _ggmlRunner.loadModel(modelPath: modelPath, modelType: modelType);
+      _loadedModelId = speechService.selectedModelId;
+      _isLocalModelDownloaded = true;
+      _whisperDownloadProgress = 1.0;
       _isWhisperLoaded = true;
+      _lastError = '';
       notifyListeners();
-      debugPrint('WhisperTranscription: Whisper model loaded (ON-DEVICE)');
+      debugPrint('WhisperTranscription: GGML model ready at $modelPath');
       return true;
     } catch (e) {
-      debugPrint('WhisperTranscription: Whisper model load error - $e');
+      debugPrint('WhisperTranscription: GGML load error - $e');
       _isWhisperLoaded = false;
+      _lastError = 'Failed to initialize Whisper runtime';
       notifyListeners();
       return false;
     }
@@ -458,14 +403,16 @@ class WhisperTranscriptionService extends ChangeNotifier {
 
   /// Process audio buffer with Whisper (ON-DEVICE)
   Future<void> _processAudioBuffer({bool force = false}) async {
-    if (_whisperInterpreter == null) return;
+    if (!_isWhisperLoaded) return;
     if (_pcmBuffer.isEmpty) return;
+    if (_isProcessingChunk) return;
 
     const minBytes = _sampleRate * _audioChunkDuration * _bytesPerSample;
     if (!force && _pcmBuffer.length < minBytes) {
       return;
     }
 
+    _isProcessingChunk = true;
     try {
       final chunkLength = force
           ? _pcmBuffer.length
@@ -477,52 +424,50 @@ class WhisperTranscriptionService extends ChangeNotifier {
       );
       _pcmBuffer.removeRange(0, chunkLength);
 
-      // Convert WAV to mel spectrogram (simplified version)
-      final melSpectrogram = _audioToMelSpectrogram(audioBytes);
-
-      // Run Whisper inference (ON-DEVICE)
-      final inputTensor = _preprocessAudio(melSpectrogram);
-      final outputTensor = List.filled(
-        _modelInputSize,
-        0.0,
-      ).reshape([1, _modelInputSize]);
-
-      _whisperInterpreter!.run(inputTensor, outputTensor);
-
-      // Decode output to text
-      final text = _decodeWhisperOutput(outputTensor);
-
-      if (text.isNotEmpty) {
-        _currentText = text;
-
-        // Translate if enabled (ON-DEVICE)
-        if (_isTranslating && _translator != null) {
-          final translated = await _translator!.translateText(text);
-          _currentTranslatedText = translated;
-        } else {
-          _currentTranslatedText = text;
-        }
-
-        // Add to subtitles list
-        _subtitles.add(
-          SubtitleEntry(
-            originalText: text,
-            translatedText: _currentTranslatedText,
-            timestamp: DateTime.now(),
-          ),
+      final wavFile = await _writeChunkToWav(audioBytes);
+      String text = '';
+      try {
+        text = await _ggmlRunner.transcribeFile(
+          audioPath: wavFile.path,
+          language: _sourceLanguage.bcpCode,
+          translate: _isTranslating,
         );
-
-        // Speak if TTS enabled
-        if (_isTTSEnabled && _currentTranslatedText.isNotEmpty) {
-          await _tts.speak(_currentTranslatedText);
-        }
-
-        notifyListeners();
-        debugPrint('WhisperTranscription: Transcribed (ON-DEVICE): $text');
+      } finally {
+        unawaited(wavFile.delete().catchError((_) => wavFile));
       }
 
+      text = text.trim();
+      if (text.isEmpty) {
+        return;
+      }
+
+      _currentText = text;
+
+      if (_isTranslating && _translator != null) {
+        final translated = await _translator!.translateText(text);
+        _currentTranslatedText = translated;
+      } else {
+        _currentTranslatedText = text;
+      }
+
+      _subtitles.add(
+        SubtitleEntry(
+          originalText: text,
+          translatedText: _currentTranslatedText,
+          timestamp: DateTime.now(),
+        ),
+      );
+
+      if (_isTTSEnabled && _currentTranslatedText.isNotEmpty) {
+        await _tts.speak(_currentTranslatedText);
+      }
+
+      notifyListeners();
+      debugPrint('WhisperTranscription: GGML transcript -> $text');
     } catch (e) {
       debugPrint('WhisperTranscription: Audio processing error - $e');
+    } finally {
+      _isProcessingChunk = false;
     }
   }
 
@@ -543,80 +488,49 @@ class WhisperTranscriptionService extends ChangeNotifier {
     _audioStreamSubscription = null;
   }
 
-  /// Convert audio to mel spectrogram (simplified)
-  List<List<double>> _audioToMelSpectrogram(Uint8List audioBytes) {
-    // This is a simplified version
-    // In production, use a proper audio processing library
-    final melSpectrogram = List.generate(
-      _melBins,
-      (i) => List.generate(_modelInputSize ~/ _melBins, (j) => 0.0),
+  Future<File> _writeChunkToWav(Uint8List pcmBytes) async {
+    final tempFile = File(
+      '${Directory.systemTemp.path}/whisper_chunk_${DateTime.now().microsecondsSinceEpoch}.wav',
     );
-
-    // Simulate mel spectrogram extraction
-    // Real implementation would use FFT and mel filterbanks
-    for (int i = 0; i < _melBins; i++) {
-      for (int j = 0; j < _modelInputSize ~/ _melBins; j++) {
-        final idx = (j * _melBins + i) % audioBytes.length;
-        melSpectrogram[i][j] = (audioBytes[idx] / 255.0) * 2.0 - 1.0;
-      }
-    }
-
-    return melSpectrogram;
+    final wavBytes = _wrapPcmAsWav(pcmBytes);
+    await tempFile.writeAsBytes(wavBytes, flush: true);
+    return tempFile;
   }
 
-  /// Preprocess audio for Whisper model
-  List _preprocessAudio(List<List<double>> melSpectrogram) {
-    // Flatten and normalize mel spectrogram for model input
-    final flattened = <double>[];
-    for (var row in melSpectrogram) {
-      flattened.addAll(row);
-    }
+  Uint8List _wrapPcmAsWav(Uint8List pcmBytes) {
+    const channels = 1;
+    const bitsPerSample = _bytesPerSample * 8;
+    const byteRate = _sampleRate * channels * _bytesPerSample;
+    const blockAlign = channels * _bytesPerSample;
+    final dataSize = pcmBytes.length;
 
-    // Pad or truncate to model input size
-    while (flattened.length < _modelInputSize) {
-      flattened.add(0.0);
-    }
-    if (flattened.length > _modelInputSize) {
-      flattened.removeRange(_modelInputSize, flattened.length);
-    }
+    final buffer = BytesBuilder(copy: false)
+      ..add('RIFF'.codeUnits)
+      ..add(_int32LE(36 + dataSize))
+      ..add('WAVE'.codeUnits)
+      ..add('fmt '.codeUnits)
+      ..add(_int32LE(16))
+      ..add(_int16LE(1))
+      ..add(_int16LE(channels))
+      ..add(_int32LE(_sampleRate))
+      ..add(_int32LE(byteRate))
+      ..add(_int16LE(blockAlign))
+      ..add(_int16LE(bitsPerSample))
+      ..add('data'.codeUnits)
+      ..add(_int32LE(dataSize))
+      ..add(pcmBytes);
 
-    return [flattened];
+    return buffer.toBytes();
   }
 
-  /// Decode Whisper model output to text
-  String _decodeWhisperOutput(List output) {
-    // This is a simplified decoder
-    // Real implementation would use Whisper's tokenizer and decoder
-
-    try {
-      final tokens = output[0] as List;
-
-      // Simple vocabulary mapping (this would be loaded from Whisper's vocab)
-      final vocab = _getSimpleVocab();
-
-      final words = <String>[];
-      for (final token in tokens) {
-        final idx = (token as double).round();
-        if (idx > 0 && idx < vocab.length) {
-          words.add(vocab[idx]);
-        }
-      }
-
-      return words.join(' ').trim();
-    } catch (e) {
-      debugPrint('WhisperTranscription: Decode error - $e');
-      return '';
-    }
+  Uint8List _int16LE(int value) {
+    final data = ByteData(2)..setUint16(0, value, Endian.little);
+    return data.buffer.asUint8List();
   }
 
-  /// Simple vocabulary (placeholder - should load from Whisper vocab file)
-  List<String> _getSimpleVocab() {
-    return [
-      '', 'the', 'a', 'to', 'of', 'and', 'in', 'is', 'it', 'you', 'that',
-      'he', 'was', 'for', 'on', 'are', 'with', 'as', 'I', 'his', 'they',
-      'be', 'at', 'one', 'have', 'this', 'from', 'or', 'had', 'by', 'not',
-      // Add more vocabulary as needed
-    ];
+  Uint8List _int32LE(int value) {
+    final data = ByteData(4)..setUint32(0, value, Endian.little);
+    return data.buffer.asUint8List();
   }
 
   /// Enable/disable translation
@@ -727,7 +641,7 @@ class WhisperTranscriptionService extends ChangeNotifier {
     unawaited(_disposeAudioStream());
     _translator?.close();
     _tts.stop();
-    _whisperInterpreter?.close();
+    _ggmlRunner.dispose();
     _speechService?.removeListener(_handleSpeechServiceChange);
     super.dispose();
   }

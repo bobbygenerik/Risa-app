@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iptv_player/services/ai_model_manager.dart';
@@ -39,6 +41,7 @@ class WhisperSpeechService extends ChangeNotifier {
     }
     _prefsLoaded = true;
     notifyListeners();
+    unawaited(_ensureModelReady(_selectedModelId));
   }
 
   void attachModelManager(AIModelManager? manager) {
@@ -47,6 +50,9 @@ class WhisperSpeechService extends ChangeNotifier {
     _modelManager = manager;
     _modelManager?.addListener(_handleManagerChange);
     notifyListeners();
+    if (_prefsLoaded) {
+      unawaited(_ensureModelReady(_selectedModelId));
+    }
   }
 
   void _handleManagerChange() {
@@ -61,6 +67,7 @@ class WhisperSpeechService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_preferredModelKey, modelId);
     notifyListeners();
+    unawaited(_ensureModelReady(modelId));
   }
 
   Future<bool> downloadModel(String modelId) async {
@@ -105,6 +112,19 @@ class WhisperSpeechService extends ChangeNotifier {
     final manager = _modelManager;
     if (manager == null) return ModelDownloadStatus.notDownloaded;
     return manager.getModelStatus(modelId);
+  }
+
+  Future<void> _ensureModelReady(String modelId) async {
+    final manager = _modelManager;
+    if (manager == null) return;
+    if (manager.isModelDownloaded(modelId) || manager.isDownloading(modelId)) {
+      return;
+    }
+
+    final success = await manager.downloadModel(modelId);
+    if (!success) {
+      debugPrint('WhisperSpeechService: auto-download failed for $modelId');
+    }
   }
 
   @override
