@@ -26,7 +26,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
   void initState() {
     super.initState();
     _currentTime = DateTime.now();
-    Future.delayed(Duration(seconds: 1), _updateTime);
+    Future.delayed(const Duration(seconds: 1), _updateTime);
     _loadRecordings();
   }
 
@@ -35,7 +35,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
     setState(() {
       _currentTime = DateTime.now();
     });
-    Future.delayed(Duration(seconds: 1), _updateTime);
+    Future.delayed(const Duration(seconds: 1), _updateTime);
   }
 
   String _formatTime(DateTime time) {
@@ -191,8 +191,8 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: Container(
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
@@ -216,7 +216,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
   Widget _buildGlassAppBar() {
     return Container(
       height: AppSizes.appBarHeight,
-      padding: EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
+      padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
       decoration: BoxDecoration(
         color: Colors.white.withAlpha((0.08 * 255).round()),
         border: Border(
@@ -225,8 +225,8 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
       ),
       child: Row(
         children: [
-          Icon(Icons.fiber_manual_record, color: AppTheme.accentRed, size: 24),
-          SizedBox(width: AppSizes.md),
+          const Icon(Icons.fiber_manual_record, color: AppTheme.accentRed, size: 24),
+          const SizedBox(width: AppSizes.md),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
@@ -240,19 +240,19 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
               if (_storagePath != null)
                 Text(
                   path.basename(_storagePath!),
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 11,
                     color: AppTheme.textSecondary,
                   ),
                 ),
             ],
           ),
-          Spacer(),
+          const Spacer(),
           IconButton(
-            icon: Icon(Icons.refresh, color: AppTheme.primaryBlue),
+            icon: const Icon(Icons.refresh, color: AppTheme.primaryBlue),
             onPressed: _loadRecordings,
           ),
-          SizedBox(width: AppSizes.sm),
+          const SizedBox(width: AppSizes.sm),
           Text(
             _formatTime(_currentTime),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -321,21 +321,21 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
     }
 
     if (_recordings.isEmpty) {
-      return Center(
+      return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
+            Icon(
               Icons.movie_outlined,
               size: 80,
               color: AppTheme.textSecondary,
             ),
-            const SizedBox(height: 16),
-            const Text(
+            SizedBox(height: 16),
+            Text(
               'No recordings found',
               style: TextStyle(fontSize: 16, color: AppTheme.textSecondary),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Text(
               'Recordings will appear here once you record from the EPG',
               style: TextStyle(fontSize: 12, color: AppTheme.textTertiary),

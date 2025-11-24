@@ -268,8 +268,8 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
     if (index >= widget.channels.length) {
       return Container(
         margin: const EdgeInsets.all(1),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
@@ -356,8 +356,8 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                 right: 0,
                 child: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
@@ -472,8 +472,8 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
           // Top bar
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
@@ -517,8 +517,8 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
           // Bottom bar with hints
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [

@@ -38,7 +38,7 @@ class _TVFocusableState extends State<TVFocusable> {
   @override
   Widget build(BuildContext context) {
     final highlightColor = widget.focusColor ?? AppTheme.tvFocusHighlight;
-    final glowColor = AppTheme.tvFocusGlow;
+    const glowColor = AppTheme.tvFocusGlow;
 
     Widget child = widget.child;
 
@@ -78,7 +78,7 @@ class _TVFocusableState extends State<TVFocusable> {
               borderRadius: widget.borderRadius,
               boxShadow: _hasFocus
                   ? [
-                      BoxShadow(
+                      const BoxShadow(
                         color: glowColor,
                         blurRadius: 18,
                         spreadRadius: 2,

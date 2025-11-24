@@ -195,7 +195,7 @@ class _VoiceSearchButtonState extends State<VoiceSearchButton>
             const SizedBox(width: 8),
             Text(
               isListening ? 'Listening' : labelText,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w600,
                 fontSize: 14,

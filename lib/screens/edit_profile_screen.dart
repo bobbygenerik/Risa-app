@@ -27,14 +27,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(Duration(seconds: 1), _updateTime);
+    Future.delayed(const Duration(seconds: 1), _updateTime);
     _loadProfileData();
   }
 
   void _updateTime() {
     if (!mounted) return;
     setState(() {});
-    Future.delayed(Duration(seconds: 1), _updateTime);
+    Future.delayed(const Duration(seconds: 1), _updateTime);
   }
 
   @override
@@ -152,12 +152,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 640),
                 child: SingleChildScrollView(
-                  padding: EdgeInsets.symmetric(
+                  padding: const EdgeInsets.symmetric(
                     horizontal: AppSizes.lg,
                     vertical: AppSizes.xl,
                   ),
                   child: Container(
-                    padding: EdgeInsets.all(AppSizes.xl),
+                    padding: const EdgeInsets.all(AppSizes.xl),
                     decoration: BoxDecoration(
                       color: AppTheme.cardBackground,
                       borderRadius: BorderRadius.circular(AppSizes.radiusXl),
@@ -182,14 +182,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             ),
                           ),
                         ),
-                        SizedBox(height: AppSizes.xl),
+                        const SizedBox(height: AppSizes.xl),
                         _buildLinedTextField(
                           controller: _nameController,
                           focusNode: _nameFocusNode,
                           label: 'Name',
                           hint: 'Enter your display name',
                         ),
-                        SizedBox(height: AppSizes.lg),
+                        const SizedBox(height: AppSizes.lg),
                         _buildLinedTextField(
                           controller: _emailController,
                           focusNode: _emailFocusNode,
@@ -197,18 +197,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           hint: 'name@example.com',
                           keyboardType: TextInputType.emailAddress,
                         ),
-                        SizedBox(height: AppSizes.xl),
+                        const SizedBox(height: AppSizes.xl),
                         ElevatedButton(
                           onPressed: _isLoading ? null : _saveProfile,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.primaryBlue,
-                            padding: EdgeInsets.symmetric(vertical: AppSizes.md),
+                            padding: const EdgeInsets.symmetric(vertical: AppSizes.md),
                           ),
                           child: _isLoading
-                              ? SizedBox(
+                              ? const SizedBox(
                                   width: 20,
                                   height: 20,
-                                  child: const CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                                 )
                               : const Text('Save Changes'),
                         ),
@@ -241,13 +241,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           )
         else
           IconButton(
-            icon: Icon(Icons.check, color: AppTheme.accentGreen, size: 28),
+            icon: const Icon(Icons.check, color: AppTheme.accentGreen, size: 28),
             onPressed: _saveProfile,
           ),
       ],
-      bottom: PreferredSize(
+      bottom: const PreferredSize(
         preferredSize: Size.zero,
-        child: const SizedBox.shrink(),
+        child: SizedBox.shrink(),
       ),
     );
   }
@@ -277,7 +277,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             borderRadius: BorderRadius.circular(AppSizes.radiusLg),
             borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 3),
           ),
-          contentPadding: EdgeInsets.symmetric(
+          contentPadding: const EdgeInsets.symmetric(
             horizontal: AppSizes.lg,
             vertical: AppSizes.md,
           ),

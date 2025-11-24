@@ -22,7 +22,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   void initState() {
     super.initState();
     _currentTime = DateTime.now();
-    Future.delayed(Duration(seconds: 1), _updateTime);
+    Future.delayed(const Duration(seconds: 1), _updateTime);
   }
 
   void _updateTime() {
@@ -30,7 +30,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     setState(() {
       _currentTime = DateTime.now();
     });
-    Future.delayed(Duration(seconds: 1), _updateTime);
+    Future.delayed(const Duration(seconds: 1), _updateTime);
   }
 
   String _formatTime(DateTime time) {
@@ -51,8 +51,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           return Scaffold(
             backgroundColor: Colors.transparent,
             body: Container(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
@@ -66,7 +66,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 _buildGlassAppBar(favorites.length),
                 Expanded(
                   child: Padding(
-                    padding: EdgeInsets.all(AppSizes.lg),
+                    padding: const EdgeInsets.all(AppSizes.lg),
                     child: favorites.isEmpty
                         ? _buildEmptyState(context)
                         : _buildFavoritesList(context, favorites),
@@ -84,33 +84,33 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   Widget _buildGlassAppBar(int favCount) {
     return Container(
       height: AppSizes.appBarHeight,
-      padding: EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
+      padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
       decoration: const BoxDecoration(
         color: Colors.transparent,
       ),
       child: Row(
         children: [
-          Icon(Icons.favorite, color: AppTheme.accentRed, size: 24),
-          SizedBox(width: AppSizes.md),
+          const Icon(Icons.favorite, color: AppTheme.accentRed, size: 24),
+          const SizedBox(width: AppSizes.md),
           Text(
             'Favorites',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
-          Spacer(),
+          const Spacer(),
           if (favCount > 0)
             Padding(
-              padding: EdgeInsets.only(right: AppSizes.lg),
+              padding: const EdgeInsets.only(right: AppSizes.lg),
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: AppSizes.md, vertical: AppSizes.xs),
+                padding: const EdgeInsets.symmetric(horizontal: AppSizes.md, vertical: AppSizes.xs),
                 decoration: BoxDecoration(
                   color: AppTheme.primaryBlue.withAlpha((0.2 * 255).round()),
                   borderRadius: BorderRadius.circular(AppSizes.radiusMd),
                 ),
                 child: Text(
                   '$favCount',
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: AppTheme.primaryBlue,
                     fontWeight: FontWeight.bold,
                   ),
@@ -138,12 +138,12 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             size: 80,
             color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
           ),
-          SizedBox(height: AppSizes.lg),
+          const SizedBox(height: AppSizes.lg),
           Text(
             'No Favorite Channels Yet',
             style: Theme.of(context).textTheme.headlineSmall,
           ),
-          SizedBox(height: AppSizes.sm),
+          const SizedBox(height: AppSizes.sm),
           Text(
             'Add channels to favorites by tapping the heart icon',
             style: Theme.of(
@@ -151,14 +151,14 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
             textAlign: TextAlign.center,
           ),
-          SizedBox(height: AppSizes.xl),
+          const SizedBox(height: AppSizes.xl),
           BrandPrimaryButton(
             icon: Icons.home,
             label: 'Browse Channels',
             onPressed: () {
               context.go('/home');
             },
-            padding: EdgeInsets.symmetric(
+            padding: const EdgeInsets.symmetric(
               horizontal: AppSizes.xl,
               vertical: AppSizes.md,
             ),
@@ -170,7 +170,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   Widget _buildFavoritesList(BuildContext context, List<Channel> favorites) {
     return GridView.builder(
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 5,
         crossAxisSpacing: AppSizes.md,
         mainAxisSpacing: AppSizes.md,
@@ -204,7 +204,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 children: [
                   Container(
                     width: double.infinity,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: AppTheme.cardBackground,
                       borderRadius: BorderRadius.vertical(
                         top: Radius.circular(AppSizes.radiusMd),
@@ -213,7 +213,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                     child:
                         channel.logoUrl != null && channel.logoUrl!.isNotEmpty
                         ? ClipRRect(
-                            borderRadius: BorderRadius.vertical(
+                            borderRadius: const BorderRadius.vertical(
                               top: Radius.circular(AppSizes.radiusMd),
                             ),
                             child: Image.network(
@@ -232,7 +232,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                     top: AppSizes.sm,
                     left: AppSizes.sm,
                     child: Container(
-                      padding: EdgeInsets.symmetric(
+                      padding: const EdgeInsets.symmetric(
                         horizontal: AppSizes.sm,
                         vertical: 4,
                       ),
@@ -246,13 +246,13 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                           Container(
                             width: 6,
                             height: 6,
-                            decoration: BoxDecoration(
+                            decoration: const BoxDecoration(
                               color: Colors.white,
                               shape: BoxShape.circle,
                             ),
                           ),
-                          SizedBox(width: 4),
-                          Text(
+                          const SizedBox(width: 4),
+                          const Text(
                             'LIVE',
                             style: TextStyle(
                               color: Colors.white,
@@ -275,7 +275,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
-                        icon: Icon(
+                        icon: const Icon(
                           Icons.favorite,
                           color: AppTheme.accentRed,
                           size: 20,
@@ -288,12 +288,12 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                               content: Text(
                                 '${channel.name} removed from favorites',
                               ),
-                              duration: Duration(seconds: 2),
+                              duration: const Duration(seconds: 2),
                             ),
                           );
                         },
-                        padding: EdgeInsets.all(4),
-                        constraints: BoxConstraints(),
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(),
                       ),
                     ),
                   ),
@@ -303,7 +303,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
             // Channel Info
             Padding(
-              padding: EdgeInsets.all(AppSizes.sm),
+              padding: const EdgeInsets.all(AppSizes.sm),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -316,7 +316,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   if (channel.groupTitle != null) ...[
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
                       channel.groupTitle!,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -345,12 +345,12 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             size: 40,
             color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Text(
               name.substring(0, name.length > 15 ? 15 : name.length),
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,

@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:iptv_player/widgets/top_navigation_bar.dart';
 import 'package:iptv_player/widgets/search_popup.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
@@ -32,6 +32,9 @@ class _MainShellState extends State<MainShell> {
   int _nextFocusToken = 0;
   int? _activeFocusToken;
   bool _autoSearchTriggered = false;
+  bool Function()? _navFocusRequester;
+  final FocusScopeNode _contentFocusScope =
+      FocusScopeNode(debugLabel: 'ContentScope');
 
   @override
   void initState() {
@@ -55,6 +58,7 @@ class _MainShellState extends State<MainShell> {
   @override
   void dispose() {
     _timeTimer.cancel();
+    _contentFocusScope.dispose();
     super.dispose();
   }
 
@@ -74,8 +78,8 @@ class _MainShellState extends State<MainShell> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Container(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
@@ -98,13 +102,23 @@ class _MainShellState extends State<MainShell> {
               showLogoAndTime: true,
               onSearch: _showSearchDialog,
               onFocusContent: _requestContentFocus,
+              onNavFocusRegistration: _setNavFocusRequester,
             ),
             // Content area - changes when navigating between tabs
             Expanded(
-              child: ContentFocusProvider(
-                registerFocusCallback: _registerContentFocusCallback,
-                unregisterFocusCallback: _unregisterContentFocusCallback,
-                child: widget.child,
+              child: Focus(
+                canRequestFocus: false,
+                skipTraversal: true,
+                onKeyEvent: _handleContentKeyEvent,
+                child: FocusScope(
+                  node: _contentFocusScope,
+                  child: ContentFocusProvider(
+                    registerFocusCallback: _registerContentFocusCallback,
+                    unregisterFocusCallback: _unregisterContentFocusCallback,
+                    requestNavFocus: _requestNavFocus,
+                    child: widget.child,
+                  ),
+                ),
               ),
             ),
           ],
@@ -118,6 +132,10 @@ class _MainShellState extends State<MainShell> {
       context: context,
       builder: (context) => const SearchPopup(),
     );
+  }
+
+  void _setNavFocusRequester(bool Function()? requester) {
+    _navFocusRequester = requester;
   }
 
   int _registerContentFocusCallback(ContentFocusCallback callback) {
@@ -139,10 +157,18 @@ class _MainShellState extends State<MainShell> {
 
   bool _requestContentFocus() {
     final callback = _contentFocusCallback;
-    if (callback == null) return false;
-    final handled = callback();
-    debugPrint('content_focus: Shell focus request ${handled ? 'succeeded' : 'failed'}');
-    return handled;
+    if (callback != null) {
+      final handled = callback();
+      debugPrint(
+        'content_focus: Shell focus request ${handled ? 'succeeded' : 'failed'}',
+      );
+      if (handled) return true;
+    }
+    final fallbackHandled = _focusFirstContentChild();
+    if (!fallbackHandled) {
+      debugPrint('content_focus: No focusable child found for fallback');
+    }
+    return fallbackHandled;
   }
 
   void _scheduleContentFocusRequest() {
@@ -151,5 +177,46 @@ class _MainShellState extends State<MainShell> {
       debugPrint('content_focus: Shell scheduling post-frame focus request');
       _contentFocusCallback?.call();
     });
+  }
+
+  KeyEventResult _handleContentKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      final handled = _requestNavFocus();
+      return handled ? KeyEventResult.handled : KeyEventResult.ignored;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  bool _focusFirstContentChild() {
+    if (_contentFocusScope.children.isEmpty) return false;
+    final target = _findFirstFocusable(_contentFocusScope);
+    if (target == null) return false;
+    target.requestFocus();
+    return true;
+  }
+
+  FocusNode? _findFirstFocusable(FocusNode node) {
+    for (final child in node.children) {
+      if (child.canRequestFocus && child.context != null) {
+        return child;
+      }
+    }
+    for (final child in node.children) {
+      final candidate = _findFirstFocusable(child);
+      if (candidate != null) return candidate;
+    }
+    return null;
+  }
+
+  bool _requestNavFocus() {
+    final requester = _navFocusRequester;
+    if (requester == null) {
+      debugPrint('content_focus: Nav focus requester unavailable');
+      return false;
+    }
+    final handled = requester();
+    debugPrint('content_focus: Nav focus request ${handled ? 'succeeded' : 'failed'}');
+    return handled;
   }
 }

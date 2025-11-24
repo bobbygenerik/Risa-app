@@ -54,7 +54,7 @@ class PrewarmService {
       // Create an ImageConfiguration synchronously and resolve ImageStreams.
       // Use a neutral ImageConfiguration to avoid holding onto BuildContext
       // across async gaps in this static helper.
-      final imageConfig = const ImageConfiguration();
+      const imageConfig = ImageConfiguration();
       for (final url in images) {
         try {
           final provider = NetworkImage(url);

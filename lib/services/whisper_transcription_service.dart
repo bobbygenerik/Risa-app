@@ -461,7 +461,7 @@ class WhisperTranscriptionService extends ChangeNotifier {
     if (_whisperInterpreter == null) return;
     if (_pcmBuffer.isEmpty) return;
 
-    final minBytes = _sampleRate * _audioChunkDuration * _bytesPerSample;
+    const minBytes = _sampleRate * _audioChunkDuration * _bytesPerSample;
     if (!force && _pcmBuffer.length < minBytes) {
       return;
     }

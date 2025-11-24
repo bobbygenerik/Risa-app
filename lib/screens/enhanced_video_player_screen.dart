@@ -882,13 +882,13 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.mic, color: AppTheme.primaryBlue, size: 16),
+                    const Icon(Icons.mic, color: AppTheme.primaryBlue, size: 16),
                     const SizedBox(width: 8),
                     Text(
                       transcriptionService.isTranslating
                           ? 'WHISPER LIVE TRANSLATION'
                           : 'WHISPER LIVE TRANSCRIPTION',
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: AppTheme.primaryBlue,
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -1009,8 +1009,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
   Widget _buildControlsOverlay() {
     return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [Color(0x99050710), Color(0x990d1140)],
@@ -1318,9 +1318,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
             // Header
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppTheme.primaryBlue,
-                borderRadius: const BorderRadius.vertical(
+                borderRadius: BorderRadius.vertical(
                   top: Radius.circular(10),
                 ),
               ),
@@ -1587,9 +1587,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
             // Header
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppTheme.primaryBlue,
-                borderRadius: const BorderRadius.vertical(
+                borderRadius: BorderRadius.vertical(
                   top: Radius.circular(10),
                 ),
               ),

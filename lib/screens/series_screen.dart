@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/content.dart';
@@ -34,11 +35,7 @@ class _SeriesScreenState extends State<SeriesScreen>
   @override
   bool handleContentFocusRequest() {
     if (!mounted) return false;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _watchFocus.requestFocus();
-      }
-    });
+    _watchFocus.requestFocus();
     return true;
   }
 
@@ -158,10 +155,10 @@ class _SeriesScreenState extends State<SeriesScreen>
         final recentSeries = contentProvider.recentlyAddedSeries;
 
         if (series.isEmpty) {
-          return _buildEmptyState(context);
+          return _wrapWithDirectionalFocus(_buildEmptyState(context));
         }
 
-        return Stack(
+        final stack = Stack(
           children: [
             // Full-height hero banner background
             Positioned.fill(
@@ -193,12 +190,12 @@ class _SeriesScreenState extends State<SeriesScreen>
                         ? 0
                         : _featuredIndex],
                   ),
-                  SizedBox(height: AppSizes.lg),
+                  const SizedBox(height: AppSizes.lg),
 
                   Container(
                     color: const Color(0xFF050710),
                     child: Padding(
-                      padding: EdgeInsets.all(AppSizes.lg),
+                      padding: const EdgeInsets.all(AppSizes.lg),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -208,9 +205,9 @@ class _SeriesScreenState extends State<SeriesScreen>
                               context,
                               'Recently Added Series',
                             ),
-                            SizedBox(height: AppSizes.md),
+                            const SizedBox(height: AppSizes.md),
                             _buildSeriesRow(context, recentSeries),
-                            SizedBox(height: AppSizes.xl),
+                            const SizedBox(height: AppSizes.xl),
                           ],
 
                           // All Series by Genre
@@ -224,6 +221,8 @@ class _SeriesScreenState extends State<SeriesScreen>
             ),
           ],
         );
+
+        return _wrapWithDirectionalFocus(stack);
       },
     );
   }
@@ -232,8 +231,8 @@ class _SeriesScreenState extends State<SeriesScreen>
     return Scaffold(
       backgroundColor: const Color(0xFF050710),
       body: Container(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [Color(0xFF050710), Color(0xFF0d1140)],
@@ -248,12 +247,12 @@ class _SeriesScreenState extends State<SeriesScreen>
                 size: 80,
                 color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
               ),
-              SizedBox(height: AppSizes.lg),
+              const SizedBox(height: AppSizes.lg),
               Text(
                 'No Series Available',
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
-              SizedBox(height: AppSizes.sm),
+              const SizedBox(height: AppSizes.sm),
               Text(
                 'Load a playlist with series content from Settings',
                 style: Theme.of(
@@ -261,7 +260,7 @@ class _SeriesScreenState extends State<SeriesScreen>
                 ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
                 textAlign: TextAlign.center,
               ),
-              SizedBox(height: AppSizes.xl),
+              const SizedBox(height: AppSizes.xl),
               ElevatedButton.icon(
                 onPressed: () {
                   Future.delayed(const Duration(milliseconds: 100), () {
@@ -279,6 +278,28 @@ class _SeriesScreenState extends State<SeriesScreen>
         ),
       ),
     );
+  }
+
+  Widget _wrapWithDirectionalFocus(Widget child) {
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onKeyEvent: _handleDirectionalKeyEvent,
+      child: child,
+    );
+  }
+
+  KeyEventResult _handleDirectionalKeyEvent(
+    FocusNode node,
+    KeyEvent event,
+  ) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      return requestNavigationFocus()
+          ? KeyEventResult.handled
+          : KeyEventResult.ignored;
+    }
+    return KeyEventResult.ignored;
   }
 
   Widget _buildSectionHeader(BuildContext context, String title) {
@@ -327,7 +348,7 @@ class _SeriesScreenState extends State<SeriesScreen>
     final firstEpisode = episodes.first;
 
     return TVFocusable(
-      focusMargin: EdgeInsets.only(right: AppSizes.md),
+      focusMargin: const EdgeInsets.only(right: AppSizes.md),
       borderRadius: BorderRadius.circular(AppSizes.radiusMd),
       onPressed: () {
         final encodedId = Uri.encodeComponent(firstEpisode.id);
@@ -362,7 +383,7 @@ class _SeriesScreenState extends State<SeriesScreen>
                       top: 8,
                       right: 8,
                       child: Container(
-                        padding: EdgeInsets.symmetric(
+                        padding: const EdgeInsets.symmetric(
                           horizontal: 8,
                           vertical: 4,
                         ),
@@ -384,7 +405,7 @@ class _SeriesScreenState extends State<SeriesScreen>
                 ),
               ),
             ),
-            SizedBox(height: AppSizes.xs),
+            const SizedBox(height: AppSizes.xs),
             Text(
               title,
               style: Theme.of(
@@ -418,12 +439,12 @@ class _SeriesScreenState extends State<SeriesScreen>
               size: 40,
               color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Padding(
-              padding: EdgeInsets.all(8),
+              padding: const EdgeInsets.all(8),
               child: Text(
                 title,
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
                 textAlign: TextAlign.center,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
@@ -453,9 +474,9 @@ class _SeriesScreenState extends State<SeriesScreen>
     for (final entry in genreMap.entries) {
       sections.addAll([
         _buildSectionHeader(context, entry.key),
-        SizedBox(height: AppSizes.md),
+        const SizedBox(height: AppSizes.md),
         _buildSeriesRow(context, entry.value),
-        SizedBox(height: AppSizes.xl),
+        const SizedBox(height: AppSizes.xl),
       ]);
     }
 
@@ -510,7 +531,7 @@ class _SeriesScreenState extends State<SeriesScreen>
             Align(
               alignment: Alignment.bottomLeft,
               child: Padding(
-                padding: EdgeInsets.all(AppSizes.lg),
+                padding: const EdgeInsets.all(AppSizes.lg),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -597,8 +618,8 @@ class _SeriesScreenState extends State<SeriesScreen>
 
   Widget _buildBannerPlaceholder() {
     return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [Color(0xFF050710), Color(0xFF0d1140)],

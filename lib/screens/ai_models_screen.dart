@@ -21,7 +21,7 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
   void initState() {
     super.initState();
     _currentTime = DateTime.now();
-    Future.delayed(Duration(seconds: 1), _updateTime);
+    Future.delayed(const Duration(seconds: 1), _updateTime);
   }
 
   void _updateTime() {
@@ -29,7 +29,7 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
     setState(() {
       _currentTime = DateTime.now();
     });
-    Future.delayed(Duration(seconds: 1), _updateTime);
+    Future.delayed(const Duration(seconds: 1), _updateTime);
   }
 
   String _formatTime(DateTime time) {
@@ -51,7 +51,7 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -394,10 +394,10 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
         color: AppTheme.highlight,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Column(
+      child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
               Icon(Icons.translate, color: AppTheme.primaryBlue, size: 20),
               SizedBox(width: 8),
@@ -407,13 +407,13 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          const Text(
+          SizedBox(height: 8),
+          Text(
             'Translation models are managed by Google ML Kit and download automatically when you use a language pair.',
             style: TextStyle(fontSize: 13, height: 1.4),
           ),
-          const SizedBox(height: 8),
-          const Text(
+          SizedBox(height: 8),
+          Text(
             '• 59 languages supported\n'
             '• ~50 MB per language pair\n'
             '• Auto-downloads on first use\n'
@@ -498,18 +498,18 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
                 ),
               ),
               const SizedBox(width: 16),
-              Expanded(
+              const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'AI Models',
                       style: TextStyle(
                         fontSize: 26,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    SizedBox(height: 6),
                     Text(
                       'Manage on-device AI downloads for video upscaling and speech features.',
                       style: TextStyle(
@@ -531,7 +531,7 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
+                  const Text(
                     'Local time',
                     style: TextStyle(
                       color: AppTheme.textSecondary,

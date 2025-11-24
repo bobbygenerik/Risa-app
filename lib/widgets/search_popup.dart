@@ -99,7 +99,7 @@ class _SearchPopupState extends State<SearchPopup> {
     final keyboard = media.viewInsets.bottom;
     const maxPreferredHeight = 600.0;
     const minComfortHeight = 360.0;
-    final topPadding = AppSizes.xl;
+    const topPadding = AppSizes.xl;
     final bottomPadding = AppSizes.xl + keyboard;
     final availableHeight = media.size.height - topPadding - bottomPadding;
     final hasComfortableSpace = availableHeight >= minComfortHeight;

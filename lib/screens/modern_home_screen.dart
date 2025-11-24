@@ -39,18 +39,18 @@ class ModernHomeScreen extends StatelessWidget {
                     size: 80,
                     color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
                   ),
-                  SizedBox(height: 24),
+                  const SizedBox(height: 24),
                   Text(
                     'No Live TV Available',
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
                     'Load a playlist with Live TV channels from Settings',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
                     textAlign: TextAlign.center,
                   ),
-                  SizedBox(height: 32),
+                  const SizedBox(height: 32),
                   ElevatedButton.icon(
                     onPressed: () {
                       Future.delayed(const Duration(milliseconds: 100), () {
@@ -94,7 +94,7 @@ class ModernHomeScreen extends StatelessWidget {
                     context.push('/player', extra: content);
                   },
                 ),
-                SizedBox(height: 40),
+                const SizedBox(height: 40),
               ],
             ),
           );
@@ -171,7 +171,7 @@ class ModernHomeScreen extends StatelessWidget {
                           children: [
                             Text(
                               featured.title,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: AppTheme.textPrimary,
                                 fontSize: 28,
                                 fontWeight: FontWeight.w700,
@@ -180,11 +180,11 @@ class ModernHomeScreen extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 12),
-                            Row(
+                            const Row(
                               children: [
                                 Icon(Icons.play_circle,
                                     color: AppTheme.accentOrange, size: 20),
-                                const SizedBox(width: 8),
+                                SizedBox(width: 8),
                                 Text(
                                   'Continue Watching',
                                   style: TextStyle(
@@ -228,8 +228,8 @@ class ModernHomeScreen extends StatelessWidget {
           children: [
             Icon(Icons.movie,
                 size: 64, color: AppTheme.textSecondary.withAlpha((0.5 * 255).round())),
-            SizedBox(height: 16),
-            Text(
+            const SizedBox(height: 16),
+            const Text(
               'No Content Available',
               style: TextStyle(
                 color: AppTheme.textSecondary,
@@ -264,16 +264,16 @@ class ModernHomeScreen extends StatelessWidget {
     return Consumer<ContentProvider>(
       builder: (context, contentProvider, _) {
         final movies = contentProvider.movies;
-        if (movies.isEmpty) return SizedBox.shrink();
+        if (movies.isEmpty) return const SizedBox.shrink();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: EdgeInsets.all(24),
+              padding: const EdgeInsets.all(24),
               child: Text(
                 title,
-                style: TextStyle(
+                style: const TextStyle(
                   color: AppTheme.textPrimary,
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
@@ -340,7 +340,7 @@ class ModernHomeScreen extends StatelessWidget {
                                 ),
                                 child: Text(
                                   content.title,
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     color: AppTheme.textPrimary,
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -358,7 +358,7 @@ class ModernHomeScreen extends StatelessWidget {
                 ),
               ),
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
           ],
         );
       },
@@ -372,16 +372,16 @@ class ModernHomeScreen extends StatelessWidget {
     return Consumer<ChannelProvider>(
       builder: (context, channelProvider, _) {
         final channels = channelProvider.channels.take(6).toList();
-        if (channels.isEmpty) return SizedBox.shrink();
+        if (channels.isEmpty) return const SizedBox.shrink();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: EdgeInsets.all(24),
+              padding: const EdgeInsets.all(24),
               child: Text(
                 title,
-                style: TextStyle(
+                style: const TextStyle(
                   color: AppTheme.textPrimary,
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
@@ -391,7 +391,7 @@ class ModernHomeScreen extends StatelessWidget {
             ),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: FocusTraversalGroup(
                 policy: WidgetOrderTraversalPolicy(),
                 child: Row(
@@ -431,7 +431,7 @@ class ModernHomeScreen extends StatelessWidget {
                 ),
               ),
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
           ],
         );
       },
@@ -447,7 +447,7 @@ class ModernHomeScreen extends StatelessWidget {
           children: [
             Icon(Icons.movie,
                 size: 48, color: AppTheme.textSecondary.withAlpha((0.5 * 255).round())),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
               'No Image',
               style: TextStyle(
@@ -470,7 +470,7 @@ class ModernHomeScreen extends StatelessWidget {
           children: [
             Icon(Icons.live_tv,
                 size: 40, color: AppTheme.textSecondary.withAlpha((0.5 * 255).round())),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
               name.length > 20 ? name.substring(0, 20) : name,
               style: TextStyle(

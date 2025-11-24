@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 void _logContentFocus(String message) {
@@ -15,11 +14,13 @@ class ContentFocusProvider extends InheritedWidget {
     super.key,
     required this.registerFocusCallback,
     required this.unregisterFocusCallback,
+    this.requestNavFocus,
     required super.child,
   });
 
   final int Function(ContentFocusCallback callback) registerFocusCallback;
   final void Function(int token) unregisterFocusCallback;
+  final bool Function()? requestNavFocus;
 
   static ContentFocusProvider? of(BuildContext context) {
     return context.dependOnInheritedWidgetOfExactType<ContentFocusProvider>();
@@ -39,10 +40,17 @@ class ContentFocusProvider extends InheritedWidget {
 /// meaningful control on the screen when requested.
 mixin ContentFocusRegistrant<T extends StatefulWidget> on State<T> {
   int? _focusRegistrationToken;
+  ContentFocusProvider? _registeredProvider;
 
   /// Called whenever the shell needs this screen to move focus into its
   /// primary content area. Return true if a focus target was found.
   bool handleContentFocusRequest();
+
+  /// Request that the shell move focus back to the top navigation bar.
+  bool requestNavigationFocus() {
+    final provider = ContentFocusProvider.maybeOf(context);
+    return provider?.requestNavFocus?.call() ?? false;
+  }
 
   /// Override to provide a more descriptive label for focus debug logging.
   @protected
@@ -52,14 +60,19 @@ mixin ContentFocusRegistrant<T extends StatefulWidget> on State<T> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final provider = ContentFocusProvider.of(context);
-    if (provider == null) return;
-    if (_focusRegistrationToken != null) {
-      provider.unregisterFocusCallback(_focusRegistrationToken!);
+    // If we were previously registered with a different provider (or none),
+    // unregister before re-registering so we do not leak callbacks.
+    if (_registeredProvider != null && _focusRegistrationToken != null) {
+      _registeredProvider!.unregisterFocusCallback(_focusRegistrationToken!);
+      _focusRegistrationToken = null;
+      _registeredProvider = null;
     }
+    if (provider == null) return;
     _focusRegistrationToken =
         provider.registerFocusCallback(_onContentFocusRequested);
+    _registeredProvider = provider;
     _logContentFocus(
-      'Registered content focus: ${focusDebugLabel} '
+      'Registered content focus: $focusDebugLabel '
       '(token: $_focusRegistrationToken)',
     );
   }
@@ -69,21 +82,23 @@ mixin ContentFocusRegistrant<T extends StatefulWidget> on State<T> {
     final handled = handleContentFocusRequest();
     _logContentFocus(
       'Focus request ${handled ? 'succeeded' : 'failed'} for '
-      '${focusDebugLabel}',
+      '$focusDebugLabel',
     );
     return handled;
   }
 
   @override
   void dispose() {
-    final provider = ContentFocusProvider.maybeOf(context);
+    final provider = _registeredProvider;
     final token = _focusRegistrationToken;
     if (provider != null && token != null) {
       provider.unregisterFocusCallback(token);
       _logContentFocus(
-        'Unregistered content focus: ${focusDebugLabel} (token: $token)',
+        'Unregistered content focus: $focusDebugLabel (token: $token)',
       );
     }
+    _registeredProvider = null;
+    _focusRegistrationToken = null;
     super.dispose();
   }
 }

@@ -134,12 +134,12 @@ class _StartupLoaderState extends State<StartupLoader> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: Scaffold(
+      home: const Scaffold(
         backgroundColor: Colors.black,
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: const [
+            children: [
               CircularProgressIndicator(),
               SizedBox(height: 12),
               Text('Loading cache...', style: TextStyle(color: Colors.white)),
@@ -221,7 +221,7 @@ class _GlobalErrorScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.error_outline, color: Colors.redAccent, size: 80),
+                const Icon(Icons.error_outline, color: Colors.redAccent, size: 80),
                 const SizedBox(height: 24),
                 Text(
                   'Something went wrong',
@@ -434,7 +434,7 @@ class _MyAppState extends State<MyApp> {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: AppTheme.darkTheme,
-        home: Scaffold(body: Center(child: CircularProgressIndicator())),
+        home: const Scaffold(body: Center(child: CircularProgressIndicator())),
       );
     }
 

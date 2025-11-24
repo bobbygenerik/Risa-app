@@ -81,7 +81,7 @@ class ChannelProvider with ChangeNotifier {
       );
       StartupProbe.mark('ChannelProvider.autoLoadPlaylist: using cache');
       try {
-        loadPlaylistFromString(cachedPlaylist);
+        await loadPlaylistFromString(cachedPlaylist);
         _hasLoadedPlaylist = true;
         debugPrint(
           'ChannelProvider: Cache loaded successfully with ${_channels.length} channels',
@@ -390,19 +390,29 @@ class ChannelProvider with ChangeNotifier {
     }
   }
 
-  /// Load channels from M3U content string
-  void loadPlaylistFromString(String content) {
+  /// Load channels from M3U content string without blocking the UI isolate
+  Future<void> loadPlaylistFromString(String content) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      _channels = _parserService.parseM3U(content);
+      final parsed = await compute(_parsePlaylistInIsolate, content);
 
-      // Also parse VOD content (movies and series)
-      final vodContent = _parserService.parseVOD(content);
-      _movies = vodContent['movies'] ?? [];
-      _series = vodContent['series'] ?? [];
+        final channelMaps = (parsed['channels'] as List<dynamic>? ?? [])
+          .map((channel) =>
+            Channel.fromMap(Map<String, dynamic>.from(channel as Map)))
+          .toList();
+        final movieMaps = (parsed['movies'] as List<dynamic>? ?? [])
+          .map((movie) => Content.fromMap(Map<String, dynamic>.from(movie as Map)))
+          .toList();
+        final seriesMaps = (parsed['series'] as List<dynamic>? ?? [])
+          .map((show) => Content.fromMap(Map<String, dynamic>.from(show as Map)))
+          .toList();
+
+      _channels = channelMaps;
+      _movies = movieMaps;
+      _series = seriesMaps;
 
       // Sync VOD content to ContentProvider
       if (_contentProvider != null) {
@@ -410,9 +420,17 @@ class ChannelProvider with ChangeNotifier {
         _contentProvider!.loadSeries(_series);
       }
 
+      final epgUrl = parsed['epgUrl'] as String?;
+      if (epgUrl != null && epgUrl.isNotEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('epg_url', epgUrl);
+      }
+
       _isLoading = false;
       notifyListeners();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('ChannelProvider: Error parsing playlist string: $e');
+      debugPrint('ChannelProvider: Stack trace: $stackTrace');
       _errorMessage = e.toString();
       _isLoading = false;
       notifyListeners();
@@ -522,4 +540,25 @@ class _MyHttpOverrides extends HttpOverrides {
         return true;
       };
   }
+}
+
+/// Parse an entire playlist off the main isolate and return simple maps that
+/// can be reconstructed into Channel/Content objects.
+Map<String, dynamic> _parsePlaylistInIsolate(String content) {
+  final parser = M3UParserService();
+  final channels = parser.parseM3U(content).map((c) => c.toMap()).toList();
+  final vodMap = parser.parseVOD(content);
+  final movies = (vodMap['movies'] ?? <Content>[])
+      .map((content) => content.toMap())
+      .toList();
+  final series = (vodMap['series'] ?? <Content>[])
+      .map((content) => content.toMap())
+      .toList();
+
+  return {
+    'channels': channels,
+    'movies': movies,
+    'series': series,
+    'epgUrl': parser.epgUrl,
+  };
 }

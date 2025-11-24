@@ -20,7 +20,8 @@ class TopNavigationBar extends StatefulWidget {
   final VoidCallback? onOverflow;
   final String currentTime;
   final bool showLogoAndTime;
-  final VoidCallback? onFocusContent;
+  final bool Function()? onFocusContent;
+  final void Function(bool Function()? requester)? onNavFocusRegistration;
 
   const TopNavigationBar({
     super.key,
@@ -32,6 +33,7 @@ class TopNavigationBar extends StatefulWidget {
     required this.currentTime,
     this.showLogoAndTime = true,
     this.onFocusContent,
+    this.onNavFocusRegistration,
   });
 
   @override
@@ -55,13 +57,20 @@ class NavTab {
 class _TopNavigationBarState extends State<TopNavigationBar> {
   late List<FocusNode> _tabFocusNodes;
   late int _activeTabIndex;
+  late FocusNode _searchButtonFocusNode;
+  late FocusNode _overflowButtonFocusNode;
+  final GlobalKey<PopupMenuButtonState<String>> _overflowMenuKey =
+      GlobalKey<PopupMenuButtonState<String>>();
 
   @override
   void initState() {
     super.initState();
     _tabFocusNodes = List.generate(widget.tabs.length, (_) => FocusNode());
+    _searchButtonFocusNode = FocusNode(debugLabel: 'NavSearchButton');
+    _overflowButtonFocusNode = FocusNode(debugLabel: 'NavOverflowButton');
     _activeTabIndex = _resolveActiveTabIndex(widget.activeTab);
     WidgetsBinding.instance.addPostFrameCallback((_) => _focusActiveTab());
+    widget.onNavFocusRegistration?.call(_requestActiveTabFocus);
   }
 
   @override
@@ -72,10 +81,17 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
       _activeTabIndex = newIndex;
       WidgetsBinding.instance.addPostFrameCallback((_) => _focusActiveTab());
     }
+    if (oldWidget.onNavFocusRegistration != widget.onNavFocusRegistration &&
+        widget.onNavFocusRegistration != null) {
+      widget.onNavFocusRegistration!.call(_requestActiveTabFocus);
+    }
   }
 
   @override
   void dispose() {
+    widget.onNavFocusRegistration?.call(null);
+    _searchButtonFocusNode.dispose();
+    _overflowButtonFocusNode.dispose();
     for (var node in _tabFocusNodes) {
       node.dispose();
     }
@@ -128,13 +144,9 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                 final tabWidth = constraints.maxWidth / tabCount;
                 final highlightWidth = math.min(56 * scale, tabWidth * 0.6);
 
-                // Determine which index to highlight: focused tab first, else active tab
-                int highlightedIndex = widget.tabs.indexWhere((t) => t.id == widget.activeTab);
-                for (int i = 0; i < _tabFocusNodes.length; i++) {
-                  if (_tabFocusNodes[i].hasFocus) {
-                    highlightedIndex = i;
-                    break;
-                  }
+                int highlightedIndex = _tabFocusNodes.indexWhere((node) => node.hasFocus);
+                if (highlightedIndex == -1) {
+                  highlightedIndex = _activeTabIndex.clamp(0, tabCount - 1);
                 }
 
                 final left = (highlightedIndex.clamp(0, tabCount - 1)) * tabWidth + (tabWidth - highlightWidth) / 2;
@@ -179,51 +191,128 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
-                IconButton(
-                  onPressed: () {
-                    debugPrint('top_nav: search button pressed');
-                    widget.onSearch?.call();
+                Focus(
+                  focusNode: _searchButtonFocusNode,
+                  onFocusChange: (_) => setState(() {}),
+                  onKeyEvent: (node, event) {
+                    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                    if (event.logicalKey == LogicalKeyboardKey.enter ||
+                        event.logicalKey == LogicalKeyboardKey.select ||
+                        event.logicalKey == LogicalKeyboardKey.space) {
+                      widget.onSearch?.call();
+                      return KeyEventResult.handled;
+                    }
+                    if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                      if (_tabFocusNodes.isNotEmpty) {
+                        _tabFocusNodes.last.requestFocus();
+                      }
+                      return KeyEventResult.handled;
+                    }
+                    if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                      _overflowButtonFocusNode.requestFocus();
+                      return KeyEventResult.handled;
+                    }
+                    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                      _handleContentFocusFromNav(node);
+                      return KeyEventResult.handled;
+                    }
+                    return KeyEventResult.ignored;
                   },
-                  icon: Icon(Icons.search, color: AppTheme.textSecondary),
-                  iconSize: 22 * scale,
-                  padding: EdgeInsets.symmetric(horizontal: 8 * scale),
-                  constraints: BoxConstraints(minWidth: 40 * scale),
-                  alignment: Alignment.center,
-                  tooltip: 'Search',
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    curve: Curves.easeOut,
+                    decoration: BoxDecoration(
+                      color: _searchButtonFocusNode.hasFocus
+                          ? Colors.white.withOpacity(0.08)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                      border: _searchButtonFocusNode.hasFocus
+                          ? Border.all(color: AppTheme.primaryBlue, width: 2)
+                          : null,
+                    ),
+                    child: IconButton(
+                      onPressed: () {
+                        debugPrint('top_nav: search button pressed');
+                        widget.onSearch?.call();
+                      },
+                      icon: const Icon(Icons.search, color: AppTheme.textSecondary),
+                      iconSize: 22 * scale,
+                      padding: EdgeInsets.symmetric(horizontal: 8 * scale),
+                      constraints: BoxConstraints(minWidth: 40 * scale),
+                      alignment: Alignment.center,
+                      tooltip: 'Search',
+                    ),
+                  ),
                 ),
                 SizedBox(width: 12 * scale),
                 // Overflow menu
-                PopupMenuButton<String>(
-                  color: Colors.black.withAlpha((0.85 * 255).round()),
-                  elevation: 20,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(
-                      color: AppTheme.darkBackgroundOpacity(0.12),
-                      width: 1.0,
+                Focus(
+                  focusNode: _overflowButtonFocusNode,
+                  onFocusChange: (_) => setState(() {}),
+                  onKeyEvent: (node, event) {
+                    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                    if (event.logicalKey == LogicalKeyboardKey.enter ||
+                        event.logicalKey == LogicalKeyboardKey.select ||
+                        event.logicalKey == LogicalKeyboardKey.space) {
+                      _overflowMenuKey.currentState?.showButtonMenu();
+                      return KeyEventResult.handled;
+                    }
+                    if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                      _searchButtonFocusNode.requestFocus();
+                      return KeyEventResult.handled;
+                    }
+                    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                      _handleContentFocusFromNav(node);
+                      return KeyEventResult.handled;
+                    }
+                    return KeyEventResult.ignored;
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    curve: Curves.easeOut,
+                    decoration: BoxDecoration(
+                      color: _overflowButtonFocusNode.hasFocus
+                          ? Colors.white.withOpacity(0.08)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                      border: _overflowButtonFocusNode.hasFocus
+                          ? Border.all(color: AppTheme.primaryBlue, width: 2)
+                          : null,
+                    ),
+                    child: PopupMenuButton<String>(
+                      key: _overflowMenuKey,
+                      color: Colors.black.withAlpha((0.85 * 255).round()),
+                      elevation: 20,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(
+                          color: AppTheme.darkBackgroundOpacity(0.12),
+                          width: 1.0,
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.more_vert,
+                        size: 22 * scale,
+                        color: AppTheme.textSecondary,
+                      ),
+                      onSelected: (value) {
+                        // Slight delay to allow menu to dismiss before navigating
+                        Future.delayed(const Duration(milliseconds: 100), () {
+                          if (!mounted) return;
+                          if (value == 'settings') router.go('/settings');
+                          if (value == 'favorites') router.go('/favorites');
+                          if (value == 'downloads') router.go('/downloads');
+                          if (value == 'guide') router.go('/epg');
+                        });
+                      },
+                      itemBuilder: (context) => [
+                        PopupMenuItem(value: 'settings', child: Row(children: [Icon(Icons.settings, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Settings', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
+                        PopupMenuItem(value: 'favorites', child: Row(children: [Icon(Icons.favorite_outline, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Favorites', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
+                        PopupMenuItem(value: 'downloads', child: Row(children: [Icon(Icons.download, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Downloads', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
+                        PopupMenuItem(value: 'guide', child: Row(children: [Icon(Icons.schedule, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Guide', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
+                      ],
                     ),
                   ),
-                  child: Icon(
-                    Icons.more_vert,
-                    size: 22 * scale,
-                    color: AppTheme.textSecondary,
-                  ),
-                  onSelected: (value) {
-                    // Slight delay to allow menu to dismiss before navigating
-                    Future.delayed(const Duration(milliseconds: 100), () {
-                      if (!mounted) return;
-                      if (value == 'settings') router.go('/settings');
-                      if (value == 'favorites') router.go('/favorites');
-                      if (value == 'downloads') router.go('/downloads');
-                      if (value == 'guide') router.go('/epg');
-                    });
-                  },
-                  itemBuilder: (context) => [
-                    PopupMenuItem(value: 'settings', child: Row(children: [Icon(Icons.settings, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Settings', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
-                    PopupMenuItem(value: 'favorites', child: Row(children: [Icon(Icons.favorite_outline, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Favorites', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
-                    PopupMenuItem(value: 'downloads', child: Row(children: [Icon(Icons.download, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Downloads', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
-                    PopupMenuItem(value: 'guide', child: Row(children: [Icon(Icons.schedule, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Guide', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
-                  ],
                 ),
                 SizedBox(width: 20 * scale),
                 // Time display (balanced width with logo)
@@ -252,8 +341,8 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
       onKeyEvent: (node, event) {
         if (event is! KeyDownEvent) return KeyEventResult.ignored;
         if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-          widget.onFocusContent?.call();
-          return KeyEventResult.handled;
+          final handled = widget.onFocusContent?.call() ?? false;
+          return handled ? KeyEventResult.handled : KeyEventResult.ignored;
         }
         return KeyEventResult.ignored;
       },
@@ -281,12 +370,24 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
     return idx >= 0 ? idx : 0;
   }
 
-  void _focusActiveTab() {
-    if (_tabFocusNodes.isEmpty) return;
+  bool _focusActiveTab({bool force = false}) {
+    if (_tabFocusNodes.isEmpty) return false;
     final index = _activeTabIndex.clamp(0, _tabFocusNodes.length - 1);
     final node = _tabFocusNodes[index];
-    if (!node.hasFocus) {
+    if (force || !node.hasFocus) {
       node.requestFocus();
+    }
+    return true;
+  }
+
+  bool _requestActiveTabFocus() {
+    return _focusActiveTab(force: true);
+  }
+
+  void _handleContentFocusFromNav(FocusNode origin) {
+    final moved = widget.onFocusContent?.call() ?? false;
+    if (!moved && origin.canRequestFocus) {
+      origin.requestFocus();
     }
   }
 
@@ -307,12 +408,17 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
           return KeyEventResult.handled;
         }
         if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+          final isLastTab = index == widget.tabs.length - 1;
+          if (isLastTab && widget.showLogoAndTime) {
+            _searchButtonFocusNode.requestFocus();
+            return KeyEventResult.handled;
+          }
           final next = (index + 1) % widget.tabs.length;
           _tabFocusNodes[next].requestFocus();
           return KeyEventResult.handled;
         }
         if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-          widget.onFocusContent?.call();
+          _handleContentFocusFromNav(node);
           return KeyEventResult.handled;
         }
         if (event.logicalKey == LogicalKeyboardKey.enter ||

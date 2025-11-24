@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/content.dart';
@@ -34,11 +35,7 @@ class _MoviesScreenState extends State<MoviesScreen>
   @override
   bool handleContentFocusRequest() {
     if (!mounted) return false;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _playFocus.requestFocus();
-      }
-    });
+    _playFocus.requestFocus();
     return true;
   }
 
@@ -89,7 +86,7 @@ class _MoviesScreenState extends State<MoviesScreen>
         final recentMovies = contentProvider.recentlyAddedMovies;
 
         if (movies.isEmpty) {
-          return _buildEmptyState(context);
+          return _wrapWithDirectionalFocus(_buildEmptyState(context));
         }
 
         final displayMovies = _curatedMovies.isNotEmpty
@@ -98,7 +95,7 @@ class _MoviesScreenState extends State<MoviesScreen>
         if (_featuredIndex >= displayMovies.length) _featuredIndex = 0;
         final featured = displayMovies[_featuredIndex];
 
-        return Stack(
+        final stack = Stack(
           children: [
             // Full-height hero banner background
             Positioned.fill(child: _buildHeroBannerBackground(featured)),
@@ -109,21 +106,21 @@ class _MoviesScreenState extends State<MoviesScreen>
                 children: [
                   // Hero banner with content overlay
                   _buildHeroBannerOverlay(context, featured),
-                  SizedBox(height: AppSizes.lg),
+                  const SizedBox(height: AppSizes.lg),
 
                   Container(
                     color: const Color(0xFF050710),
                     child: Padding(
-                      padding: EdgeInsets.all(AppSizes.lg),
+                      padding: const EdgeInsets.all(AppSizes.lg),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Recently Added Movies
                           if (recentMovies.isNotEmpty) ...[
                             _buildSectionHeader(context, 'Recently Added'),
-                            SizedBox(height: AppSizes.md),
+                            const SizedBox(height: AppSizes.md),
                             _buildMoviesRow(context, recentMovies),
-                            SizedBox(height: AppSizes.xl),
+                            const SizedBox(height: AppSizes.xl),
                           ],
 
                           // All Movies by Genre
@@ -137,6 +134,8 @@ class _MoviesScreenState extends State<MoviesScreen>
             ),
           ],
         );
+
+        return _wrapWithDirectionalFocus(stack);
       },
     );
   }
@@ -145,8 +144,8 @@ class _MoviesScreenState extends State<MoviesScreen>
     return Scaffold(
       backgroundColor: const Color(0xFF050710),
       body: Container(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [Color(0xFF050710), Color(0xFF0d1140)],
@@ -161,12 +160,12 @@ class _MoviesScreenState extends State<MoviesScreen>
                 size: 80,
                 color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
               ),
-              SizedBox(height: AppSizes.lg),
+              const SizedBox(height: AppSizes.lg),
               Text(
                 'No Movies Available',
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
-              SizedBox(height: AppSizes.sm),
+              const SizedBox(height: AppSizes.sm),
               Text(
                 'Load a playlist with VOD content from Settings',
                 style: Theme.of(
@@ -174,7 +173,7 @@ class _MoviesScreenState extends State<MoviesScreen>
                 ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
                 textAlign: TextAlign.center,
               ),
-              SizedBox(height: AppSizes.xl),
+              const SizedBox(height: AppSizes.xl),
               ElevatedButton.icon(
                 onPressed: () {
                   Future.delayed(const Duration(milliseconds: 100), () {
@@ -203,6 +202,28 @@ class _MoviesScreenState extends State<MoviesScreen>
     );
   }
 
+  Widget _wrapWithDirectionalFocus(Widget child) {
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onKeyEvent: _handleDirectionalKeyEvent,
+      child: child,
+    );
+  }
+
+  KeyEventResult _handleDirectionalKeyEvent(
+    FocusNode node,
+    KeyEvent event,
+  ) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      return requestNavigationFocus()
+          ? KeyEventResult.handled
+          : KeyEventResult.ignored;
+    }
+    return KeyEventResult.ignored;
+  }
+
   Widget _buildMoviesRow(BuildContext context, List<Content> movies) {
     if (movies.isEmpty) return const SizedBox.shrink();
 
@@ -223,7 +244,7 @@ class _MoviesScreenState extends State<MoviesScreen>
 
   Widget _buildMovieCard(BuildContext context, Content movie) {
     return TVFocusable(
-      focusMargin: EdgeInsets.only(right: AppSizes.md),
+      focusMargin: const EdgeInsets.only(right: AppSizes.md),
       borderRadius: BorderRadius.circular(AppSizes.radiusMd),
       onPressed: () {
         final encodedId = Uri.encodeComponent(movie.id);
@@ -272,7 +293,7 @@ class _MoviesScreenState extends State<MoviesScreen>
                 ),
               ),
             ),
-            SizedBox(height: AppSizes.xs),
+            const SizedBox(height: AppSizes.xs),
             Text(
               movie.title,
               style: Theme.of(
@@ -306,12 +327,12 @@ class _MoviesScreenState extends State<MoviesScreen>
               size: 40,
               color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Padding(
-              padding: EdgeInsets.all(8),
+              padding: const EdgeInsets.all(8),
               child: Text(
                 title,
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
                 textAlign: TextAlign.center,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
@@ -341,9 +362,9 @@ class _MoviesScreenState extends State<MoviesScreen>
     for (final entry in genreMap.entries) {
       sections.addAll([
         _buildSectionHeader(context, entry.key),
-        SizedBox(height: AppSizes.md),
+        const SizedBox(height: AppSizes.md),
         _buildMoviesRow(context, entry.value),
-        SizedBox(height: AppSizes.xl),
+        const SizedBox(height: AppSizes.xl),
       ]);
     }
 
@@ -352,8 +373,8 @@ class _MoviesScreenState extends State<MoviesScreen>
 
   Widget _buildHeroBannerBackground(Content featuredMovie) {
     return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [Color(0xFF050710), Color(0xFF0d1140)],
@@ -398,7 +419,7 @@ class _MoviesScreenState extends State<MoviesScreen>
             Align(
               alignment: Alignment.bottomLeft,
               child: Padding(
-                padding: EdgeInsets.all(AppSizes.lg),
+                padding: const EdgeInsets.all(AppSizes.lg),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -486,8 +507,8 @@ class _MoviesScreenState extends State<MoviesScreen>
 
   Widget _buildBannerPlaceholder() {
     return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [Color(0xFF050710), Color(0xFF0d1140)],

@@ -262,9 +262,9 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: AppTheme.primaryBlue, width: 3),
+              borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 3),
             ),
-            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           ),
         ),
       ),
@@ -287,8 +287,8 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
       return Scaffold(
         backgroundColor: Colors.transparent,
         body: Container(
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
@@ -297,7 +297,7 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
                 ],
               )
           ),
-          child: Center(
+          child: const Center(
             child: CircularProgressIndicator(color: AppTheme.primaryBlue),
           ),
         ),
@@ -328,8 +328,8 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
         ],
       ),
       body: Container(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [

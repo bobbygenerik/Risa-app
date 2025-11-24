@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
@@ -51,23 +52,20 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   @override
   bool handleContentFocusRequest() {
-    return requestFirstContentFocus();
+    return _focusPrimaryAction();
   }
 
-  bool requestFirstContentFocus() {
+  bool _focusPrimaryAction() {
     if (!mounted) return false;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final channelProvider = Provider.of<ChannelProvider>(
-        context,
-        listen: false,
-      );
-      if (channelProvider.channels.isEmpty) {
-        _settingsButtonFocus.requestFocus();
-      } else {
-        _watchFocus.requestFocus();
-      }
-    });
+    final channelProvider = Provider.of<ChannelProvider>(
+      context,
+      listen: false,
+    );
+    if (channelProvider.channels.isEmpty) {
+      _settingsButtonFocus.requestFocus();
+    } else {
+      _watchFocus.requestFocus();
+    }
     return true;
   }
 
@@ -96,14 +94,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     // Default focus to the watch button
     final watchFocusNode = _watchFocus;
-    Future.delayed(const Duration(milliseconds: 300), () {
+    Future.delayed(const Duration(milliseconds: 120), () {
       if (mounted) watchFocusNode.requestFocus();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final body = Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -201,6 +199,26 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         },
       ),
     );
+
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onKeyEvent: _handleDirectionalKeyEvent,
+      child: body,
+    );
+  }
+
+  KeyEventResult _handleDirectionalKeyEvent(
+    FocusNode node,
+    KeyEvent event,
+  ) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      return requestNavigationFocus()
+          ? KeyEventResult.handled
+          : KeyEventResult.ignored;
+    }
+    return KeyEventResult.ignored;
   }
 
   Widget _buildHero(BuildContext context, Channel channel, Program? program) {
@@ -218,7 +236,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       child: Container(
         height: 420,
         width: double.infinity,
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: AppTheme.cardBackground,
           borderRadius: BorderRadius.zero,
         ),
@@ -401,14 +419,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                             horizontal: 22,
                             vertical: 14,
                           ),
-                          child: Row(
+                          child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
                                 Icons.schedule,
                                 color: AppTheme.textPrimary,
                               ),
-                              const SizedBox(width: 8),
+                              SizedBox(width: 8),
                               Text(
                                 'Guide',
                                 style: TextStyle(

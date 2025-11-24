@@ -24,7 +24,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
   void initState() {
     super.initState();
     _currentTime = DateTime.now();
-    Future.delayed(Duration(seconds: 1), _updateTime);
+    Future.delayed(const Duration(seconds: 1), _updateTime);
     _loadFiles();
   }
 
@@ -33,7 +33,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     setState(() {
       _currentTime = DateTime.now();
     });
-    Future.delayed(Duration(seconds: 1), _updateTime);
+    Future.delayed(const Duration(seconds: 1), _updateTime);
   }
 
   String _formatTime(DateTime time) {
@@ -174,8 +174,8 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: Container(
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
@@ -189,18 +189,18 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
             // Glass app bar
             // Top bar - make fully transparent (only text/icons visible)
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               decoration: const BoxDecoration(
                 color: Colors.transparent,
               ),
               child: Row(
                 children: [
-                  Icon(Icons.download_rounded, color: AppTheme.primaryBlue, size: 24),
-                  SizedBox(width: 16),
+                  const Icon(Icons.download_rounded, color: AppTheme.primaryBlue, size: 24),
+                  const SizedBox(width: 16),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'Downloads & Recordings',
                         style: TextStyle(
                           color: AppTheme.textPrimary,
@@ -210,17 +210,17 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                       ),
                       Text(
                         '${_files.length} items',
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: AppTheme.textSecondary,
                           fontSize: 12,
                         ),
                       ),
                     ],
                   ),
-                  Spacer(),
+                  const Spacer(),
                   Text(
                     _formatTime(_currentTime),
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppTheme.textSecondary,
                       fontSize: 14,
                     ),
@@ -232,7 +232,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
             // Content
             Expanded(
               child: _isLoading
-                  ? Center(
+                  ? const Center(
                       child: CircularProgressIndicator(
                         color: AppTheme.primaryBlue,
                       ),
@@ -247,13 +247,13 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                                 size: 80,
                                 color: AppTheme.textSecondary.withAlpha((0.3 * 255).round()),
                               ),
-                              SizedBox(height: 24),
+                              const SizedBox(height: 24),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 32),
+                                padding: const EdgeInsets.symmetric(horizontal: 32),
                                 child: Text(
                                   _errorMessage!,
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     color: AppTheme.textSecondary,
                                     fontSize: 16,
                                   ),
@@ -272,8 +272,8 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                                     size: 80,
                                     color: AppTheme.textSecondary.withAlpha((0.3 * 255).round()),
                                   ),
-                                  SizedBox(height: 24),
-                                  Text(
+                                  const SizedBox(height: 24),
+                                  const Text(
                                     'No Downloads Yet',
                                     style: TextStyle(
                                       color: AppTheme.textPrimary,
@@ -281,8 +281,8 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  SizedBox(height: 8),
-                                  Text(
+                                  const SizedBox(height: 8),
+                                  const Text(
                                     'Recorded programs will appear here',
                                     style: TextStyle(
                                       color: AppTheme.textSecondary,
@@ -303,7 +303,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                                     '${fileStat.modified.month}/${fileStat.modified.day}/${fileStat.modified.year} ${fileStat.modified.hour.toString().padLeft(2, '0')}:${fileStat.modified.minute.toString().padLeft(2, '0')}';
 
                                 return Container(
-                                  margin: EdgeInsets.symmetric(
+                                  margin: const EdgeInsets.symmetric(
                                       horizontal: 16, vertical: 8),
                                   decoration: BoxDecoration(
                                     color: Colors.white.withAlpha((0.05 * 255).round()),
@@ -314,7 +314,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: ListTile(
-                                    leading: Icon(
+                                    leading: const Icon(
                                       Icons.video_file,
                                       color: AppTheme.primaryBlue,
                                       size: 32,
@@ -323,7 +323,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                                       fileName,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
+                                      style: const TextStyle(
                                         color: AppTheme.textPrimary,
                                         fontWeight: FontWeight.w500,
                                       ),
@@ -332,10 +332,10 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        SizedBox(height: 4),
+                                        const SizedBox(height: 4),
                                         Text(
                                           '$fileSize • $modDate',
-                                          style: TextStyle(
+                                          style: const TextStyle(
                                             color: AppTheme.textSecondary,
                                             fontSize: 12,
                                           ),
@@ -353,7 +353,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                                       ),
                                       itemBuilder: (context) => [
                                         PopupMenuItem(
-                                          child: Row(
+                                          child: const Row(
                                             children: [
                                               Icon(Icons.play_arrow,
                                                   color: AppTheme.primaryBlue,
@@ -371,7 +371,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                                           },
                                         ),
                                         PopupMenuItem(
-                                          child: Row(
+                                          child: const Row(
                                             children: [
                                                 Icon(Icons.delete,
                                                   color: AppTheme.accentRed,

@@ -279,8 +279,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                                       width: 100,
                                       height: 100,
                                       decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [const Color(0xFF2E3192), AppTheme.primaryBlue],
+                                        gradient: const LinearGradient(
+                                          colors: [Color(0xFF2E3192), AppTheme.primaryBlue],
                                           begin: Alignment.topLeft,
                                           end: Alignment.bottomRight,
                                         ),
@@ -381,8 +381,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 left: 0,
                 right: 0,
                 child: Container(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [

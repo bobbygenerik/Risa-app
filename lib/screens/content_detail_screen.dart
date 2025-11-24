@@ -74,8 +74,8 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
           right: 0,
           child: Container(
             padding: const EdgeInsets.all(AppSizes.md),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [Color(0xFF050710), Color(0xFF0d1140)],
@@ -224,8 +224,8 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
 
   Widget _buildHeroPlaceholder() {
     return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [Color(0xFF050710), Color(0xFF0d1140)],

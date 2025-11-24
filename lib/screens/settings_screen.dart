@@ -60,6 +60,8 @@ class _SettingsScreenState extends State<SettingsScreen>
   final FocusNode _realDebridApiKeyFocusNode = FocusNode();
   final FocusNode _openSubtitlesUsernameFocusNode = FocusNode();
   final FocusNode _openSubtitlesPasswordFocusNode = FocusNode();
+  final FocusNode _loadM3uButtonFocusNode =
+      FocusNode(debugLabel: 'LoadM3UButton');
   final Map<FocusNode, VoidCallback> _focusNodeListeners = {};
 
   // Playback Settings
@@ -231,6 +233,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     _openSubtitlesUsernameFocusNode.dispose();
     _openSubtitlesPasswordController.dispose();
     _openSubtitlesPasswordFocusNode.dispose();
+    _loadM3uButtonFocusNode.dispose();
     super.dispose();
   }
 
@@ -246,8 +249,8 @@ class _SettingsScreenState extends State<SettingsScreen>
           context.go('/home');
         },
         child: Container(
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [Color(0xFF050710), Color(0xFF0d1140)],
@@ -327,14 +330,14 @@ class _SettingsScreenState extends State<SettingsScreen>
           // Settings header
           Container(
             height: AppSizes.appBarHeight,
-            padding: EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             alignment: Alignment.centerLeft,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               border: Border(
                 bottom: BorderSide(color: AppTheme.primaryBlue, width: 2),
               ),
             ),
-            child: Align(
+            child: const Align(
               alignment: Alignment.centerLeft,
               child: Text(
                 'Settings',
@@ -349,7 +352,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
           Expanded(
             child: ListView.builder(
-              padding: EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(vertical: 12),
               itemCount: menuItems.length,
               itemBuilder: (context, index) {
                 final item = menuItems[index];
@@ -395,7 +398,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       return KeyEventResult.ignored;
                     },
                     child: Container(
-                      margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: isSelected
                             ? AppTheme.primaryBlue.withAlpha(
@@ -413,7 +416,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Padding(
-                        padding: EdgeInsets.symmetric(
+                        padding: const EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 12,
                         ),
@@ -426,7 +429,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                                   : AppTheme.textSecondary,
                               size: 20,
                             ),
-                            SizedBox(width: 12),
+                            const SizedBox(width: 12),
                             Expanded(
                               child: Text(
                                 item['title'] as String,
@@ -521,14 +524,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                             : null,
                         child:
                             profileImagePath == null || profileImagePath.isEmpty
-                            ? Icon(
+                            ? const Icon(
                                 Icons.person,
                                 size: 50,
                                 color: AppTheme.primaryBlue,
                               )
                             : null,
                       ),
-                      SizedBox(height: AppSizes.md),
+                      const SizedBox(height: AppSizes.md),
                       Text(
                         userName,
                         style: Theme.of(context).textTheme.titleLarge,
@@ -539,7 +542,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                           color: AppTheme.textSecondary,
                         ),
                       ),
-                      SizedBox(height: AppSizes.md),
+                      const SizedBox(height: AppSizes.md),
                       ElevatedButton(
                         onPressed: () async {
                           final result = await context.push('/edit-profile');
@@ -548,7 +551,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                             setState(() {});
                           }
                         },
-                        child: Text('Edit Profile'),
+                        child: const Text('Edit Profile'),
                       ),
                     ],
                   ),
@@ -758,7 +761,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       }(),
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data == null) {
-          return Card(
+          return const Card(
             margin: EdgeInsets.only(bottom: AppSizes.lg),
             child: Padding(
               padding: EdgeInsets.all(AppSizes.lg),
@@ -813,11 +816,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                 color: AppTheme.primaryBlue,
               ),
             ),
-            SizedBox(height: AppSizes.md),
+            const SizedBox(height: AppSizes.md),
 
             // Current Provider Info
             Container(
-              padding: EdgeInsets.all(AppSizes.md),
+              padding: const EdgeInsets.all(AppSizes.md),
               decoration: BoxDecoration(
                 color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
                 borderRadius: BorderRadius.circular(AppSizes.radiusMd),
@@ -828,7 +831,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  const Row(
                     children: [
                       Icon(Icons.tv, color: AppTheme.primaryBlue, size: 20),
                       SizedBox(width: 8),
@@ -841,17 +844,17 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ),
                     ],
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
                     providerName,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppTheme.textSecondary,
                       fontSize: 13,
                     ),
                   ),
                   if (epgUrl != null) ...[
-                    SizedBox(height: 12),
-                    Row(
+                    const SizedBox(height: 12),
+                    const Row(
                       children: [
                         Icon(
                           Icons.check_circle,
@@ -871,12 +874,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                         ),
                       ],
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
                       epgUrl,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 11,
                         color: AppTheme.textSecondary,
                       ),
@@ -886,7 +889,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
             ),
 
-            SizedBox(height: AppSizes.lg),
+            const SizedBox(height: AppSizes.lg),
 
             // Custom EPG URL Input
             Text(
@@ -895,7 +898,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 context,
               ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: AppSizes.sm),
+            const SizedBox(height: AppSizes.sm),
             Focus(
               canRequestFocus: true,
               child: TextField(
@@ -903,7 +906,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 autofocus: false,
                 decoration: InputDecoration(
                   hintText: 'http://example.com/epg.xml.gz',
-                  prefixIcon: Icon(Icons.link),
+                  prefixIcon: const Icon(Icons.link),
                   filled: true,
                   fillColor: AppTheme.highlight,
                   border: OutlineInputBorder(
@@ -912,13 +915,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(
+                    borderSide: const BorderSide(
                       color: AppTheme.primaryBlue,
                       width: 3,
                     ),
                   ),
                   suffixIcon: IconButton(
-                    icon: Icon(Icons.save),
+                    icon: const Icon(Icons.save),
                     onPressed: () async {
                       final localContext = context;
                       final prefs = await SharedPreferences.getInstance();
@@ -929,7 +932,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       if (!localContext.mounted) return;
                       showAppSnackBar(
                         localContext,
-                        SnackBar(
+                        const SnackBar(
                           content: Text('Custom EPG URL saved'),
                           backgroundColor: AppTheme.accentGreen,
                         ),
@@ -949,7 +952,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   if (!localContext.mounted) return;
                   showAppSnackBar(
                     localContext,
-                    SnackBar(
+                    const SnackBar(
                       content: Text('Custom EPG URL saved'),
                       backgroundColor: AppTheme.accentGreen,
                     ),
@@ -960,8 +963,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                 },
               ),
             ),
-            SizedBox(height: AppSizes.xs),
-            Text(
+            const SizedBox(height: AppSizes.xs),
+            const Text(
               'Override auto-detected EPG or provide EPG for playlists without one',
               style: TextStyle(
                 fontSize: 11,
@@ -970,9 +973,9 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
             ),
 
-            SizedBox(height: AppSizes.md),
-            Divider(),
-            SizedBox(height: AppSizes.lg),
+            const SizedBox(height: AppSizes.md),
+            const Divider(),
+            const SizedBox(height: AppSizes.lg),
 
             // === 3. UPDATE SETTINGS ===
             Text(
@@ -982,19 +985,19 @@ class _SettingsScreenState extends State<SettingsScreen>
                 color: AppTheme.primaryBlue,
               ),
             ),
-            SizedBox(height: AppSizes.md),
+            const SizedBox(height: AppSizes.md),
 
             // Update Interval
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.update, color: AppTheme.primaryBlue),
-              title: Text('Auto-Update Interval'),
+              leading: const Icon(Icons.update, color: AppTheme.primaryBlue),
+              title: const Text('Auto-Update Interval'),
               subtitle: Text('Update EPG data every $epgUpdateInterval hours'),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    icon: Icon(Icons.remove_circle_outline),
+                    icon: const Icon(Icons.remove_circle_outline),
                     onPressed: epgUpdateInterval > 1
                         ? () async {
                             final newValue = epgUpdateInterval - 1;
@@ -1005,7 +1008,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         : null,
                   ),
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: AppTheme.primaryBlue.withAlpha(
                         (0.1 * 255).round(),
@@ -1014,14 +1017,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                     ),
                     child: Text(
                       '$epgUpdateInterval',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
                     ),
                   ),
                   IconButton(
-                    icon: Icon(Icons.add_circle_outline),
+                    icon: const Icon(Icons.add_circle_outline),
                     onPressed: epgUpdateInterval < 48
                         ? () async {
                             final newValue = epgUpdateInterval + 1;
@@ -1035,9 +1038,9 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
             ),
 
-            SizedBox(height: AppSizes.md),
-            Divider(),
-            SizedBox(height: AppSizes.lg),
+            const SizedBox(height: AppSizes.md),
+            const Divider(),
+            const SizedBox(height: AppSizes.lg),
 
             // === 2. DATA MANAGEMENT ===
             Text(
@@ -1047,19 +1050,19 @@ class _SettingsScreenState extends State<SettingsScreen>
                 color: AppTheme.primaryBlue,
               ),
             ),
-            SizedBox(height: AppSizes.md),
+            const SizedBox(height: AppSizes.md),
 
             // 2. Past Days to Keep
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.history, color: AppTheme.primaryBlue),
-              title: Text('Past Days to Keep'),
+              leading: const Icon(Icons.history, color: AppTheme.primaryBlue),
+              title: const Text('Past Days to Keep'),
               subtitle: Text('Keep EPG data for the past $epgPastDays days'),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    icon: Icon(Icons.remove_circle_outline),
+                    icon: const Icon(Icons.remove_circle_outline),
                     onPressed: epgPastDays > 0
                         ? () async {
                             final newValue = epgPastDays - 1;
@@ -1070,7 +1073,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         : null,
                   ),
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: AppTheme.primaryBlue.withAlpha(
                         (0.1 * 255).round(),
@@ -1079,14 +1082,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                     ),
                     child: Text(
                       '$epgPastDays',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
                     ),
                   ),
                   IconButton(
-                    icon: Icon(Icons.add_circle_outline),
+                    icon: const Icon(Icons.add_circle_outline),
                     onPressed: epgPastDays < 30
                         ? () async {
                             final newValue = epgPastDays + 1;
@@ -1103,8 +1106,8 @@ class _SettingsScreenState extends State<SettingsScreen>
             // 3. STORE PROGRAM DESCRIPTIONS TOGGLE
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: Text('Store Program Descriptions'),
-              subtitle: Text(
+              title: const Text('Store Program Descriptions'),
+              subtitle: const Text(
                 'Save detailed program information (uses more storage)',
               ),
               value: storeDescriptions,
@@ -1115,9 +1118,9 @@ class _SettingsScreenState extends State<SettingsScreen>
               },
             ),
 
-            SizedBox(height: AppSizes.md),
-            Divider(),
-            SizedBox(height: AppSizes.lg),
+            const SizedBox(height: AppSizes.md),
+            const Divider(),
+            const SizedBox(height: AppSizes.lg),
 
             // === 7. DISPLAY OPTIONS ===
             Text(
@@ -1127,12 +1130,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                 color: AppTheme.primaryBlue,
               ),
             ),
-            SizedBox(height: AppSizes.sm),
+            const SizedBox(height: AppSizes.sm),
 
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: Text('Show Channel Logos'),
-              subtitle: Text('Display channel logos in EPG grid'),
+              title: const Text('Show Channel Logos'),
+              subtitle: const Text('Display channel logos in EPG grid'),
               value: showChannelLogos,
               onChanged: (value) async {
                 final prefs = await SharedPreferences.getInstance();
@@ -1143,8 +1146,8 @@ class _SettingsScreenState extends State<SettingsScreen>
 
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: Text('Show Program Images'),
-              subtitle: Text('Display program thumbnails and posters'),
+              title: const Text('Show Program Images'),
+              subtitle: const Text('Display program thumbnails and posters'),
               value: showProgramImages,
               onChanged: (value) async {
                 final prefs = await SharedPreferences.getInstance();
@@ -1153,7 +1156,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               },
             ),
 
-            SizedBox(height: AppSizes.lg),
+            const SizedBox(height: AppSizes.lg),
 
             // Update EPG & Clear EPG Buttons
             Row(
@@ -1163,21 +1166,21 @@ class _SettingsScreenState extends State<SettingsScreen>
                     onPressed: () {
                       showAppSnackBar(
                         context,
-                        SnackBar(
+                        const SnackBar(
                           content: Text('Updating EPG data...'),
                           backgroundColor: AppTheme.primaryBlue,
                         ),
                       );
                     },
-                    icon: Icon(Icons.refresh),
-                    label: Text('Update EPG'),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Update EPG'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryBlue,
-                      padding: EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
                 ),
-                SizedBox(width: AppSizes.md),
+                const SizedBox(width: AppSizes.md),
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () async {
@@ -1185,18 +1188,18 @@ class _SettingsScreenState extends State<SettingsScreen>
                       final confirm = await showDialog<bool>(
                         context: context,
                         builder: (context) => AlertDialog(
-                          title: Text('Clear EPG Data'),
-                          content: Text(
+                          title: const Text('Clear EPG Data'),
+                          content: const Text(
                             'Are you sure you want to clear all EPG data? This cannot be undone.',
                           ),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(context, false),
-                              child: Text('Cancel'),
+                              child: const Text('Cancel'),
                             ),
                             TextButton(
                               onPressed: () => Navigator.pop(context, true),
-                              child: Text(
+                              child: const Text(
                                 'Clear',
                                 style: TextStyle(color: Colors.red),
                               ),
@@ -1211,7 +1214,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         if (localContext.mounted) {
                           showAppSnackBar(
                             localContext,
-                            SnackBar(
+                            const SnackBar(
                               content: Text('EPG data cleared'),
                               backgroundColor: AppTheme.accentGreen,
                             ),
@@ -1219,11 +1222,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                         }
                       }
                     },
-                    icon: Icon(Icons.delete_sweep),
-                    label: Text('Clear EPG'),
+                    icon: const Icon(Icons.delete_sweep),
+                    label: const Text('Clear EPG'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red.shade700,
-                      padding: EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
                 ),
@@ -1247,7 +1250,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             // Input Method Tabs
             Container(
               height: 48,
-              padding: EdgeInsets.all(4),
+              padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
                 color: AppTheme.highlight,
                 borderRadius: BorderRadius.circular(AppSizes.radiusMd),
@@ -1273,7 +1276,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 ],
               ),
             ),
-            SizedBox(height: AppSizes.lg),
+            const SizedBox(height: AppSizes.lg),
 
             // M3U Content
             if (_playlistInputMethod == 0) ...[
@@ -1287,18 +1290,36 @@ class _SettingsScreenState extends State<SettingsScreen>
                 helperText: 'Enter M3U URL and click Load',
                 prefixIcon: Icons.link,
                 onLeftArrow: requestFirstSidebarFocus,
+                onDownArrow: _focusLoadM3uButton,
+                enableDirectionalNavigation: true,
               ),
-              SizedBox(height: AppSizes.md),
+              const SizedBox(height: AppSizes.md),
               Align(
                 alignment: Alignment.centerRight,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
+                child: Focus(
+                  focusNode: _loadM3uButtonFocusNode,
+                  onKeyEvent: (node, event) {
+                    if (event is! KeyDownEvent) {
+                      return KeyEventResult.ignored;
+                    }
+                    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                      _m3uUrlFocusNode.requestFocus();
+                      return KeyEventResult.handled;
+                    }
+                    if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                      requestFirstSidebarFocus();
+                      return KeyEventResult.handled;
+                    }
+                    return KeyEventResult.ignored;
+                  },
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
                     final url = _m3uUrlController.text.trim();
                     if (url.isEmpty) {
                       if (!mounted) return;
                       showAppSnackBar(
                         context,
-                        SnackBar(content: Text('Please enter a valid M3U URL')),
+                        const SnackBar(content: Text('Please enter a valid M3U URL')),
                       );
                       return;
                     }
@@ -1306,7 +1327,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     if (mounted) {
                       showAppSnackBar(
                         context,
-                        SnackBar(content: Text('Loading playlist from URL...')),
+                        const SnackBar(content: Text('Loading playlist from URL...')),
                       );
                     }
 
@@ -1345,10 +1366,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                       }
                     }
                   },
-                  icon: Icon(Icons.download),
-                  label: Text('Load M3U Playlist'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryBlue,
+                    icon: const Icon(Icons.download),
+                    label: const Text('Load M3U Playlist'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryBlue,
+                    ),
                   ),
                 ),
               ),
@@ -1366,8 +1388,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                 hintText: 'http://example.com:8080',
                 prefixIcon: Icons.dns,
                 onLeftArrow: requestFirstSidebarFocus,
+                enableDirectionalNavigation: true,
               ),
-              SizedBox(height: AppSizes.md),
+              const SizedBox(height: AppSizes.md),
               Row(
                 children: [
                   Expanded(
@@ -1380,9 +1403,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                       labelText: 'Username',
                       prefixIcon: Icons.person,
                       onLeftArrow: requestFirstSidebarFocus,
+                      enableDirectionalNavigation: true,
                     ),
                   ),
-                  SizedBox(width: AppSizes.md),
+                  const SizedBox(width: AppSizes.md),
                   Expanded(
                     child: _buildTVTextField(
                       controller: _xtreamPasswordController,
@@ -1394,11 +1418,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                       prefixIcon: Icons.lock,
                       obscureText: true,
                       onLeftArrow: requestFirstSidebarFocus,
+                      enableDirectionalNavigation: true,
                     ),
                   ),
                 ],
               ),
-              SizedBox(height: AppSizes.md),
+              const SizedBox(height: AppSizes.md),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
@@ -1408,9 +1433,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                       _xtreamUsernameController.clear();
                       _xtreamPasswordController.clear();
                     },
-                    child: Text('Clear'),
+                    child: const Text('Clear'),
                   ),
-                  SizedBox(width: AppSizes.sm),
+                  const SizedBox(width: AppSizes.sm),
                   ElevatedButton.icon(
                     onPressed: () async {
                       final server = _xtreamServerController.text.trim();
@@ -1423,7 +1448,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         if (!mounted) return;
                         showAppSnackBar(
                           context,
-                          SnackBar(
+                          const SnackBar(
                             content: Text(
                               'Please fill in all Xtream Codes fields',
                             ),
@@ -1435,7 +1460,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       if (mounted) {
                         showAppSnackBar(
                           context,
-                          SnackBar(
+                          const SnackBar(
                             content: Text('Loading Xtream Codes playlist...'),
                           ),
                         );
@@ -1481,8 +1506,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                         }
                       }
                     },
-                    icon: Icon(Icons.download),
-                    label: Text('Load Playlist'),
+                    icon: const Icon(Icons.download),
+                    label: const Text('Load Playlist'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryBlue,
                     ),
@@ -1527,11 +1552,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ? AppTheme.accentGreen
                       : AppTheme.accentOrange,
                 ),
-                SizedBox(width: AppSizes.sm),
+                const SizedBox(width: AppSizes.sm),
                 Expanded(
                   child: Text(
                     statusText,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppTheme.textPrimary,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -1558,6 +1583,20 @@ class _SettingsScreenState extends State<SettingsScreen>
         );
       },
     );
+  }
+
+  void _focusLoadM3uButton() {
+    if (!_loadM3uButtonFocusNode.canRequestFocus) return;
+    FocusScope.of(context).requestFocus(_loadM3uButtonFocusNode);
+    final buttonContext = _loadM3uButtonFocusNode.context;
+    if (buttonContext != null) {
+      Scrollable.ensureVisible(
+        buttonContext,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+        alignment: 0.6,
+      );
+    }
   }
 
   Widget _buildTabButton({
@@ -1602,7 +1641,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     color: isSelected ? Colors.white : AppTheme.textSecondary,
                     size: 18,
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Text(
                     title,
                     style: TextStyle(
@@ -1813,7 +1852,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ],
                   const SizedBox(height: 8),
                   Container(
-                    padding: EdgeInsets.all(AppSizes.md),
+                    padding: const EdgeInsets.all(AppSizes.md),
                     decoration: BoxDecoration(
                       color: AppTheme.primaryBlue.withAlpha(
                         (0.1 * 255).round(),
@@ -1854,7 +1893,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               return _buildSectionCard(
                 title: 'Whisper Live Captions',
                 children: [
-                  Text(
+                  const Text(
                     'Unavailable on this device',
                     style: TextStyle(color: AppTheme.textSecondary),
                   ),
@@ -1873,7 +1912,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 subtitle: 'On-device upscaling for better quality (FREE)',
                 children: [
                   SwitchListTile(
-                    title: Text('Enable AI Upscaling'),
+                    title: const Text('Enable AI Upscaling'),
                     subtitle: Text(
                       aiService.isModelLoaded
                           ? 'Upscale video to 2x resolution using AI'
@@ -1919,9 +1958,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                       },
                     ),
                     Padding(
-                      padding: EdgeInsets.all(AppSizes.md),
+                      padding: const EdgeInsets.all(AppSizes.md),
                       child: Container(
-                        padding: EdgeInsets.all(AppSizes.md),
+                        padding: const EdgeInsets.all(AppSizes.md),
                         decoration: BoxDecoration(
                           color: AppTheme.highlight,
                           borderRadius: BorderRadius.circular(
@@ -1931,7 +1970,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
+                            const Row(
                               children: [
                                 Icon(Icons.info_outline, size: 16),
                                 SizedBox(width: 8),
@@ -1941,11 +1980,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                                 ),
                               ],
                             ),
-                            SizedBox(height: 8),
+                            const SizedBox(height: 8),
                             Text(
                               '• GPU Acceleration: ${aiService.isGPUAvailable ? "✓ Available" : "✗ CPU Only"}',
                             ),
-                            Text('• Upscales video to 2x resolution'),
+                            const Text('• Upscales video to 2x resolution'),
                             Text('• Quality: $_aiQuality'),
                             if (aiService.isGPUAvailable)
                               Text(
@@ -1962,7 +2001,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ],
                   if (!aiService.isModelLoaded)
                     Padding(
-                      padding: EdgeInsets.all(AppSizes.md),
+                      padding: const EdgeInsets.all(AppSizes.md),
                       child: _buildAIModelDownloadCard(aiService),
                     ),
                 ],
@@ -1972,7 +2011,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               return _buildSectionCard(
                 title: 'AI Video Enhancement',
                 children: [
-                  Text(
+                  const Text(
                     'Unavailable on this device',
                     style: TextStyle(color: AppTheme.textSecondary),
                   ),
@@ -2076,6 +2115,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     helperText: 'Create free account at opensubtitles.com',
                     prefixIcon: Icons.person,
                     onLeftArrow: requestFirstSidebarFocus,
+                    enableDirectionalNavigation: true,
                   ),
                   const SizedBox(height: 16),
                   _buildTVTextField(
@@ -2095,6 +2135,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     prefixIcon: Icons.lock,
                     obscureText: true,
                     onLeftArrow: requestFirstSidebarFocus,
+                    enableDirectionalNavigation: true,
                   ),
                   const SizedBox(height: 16),
                   SwitchListTile(
@@ -2176,6 +2217,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     helperText: 'Get API key from real-debrid.com/apitoken',
                     prefixIcon: Icons.vpn_key,
                     onLeftArrow: requestFirstSidebarFocus,
+                    enableDirectionalNavigation: true,
                   ),
                   const SizedBox(height: 16),
                   CheckboxListTile(
@@ -2313,7 +2355,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               return _buildSectionCard(
                 title: 'AI Video Upscaling',
                 children: [
-                  Text(
+                  const Text(
                     'Unavailable on this device',
                     style: TextStyle(color: AppTheme.textSecondary),
                   ),
@@ -2369,7 +2411,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               return _buildSectionCard(
                 title: 'On-Device Transcription (Whisper)',
                 children: [
-                  Text(
+                  const Text(
                     'Unavailable on this device',
                     style: TextStyle(color: AppTheme.textSecondary),
                   ),
@@ -2495,7 +2537,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               children: [
                 // Warning message about storage
                 Container(
-                  padding: EdgeInsets.all(AppSizes.md),
+                  padding: const EdgeInsets.all(AppSizes.md),
                   decoration: BoxDecoration(
                     color: AppTheme.accentOrange.withAlpha((0.1 * 255).round()),
                     borderRadius: BorderRadius.circular(8),
@@ -2505,7 +2547,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ),
                     ),
                   ),
-                  child: Row(
+                  child: const Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Icon(
@@ -2526,12 +2568,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                     ],
                   ),
                 ),
-                SizedBox(height: AppSizes.md),
+                const SizedBox(height: AppSizes.md),
                 Text(
                   'Storage Location',
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
-                SizedBox(height: AppSizes.sm),
+                const SizedBox(height: AppSizes.sm),
                 Row(
                   children: [
                     Expanded(
@@ -2539,7 +2581,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         controller: TextEditingController(text: recordingPath),
                         autofocus: false,
                         readOnly: true,
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           hintText: 'No storage location selected',
                           prefixIcon: Icon(Icons.folder_outlined),
                           border: OutlineInputBorder(),
@@ -2548,7 +2590,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         ),
                       ),
                     ),
-                    SizedBox(width: AppSizes.sm),
+                    const SizedBox(width: AppSizes.sm),
                     ElevatedButton.icon(
                       onPressed: () async {
                         final localContext = context;
@@ -2565,7 +2607,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                             if (!localContext.mounted) return;
                             showAppSnackBar(
                               localContext,
-                              SnackBar(
+                              const SnackBar(
                                 content: Text('Recording location updated'),
                                 backgroundColor: AppTheme.accentGreen,
                               ),
@@ -2582,18 +2624,18 @@ class _SettingsScreenState extends State<SettingsScreen>
                           );
                         }
                       },
-                      icon: Icon(Icons.create_new_folder),
-                      label: Text('Browse'),
+                      icon: const Icon(Icons.create_new_folder),
+                      label: const Text('Browse'),
                     ),
                   ],
                 ),
-                SizedBox(height: AppSizes.sm),
-                Text(
+                const SizedBox(height: AppSizes.sm),
+                const Text(
                   'Suggested locations:',
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                 ),
-                SizedBox(height: 4),
-                Text(
+                const SizedBox(height: 4),
+                const Text(
                   '• /storage/[USB-ID]/ (External USB drive)\n'
                   '• /mnt/media_rw/[USB-ID]/ (Some Android TV)\n'
                   '• /sdcard/Recordings/ (Internal - not recommended)\n'
@@ -2601,20 +2643,20 @@ class _SettingsScreenState extends State<SettingsScreen>
                   style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
                 ),
                 if (recordingPath.isNotEmpty) ...[
-                  SizedBox(height: AppSizes.md),
+                  const SizedBox(height: AppSizes.md),
                   FutureBuilder<String>(
                     future: _getStorageInfo(recordingPath),
                     builder: (context, snapshot) {
                       if (snapshot.hasData) {
                         return Text(
                           snapshot.data ?? '',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 11,
                             color: AppTheme.primaryBlue,
                           ),
                         );
                       }
-                      return SizedBox.shrink();
+                      return const SizedBox.shrink();
                     },
                   ),
                 ],
@@ -2642,13 +2684,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                     if (localContext.mounted) {
                       showAppSnackBar(
                         localContext,
-                        SnackBar(content: Text('Updating EPG data...')),
+                        const SnackBar(content: Text('Updating EPG data...')),
                       );
                     }
                     // TODO: Implement EPG update functionality
                   },
-                  icon: Icon(Icons.refresh),
-                  label: Text('Update EPG Now'),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Update EPG Now'),
                 ),
               ],
             ),
@@ -2663,7 +2705,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     required List<Widget> children,
   }) {
     return SingleChildScrollView(
-      padding: EdgeInsets.all(AppSizes.lg), // Reduced from xl
+      padding: const EdgeInsets.all(AppSizes.lg), // Reduced from xl
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2673,7 +2715,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               fontWeight: FontWeight.bold,
             ), // Changed from headlineMedium
           ),
-          SizedBox(height: AppSizes.md), // Reduced from lg
+          const SizedBox(height: AppSizes.md), // Reduced from lg
           ...children,
         ],
       ),
@@ -2694,7 +2736,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       }(),
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data == null) {
-          return Card(
+          return const Card(
             margin: EdgeInsets.only(bottom: AppSizes.lg),
             child: Padding(
               padding: EdgeInsets.all(AppSizes.lg),
@@ -2708,40 +2750,40 @@ class _SettingsScreenState extends State<SettingsScreen>
         final playlistName = data['name'] ?? 'My Playlist';
 
         return Card(
-          margin: EdgeInsets.only(bottom: AppSizes.lg),
+          margin: const EdgeInsets.only(bottom: AppSizes.lg),
           child: Padding(
-            padding: EdgeInsets.all(AppSizes.lg),
+            padding: const EdgeInsets.all(AppSizes.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Icon(Icons.playlist_play, color: AppTheme.primaryBlue),
-                    SizedBox(width: AppSizes.sm),
+                    const Icon(Icons.playlist_play, color: AppTheme.primaryBlue),
+                    const SizedBox(width: AppSizes.sm),
                     Text(
                       'Saved Playlists',
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                   ],
                 ),
-                SizedBox(height: AppSizes.sm),
+                const SizedBox(height: AppSizes.sm),
                 Text(
                   'Manage your saved playlist credentials',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: AppTheme.textSecondary,
                   ),
                 ),
-                SizedBox(height: AppSizes.lg),
+                const SizedBox(height: AppSizes.lg),
 
                 if (!hasPlaylist)
                   Container(
-                    padding: EdgeInsets.all(AppSizes.md),
+                    padding: const EdgeInsets.all(AppSizes.md),
                     decoration: BoxDecoration(
                       color: AppTheme.cardBackground,
                       borderRadius: BorderRadius.circular(AppSizes.radiusMd),
                       border: Border.all(color: AppTheme.divider),
                     ),
-                    child: Row(
+                    child: const Row(
                       children: [
                         Icon(Icons.info_outline, color: AppTheme.textSecondary),
                         SizedBox(width: AppSizes.md),
@@ -2768,7 +2810,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     child: GestureDetector(
                       onTap: () => context.go('/playlist-editor'),
                       child: Container(
-                        padding: EdgeInsets.all(AppSizes.md),
+                        padding: const EdgeInsets.all(AppSizes.md),
                         decoration: BoxDecoration(
                           color: AppTheme.primaryBlue.withAlpha(
                             (0.1 * 255).round(),
@@ -2787,23 +2829,23 @@ class _SettingsScreenState extends State<SettingsScreen>
                           children: [
                             Row(
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.playlist_play,
                                   color: AppTheme.primaryBlue,
                                   size: 24,
                                 ),
-                                SizedBox(width: AppSizes.sm),
+                                const SizedBox(width: AppSizes.sm),
                                 Expanded(
                                   child: Text(
                                     playlistName,
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                 ),
                                 Container(
-                                  padding: EdgeInsets.symmetric(
+                                  padding: const EdgeInsets.symmetric(
                                     horizontal: 12,
                                     vertical: 6,
                                   ),
@@ -2813,21 +2855,21 @@ class _SettingsScreenState extends State<SettingsScreen>
                                   ),
                                   child: Text(
                                     data['type'] == 'm3u' ? 'M3U' : 'Xtream',
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                 ),
-                                SizedBox(width: AppSizes.sm),
-                                Icon(
+                                const SizedBox(width: AppSizes.sm),
+                                const Icon(
                                   Icons.chevron_right,
                                   color: AppTheme.textSecondary,
                                 ),
                               ],
                             ),
-                            SizedBox(height: AppSizes.md),
+                            const SizedBox(height: AppSizes.md),
                             if (data['type'] == 'm3u') ...[
                               _buildInfoRow('URL', data['m3u_url'] ?? 'N/A'),
                             ] else if (data['type'] == 'xtream') ...[
@@ -2835,22 +2877,22 @@ class _SettingsScreenState extends State<SettingsScreen>
                                 'Server',
                                 data['xtream_server'] ?? 'N/A',
                               ),
-                              SizedBox(height: AppSizes.xs),
+                              const SizedBox(height: AppSizes.xs),
                               _buildInfoRow(
                                 'Username',
                                 data['xtream_username'] ?? 'N/A',
                               ),
                             ],
-                            SizedBox(height: AppSizes.md),
+                            const SizedBox(height: AppSizes.md),
                             Container(
-                              padding: EdgeInsets.all(AppSizes.sm),
+                              padding: const EdgeInsets.all(AppSizes.sm),
                               decoration: BoxDecoration(
                                 color: AppTheme.cardBackground,
                                 borderRadius: BorderRadius.circular(
                                   AppSizes.radiusSm,
                                 ),
                               ),
-                              child: Row(
+                              child: const Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Icon(
@@ -2891,13 +2933,13 @@ class _SettingsScreenState extends State<SettingsScreen>
           width: 80,
           child: Text(
             label,
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
           ),
         ),
         Expanded(
           child: Text(
             value,
-            style: TextStyle(
+            style: const TextStyle(
               color: AppTheme.textPrimary,
               fontSize: 13,
               fontWeight: FontWeight.w500,
@@ -2916,9 +2958,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     required List<Widget> children,
   }) {
     return Card(
-      margin: EdgeInsets.only(bottom: AppSizes.md), // Reduced from lg
+      margin: const EdgeInsets.only(bottom: AppSizes.md), // Reduced from lg
       child: Padding(
-        padding: EdgeInsets.all(AppSizes.md), // Reduced from lg
+        padding: const EdgeInsets.all(AppSizes.md), // Reduced from lg
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2930,7 +2972,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
             ),
             if (subtitle != null) ...[
-              SizedBox(height: 3), // Reduced spacing
+              const SizedBox(height: 3), // Reduced spacing
               Text(
                 subtitle,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -2939,7 +2981,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 ),
               ),
             ],
-            SizedBox(height: AppSizes.sm), // Reduced from md
+            const SizedBox(height: AppSizes.sm), // Reduced from md
             ...children,
           ],
         ),
@@ -2949,7 +2991,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   Widget _buildSwitchTile(String title, bool value, {String? subtitle}) {
     return Padding(
-      padding: EdgeInsets.only(bottom: AppSizes.sm),
+      padding: const EdgeInsets.only(bottom: AppSizes.sm),
       child: TVFocusable(
         borderRadius: BorderRadius.circular(12),
         child: SwitchListTile(
@@ -3051,7 +3093,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   Widget _buildAudioSwitchTile(String title, bool value, {String? subtitle}) {
     return Padding(
-      padding: EdgeInsets.only(bottom: AppSizes.sm),
+      padding: const EdgeInsets.only(bottom: AppSizes.sm),
       child: TVFocusable(
         borderRadius: BorderRadius.circular(12),
         child: SwitchListTile(
@@ -3101,12 +3143,12 @@ class _SettingsScreenState extends State<SettingsScreen>
     Function(String?) onChanged,
   ) {
     return Padding(
-      padding: EdgeInsets.only(bottom: AppSizes.md),
+      padding: const EdgeInsets.only(bottom: AppSizes.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label, style: Theme.of(context).textTheme.bodyMedium),
-          SizedBox(height: AppSizes.sm),
+          const SizedBox(height: AppSizes.sm),
           TVFocusable(
             borderRadius: BorderRadius.circular(10),
             enableScale: false,
@@ -3157,8 +3199,12 @@ class _SettingsScreenState extends State<SettingsScreen>
     bool obscureText = false,
     int? maxLines = 1,
     VoidCallback? onLeftArrow,
+    VoidCallback? onDownArrow,
+    VoidCallback? onUpArrow,
+    VoidCallback? onRightArrow,
+    bool enableDirectionalNavigation = false,
   }) {
-    final bool isDirectionalNavigation =
+    final bool isDirectionalNavigation = enableDirectionalNavigation ||
         MediaQuery.of(context).navigationMode == NavigationMode.directional;
 
     if (!isDirectionalNavigation) {
@@ -3195,9 +3241,9 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: AppTheme.primaryBlue, width: 3),
+            borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 3),
           ),
-          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         ),
       );
     }
@@ -3225,6 +3271,18 @@ class _SettingsScreenState extends State<SettingsScreen>
       shortcutMap[LogicalKeySet(LogicalKeyboardKey.arrowLeft)] =
           const _NavigateLeftIntent();
     }
+    if (!isEditable && onRightArrow != null) {
+      shortcutMap[LogicalKeySet(LogicalKeyboardKey.arrowRight)] =
+          const _NavigateRightIntent();
+    }
+    if (onDownArrow != null) {
+      shortcutMap[LogicalKeySet(LogicalKeyboardKey.arrowDown)] =
+          const _NavigateDownIntent();
+    }
+    if (onUpArrow != null) {
+      shortcutMap[LogicalKeySet(LogicalKeyboardKey.arrowUp)] =
+          const _NavigateUpIntent();
+    }
 
     return Shortcuts(
       shortcuts: shortcutMap,
@@ -3249,6 +3307,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               if (isEditable) {
                 onEditableChanged(false);
                 focusNode.requestFocus();
+                SystemChannels.textInput.invokeMethod('TextInput.hide');
               }
               return null;
             },
@@ -3258,6 +3317,36 @@ class _SettingsScreenState extends State<SettingsScreen>
               if (!isEditable && onLeftArrow != null) {
                 onLeftArrow();
               }
+              return null;
+            },
+          ),
+          _NavigateRightIntent: CallbackAction<_NavigateRightIntent>(
+            onInvoke: (intent) {
+              if (!isEditable && onRightArrow != null) {
+                onRightArrow();
+              }
+              return null;
+            },
+          ),
+          _NavigateDownIntent: CallbackAction<_NavigateDownIntent>(
+            onInvoke: (intent) {
+              if (onDownArrow == null) return null;
+              if (isEditable) {
+                onEditableChanged(false);
+                SystemChannels.textInput.invokeMethod('TextInput.hide');
+              }
+              onDownArrow();
+              return null;
+            },
+          ),
+          _NavigateUpIntent: CallbackAction<_NavigateUpIntent>(
+            onInvoke: (intent) {
+              if (onUpArrow == null) return null;
+              if (isEditable) {
+                onEditableChanged(false);
+                SystemChannels.textInput.invokeMethod('TextInput.hide');
+              }
+              onUpArrow();
               return null;
             },
           ),
@@ -3296,9 +3385,9 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: AppTheme.primaryBlue, width: 3),
+              borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 3),
             ),
-            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           ),
         ),
       ),
@@ -3530,9 +3619,9 @@ class _SettingsScreenState extends State<SettingsScreen>
             color: AppTheme.accentGreen.withAlpha((0.2 * 255).round()),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Row(
+          child: const Row(
             mainAxisSize: MainAxisSize.min,
-            children: const [
+            children: [
               Icon(Icons.check_circle, color: AppTheme.accentGreen, size: 18),
               SizedBox(width: 6),
               Text(
@@ -3679,9 +3768,9 @@ class _SettingsScreenState extends State<SettingsScreen>
         color: AppTheme.primaryBlue.withAlpha((0.2 * 255).round()),
         borderRadius: BorderRadius.circular(18),
       ),
-      child: Row(
+      child: const Row(
         mainAxisSize: MainAxisSize.min,
-        children: const [
+        children: [
           Icon(Icons.mic, size: 16, color: AppTheme.primaryBlue),
           SizedBox(width: 6),
           Text(
@@ -3839,8 +3928,8 @@ class _SettingsScreenState extends State<SettingsScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: const [
+          const Row(
+            children: [
               Icon(Icons.science, color: AppTheme.primaryBlue),
               SizedBox(width: 8),
               Text(
@@ -4059,4 +4148,16 @@ class _ExitEditIntent extends Intent {
 
 class _NavigateLeftIntent extends Intent {
   const _NavigateLeftIntent();
+}
+
+class _NavigateDownIntent extends Intent {
+  const _NavigateDownIntent();
+}
+
+class _NavigateUpIntent extends Intent {
+  const _NavigateUpIntent();
+}
+
+class _NavigateRightIntent extends Intent {
+  const _NavigateRightIntent();
 }
