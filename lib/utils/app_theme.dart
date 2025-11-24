@@ -113,7 +113,7 @@ class AppTheme {
         ),
       ),
       
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: cardBackground,
         elevation: 0,
         shape: RoundedRectangleBorder(
@@ -187,14 +187,14 @@ class AppTheme {
           elevation: 0,
         ).copyWith(
           // Android TV focus support - pink border on focus
-          overlayColor: MaterialStateProperty.resolveWith((states) {
-            if (states.contains(MaterialState.focused)) {
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.focused)) {
               return primaryBlue.withAlpha((0.2 * 255).round());
             }
             return null;
           }),
-          side: MaterialStateProperty.resolveWith((states) {
-            if (states.contains(MaterialState.focused)) {
+          side: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.focused)) {
               return const BorderSide(color: primaryBlue, width: 3);
             }
             return null;
@@ -208,14 +208,14 @@ class AppTheme {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ).copyWith(
           // Pink border on focus
-          overlayColor: MaterialStateProperty.resolveWith((states) {
-            if (states.contains(MaterialState.focused)) {
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.focused)) {
               return primaryBlue.withAlpha((0.1 * 255).round());
             }
             return null;
           }),
-          side: MaterialStateProperty.resolveWith((states) {
-            if (states.contains(MaterialState.focused)) {
+          side: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.focused)) {
               return const BorderSide(color: primaryBlue, width: 3);
             }
             return null;
@@ -234,14 +234,14 @@ class AppTheme {
       ),
       
       switchTheme: SwitchThemeData(
-        thumbColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
             return textPrimary;
           }
           return textTertiary;
         }),
-        trackColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
             return primaryBlue;
           }
           return highlight;

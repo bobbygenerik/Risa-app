@@ -1783,7 +1783,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       if (transcriptionService.isDownloadingModels) ...[
                         const SizedBox(height: 12),
                         LinearProgressIndicator(
-                          value: transcriptionService.downloadProgress > 0
+                            value: transcriptionService.downloadProgress > 0
                               ? transcriptionService.downloadProgress
                               : null,
                           backgroundColor: AppTheme.highlight,
@@ -3153,7 +3153,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             borderRadius: BorderRadius.circular(10),
             enableScale: false,
             child: DropdownButtonFormField<String>(
-              value: value,
+              initialValue: value,
               dropdownColor: AppTheme.darkBackgroundOpacity(0.95),
               decoration: InputDecoration(
                 filled: true,

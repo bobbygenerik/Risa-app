@@ -1140,9 +1140,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: Colors.white.withOpacity(0.12)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
         boxShadow: const [
           BoxShadow(
             color: Colors.black26,
@@ -1235,7 +1235,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
     final backgroundColor = isPrimary
       ? null
-      : Colors.white.withOpacity(isActive ? 0.18 : 0.08);
+      : Colors.white.withValues(alpha: isActive ? 0.18 : 0.08);
 
     return Opacity(
       opacity: isDisabled ? 0.45 : 1.0,
@@ -1255,7 +1255,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
               gradient: gradient,
               color: backgroundColor,
               border: Border.all(
-                color: Colors.white.withOpacity(isPrimary ? 0.0 : 0.15),
+                color: Colors.white.withValues(alpha: isPrimary ? 0.0 : 0.15),
               ),
               boxShadow: isPrimary || isActive
                   ? const [

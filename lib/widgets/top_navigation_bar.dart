@@ -222,8 +222,8 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                     duration: const Duration(milliseconds: 150),
                     curve: Curves.easeOut,
                     decoration: BoxDecoration(
-                      color: _searchButtonFocusNode.hasFocus
-                          ? Colors.white.withOpacity(0.08)
+                        color: _searchButtonFocusNode.hasFocus
+                          ? Colors.white.withValues(alpha: 0.08)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(12),
                       border: _searchButtonFocusNode.hasFocus
@@ -271,8 +271,8 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                     duration: const Duration(milliseconds: 150),
                     curve: Curves.easeOut,
                     decoration: BoxDecoration(
-                      color: _overflowButtonFocusNode.hasFocus
-                          ? Colors.white.withOpacity(0.08)
+                        color: _overflowButtonFocusNode.hasFocus
+                          ? Colors.white.withValues(alpha: 0.08)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(12),
                       border: _overflowButtonFocusNode.hasFocus

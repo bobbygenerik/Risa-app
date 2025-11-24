@@ -245,7 +245,7 @@ class TranscriptionControlPanel extends StatelessWidget {
         Text(label, style: Theme.of(context).textTheme.bodyMedium),
         const SizedBox(height: 4),
         DropdownButtonFormField<dynamic>(
-          value: currentLanguage,
+          initialValue: currentLanguage,
           decoration: const InputDecoration(
             border: OutlineInputBorder(),
             isDense: true,

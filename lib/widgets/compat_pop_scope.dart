@@ -26,7 +26,7 @@ class CompatPopScope extends StatelessWidget {
     // this codebase (navigate somewhere and return false).
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         if (onWillPop != null) {
           Future.microtask(() => onWillPop!());
