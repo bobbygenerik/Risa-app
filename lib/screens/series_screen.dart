@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/widgets/go_to_settings_button.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/service_validator.dart';
 import 'package:go_router/go_router.dart';
@@ -261,17 +262,12 @@ class _SeriesScreenState extends State<SeriesScreen>
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppSizes.xl),
-              ElevatedButton.icon(
+              GoToSettingsButton(
                 onPressed: () {
                   Future.delayed(const Duration(milliseconds: 100), () {
                     if (context.mounted) context.go('/settings');
                   });
                 },
-                icon: const Icon(Icons.settings),
-                label: const Text('Go to Settings'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryBlue,
-                ),
               ),
             ],
           ),

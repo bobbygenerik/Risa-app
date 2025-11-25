@@ -10,6 +10,7 @@ import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
+import 'package:iptv_player/widgets/go_to_settings_button.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/service_validator.dart';
 
@@ -137,36 +138,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 32),
-                  TVFocusable(
-                    focusNode: _settingsButtonFocus,
+                  GoToSettingsButton(
                     onPressed: _goToSettings,
-                    borderRadius: BorderRadius.circular(16),
-                    focusMargin: const EdgeInsets.only(top: 8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 14,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryBlue,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.settings, color: Colors.white),
-                          SizedBox(width: 10),
-                          Text(
-                            'Go to Settings',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    focusNode: _settingsButtonFocus,
                   ),
                 ],
               ),

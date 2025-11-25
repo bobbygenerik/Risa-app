@@ -10,6 +10,8 @@ import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/epg_service.dart';
 
+import 'package:iptv_player/widgets/go_to_settings_button.dart';
+
 import 'dart:async';
 import 'package:flutter/services.dart';
 
@@ -128,18 +130,13 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 32),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Future.delayed(const Duration(milliseconds: 100), () {
-                        if (context.mounted) context.go('/settings');
-                      });
-                    },
-                    icon: const Icon(Icons.settings),
-                    label: const Text('Go to Settings'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryBlue,
+                    GoToSettingsButton(
+                      onPressed: () {
+                        Future.delayed(const Duration(milliseconds: 100), () {
+                          if (context.mounted) context.go('/settings');
+                        });
+                      },
                     ),
-                  ),
                 ],
               ),
             );
