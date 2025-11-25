@@ -1254,7 +1254,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     ),
                   );
                   if (confirm == true) {
-                    final provider = Provider.of<ChannelProvider>(context, listen: false);
+                    Provider.of<ChannelProvider>(context, listen: false);
                     await clearPlaylistCache();
                     if (mounted) {
                       showAppSnackBar(
@@ -1288,7 +1288,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                 helperText: 'Enter M3U URL and click Load',
                 prefixIcon: Icons.link,
                 onLeftArrow: requestFirstSidebarFocus,
-                onDownArrow: _focusLoadM3uButton,
+                onDownArrow: () {
+                  _focusLoadM3uButton();
+                  _loadM3uButtonFocusNode.requestFocus();
+                },
                 enableDirectionalNavigation: true,
               ),
               const SizedBox(height: AppSizes.md),
@@ -1306,6 +1309,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                     }
                     if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
                       requestFirstSidebarFocus();
+                      return KeyEventResult.handled;
+                    }
+                    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                      // Stay on button
                       return KeyEventResult.handled;
                     }
                     return KeyEventResult.ignored;
@@ -1610,14 +1617,20 @@ class _SettingsScreenState extends State<SettingsScreen>
         // Left/right navigation between tabs
         if (key == LogicalKeyboardKey.arrowRight) {
           if (_playlistInputMethod == 0) {
-            // Move to Xtream Codes tab
             onTap();
+            // Move focus to next tab
+            Future.delayed(Duration.zero, () {
+              FocusScope.of(node.context!).nextFocus();
+            });
             return KeyEventResult.handled;
           }
         } else if (key == LogicalKeyboardKey.arrowLeft) {
           if (_playlistInputMethod == 1) {
-            // Move to M3U tab
             onTap();
+            // Move focus to previous tab
+            Future.delayed(Duration.zero, () {
+              FocusScope.of(node.context!).previousFocus();
+            });
             return KeyEventResult.handled;
           }
         } else if (key == LogicalKeyboardKey.arrowDown) {

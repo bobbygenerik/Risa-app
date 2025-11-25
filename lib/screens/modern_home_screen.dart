@@ -73,7 +73,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
     final idx = (page % channels.length + channels.length) % channels.length;
     final channel = channels[idx];
     final currentProgram = epgService.getCurrentProgram(channel.id);
-    final showTitle = currentProgram?.title?.isNotEmpty == true ? currentProgram!.title : channel.name;
+    final showTitle = currentProgram?.title.isNotEmpty == true ? currentProgram!.title : channel.name;
     _getBestArt(showTitle).then((url) {
       if (url != null && url.isNotEmpty) {
         precacheImage(NetworkImage(url.replaceFirst('/w1280', '/w780')), context);
@@ -233,7 +233,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
               itemBuilder: (context, index) {
                 final channel = channels[index];
                 final currentProgram = epgService.getCurrentProgram(channel.id);
-                final showTitle = currentProgram?.title?.isNotEmpty == true ? currentProgram!.title : channel.name;
+                final showTitle = currentProgram?.title.isNotEmpty == true ? currentProgram!.title : channel.name;
                 final startTime = currentProgram?.startTime;
                 final endTime = currentProgram?.endTime;
                 final progress = currentProgram?.progressPercentage ?? 0.0;
