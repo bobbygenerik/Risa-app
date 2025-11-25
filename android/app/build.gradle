@@ -9,7 +9,7 @@ android {
     // Use an explicit compileSdk to satisfy newer AndroidX library requirements
     // (some updated plugins require compileSdk 34+). Set to 36 to be safe.
     compileSdk 36
-    ndkVersion "27.0.12077973"
+    ndkVersion "29.0.13113456"
     
     // Enable R8 full mode for maximum optimization
     buildFeatures {
