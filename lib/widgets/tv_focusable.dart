@@ -38,7 +38,8 @@ class _TVFocusableState extends State<TVFocusable> {
   @override
   Widget build(BuildContext context) {
     final highlightColor = widget.focusColor ?? AppTheme.tvFocusHighlight;
-    const glowColor = AppTheme.tvFocusGlow;
+    // Make focus cues more prominent for TV
+    const glowColor = Color(0xFF00BFFF); // Brighter blue glow
 
     Widget child = widget.child;
 
@@ -68,7 +69,7 @@ class _TVFocusableState extends State<TVFocusable> {
           return KeyEventResult.ignored;
         },
         child: AnimatedScale(
-          scale: _hasFocus && widget.enableScale ? widget.focusScale : 1.0,
+          scale: _hasFocus && widget.enableScale ? (widget.focusScale + 0.04) : 1.0,
           duration: const Duration(milliseconds: 140),
           curve: Curves.easeOut,
           child: AnimatedContainer(
@@ -80,8 +81,8 @@ class _TVFocusableState extends State<TVFocusable> {
                   ? [
                       const BoxShadow(
                         color: glowColor,
-                        blurRadius: 18,
-                        spreadRadius: 2,
+                        blurRadius: 28,
+                        spreadRadius: 4,
                       ),
                     ]
                   : null,
@@ -90,7 +91,7 @@ class _TVFocusableState extends State<TVFocusable> {
               borderRadius: widget.borderRadius,
               border: Border.all(
                 color: _hasFocus ? highlightColor : Colors.transparent,
-                width: _hasFocus ? 3 : 0,
+                width: _hasFocus ? 4 : 0,
               ),
             ),
             child: child,

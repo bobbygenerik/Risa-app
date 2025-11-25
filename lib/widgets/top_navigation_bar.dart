@@ -144,12 +144,18 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                 final tabWidth = constraints.maxWidth / tabCount;
                 final highlightWidth = math.min(56 * scale, tabWidth * 0.6);
 
+                // Only show the highlight if a tab is focused, not when search/overflow is focused
                 int highlightedIndex = _tabFocusNodes.indexWhere((node) => node.hasFocus);
-                if (highlightedIndex == -1) {
-                  highlightedIndex = _activeTabIndex.clamp(0, tabCount - 1);
+                final bool showHighlight = highlightedIndex != -1;
+                if (!showHighlight) {
+                  highlightedIndex = -1;
+                } else {
+                  highlightedIndex = highlightedIndex.clamp(0, tabCount - 1);
                 }
 
-                final left = (highlightedIndex.clamp(0, tabCount - 1)) * tabWidth + (tabWidth - highlightWidth) / 2;
+                final left = highlightedIndex != -1
+                    ? (highlightedIndex * tabWidth + (tabWidth - highlightWidth) / 2)
+                    : 0.0;
 
                 return Stack(
                   fit: StackFit.loose,
@@ -160,25 +166,26 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                         tabCount,
                         (index) => SizedBox(
                           width: tabWidth,
-                            child: _buildTabButton(index, scale),
-                          ),
-                        ),
-                      ),
-                    // Sliding highlighter (scaled for TV)
-                    AnimatedPositioned(
-                      duration: const Duration(milliseconds: 260),
-                      curve: Curves.easeInOut,
-                      left: left,
-                      bottom: 8 * scale,
-                      child: Container(
-                        width: highlightWidth,
-                        height: 4 * scale,
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryBlue,
-                          borderRadius: BorderRadius.circular(4),
+                          child: _buildTabButton(index, scale),
                         ),
                       ),
                     ),
+                    // Sliding highlighter (scaled for TV)
+                    if (showHighlight)
+                      AnimatedPositioned(
+                        duration: const Duration(milliseconds: 260),
+                        curve: Curves.easeInOut,
+                        left: left,
+                        bottom: 8 * scale,
+                        child: Container(
+                          width: highlightWidth,
+                          height: 4 * scale,
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryBlue,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
                   ],
                 );
               },

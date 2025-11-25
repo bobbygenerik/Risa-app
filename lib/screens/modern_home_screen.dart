@@ -7,9 +7,86 @@ import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
+import 'package:iptv_player/services/tmdb_service.dart';
+import 'package:iptv_player/services/epg_service.dart';
 
-class ModernHomeScreen extends StatelessWidget {
+import 'dart:async';
+import 'package:flutter/services.dart';
+
+
+class ModernHomeScreen extends StatefulWidget {
   const ModernHomeScreen({super.key});
+
+  @override
+  State<ModernHomeScreen> createState() => _ModernHomeScreenState();
+}
+
+class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerProviderStateMixin {
+  final PageController _pageController = PageController();
+  final FocusNode _heroFocusNode = FocusNode(debugLabel: 'HeroBanner');
+  int _currentPage = 0;
+  Timer? _autoScrollTimer;
+
+  static const int _maxHeroChannels = 6;
+  static const Duration _autoScrollDuration = Duration(seconds: 7);
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Request focus on hero banner when entering home screen
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted && !_heroFocusNode.hasFocus) {
+        _heroFocusNode.requestFocus();
+      }
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _startAutoScroll();
+  }
+
+  void _startAutoScroll() {
+    _autoScrollTimer?.cancel();
+    _autoScrollTimer = Timer.periodic(_autoScrollDuration, (_) {
+      if (!mounted) return;
+      setState(() {
+        _currentPage = (_currentPage + 1) % _maxHeroChannels;
+        _pageController.animateToPage(
+          _currentPage,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
+        _precacheHeroArt(_currentPage + 1);
+        _precacheHeroArt(_currentPage - 1);
+      });
+    });
+  }
+
+  void _precacheHeroArt(int page) {
+    final context = this.context;
+    final channelProvider = Provider.of<ChannelProvider>(context, listen: false);
+    final epgService = Provider.of<EpgService>(context, listen: false);
+    final channels = channelProvider.channels.take(_maxHeroChannels).toList();
+    if (channels.isEmpty) return;
+    final idx = (page % channels.length + channels.length) % channels.length;
+    final channel = channels[idx];
+    final currentProgram = epgService.getCurrentProgram(channel.id);
+    final showTitle = currentProgram?.title?.isNotEmpty == true ? currentProgram!.title : channel.name;
+    _getBestArt(showTitle).then((url) {
+      if (url != null && url.isNotEmpty) {
+        precacheImage(NetworkImage(url.replaceFirst('/w1280', '/w780')), context);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _autoScrollTimer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -104,109 +181,256 @@ class ModernHomeScreen extends StatelessWidget {
   }
 
   Widget _buildHeroBanner() {
-    return Consumer<ContentProvider>(
-      builder: (context, contentProvider, _) {
-        final movies = contentProvider.movies;
-        if (movies.isEmpty) {
+    return Consumer2<ChannelProvider, EpgService>(
+      builder: (context, channelProvider, epgService, _) {
+        final channels = channelProvider.channels.take(_maxHeroChannels).toList();
+        if (channels.isEmpty) {
           return _buildPlaceholderBanner();
         }
 
-        final featured = movies.first;
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: TVFocusable(
-            borderRadius: BorderRadius.circular(24),
-            onPressed: () => context.push('/player', extra: featured),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(24),
-              child: Container(
-                height: 400,
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFF050710),
-                      Color(0xFF0d1140),
-                    ],
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    // Background image or gradient
-                    Container(
-                      color: AppTheme.cardBackground,
-                      child: featured.backdropUrl != null
-                          ? Image.network(
-                              featured.backdropUrl!,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: double.infinity,
-                              errorBuilder: (_, __, ___) =>
-                                  _buildPlaceholderGradient(),
-                            )
-                          : _buildPlaceholderGradient(),
-                    ),
-                    // Content overlay
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              Color(0xFF050710),
-                              Color(0xFF0d1140),
-                            ],
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              featured.title,
-                              style: const TextStyle(
-                                color: AppTheme.textPrimary,
-                                fontSize: 28,
-                                fontWeight: FontWeight.w700,
+        return SizedBox(
+          height: 420,
+          child: Focus(
+            focusNode: _heroFocusNode,
+            onKeyEvent: (node, event) {
+              if (event is! KeyDownEvent) return KeyEventResult.ignored;
+              if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                setState(() {
+                  _currentPage = (_currentPage - 1 + channels.length) % channels.length;
+                  _pageController.animateToPage(
+                    _currentPage,
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeInOut,
+                  );
+                  _precacheHeroArt(_currentPage - 1);
+                  _precacheHeroArt(_currentPage + 1);
+                });
+                return KeyEventResult.handled;
+              }
+              if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                setState(() {
+                  _currentPage = (_currentPage + 1) % channels.length;
+                  _pageController.animateToPage(
+                    _currentPage,
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeInOut,
+                  );
+                  _precacheHeroArt(_currentPage - 1);
+                  _precacheHeroArt(_currentPage + 1);
+                });
+                return KeyEventResult.handled;
+              }
+              return KeyEventResult.ignored;
+            },
+            child: PageView.builder(
+              controller: _pageController,
+              itemCount: channels.length,
+              onPageChanged: (index) {
+                setState(() => _currentPage = index);
+                _precacheHeroArt(index - 1);
+                _precacheHeroArt(index + 1);
+              },
+              itemBuilder: (context, index) {
+                final channel = channels[index];
+                final currentProgram = epgService.getCurrentProgram(channel.id);
+                final showTitle = currentProgram?.title?.isNotEmpty == true ? currentProgram!.title : channel.name;
+                final startTime = currentProgram?.startTime;
+                final endTime = currentProgram?.endTime;
+                final progress = currentProgram?.progressPercentage ?? 0.0;
+
+                return FutureBuilder<String?>(
+                  future: _getBestArt(showTitle),
+                  builder: (context, snapshot) {
+                    final heroImage = snapshot.data;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      child: TVFocusable(
+                        borderRadius: BorderRadius.circular(24),
+                        onPressed: () => context.push('/player', extra: channel),
+                        focusNode: index == _currentPage ? _heroFocusNode : null,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: Container(
+                            height: 400,
+                            width: double.infinity,
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Color(0xFF050710),
+                                  Color(0xFF0d1140),
+                                ],
                               ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(height: 12),
-                            const Row(
+                            child: Stack(
                               children: [
-                                Icon(Icons.play_circle,
-                                    color: AppTheme.accentOrange, size: 20),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Continue Watching',
-                                  style: TextStyle(
-                                    color: AppTheme.textSecondary,
-                                    fontSize: 14,
+                                // Background image or gradient
+                                Container(
+                                  color: AppTheme.cardBackground,
+                                  child: heroImage != null && heroImage.isNotEmpty
+                                      ? Image.network(
+                                          heroImage.replaceFirst('/w1280', '/w780'),
+                                          fit: BoxFit.cover,
+                                          width: double.infinity,
+                                          height: double.infinity,
+                                          cacheWidth: 1280,
+                                          cacheHeight: 720,
+                                          errorBuilder: (_, __, ___) => _buildPlaceholderGradient(),
+                                        )
+                                      : _buildPlaceholderGradient(),
+                                ),
+                                // Channel logo overlay (top left)
+                                if (channel.logoUrl != null && channel.logoUrl!.isNotEmpty)
+                                  Positioned(
+                                    top: 20,
+                                    left: 20,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(0.7),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      padding: const EdgeInsets.all(6),
+                                      child: Image.network(
+                                        channel.logoUrl!,
+                                        width: 48,
+                                        height: 48,
+                                        fit: BoxFit.contain,
+                                        cacheWidth: 96,
+                                        cacheHeight: 96,
+                                        errorBuilder: (_, __, ___) => const Icon(Icons.live_tv, color: Colors.white, size: 32),
+                                      ),
+                                    ),
+                                  ),
+                                // Now Playing badge (top right)
+                                Positioned(
+                                  top: 20,
+                                  right: 20,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.accentOrange,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Text(
+                                      'NOW PLAYING',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                        letterSpacing: 1.2,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                // Content overlay
+                                Positioned(
+                                  bottom: 0,
+                                  left: 0,
+                                  right: 0,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(24),
+                                    decoration: const BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [
+                                          Color(0xFF050710),
+                                          Color(0xFF0d1140),
+                                        ],
+                                      ),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          showTitle,
+                                          style: const TextStyle(
+                                            color: AppTheme.textPrimary,
+                                            fontSize: 28,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        if (startTime != null && endTime != null)
+                                          Row(
+                                            children: [
+                                              Text(
+                                                _formatTime(startTime),
+                                                style: const TextStyle(
+                                                  color: AppTheme.textSecondary,
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              const Text('-', style: TextStyle(color: AppTheme.textSecondary)),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                _formatTime(endTime),
+                                                style: const TextStyle(
+                                                  color: AppTheme.textSecondary,
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        if (startTime != null && endTime != null)
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 8, bottom: 4),
+                                            child: LinearProgressIndicator(
+                                              value: progress,
+                                              backgroundColor: Colors.white24,
+                                              color: AppTheme.accentOrange,
+                                              minHeight: 6,
+                                            ),
+                                          ),
+                                        const SizedBox(height: 12),
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.live_tv, color: AppTheme.accentOrange, size: 20),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              channel.name,
+                                              style: const TextStyle(
+                                                color: AppTheme.textSecondary,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
+                    );
+                  },
+                );
+              },
             ),
           ),
         );
       },
     );
   }
+
+  Future<String?> _getBestArt(String title) async {
+    final details = await TMDBService.getTVDetails(title) ?? await TMDBService.getMovieDetails(title);
+    return details?['backdrop'] ?? details?['poster'];
+  }
+
+  String _formatTime(DateTime time) {
+    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+  }
+
+  // No longer needed: always use TMDB art for hero banner
 
   Widget _buildPlaceholderBanner() {
     return Container(
@@ -313,8 +537,10 @@ class ModernHomeScreen extends StatelessWidget {
                                       fit: BoxFit.cover,
                                       width: double.infinity,
                                       height: double.infinity,
+                                      cacheWidth: 320,
+                                      cacheHeight: 480,
                                       errorBuilder: (_, __, ___) =>
-                                          _buildCardPlaceholder(),
+                                      _buildCardPlaceholder(),
                                     )
                                   : _buildCardPlaceholder(),
                             ),
@@ -415,13 +641,15 @@ class ModernHomeScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12),
                           child: channel.logoUrl != null &&
                                   channel.logoUrl!.isNotEmpty
-                              ? Image.network(
+                                ? Image.network(
                                   channel.logoUrl!,
                                   fit: BoxFit.cover,
                                   width: double.infinity,
                                   height: double.infinity,
+                                  cacheWidth: 320,
+                                  cacheHeight: 180,
                                   errorBuilder: (_, __, ___) =>
-                                      _buildChannelPlaceholder(channel.name),
+                                    _buildChannelPlaceholder(channel.name),
                                 )
                               : _buildChannelPlaceholder(channel.name),
                         ),

@@ -913,54 +913,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide.none,
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(
-                      color: AppTheme.primaryBlue,
-                      width: 3,
-                    ),
-                  ),
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.save),
-                    onPressed: () async {
-                      final localContext = context;
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setString(
-                        'custom_epg_url',
-                        customEpgController.text,
-                      );
-                      if (!localContext.mounted) return;
-                      showAppSnackBar(
-                        localContext,
-                        const SnackBar(
-                          content: Text('Custom EPG URL saved'),
-                          backgroundColor: AppTheme.accentGreen,
-                        ),
-                      );
-                      // Refresh to show saved URL
-                      if (localContext.mounted) {
-                        setState(() {});
-                      }
-                    },
-                    tooltip: 'Save EPG URL',
-                  ),
                 ),
-                onSubmitted: (value) async {
-                  final localContext = context;
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setString('custom_epg_url', value);
-                  if (!localContext.mounted) return;
-                  showAppSnackBar(
-                    localContext,
-                    const SnackBar(
-                      content: Text('Custom EPG URL saved'),
-                      backgroundColor: AppTheme.accentGreen,
-                    ),
-                  );
-                  if (localContext.mounted) {
-                    setState(() {}); // Refresh to show saved URL
-                  }
-                },
               ),
             ),
             const SizedBox(height: AppSizes.xs),
@@ -1278,6 +1231,51 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             const SizedBox(height: AppSizes.lg),
 
+            // Clear Playlist Cache Button
+            Align(
+              alignment: Alignment.centerRight,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Clear Playlist Cache?'),
+                      content: const Text('Are you sure you want to clear the playlist cache? This will remove all locally cached playlist data.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text('Clear', style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirm == true) {
+                    final provider = Provider.of<ChannelProvider>(context, listen: false);
+                    await clearPlaylistCache();
+                    if (mounted) {
+                      showAppSnackBar(
+                        context,
+                        const SnackBar(
+                          content: Text('Playlist cache cleared'),
+                          backgroundColor: AppTheme.accentGreen,
+                        ),
+                      );
+                    }
+                  }
+                },
+                icon: const Icon(Icons.delete_sweep),
+                label: const Text('Clear Playlist Cache'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.shade700,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSizes.md),
             // M3U Content
             if (_playlistInputMethod == 0) ...[
               _buildTVTextField(
@@ -1608,8 +1606,33 @@ class _SettingsScreenState extends State<SettingsScreen>
     return Focus(
       onKeyEvent: (node, event) {
         if (event is! KeyDownEvent) return KeyEventResult.ignored;
-        if (event.logicalKey == LogicalKeyboardKey.enter ||
-            event.logicalKey == LogicalKeyboardKey.select) {
+        final key = event.logicalKey;
+        // Left/right navigation between tabs
+        if (key == LogicalKeyboardKey.arrowRight) {
+          if (_playlistInputMethod == 0) {
+            // Move to Xtream Codes tab
+            onTap();
+            return KeyEventResult.handled;
+          }
+        } else if (key == LogicalKeyboardKey.arrowLeft) {
+          if (_playlistInputMethod == 1) {
+            // Move to M3U tab
+            onTap();
+            return KeyEventResult.handled;
+          }
+        } else if (key == LogicalKeyboardKey.arrowDown) {
+          // Move to first input field for the selected tab
+          if (_playlistInputMethod == 0) {
+            _m3uUrlFocusNode.requestFocus();
+            return KeyEventResult.handled;
+          } else if (_playlistInputMethod == 1) {
+            _xtreamServerFocusNode.requestFocus();
+            return KeyEventResult.handled;
+          }
+        } else if (key == LogicalKeyboardKey.arrowUp) {
+          // Stay on tab (top of screen)
+          return KeyEventResult.handled;
+        } else if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.select) {
           onTap();
           return KeyEventResult.handled;
         }

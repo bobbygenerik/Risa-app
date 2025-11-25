@@ -1,19 +1,42 @@
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:iptv_player/utils/startup_probe.dart';
 import '../models/channel.dart';
 import '../models/content.dart';
 import '../services/m3u_parser_service.dart';
+import 'playlist_isolate.dart';
 import '../services/xtream_codes_service.dart';
 import 'package:http/http.dart' as http;
 import 'content_provider.dart';
 
+/// Clear both SharedPreferences and file-based playlist cache
+Future<void> clearPlaylistCache() async {
+  final prefs = await SharedPreferences.getInstance();
+  // Remove SharedPreferences cache
+  await prefs.remove('cached_playlist');
+  await prefs.remove('cache_timestamp');
+  // Remove file-based cache
+  final cacheFilePath = prefs.getString(ChannelProvider._playlistCacheFilePathKey);
+  if (cacheFilePath != null) {
+    final file = File(cacheFilePath);
+    if (await file.exists()) {
+      await file.delete();
+    }
+    await prefs.remove(ChannelProvider._playlistCacheFilePathKey);
+  }
+  debugPrint('ChannelProvider: Playlist cache cleared');
+}
+
 class ChannelProvider with ChangeNotifier {
   static const int _maxCacheBytes = 5 * 1024 * 1024; // 5 MB cache cap
+  static const String _playlistCacheFileName = 'playlist_cache.m3u';
+  static const String _playlistCacheFilePathKey = 'cached_playlist_file';
   static const int _debugCaptureBytes =
       512 * 1024; // capture 512 KB for previews
 
@@ -67,40 +90,46 @@ class ChannelProvider with ChangeNotifier {
       return; // No saved playlist
     }
 
-    // First, try to load from cache
+    // First, try to load from cache (SharedPreferences or file)
     final cachedPlaylist = prefs.getString('cached_playlist');
     final cacheTimestamp = prefs.getInt('cache_timestamp');
+    final cacheFilePath = prefs.getString(_playlistCacheFilePathKey);
     final cacheAge = cacheTimestamp != null
         ? DateTime.now().millisecondsSinceEpoch - cacheTimestamp
         : null;
 
-    // If cache is less than 6 hours old (21600000 ms), use it
+    bool loadedFromCache = false;
     if (cachedPlaylist != null && cacheAge != null && cacheAge < 21600000) {
-      debugPrint(
-        'ChannelProvider: Loading from cache (${(cacheAge / 60000).round()} minutes old)',
-      );
+      debugPrint('ChannelProvider: Loading from SharedPreferences cache (${(cacheAge / 60000).round()} minutes old)');
       StartupProbe.mark('ChannelProvider.autoLoadPlaylist: using cache');
       try {
         await loadPlaylistFromString(cachedPlaylist);
         _hasLoadedPlaylist = true;
-        debugPrint(
-          'ChannelProvider: Cache loaded successfully with ${_channels.length} channels',
-        );
+        debugPrint('ChannelProvider: Cache loaded successfully with [0m${_channels.length} channels');
         StartupProbe.mark('ChannelProvider.autoLoadPlaylist: cache load finished');
-
-        // Load from network in background to update cache
         _refreshCacheInBackground(prefs, playlistType);
         return;
       } catch (e) {
-        debugPrint(
-          'ChannelProvider: Cache load failed: $e, loading from network',
-        );
-        StartupProbe.mark('ChannelProvider.autoLoadPlaylist: cache load failed, fallback network');
+        debugPrint('ChannelProvider: SharedPreferences cache load failed: $e, trying file cache');
       }
-    } else {
-      debugPrint(
-        'ChannelProvider: Cache expired or not found, loading from network',
-      );
+    }
+    // Try file-based cache if present and fresh
+    if (!loadedFromCache && cacheFilePath != null && cacheAge != null && cacheAge < 21600000) {
+      try {
+        final file = File(cacheFilePath);
+        if (await file.exists()) {
+          final fileContent = await file.readAsString();
+          await loadPlaylistFromString(fileContent);
+          _hasLoadedPlaylist = true;
+          debugPrint('ChannelProvider: File cache loaded successfully with ${_channels.length} channels');
+          StartupProbe.mark('ChannelProvider.autoLoadPlaylist: file cache load finished');
+          _refreshCacheInBackground(prefs, playlistType);
+          return;
+        }
+      } catch (e) {
+        debugPrint('ChannelProvider: File cache load failed: $e, loading from network');
+      }
+      debugPrint('ChannelProvider: File cache expired or not found, loading from network');
     }
 
     debugPrint('ChannelProvider: Playlist type: $playlistType');
@@ -260,10 +289,9 @@ class ChannelProvider with ChangeNotifier {
           );
         }
 
-        final parseController = StreamController<List<int>>();
-        late Future<M3UParseResult> parseFuture;
-        parseFuture = _parserService.parseM3UStream(parseController.stream);
 
+        // Download all bytes first (streaming to memory, but in background isolate)
+        final playlistBytes = <int>[];
         final debugBuilder = BytesBuilder();
         final cacheBuilder = BytesBuilder();
         bool cacheWithinLimit = true;
@@ -271,15 +299,13 @@ class ChannelProvider with ChangeNotifier {
 
         await for (final chunk in streamedResponse.stream) {
           totalBytes += chunk.length;
-          parseController.add(chunk);
-
+          playlistBytes.addAll(chunk);
           if (debugBuilder.length < _debugCaptureBytes) {
             final remaining = _debugCaptureBytes - debugBuilder.length;
             debugBuilder.add(
               chunk.length <= remaining ? chunk : chunk.sublist(0, remaining),
             );
           }
-
           if (cacheWithinLimit) {
             if (totalBytes <= _maxCacheBytes) {
               cacheBuilder.add(chunk);
@@ -288,20 +314,21 @@ class ChannelProvider with ChangeNotifier {
             }
           }
         }
-
-        await parseController.close();
         debugPrint('ChannelProvider: Downloaded $totalBytes bytes');
 
-        final parseResult = await parseFuture;
-        _channels = parseResult.channels;
-        _movies = parseResult.movies;
-        _series = parseResult.series;
-        debugPrint(
-          'ChannelProvider: Parsed ${_channels.length} channels (streaming parser)',
-        );
-        debugPrint(
-          'ChannelProvider: Parsed ${_movies.length} movies, ${_series.length} series from streamed data',
-        );
+        // Parse playlist in background isolate
+        final parsed = await compute(parsePlaylistInIsolate, playlistBytes);
+        _channels = (parsed['channels'] as List<dynamic>)
+            .map((c) => Channel.fromMap(Map<String, dynamic>.from(c)))
+            .toList();
+        _movies = (parsed['movies'] as List<dynamic>)
+            .map((m) => Content.fromMap(Map<String, dynamic>.from(m)))
+            .toList();
+        _series = (parsed['series'] as List<dynamic>)
+            .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
+            .toList();
+        debugPrint('ChannelProvider: Parsed ${_channels.length} channels (isolate)');
+        debugPrint('ChannelProvider: Parsed ${_movies.length} movies, ${_series.length} series (isolate)');
 
         if (_contentProvider != null) {
           _contentProvider!.loadMovies(_movies);
@@ -312,33 +339,31 @@ class ChannelProvider with ChangeNotifier {
             ? utf8.decode(debugBuilder.takeBytes(), allowMalformed: true)
             : null;
 
-        // Cache smaller playlists (<5MB) for faster reloads
+        // Cache smaller playlists (<5MB) in SharedPreferences, larger ones as a file
         final prefs = await SharedPreferences.getInstance();
+        final now = DateTime.now().millisecondsSinceEpoch;
         if (cacheWithinLimit) {
           await prefs.setString(
             'cached_playlist',
             utf8.decode(cacheBuilder.takeBytes(), allowMalformed: true),
           );
-          await prefs.setInt(
-            'cache_timestamp',
-            DateTime.now().millisecondsSinceEpoch,
-          );
-          debugPrint(
-            'ChannelProvider: Playlist cached successfully ($totalBytes bytes)',
-          );
+          await prefs.setInt('cache_timestamp', now);
+          await prefs.remove(_playlistCacheFilePathKey);
+          debugPrint('ChannelProvider: Playlist cached in SharedPreferences ($totalBytes bytes)');
         } else {
+          // Save to file
+          final dir = await getApplicationDocumentsDirectory();
+          final file = File('${dir.path}/$_playlistCacheFileName');
+          await file.writeAsBytes(cacheBuilder.takeBytes());
+          await prefs.setString(_playlistCacheFilePathKey, file.path);
+          await prefs.setInt('cache_timestamp', now);
           await prefs.remove('cached_playlist');
-          await prefs.remove('cache_timestamp');
-          debugPrint(
-            'ChannelProvider: Playlist too large to cache ($totalBytes bytes > $_maxCacheBytes)',
-          );
+          debugPrint('ChannelProvider: Playlist cached to file (${file.path}, $totalBytes bytes)');
         }
 
-        if (_parserService.epgUrl != null) {
-          debugPrint(
-            'ChannelProvider: Saving EPG URL: ${_parserService.epgUrl}',
-          );
-          await prefs.setString('epg_url', _parserService.epgUrl!);
+        if (parsed['epgUrl'] != null) {
+          debugPrint('ChannelProvider: Saving EPG URL: ${parsed['epgUrl']}');
+          await prefs.setString('epg_url', parsed['epgUrl']);
         }
 
         await _loadXtreamVOD(url);
