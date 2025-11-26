@@ -328,6 +328,15 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
   Widget _buildPlayerTile(int index, {bool isSingle = false}) {
     if (index >= _channelsList.length) {
       return Focus(
+        onKeyEvent: (node, event) {
+          if (event is KeyDownEvent && 
+              (event.logicalKey == LogicalKeyboardKey.select || 
+               event.logicalKey == LogicalKeyboardKey.enter)) {
+            _selectChannelForSlot(index);
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
         child: Builder(
           builder: (context) {
             final isFocused = Focus.of(context).hasFocus;
@@ -380,13 +389,31 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
     final isFocused = _focusedPlayer == index;
     final hasAudio = _activeAudioPlayer == index;
 
-    return GestureDetector(
-      onTap: () {
-        _setFocusedPlayer(index);
-        _startControlsTimer();
+    return Focus(
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.select || 
+              event.logicalKey == LogicalKeyboardKey.enter) {
+            _setFocusedPlayer(index);
+            _startControlsTimer();
+            return KeyEventResult.handled;
+          } else if (event.logicalKey == LogicalKeyboardKey.keyF) {
+            _expandPlayer(index);
+            return KeyEventResult.handled;
+          } else if (event.logicalKey == LogicalKeyboardKey.keyA) {
+            _switchAudioPlayer(index);
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
       },
-      onDoubleTap: () => _expandPlayer(index),
-      child: Container(
+      child: GestureDetector(
+        onTap: () {
+          _setFocusedPlayer(index);
+          _startControlsTimer();
+        },
+        onDoubleTap: () => _expandPlayer(index),
+        child: Container(
         margin: const EdgeInsets.all(1),
         decoration: BoxDecoration(
           border: Border.all(
@@ -588,6 +615,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -611,6 +639,15 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
             child: Row(
               children: [
                 Focus(
+                  onKeyEvent: (node, event) {
+                    if (event is KeyDownEvent && 
+                        (event.logicalKey == LogicalKeyboardKey.select || 
+                         event.logicalKey == LogicalKeyboardKey.enter)) {
+                      Navigator.of(context).pop();
+                      return KeyEventResult.handled;
+                    }
+                    return KeyEventResult.ignored;
+                  },
                   child: Builder(
                     builder: (context) {
                       final isFocused = Focus.of(context).hasFocus;
@@ -688,24 +725,51 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
   Widget _buildGridSizeButton(int size, IconData icon) {
     final isActive = _gridSize == size;
     return Focus(
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent && 
+            (event.logicalKey == LogicalKeyboardKey.select || 
+             event.logicalKey == LogicalKeyboardKey.enter)) {
+          _changeGridSize(size);
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
       child: Builder(
         builder: (context) {
           final isFocused = Focus.of(context).hasFocus;
           return Material(
-            color: isActive ? AppTheme.primaryBlue : Colors.white.withAlpha((0.2 * 255).round()),
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              decoration: BoxDecoration(
-                border: isFocused ? Border.all(color: Colors.white, width: 2) : null,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: InkWell(
-                onTap: () => _changeGridSize(size),
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  child: Icon(icon, color: Colors.white, size: 20),
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => _changeGridSize(size),
+              borderRadius: BorderRadius.circular(12),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  gradient: isActive
+                      ? const LinearGradient(
+                          colors: [Color(0xFF6F5BFF), Color(0xFFB86BFF)],
+                        )
+                      : null,
+                  color: isActive ? null : Colors.white.withValues(alpha: 0.08),
+                  border: Border.all(
+                    color: isFocused 
+                        ? Colors.white
+                        : Colors.white.withValues(alpha: 0.15),
+                    width: isFocused ? 2 : 1,
+                  ),
+                  boxShadow: isActive || isFocused
+                      ? [
+                          BoxShadow(
+                            color: isFocused ? const Color(0x88FFFFFF) : const Color(0x550057FF),
+                            blurRadius: 18,
+                            offset: const Offset(0, 6),
+                          ),
+                        ]
+                      : null,
                 ),
+                child: Icon(icon, color: Colors.white, size: 20),
               ),
             ),
           );
