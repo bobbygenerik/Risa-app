@@ -286,6 +286,11 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     _startControlsTimer();
   }
 
+  void _hideControls() {
+    _controlsTimer?.cancel();
+    setState(() => _controlsVisible = false);
+  }
+
   void _togglePlayPause() {
     if (!_isInitialized) return;
     try {
@@ -352,77 +357,45 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     final bool isBackKey = event.logicalKey == LogicalKeyboardKey.escape ||
         event.logicalKey == LogicalKeyboardKey.goBack;
 
-    // First back press reveals the overlay instead of exiting immediately.
+    // If overlay is visible and user presses back, hide it (don't exit)
+    if (_controlsVisible && isBackKey) {
+      _hideControls();
+      return;
+    }
+
+    // If overlay is not visible and back is pressed, show it first
     if (!_controlsVisible && isBackKey) {
       _showControls();
       return;
     }
 
-    _showControls();
+    // For all other keys, show the overlay if hidden
+    if (!_controlsVisible) {
+      _showControls();
+    }
+
+    // Don't process arrow keys if overlay is visible - let them navigate controls
+    if (_controlsVisible && (
+        event.logicalKey == LogicalKeyboardKey.arrowLeft ||
+        event.logicalKey == LogicalKeyboardKey.arrowRight ||
+        event.logicalKey == LogicalKeyboardKey.arrowUp ||
+        event.logicalKey == LogicalKeyboardKey.arrowDown)) {
+      return;
+    }
 
     switch (event.logicalKey) {
       case LogicalKeyboardKey.select:
       case LogicalKeyboardKey.enter:
       case LogicalKeyboardKey.space:
-        // Play/Pause
-        try {
-          if (_videoPlayerController.value.isPlaying) {
-            _videoPlayerController.pause();
-          } else {
-            _videoPlayerController.play();
-          }
-        } catch (_) {}
-        break;
-
-      case LogicalKeyboardKey.arrowLeft:
-        // Seek backward 10 seconds
-        try {
-          final currentPosition = _videoPlayerController.value.position;
-          final newPosition = currentPosition - const Duration(seconds: 10);
-          _videoPlayerController.seekTo(
-            newPosition > Duration.zero ? newPosition : Duration.zero,
-          );
-        } catch (_) {}
-        break;
-
-      case LogicalKeyboardKey.arrowRight:
-        // Seek forward 10 seconds
-        try {
-          final currentPosition = _videoPlayerController.value.position;
-          final duration = _videoPlayerController.value.duration;
-          final newPosition = currentPosition + const Duration(seconds: 10);
-          _videoPlayerController.seekTo(
-            newPosition < duration ? newPosition : duration,
-          );
-        } catch (_) {}
-        break;
-
-      case LogicalKeyboardKey.arrowUp:
-        // Switch to previous channel (live TV only)
-        if (widget.isLive && widget.channel != null) {
-          _switchToPreviousChannel();
-        } else {
-          // For VOD, toggle subtitle selector
-          setState(() => _showSubtitleSelector = !_showSubtitleSelector);
-        }
-        break;
-
-      case LogicalKeyboardKey.arrowDown:
-        // Switch to next channel (live TV only)
-        if (widget.isLive && widget.channel != null) {
-          _switchToNextChannel();
-        } else {
-          // For VOD, toggle audio selector
-          setState(() => _showAudioSelector = !_showAudioSelector);
-          // If opening the audio selector and we have a native controller, fetch
-          // the native audio track list for display.
-          if (!_showAudioSelector && Platform.isAndroid) {
-            // was open, now closed - do nothing
-          } else if (_showAudioSelector &&
-              _nativeController != null &&
-              Platform.isAndroid) {
-            _loadNativeAudioTracks();
-          }
+        // Play/Pause only if overlay is not visible
+        if (!_controlsVisible) {
+          try {
+            if (_videoPlayerController.value.isPlaying) {
+              _videoPlayerController.pause();
+            } else {
+              _videoPlayerController.play();
+            }
+          } catch (_) {}
         }
         break;
 
@@ -1277,59 +1250,78 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       ? null
       : Colors.white.withValues(alpha: isActive ? 0.18 : 0.08);
 
-    return Opacity(
-      opacity: isDisabled ? 0.45 : 1.0,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: borderRadius,
-          onTap: isDisabled ? null : onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: EdgeInsets.symmetric(
-              horizontal: isPrimary ? 22 : 16,
-              vertical: 12,
-            ),
-            decoration: BoxDecoration(
-              borderRadius: borderRadius,
-              gradient: gradient,
-              color: backgroundColor,
-              border: Border.all(
-                color: Colors.white.withValues(alpha: isPrimary ? 0.0 : 0.15),
-              ),
-              boxShadow: isPrimary || isActive
-                  ? const [
-                      BoxShadow(
-                        color: Color(0x550057FF),
-                        blurRadius: 18,
-                        offset: Offset(0, 6),
-                      ),
-                    ]
-                  : null,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  icon,
-                  color: Colors.white,
-                  size: isPrimary ? 26 : 22,
-                ),
-                if (label.isNotEmpty) ...[
-                  const SizedBox(width: 8),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: isPrimary ? 16 : 14,
-                      fontWeight: isPrimary ? FontWeight.w600 : FontWeight.w500,
-                    ),
+    return Focus(
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent && !isDisabled && onTap != null &&
+            (event.logicalKey == LogicalKeyboardKey.select || 
+             event.logicalKey == LogicalKeyboardKey.enter)) {
+          onTap();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Builder(
+        builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
+          return Opacity(
+            opacity: isDisabled ? 0.45 : 1.0,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: borderRadius,
+                onTap: isDisabled ? null : onTap,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isPrimary ? 22 : 16,
+                    vertical: 12,
                   ),
-                ],
-              ],
+                  decoration: BoxDecoration(
+                    borderRadius: borderRadius,
+                    gradient: gradient,
+                    color: backgroundColor,
+                    border: Border.all(
+                      color: isFocused 
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: isPrimary ? 0.0 : 0.15),
+                      width: isFocused ? 2 : 1,
+                    ),
+                    boxShadow: isPrimary || isActive || isFocused
+                        ? [
+                            BoxShadow(
+                              color: isFocused ? const Color(0x88FFFFFF) : const Color(0x550057FF),
+                              blurRadius: 18,
+                              offset: const Offset(0, 6),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        icon,
+                        color: Colors.white,
+                        size: isPrimary ? 26 : 22,
+                      ),
+                      if (label.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          label,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: isPrimary ? 16 : 14,
+                            fontWeight: isPrimary ? FontWeight.w600 : FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

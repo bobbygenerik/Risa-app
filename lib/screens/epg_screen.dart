@@ -1,5 +1,6 @@
 // ignore_for_file: sized_box_for_whitespace
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -442,8 +443,7 @@ class _EPGScreenState extends State<EPGScreen> {
               ),
               Text(
                 DateFormat('EEEE, MMM dd').format(_selectedDate),
-                style: const TextStyle(
-                  fontSize: 12,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: AppTheme.textSecondary,
                   decoration: TextDecoration.none,
                 ),
@@ -569,17 +569,26 @@ class _EPGScreenState extends State<EPGScreen> {
     required bool isSelected,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Focus(
-        onFocusChange: (_) => setState(() {}),
-        child: Builder(builder: (context) {
-          final bool isFocused = Focus.of(context).hasFocus;
-          final Color textColor = isFocused
-              ? Colors.white
-              : (isSelected ? AppTheme.primaryBlue : AppTheme.textSecondary);
-          return AnimatedScale(
+    return Focus(
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent && 
+            (event.logicalKey == LogicalKeyboardKey.select || 
+             event.logicalKey == LogicalKeyboardKey.enter)) {
+          onTap();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      onFocusChange: (_) => setState(() {}),
+      child: Builder(builder: (context) {
+        final bool isFocused = Focus.of(context).hasFocus;
+        final Color textColor = isFocused
+            ? Colors.white
+            : (isSelected ? AppTheme.primaryBlue : AppTheme.textSecondary);
+        return GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: AnimatedScale(
             scale: isFocused ? 1.02 : 1.0,
             duration: AppDurations.fast,
             curve: Curves.easeOut,
@@ -616,9 +625,8 @@ class _EPGScreenState extends State<EPGScreen> {
                   Expanded(
                     child: Text(
                       name,
-                      style: TextStyle(
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: textColor,
-                        fontSize: 13,
                         fontWeight:
                             (isFocused || isSelected) ? FontWeight.bold : FontWeight.normal,
                         decoration: TextDecoration.none,
@@ -630,9 +638,9 @@ class _EPGScreenState extends State<EPGScreen> {
                 ],
               ),
             ),
-          );
-        }),
-      ),
+          ),
+        );
+      }),
     );
   }
 

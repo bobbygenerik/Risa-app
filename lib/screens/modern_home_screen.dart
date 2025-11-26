@@ -329,6 +329,15 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                       child: Focus(
                         focusNode: index == _currentPage ? _heroFocusNode : null,
+                        onKeyEvent: (node, event) {
+                          if (event is KeyDownEvent && 
+                              (event.logicalKey == LogicalKeyboardKey.select || 
+                               event.logicalKey == LogicalKeyboardKey.enter)) {
+                            context.push('/player', extra: channel);
+                            return KeyEventResult.handled;
+                          }
+                          return KeyEventResult.ignored;
+                        },
                         child: Builder(
                           builder: (context) {
                             final isFocused = Focus.of(context).hasFocus;
@@ -642,6 +651,15 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
                     return Padding(
                       padding: const EdgeInsets.only(right: 16),
                       child: Focus(
+                        onKeyEvent: (node, event) {
+                          if (event is KeyDownEvent && 
+                              (event.logicalKey == LogicalKeyboardKey.select || 
+                               event.logicalKey == LogicalKeyboardKey.enter)) {
+                            onTap(content);
+                            return KeyEventResult.handled;
+                          }
+                          return KeyEventResult.ignored;
+                        },
                         child: Builder(
                           builder: (context) {
                             final isFocused = Focus.of(context).hasFocus;
@@ -782,6 +800,15 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
                     return Padding(
                       padding: const EdgeInsets.only(right: 16),
                       child: Focus(
+                        onKeyEvent: (node, event) {
+                          if (event is KeyDownEvent && 
+                              (event.logicalKey == LogicalKeyboardKey.select || 
+                               event.logicalKey == LogicalKeyboardKey.enter)) {
+                            onTap(channel);
+                            return KeyEventResult.handled;
+                          }
+                          return KeyEventResult.ignored;
+                        },
                         child: Builder(
                           builder: (context) {
                             final isFocused = Focus.of(context).hasFocus;

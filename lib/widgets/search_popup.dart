@@ -225,7 +225,7 @@ class _SearchPopupState extends State<SearchPopup> {
                   child: TextField(
                     controller: _searchController,
                     focusNode: _textFieldFocusNode,
-                    autofocus: true,
+                    autofocus: false,
                     style: const TextStyle(
                       fontSize: 20,
                       color: AppTheme.textPrimary,
@@ -429,20 +429,37 @@ class _SearchPopupState extends State<SearchPopup> {
       itemCount: channels.length,
       itemBuilder: (context, index) {
         final channel = channels[index];
-        return InkWell(
-          onTap: () {
-            Navigator.of(context).pop(); // Close popup
-            context.push('/player', extra: channel);
+        return Focus(
+          onKeyEvent: (node, event) {
+            if (event is KeyDownEvent && 
+                (event.logicalKey == LogicalKeyboardKey.select || 
+                 event.logicalKey == LogicalKeyboardKey.enter)) {
+              Navigator.of(context).pop();
+              context.push('/player', extra: channel);
+              return KeyEventResult.handled;
+            }
+            return KeyEventResult.ignored;
           },
-          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppTheme.cardBackground,
-              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-              border: Border.all(
-                color: AppTheme.textSecondary.withAlpha((0.1 * 255).round()),
-              ),
-            ),
+          child: Builder(
+            builder: (context) {
+              final isFocused = Focus.of(context).hasFocus;
+              return InkWell(
+                onTap: () {
+                  Navigator.of(context).pop(); // Close popup
+                  context.push('/player', extra: channel);
+                },
+                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppTheme.cardBackground,
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    border: Border.all(
+                      color: isFocused
+                          ? Colors.white
+                          : AppTheme.textSecondary.withAlpha((0.1 * 255).round()),
+                      width: isFocused ? 2 : 1,
+                    ),
+                  ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -484,6 +501,9 @@ class _SearchPopupState extends State<SearchPopup> {
                 ),
               ],
             ),
+          ),
+        );
+            },
           ),
         );
       },
