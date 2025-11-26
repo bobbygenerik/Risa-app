@@ -55,9 +55,19 @@ class _EPGScreenState extends State<EPGScreen> {
       // Check if EPG URL is configured
       final epgUrl = prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
       
-      if (epgUrl != null && epgUrl.isNotEmpty && !epgService.hasData) {
-        debugPrint('EPG Screen: Loading EPG from URL: $epgUrl');
-        await epgService.loadEpgFromUrl(epgUrl);
+      debugPrint('EPG Screen: EPG URL = $epgUrl');
+      debugPrint('EPG Screen: hasData = ${epgService.hasData}');
+      debugPrint('EPG Screen: epgData.length = ${epgService.epgData.length}');
+      
+      if (epgUrl != null && epgUrl.isNotEmpty) {
+        if (!epgService.hasData) {
+          debugPrint('EPG Screen: Loading EPG from URL: $epgUrl');
+          await epgService.loadEpgFromUrl(epgUrl);
+        } else {
+          debugPrint('EPG Screen: EPG data already loaded (${epgService.epgData.length} channels)');
+        }
+      } else {
+        debugPrint('EPG Screen: No EPG URL configured');
       }
       
       // Check if we're coming back from player with mini player data

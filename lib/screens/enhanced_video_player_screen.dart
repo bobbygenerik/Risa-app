@@ -108,6 +108,14 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     _probeNativeExoAvailability();
     _initializePlayer();
     _startControlsTimer();
+    
+    // Track that this channel is being watched
+    if (widget.channel != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final channelProvider = Provider.of<ChannelProvider>(context, listen: false);
+        channelProvider.incrementWatchCount(widget.channel!.id);
+      });
+    }
   }
 
   void _probeNativeExoAvailability() {
@@ -152,9 +160,17 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       // VLC DISABLED: flutter_vlc_player causes build errors
       _useVlcBackend = false;
 
+      // Convert HTTPS to HTTP for streams to avoid SSL handshake errors
+      // Many IPTV providers have SSL certificate issues
+      String processedUrl = widget.videoUrl;
+      if (processedUrl.startsWith('https://')) {
+        processedUrl = processedUrl.replaceFirst('https://', 'http://');
+        debugPrint('VideoPlayer: Converted HTTPS to HTTP for SSL bypass: $processedUrl');
+      }
+
       // Initialize video player
       _videoPlayerController = VideoPlayerController.networkUrl(
-        Uri.parse(widget.videoUrl),
+        Uri.parse(processedUrl),
         videoPlayerOptions: VideoPlayerOptions(
           mixWithOthers: false,
           allowBackgroundPlayback: false,
@@ -162,7 +178,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         httpHeaders: {
           'User-Agent':
               'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Referer': widget.videoUrl,
+          'Referer': processedUrl,
         },
       );
 
@@ -1190,20 +1206,20 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
             children: [
               _buildControlButton(
                 icon: Icons.subtitles,
-                label: '',
+                label: 'Subtitles',
                 onTap: _openSubtitleSelector,
                 isActive: subtitleActive,
               ),
               _buildControlButton(
-                icon: Icons.audio_file,
-                label: '',
+                icon: Icons.multitrack_audio,
+                label: 'Audio',
                 onTap: hasAudioTracks ? _openAudioSelector : null,
                 isActive: _showAudioSelector,
                 isDisabled: !hasAudioTracks,
               ),
               _buildControlButton(
                 icon: Icons.tv_rounded,
-                label: '',
+                label: 'Guide',
                 onTap: () {
                   if (widget.isLive && widget.channel != null) {
                     context.go(
@@ -1218,18 +1234,18 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                   }
                 },
               ),
-              if (widget.channel != null)
-                _buildControlButton(
-                  icon: Icons.grid_view,
-                  label: '',
-                  onTap: _openMultiView,
-                ),
               if (_isPipSupported)
                 _buildControlButton(
                   icon: Icons.picture_in_picture_alt,
-                  label: '',
+                  label: 'PiP',
                   onTap: _togglePip,
                   isActive: _isPipActive,
+                ),
+              if (widget.channel != null)
+                _buildControlButton(
+                  icon: Icons.grid_view,
+                  label: 'Multi-View',
+                  onTap: _openMultiView,
                 ),
             ],
           ),
@@ -1299,15 +1315,17 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                   color: Colors.white,
                   size: isPrimary ? 26 : 22,
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: isPrimary ? 16 : 14,
-                    fontWeight: isPrimary ? FontWeight.w600 : FontWeight.w500,
+                if (label.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: isPrimary ? 16 : 14,
+                      fontWeight: isPrimary ? FontWeight.w600 : FontWeight.w500,
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),

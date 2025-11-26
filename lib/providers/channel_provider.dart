@@ -57,6 +57,9 @@ class ChannelProvider with ChangeNotifier {
     _contentProvider = provider;
   }
 
+  // Watch count tracking (channelId -> count)
+  Map<String, int> _watchCounts = {};
+
   List<Channel> get channels => _channels;
   List<Channel> get favoriteChannels => _favoriteChannels;
   List<Content> get movies => _movies;
@@ -65,12 +68,49 @@ class ChannelProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get hasLoadedPlaylist => _hasLoadedPlaylist;
   String? get lastM3UContent => _lastM3UContent; // Expose for debugging
+  
+  /// Get channels sorted by watch count (most watched first)
+  List<Channel> get mostWatchedChannels {
+    final sorted = List<Channel>.from(_channels);
+    sorted.sort((a, b) {
+      final aCount = _watchCounts[a.id] ?? 0;
+      final bCount = _watchCounts[b.id] ?? 0;
+      return bCount.compareTo(aCount); // Descending order
+    });
+    return sorted;
+  }
+
+  /// Track when a channel is watched
+  Future<void> incrementWatchCount(String channelId) async {
+    _watchCounts[channelId] = (_watchCounts[channelId] ?? 0) + 1;
+    notifyListeners();
+    
+    // Persist watch counts
+    final prefs = await SharedPreferences.getInstance();
+    final watchCountsJson = _watchCounts.map((k, v) => MapEntry(k, v.toString()));
+    await prefs.setString('channel_watch_counts', json.encode(watchCountsJson));
+  }
+  
+  /// Load watch counts from storage
+  Future<void> _loadWatchCounts() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final watchCountsString = prefs.getString('channel_watch_counts');
+      if (watchCountsString != null) {
+        final decoded = json.decode(watchCountsString) as Map<String, dynamic>;
+        _watchCounts = decoded.map((k, v) => MapEntry(k, int.tryParse(v.toString()) ?? 0));
+      }
+    } catch (e) {
+      debugPrint('Error loading watch counts: $e');
+    }
+  }
 
   /// Auto-load saved playlist on startup
   Future<void> autoLoadPlaylist() async {
     if (_hasLoadedPlaylist) return; // Already loaded
 
     StartupProbe.mark('ChannelProvider.autoLoadPlaylist invoked');
+    await _loadWatchCounts();
     debugPrint('ChannelProvider: Auto-loading playlist...');
     final prefs = await SharedPreferences.getInstance();
     final playlistType = prefs.getString('playlist_type');
@@ -227,6 +267,23 @@ class ChannelProvider with ChangeNotifier {
 
   /// Load channels from M3U URL
   Future<void> loadPlaylistFromUrl(String url) async {
+    try {
+      await _loadPlaylistFromUrlImpl(url);
+    } catch (e) {
+      // If we get an SSL/TLS handshake error, retry with direct HttpClient
+      if (e.toString().contains('HandshakeException') || 
+          e.toString().contains('WRONG_VERSION_NUMBER') ||
+          e.toString().contains('CERTIFICATE_VERIFY_FAILED')) {
+        debugPrint('ChannelProvider: Handshake error detected, retrying with direct HttpClient: $e');
+        await _loadPlaylistWithDirectClient(url);
+      } else {
+        rethrow;
+      }
+    }
+  }
+
+  /// Implementation of loadPlaylistFromUrl using standard http.Client
+  Future<void> _loadPlaylistFromUrlImpl(String url) async {
     _isLoading = true;
     _errorMessage = null;
     _lastM3UContent = null; // Clear old content
@@ -241,7 +298,8 @@ class ChannelProvider with ChangeNotifier {
       // Allow insecure connections for IPTV providers with SSL issues
       HttpOverrides.global = _MyHttpOverrides();
 
-      final client = http.Client();
+      http.Client client = http.Client();
+      
       try {
         final request = http.Request('GET', Uri.parse(url));
         request.headers.addAll({
@@ -262,7 +320,10 @@ class ChannelProvider with ChangeNotifier {
                   'Connection timeout - server took too long to respond (90s limit)',
                 );
               },
-            );
+            ).catchError((e) {
+              // Handshake errors will be caught by outer try-catch
+              throw e;
+            });
 
         debugPrint(
           'ChannelProvider: Response received - status: ${streamedResponse.statusCode}',
@@ -361,12 +422,11 @@ class ChannelProvider with ChangeNotifier {
           debugPrint('ChannelProvider: Playlist cached to file (${file.path}, $totalBytes bytes)');
         }
 
-        // Do NOT auto-save EPG URL from M3U x-tvg-url attribute
-        // M3U playlists don't contain EPG data, only optionally reference external EPG
-        // Users should manually configure EPG URL in settings if needed
-        if (parsed['epgUrl'] != null) {
-          debugPrint('ChannelProvider: Found EPG URL in M3U: ${parsed['epgUrl']} (not auto-saving)');
-          // await prefs.setString('epg_url', parsed['epgUrl']); // Commented out
+        // Auto-save EPG URL from M3U x-tvg-url attribute
+        final epgUrl = parsed['epgUrl'] as String?;
+        if (epgUrl != null && epgUrl.isNotEmpty) {
+          debugPrint('ChannelProvider: Found EPG URL in M3U: $epgUrl (auto-saving)');
+          await prefs.setString('epg_url', epgUrl);
         }
 
         await _loadXtreamVOD(url);
@@ -418,6 +478,100 @@ class ChannelProvider with ChangeNotifier {
     }
   }
 
+  /// Load playlist using direct HttpClient with SSL bypass (fallback for handshake errors)
+  Future<void> _loadPlaylistWithDirectClient(String url) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    final httpClient = HttpClient()
+      ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+
+    try {
+      debugPrint('ChannelProvider: Using direct HttpClient with SSL bypass');
+      
+      final request = await httpClient.getUrl(Uri.parse(url));
+      request.headers.add('User-Agent', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36');
+      request.headers.add('Accept', '*/*');
+      
+      final response = await request.close().timeout(
+        const Duration(seconds: 90),
+        onTimeout: () {
+          throw Exception('Connection timeout - server took too long to respond (90s limit)');
+        },
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('HTTP ${response.statusCode}: Failed to load playlist');
+      }
+
+      // Download all bytes
+      final playlistBytes = <int>[];
+      int totalBytes = 0;
+
+      await for (final chunk in response) {
+        totalBytes += chunk.length;
+        playlistBytes.addAll(chunk);
+      }
+      
+      debugPrint('ChannelProvider: Downloaded $totalBytes bytes (direct client)');
+
+      // Parse in background
+      final parsed = await compute(parsePlaylistInIsolate, playlistBytes);
+      _channels = (parsed['channels'] as List<dynamic>)
+          .map((c) => Channel.fromMap(Map<String, dynamic>.from(c)))
+          .toList();
+      _movies = (parsed['movies'] as List<dynamic>)
+          .map((m) => Content.fromMap(Map<String, dynamic>.from(m)))
+          .toList();
+      _series = (parsed['series'] as List<dynamic>)
+          .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
+          .toList();
+
+      debugPrint('ChannelProvider: Parsed ${_channels.length} channels (direct client)');
+
+      if (_contentProvider != null) {
+        _contentProvider!.loadMovies(_movies);
+        _contentProvider!.loadSeries(_series);
+      }
+
+      // Cache the playlist
+      final prefs = await SharedPreferences.getInstance();
+      final now = DateTime.now().millisecondsSinceEpoch;
+      
+      if (totalBytes <= _maxCacheBytes) {
+        await prefs.setString(
+          'cached_playlist',
+          utf8.decode(playlistBytes, allowMalformed: true),
+        );
+        await prefs.setInt('cache_timestamp', now);
+        debugPrint('ChannelProvider: Playlist cached ($totalBytes bytes)');
+      }
+
+      // Auto-save EPG URL
+      final epgUrl = parsed['epgUrl'] as String?;
+      if (epgUrl != null && epgUrl.isNotEmpty) {
+        debugPrint('ChannelProvider: Found EPG URL: $epgUrl (auto-saving)');
+        await prefs.setString('epg_url', epgUrl);
+      }
+
+      await _loadXtreamVOD(url);
+
+      _isLoading = false;
+      _hasLoadedPlaylist = true;
+      notifyListeners();
+    } catch (e, stackTrace) {
+      debugPrint('ChannelProvider: Error with direct client: $e');
+      debugPrint('ChannelProvider: Stack trace: $stackTrace');
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    } finally {
+      httpClient.close();
+    }
+  }
+
   /// Load channels from M3U content string without blocking the UI isolate
   Future<void> loadPlaylistFromString(String content) async {
     _isLoading = true;
@@ -448,13 +602,12 @@ class ChannelProvider with ChangeNotifier {
         _contentProvider!.loadSeries(_series);
       }
 
-      // Do NOT auto-save EPG URL from M3U x-tvg-url attribute
-      // M3U playlists don't contain EPG data, only optionally reference external EPG
+      // Auto-save EPG URL from M3U x-tvg-url attribute
       final epgUrl = parsed['epgUrl'] as String?;
       if (epgUrl != null && epgUrl.isNotEmpty) {
-        debugPrint('ChannelProvider: Found EPG URL in M3U: $epgUrl (not auto-saving)');
-        // final prefs = await SharedPreferences.getInstance();
-        // await prefs.setString('epg_url', epgUrl);
+        debugPrint('ChannelProvider: Found EPG URL in M3U: $epgUrl (auto-saving)');
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('epg_url', epgUrl);
       }
 
       _isLoading = false;

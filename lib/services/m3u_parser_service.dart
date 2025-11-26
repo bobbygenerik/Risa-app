@@ -91,6 +91,7 @@ class M3UParserService {
           groupTitle: currentAttributes['group-title'],
           tvgId: currentAttributes['tvg-id'],
           attributes: currentAttributes,
+          sortOrder: channelCount, // Preserve playlist order
         );
 
         channels.add(channel);
@@ -159,6 +160,7 @@ class M3UParserService {
           groupTitle: currentAttributes['group-title'],
           tvgId: currentAttributes['tvg-id'],
           attributes: currentAttributes,
+          sortOrder: channelCount, // Preserve playlist order
         );
         channels.add(channel);
         channelCount++;

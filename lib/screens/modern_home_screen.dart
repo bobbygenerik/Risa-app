@@ -264,7 +264,8 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
   Widget _buildHeroBanner() {
     return Consumer2<ChannelProvider, EpgService>(
       builder: (context, channelProvider, epgService, _) {
-        final channels = channelProvider.channels.take(_maxHeroChannels).toList();
+        // Show most watched channels in the hero banner
+        final channels = channelProvider.mostWatchedChannels.take(_maxHeroChannels).toList();
         if (channels.isEmpty) {
           return _buildPlaceholderBanner();
         }
@@ -741,8 +742,12 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
   }) {
     return Consumer<ChannelProvider>(
       builder: (context, channelProvider, _) {
-        final channels = channelProvider.channels.take(6).toList();
-        if (channels.isEmpty) return const SizedBox.shrink();
+        // Get random channels for featured section
+        final allChannels = List<Channel>.from(channelProvider.channels);
+        if (allChannels.isEmpty) return const SizedBox.shrink();
+        
+        allChannels.shuffle();
+        final channels = allChannels.take(6).toList();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,

@@ -183,19 +183,8 @@ class MainActivity : FlutterActivity() {
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !isInPipMode) {
-            val aspectRatio = Rational(16, 9)
-            val params = PictureInPictureParams.Builder()
-                .setAspectRatio(aspectRatio)
-                .build()
-
-            try {
-                enterPictureInPictureMode(params)
-            } catch (_: Exception) {
-                // Ignore failures
-            }
-        }
+        // Do NOT auto-enter PiP on home button press
+        // PiP should only be triggered manually via the PiP button in video player
     }
 }
 
