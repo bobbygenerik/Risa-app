@@ -70,10 +70,10 @@ class _TVFocusableState extends State<TVFocusable> {
         },
         child: AnimatedScale(
           scale: _hasFocus && widget.enableScale ? (widget.focusScale + 0.04) : 1.0,
-          duration: const Duration(milliseconds: 140),
+          duration: const Duration(milliseconds: 100),
           curve: Curves.easeOut,
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 140),
+            duration: const Duration(milliseconds: 100),
             curve: Curves.easeOut,
             decoration: BoxDecoration(
               borderRadius: widget.borderRadius,

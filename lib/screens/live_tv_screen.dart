@@ -9,7 +9,6 @@ import 'package:iptv_player/services/epg_service.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
-import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/widgets/go_to_settings_button.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/service_validator.dart';
@@ -32,6 +31,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   final Map<String, String?> _programArtwork = {};
   final Set<String> _artworkRequests = {};
   late final bool _tmdbEnabled;
+  
+  // Pagination for All Channels section
+  static const int _channelsPerPage = 20;
+  int _currentChannelPage = 0;
 
   @override
   void initState() {
@@ -152,7 +155,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
           final featuredChannel = channels[_featuredIndex];
           final currentProgram = epgService.getCurrentProgram(
-            featuredChannel.id,
+            featuredChannel.tvgId ?? featuredChannel.id,
           );
 
           return SingleChildScrollView(
@@ -165,7 +168,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   channels.take(6).toList(),
                 ),
                 const SizedBox(height: 24),
-                _buildChannelSection(context, 'All Channels', channels),
+                _buildPaginatedChannelSection(context, 'All Channels', channels),
                 const SizedBox(height: 40),
               ],
             ),
@@ -216,24 +219,28 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         ),
         child: Stack(
           children: [
-            // Background image if available
+            // Background image if available, otherwise gradient with TV icon
             if (heroImage != null && heroImage.isNotEmpty)
               Positioned.fill(
                 child: Image.network(
                   heroImage,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) =>
-                      Container(color: AppTheme.cardBackground),
+                  errorBuilder: (_, __, ___) => _buildDefaultHeroBackground(),
                 ),
-              ),
+              )
+            else
+              Positioned.fill(child: _buildDefaultHeroBackground()),
             // Dark gradient overlay
             Positioned.fill(
               child: Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF050710), Color(0xFF0d1140)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withAlpha((0.7 * 255).round()),
+                    ],
                   ),
                 ),
               ),
@@ -342,75 +349,111 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      // TV-friendly watch button with consistent focus cues
-                      TVFocusable(
-                        focusNode: _watchFocus,
-                        focusMargin: const EdgeInsets.only(right: 12),
-                        borderRadius: BorderRadius.circular(12),
-                        onPressed: () => context.push('/player', extra: channel),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryBlue,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 14,
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.play_arrow, color: Colors.white),
-                              SizedBox(width: 8),
-                              Text(
-                                'Watch',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
+                      // TV-friendly watch button with subtle focus styling
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: Focus(
+                          focusNode: _watchFocus,
+                          child: Builder(
+                            builder: (context) {
+                              final isFocused = Focus.of(context).hasFocus;
+                              return GestureDetector(
+                                onTap: () => context.push('/player', extra: channel),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryBlue,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: isFocused
+                                        ? Border.all(color: Colors.white, width: 2)
+                                        : null,
+                                    boxShadow: isFocused
+                                        ? [
+                                            BoxShadow(
+                                              color: Colors.black.withAlpha((0.3 * 255).round()),
+                                              offset: const Offset(0, 4),
+                                              blurRadius: 8,
+                                            ),
+                                          ]
+                                        : null,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 14,
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.play_arrow, color: Colors.white),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Watch',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
+                              );
+                            },
                           ),
                         ),
                       ),
-                      // Guide button with stronger contrast when focused
-                      TVFocusable(
-                        borderRadius: BorderRadius.circular(12),
-                        focusColor: AppTheme.primaryBlue,
-                        onPressed: () => context.go('/epg'),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: AppTheme.primaryBlue.withAlpha(
-                                (0.7 * 255).round(),
-                              ),
-                              width: 1.5,
-                            ),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 22,
-                            vertical: 14,
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.schedule,
-                                color: AppTheme.textPrimary,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Guide',
-                                style: TextStyle(
-                                  color: AppTheme.textPrimary,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
+                      // Guide button with subtle focus styling
+                      Focus(
+                        child: Builder(
+                          builder: (context) {
+                            final isFocused = Focus.of(context).hasFocus;
+                            return GestureDetector(
+                              onTap: () => context.go('/epg'),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isFocused
+                                        ? Colors.white
+                                        : AppTheme.primaryBlue.withAlpha(
+                                            (0.7 * 255).round(),
+                                          ),
+                                    width: isFocused ? 2 : 1.5,
+                                  ),
+                                  boxShadow: isFocused
+                                      ? [
+                                          BoxShadow(
+                                            color: Colors.black.withAlpha((0.3 * 255).round()),
+                                            offset: const Offset(0, 4),
+                                            blurRadius: 8,
+                                          ),
+                                        ]
+                                      : null,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 22,
+                                  vertical: 14,
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.schedule,
+                                      color: AppTheme.textPrimary,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Guide',
+                                      style: TextStyle(
+                                        color: AppTheme.textPrimary,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
+                            );
+                          },
                         ),
                       ),
                     ],
@@ -425,32 +468,91 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   String? _resolveHeroImage(Program? program) {
-    if (program == null) return null;
-    final direct = program.imageUrl;
-    if (direct != null && direct.isNotEmpty) return direct;
+    // Try program image first
+    if (program != null) {
+      final direct = program.imageUrl;
+      if (direct != null && direct.isNotEmpty) return direct;
 
-    final cached = _programArtwork[program.id];
-    if (cached != null) {
-      return cached.isNotEmpty ? cached : null;
-    }
+      final cached = _programArtwork[program.id];
+      if (cached != null) {
+        return cached.isNotEmpty ? cached : null;
+      }
 
-    if (_tmdbEnabled) {
-      _fetchProgramArtwork(program);
+      if (_tmdbEnabled) {
+        _fetchProgramArtwork(program);
+      }
     }
+    
+    // Fallback: try channel-based artwork if no program or program has no image
+    final channel = _getCurrentFeaturedChannel();
+    if (channel != null) {
+      final channelKey = 'channel_${channel.id}';
+      final cachedChannelArt = _programArtwork[channelKey];
+      if (cachedChannelArt != null && cachedChannelArt.isNotEmpty) {
+        return cachedChannelArt;
+      }
+      
+      // Fetch TMDB artwork based on channel name if enabled
+      if (_tmdbEnabled && !_artworkRequests.contains(channelKey)) {
+        _fetchChannelArtwork(channel);
+      }
+    }
+    
     return null;
+  }
+
+  Channel? _getCurrentFeaturedChannel() {
+    final channelProvider = Provider.of<ChannelProvider>(context, listen: false);
+    final channels = channelProvider.channels;
+    if (channels.isEmpty || _featuredIndex >= channels.length) return null;
+    return channels[_featuredIndex];
+  }
+
+  Future<void> _fetchChannelArtwork(Channel channel) async {
+    final channelKey = 'channel_${channel.id}';
+    if (_artworkRequests.contains(channelKey)) return;
+    _artworkRequests.add(channelKey);
+    try {
+      debugPrint('LiveTV: Fetching TMDB art for channel: "${channel.name}"');
+      final image = await TMDBService.getBestBackdrop(channel.name);
+      if (!mounted) return;
+      if (image != null) {
+        debugPrint('LiveTV: Found TMDB art for channel "${channel.name}": $image');
+      } else {
+        debugPrint('LiveTV: No TMDB art found for channel "${channel.name}"');
+      }
+      setState(() {
+        _programArtwork[channelKey] = image ?? '';
+      });
+    } catch (e) {
+      debugPrint('LiveTV: Error fetching TMDB art for channel "${channel.name}": $e');
+      if (mounted) {
+        setState(() {
+          _programArtwork[channelKey] = '';
+        });
+      }
+    } finally {
+      _artworkRequests.remove(channelKey);
+    }
   }
 
   Future<void> _fetchProgramArtwork(Program program) async {
     if (_artworkRequests.contains(program.id)) return;
     _artworkRequests.add(program.id);
     try {
+      debugPrint('LiveTV: Fetching TMDB art for: "${program.title}"');
       final image = await TMDBService.getBestBackdrop(program.title);
       if (!mounted) return;
+      if (image != null) {
+        debugPrint('LiveTV: Found TMDB art for "${program.title}": $image');
+      } else {
+        debugPrint('LiveTV: No TMDB art found for "${program.title}"');
+      }
       setState(() {
         _programArtwork[program.id] = image ?? '';
       });
     } catch (e) {
-      debugPrint('TMDB artwork fetch failed for ${program.title}: $e');
+      debugPrint('LiveTV: Error fetching TMDB art for "${program.title}": $e');
       if (mounted) {
         setState(() {
           _programArtwork[program.id] = '';
@@ -491,35 +593,183 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               policy: WidgetOrderTraversalPolicy(),
               child: Row(
                 children: channels.map((channel) {
-                  return TVFocusable(
-                    focusMargin: const EdgeInsets.only(right: 16),
-                    borderRadius: BorderRadius.circular(12),
-                    onPressed: () => context.push('/player', extra: channel),
-                    child: Container(
-                      width: 200,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: AppTheme.cardBackground,
-                        border: Border.all(
-                          color:
-                              Colors.white.withAlpha((0.1 * 255).round()),
-                          width: 1,
-                        ),
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: Focus(
+                      child: Builder(
+                        builder: (context) {
+                          final isFocused = Focus.of(context).hasFocus;
+                          return GestureDetector(
+                            onTap: () => context.push('/player', extra: channel),
+                            child: Container(
+                              width: 200,
+                              height: 120,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                color: AppTheme.cardBackground,
+                                border: Border.all(
+                                  color: isFocused
+                                      ? Colors.white
+                                      : Colors.white.withAlpha((0.1 * 255).round()),
+                                  width: isFocused ? 2 : 1,
+                                ),
+                                boxShadow: isFocused
+                                    ? [
+                                        BoxShadow(
+                                          color: Colors.black.withAlpha((0.3 * 255).round()),
+                                          offset: const Offset(0, 4),
+                                          blurRadius: 8,
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: channel.logoUrl != null &&
+                                        channel.logoUrl!.isNotEmpty
+                                    ? Image.network(
+                                        channel.logoUrl!,
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                        errorBuilder: (_, __, ___) =>
+                                            _buildChannelPlaceholder(channel.name),
+                                      )
+                                    : _buildChannelPlaceholder(channel.name),
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: channel.logoUrl != null &&
-                                channel.logoUrl!.isNotEmpty
-                            ? Image.network(
-                                channel.logoUrl!,
-                                fit: BoxFit.cover,
-                                width: double.infinity,
-                                height: double.infinity,
-                                errorBuilder: (_, __, ___) =>
-                                    _buildChannelPlaceholder(channel.name),
-                              )
-                            : _buildChannelPlaceholder(channel.name),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _buildPaginatedChannelSection(
+    BuildContext context,
+    String title,
+    List<Channel> allChannels,
+  ) {
+    if (allChannels.isEmpty) return const SizedBox.shrink();
+
+    final totalPages = (allChannels.length / _channelsPerPage).ceil();
+    final startIdx = _currentChannelPage * _channelsPerPage;
+    final endIdx = (startIdx + _channelsPerPage).clamp(0, allChannels.length);
+    final pageChannels = allChannels.sublist(startIdx, endIdx);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (totalPages > 1)
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios, size: 16),
+                      color: _currentChannelPage > 0 
+                          ? AppTheme.textPrimary 
+                          : AppTheme.textSecondary,
+                      onPressed: _currentChannelPage > 0
+                          ? () => setState(() => _currentChannelPage--)
+                          : null,
+                    ),
+                    Text(
+                      'Page ${_currentChannelPage + 1} of $totalPages',
+                      style: const TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 14,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.arrow_forward_ios, size: 16),
+                      color: _currentChannelPage < totalPages - 1
+                          ? AppTheme.textPrimary
+                          : AppTheme.textSecondary,
+                      onPressed: _currentChannelPage < totalPages - 1
+                          ? () => setState(() => _currentChannelPage++)
+                          : null,
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 140,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: FocusTraversalGroup(
+              policy: WidgetOrderTraversalPolicy(),
+              child: Row(
+                children: pageChannels.map((channel) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: Focus(
+                      child: Builder(
+                        builder: (context) {
+                          final isFocused = Focus.of(context).hasFocus;
+                          return GestureDetector(
+                            onTap: () => context.push('/player', extra: channel),
+                            child: Container(
+                              width: 200,
+                              height: 120,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                color: AppTheme.cardBackground,
+                                border: Border.all(
+                                  color: isFocused
+                                      ? Colors.white
+                                      : Colors.white.withAlpha((0.1 * 255).round()),
+                                  width: isFocused ? 2 : 1,
+                                ),
+                                boxShadow: isFocused
+                                    ? [
+                                        BoxShadow(
+                                          color: Colors.black.withAlpha((0.3 * 255).round()),
+                                          offset: const Offset(0, 4),
+                                          blurRadius: 8,
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: channel.logoUrl != null &&
+                                        channel.logoUrl!.isNotEmpty
+                                    ? Image.network(
+                                        channel.logoUrl!,
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                        errorBuilder: (_, __, ___) =>
+                                            _buildChannelPlaceholder(channel.name),
+                                      )
+                                    : _buildChannelPlaceholder(channel.name),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   );
@@ -557,6 +807,29 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               overflow: TextOverflow.ellipsis,
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDefaultHeroBackground() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF1a1a2e),
+            const Color(0xFF16213e),
+            AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
+          ],
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          Icons.live_tv,
+          size: 120,
+          color: Colors.white.withAlpha((0.15 * 255).round()),
         ),
       ),
     );

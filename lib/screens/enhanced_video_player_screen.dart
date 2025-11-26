@@ -17,6 +17,7 @@ import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
+import 'package:iptv_player/screens/multi_view_screen.dart';
 import 'dart:io' as io;
 
 /// Enhanced full-screen video player with advanced features:
@@ -187,7 +188,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         videoPlayerController: _videoPlayerController,
         autoPlay: true,
         looping: widget.isLive,
-        aspectRatio: 16 / 9,
         allowFullScreen: true,
         allowMuting: true,
         showControls: false,
@@ -621,7 +621,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     }
 
     if (shouldEnable) {
-      await transcriptionService.startTranscription();
+      await transcriptionService.startTranscription(streamUrl: widget.videoUrl);
       if (mounted) {
         setState(() {
           _liveTranscriptionEnabled = true;
@@ -713,6 +713,18 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         SnackBar(content: Text('Picture-in-Picture not available: $e')),
       );
     }
+  }
+
+  void _openMultiView() {
+    if (widget.channel == null) return;
+    
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => MultiViewScreen(
+          initialChannel: widget.channel,
+        ),
+      ),
+    );
   }
 
   /// Try to enter Android PiP mode via platform channel.
@@ -835,10 +847,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return AspectRatio(
-      aspectRatio: 16 / 9,
-      child: Chewie(controller: _chewieController!),
-    );
+    return Chewie(controller: _chewieController!);
   }
 
   // Subtitle overlay removed (subtitle support disabled to avoid platform plugin issues)
@@ -859,9 +868,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           final text = transcriptionService.latestSubtitles;
 
           if (!transcriptionService.isTranscribing) {
-            return _buildTranscriptionStatusPill(
-              message: 'Whisper ready – start transcription to show live captions.',
-            );
+            // Don't show any message when transcription is off
+            return const SizedBox.shrink();
           }
 
           if (text.isEmpty) {
@@ -1030,8 +1038,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
   Widget _buildTopBar() {
     return SafeArea(
+      bottom: false,
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: Row(
           children: [
             // Back button
@@ -1044,6 +1053,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     widget.title,
@@ -1052,6 +1062,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   if (widget.subtitle != null)
                     Text(
@@ -1060,10 +1072,13 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                         color: Colors.white70,
                         fontSize: 14,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                 ],
               ),
             ),
+            const SizedBox(width: 12),
             // Status indicators
             if (widget.isLive)
               Container(
@@ -1117,7 +1132,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   Widget _buildControlDeck(bool isPlaying) {
-    final hasSubtitleTracks = widget.subtitleOptions?.isNotEmpty ?? false;
     final hasAudioTracks = (widget.audioTracks?.isNotEmpty ?? false) ||
         _nativeAudioTracks.isNotEmpty ||
         (_useVlcBackend && _vlcAudioTrackLabels.isNotEmpty);
@@ -1125,17 +1139,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     final bool subtitleActive =
         _selectedSubtitleIndex >= 0 ||
         _selectedSubtitleIndex == _subtitleIndexTranscription;
-
-    final String subtitleLabel;
-    if (_selectedSubtitleIndex == _subtitleIndexTranscription) {
-      subtitleLabel = 'Transcription';
-    } else if (_selectedSubtitleIndex >= 0) {
-      subtitleLabel = 'Subtitles On';
-    } else if (hasSubtitleTracks) {
-      subtitleLabel = 'Subtitles';
-    } else {
-      subtitleLabel = 'Transcription';
-    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -1151,64 +1154,85 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           ),
         ],
       ),
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        spacing: 12,
-        runSpacing: 12,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          _buildControlButton(
-            icon: Icons.replay_10,
-            label: '-10s',
-            onTap: () => _seekRelative(const Duration(seconds: -10)),
+          // First row: Rewind, Play/Pause, Fast Forward (centered)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildControlButton(
+                icon: Icons.replay_10,
+                label: '-10s',
+                onTap: () => _seekRelative(const Duration(seconds: -10)),
+              ),
+              const SizedBox(width: 12),
+              _buildControlButton(
+                icon: isPlaying ? Icons.pause : Icons.play_arrow,
+                label: isPlaying ? 'Pause' : 'Play',
+                onTap: _togglePlayPause,
+                isPrimary: true,
+              ),
+              const SizedBox(width: 12),
+              _buildControlButton(
+                icon: Icons.forward_10,
+                label: '+10s',
+                onTap: () => _seekRelative(const Duration(seconds: 10)),
+              ),
+            ],
           ),
-          _buildControlButton(
-            icon: isPlaying ? Icons.pause : Icons.play_arrow,
-            label: isPlaying ? 'Pause' : 'Play',
-            onTap: _togglePlayPause,
-            isPrimary: true,
+          const SizedBox(height: 12),
+          // Second row: Other controls
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              _buildControlButton(
+                icon: Icons.subtitles,
+                label: '',
+                onTap: _openSubtitleSelector,
+                isActive: subtitleActive,
+              ),
+              _buildControlButton(
+                icon: Icons.audio_file,
+                label: '',
+                onTap: hasAudioTracks ? _openAudioSelector : null,
+                isActive: _showAudioSelector,
+                isDisabled: !hasAudioTracks,
+              ),
+              _buildControlButton(
+                icon: Icons.tv_rounded,
+                label: '',
+                onTap: () {
+                  if (widget.isLive && widget.channel != null) {
+                    context.go(
+                      '/epg',
+                      extra: {
+                        'channel': widget.channel,
+                        'continuePlayback': true,
+                      },
+                    );
+                  } else {
+                    Navigator.of(context).pop();
+                  }
+                },
+              ),
+              if (widget.channel != null)
+                _buildControlButton(
+                  icon: Icons.grid_view,
+                  label: '',
+                  onTap: _openMultiView,
+                ),
+              if (_isPipSupported)
+                _buildControlButton(
+                  icon: Icons.picture_in_picture_alt,
+                  label: '',
+                  onTap: _togglePip,
+                  isActive: _isPipActive,
+                ),
+            ],
           ),
-          _buildControlButton(
-            icon: Icons.forward_10,
-            label: '+10s',
-            onTap: () => _seekRelative(const Duration(seconds: 10)),
-          ),
-          _buildControlButton(
-            icon: Icons.subtitles,
-            label: subtitleLabel,
-            onTap: _openSubtitleSelector,
-            isActive: subtitleActive,
-          ),
-          _buildControlButton(
-            icon: Icons.headset,
-            label: hasAudioTracks ? 'Audio Tracks' : 'Audio Unavailable',
-            onTap: hasAudioTracks ? _openAudioSelector : null,
-            isActive: _showAudioSelector,
-            isDisabled: !hasAudioTracks,
-          ),
-          _buildControlButton(
-            icon: Icons.logout,
-            label: 'Exit',
-            onTap: () {
-              if (widget.isLive && widget.channel != null) {
-                context.go(
-                  '/epg',
-                  extra: {
-                    'channel': widget.channel,
-                    'continuePlayback': true,
-                  },
-                );
-              } else {
-                Navigator.of(context).pop();
-              }
-            },
-          ),
-          if (_isPipSupported)
-            _buildControlButton(
-              icon: Icons.picture_in_picture_alt,
-              label: 'PiP Mode',
-              onTap: _togglePip,
-              isActive: _isPipActive,
-            ),
         ],
       ),
     );

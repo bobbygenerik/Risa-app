@@ -309,7 +309,8 @@ class WhisperTranscriptionService extends ChangeNotifier {
   }
 
   /// Start transcription (100% ON-DEVICE)
-  Future<bool> startTranscription() async {
+  /// [streamUrl] - optional stream URL for direct audio capture (Android only)
+  Future<bool> startTranscription({String? streamUrl}) async {
     if (!Platform.isAndroid) {
       _lastError = 'Live stream capture is available on Android devices only';
       notifyListeners();
@@ -354,7 +355,11 @@ class WhisperTranscriptionService extends ChangeNotifier {
 
       final started = await _transcriptionChannel.invokeMethod<bool>(
             'startAudioCapture',
-            {'sampleRate': _sampleRate, 'channels': 1},
+            {
+              'sampleRate': _sampleRate,
+              'channels': 1,
+              'streamUrl': streamUrl,
+            },
           ) ??
           false;
 

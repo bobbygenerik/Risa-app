@@ -21,14 +21,12 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
   final TextEditingController _xtreamServerController = TextEditingController();
   final TextEditingController _xtreamUsernameController = TextEditingController();
   final TextEditingController _xtreamPasswordController = TextEditingController();
-  final TextEditingController _epgUrlController = TextEditingController();
   
   final FocusNode _playlistNameFocusNode = FocusNode();
   final FocusNode _m3uUrlFocusNode = FocusNode();
   final FocusNode _xtreamServerFocusNode = FocusNode();
   final FocusNode _xtreamUsernameFocusNode = FocusNode();
   final FocusNode _xtreamPasswordFocusNode = FocusNode();
-  final FocusNode _epgUrlFocusNode = FocusNode();
   final FocusNode _updateFrequencyFocusNode = FocusNode();
   
   bool _playlistNameEditable = false;
@@ -36,7 +34,6 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
   bool _xtreamServerEditable = false;
   bool _xtreamUsernameEditable = false;
   bool _xtreamPasswordEditable = false;
-  bool _epgUrlEditable = false;
   
   String _playlistType = 'm3u';
   int _updateFrequencyHours = 24; // Default: update every 24 hours
@@ -55,13 +52,11 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
     _xtreamServerController.dispose();
     _xtreamUsernameController.dispose();
     _xtreamPasswordController.dispose();
-    _epgUrlController.dispose();
     _playlistNameFocusNode.dispose();
     _m3uUrlFocusNode.dispose();
     _xtreamServerFocusNode.dispose();
     _xtreamUsernameFocusNode.dispose();
     _xtreamPasswordFocusNode.dispose();
-    _epgUrlFocusNode.dispose();
     _updateFrequencyFocusNode.dispose();
     super.dispose();
   }
@@ -75,7 +70,6 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
       _xtreamServerController.text = prefs.getString('xtream_server') ?? '';
       _xtreamUsernameController.text = prefs.getString('xtream_username') ?? '';
       _xtreamPasswordController.text = prefs.getString('xtream_password') ?? '';
-      _epgUrlController.text = prefs.getString('epg_url') ?? '';
       _updateFrequencyHours = prefs.getInt('playlist_update_frequency') ?? 24;
       _isLoading = false;
     });
@@ -84,7 +78,6 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
   Future<void> _saveSettings() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('playlist_name', _playlistNameController.text);
-    await prefs.setString('epg_url', _epgUrlController.text);
     await prefs.setInt('playlist_update_frequency', _updateFrequencyHours);
     
     if (_playlistType == 'm3u') {
@@ -184,7 +177,6 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
       await prefs.remove('xtream_server');
       await prefs.remove('xtream_username');
       await prefs.remove('xtream_password');
-      await prefs.remove('epg_url');
       await prefs.remove('playlist_update_frequency');
 
       if (mounted) {
@@ -417,25 +409,6 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
                     ],
                   ),
                 ],
-              ],
-            ),
-
-              const SizedBox(height: AppSizes.lg),
-
-              // EPG Source
-              _buildSectionCard(
-              title: 'EPG Source',
-              subtitle: 'Electronic Program Guide URL',
-              children: [
-                _buildTVFriendlyTextField(
-                  controller: _epgUrlController,
-                  focusNode: _epgUrlFocusNode,
-                  isEditable: _epgUrlEditable,
-                  onEditableChange: (value) => setState(() => _epgUrlEditable = value),
-                  label: 'EPG URL (Optional)',
-                  hint: 'http://example.com/epg.xml',
-                  icon: Icons.calendar_today,
-                ),
               ],
             ),
 

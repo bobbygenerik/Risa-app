@@ -3,9 +3,59 @@ import 'package:dio/dio.dart';
 import 'package:xml/xml.dart';
 import 'package:iptv_player/models/program.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-// Removed unused imports: channel.dart and dart:convert
 import 'dart:io';
+import 'dart:convert';
 import 'package:path_provider/path_provider.dart';
+
+// Top-level function for isolate parsing
+Map<String, dynamic> parseEpgInIsolate(String xmlData) {
+  try {
+    final document = XmlDocument.parse(xmlData);
+    final programmes = document.findAllElements('programme');
+    final epgData = <String, List<Map<String, dynamic>>>{};
+
+    for (final programme in programmes) {
+      try {
+        final channelId = programme.getAttribute('channel');
+        if (channelId == null || channelId.isEmpty) continue;
+
+        final startStr = programme.getAttribute('start');
+        final stopStr = programme.getAttribute('stop');
+        if (startStr == null || stopStr == null) continue;
+
+        final title = programme.findElements('title').firstOrNull?.innerText ?? 'Unknown Program';
+        final description = programme.findElements('desc').firstOrNull?.innerText;
+        final category = programme.findElements('category').firstOrNull?.innerText;
+        final icon = programme.findElements('icon').firstOrNull?.getAttribute('src');
+
+        final programMap = {
+          'id': '${channelId}_$startStr',
+          'channelId': channelId,
+          'title': title,
+          'description': description,
+          'startTime': startStr,
+          'endTime': stopStr,
+          'imageUrl': icon,
+          'category': category,
+          'isLive': false,
+          'canRecord': true,
+        };
+
+        if (!epgData.containsKey(channelId)) {
+          epgData[channelId] = [];
+        }
+        epgData[channelId]!.add(programMap);
+      } catch (e) {
+        debugPrint('Error parsing programme: $e');
+        continue;
+      }
+    }
+
+    return {'epgData': epgData};
+  } catch (e) {
+    throw Exception('Failed to parse EPG XML: ${e.toString()}');
+  }
+}
 
 class EpgService with ChangeNotifier {
   final Dio _dio = Dio(BaseOptions(
@@ -51,26 +101,74 @@ class EpgService with ChangeNotifier {
       try {
         debugPrint('Fetching EPG from URL (attempt ${retryCount + 1}/$_maxRetries)...');
         
-        final response = await _dio.get(
-          url,
-          options: Options(
-            responseType: ResponseType.plain,
-            validateStatus: (status) => status != null && status < 500,
-          ),
-        );
+        // Use streaming to handle large EPG files efficiently
+        final client = HttpClient();
+        final request = await client.getUrl(Uri.parse(url));
+        final response = await request.close();
 
-        if (response.statusCode == 200 && response.data != null) {
-          await _parseEpgData(response.data);
-          await _saveToCache(response.data);
-          success = true;
-          _error = null;
-          debugPrint('EPG loaded successfully');
-        } else {
-          throw Exception('HTTP ${response.statusCode}: ${response.statusMessage}');
+        if (response.statusCode != 200) {
+          throw Exception('HTTP ${response.statusCode}');
         }
-      } on DioException catch (e) {
+
+        // Download all bytes (streamed, then parsed in background)
+        final epgBytes = <int>[];
+        int totalBytes = 0;
+        
+        await for (final chunk in response) {
+          totalBytes += chunk.length;
+          epgBytes.addAll(chunk);
+          
+          // Show progress for large files
+          if (totalBytes % (1024 * 1024) == 0) {
+            debugPrint('EPG download: ${(totalBytes / 1024 / 1024).toStringAsFixed(1)} MB');
+          }
+        }
+        
+        client.close();
+        debugPrint('EPG downloaded: ${(totalBytes / 1024 / 1024).toStringAsFixed(2)} MB');
+
+        // Parse in background isolate to avoid blocking UI
+        final xmlData = utf8.decode(epgBytes, allowMalformed: true);
+        debugPrint('EPG: Starting background parsing...');
+        
+        final parsed = await compute(parseEpgInIsolate, xmlData);
+        
+        // Convert parsed data back to Program objects
+        _epgData.clear();
+        final rawEpgData = parsed['epgData'] as Map<String, dynamic>;
+        
+        for (final channelId in rawEpgData.keys) {
+          final programs = (rawEpgData[channelId] as List<dynamic>)
+              .map((p) {
+                final map = Map<String, dynamic>.from(p);
+                return Program(
+                  id: map['id'],
+                  channelId: map['channelId'],
+                  title: map['title'],
+                  description: map['description'],
+                  startTime: _parseEpgTime(map['startTime']),
+                  endTime: _parseEpgTime(map['endTime']),
+                  imageUrl: map['imageUrl'],
+                  category: map['category'],
+                  isLive: map['isLive'] ?? false,
+                  canRecord: map['canRecord'] ?? true,
+                );
+              })
+              .toList();
+          
+          // Sort by start time
+          programs.sort((a, b) => a.startTime.compareTo(b.startTime));
+          _epgData[channelId] = programs;
+        }
+
+        await _saveToCache(xmlData);
+        success = true;
+        _error = null;
+        _lastFetchTime = DateTime.now();
+        debugPrint('EPG parsed successfully: ${_epgData.length} channels');
+      } catch (e) {
         retryCount++;
-        _error = _getDioErrorMessage(e);
+        _error = e.toString();
         debugPrint('EPG fetch error (attempt $retryCount): $_error');
 
         if (retryCount < _maxRetries) {
@@ -83,78 +181,11 @@ class EpgService with ChangeNotifier {
             success = true;
           }
         }
-      } catch (e) {
-        retryCount++;
-        _error = 'Unexpected error: ${e.toString()}';
-        debugPrint('EPG error: $_error');
-
-        if (retryCount >= _maxRetries) {
-          await _loadFromCache();
-        }
       }
     }
 
     _isLoading = false;
     notifyListeners();
-  }
-
-  /// Parse EPG XML data with comprehensive error handling
-  Future<void> _parseEpgData(String xmlData) async {
-    try {
-      // Run parsing in a separate isolate or just be careful with large strings
-      // For now, we'll keep it simple but catch errors
-      final document = XmlDocument.parse(xmlData);
-      final programmes = document.findAllElements('programme');
-
-      _epgData.clear();
-
-      for (final programme in programmes) {
-        try {
-          final channelId = programme.getAttribute('channel');
-          if (channelId == null || channelId.isEmpty) continue;
-
-          final startStr = programme.getAttribute('start');
-          final stopStr = programme.getAttribute('stop');
-          if (startStr == null || stopStr == null) continue;
-
-          final title = programme.findElements('title').firstOrNull?.innerText ?? 'Unknown Program';
-          final description = programme.findElements('desc').firstOrNull?.innerText;
-          final category = programme.findElements('category').firstOrNull?.innerText;
-          final icon = programme.findElements('icon').firstOrNull?.getAttribute('src');
-
-          final program = Program(
-            id: '${channelId}_$startStr',
-            channelId: channelId,
-            title: title,
-            description: description,
-            startTime: _parseEpgTime(startStr),
-            endTime: _parseEpgTime(stopStr),
-            imageUrl: icon,
-            category: category,
-            isLive: false,
-            canRecord: true,
-          );
-
-          if (!_epgData.containsKey(channelId)) {
-            _epgData[channelId] = [];
-          }
-          _epgData[channelId]!.add(program);
-        } catch (e) {
-          debugPrint('Error parsing programme: $e');
-          continue; // Skip this programme and continue with others
-        }
-      }
-
-      // Sort programs by start time for each channel
-      for (final channelId in _epgData.keys) {
-        _epgData[channelId]!.sort((a, b) => a.startTime.compareTo(b.startTime));
-      }
-
-      _lastFetchTime = DateTime.now();
-      debugPrint('Parsed ${_epgData.length} channels with EPG data');
-    } catch (e) {
-      throw Exception('Failed to parse EPG XML: ${e.toString()}');
-    }
   }
 
   /// Parse EPG timestamp format (e.g., "20231104120000 +0000")
@@ -280,10 +311,41 @@ class EpgService with ChangeNotifier {
         return false;
       }
 
+      debugPrint('EPG: Loading from cache (${age.inMinutes} minutes old)...');
       final cachedData = await file.readAsString();
-      await _parseEpgData(cachedData);
       
-      debugPrint('EPG loaded from file cache (${age.inMinutes} minutes old)');
+      // Parse cached data in background isolate
+      final parsed = await compute(parseEpgInIsolate, cachedData);
+      
+      // Convert parsed data back to Program objects
+      _epgData.clear();
+      final rawEpgData = parsed['epgData'] as Map<String, dynamic>;
+      
+      for (final channelId in rawEpgData.keys) {
+        final programs = (rawEpgData[channelId] as List<dynamic>)
+            .map((p) {
+              final map = Map<String, dynamic>.from(p);
+              return Program(
+                id: map['id'],
+                channelId: map['channelId'],
+                title: map['title'],
+                description: map['description'],
+                startTime: _parseEpgTime(map['startTime']),
+                endTime: _parseEpgTime(map['endTime']),
+                imageUrl: map['imageUrl'],
+                category: map['category'],
+                isLive: map['isLive'] ?? false,
+                canRecord: map['canRecord'] ?? true,
+              );
+            })
+            .toList();
+        
+        programs.sort((a, b) => a.startTime.compareTo(b.startTime));
+        _epgData[channelId] = programs;
+      }
+      
+      _lastFetchTime = cacheTime;
+      debugPrint('EPG loaded from cache: ${_epgData.length} channels');
       return true;
     } catch (e) {
       debugPrint('Failed to load EPG from cache: $e');
@@ -309,28 +371,6 @@ class EpgService with ChangeNotifier {
       debugPrint('EPG cache cleared');
     } catch (e) {
       debugPrint('Failed to clear EPG cache: $e');
-    }
-  }
-
-  /// Get user-friendly error message from DioException
-  String _getDioErrorMessage(DioException e) {
-    switch (e.type) {
-      case DioExceptionType.connectionTimeout:
-        return 'Connection timeout - EPG server is not responding';
-      case DioExceptionType.sendTimeout:
-        return 'Send timeout - Unable to send request to EPG server';
-      case DioExceptionType.receiveTimeout:
-        return 'Receive timeout - EPG data is taking too long to download';
-      case DioExceptionType.badResponse:
-        return 'Server error: ${e.response?.statusCode ?? 'Unknown'}';
-      case DioExceptionType.cancel:
-        return 'Request cancelled';
-      case DioExceptionType.connectionError:
-        return 'Connection error - Check your internet connection';
-      case DioExceptionType.badCertificate:
-        return 'SSL certificate error';
-      case DioExceptionType.unknown:
-        return 'Network error: ${e.message ?? 'Unknown error'}';
     }
   }
 

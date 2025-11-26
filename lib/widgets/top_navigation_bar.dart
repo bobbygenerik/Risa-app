@@ -144,15 +144,13 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                 final tabWidth = constraints.maxWidth / tabCount;
                 final highlightWidth = math.min(56 * scale, tabWidth * 0.6);
 
-                // Only show the highlight if a tab is focused, not when search/overflow is focused
+                // Show the highlight unless search or overflow is focused
                 int highlightedIndex = _tabFocusNodes.indexWhere((node) => node.hasFocus);
-                final bool showHighlight = highlightedIndex != -1;
-                if (!showHighlight) {
-                  highlightedIndex = -1;
-                } else {
-                  highlightedIndex = highlightedIndex.clamp(0, tabCount - 1);
+                final bool searchOrOverflowFocused = _searchButtonFocusNode.hasFocus || _overflowButtonFocusNode.hasFocus;
+                if (highlightedIndex == -1 && !searchOrOverflowFocused) {
+                  highlightedIndex = _activeTabIndex;
                 }
-
+                final bool showHighlight = !searchOrOverflowFocused;
                 final left = highlightedIndex != -1
                     ? (highlightedIndex * tabWidth + (tabWidth - highlightWidth) / 2)
                     : 0.0;

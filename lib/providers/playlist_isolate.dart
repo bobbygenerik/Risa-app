@@ -1,7 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
-import '../models/channel.dart';
-import '../models/content.dart';
 import '../services/m3u_parser_service.dart';
 
 /// Isolate entry point for parsing a playlist from bytes

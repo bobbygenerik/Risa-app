@@ -52,7 +52,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool _openSubtitlesUsernameEditable = false;
   bool _openSubtitlesPasswordEditable = false;
 
-  // Focus nodes for text fields
+  // Focus nodes for text fields and tab buttons
   final FocusNode _m3uUrlFocusNode = FocusNode();
   final FocusNode _xtreamServerFocusNode = FocusNode();
   final FocusNode _xtreamUsernameFocusNode = FocusNode();
@@ -60,8 +60,9 @@ class _SettingsScreenState extends State<SettingsScreen>
   final FocusNode _realDebridApiKeyFocusNode = FocusNode();
   final FocusNode _openSubtitlesUsernameFocusNode = FocusNode();
   final FocusNode _openSubtitlesPasswordFocusNode = FocusNode();
-  final FocusNode _loadM3uButtonFocusNode =
-      FocusNode(debugLabel: 'LoadM3UButton');
+  final FocusNode _loadM3uButtonFocusNode = FocusNode(debugLabel: 'LoadM3UButton');
+  final FocusNode _m3uTabFocusNode = FocusNode(debugLabel: 'M3UTabButton');
+  final FocusNode _xtreamTabFocusNode = FocusNode(debugLabel: 'XtreamTabButton');
   final Map<FocusNode, VoidCallback> _focusNodeListeners = {};
 
   // Playback Settings
@@ -237,6 +238,19 @@ class _SettingsScreenState extends State<SettingsScreen>
     super.dispose();
   }
 
+  void _focusFirstContentElement() {
+    // Focus the first interactive element in the current tab's content area
+    Future.microtask(() {
+      if (_tabController!.index == 0) {
+        // General tab - focus M3U tab button
+        _m3uTabFocusNode.requestFocus();
+      } else {
+        // For other tabs, traverse to the first focusable element in the content scope
+        FocusScope.of(context).nextFocus();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -265,8 +279,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                 color: Colors.white.withAlpha((0.1 * 255).round()),
               ),
               Expanded(
-                child: Focus(
-                  canRequestFocus: false,
+                child: FocusScope(
+                  canRequestFocus: true,
                   onKeyEvent: (node, event) {
                     if (event is! KeyDownEvent) return KeyEventResult.ignored;
                     final key = event.logicalKey;
@@ -383,70 +397,68 @@ class _SettingsScreenState extends State<SettingsScreen>
                         setState(() => _tabController!.index = prev);
                         return KeyEventResult.handled;
                       } else if (key == LogicalKeyboardKey.arrowRight) {
-                        Future.microtask(() {
-                          switch (_tabController!.index) {
-                            case 0:
-                              _m3uUrlFocusNode.requestFocus();
-                              break;
-                            case 1:
-                              _realDebridApiKeyFocusNode.requestFocus();
-                              break;
-                          }
-                        });
+                        _focusFirstContentElement();
                         return KeyEventResult.handled;
                       }
                       return KeyEventResult.ignored;
                     },
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppTheme.primaryBlue.withAlpha(
-                                (0.3 * 255).round(),
-                              )
-                            : Colors.transparent,
-                        border: Border.all(
-                          color: isSelected
-                              ? AppTheme.primaryBlue.withAlpha(
-                                  (0.5 * 255).round(),
-                                )
-                              : Colors.transparent,
-                          width: 1.5,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              item['icon'] as IconData,
-                              color: isSelected
-                                  ? AppTheme.primaryBlue
-                                  : AppTheme.textSecondary,
-                              size: 20,
+                    child: Builder(
+                      builder: (context) {
+                        final isFocused = Focus.of(context).hasFocus;
+                        return Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? AppTheme.primaryBlue.withAlpha(
+                                    (0.3 * 255).round(),
+                                  )
+                                : Colors.transparent,
+                            border: Border.all(
+                              color: isFocused
+                                  ? Colors.white
+                                  : (isSelected
+                                      ? AppTheme.primaryBlue.withAlpha(
+                                          (0.5 * 255).round(),
+                                        )
+                                      : Colors.transparent),
+                              width: isFocused ? 2.0 : 1.5,
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                item['title'] as String,
-                                style: TextStyle(
-                                  color: isSelected
-                                      ? AppTheme.textPrimary
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 12,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  item['icon'] as IconData,
+                                  color: (isFocused || isSelected)
+                                      ? AppTheme.primaryBlue
                                       : AppTheme.textSecondary,
-                                  fontSize: 14,
-                                  fontWeight: isSelected
-                                      ? FontWeight.w600
-                                      : FontWeight.w500,
+                                  size: 20,
                                 ),
-                              ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    item['title'] as String,
+                                    style: TextStyle(
+                                      color: (isFocused || isSelected)
+                                          ? AppTheme.textPrimary
+                                          : AppTheme.textSecondary,
+                                      fontSize: 14,
+                                      fontWeight: (isFocused || isSelected)
+                                          ? FontWeight.w600
+                                          : FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      ),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 );
@@ -543,15 +555,18 @@ class _SettingsScreenState extends State<SettingsScreen>
                         ),
                       ),
                       const SizedBox(height: AppSizes.md),
-                      ElevatedButton(
-                        onPressed: () async {
-                          final result = await context.push('/edit-profile');
-                          if (!mounted) return;
-                          if (result == true) {
-                            setState(() {});
-                          }
-                        },
-                        child: const Text('Edit Profile'),
+                      TVFocusable(
+                        borderRadius: BorderRadius.circular(8),
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            final result = await context.push('/edit-profile');
+                            if (!mounted) return;
+                            if (result == true) {
+                              setState(() {});
+                            }
+                          },
+                          child: const Text('Edit Profile'),
+                        ),
                       ),
                     ],
                   ),
@@ -1216,6 +1231,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                       icon: Icons.link,
                       isSelected: _playlistInputMethod == 0,
                       onTap: () => setState(() => _playlistInputMethod = 0),
+                      focusNode: _m3uTabFocusNode,
+                      onDownArrow: () => _m3uUrlFocusNode.requestFocus(),
                     ),
                   ),
                   Expanded(
@@ -1224,58 +1241,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                       icon: Icons.dns,
                       isSelected: _playlistInputMethod == 1,
                       onTap: () => setState(() => _playlistInputMethod = 1),
+                      focusNode: _xtreamTabFocusNode,
+                      onDownArrow: () => _xtreamServerFocusNode.requestFocus(),
                     ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: AppSizes.lg),
-
-            // Clear Playlist Cache Button
-            Align(
-              alignment: Alignment.centerRight,
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  final confirm = await showDialog<bool>(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Clear Playlist Cache?'),
-                      content: const Text('Are you sure you want to clear the playlist cache? This will remove all locally cached playlist data.'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, false),
-                          child: const Text('Cancel'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, true),
-                          child: const Text('Clear', style: TextStyle(color: Colors.red)),
-                        ),
-                      ],
-                    ),
-                  );
-                  if (confirm == true) {
-                    Provider.of<ChannelProvider>(context, listen: false);
-                    await clearPlaylistCache();
-                    if (mounted) {
-                      showAppSnackBar(
-                        context,
-                        const SnackBar(
-                          content: Text('Playlist cache cleared'),
-                          backgroundColor: AppTheme.accentGreen,
-                        ),
-                      );
-                    }
-                  }
-                },
-                icon: const Icon(Icons.delete_sweep),
-                label: const Text('Clear Playlist Cache'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red.shade700,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSizes.md),
             // M3U Content
             if (_playlistInputMethod == 0) ...[
               _buildTVTextField(
@@ -1295,30 +1268,38 @@ class _SettingsScreenState extends State<SettingsScreen>
                 enableDirectionalNavigation: true,
               ),
               const SizedBox(height: AppSizes.md),
-              Align(
-                alignment: Alignment.centerRight,
-                child: Focus(
-                  focusNode: _loadM3uButtonFocusNode,
-                  onKeyEvent: (node, event) {
-                    if (event is! KeyDownEvent) {
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      _m3uUrlController.clear();
+                    },
+                    child: const Text('Clear'),
+                  ),
+                  const SizedBox(width: AppSizes.sm),
+                  Focus(
+                    focusNode: _loadM3uButtonFocusNode,
+                    onKeyEvent: (node, event) {
+                      if (event is! KeyDownEvent) {
+                        return KeyEventResult.ignored;
+                      }
+                      if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                        _m3uUrlFocusNode.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                        requestFirstSidebarFocus();
+                        return KeyEventResult.handled;
+                      }
+                      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                        // Stay on button
+                        return KeyEventResult.handled;
+                      }
                       return KeyEventResult.ignored;
-                    }
-                    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-                      _m3uUrlFocusNode.requestFocus();
-                      return KeyEventResult.handled;
-                    }
-                    if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                      requestFirstSidebarFocus();
-                      return KeyEventResult.handled;
-                    }
-                    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                      // Stay on button
-                      return KeyEventResult.handled;
-                    }
-                    return KeyEventResult.ignored;
-                  },
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
+                    },
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
                     final url = _m3uUrlController.text.trim();
                     if (url.isEmpty) {
                       if (!mounted) return;
@@ -1371,13 +1352,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                       }
                     }
                   },
-                    icon: const Icon(Icons.download),
-                    label: const Text('Load M3U Playlist'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryBlue,
-                    ),
+                  icon: const Icon(Icons.download),
+                  label: const Text('Load M3U Playlist'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryBlue,
                   ),
                 ),
+              ),
+                ],
               ),
             ],
 
@@ -1520,6 +1502,51 @@ class _SettingsScreenState extends State<SettingsScreen>
                 ],
               ),
             ],
+            
+            // Clear Playlist Cache Button (shown for both M3U and Xtream)
+            const SizedBox(height: AppSizes.md),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Clear Playlist Cache?'),
+                      content: const Text('Are you sure you want to clear the playlist cache? This will remove all locally cached playlist data.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text('Clear', style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirm == true) {
+                    Provider.of<ChannelProvider>(context, listen: false);
+                    await clearPlaylistCache();
+                    if (mounted) {
+                      showAppSnackBar(
+                        context,
+                        const SnackBar(
+                          content: Text('Playlist cache cleared'),
+                          backgroundColor: AppTheme.accentGreen,
+                        ),
+                      );
+                    }
+                  }
+                },
+                icon: const Icon(Icons.delete_sweep),
+                label: const Text('Clear Playlist Cache'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.shade700,
+                ),
+              ),
+            ),
           ],
         ),
         _buildSavedPlaylistsSection(),
@@ -1597,7 +1624,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (buttonContext != null) {
       Scrollable.ensureVisible(
         buttonContext,
-        duration: const Duration(milliseconds: 220),
+        duration: const Duration(milliseconds: 150),
         curve: Curves.easeOut,
         alignment: 0.6,
       );
@@ -1609,39 +1636,43 @@ class _SettingsScreenState extends State<SettingsScreen>
     required IconData icon,
     required bool isSelected,
     required VoidCallback onTap,
+    FocusNode? focusNode,
+    VoidCallback? onDownArrow,
   }) {
     return Focus(
+      focusNode: focusNode,
       onKeyEvent: (node, event) {
         if (event is! KeyDownEvent) return KeyEventResult.ignored;
         final key = event.logicalKey;
         // Left/right navigation between tabs
         if (key == LogicalKeyboardKey.arrowRight) {
           if (_playlistInputMethod == 0) {
-            onTap();
-            // Move focus to next tab
-            Future.delayed(Duration.zero, () {
-              FocusScope.of(node.context!).nextFocus();
-            });
+            // Switch to Xtream tab and focus it
+            setState(() => _playlistInputMethod = 1);
+            _xtreamTabFocusNode.requestFocus();
             return KeyEventResult.handled;
           }
-        } else if (key == LogicalKeyboardKey.arrowLeft) {
+        } else if (key == LogicalKeyboardKey.arrowLeft || key == LogicalKeyboardKey.goBack) {
           if (_playlistInputMethod == 1) {
-            onTap();
-            // Move focus to previous tab
-            Future.delayed(Duration.zero, () {
-              FocusScope.of(node.context!).previousFocus();
-            });
+            // Switch to M3U tab and focus it
+            setState(() => _playlistInputMethod = 0);
+            _m3uTabFocusNode.requestFocus();
+            return KeyEventResult.handled;
+          } else {
+            // On M3U tab, go back to sidebar
+            requestFirstSidebarFocus();
             return KeyEventResult.handled;
           }
         } else if (key == LogicalKeyboardKey.arrowDown) {
           // Move to first input field for the selected tab
-          if (_playlistInputMethod == 0) {
+          if (onDownArrow != null) {
+            onDownArrow();
+          } else if (_playlistInputMethod == 0) {
             _m3uUrlFocusNode.requestFocus();
-            return KeyEventResult.handled;
           } else if (_playlistInputMethod == 1) {
             _xtreamServerFocusNode.requestFocus();
-            return KeyEventResult.handled;
           }
+          return KeyEventResult.handled;
         } else if (key == LogicalKeyboardKey.arrowUp) {
           // Stay on tab (top of screen)
           return KeyEventResult.handled;
@@ -1658,14 +1689,15 @@ class _SettingsScreenState extends State<SettingsScreen>
             onTap: onTap,
             child: Container(
               decoration: BoxDecoration(
-                color: isSelected
-                    ? AppTheme.primaryBlue
-                    : (isFocused
-                          ? AppTheme.primaryBlue.withAlpha((0.3 * 255).round())
-                          : Colors.transparent),
+                // When focused, show white border; when selected but not focused, show blue background
+                color: isFocused
+                    ? AppTheme.primaryBlue.withAlpha((0.5 * 255).round())
+                    : (isSelected
+                        ? AppTheme.primaryBlue.withAlpha((0.3 * 255).round())
+                        : Colors.transparent),
                 borderRadius: BorderRadius.circular(AppSizes.radiusMd - 2),
                 border: isFocused
-                    ? Border.all(color: Colors.white, width: 1.5)
+                    ? Border.all(color: Colors.white, width: 2)
                     : null,
               ),
               alignment: Alignment.center,
@@ -1674,15 +1706,15 @@ class _SettingsScreenState extends State<SettingsScreen>
                 children: [
                   Icon(
                     icon,
-                    color: isSelected ? Colors.white : AppTheme.textSecondary,
+                    color: (isFocused || isSelected) ? Colors.white : AppTheme.textSecondary,
                     size: 18,
                   ),
                   const SizedBox(width: 8),
                   Text(
                     title,
                     style: TextStyle(
-                      color: isSelected ? Colors.white : AppTheme.textSecondary,
-                      fontWeight: isSelected
+                      color: (isFocused || isSelected) ? Colors.white : AppTheme.textSecondary,
+                      fontWeight: (isFocused || isSelected)
                           ? FontWeight.bold
                           : FontWeight.normal,
                       fontSize: 13,

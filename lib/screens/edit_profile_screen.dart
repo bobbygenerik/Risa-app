@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
+import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
@@ -198,19 +199,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           keyboardType: TextInputType.emailAddress,
                         ),
                         const SizedBox(height: AppSizes.xl),
-                        ElevatedButton(
-                          onPressed: _isLoading ? null : _saveProfile,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryBlue,
-                            padding: const EdgeInsets.symmetric(vertical: AppSizes.md),
+                        TVFocusable(
+                          borderRadius: BorderRadius.circular(8),
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _saveProfile,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryBlue,
+                              padding: const EdgeInsets.symmetric(vertical: AppSizes.md),
+                            ),
+                            child: _isLoading
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  )
+                                : const Text('Save Changes'),
                           ),
-                          child: _isLoading
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                )
-                              : const Text('Save Changes'),
                         ),
                       ],
                     ),

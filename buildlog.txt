@@ -1,1011 +1,176 @@
-[        ] Transforming signflinger-8.4.2.jar (com.android:signflinger:8.4.2) with ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming zipflinger-8.4.2.jar (com.android:zipflinger:8.4.2) with ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming annotations-31.4.2.jar (com.android.tools:annotations:31.4.2) with ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming jna-platform-5.6.0.jar (net.java.dev.jna:jna-platform:5.6.0) with ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming juniversalchardet-1.0.3.jar (com.googlecode.juniversalchardet:juniversalchardet:1.0.3) with
-ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming javax.annotation-api-1.3.2.jar (javax.annotation:javax.annotation-api:1.3.2) with
-ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming stax-ex-1.8.1.jar (org.jvnet.staxex:stax-ex:1.8.1) with ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming jakarta.xml.bind-api-2.3.2.jar (jakarta.xml.bind:jakarta.xml.bind-api:2.3.2) with
-ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming txw2-2.3.2.jar (org.glassfish.jaxb:txw2:2.3.2) with ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming istack-commons-runtime-3.0.8.jar (com.sun.istack:istack-commons-runtime:3.0.8) with
-ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming FastInfoset-1.2.16.jar (com.sun.xml.fastinfoset:FastInfoset:1.2.16) with ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming jakarta.activation-api-1.2.1.jar (jakarta.activation:jakarta.activation-api:1.2.1) with
-ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming auto-value-annotations-1.6.2.jar (com.google.auto.value:auto-value-annotations:1.6.2) with
-ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming error_prone_annotations-2.18.0.jar (com.google.errorprone:error_prone_annotations:2.18.0) with
-ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming jose4j-0.7.0.jar (org.bitbucket.b_c:jose4j:0.7.0) with ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming slf4j-api-1.7.30.jar (org.slf4j:slf4j-api:1.7.30) with ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming jdom2-2.0.6.jar (org.jdom:jdom2:2.0.6) with ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming jsr305-3.0.2.jar (com.google.code.findbugs:jsr305:3.0.2) with ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming j2objc-annotations-2.8.jar (com.google.j2objc:j2objc-annotations:2.8) with
-ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming annotations-4.1.1.4.jar (com.google.android:annotations:4.1.1.4) with ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming animal-sniffer-annotations-1.23.jar (org.codehaus.mojo:animal-sniffer-annotations:1.23) with
-ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming perfmark-api-0.26.0.jar (io.perfmark:perfmark-api:0.26.0) with ExternalDependencyInstrumentingArtifactTransform
-[   +1 ms] Transforming netty-codec-http2-4.1.93.Final.jar (io.netty:netty-codec-http2:4.1.93.Final) with
-ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming netty-handler-proxy-4.1.93.Final.jar (io.netty:netty-handler-proxy:4.1.93.Final) with
-ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming netty-codec-http-4.1.93.Final.jar (io.netty:netty-codec-http:4.1.93.Final) with
-ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming netty-handler-4.1.93.Final.jar (io.netty:netty-handler:4.1.93.Final) with ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming netty-transport-native-unix-common-4.1.93.Final.jar (io.netty:netty-transport-native-unix-common:4.1.93.Final) with
-ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming checker-qual-3.33.0.jar (org.checkerframework:checker-qual:3.33.0) with ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming commons-codec-1.11.jar (commons-codec:commons-codec:1.11) with ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming apksig-8.4.2.jar (com.android.tools.build:apksig:8.4.2) with ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming javawriter-2.5.0.jar (com.squareup:javawriter:2.5.0) with ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming failureaccess-1.0.1.jar (com.google.guava:failureaccess:1.0.1) with ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar
-(com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava) with ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming commons-logging-1.2.jar (commons-logging:commons-logging:1.2) with ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming jna-5.6.0.jar (net.java.dev.jna:jna:5.6.0) with ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming netty-codec-socks-4.1.93.Final.jar (io.netty:netty-codec-socks:4.1.93.Final) with
-ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming netty-codec-4.1.93.Final.jar (io.netty:netty-codec:4.1.93.Final) with ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming netty-transport-4.1.93.Final.jar (io.netty:netty-transport:4.1.93.Final) with
-ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming netty-buffer-4.1.93.Final.jar (io.netty:netty-buffer:4.1.93.Final) with ExternalDependencyInstrumentingArtifactTransform
-[        ] Transforming netty-resolver-4.1.93.Final.jar (io.netty:netty-resolver:4.1.93.Final) with
-ExternalDependencyInstrumentingArtifactTransform
-[   +1 ms] Transforming netty-common-4.1.93.Final.jar (io.netty:netty-common:4.1.93.Final) with ExternalDependencyInstrumentingArtifactTransform
-[        ] Using default execution profile
-[        ] C/C++: android.ndkVersion from module build.gradle is [29.0.13113456]
-[        ] C/C++: android.ndkPath from module build.gradle is not set
-[        ] C/C++: ndk.dir in local.properties is not set
-[        ] C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
-[        ] C/C++: sdkFolder is /usr/lib/android-sdk
-[        ] C/C++: android.ndkVersion from module build.gradle is [29.0.13113456]
-[        ] C/C++: android.ndkPath from module build.gradle is not set
-[        ] C/C++: ndk.dir in local.properties is not set
-[        ] C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
-[        ] C/C++: sdkFolder is /usr/lib/android-sdk
-[        ] C/C++: android.ndkVersion from module build.gradle is [29.0.13113456]
-[        ] C/C++: android.ndkPath from module build.gradle is not set
-[        ] C/C++: ndk.dir in local.properties is not set
-[        ] C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
-[        ] C/C++: sdkFolder is /usr/lib/android-sdk
-[        ] C/C++: android.ndkVersion from module build.gradle is [29.0.13113456]
-[        ] C/C++: android.ndkPath from module build.gradle is not set
-[        ] C/C++: ndk.dir in local.properties is not set
-[        ] C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
-[        ] C/C++: sdkFolder is /usr/lib/android-sdk
-[        ] C/C++: android.ndkVersion from module build.gradle is [29.0.13113456]
-[        ] C/C++: android.ndkPath from module build.gradle is not set
-[        ] C/C++: ndk.dir in local.properties is not set
-[        ] C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
-[        ] C/C++: sdkFolder is /usr/lib/android-sdk
-[        ] C/C++: android.ndkVersion from module build.gradle is [29.0.13113456]
-[        ] C/C++: android.ndkPath from module build.gradle is not set
-[        ] C/C++: ndk.dir in local.properties is not set
-[        ] C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
-[        ] C/C++: sdkFolder is /usr/lib/android-sdk
-[        ] C/C++: android.ndkVersion from module build.gradle is [29.0.13113456]
-[        ] C/C++: android.ndkPath from module build.gradle is not set
-[        ] C/C++: ndk.dir in local.properties is not set
-[        ] C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
-[        ] C/C++: sdkFolder is /usr/lib/android-sdk
-[        ] C/C++: android.ndkVersion from module build.gradle is [29.0.13113456]
-[        ] C/C++: android.ndkPath from module build.gradle is not set
-[        ] C/C++: ndk.dir in local.properties is not set
-[        ] C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
-[        ] C/C++: sdkFolder is /usr/lib/android-sdk
-[        ] C/C++: android.ndkVersion from module build.gradle is [29.0.13113456]
-[        ] C/C++: android.ndkPath from module build.gradle is not set
-[        ] C/C++: ndk.dir in local.properties is not set
-[        ] C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
-[        ] C/C++: sdkFolder is /usr/lib/android-sdk
-[        ] C/C++: android.ndkVersion from module build.gradle is [29.0.13113456]
-[        ] C/C++: android.ndkPath from module build.gradle is not set
-[        ] C/C++: ndk.dir in local.properties is not set
-[        ] C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
-[        ] C/C++: sdkFolder is /usr/lib/android-sdk
-[        ] C/C++: android.ndkVersion from module build.gradle is [29.0.13113456]
-[        ] C/C++: android.ndkPath from module build.gradle is not set
-[        ] C/C++: ndk.dir in local.properties is not set
-[        ] C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
-[        ] C/C++: sdkFolder is /usr/lib/android-sdk
-[        ] C/C++: android.ndkVersion from module build.gradle is [29.0.13113456]
-[        ] C/C++: android.ndkPath from module build.gradle is not set
-[        ] C/C++: ndk.dir in local.properties is not set
-[        ] C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
-[        ] C/C++: sdkFolder is /usr/lib/android-sdk
-[        ] C/C++: android.ndkVersion from module build.gradle is [29.0.13113456]
-[        ] C/C++: android.ndkPath from module build.gradle is not set
-[        ] C/C++: ndk.dir in local.properties is not set
-[        ] C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
-[        ] C/C++: sdkFolder is /usr/lib/android-sdk
-[        ] C/C++: android.ndkVersion from module build.gradle is [29.0.13113456]
-[        ] C/C++: android.ndkPath from module build.gradle is not set
-[        ] C/C++: ndk.dir in local.properties is not set
-[        ] C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
-[        ] C/C++: sdkFolder is /usr/lib/android-sdk
-[        ] C/C++: android.ndkVersion from module build.gradle is [29.0.13113456]
-[        ] C/C++: android.ndkPath from module build.gradle is not set
-[        ] C/C++: ndk.dir in local.properties is not set
-[        ] C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
-[        ] C/C++: sdkFolder is /usr/lib/android-sdk
-[        ] C/C++: android.ndkVersion from module build.gradle is [29.0.13113456]
-[        ] C/C++: android.ndkPath from module build.gradle is not set
-[        ] C/C++: ndk.dir in local.properties is not set
-[        ] C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
-[        ] C/C++: sdkFolder is /usr/lib/android-sdk
-[        ] C/C++: android.ndkVersion from module build.gradle is [29.0.13113456]
-[        ] C/C++: android.ndkPath from module build.gradle is not set
-[        ] C/C++: ndk.dir in local.properties is not set
-[        ] C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
-[        ] C/C++: sdkFolder is /usr/lib/android-sdk
-[        ] C/C++: android.ndkVersion from module build.gradle is [29.0.13113456]
-[        ] C/C++: android.ndkPath from module build.gradle is not set
-[        ] C/C++: ndk.dir in local.properties is not set
-[        ] C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
-[        ] C/C++: sdkFolder is /usr/lib/android-sdk
-[        ] C/C++: android.ndkVersion from module build.gradle is [29.0.13113456]
-[        ] C/C++: android.ndkPath from module build.gradle is not set
-[        ] C/C++: ndk.dir in local.properties is not set
-[        ] C/C++: Not considering ANDROID_NDK_HOME because support was removed after deprecation period.
-[        ] C/C++: sdkFolder is /usr/lib/android-sdk
-[        ] Task name matched 'assembleDebug'
-[        ] Selected primary task 'assembleDebug' from project :
-[        ] Adding -Xuse-inline-scopes-numbers Kotlin compiler flag for task :app:compileDebugKotlin
-[        ] All projects evaluated.
-[  +16 ms] Tasks to be executed: [task ':app:DebugMinSdkCheck', task ':app:preBuild', task ':app:preDebugBuild', task
-':app:mergeDebugNativeDebugMetadata', task ':app:checkKotlinGradlePluginConfigurationErrors', task ':app:generateDebugBuildConfig', task
-':app:compileFlutterBuildDebug', task ':app:packJniLibsflutterBuildDebug', task ':ffmpeg_kit_flutter_new_min:preBuild', task
-':ffmpeg_kit_flutter_new_min:preDebugBuild', task ':ffmpeg_kit_flutter_new_min:writeDebugAarMetadata', task ':file_picker:preBuild', task
-':file_picker:preDebugBuild', task ':file_picker:writeDebugAarMetadata', task ':flutter_plugin_android_lifecycle:preBuild', task
-':flutter_plugin_android_lifecycle:preDebugBuild', task ':flutter_plugin_android_lifecycle:writeDebugAarMetadata', task ':flutter_tts:preBuild',
-task ':flutter_tts:preDebugBuild', task ':flutter_tts:writeDebugAarMetadata', task ':google_mlkit_commons:preBuild', task
-':google_mlkit_commons:preDebugBuild', task ':google_mlkit_commons:writeDebugAarMetadata', task ':google_mlkit_language_id:preBuild', task
-':google_mlkit_language_id:preDebugBuild', task ':google_mlkit_language_id:writeDebugAarMetadata', task ':google_mlkit_translation:preBuild', task
-':google_mlkit_translation:preDebugBuild', task ':google_mlkit_translation:writeDebugAarMetadata', task ':package_info_plus:preBuild', task
-':package_info_plus:preDebugBuild', task ':package_info_plus:writeDebugAarMetadata', task ':path_provider_android:preBuild', task
-':path_provider_android:preDebugBuild', task ':path_provider_android:writeDebugAarMetadata', task ':permission_handler_android:preBuild', task
-':permission_handler_android:preDebugBuild', task ':permission_handler_android:writeDebugAarMetadata', task ':record_android:preBuild', task
-':record_android:preDebugBuild', task ':record_android:writeDebugAarMetadata', task ':shared_preferences_android:preBuild', task
-':shared_preferences_android:preDebugBuild', task ':shared_preferences_android:writeDebugAarMetadata', task ':speech_to_text:preBuild', task
-':speech_to_text:preDebugBuild', task ':speech_to_text:writeDebugAarMetadata', task ':sqflite_android:preBuild', task
-':sqflite_android:preDebugBuild', task ':sqflite_android:writeDebugAarMetadata', task ':tflite_flutter:preBuild', task
-':tflite_flutter:preDebugBuild', task ':tflite_flutter:writeDebugAarMetadata', task ':url_launcher_android:preBuild', task
-':url_launcher_android:preDebugBuild', task ':url_launcher_android:writeDebugAarMetadata', task ':video_player_android:preBuild', task
-':video_player_android:preDebugBuild', task ':video_player_android:writeDebugAarMetadata', task ':wakelock_plus:preBuild', task
-':wakelock_plus:preDebugBuild', task ':wakelock_plus:writeDebugAarMetadata', task ':whisper_ggml:preBuild', task ':whisper_ggml:preDebugBuild',
-task ':whisper_ggml:writeDebugAarMetadata', task ':app:checkDebugAarMetadata', task ':app:cleanMergeDebugAssets', task ':app:generateDebugAssets',
-task ':ffmpeg_kit_flutter_new_min:generateDebugAssets', task ':ffmpeg_kit_flutter_new_min:mergeDebugAssets', task
-':file_picker:generateDebugAssets', task ':file_picker:mergeDebugAssets', task ':flutter_plugin_android_lifecycle:generateDebugAssets', task
-':flutter_plugin_android_lifecycle:mergeDebugAssets', task ':flutter_tts:generateDebugAssets', task ':flutter_tts:mergeDebugAssets', task
-':google_mlkit_commons:generateDebugAssets', task ':google_mlkit_commons:mergeDebugAssets', task ':google_mlkit_language_id:generateDebugAssets',
-task ':google_mlkit_language_id:mergeDebugAssets', task ':google_mlkit_translation:generateDebugAssets', task
-':google_mlkit_translation:mergeDebugAssets', task ':package_info_plus:generateDebugAssets', task ':package_info_plus:mergeDebugAssets', task
-':path_provider_android:generateDebugAssets', task ':path_provider_android:mergeDebugAssets', task
-':permission_handler_android:generateDebugAssets', task ':permission_handler_android:mergeDebugAssets', task
-':record_android:generateDebugAssets', task ':record_android:mergeDebugAssets', task ':shared_preferences_android:generateDebugAssets', task
-':shared_preferences_android:mergeDebugAssets', task ':speech_to_text:generateDebugAssets', task ':speech_to_text:mergeDebugAssets', task
-':sqflite_android:generateDebugAssets', task ':sqflite_android:mergeDebugAssets', task ':tflite_flutter:generateDebugAssets', task
-':tflite_flutter:mergeDebugAssets', task ':url_launcher_android:generateDebugAssets', task ':url_launcher_android:mergeDebugAssets', task
-':video_player_android:generateDebugAssets', task ':video_player_android:mergeDebugAssets', task ':wakelock_plus:generateDebugAssets', task
-':wakelock_plus:mergeDebugAssets', task ':whisper_ggml:generateDebugAssets', task ':whisper_ggml:mergeDebugAssets', task ':app:mergeDebugAssets',
-task ':app:copyFlutterAssetsDebug', task ':ffmpeg_kit_flutter_new_min:generateDebugResources', task
-':ffmpeg_kit_flutter_new_min:packageDebugResources', task ':file_picker:generateDebugResources', task ':file_picker:packageDebugResources', task
-':flutter_plugin_android_lifecycle:generateDebugResources', task ':flutter_plugin_android_lifecycle:packageDebugResources', task
-':flutter_tts:generateDebugResources', task ':flutter_tts:packageDebugResources', task ':google_mlkit_commons:generateDebugResources', task
-':google_mlkit_commons:packageDebugResources', task ':google_mlkit_language_id:generateDebugResources', task
-':google_mlkit_language_id:packageDebugResources', task ':google_mlkit_translation:generateDebugResources', task
-':google_mlkit_translation:packageDebugResources', task ':package_info_plus:generateDebugResources', task
-':package_info_plus:packageDebugResources', task ':path_provider_android:generateDebugResources', task
-':path_provider_android:packageDebugResources', task ':permission_handler_android:generateDebugResources', task
-':permission_handler_android:packageDebugResources', task ':record_android:generateDebugResources', task ':record_android:packageDebugResources',
-task ':shared_preferences_android:generateDebugResources', task ':shared_preferences_android:packageDebugResources', task
-':speech_to_text:generateDebugResources', task ':speech_to_text:packageDebugResources', task ':sqflite_android:generateDebugResources', task
-':sqflite_android:packageDebugResources', task ':tflite_flutter:generateDebugResources', task ':tflite_flutter:packageDebugResources', task
-':url_launcher_android:generateDebugResources', task ':url_launcher_android:packageDebugResources', task
-':video_player_android:generateDebugResources', task ':video_player_android:packageDebugResources', task ':wakelock_plus:generateDebugResources',
-task ':wakelock_plus:packageDebugResources', task ':whisper_ggml:generateDebugResources', task ':whisper_ggml:packageDebugResources', task
-':app:mapDebugSourceSetPaths', task ':app:generateDebugResources', task ':app:mergeDebugResources', task ':app:packageDebugResources', task
-':app:parseDebugLocalResources', task ':app:createDebugCompatibleScreenManifests', task ':app:extractDeepLinksDebug', task
-':ffmpeg_kit_flutter_new_min:extractDeepLinksDebug', task ':ffmpeg_kit_flutter_new_min:processDebugManifest', task
-':file_picker:extractDeepLinksDebug', task ':file_picker:processDebugManifest', task ':flutter_plugin_android_lifecycle:extractDeepLinksDebug',
-task ':flutter_plugin_android_lifecycle:processDebugManifest', task ':flutter_tts:extractDeepLinksDebug', task
-':flutter_tts:processDebugManifest', task ':google_mlkit_commons:extractDeepLinksDebug', task ':google_mlkit_commons:processDebugManifest', task
-':google_mlkit_language_id:extractDeepLinksDebug', task ':google_mlkit_language_id:processDebugManifest', task
-':google_mlkit_translation:extractDeepLinksDebug', task ':google_mlkit_translation:processDebugManifest', task
-':package_info_plus:extractDeepLinksDebug', task ':package_info_plus:processDebugManifest', task ':path_provider_android:extractDeepLinksDebug',
-task ':path_provider_android:processDebugManifest', task ':permission_handler_android:extractDeepLinksDebug', task
-':permission_handler_android:processDebugManifest', task ':record_android:extractDeepLinksDebug', task ':record_android:processDebugManifest',
-task ':shared_preferences_android:extractDeepLinksDebug', task ':shared_preferences_android:processDebugManifest', task
-':speech_to_text:extractDeepLinksDebug', task ':speech_to_text:processDebugManifest', task ':sqflite_android:extractDeepLinksDebug', task
-':sqflite_android:processDebugManifest', task ':tflite_flutter:extractDeepLinksDebug', task ':tflite_flutter:processDebugManifest', task
-':url_launcher_android:extractDeepLinksDebug', task ':url_launcher_android:processDebugManifest', task
-':video_player_android:extractDeepLinksDebug', task ':video_player_android:processDebugManifest', task ':wakelock_plus:extractDeepLinksDebug',
-task ':wakelock_plus:processDebugManifest', task ':whisper_ggml:extractDeepLinksDebug', task ':whisper_ggml:processDebugManifest', task
-':app:processDebugMainManifest', task ':app:outputDebugAppLinkSettings', task ':app:processDebugManifest', task
-':app:processDebugManifestForPackage', task ':ffmpeg_kit_flutter_new_min:compileDebugLibraryResources', task
-':ffmpeg_kit_flutter_new_min:parseDebugLocalResources', task ':ffmpeg_kit_flutter_new_min:generateDebugRFile', task
-':file_picker:compileDebugLibraryResources', task ':file_picker:parseDebugLocalResources', task ':file_picker:generateDebugRFile', task
-':flutter_plugin_android_lifecycle:compileDebugLibraryResources', task ':flutter_plugin_android_lifecycle:parseDebugLocalResources', task
-':flutter_plugin_android_lifecycle:generateDebugRFile', task ':flutter_tts:compileDebugLibraryResources', task
-':flutter_tts:parseDebugLocalResources', task ':flutter_tts:generateDebugRFile', task ':google_mlkit_commons:compileDebugLibraryResources', task
-':google_mlkit_commons:parseDebugLocalResources', task ':google_mlkit_commons:generateDebugRFile', task
-':google_mlkit_language_id:compileDebugLibraryResources', task ':google_mlkit_language_id:parseDebugLocalResources', task
-':google_mlkit_language_id:generateDebugRFile', task ':google_mlkit_translation:compileDebugLibraryResources', task
-':google_mlkit_translation:parseDebugLocalResources', task ':google_mlkit_translation:generateDebugRFile', task
-':package_info_plus:compileDebugLibraryResources', task ':package_info_plus:parseDebugLocalResources', task
-':package_info_plus:generateDebugRFile', task ':path_provider_android:compileDebugLibraryResources', task
-':path_provider_android:parseDebugLocalResources', task ':path_provider_android:generateDebugRFile', task
-':permission_handler_android:compileDebugLibraryResources', task ':permission_handler_android:parseDebugLocalResources', task
-':permission_handler_android:generateDebugRFile', task ':record_android:compileDebugLibraryResources', task
-':record_android:parseDebugLocalResources', task ':record_android:generateDebugRFile', task
-':shared_preferences_android:compileDebugLibraryResources', task ':shared_preferences_android:parseDebugLocalResources', task
-':shared_preferences_android:generateDebugRFile', task ':speech_to_text:compileDebugLibraryResources', task
-':speech_to_text:parseDebugLocalResources', task ':speech_to_text:generateDebugRFile', task ':sqflite_android:compileDebugLibraryResources', task
-':sqflite_android:parseDebugLocalResources', task ':sqflite_android:generateDebugRFile', task ':tflite_flutter:compileDebugLibraryResources', task
-':tflite_flutter:parseDebugLocalResources', task ':tflite_flutter:generateDebugRFile', task ':url_launcher_android:compileDebugLibraryResources',
-task ':url_launcher_android:parseDebugLocalResources', task ':url_launcher_android:generateDebugRFile', task
-':video_player_android:compileDebugLibraryResources', task ':video_player_android:parseDebugLocalResources', task
-':video_player_android:generateDebugRFile', task ':wakelock_plus:compileDebugLibraryResources', task ':wakelock_plus:parseDebugLocalResources',
-task ':wakelock_plus:generateDebugRFile', task ':whisper_ggml:compileDebugLibraryResources', task ':whisper_ggml:parseDebugLocalResources', task
-':whisper_ggml:generateDebugRFile', task ':app:processDebugResources', task
-':ffmpeg_kit_flutter_new_min:checkKotlinGradlePluginConfigurationErrors', task ':ffmpeg_kit_flutter_new_min:compileDebugKotlin', task
-':ffmpeg_kit_flutter_new_min:javaPreCompileDebug', task ':ffmpeg_kit_flutter_new_min:compileDebugJavaWithJavac', task
-':ffmpeg_kit_flutter_new_min:bundleLibCompileToJarDebug', task ':file_picker:checkKotlinGradlePluginConfigurationErrors', task
-':flutter_plugin_android_lifecycle:javaPreCompileDebug', task ':flutter_plugin_android_lifecycle:compileDebugJavaWithJavac', task
-':flutter_plugin_android_lifecycle:bundleLibCompileToJarDebug', task ':file_picker:compileDebugKotlin', task ':file_picker:javaPreCompileDebug',
-task ':file_picker:compileDebugJavaWithJavac', task ':file_picker:bundleLibCompileToJarDebug', task
-':flutter_tts:checkKotlinGradlePluginConfigurationErrors', task ':flutter_tts:compileDebugKotlin', task ':flutter_tts:javaPreCompileDebug', task
-':flutter_tts:compileDebugJavaWithJavac', task ':flutter_tts:bundleLibCompileToJarDebug', task ':google_mlkit_commons:javaPreCompileDebug', task
-':google_mlkit_commons:compileDebugJavaWithJavac', task ':google_mlkit_commons:bundleLibCompileToJarDebug', task
-':google_mlkit_language_id:javaPreCompileDebug', task ':google_mlkit_language_id:compileDebugJavaWithJavac', task
-':google_mlkit_language_id:bundleLibCompileToJarDebug', task ':google_mlkit_translation:javaPreCompileDebug', task
-':google_mlkit_translation:compileDebugJavaWithJavac', task ':google_mlkit_translation:bundleLibCompileToJarDebug', task
-':package_info_plus:checkKotlinGradlePluginConfigurationErrors', task ':package_info_plus:compileDebugKotlin', task
-':package_info_plus:javaPreCompileDebug', task ':package_info_plus:compileDebugJavaWithJavac', task
-':package_info_plus:bundleLibCompileToJarDebug', task ':path_provider_android:javaPreCompileDebug', task
-':path_provider_android:compileDebugJavaWithJavac', task ':path_provider_android:bundleLibCompileToJarDebug', task
-':permission_handler_android:javaPreCompileDebug', task ':permission_handler_android:compileDebugJavaWithJavac', task
-':permission_handler_android:bundleLibCompileToJarDebug', task ':record_android:checkKotlinGradlePluginConfigurationErrors', task
-':record_android:compileDebugKotlin', task ':record_android:javaPreCompileDebug', task ':record_android:compileDebugJavaWithJavac', task
-':record_android:bundleLibCompileToJarDebug', task ':shared_preferences_android:checkKotlinGradlePluginConfigurationErrors', task
-':shared_preferences_android:compileDebugKotlin', task ':shared_preferences_android:javaPreCompileDebug', task
-':shared_preferences_android:compileDebugJavaWithJavac', task ':shared_preferences_android:bundleLibCompileToJarDebug', task
-':speech_to_text:checkKotlinGradlePluginConfigurationErrors', task ':speech_to_text:compileDebugKotlin', task
-':speech_to_text:javaPreCompileDebug', task ':speech_to_text:compileDebugJavaWithJavac', task ':speech_to_text:bundleLibCompileToJarDebug', task
-':sqflite_android:javaPreCompileDebug', task ':sqflite_android:compileDebugJavaWithJavac', task ':sqflite_android:bundleLibCompileToJarDebug',
-task ':tflite_flutter:javaPreCompileDebug', task ':tflite_flutter:compileDebugJavaWithJavac', task ':tflite_flutter:bundleLibCompileToJarDebug',
-task ':url_launcher_android:generateDebugBuildConfig', task ':url_launcher_android:javaPreCompileDebug', task
-':url_launcher_android:compileDebugJavaWithJavac', task ':url_launcher_android:bundleLibCompileToJarDebug', task
-':video_player_android:checkKotlinGradlePluginConfigurationErrors', task ':video_player_android:compileDebugKotlin', task
-':video_player_android:javaPreCompileDebug', task ':video_player_android:compileDebugJavaWithJavac', task
-':video_player_android:bundleLibCompileToJarDebug', task ':wakelock_plus:checkKotlinGradlePluginConfigurationErrors', task
-':wakelock_plus:compileDebugKotlin', task ':wakelock_plus:javaPreCompileDebug', task ':wakelock_plus:compileDebugJavaWithJavac', task
-':wakelock_plus:bundleLibCompileToJarDebug', task ':whisper_ggml:javaPreCompileDebug', task ':whisper_ggml:compileDebugJavaWithJavac', task
-':whisper_ggml:bundleLibCompileToJarDebug', task ':app:compileDebugKotlin', task ':app:javaPreCompileDebug', task
-':app:compileDebugJavaWithJavac', task ':app:compressDebugAssets', task ':app:processDebugJavaRes', task
-':ffmpeg_kit_flutter_new_min:processDebugJavaRes', task ':file_picker:processDebugJavaRes', task
-':flutter_plugin_android_lifecycle:processDebugJavaRes', task ':flutter_tts:processDebugJavaRes', task
-':google_mlkit_commons:processDebugJavaRes', task ':google_mlkit_language_id:processDebugJavaRes', task
-':google_mlkit_translation:processDebugJavaRes', task ':package_info_plus:processDebugJavaRes', task ':path_provider_android:processDebugJavaRes',
-task ':permission_handler_android:processDebugJavaRes', task ':record_android:processDebugJavaRes', task
-':shared_preferences_android:processDebugJavaRes', task ':speech_to_text:processDebugJavaRes', task ':sqflite_android:processDebugJavaRes', task
-':tflite_flutter:processDebugJavaRes', task ':url_launcher_android:processDebugJavaRes', task ':video_player_android:processDebugJavaRes', task
-':wakelock_plus:processDebugJavaRes', task ':whisper_ggml:processDebugJavaRes', task ':app:mergeDebugJavaResource', task
-':app:checkDebugDuplicateClasses', task ':app:desugarDebugFileDependencies', task ':app:mergeExtDexDebug', task
-':whisper_ggml:bundleLibRuntimeToDirDebug', task ':ffmpeg_kit_flutter_new_min:bundleLibRuntimeToDirDebug', task
-':file_picker:bundleLibRuntimeToDirDebug', task ':flutter_plugin_android_lifecycle:bundleLibRuntimeToDirDebug', task
-':flutter_tts:bundleLibRuntimeToDirDebug', task ':google_mlkit_translation:bundleLibRuntimeToDirDebug', task
-':google_mlkit_commons:bundleLibRuntimeToDirDebug', task ':google_mlkit_language_id:bundleLibRuntimeToDirDebug', task
-':wakelock_plus:bundleLibRuntimeToDirDebug', task ':package_info_plus:bundleLibRuntimeToDirDebug', task
-':path_provider_android:bundleLibRuntimeToDirDebug', task ':permission_handler_android:bundleLibRuntimeToDirDebug', task
-':record_android:bundleLibRuntimeToDirDebug', task ':shared_preferences_android:bundleLibRuntimeToDirDebug', task
-':speech_to_text:bundleLibRuntimeToDirDebug', task ':sqflite_android:bundleLibRuntimeToDirDebug', task
-':tflite_flutter:bundleLibRuntimeToDirDebug', task ':url_launcher_android:bundleLibRuntimeToDirDebug', task
-':video_player_android:bundleLibRuntimeToDirDebug', task ':app:mergeLibDexDebug', task ':app:dexBuilderDebug', task ':app:mergeProjectDexDebug',
-task ':app:configureCMakeDebug[arm64-v8a]', task ':app:buildCMakeDebug[arm64-v8a]', task ':app:configureCMakeDebug[armeabi-v7a]', task
-':app:buildCMakeDebug[armeabi-v7a]', task ':app:configureCMakeDebug[x86]', task ':app:buildCMakeDebug[x86]', task
-':app:configureCMakeDebug[x86_64]', task ':app:buildCMakeDebug[x86_64]', task ':app:mergeDebugJniLibFolders', task
-':ffmpeg_kit_flutter_new_min:mergeDebugJniLibFolders', task ':ffmpeg_kit_flutter_new_min:mergeDebugNativeLibs', task
-':ffmpeg_kit_flutter_new_min:copyDebugJniLibsProjectOnly', task ':file_picker:mergeDebugJniLibFolders', task ':file_picker:mergeDebugNativeLibs',
-task ':file_picker:copyDebugJniLibsProjectOnly', task ':flutter_plugin_android_lifecycle:mergeDebugJniLibFolders', task
-':flutter_plugin_android_lifecycle:mergeDebugNativeLibs', task ':flutter_plugin_android_lifecycle:copyDebugJniLibsProjectOnly', task
-':flutter_tts:mergeDebugJniLibFolders', task ':flutter_tts:mergeDebugNativeLibs', task ':flutter_tts:copyDebugJniLibsProjectOnly', task
-':google_mlkit_commons:mergeDebugJniLibFolders', task ':google_mlkit_commons:mergeDebugNativeLibs', task
-':google_mlkit_commons:copyDebugJniLibsProjectOnly', task ':google_mlkit_language_id:mergeDebugJniLibFolders', task
-':google_mlkit_language_id:mergeDebugNativeLibs', task ':google_mlkit_language_id:copyDebugJniLibsProjectOnly', task
-':google_mlkit_translation:mergeDebugJniLibFolders', task ':google_mlkit_translation:mergeDebugNativeLibs', task
-':google_mlkit_translation:copyDebugJniLibsProjectOnly', task ':package_info_plus:mergeDebugJniLibFolders', task
-':package_info_plus:mergeDebugNativeLibs', task ':package_info_plus:copyDebugJniLibsProjectOnly', task
-':path_provider_android:mergeDebugJniLibFolders', task ':path_provider_android:mergeDebugNativeLibs', task
-':path_provider_android:copyDebugJniLibsProjectOnly', task ':permission_handler_android:mergeDebugJniLibFolders', task
-':permission_handler_android:mergeDebugNativeLibs', task ':permission_handler_android:copyDebugJniLibsProjectOnly', task
-':record_android:mergeDebugJniLibFolders', task ':record_android:mergeDebugNativeLibs', task ':record_android:copyDebugJniLibsProjectOnly', task
-':shared_preferences_android:mergeDebugJniLibFolders', task ':shared_preferences_android:mergeDebugNativeLibs', task
-':shared_preferences_android:copyDebugJniLibsProjectOnly', task ':speech_to_text:mergeDebugJniLibFolders', task
-':speech_to_text:mergeDebugNativeLibs', task ':speech_to_text:copyDebugJniLibsProjectOnly', task ':sqflite_android:mergeDebugJniLibFolders', task
-':sqflite_android:mergeDebugNativeLibs', task ':sqflite_android:copyDebugJniLibsProjectOnly', task ':tflite_flutter:mergeDebugJniLibFolders', task
-':tflite_flutter:mergeDebugNativeLibs', task ':tflite_flutter:copyDebugJniLibsProjectOnly', task ':url_launcher_android:mergeDebugJniLibFolders',
-task ':url_launcher_android:mergeDebugNativeLibs', task ':url_launcher_android:copyDebugJniLibsProjectOnly', task
-':video_player_android:mergeDebugJniLibFolders', task ':video_player_android:mergeDebugNativeLibs', task
-':video_player_android:copyDebugJniLibsProjectOnly', task ':wakelock_plus:mergeDebugJniLibFolders', task ':wakelock_plus:mergeDebugNativeLibs',
-task ':wakelock_plus:copyDebugJniLibsProjectOnly', task ':whisper_ggml:preProfileBuild', task ':whisper_ggml:configureCMakeRelease[arm64-v8a]',
-task ':whisper_ggml:buildCMakeRelease[arm64-v8a]', task ':whisper_ggml:configureCMakeRelease[armeabi-v7a]', task
-':whisper_ggml:buildCMakeRelease[armeabi-v7a]', task ':whisper_ggml:configureCMakeRelease[x86]', task ':whisper_ggml:buildCMakeRelease[x86]', task
-':whisper_ggml:configureCMakeRelease[x86_64]', task ':whisper_ggml:buildCMakeRelease[x86_64]', task ':whisper_ggml:mergeDebugJniLibFolders', task
-':whisper_ggml:mergeDebugNativeLibs', task ':whisper_ggml:copyDebugJniLibsProjectOnly', task ':app:mergeDebugNativeLibs', task
-':app:stripDebugDebugSymbols', task ':app:validateSigningDebug', task ':app:writeDebugAppMetadata', task ':app:writeDebugSigningConfigVersions',
-task ':app:packageDebug', task ':app:createDebugApkListingFileRedirect', task ':app:assembleDebug', task
-':ffmpeg_kit_flutter_new_min:stripDebugDebugSymbols', task ':ffmpeg_kit_flutter_new_min:copyDebugJniLibsProjectAndLocalJars', task
-':ffmpeg_kit_flutter_new_min:extractDebugAnnotations', task ':ffmpeg_kit_flutter_new_min:extractDeepLinksForAarDebug', task
-':ffmpeg_kit_flutter_new_min:mergeDebugGeneratedProguardFiles', task ':ffmpeg_kit_flutter_new_min:mergeDebugConsumerProguardFiles', task
-':ffmpeg_kit_flutter_new_min:prepareDebugArtProfile', task ':ffmpeg_kit_flutter_new_min:prepareLintJarForPublish', task
-':ffmpeg_kit_flutter_new_min:mergeDebugJavaResource', task ':ffmpeg_kit_flutter_new_min:syncDebugLibJars', task
-':ffmpeg_kit_flutter_new_min:bundleDebugAar', task ':ffmpeg_kit_flutter_new_min:assembleDebug', task ':file_picker:stripDebugDebugSymbols', task
-':file_picker:copyDebugJniLibsProjectAndLocalJars', task ':file_picker:extractDebugAnnotations', task ':file_picker:extractDeepLinksForAarDebug',
-task ':file_picker:mergeDebugGeneratedProguardFiles', task ':file_picker:mergeDebugConsumerProguardFiles', task
-':file_picker:prepareDebugArtProfile', task ':file_picker:prepareLintJarForPublish', task ':file_picker:mergeDebugJavaResource', task
-':file_picker:syncDebugLibJars', task ':file_picker:bundleDebugAar', task ':file_picker:assembleDebug', task
-':flutter_plugin_android_lifecycle:stripDebugDebugSymbols', task ':flutter_plugin_android_lifecycle:copyDebugJniLibsProjectAndLocalJars', task
-':flutter_plugin_android_lifecycle:extractDebugAnnotations', task ':flutter_plugin_android_lifecycle:extractDeepLinksForAarDebug', task
-':flutter_plugin_android_lifecycle:mergeDebugGeneratedProguardFiles', task ':flutter_plugin_android_lifecycle:mergeDebugConsumerProguardFiles',
-task ':flutter_plugin_android_lifecycle:prepareDebugArtProfile', task ':flutter_plugin_android_lifecycle:prepareLintJarForPublish', task
-':flutter_plugin_android_lifecycle:mergeDebugJavaResource', task ':flutter_plugin_android_lifecycle:syncDebugLibJars', task
-':flutter_plugin_android_lifecycle:bundleDebugAar', task ':flutter_plugin_android_lifecycle:assembleDebug', task
-':flutter_tts:stripDebugDebugSymbols', task ':flutter_tts:copyDebugJniLibsProjectAndLocalJars', task ':flutter_tts:extractDebugAnnotations', task
-':flutter_tts:extractDeepLinksForAarDebug', task ':flutter_tts:mergeDebugGeneratedProguardFiles', task
-':flutter_tts:mergeDebugConsumerProguardFiles', task ':flutter_tts:prepareDebugArtProfile', task ':flutter_tts:prepareLintJarForPublish', task
-':flutter_tts:mergeDebugJavaResource', task ':flutter_tts:syncDebugLibJars', task ':flutter_tts:bundleDebugAar', task
-':flutter_tts:assembleDebug', task ':google_mlkit_commons:stripDebugDebugSymbols', task
-':google_mlkit_commons:copyDebugJniLibsProjectAndLocalJars', task ':google_mlkit_commons:extractDebugAnnotations', task
-':google_mlkit_commons:extractDeepLinksForAarDebug', task ':google_mlkit_commons:mergeDebugGeneratedProguardFiles', task
-':google_mlkit_commons:mergeDebugConsumerProguardFiles', task ':google_mlkit_commons:prepareDebugArtProfile', task
-':google_mlkit_commons:prepareLintJarForPublish', task ':google_mlkit_commons:mergeDebugJavaResource', task
-':google_mlkit_commons:syncDebugLibJars', task ':google_mlkit_commons:bundleDebugAar', task ':google_mlkit_commons:assembleDebug', task
-':google_mlkit_language_id:stripDebugDebugSymbols', task ':google_mlkit_language_id:copyDebugJniLibsProjectAndLocalJars', task
-':google_mlkit_language_id:extractDebugAnnotations', task ':google_mlkit_language_id:extractDeepLinksForAarDebug', task
-':google_mlkit_language_id:mergeDebugGeneratedProguardFiles', task ':google_mlkit_language_id:mergeDebugConsumerProguardFiles', task
-':google_mlkit_language_id:prepareDebugArtProfile', task ':google_mlkit_language_id:prepareLintJarForPublish', task
-':google_mlkit_language_id:mergeDebugJavaResource', task ':google_mlkit_language_id:syncDebugLibJars', task
-':google_mlkit_language_id:bundleDebugAar', task ':google_mlkit_language_id:assembleDebug', task
-':google_mlkit_translation:stripDebugDebugSymbols', task ':google_mlkit_translation:copyDebugJniLibsProjectAndLocalJars', task
-':google_mlkit_translation:extractDebugAnnotations', task ':google_mlkit_translation:extractDeepLinksForAarDebug', task
-':google_mlkit_translation:mergeDebugGeneratedProguardFiles', task ':google_mlkit_translation:mergeDebugConsumerProguardFiles', task
-':google_mlkit_translation:prepareDebugArtProfile', task ':google_mlkit_translation:prepareLintJarForPublish', task
-':google_mlkit_translation:mergeDebugJavaResource', task ':google_mlkit_translation:syncDebugLibJars', task
-':google_mlkit_translation:bundleDebugAar', task ':google_mlkit_translation:assembleDebug', task ':package_info_plus:stripDebugDebugSymbols', task
-':package_info_plus:copyDebugJniLibsProjectAndLocalJars', task ':package_info_plus:extractDebugAnnotations', task
-':package_info_plus:extractDeepLinksForAarDebug', task ':package_info_plus:mergeDebugGeneratedProguardFiles', task
-':package_info_plus:mergeDebugConsumerProguardFiles', task ':package_info_plus:prepareDebugArtProfile', task
-':package_info_plus:prepareLintJarForPublish', task ':package_info_plus:mergeDebugJavaResource', task ':package_info_plus:syncDebugLibJars', task
-':package_info_plus:bundleDebugAar', task ':package_info_plus:assembleDebug', task ':path_provider_android:stripDebugDebugSymbols', task
-':path_provider_android:copyDebugJniLibsProjectAndLocalJars', task ':path_provider_android:extractDebugAnnotations', task
-':path_provider_android:extractDeepLinksForAarDebug', task ':path_provider_android:mergeDebugGeneratedProguardFiles', task
-':path_provider_android:mergeDebugConsumerProguardFiles', task ':path_provider_android:prepareDebugArtProfile', task
-':path_provider_android:prepareLintJarForPublish', task ':path_provider_android:mergeDebugJavaResource', task
-':path_provider_android:syncDebugLibJars', task ':path_provider_android:bundleDebugAar', task ':path_provider_android:assembleDebug', task
-':permission_handler_android:stripDebugDebugSymbols', task ':permission_handler_android:copyDebugJniLibsProjectAndLocalJars', task
-':permission_handler_android:extractDebugAnnotations', task ':permission_handler_android:extractDeepLinksForAarDebug', task
-':permission_handler_android:mergeDebugGeneratedProguardFiles', task ':permission_handler_android:mergeDebugConsumerProguardFiles', task
-':permission_handler_android:prepareDebugArtProfile', task ':permission_handler_android:prepareLintJarForPublish', task
-':permission_handler_android:mergeDebugJavaResource', task ':permission_handler_android:syncDebugLibJars', task
-':permission_handler_android:bundleDebugAar', task ':permission_handler_android:assembleDebug', task ':record_android:stripDebugDebugSymbols',
-task ':record_android:copyDebugJniLibsProjectAndLocalJars', task ':record_android:extractDebugAnnotations', task
-':record_android:extractDeepLinksForAarDebug', task ':record_android:mergeDebugGeneratedProguardFiles', task
-':record_android:mergeDebugConsumerProguardFiles', task ':record_android:prepareDebugArtProfile', task ':record_android:prepareLintJarForPublish',
-task ':record_android:mergeDebugJavaResource', task ':record_android:syncDebugLibJars', task ':record_android:bundleDebugAar', task
-':record_android:assembleDebug', task ':shared_preferences_android:stripDebugDebugSymbols', task
-':shared_preferences_android:copyDebugJniLibsProjectAndLocalJars', task ':shared_preferences_android:extractDebugAnnotations', task
-':shared_preferences_android:extractDeepLinksForAarDebug', task ':shared_preferences_android:mergeDebugGeneratedProguardFiles', task
-':shared_preferences_android:mergeDebugConsumerProguardFiles', task ':shared_preferences_android:prepareDebugArtProfile', task
-':shared_preferences_android:prepareLintJarForPublish', task ':shared_preferences_android:mergeDebugJavaResource', task
-':shared_preferences_android:syncDebugLibJars', task ':shared_preferences_android:bundleDebugAar', task
-':shared_preferences_android:assembleDebug', task ':speech_to_text:stripDebugDebugSymbols', task
-':speech_to_text:copyDebugJniLibsProjectAndLocalJars', task ':speech_to_text:extractDebugAnnotations', task
-':speech_to_text:extractDeepLinksForAarDebug', task ':speech_to_text:mergeDebugGeneratedProguardFiles', task
-':speech_to_text:mergeDebugConsumerProguardFiles', task ':speech_to_text:prepareDebugArtProfile', task ':speech_to_text:prepareLintJarForPublish',
-task ':speech_to_text:mergeDebugJavaResource', task ':speech_to_text:syncDebugLibJars', task ':speech_to_text:bundleDebugAar', task
-':speech_to_text:assembleDebug', task ':sqflite_android:stripDebugDebugSymbols', task ':sqflite_android:copyDebugJniLibsProjectAndLocalJars', task
-':sqflite_android:extractDebugAnnotations', task ':sqflite_android:extractDeepLinksForAarDebug', task
-':sqflite_android:mergeDebugGeneratedProguardFiles', task ':sqflite_android:mergeDebugConsumerProguardFiles', task
-':sqflite_android:prepareDebugArtProfile', task ':sqflite_android:prepareLintJarForPublish', task ':sqflite_android:mergeDebugJavaResource', task
-':sqflite_android:syncDebugLibJars', task ':sqflite_android:bundleDebugAar', task ':sqflite_android:assembleDebug', task
-':tflite_flutter:stripDebugDebugSymbols', task ':tflite_flutter:copyDebugJniLibsProjectAndLocalJars', task
-':tflite_flutter:extractDebugAnnotations', task ':tflite_flutter:extractDeepLinksForAarDebug', task
-':tflite_flutter:mergeDebugGeneratedProguardFiles', task ':tflite_flutter:mergeDebugConsumerProguardFiles', task
-':tflite_flutter:prepareDebugArtProfile', task ':tflite_flutter:prepareLintJarForPublish', task ':tflite_flutter:mergeDebugJavaResource', task
-':tflite_flutter:syncDebugLibJars', task ':tflite_flutter:bundleDebugAar', task ':tflite_flutter:assembleDebug', task
-':url_launcher_android:stripDebugDebugSymbols', task ':url_launcher_android:copyDebugJniLibsProjectAndLocalJars', task
-':url_launcher_android:extractDebugAnnotations', task ':url_launcher_android:extractDeepLinksForAarDebug', task
-':url_launcher_android:mergeDebugGeneratedProguardFiles', task ':url_launcher_android:mergeDebugConsumerProguardFiles', task
-':url_launcher_android:prepareDebugArtProfile', task ':url_launcher_android:prepareLintJarForPublish', task
-':url_launcher_android:mergeDebugJavaResource', task ':url_launcher_android:syncDebugLibJars', task ':url_launcher_android:bundleDebugAar', task
-':url_launcher_android:assembleDebug', task ':video_player_android:stripDebugDebugSymbols', task
-':video_player_android:copyDebugJniLibsProjectAndLocalJars', task ':video_player_android:extractDebugAnnotations', task
-':video_player_android:extractDeepLinksForAarDebug', task ':video_player_android:mergeDebugGeneratedProguardFiles', task
-':video_player_android:mergeDebugConsumerProguardFiles', task ':video_player_android:prepareDebugArtProfile', task
-':video_player_android:prepareLintJarForPublish', task ':video_player_android:mergeDebugJavaResource', task
-':video_player_android:syncDebugLibJars', task ':video_player_android:bundleDebugAar', task ':video_player_android:assembleDebug', task
-':wakelock_plus:stripDebugDebugSymbols', task ':wakelock_plus:copyDebugJniLibsProjectAndLocalJars', task ':wakelock_plus:extractDebugAnnotations',
-task ':wakelock_plus:extractDeepLinksForAarDebug', task ':wakelock_plus:mergeDebugGeneratedProguardFiles', task
-':wakelock_plus:mergeDebugConsumerProguardFiles', task ':wakelock_plus:prepareDebugArtProfile', task ':wakelock_plus:prepareLintJarForPublish',
-task ':wakelock_plus:mergeDebugJavaResource', task ':wakelock_plus:syncDebugLibJars', task ':wakelock_plus:bundleDebugAar', task
-':wakelock_plus:assembleDebug', task ':whisper_ggml:stripDebugDebugSymbols', task ':whisper_ggml:copyDebugJniLibsProjectAndLocalJars', task
-':whisper_ggml:extractDebugAnnotations', task ':whisper_ggml:extractDeepLinksForAarDebug', task ':whisper_ggml:mergeDebugGeneratedProguardFiles',
-task ':whisper_ggml:mergeDebugConsumerProguardFiles', task ':whisper_ggml:prepareDebugArtProfile', task ':whisper_ggml:prepareLintJarForPublish',
-task ':whisper_ggml:mergeDebugJavaResource', task ':whisper_ggml:syncDebugLibJars', task ':whisper_ggml:bundleDebugAar', task
-':whisper_ggml:assembleDebug']
-[ +513 ms] Tasks that were excluded: []
-[   +1 ms] Resolve mutations for :ffmpeg_kit_flutter_new_min:preBuild (Thread[#809,Execution worker,5,main]) started.
-[   +1 ms] :ffmpeg_kit_flutter_new_min:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] work action Parameters of ClassesDirToClassesTransform (Thread[#808,included builds,5,main]) started.
-[        ] work action Parameters of DexingNoClasspathTransform (Thread[#808,included builds,5,main]) started.
-[   +1 ms] Resolve mutations for :app:DebugMinSdkCheck (Thread[#808,included builds,5,main]) started.
-[        ] :app:DebugMinSdkCheck (Thread[#808,included builds,5,main]) started.
-[        ] > Task :ffmpeg_kit_flutter_new_min:preBuild UP-TO-DATE
-[        ] Skipping task ':ffmpeg_kit_flutter_new_min:preBuild' as it has no actions.
-[        ] > Task :app:DebugMinSdkCheck
-[        ] Custom actions are attached to task ':app:DebugMinSdkCheck'.
-[   +2 ms] Caching disabled for task ':app:DebugMinSdkCheck' because:
-[   +1 ms]   Gradle would require more information to cache this task
-[        ] Task ':app:DebugMinSdkCheck' is not up-to-date because:
-[        ]   Task has not declared any outputs despite executing actions.
-[        ] Resolve mutations for :ffmpeg_kit_flutter_new_min:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :ffmpeg_kit_flutter_new_min:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :ffmpeg_kit_flutter_new_min:preDebugBuild UP-TO-DATE
-[        ] Skipping task ':ffmpeg_kit_flutter_new_min:preDebugBuild' as it has no actions.
-[        ] Resolve mutations for :app:preBuild (Thread[#808,included builds,5,main]) started.
-[        ] :app:preBuild (Thread[#808,included builds,5,main]) started.
-[        ] > Task :app:preBuild UP-TO-DATE
-[        ] Skipping task ':app:preBuild' as it has no actions.
-[   +3 ms] Resolve mutations for :app:preDebugBuild (Thread[#808,included builds,5,main]) started.
-[        ] :app:preDebugBuild (Thread[#808,included builds,5,main]) started.
-[        ] > Task :app:preDebugBuild UP-TO-DATE
-[        ] Skipping task ':app:preDebugBuild' as it has no actions.
-[        ] Resolve mutations for :ffmpeg_kit_flutter_new_min:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] :ffmpeg_kit_flutter_new_min:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] Resolve mutations for :app:mergeDebugNativeDebugMetadata (Thread[#808,included builds,5,main]) started.
-[        ] :app:mergeDebugNativeDebugMetadata (Thread[#808,included builds,5,main]) started.
-[        ] > Task :ffmpeg_kit_flutter_new_min:writeDebugAarMetadata UP-TO-DATE
-[   +1 ms] Caching disabled for task ':ffmpeg_kit_flutter_new_min:writeDebugAarMetadata' because:
-[        ]   Caching has been disabled for the task
-[        ] Skipping task ':ffmpeg_kit_flutter_new_min:writeDebugAarMetadata' as it is up-to-date.
-[        ] work action resolve aar-metadata.properties (project :ffmpeg_kit_flutter_new_min) (Thread[#809,Execution worker,5,main]) started.
-[        ] Resolve mutations for :file_picker:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
-[        ] Skipping task ':app:mergeDebugNativeDebugMetadata' as it has no source files and no previous output files.
-[        ] Resolve mutations for :app:checkKotlinGradlePluginConfigurationErrors (Thread[#808,included builds,5,main]) started.
-[        ] :app:checkKotlinGradlePluginConfigurationErrors (Thread[#808,included builds,5,main]) started.
-[        ] > Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
-[        ] Skipping task ':app:checkKotlinGradlePluginConfigurationErrors' as task onlyIf 'errorDiagnostics are present' is false.
-[        ] Resolve mutations for :app:generateDebugBuildConfig (Thread[#808,included builds,5,main]) started.
-[        ] :app:generateDebugBuildConfig (Thread[#808,included builds,5,main]) started.
-[        ] :file_picker:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :file_picker:preBuild UP-TO-DATE
-[        ] Skipping task ':file_picker:preBuild' as it has no actions.
-[        ] Resolve mutations for :file_picker:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :file_picker:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :file_picker:preDebugBuild UP-TO-DATE
-[        ] Skipping task ':file_picker:preDebugBuild' as it has no actions.
-[        ] Resolve mutations for :file_picker:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] :file_picker:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :app:generateDebugBuildConfig UP-TO-DATE
-[        ] Build cache key for task ':app:generateDebugBuildConfig' is 2ed78df62004619f1f372ca3b35d82a9
-[        ] Skipping task ':app:generateDebugBuildConfig' as it is up-to-date.
-[        ] Resolve mutations for :app:compileFlutterBuildDebug (Thread[#808,included builds,5,main]) started.
-[        ] > Task :file_picker:writeDebugAarMetadata
-[        ] Caching disabled for task ':file_picker:writeDebugAarMetadata' because:
-[        ]   Caching has been disabled for the task
-[        ] Task ':file_picker:writeDebugAarMetadata' is not up-to-date because:
-[        ]   Output property 'output' file
-/home/devuser/repos/Risa-app/build/file_picker/intermediates/aar_metadata/debug/writeDebugAarMetadata/aar-metadata.properties has been removed.
-[        ] work action resolve aar-metadata.properties (project :file_picker) (Thread[#809,Execution worker,5,main]) started.
-[        ] Resolve mutations for :flutter_plugin_android_lifecycle:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :flutter_plugin_android_lifecycle:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :app:compileFlutterBuildDebug (Thread[#808,included builds,5,main]) started.
-[        ] > Task :flutter_plugin_android_lifecycle:preBuild UP-TO-DATE
-[        ] Skipping task ':flutter_plugin_android_lifecycle:preBuild' as it has no actions.
-[        ] Resolve mutations for :flutter_plugin_android_lifecycle:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :flutter_plugin_android_lifecycle:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :flutter_plugin_android_lifecycle:preDebugBuild UP-TO-DATE
-[        ] Skipping task ':flutter_plugin_android_lifecycle:preDebugBuild' as it has no actions.
-[        ] Resolve mutations for :flutter_plugin_android_lifecycle:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] :flutter_plugin_android_lifecycle:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :flutter_plugin_android_lifecycle:writeDebugAarMetadata
-[        ] Caching disabled for task ':flutter_plugin_android_lifecycle:writeDebugAarMetadata' because:
-[        ]   Caching has been disabled for the task
-[        ] Task ':flutter_plugin_android_lifecycle:writeDebugAarMetadata' is not up-to-date because:
-[        ]   Output property 'output' file
-/home/devuser/repos/Risa-app/build/flutter_plugin_android_lifecycle/intermediates/aar_metadata/debug/writeDebugAarMetadata/aar-metadata.properties
-has been removed.
-[        ] work action resolve aar-metadata.properties (project :flutter_plugin_android_lifecycle) (Thread[#809,Execution worker,5,main]) started.
-[        ] Resolve mutations for :flutter_tts:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :flutter_tts:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :flutter_tts:preBuild UP-TO-DATE
-[        ] Skipping task ':flutter_tts:preBuild' as it has no actions.
-[        ] Resolve mutations for :flutter_tts:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :flutter_tts:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :flutter_tts:preDebugBuild UP-TO-DATE
-[        ] Skipping task ':flutter_tts:preDebugBuild' as it has no actions.
-[        ] Resolve mutations for :flutter_tts:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] :flutter_tts:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :flutter_tts:writeDebugAarMetadata
-[        ] Caching disabled for task ':flutter_tts:writeDebugAarMetadata' because:
-[        ]   Caching has been disabled for the task
-[        ] Task ':flutter_tts:writeDebugAarMetadata' is not up-to-date because:
-[        ]   Output property 'output' file
-/home/devuser/repos/Risa-app/build/flutter_tts/intermediates/aar_metadata/debug/writeDebugAarMetadata/aar-metadata.properties has been removed.
-[        ] work action resolve aar-metadata.properties (project :flutter_tts) (Thread[#809,Execution worker,5,main]) started.
-[   +1 ms] Resolve mutations for :google_mlkit_commons:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :google_mlkit_commons:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :google_mlkit_commons:preBuild UP-TO-DATE
-[        ] Skipping task ':google_mlkit_commons:preBuild' as it has no actions.
-[        ] Resolve mutations for :google_mlkit_commons:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :google_mlkit_commons:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :google_mlkit_commons:preDebugBuild UP-TO-DATE
-[        ] Skipping task ':google_mlkit_commons:preDebugBuild' as it has no actions.
-[        ] Resolve mutations for :google_mlkit_commons:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] :google_mlkit_commons:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :google_mlkit_commons:writeDebugAarMetadata
-[   +1 ms] Caching disabled for task ':google_mlkit_commons:writeDebugAarMetadata' because:
-[        ]   Caching has been disabled for the task
-[        ] Task ':google_mlkit_commons:writeDebugAarMetadata' is not up-to-date because:
-[        ]   Output property 'output' file
-/home/devuser/repos/Risa-app/build/google_mlkit_commons/intermediates/aar_metadata/debug/writeDebugAarMetadata/aar-metadata.properties has been
-removed.
-[        ] work action resolve aar-metadata.properties (project :google_mlkit_commons) (Thread[#809,Execution worker,5,main]) started.
-[        ] Resolve mutations for :google_mlkit_language_id:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :google_mlkit_language_id:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :google_mlkit_language_id:preBuild UP-TO-DATE
-[        ] Skipping task ':google_mlkit_language_id:preBuild' as it has no actions.
-[        ] Resolve mutations for :google_mlkit_language_id:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :google_mlkit_language_id:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :google_mlkit_language_id:preDebugBuild UP-TO-DATE
-[   +1 ms] Skipping task ':google_mlkit_language_id:preDebugBuild' as it has no actions.
-[        ] Resolve mutations for :google_mlkit_language_id:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] :google_mlkit_language_id:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :google_mlkit_language_id:writeDebugAarMetadata
-[        ] Caching disabled for task ':google_mlkit_language_id:writeDebugAarMetadata' because:
-[        ]   Caching has been disabled for the task
-[        ] Task ':google_mlkit_language_id:writeDebugAarMetadata' is not up-to-date because:
-[   +1 ms]   Output property 'output' file
-/home/devuser/repos/Risa-app/build/google_mlkit_language_id/intermediates/aar_metadata/debug/writeDebugAarMetadata/aar-metadata.properties has
-been removed.
-[   +2 ms] work action resolve aar-metadata.properties (project :google_mlkit_language_id) (Thread[#809,Execution worker,5,main]) started.
-[        ] Resolve mutations for :google_mlkit_translation:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :google_mlkit_translation:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :google_mlkit_translation:preBuild UP-TO-DATE
-[        ] Skipping task ':google_mlkit_translation:preBuild' as it has no actions.
-[        ] Resolve mutations for :google_mlkit_translation:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :google_mlkit_translation:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :google_mlkit_translation:preDebugBuild UP-TO-DATE
-[        ] Skipping task ':google_mlkit_translation:preDebugBuild' as it has no actions.
-[        ] Resolve mutations for :google_mlkit_translation:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] :google_mlkit_translation:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :google_mlkit_translation:writeDebugAarMetadata
-[        ] Caching disabled for task ':google_mlkit_translation:writeDebugAarMetadata' because:
-[        ]   Caching has been disabled for the task
-[        ] Task ':google_mlkit_translation:writeDebugAarMetadata' is not up-to-date because:
-[        ]   Output property 'output' file
-/home/devuser/repos/Risa-app/build/google_mlkit_translation/intermediates/aar_metadata/debug/writeDebugAarMetadata/aar-metadata.properties has
-been removed.
-[        ] work action resolve aar-metadata.properties (project :google_mlkit_translation) (Thread[#809,Execution worker,5,main]) started.
-[   +1 ms] Resolve mutations for :package_info_plus:preBuild (Thread[#809,Execution worker,5,main]) started.
-[   +1 ms] :package_info_plus:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :package_info_plus:preBuild UP-TO-DATE
-[        ] Skipping task ':package_info_plus:preBuild' as it has no actions.
-[        ] Resolve mutations for :package_info_plus:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :package_info_plus:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :package_info_plus:preDebugBuild UP-TO-DATE
-[        ] Skipping task ':package_info_plus:preDebugBuild' as it has no actions.
-[        ] Resolve mutations for :package_info_plus:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] :package_info_plus:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :package_info_plus:writeDebugAarMetadata
-[        ] Caching disabled for task ':package_info_plus:writeDebugAarMetadata' because:
-[        ]   Caching has been disabled for the task
-[        ] Task ':package_info_plus:writeDebugAarMetadata' is not up-to-date because:
-[        ]   Output property 'output' file
-/home/devuser/repos/Risa-app/build/package_info_plus/intermediates/aar_metadata/debug/writeDebugAarMetadata/aar-metadata.properties has been
-removed.
-[        ] work action resolve aar-metadata.properties (project :package_info_plus) (Thread[#809,Execution worker,5,main]) started.
-[        ] Resolve mutations for :path_provider_android:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :path_provider_android:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :path_provider_android:preBuild UP-TO-DATE
-[        ] Skipping task ':path_provider_android:preBuild' as it has no actions.
-[        ] Resolve mutations for :path_provider_android:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :path_provider_android:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :path_provider_android:preDebugBuild UP-TO-DATE
-[        ] Skipping task ':path_provider_android:preDebugBuild' as it has no actions.
-[        ] Resolve mutations for :path_provider_android:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[   +1 ms] :path_provider_android:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :path_provider_android:writeDebugAarMetadata
-[        ] Caching disabled for task ':path_provider_android:writeDebugAarMetadata' because:
-[        ]   Caching has been disabled for the task
-[        ] Task ':path_provider_android:writeDebugAarMetadata' is not up-to-date because:
-[        ]   Output property 'output' file
-/home/devuser/repos/Risa-app/build/path_provider_android/intermediates/aar_metadata/debug/writeDebugAarMetadata/aar-metadata.properties has been
-removed.
-[        ] work action resolve aar-metadata.properties (project :path_provider_android) (Thread[#809,Execution worker,5,main]) started.
-[        ] Resolve mutations for :permission_handler_android:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :permission_handler_android:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :permission_handler_android:preBuild UP-TO-DATE
-[        ] Skipping task ':permission_handler_android:preBuild' as it has no actions.
-[        ] Resolve mutations for :permission_handler_android:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :permission_handler_android:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :permission_handler_android:preDebugBuild UP-TO-DATE
-[        ] Skipping task ':permission_handler_android:preDebugBuild' as it has no actions.
-[   +1 ms] Resolve mutations for :permission_handler_android:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] :permission_handler_android:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :permission_handler_android:writeDebugAarMetadata
-[        ] Caching disabled for task ':permission_handler_android:writeDebugAarMetadata' because:
-[        ]   Caching has been disabled for the task
-[        ] Task ':permission_handler_android:writeDebugAarMetadata' is not up-to-date because:
-[        ]   Output property 'output' file
-/home/devuser/repos/Risa-app/build/permission_handler_android/intermediates/aar_metadata/debug/writeDebugAarMetadata/aar-metadata.properties has
-been removed.
-[        ] work action resolve aar-metadata.properties (project :permission_handler_android) (Thread[#809,Execution worker,5,main]) started.
-[        ] Resolve mutations for :record_android:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :record_android:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :record_android:preBuild UP-TO-DATE
-[        ] Skipping task ':record_android:preBuild' as it has no actions.
-[        ] Resolve mutations for :record_android:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :record_android:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :record_android:preDebugBuild UP-TO-DATE
-[        ] Skipping task ':record_android:preDebugBuild' as it has no actions.
-[        ] Resolve mutations for :record_android:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] :record_android:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :record_android:writeDebugAarMetadata
-[        ] Caching disabled for task ':record_android:writeDebugAarMetadata' because:
-[   +1 ms]   Caching has been disabled for the task
-[        ] Task ':record_android:writeDebugAarMetadata' is not up-to-date because:
-[        ]   Output property 'output' file
-/home/devuser/repos/Risa-app/build/record_android/intermediates/aar_metadata/debug/writeDebugAarMetadata/aar-metadata.properties has been removed.
-[        ] work action resolve aar-metadata.properties (project :record_android) (Thread[#809,Execution worker,5,main]) started.
-[        ] Resolve mutations for :shared_preferences_android:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :shared_preferences_android:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :shared_preferences_android:preBuild UP-TO-DATE
-[        ] Skipping task ':shared_preferences_android:preBuild' as it has no actions.
-[        ] Resolve mutations for :shared_preferences_android:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :shared_preferences_android:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :shared_preferences_android:preDebugBuild UP-TO-DATE
-[        ] Skipping task ':shared_preferences_android:preDebugBuild' as it has no actions.
-[        ] Resolve mutations for :shared_preferences_android:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] :shared_preferences_android:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :shared_preferences_android:writeDebugAarMetadata
-[        ] Caching disabled for task ':shared_preferences_android:writeDebugAarMetadata' because:
-[        ]   Caching has been disabled for the task
-[        ] Task ':shared_preferences_android:writeDebugAarMetadata' is not up-to-date because:
-[        ]   Output property 'output' file
-/home/devuser/repos/Risa-app/build/shared_preferences_android/intermediates/aar_metadata/debug/writeDebugAarMetadata/aar-metadata.properties has
-been removed.
-[   +1 ms] work action resolve aar-metadata.properties (project :shared_preferences_android) (Thread[#809,Execution worker,5,main]) started.
-[        ] Resolve mutations for :speech_to_text:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :speech_to_text:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :speech_to_text:preBuild UP-TO-DATE
-[        ] Skipping task ':speech_to_text:preBuild' as it has no actions.
-[        ] Resolve mutations for :speech_to_text:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :speech_to_text:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :speech_to_text:preDebugBuild UP-TO-DATE
-[        ] Skipping task ':speech_to_text:preDebugBuild' as it has no actions.
-[   +2 ms] Resolve mutations for :speech_to_text:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] :speech_to_text:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :speech_to_text:writeDebugAarMetadata
-[        ] Caching disabled for task ':speech_to_text:writeDebugAarMetadata' because:
-[        ]   Caching has been disabled for the task
-[        ] Task ':speech_to_text:writeDebugAarMetadata' is not up-to-date because:
-[        ]   Output property 'output' file
-/home/devuser/repos/Risa-app/build/speech_to_text/intermediates/aar_metadata/debug/writeDebugAarMetadata/aar-metadata.properties has been removed.
-[        ] work action resolve aar-metadata.properties (project :speech_to_text) (Thread[#809,Execution worker,5,main]) started.
-[        ] Resolve mutations for :sqflite_android:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :sqflite_android:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :sqflite_android:preBuild UP-TO-DATE
-[        ] Skipping task ':sqflite_android:preBuild' as it has no actions.
-[        ] Resolve mutations for :sqflite_android:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :sqflite_android:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :sqflite_android:preDebugBuild UP-TO-DATE
-[        ] Skipping task ':sqflite_android:preDebugBuild' as it has no actions.
-[        ] Resolve mutations for :sqflite_android:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] :sqflite_android:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :sqflite_android:writeDebugAarMetadata
-[        ] Caching disabled for task ':sqflite_android:writeDebugAarMetadata' because:
-[        ]   Caching has been disabled for the task
-[        ] Task ':sqflite_android:writeDebugAarMetadata' is not up-to-date because:
-[        ]   Output property 'output' file
-/home/devuser/repos/Risa-app/build/sqflite_android/intermediates/aar_metadata/debug/writeDebugAarMetadata/aar-metadata.properties has been
-removed.
-[        ] work action resolve aar-metadata.properties (project :sqflite_android) (Thread[#809,Execution worker,5,main]) started.
-[        ] Resolve mutations for :tflite_flutter:preBuild (Thread[#809,Execution worker,5,main]) started.
-[   +1 ms] :tflite_flutter:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :tflite_flutter:preBuild UP-TO-DATE
-[        ] Skipping task ':tflite_flutter:preBuild' as it has no actions.
-[        ] Resolve mutations for :tflite_flutter:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :tflite_flutter:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :tflite_flutter:preDebugBuild UP-TO-DATE
-[        ] Skipping task ':tflite_flutter:preDebugBuild' as it has no actions.
-[        ] Resolve mutations for :tflite_flutter:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] :tflite_flutter:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :tflite_flutter:writeDebugAarMetadata
-[        ] Caching disabled for task ':tflite_flutter:writeDebugAarMetadata' because:
-[        ]   Caching has been disabled for the task
-[   +1 ms] Task ':tflite_flutter:writeDebugAarMetadata' is not up-to-date because:
-[        ]   Output property 'output' file
-/home/devuser/repos/Risa-app/build/tflite_flutter/intermediates/aar_metadata/debug/writeDebugAarMetadata/aar-metadata.properties has been removed.
-[        ] work action resolve aar-metadata.properties (project :tflite_flutter) (Thread[#809,Execution worker,5,main]) started.
-[        ] Resolve mutations for :url_launcher_android:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :url_launcher_android:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :url_launcher_android:preBuild UP-TO-DATE
-[        ] Skipping task ':url_launcher_android:preBuild' as it has no actions.
-[        ] Resolve mutations for :url_launcher_android:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :url_launcher_android:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :url_launcher_android:preDebugBuild UP-TO-DATE
-[        ] Skipping task ':url_launcher_android:preDebugBuild' as it has no actions.
-[        ] Resolve mutations for :url_launcher_android:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] :url_launcher_android:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :url_launcher_android:writeDebugAarMetadata
-[        ] Caching disabled for task ':url_launcher_android:writeDebugAarMetadata' because:
-[        ]   Caching has been disabled for the task
-[        ] Task ':url_launcher_android:writeDebugAarMetadata' is not up-to-date because:
-[   +2 ms]   Output property 'output' file
-/home/devuser/repos/Risa-app/build/url_launcher_android/intermediates/aar_metadata/debug/writeDebugAarMetadata/aar-metadata.properties has been
-removed.
-[        ] work action resolve aar-metadata.properties (project :url_launcher_android) (Thread[#809,Execution worker,5,main]) started.
-[        ] Resolve mutations for :video_player_android:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :video_player_android:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :video_player_android:preBuild UP-TO-DATE
-[        ] Skipping task ':video_player_android:preBuild' as it has no actions.
-[        ] Resolve mutations for :video_player_android:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :video_player_android:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :video_player_android:preDebugBuild UP-TO-DATE
-[        ] Skipping task ':video_player_android:preDebugBuild' as it has no actions.
-[   +1 ms] Resolve mutations for :video_player_android:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] :video_player_android:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[   +1 ms] > Task :video_player_android:writeDebugAarMetadata
-[        ] Caching disabled for task ':video_player_android:writeDebugAarMetadata' because:
-[        ]   Caching has been disabled for the task
-[        ] Task ':video_player_android:writeDebugAarMetadata' is not up-to-date because:
-[        ]   Output property 'output' file
-/home/devuser/repos/Risa-app/build/video_player_android/intermediates/aar_metadata/debug/writeDebugAarMetadata/aar-metadata.properties has been
-removed.
-[        ] work action resolve aar-metadata.properties (project :video_player_android) (Thread[#809,Execution worker,5,main]) started.
-[        ] Resolve mutations for :wakelock_plus:preBuild (Thread[#809,Execution worker,5,main]) started.
-[   +1 ms] :wakelock_plus:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :wakelock_plus:preBuild UP-TO-DATE
-[        ] Skipping task ':wakelock_plus:preBuild' as it has no actions.
-[        ] Resolve mutations for :wakelock_plus:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :wakelock_plus:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :wakelock_plus:preDebugBuild UP-TO-DATE
-[        ] Skipping task ':wakelock_plus:preDebugBuild' as it has no actions.
-[        ] Resolve mutations for :wakelock_plus:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] :wakelock_plus:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :wakelock_plus:writeDebugAarMetadata
-[        ] Caching disabled for task ':wakelock_plus:writeDebugAarMetadata' because:
-[        ]   Caching has been disabled for the task
-[        ] Task ':wakelock_plus:writeDebugAarMetadata' is not up-to-date because:
-[        ]   Output property 'output' file
-/home/devuser/repos/Risa-app/build/wakelock_plus/intermediates/aar_metadata/debug/writeDebugAarMetadata/aar-metadata.properties has been removed.
-[        ] work action resolve aar-metadata.properties (project :wakelock_plus) (Thread[#809,Execution worker,5,main]) started.
-[        ] Resolve mutations for :whisper_ggml:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :whisper_ggml:preBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :whisper_ggml:preBuild UP-TO-DATE
-[        ] Skipping task ':whisper_ggml:preBuild' as it has no actions.
-[        ] Resolve mutations for :whisper_ggml:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] :whisper_ggml:preDebugBuild (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :whisper_ggml:preDebugBuild UP-TO-DATE
-[   +2 ms] Skipping task ':whisper_ggml:preDebugBuild' as it has no actions.
-[        ] Resolve mutations for :whisper_ggml:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] :whisper_ggml:writeDebugAarMetadata (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :whisper_ggml:writeDebugAarMetadata
-[        ] Caching disabled for task ':whisper_ggml:writeDebugAarMetadata' because:
-[        ]   Caching has been disabled for the task
-[        ] Task ':whisper_ggml:writeDebugAarMetadata' is not up-to-date because:
-[        ]   Output property 'output' file
-/home/devuser/repos/Risa-app/build/whisper_ggml/intermediates/aar_metadata/debug/writeDebugAarMetadata/aar-metadata.properties has been removed.
-[        ] work action resolve aar-metadata.properties (project :whisper_ggml) (Thread[#809,Execution worker,5,main]) started.
-[        ] Resolve mutations for :ffmpeg_kit_flutter_new_min:generateDebugAssets (Thread[#809,Execution worker,5,main]) started.
-[        ] :ffmpeg_kit_flutter_new_min:generateDebugAssets (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :ffmpeg_kit_flutter_new_min:generateDebugAssets UP-TO-DATE
-[        ] Skipping task ':ffmpeg_kit_flutter_new_min:generateDebugAssets' as it has no actions.
-[        ] Resolve mutations for :ffmpeg_kit_flutter_new_min:mergeDebugAssets (Thread[#809,Execution worker,5,main]) started.
-[        ] :ffmpeg_kit_flutter_new_min:mergeDebugAssets (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :ffmpeg_kit_flutter_new_min:mergeDebugAssets
-[        ] Caching disabled for task ':ffmpeg_kit_flutter_new_min:mergeDebugAssets' because:
-[        ]   Simple merging task
-[        ] Task ':ffmpeg_kit_flutter_new_min:mergeDebugAssets' is not up-to-date because:
-[        ]   Output property 'outputDir' file
-/home/devuser/repos/Risa-app/build/ffmpeg_kit_flutter_new_min/intermediates/assets/debug/mergeDebugAssets has been removed.
-[        ] The input changes require a full rebuild for incremental task ':ffmpeg_kit_flutter_new_min:mergeDebugAssets'.
-[        ] work action resolve mergeDebugAssets (project :ffmpeg_kit_flutter_new_min) (Thread[#809,Execution worker,5,main]) started.
-[        ] Resolve mutations for :file_picker:generateDebugAssets (Thread[#809,Execution worker,5,main]) started.
-[        ] :file_picker:generateDebugAssets (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :file_picker:generateDebugAssets UP-TO-DATE
-[        ] Skipping task ':file_picker:generateDebugAssets' as it has no actions.
-[        ] Resolve mutations for :file_picker:mergeDebugAssets (Thread[#809,Execution worker,5,main]) started.
-[        ] :file_picker:mergeDebugAssets (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :file_picker:mergeDebugAssets
-[        ] Caching disabled for task ':file_picker:mergeDebugAssets' because:
-[        ]   Simple merging task
-[        ] Task ':file_picker:mergeDebugAssets' is not up-to-date because:
-[        ]   Output property 'outputDir' file /home/devuser/repos/Risa-app/build/file_picker/intermediates/assets/debug/mergeDebugAssets has been
-removed.
-[        ] The input changes require a full rebuild for incremental task ':file_picker:mergeDebugAssets'.
-[        ] work action resolve mergeDebugAssets (project :file_picker) (Thread[#809,Execution worker,5,main]) started.
-[        ] Resolve mutations for :flutter_plugin_android_lifecycle:generateDebugAssets (Thread[#809,Execution worker,5,main]) started.
-[        ] :flutter_plugin_android_lifecycle:generateDebugAssets (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :flutter_plugin_android_lifecycle:generateDebugAssets UP-TO-DATE
-[        ] Skipping task ':flutter_plugin_android_lifecycle:generateDebugAssets' as it has no actions.
-[        ] Resolve mutations for :flutter_plugin_android_lifecycle:mergeDebugAssets (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :app:compileFlutterBuildDebug FAILED
-[        ] Caching disabled for task ':app:compileFlutterBuildDebug' because:
-[        ]   Caching has not been enabled for the task
-[        ] Task ':app:compileFlutterBuildDebug' is not up-to-date because:
-[        ]   Task has failed previously.
-[        ] Starting process 'command '/home/devuser/flutter/bin/flutter''. Working directory: /home/devuser/repos/Risa-app Command:
-/home/devuser/flutter/bin/flutter --verbose assemble --no-version-check --depfile
-/home/devuser/repos/Risa-app/build/app/intermediates/flutter/debug/flutter_build.d --output
-/home/devuser/repos/Risa-app/build/app/intermediates/flutter/debug -dTargetFile=lib/main.dart -dTargetPlatform=android -dBuildMode=debug
--dTrackWidgetCreation=true
---DartDefines=RkxVVFRFUl9WRVJTSU9OPTMuMzkuMC0wLjEucHJl,RkxVVFRFUl9DSEFOTkVMPWJldGE=,RkxVVFRFUl9HSVRfVVJMPWh0dHBzOi8vZ2l0aHViLmNvbS9mbHV0dGVyL2ZsdX
-R0ZXIuZ2l0,RkxVVFRFUl9GUkFNRVdPUktfUkVWSVNJT049Y2JiNDY5MzhlZQ==,RkxVVFRFUl9FTkdJTkVfUkVWSVNJT049YjlhZmIwMzI3NQ==,RkxVVFRFUl9EQVJUX1ZFUlNJT049My4xM
-S4wIChidWlsZCAzLjExLjAtOTMuMS5iZXRhKQ== -dFlavor= -dAndroidArchs=android-arm android-arm64 android-x64 -dMinSdkVersion=26
-debug_android_application
-[        ] :flutter_plugin_android_lifecycle:mergeDebugAssets (Thread[#809,Execution worker,5,main]) started.
-[        ] > Task :flutter_plugin_android_lifecycle:mergeDebugAssets
-[        ] Caching disabled for task ':flutter_plugin_android_lifecycle:mergeDebugAssets' because:
-[        ]   Simple merging task
-[        ] Task ':flutter_plugin_android_lifecycle:mergeDebugAssets' is not up-to-date because:
-[        ]   Output property 'outputDir' file
-/home/devuser/repos/Risa-app/build/flutter_plugin_android_lifecycle/intermediates/assets/debug/mergeDebugAssets has been removed.
-[        ] The input changes require a full rebuild for incremental task ':flutter_plugin_android_lifecycle:mergeDebugAssets'.
-[        ] 29 actionable tasks: 23 executed, 6 up-to-date
-[   +3 ms] FAILURE: Build failed with an exception.
-[   +3 ms] * What went wrong:
-[        ] Execution failed for task ':app:compileFlutterBuildDebug'.
-[        ] > A problem occurred starting process 'command '/home/devuser/flutter/bin/flutter''
-[        ] * Try:
-[        ] > Run with --debug option to get more log output.
-[        ] > Run with --scan to get full insights.
-[        ] > Get more help at https://help.gradle.org.
-[        ] * Exception is:
-[        ] org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:compileFlutterBuildDebug'.
-[        ]      at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.lambda$executeIfValid$1(ExecuteActionsTaskExecuter.java:130)
-[        ]      at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:293)
-[        ]      at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:128)
-[        ]      at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:116)
-[        ]      at org.gradle.api.internal.tasks.execution.FinalizePropertiesTaskExecuter.execute(FinalizePropertiesTaskExecuter.java:46)
-[        ]      at org.gradle.api.internal.tasks.execution.ResolveTaskExecutionModeExecuter.execute(ResolveTaskExecutionModeExecuter.java:51)
-[        ]      at org.gradle.api.internal.tasks.execution.SkipTaskWithNoActionsExecuter.execute(SkipTaskWithNoActionsExecuter.java:57)
-[        ]      at org.gradle.api.internal.tasks.execution.SkipOnlyIfTaskExecuter.execute(SkipOnlyIfTaskExecuter.java:74)
-[        ]      at org.gradle.api.internal.tasks.execution.CatchExceptionTaskExecuter.execute(CatchExceptionTaskExecuter.java:36)
-[        ]      at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.executeTask(EventFiringTaskExecuter.java:77)
-[        ]      at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:55)
-[        ]      at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:52)
-[        ]      at
-org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
-[        ]      at
-org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
-[        ]      at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
-[        ]      at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
-[        ]      at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
-[        ]      at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
-[        ]      at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
-[        ]      at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter.execute(EventFiringTaskExecuter.java:52)
-[        ]      at org.gradle.execution.plan.LocalTaskNodeExecutor.execute(LocalTaskNodeExecutor.java:42)
-[        ]      at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:331)
-[        ]      at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:318)
-[        ]      at
-org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.lambda$execute$0(DefaultTaskExecutionGraph.java:314)
-[        ]      at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:85)
-[        ]      at
-org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:314)
-[        ]      at
-org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:303)
-[        ]      at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:459)
-[        ]      at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
-[        ]      at org.gradle.execution.plan.DefaultPlanExecutor.process(DefaultPlanExecutor.java:111)
-[        ]      at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph.executeWithServices(DefaultTaskExecutionGraph.java:138)
-[        ]      at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph.execute(DefaultTaskExecutionGraph.java:123)
-[        ]      at org.gradle.execution.SelectedTaskExecutionAction.execute(SelectedTaskExecutionAction.java:35)
-[        ]      at org.gradle.execution.DryRunBuildExecutionAction.execute(DryRunBuildExecutionAction.java:51)
-[        ]      at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor$ExecuteTasks.call(BuildOperationFiringBuildWorkerExecutor.java:54)
-[        ]      at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor$ExecuteTasks.call(BuildOperationFiringBuildWorkerExecutor.java:43)
-[        ]      at
-org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
-[        ]      at
-org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
-[        ]      at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
-[        ]      at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
-[        ]      at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
-[        ]      at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
-[        ]      at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
-[        ]      at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor.execute(BuildOperationFiringBuildWorkerExecutor.java:40)
-[        ]      at org.gradle.internal.build.DefaultBuildLifecycleController.lambda$executeTasks$10(DefaultBuildLifecycleController.java:313)
-[        ]      at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:266)
-[        ]      at org.gradle.internal.model.StateTransitionController.lambda$tryTransition$8(StateTransitionController.java:177)
-[        ]      at org.gradle.internal.work.DefaultSynchronizer.withLock(DefaultSynchronizer.java:46)
-[        ]      at org.gradle.internal.model.StateTransitionController.tryTransition(StateTransitionController.java:177)
-[        ]      at org.gradle.internal.build.DefaultBuildLifecycleController.executeTasks(DefaultBuildLifecycleController.java:304)
-[        ]      at org.gradle.internal.build.DefaultBuildWorkGraphController$DefaultBuildWorkGraph.runWork(DefaultBuildWorkGraphController.java:220)
-[        ]      at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:263)
-[        ]      at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:127)
-[        ]      at org.gradle.composite.internal.DefaultBuildController.doRun(DefaultBuildController.java:181)
-[        ]      at org.gradle.composite.internal.DefaultBuildController.access$000(DefaultBuildController.java:50)
-[        ]      at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.lambda$run$0(DefaultBuildController.java:198)
-[        ]      at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:85)
-[        ]      at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.run(DefaultBuildController.java:198)
-[        ]      at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:572)
-[        ]      at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
-[        ]      at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
-[        ]      at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
-[        ]      at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
-[        ]      at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
-[        ]      at java.base/java.lang.Thread.run(Thread.java:1583)
-[        ] Caused by: org.gradle.process.internal.ExecException: A problem occurred starting process 'command '/home/devuser/flutter/bin/flutter''
-[        ]      at org.gradle.process.internal.DefaultExecHandle.execExceptionFor(DefaultExecHandle.java:241)
-[        ]      at org.gradle.process.internal.DefaultExecHandle.setEndStateInfo(DefaultExecHandle.java:218)
-[        ]      at org.gradle.process.internal.DefaultExecHandle.failed(DefaultExecHandle.java:396)
-[        ]      at org.gradle.process.internal.ExecHandleRunner.lambda$run$3(ExecHandleRunner.java:102)
-[        ]      at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:85)
-[        ]      at org.gradle.process.internal.ExecHandleRunner.run(ExecHandleRunner.java:101)
-[        ]      at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
-[        ]      at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
-[        ]      at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
-[        ]      at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
-[        ]      at java.base/java.lang.Thread.run(Thread.java:1583)
-[        ] Caused by: net.rubygrapefruit.platform.NativeException: Could not start '/home/devuser/flutter/bin/flutter'
-[        ]      at net.rubygrapefruit.platform.internal.DefaultProcessLauncher.start(DefaultProcessLauncher.java:27)
-[        ]      at net.rubygrapefruit.platform.internal.WrapperProcessLauncher.start(WrapperProcessLauncher.java:36)
-[        ]      at org.gradle.process.internal.ExecHandleRunner.startProcess(ExecHandleRunner.java:122)
-[        ]      at org.gradle.process.internal.ExecHandleRunner.lambda$run$0(ExecHandleRunner.java:80)
-[        ]      at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:85)
-[        ]      at org.gradle.process.internal.ExecHandleRunner.run(ExecHandleRunner.java:79)
-[        ]      ... 5 more
-[        ] Caused by: java.io.IOException: Cannot run program "/home/devuser/flutter/bin/flutter" (in directory "/home/devuser/repos/Risa-app"):
-error=0, Failed to exec spawn helper: pid: 97414, exit value: 1
-[        ]      at java.base/java.lang.ProcessBuilder.start(ProcessBuilder.java:1170)
-[        ]      at java.base/java.lang.ProcessBuilder.start(ProcessBuilder.java:1089)
-[        ]      at net.rubygrapefruit.platform.internal.DefaultProcessLauncher.start(DefaultProcessLauncher.java:25)
-[        ]      ... 10 more
-[        ] Caused by: java.io.IOException: error=0, Failed to exec spawn helper: pid: 97414, exit value: 1
-[        ]      at java.base/java.lang.ProcessImpl.forkAndExec(Native Method)
-[        ]      at java.base/java.lang.ProcessImpl.<init>(ProcessImpl.java:295)
-[        ]      at java.base/java.lang.ProcessImpl.start(ProcessImpl.java:225)
-[        ]      at java.base/java.lang.ProcessBuilder.start(ProcessBuilder.java:1126)
-[        ]      ... 12 more
-[        ] BUILD FAILED in 18s
-[   +6 ms] Running Gradle task 'assembleDebug'... (completed in 21.9s)
-[   +4 ms] "flutter apk" took 25,144ms.
-[  +15 ms] Gradle task assembleDebug failed with exit code 1
-[        ] 
-           #0      throwToolExit (package:flutter_tools/src/base/common.dart:34:3)
-           #1      AndroidGradleBuilder.buildGradleApp (package:flutter_tools/src/android/gradle.dart:592:7)
-           <asynchronous suspension>
-           #2      AndroidGradleBuilder.buildApk (package:flutter_tools/src/android/gradle.dart:234:5)
-           <asynchronous suspension>
-           #3      BuildApkCommand.runCommand (package:flutter_tools/src/commands/build_apk.dart:131:5)
-           <asynchronous suspension>
-           #4      FlutterCommand.run.<anonymous closure> (package:flutter_tools/src/runner/flutter_command.dart:1559:27)
-           <asynchronous suspension>
-           #5      AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
-           <asynchronous suspension>
-           #6      CommandRunner.runCommand (package:args/command_runner.dart:212:13)
-           <asynchronous suspension>
-           #7      FlutterCommandRunner.runCommand.<anonymous closure> (package:flutter_tools/src/runner/flutter_command_runner.dart:487:9)
-           <asynchronous suspension>
-           #8      AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
-           <asynchronous suspension>
-           #9      FlutterCommandRunner.runCommand (package:flutter_tools/src/runner/flutter_command_runner.dart:422:5)
-           <asynchronous suspension>
-           #10     run.<anonymous closure>.<anonymous closure> (package:flutter_tools/runner.dart:101:11)
-           <asynchronous suspension>
-           #11     AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
-           <asynchronous suspension>
-           #12     main (package:flutter_tools/executable.dart:103:3)
-           <asynchronous suspension>
-           
-           
-[        ] Running 1 shutdown hook
-[   +1 ms] Shutdown hooks complete
-[        ] exiting with code 1
+ adb logcat | grep com.risa.app
+11-25 16:13:12.962  2142  3830 I Pageboost: start alp : com.risa.app
+11-25 16:13:12.962  2142  3803 I Pageboost: alp for : com.risa.app , 0
+11-25 16:13:12.965 31464 31958 D ShellStartingWindow: preload Icon com.risa.app
+11-25 16:13:12.984  2142  2577 I ActivityManager: Start proc 12151:com.risa.app/u0a1143 for activelaunch {com.risa.app/com.risa.app.MainActivity}
+11-25 16:13:13.004 12151 12151 I com.risa.app: Late-enabling -Xcheck:jni
+11-25 16:13:13.030 12151 12151 I com.risa.app: Using CollectorTypeCMC GC.
+11-25 16:13:13.041  2142  4473 I Pageboost: onAppLaunch : com.risa.app
+11-25 16:13:13.041  2142  3803 I Pageboost: Record App IO : com.risa.app pid 12151
+11-25 16:13:13.042  7891  6730 I AppIconSolution: getThemeIconWithBG called with public API, pkg = com.risa.app, mode = 48
+11-25 16:13:13.042  7891  6730 I AppIconSolution: return adaptive icon for com.risa.app, isNight = true
+11-25 16:13:13.042  7891  6730 I LauncherActivityInfo: packageName: com.risa.app, useThemeIcon: false, height: 298, width: 298, density: 640
+11-25 16:13:13.042  2142  4473 V WindowManager: Collecting in transition 5543: ActivityRecord{187644491 u0 com.risa.app/.MainActivity, caller=com.android.server.wm.TransitionController.collect:7 com.android.server.wm.ActivityStarter.startActivityUnchecked:98 com.android.server.wm.ActivityStarter.executeRequest:3651 com.android.server.wm.ActivityStarter.execute:1752 com.android.server.wm.ActivityTaskManagerService.startActivityAsUser:95 
+11-25 16:13:13.042  2142  4473 D ActivityTaskManager: DesktopModeLaunchParamsModifier: task=null activity=ActivityRecord{187644491 u0 com.risa.app/.MainActivity t-1} task null, skipping
+11-25 16:13:13.042  2142  4473 D ActivityTaskManager: TaskLaunchParamsModifier:task=null activity=ActivityRecord{187644491 u0 com.risa.app/.MainActivity t-1} display-from-option=0 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@255724057
+11-25 16:13:13.043  2142  4473 D ActivityTaskManager: DesktopModeLaunchParamsModifier: task=null activity=ActivityRecord{187644491 u0 com.risa.app/.MainActivity t-1} task null, skipping
+11-25 16:13:13.043  2142  4473 D ActivityTaskManager: TaskLaunchParamsModifier:task=null activity=ActivityRecord{187644491 u0 com.risa.app/.MainActivity t-1} display-from-option=0 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@255724057 inherit-from-source=fullscreen non-freeform-task-display-area display-area=DefaultTaskDisplayArea_d0@255724057 activity-requested-landscape freeform-size-mismatch=Rect(81, 559 - 999, 1729)
+11-25 16:13:13.044  2142  4473 D ActivityTaskManager: DesktopModeLaunchParamsModifier: task=Task{7e0dc28 #16986 type=standard I=com.risa.app/.MainActivity} activity=ActivityRecord{187644491 u0 com.risa.app/.MainActivity t-1} non-desktop, skipping
+11-25 16:13:13.044  2142  4473 D ActivityTaskManager: TaskLaunchParamsModifier:task=Task{7e0dc28 #16986 type=standard I=com.risa.app/.MainActivity} activity=ActivityRecord{187644491 u0 com.risa.app/.MainActivity t-1} display-from-option=0 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@255724057 inherit-from-source=fullscreen non-freeform-task-display-area display-area=DefaultTaskDisplayArea_d0@255724057 activity-requested-landscape freeform-size-mismatch=Rect(81, 559 - 999, 1729)
+11-25 16:13:13.044  2142  4473 V WindowManager: Collecting in transition 5543: Task{7e0dc28 #16986 type=standard I=com.risa.app/.MainActivity}, caller=com.android.server.wm.Transition.collectExistenceChange:40 com.android.server.wm.ActivityStarter.startActivityInner:293 com.android.server.wm.ActivityStarter.startActivityUnchecked:111 com.android.server.wm.ActivityStarter.executeRequest:3651 com.android.server.wm.ActivityStarter.execute:1752 
+11-25 16:13:13.044  1762  3753 I SurfaceFlinger: id=74840 createSurf, flag=84004, ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986}#74840
+11-25 16:13:13.045  2142  4473 V WindowManager: Add starting ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986}: startingData=SplashScreenStartingData{4d672e6 removeAfterTransaction= 0}
+11-25 16:13:13.045  2142  4473 V WindowManager: Added starting ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986}: startingWindow=null startingView=com.android.server.wm.StartingSurfaceController$StartingSurface@a353027
+11-25 16:13:13.048  2142  4473 V WindowManager: Collecting in transition 5543: ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986}, caller=com.android.server.wm.Transition.collectExistenceChange:40 com.android.server.wm.ActivityStarter.handleStartResult:761 com.android.server.wm.ActivityStarter.startActivityUnchecked:124 com.android.server.wm.ActivityStarter.executeRequest:3651 com.android.server.wm.ActivityStarter.execute:1752 
+11-25 16:13:13.048  2142  4473 V WindowManager:    ChangeInfo{9524c7d container=Task{7e0dc28 #16986 type=standard I=com.risa.app/.MainActivity} flags=0x0}
+11-25 16:13:13.048  2142  4473 V WindowManager:    ChangeInfo{106d772 container=ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986} flags=0x0}
+11-25 16:13:13.049  2142  4473 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10200000 xflg=0x4 cmp=com.risa.app/.MainActivity bnds=[540,308][790,583]} with LAUNCH_SINGLE_TOP from uid 10150 (sr=125698383) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-25 16:13:13.050  7891  6730 I HoneySpace.SuggestedAppsRepositoryImpl: sendSuggestedAppsLaunchTarget: ComponentInfo{com.risa.app/com.risa.app.MainActivity}
+11-25 16:13:13.050  2142  7680 D WindowManager: prepareSync <SYNC_STATE_WAITING_FOR_DRAW>, mPrepareSyncSeqId=0, win=Window{d95fd1f u0 Splash Screen com.risa.app}
+11-25 16:13:13.050  1762  1921 I SurfaceFlinger: id=74841 createSurf, flag=84004, d95fd1f Splash Screen com.risa.app#74841
+11-25 16:13:13.050  2142  7680 V WindowManager: addWindow: ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986} startingWindow=Window{d95fd1f u0 Splash Screen com.risa.app}
+11-25 16:13:13.051 31464 31956 I InsetsController: onStateChanged: host=Splash Screen com.risa.app, from=android.view.ViewRootImpl.onInsetsStateChanged:3026, state=InsetsState: {mDisplayFrame=Rect(0, 0 - 1080, 2340), mDisplayCutout=DisplayCutout{insets=Rect(0, 84 - 0, 0) waterfall=Insets{left=0, top=0, right=0, bottom=0} boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(515, 0 - 566, 84), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0)]} cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=1080 displayHeight=2340 physicalDisplayWidth=1080 physicalDisplayHeight=2340 density={2.8125} cutoutSpec={M 0,0 H -9.066666666666667 V 29.86666666666667 H 9.066666666666667 V 0 H 0 Z @dp} rotation={0} scale={1.0} physicalPixelDisplaySizeRatio={1.0}}} sideOverrides={}}, mRoundedCorners=RoundedCorners{[RoundedCorner{position=TopLeft, radius=101, center=Point(101, 101)}, RoundedCorner{position=TopRight, radius=101, center=Point(979, 101)}, RoundedCorner{position=BottomRight, radius=101, center=Point(979, 2239)}, RoundedCorner{position=BottomLeft, radius=101, center=Point(101, 2239)}]}  mRoundedCornerFrame=Rect(0, 0 - 1080, 2340), mPrivacyIndicatorBounds=PrivacyIndicatorBounds {static bounds=Rect(956, 0 - 1080, 84) rotation=0}, mDisplayShape=DisplayShape{ spec=1406003047 displayWidth=1080 displayHeight=2340 physicalPixelDisplaySizeRatio=0.75 rotation=0 offsetX=0 offsetY=0 scale=1.0}, mSources= { InsetsSource: {27 mType=displayCutout mFrame=[0,0][1080,84] mVisible=true mFlags= mSideHint=TOP mBoundingRects=null}, InsetsSource: {4bef0001 mType=navigationBars mFrame=[0,2205][1080,2340] mVisible=true mFlags= mSideHint=BOTTOM mBoundingRects=null}, InsetsSource: {4bef0004 mType=systemGestures mFrame=[0,0][0,0] mVisible=true mFlags= mSideHint=NONE mBoundingRects=null}, InsetsSource: {4bef0005 mType=mandatorySystemGestures mFrame=[0,2205][1080,2340] mVisible=true mFlags= mSideHint=BOTTOM mBoundingRects=null}, InsetsSource: {4bef0006 mType=tappableElement mFrame=[0,2205][1080,2340] mVisible=true mFlags= mSideHint=BOTTOM mBoundingRects=null}, InsetsSource: {4bef0024 mType=systemGestures mFrame=[0,0][0,0] mVisible=true mFlags= mSideHint=NONE mBoundingRects=null}, InsetsSource: {59bb0000 mType=statusBars mFrame=[0,0][1080,84] mVisible=true mFlags= mSideHint=TOP mBoundingRects=null}, InsetsSource: {59bb0005 mType=mandatorySystemGestures mFrame=[0,0][1080,118] mVisible=true mFlags= mSideHint=TOP mBoundingRects=null}, InsetsSource: {59bb0006 mType=tappableElement mFrame=[0,0][1080,84] mVisible=true mFlags= mSideHint=TOP mBoundingRects=null} }
+11-25 16:13:13.054  1762  1762 I SurfaceFlinger: [ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986}#74840] attach to parent LayerHierarchy{RequestedLayerState{Task=16986#74839 parentId=57601} 1 children}
+11-25 16:13:13.054  1762  1762 I SurfaceFlinger: [d95fd1f Splash Screen com.risa.app#74841] attach to parent LayerHierarchy{RequestedLayerState{ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986}#74840 parentId=74839} 1 children}
+11-25 16:13:13.056  1956  7037 D BinderSender: sendBinder to uid 11143: packages=com.risa.app
+11-25 16:13:13.057  2142  7690 V WindowManager: Collecting in transition 5543: ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986}, caller=com.android.server.wm.TransitionController.collect:7 com.android.server.wm.ActivityRecord.setVisibility:132 com.android.server.wm.ActivityRecord.makeVisibleIfNeeded:36 com.android.server.wm.EnsureActivitiesVisibleHelper.process:538 com.android.server.wm.TaskFragment.updateActivityVisibilities:12 
+11-25 16:13:13.058  2142  7690 D WindowManager: rotationForOrientation, orientationSource=ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986}
+11-25 16:13:13.058  2142  7690 D ActivityTaskManager: applyFixedRotationTransform, r=ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986}, caller=com.android.server.wm.ActivityRecord.applyFixedRotationTransform:20 com.android.server.wm.DisplayContent.startFixedRotationTransform:63 com.android.server.wm.DisplayContent.setFixedRotationLaunchingApp:47 com.android.server.wm.DisplayContent.handleTopActivityLaunchingInDifferentOrientation:286 com.android.server.wm.DisplayContent.updateOrientation:40 
+11-25 16:13:13.059  2142  7690 D WindowManager: setFixedRotationLaunchingAppUnchecked, rotation=1, r=ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986}, caller=com.android.server.wm.DisplayContent.setFixedRotationLaunchingAppUnchecked:131 com.android.server.wm.DisplayContent.setFixedRotationLaunchingApp:50 com.android.server.wm.DisplayContent.handleTopActivityLaunchingInDifferentOrientation:286 com.android.server.wm.DisplayContent.updateOrientation:40 com.android.server.wm.DisplayContent.updateOrientationAndComputeConfig:48 
+11-25 16:13:13.059  2142  7690 V WindowManager: Collecting in transition 5543: ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986}, caller=com.android.server.wm.TransitionController.collect:7 com.android.server.wm.ActivityRecord.setVisibility:132 com.android.server.wm.ActivityTaskSupervisor.realStartActivityLocked:203 com.android.server.wm.ActivityTaskSupervisor.startSpecificActivity:27 com.android.server.wm.TaskFragment.resumeTopActivity:2089 
+11-25 16:13:13.059  2142  7690 D SGM:FgCheckThread: notifyAppCreated(), packageName: com.risa.app, userId: 0, sendRet: true
+11-25 16:13:13.059  2142  3518 D SGM:FgCheckThread: onLooperPrepared(), msg: MSG_APP_CREATE, pkgName: com.risa.app, userId: 0
+11-25 16:13:13.061  2142  7690 D SGM:FgCheckThread:   sendRunningComponentFocus(), pkgName: com.risa.app, userId: 0
+11-25 16:13:13.061  2142  7690 D InputDispatcher: Focused application(0): ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986}
+11-25 16:13:13.061  2142  3518 D SGM:FgCheckThread: onLooperPrepared(), msg: MSG_TASK_FOCUSED, pkgName: com.risa.app, userId: 0
+11-25 16:13:13.061  2142  3518 D SGM:FgCheckThread:   handleTaskFocused(), pkgName: com.risa.app, userID:0
+11-25 16:13:13.061  2142  3518 D SGM:FgCheckThread:   handleResume(). pkgName: com.risa.app, userId: 0, category: non-game
+11-25 16:13:13.061  2142  3518 D SGM:FgCheckThread: notifyFocusInOut(). of pkg: com.risa.app, type: 4, isSecGameFamily: false, userId: 0
+11-25 16:13:13.061  2142  7690 D ActivityTaskManager: scheduleTopResumedActivityChanged, onTop=true, r=ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986}, caller=com.android.server.wm.ActivityTaskSupervisor.scheduleTopResumedActivityStateIfNeeded:18 com.android.server.wm.ActivityTaskSupervisor.updateTopResumedActivityIfNeeded:54 com.android.server.wm.TaskFragment.setResumedActivity:30 com.android.server.wm.ActivityRecord.setState:100 com.android.server.wm.ActivityTaskSupervisor.realStartActivityLocked:477 com.android.server.wm.ActivityTaskSupervisor.startSpecificActivity:27 
+11-25 16:13:13.061  2142  7690 D WindowManagerServiceExt: updateTaskbarTargetIfNeeded: cn=ComponentInfo{com.risa.app/com.risa.app.MainActivity} occludesParent=true isInSplitScreenMode=false
+11-25 16:13:13.062  2142  7690 D SurfaceComposerClient: setCornerRadius ## d95fd1f Splash Screen com.risa.app#74841 cornerRadius=0.000000
+11-25 16:13:13.062  2142  7690 D SurfaceComposerClient: setCornerRadius ## d95fd1f Splash Screen com.risa.app#74841 cornerRadius=0.000000
+11-25 16:13:13.062  2142  7680 I WindowManager: Relayout Window{d95fd1f u0 Splash Screen com.risa.app}: viewVisibility=0 req=1080x2340 ty=3 d0
+11-25 16:13:13.062  1762  3753 I SurfaceFlinger: id=74844 createSurf, flag=44004, Splash Screen com.risa.app$_31464#74844
+11-25 16:13:13.062  2142  7680 D WindowManager: makeSurface duration=0 name=Splash Screen com.risa.app$_31464
+11-25 16:13:13.063  2142  7680 D SurfaceComposerClient: setCornerRadius ## d95fd1f Splash Screen com.risa.app#74841 cornerRadius=0.000000
+11-25 16:13:13.063  2142  7680 D SurfaceComposerClient: setCornerRadius ## d95fd1f Splash Screen com.risa.app#74841 cornerRadius=0.000000
+11-25 16:13:13.063  7891  8821 I HoneySpace.TopTaskUseCase: topTasks 16986 ComponentInfo{com.risa.app/com.risa.app.MainActivity}[displayId=0]
+11-25 16:13:13.064 31464 31956 I InsetsController: onStateChanged: host=Splash Screen com.risa.app, from=android.view.ViewRootImpl.onInsetsStateChanged:3026, state=InsetsState: {mDisplayFrame=Rect(0, 0 - 2340, 1080), mDisplayCutout=DisplayCutout{insets=Rect(84, 0 - 0, 0) waterfall=Insets{left=0, top=0, right=0, bottom=0} boundingRect={Bounds=[Rect(0, 514 - 84, 565), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0)]} cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=1080 displayHeight=2340 physicalDisplayWidth=1080 physicalDisplayHeight=2340 density={2.8125} cutoutSpec={M 0,0 H -9.066666666666667 V 29.86666666666667 H 9.066666666666667 V 0 H 0 Z @dp} rotation={1} scale={1.0} physicalPixelDisplaySizeRatio={1.0}}} sideOverrides={}}, mRoundedCorners=RoundedCorners{[RoundedCorner{position=TopLeft, radius=101, center=Point(101, 101)}, RoundedCorner{position=TopRight, radius=101, center=Point(2239, 101)}, RoundedCorner{position=BottomRight, radius=101, center=Point(2239, 979)}, RoundedCorner{position=BottomLeft, radius=101, center=Point(101, 979)}]}  mRoundedCornerFrame=Rect(0, 0 - 2340, 1080), mPrivacyIndicatorBounds=PrivacyIndicatorBounds {static bounds=Rect(2216, 0 - 2340, 84) rotation=1}, mDisplayShape=DisplayShape{ spec=1406003047 displayWidth=1080 displayHeight=2340 physicalPixelDisplaySizeRatio=0.75 rotation=1 offsetX=0 offsetY=0 scale=1.0}, mSources= { InsetsSource: {7 mType=displayCutout mFrame=[0,0][84,1080] mVisible=true mFlags= mSideHint=LEFT mBoundingRects=null}, InsetsSource: {4bef0001 mType=navigationBars mFrame=[2205,0][2340,1080] mVisible=true mFlags= mSideHint=RIGHT mBoundingRects=null}, InsetsSource: {4bef0004 mType=systemGestures mFrame=[0,0][0,0] mVisible=true mFlags= mSideHint=NONE mBoundingRects=null}, InsetsSource: {4bef0005 mType=mandatorySystemGestures mFrame=[2205,0][2340,1080] mVisible=true mFlags= mSideHint=RIGHT mBoundingRects=null}, InsetsSource: {4bef0006 mType=tappableElement mFrame=[2205,0][2340,1080] mVisible=true mFlags= mSideHint=RIGHT mBoundingRects=null}, InsetsSource: {4bef0024 mType=systemGestures mFrame=[0,0][0,0] mVisible=true mFlags= mSideHint=NONE mBoundingRects=null}, InsetsSource: {59bb0000 mType=statusBars mFrame=[0,0][2340,84] mVisible=true mFlags= mSideHint=TOP mBoundingRects=null}, InsetsSource: {59bb0005 mType=mandatorySystemGestures mFrame=[0,0][2340,84] mVisible=true mFlags= mSideHint=TOP mBoundingRects=null}, InsetsSource: {59bb0006 mType=tappableElement mFrame=[0,0][2340,84] mVisible=true mFlags= mSideHint=TOP mBoundingRects=null} }
+11-25 16:13:13.070  1762  1762 I SurfaceFlinger: [Splash Screen com.risa.app$_31464#74844] attach to parent LayerHierarchy{RequestedLayerState{d95fd1f Splash Screen com.risa.app#74841 parentId=74840} 1 children}
+11-25 16:13:13.070 31464 31787 V WindowManagerShell: Transition requested (#5543): android.os.BinderProxy@77a283f TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=16986 effectiveUid=11143 displayId=0 isRunning=true baseIntent=Intent { act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10200000 cmp=com.risa.app/.MainActivity } baseActivity=ComponentInfo{com.risa.app/com.risa.app.MainActivity} topActivity=ComponentInfo{com.risa.app/com.risa.app.MainActivity} origActivity=null realActivity=ComponentInfo{com.risa.app/com.risa.app.MainActivity} numActivities=1 lastActiveTime=207035014 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 maxWidth=-1 maxHeight=-1 defaultMinSize=220 desktopDefaultMinSize=304 token=WCT{android.window.IWindowContainerToken$Stub$Proxy@700850c} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=Rect(0, 84 - 0, 0) topActivityInfo=ActivityInfo{70a7e55 com.risa.app.MainActivity} launchCookies=[android.os.BinderProxy@cb3e06a] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=false isVisible=false isVisibleRequested=false isTopActivityNoDisplay=false isSleeping=false locusId=null displayAreaFeatureId=1 isTopActivityTransparent=false isActivityStackTransparent=false lastNonFullscreenBounds=Rect(81, 559 - 999, 1729) capturedLink=null capturedLinkTimestamp=0 requestedVisibleTypes=-9 topActivityRequestOpenInBrowserEducationTimestamp=0 appCompatTaskInfo=AppCompatTaskInfo { topActivityInSizeCompat=false eligibleForLetterboxEducation= false isLetterboxEducationEnabled= false isLetterboxDoubleTapEnabled= false eligibleForUserAspectRatioButton= false topActivityBoundsLetterboxed= false isFromLetterboxDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 topActivityAppBounds=Rect(0, 0 - 1080, 2340) isUserFullscreenOverrideEnabled=false isSystemFullscreenOverrideEnabled=false hasMinAspectRatioOverride=false topActivityLetterboxBounds=null cameraCompatTaskInfo=CameraCompatTaskInfo { freeformCameraCompatMode=inactive} topActivityBounds=null topActivityInDisplayCompat=false singleTapFromLetterbox=false} topActivityMainWindowFrame=null originallySupportedMultiWindow=true hasWallpaper=false rootAffinity=null isTopTaskInStage=false CoverLauncherWidgetTask=false LaunchedFromAppsCoverLauncherTask=false LaunchedFromMultistarCoverLauncherTask=false isAllowedSeamlessRotation=false isTopTransparentActivity=false isAliasManaged=false hasConfigChanged=false snappingGuideBounds=null isAiKeyRemoveAppTask=false lastDesktopWindowingBounds=null lastExternalDesktopWindowingBounds=null safeCutoutInsets=null}, pipChange = null, remoteTransition = RemoteTransition { remoteTransition = android.window.IRemoteTransition$Stub$Proxy@2f3095b, appThread = android.app.IApplicationThread$Stub$Proxy@5b6e5f8, debugName = QuickstepLaunchflags =NONE }, displayChange = null, flags = 0, debugId = 5543 }
+11-25 16:13:13.074  2142  2328 D SurfaceComposerClient: setCornerRadius ## d95fd1f Splash Screen com.risa.app#74841 cornerRadius=0.000000
+11-25 16:13:13.074  1762  3753 I SurfaceFlinger: [Splash Screen com.risa.app$_31464#74844] setTransactionState with the first frame. bufferData(ID: 135136851007422, frameNumber: 1)
+11-25 16:13:13.074  2142  2328 D BLASTSyncEngine: SyncGroup 5543:  Unfinished container: ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986} mSyncState=2
+11-25 16:13:13.076  2142  3380 D WindowManager: finishDrawingWindow: Window{d95fd1f u0 Splash Screen com.risa.app} mDrawState=DRAW_PENDING seqId=0
+11-25 16:13:13.076  2142  3380 V WindowManager: Finishing drawing window Window{d95fd1f u0 Splash Screen com.risa.app}: mDrawState=DRAW_PENDING
+11-25 16:13:13.076  2142  3380 V WindowManager: Draw state now committed in Window{d95fd1f u0 Splash Screen com.risa.app}
+11-25 16:13:13.076  2142  2328 D SurfaceComposerClient: setCornerRadius ## d95fd1f Splash Screen com.risa.app#74841 cornerRadius=0.000000
+11-25 16:13:13.076  2142  2328 D SurfaceComposerClient: setCornerRadius ## d95fd1f Splash Screen com.risa.app#74841 cornerRadius=0.000000
+11-25 16:13:13.076  2142  2328 V WindowManager: performShowLocked: mDrawState=HAS_DRAWN in Window{d95fd1f u0 Splash Screen com.risa.app}
+11-25 16:13:13.076  2142  2328 D ChangeTransitionController:    ChangeInfo{9524c7d container=Task{7e0dc28 #16986 type=standard I=com.risa.app/.MainActivity} flags=0x0}
+11-25 16:13:13.076  2142  2328 D ChangeTransitionController:    ChangeInfo{106d772 container=ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986} flags=0x0}
+11-25 16:13:13.076  2142  2328 V WindowManager: Start calculating TransitionInfo based on participants: {ActivityRecord{125698383 u0 com.sec.android.app.launcher/.activities.LauncherActivity t16479}, Task{7e0dc28 #16986 type=standard I=com.risa.app/.MainActivity}, WallpaperWindowToken{87efe56 showWhenLocked=false}_<system>, WallpaperWindowToken{99c275c showWhenLocked=true}_<lock>, ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986}}
+11-25 16:13:13.076  2142  2328 V WindowManager:   Final targets: [ChangeInfo{9524c7d container=Task{7e0dc28 #16986 type=standard I=com.risa.app/.MainActivity} flags=0x10}, ChangeInfo{3368e2a container=Task{16c638d #1 type=home} flags=0x10}, ChangeInfo{155a9b8 container=WallpaperWindowToken{87efe56 showWhenLocked=false}_<system> flags=0x0}]
+11-25 16:13:13.077  2142  2328 I SurfaceControlRegistry: show, t=StartTransaction_SyncId<5543> sc=ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986}, caller=android.view.SurfaceControl$Transaction.show:3557 com.android.server.wm.Transition.onTransactionReady:2048 com.android.server.wm.BLASTSyncEngine$SyncGroup.finishNow:240 com.android.server.wm.BLASTSyncEngine.onSurfacePlacement:263 com.android.server.wm.RootWindowContainer.performSurfacePlacementNoTrace:1083 com.android.server.wm.WindowSurfacePlacer.performSurfacePlacement:166 
+11-25 16:13:13.077  2142  2328 V WindowManager:         {WCT{RemoteToken{697a964 Task{7e0dc28 #16986 type=standard I=com.risa.app/.MainActivity}}} m=OPEN f=NONE leash=Surface(name=Task=16986)/@0xe8762f6 sb=Rect(0, 0 - 1080, 2340) eb=Rect(0, 0 - 1080, 2340) epz=Point(1080, 2340) d=0 endFixedRotation=1 taskParent=-1 inset=Rect(84, 84 - 0, 0) dim=true},
+11-25 16:13:13.078  2142  2313 V WindowManager: Sent Transition (#5543) createdAt=11-25 16:13:13.042 via request=TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=16986 effectiveUid=11143 displayId=0 isRunning=true baseIntent=Intent { act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10200000 cmp=com.risa.app/.MainActivity } baseActivity=ComponentInfo{com.risa.app/com.risa.app.MainActivity} topActivity=ComponentInfo{com.risa.app/com.risa.app.MainActivity} origActivity=null realActivity=ComponentInfo{com.risa.app/com.risa.app.MainActivity} numActivities=1 lastActiveTime=207035014 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 maxWidth=-1 maxHeight=-1 defaultMinSize=220 desktopDefaultMinSize=304 token=WCT{RemoteToken{697a964 Task{7e0dc28 #16986 type=standard I=com.risa.app/.MainActivity}}} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=Rect(0, 84 - 0, 0) topActivityInfo=ActivityInfo{b87c7cd com.risa.app.MainActivity} launchCookies=[android.os.BinderProxy@d3eb882] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=false isVisible=false isVisibleRequested=false isTopActivityNoDisplay=false isSleeping=false locusId=null displayAreaFeatureId=1 isTopActivityTransparent=false isActivityStackTransparent=false lastNonFullscreenBounds=Rect(81, 559 - 999, 1729) capturedLink=null capturedLinkTimestamp=0 requestedVisibleTypes=-9 topActivityRequestOpenInBrowserEducationTimestamp=0 appCompatTaskInfo=AppCompatTaskInfo { topActivityInSizeCompat=false eligibleForLetterboxEducation= false isLetterboxEducationEnabled= false isLetterboxDoubleTapEnabled= false eligibleForUserAspectRatioButton= false topActivityBoundsLetterboxed= false isFromLetterboxDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 topActivityAppBounds=Rect(0, 0 - 1080, 2340) isUserFullscreenOverrideEnabled=false isSystemFullscreenOverrideEnabled=false hasMinAspectRatioOverride=false topActivityLetterboxBounds=null cameraCompatTaskInfo=CameraCompatTaskInfo { freeformCameraCompatMode=inactive} topActivityBounds=null topActivityInDisplayCompat=false singleTapFromLetterbox=false} topActivityMainWindowFrame=null originallySupportedMultiWindow=true hasWallpaper=false rootAffinity=null isTopTaskInStage=false CoverLauncherWidgetTask=false LaunchedFromAppsCoverLauncherTask=false LaunchedFromMultistarCoverLauncherTask=false isAllowedSeamlessRotation=false isTopTransparentActivity=false isAliasManaged=false hasConfigChanged=false snappingGuideBounds=null isAiKeyRemoveAppTask=false lastDesktopWindowingBounds=null lastExternalDesktopWindowingBounds=null safeCutoutInsets=null}, pipChange = null, remoteTransition = RemoteTransition { remoteTransition = android.window.IRemoteTransition$Stub$Proxy@6785b93, appThread = android.app.IApplicationThread$Stub$Proxy@3d7f7d0, debugName = QuickstepLaunchflags =NONE }, displayChange = null, flags = 0, debugId = 5543 }
+11-25 16:13:13.078  2142  2313 V WindowManager:         {WCT{RemoteToken{697a964 Task{7e0dc28 #16986 type=standard I=com.risa.app/.MainActivity}}} m=OPEN f=NONE leash=Surface(name=Task=16986)/@0xe8762f6 sb=Rect(0, 0 - 1080, 2340) eb=Rect(0, 0 - 1080, 2340) epz=Point(1080, 2340) d=0 endFixedRotation=1 taskParent=-1 inset=Rect(84, 84 - 0, 0) dim=true},
+11-25 16:13:13.081  2142  2326 D SGM:GameManager: identifyGamePackage. com.risa.app, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.SemGameManager.isGamePackage(SemGameManager.java:106)
+11-25 16:13:13.081  2142  2326 D SGM:SemGameManager: isGamePackage(), pkgName=com.risa.app, ret=false
+11-25 16:13:13.081  2142  2326 D SGM:FgCheckThread: noteResumeComponent(), received pkgName: com.risa.app, userId: 0
+11-25 16:13:13.082  6643 10755 I SDHMS:k : handleResumeComponent : put = com.risa.app, userid = 0 instanceid =214048065
+11-25 16:13:13.087  1762  1923 I SurfaceFlinger: id=74847 createSurf, flag=84000, fcba9c5 ActivityRecordInputSink com.risa.app/.MainActivity#74847
+11-25 16:13:13.091  2142  2328 D InsetsSourceProvider: updateControlForTarget: control=InsetsSourceControl: {59bb0000 mType=statusBars initiallyVisible mSurfacePosition=Point(0, 0) mInsetsHint=Insets{left=0, top=84, right=0, bottom=0}}, target=Window{d95fd1f u0 Splash Screen com.risa.app}, from=com.android.server.wm.InsetsStateController.onControlTargetChanged:83 com.android.server.wm.InsetsPolicy.updateBarControlTarget:212 com.android.server.wm.DisplayPolicy.updateSystemBarAttributes:262 com.android.server.wm.DisplayPolicy.finishPostLayoutPolicyLw:17 com.android.server.wm.RootWindowContainer.applySurfaceChangesTransaction$1:195 
+11-25 16:13:13.091  2142  3518 D SGM:FgCheckThread: onLooperPrepared(), msg: MSG_APP_RESUME, pkgName: com.risa.app, userid: 0
+11-25 16:13:13.091  2142  2328 D InsetsSourceProvider: updateControlForTarget: control=InsetsSourceControl: {4bef0001 mType=navigationBars initiallyVisible mSurfacePosition=Point(0, 2205) mInsetsHint=Insets{left=0, top=0, right=0, bottom=135}}, target=Window{d95fd1f u0 Splash Screen com.risa.app}, from=com.android.server.wm.InsetsStateController.onControlTargetChanged:83 com.android.server.wm.InsetsPolicy.updateBarControlTarget:225 com.android.server.wm.DisplayPolicy.updateSystemBarAttributes:262 com.android.server.wm.DisplayPolicy.finishPostLayoutPolicyLw:17 com.android.server.wm.RootWindowContainer.applySurfaceChangesTransaction$1:195 
+11-25 16:13:13.091  2142  2328 D WindowManager: updateSystemBarAttributes: displayId=0, focusedCanBeNavColorWin=false, win=Window{d95fd1f u0 Splash Screen com.risa.app}, navColorWin=Window{d95fd1f u0 Splash Screen com.risa.app}, caller=com.android.server.wm.DisplayPolicy.finishPostLayoutPolicyLw:17 com.android.server.wm.RootWindowContainer.applySurfaceChangesTransaction$1:195 com.android.server.wm.RootWindowContainer.performSurfacePlacementNoTrace:59 
+11-25 16:13:13.092  2142  2328 D SurfaceComposerClient: setCornerRadius ## d95fd1f Splash Screen com.risa.app#74841 cornerRadius=0.000000
+11-25 16:13:13.104  1762  1762 I SurfaceFlinger: RequestedLayer [ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986}#74840] hidden!! flag  from(1) --> to(0)
+11-25 16:13:13.104  1762  1762 I SurfaceFlinger: RequestedLayer [d95fd1f Splash Screen com.risa.app#74841] hidden!! flag  from(1) --> to(0)
+11-25 16:13:13.104  1762  1762 I SurfaceFlinger: RequestedLayer [Splash Screen com.risa.app$_31464#74844] hidden!! flag  from(1) --> to(0)
+11-25 16:13:13.104  1762  1762 I SurfaceFlinger: [fcba9c5 ActivityRecordInputSink com.risa.app/.MainActivity#74847] attach to parent LayerHierarchy{RequestedLayerState{ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986}#74840 parentId=74839} 2 children}
+11-25 16:13:13.122  2142  2328 I WindowManager: notifyInsetsControlChanged, removed=false, win=Window{d95fd1f u0 Splash Screen com.risa.app}, caller=com.android.server.wm.InsetsStateController$$ExternalSyntheticLambda1.run:137 com.android.server.wm.WindowAnimator$$ExternalSyntheticLambda2.onTransactionCommitted:26 android.view.SurfaceControl$Transaction$$ExternalSyntheticLambda4.run:0 android.os.Handler.handleCallback:995 android.os.Handler.dispatchMessage:103 android.os.Looper.loopOnce:273 
+11-25 16:13:13.123 31464 31956 I InsetsSourceConsumer: applyRequestedVisibilityToControl: visible=true, type=statusBars, host=Splash Screen com.risa.app
+11-25 16:13:13.124 31464 31956 I InsetsSourceConsumer: applyRequestedVisibilityToControl: visible=true, type=navigationBars, host=Splash Screen com.risa.app
+11-25 16:13:13.157  1762  1762 D SurfaceFlinger:        CLIENT |          135136851007422 | 00002100 | RGBA_8888    |   40.0    0.0 2137.0 1040.0 |  273  158  925 1472 | Splash Screen com.risa.app$_31464#74844 (1)
+11-25 16:13:13.190  2142  2328 D SurfaceComposerClient: setCornerRadius ## d95fd1f Splash Screen com.risa.app#74841 cornerRadius=0.000000
+11-25 16:13:13.191  1762  1762 D SurfaceFlinger:        CLIENT |          135136851007422 | 00002100 | RGBA_8888    |   14.0    0.0 2284.0 1066.0 |   96   56 1025 2034 | Splash Screen com.risa.app$_31464#74844 (1)
+11-25 16:13:13.231 12151 12151 D nativeloader: Configuring clns-9 for other apk /data/app/~~9UnbgULIC_8mQ4p2BbxP5A==/com.risa.app-Uh0fVXwVRPkbBnWO5tNQ5Q==/base.apk. target_sdk_version=36, uses_libraries=libOpenCL.so, library_path=/data/app/~~9UnbgULIC_8mQ4p2BbxP5A==/com.risa.app-Uh0fVXwVRPkbBnWO5tNQ5Q==/lib/arm64:/data/app/~~9UnbgULIC_8mQ4p2BbxP5A==/com.risa.app-Uh0fVXwVRPkbBnWO5tNQ5Q==/base.apk!/lib/arm64-v8a, permitted_path=/data:/mnt/expand:/data/user/0/com.risa.app
+11-25 16:13:13.236 12151 12151 V GraphicsEnvironment: com.risa.app is not listed in per-application setting
+11-25 16:13:13.236 12151 12151 V GraphicsEnvironment: com.risa.app is not listed in ANGLE allowlist or settings, returning default
+11-25 16:13:13.260  2142  4473 D GraphicsStatsService: requestRenderEngineFor(com.risa.app)
+11-25 16:13:13.260 12151 12151 D ActivityThread: com.risa.app will use render engine as VK
+11-25 16:13:13.260  2142  2314 D SGM:GameManager: identifyForegroundApp. com.risa.app, mCurrentUserId: 0, callerUserId: 0
+11-25 16:13:13.261 12151 12179 D vulkan  : searching for layers in '/data/app/~~9UnbgULIC_8mQ4p2BbxP5A==/com.risa.app-Uh0fVXwVRPkbBnWO5tNQ5Q==/lib/arm64'
+11-25 16:13:13.261  2142  2314 D SGM:GameManager: identifyForegroundApp. com.risa.app, mCurrentUserId: 0, callerUserId: 0
+11-25 16:13:13.261 12151 12179 D vulkan  : searching for layers in '/data/app/~~9UnbgULIC_8mQ4p2BbxP5A==/com.risa.app-Uh0fVXwVRPkbBnWO5tNQ5Q==/base.apk!/lib/arm64-v8a'
+11-25 16:13:13.264  1956  7037 D BinderSender: sendBinder to uid 11143: packages=com.risa.app
+11-25 16:13:13.278 12151 12181 D nativeloader: Load libflutter.so using class loader ns clns-9 (caller=/data/app/~~9UnbgULIC_8mQ4p2BbxP5A==/com.risa.app-Uh0fVXwVRPkbBnWO5tNQ5Q==/base.apk!classes21.dex): dlopen failed: library "libflutter.so" not found
+11-25 16:13:13.303 12151 12151 E TransactionExecutor: tId:257616777     LaunchActivityItem{activityToken=android.os.BinderProxy@43ef8b4,intent=Intent { act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10200000 xflg=0x4 cmp=com.risa.app/.MainActivity bnds=[540,308][790,583] },ident=187644491,info=ActivityInfo{47d2713 com.risa.app.MainActivity},curConfig={1.0 310mcc260mnc [en_US] ldltr sw384dp w832dp h384dp 450dpi nrml long hdr widecg land night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 2340, 1080) mAppBounds=Rect(0, 0 - 2340, 1080) mMaxBounds=Rect(0, 0 - 2340, 1080) mDisplayRotation=ROTATION_90 mWindowingMode=fullscreen mActivityType=undefined mAlwaysOnTop=undefined mRotation=ROTATION_90 mStageConfig=undefined mEmbedActivityMode=undefined mPopOver=off mOverlappingWithCutout=false} s.11886 fontWeightAdjustment=0 ff=0 bf=-1 bts=0 cst=1.0 nightDim=0 themeSeq=0},overrideConfig={1.0 310mcc260mnc [en_US] ldltr sw384dp w832dp h384dp 450dpi nrml long hdr widecg land night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 2340, 1080) mAppBounds=Rect(0, 0 - 2340, 1080) mMaxBounds=Rect(0, 0 - 2340, 1080) mDisplayRotation=ROTATION_90 mWindowingMode=fullscreen mActivityType=standard mAlwaysOnTop=undefined mRotation=ROTATION_90 mStageConfig=undefined mEmbedActivityMode=undefined mPopOver=off mOverlappingWithCutout=false} s.3 fontWeightAdjustment=0 ff=0 bf=-1 bts=0 cst=1.0 nightDim=0 themeSeq=0},deviceId=0,referrer=com.sec.android.app.launcher,procState=7,state=null,persistentState=null,pendingResults=null,pendingNewIntents=null,sceneTransitionInfo=null,profilerInfo=null,assistToken=android.os.BinderProxy@ebf6e4,shareableActivityToken=android.os.BinderProxy@209c74d,activityWindowInfo=ActivityWindowInfo{isEmbedded=false, taskBounds=Rect(0, 0 - 2340, 1080), taskFragmentBounds=Rect(0, 0 - 2340, 1080)}}
+11-25 16:13:13.303 12151 12151 E TransactionExecutor: tId:257616777     Target activity: com.risa.app.MainActivity
+11-25 16:13:13.304 12151 12151 E AndroidRuntime: Process: com.risa.app, PID: 12151
+11-25 16:13:13.304 12151 12151 E AndroidRuntime: java.lang.RuntimeException: Unable to start activity ComponentInfo{com.risa.app/com.risa.app.MainActivity}: java.lang.RuntimeException: java.util.concurrent.ExecutionException: com.getkeepsafe.relinker.MissingLibraryException: Could not find 'libflutter.so'. Looked for: [arm64-v8a], but only found: [x86_64].
+11-25 16:13:13.306  2142 12183 W ActivityManager: crash : com.risa.app,11143
+11-25 16:13:13.306  2142  3380 W ActivityTaskManager:   Force finishing activity com.risa.app/.MainActivity
+11-25 16:13:13.307  2142  3380 V WindowManager: Collecting in transition 5544: Task{7e0dc28 #16986 type=standard I=com.risa.app/.MainActivity}, caller=com.android.server.wm.Transition.collectExistenceChange:40 com.android.server.wm.Transition.collectClose:7 com.android.server.wm.ActivityRecord.finishIfPossible:50 com.android.server.wm.ActivityRecord.finishIfPossible:1 com.android.server.wm.RootWindowContainer$$ExternalSyntheticLambda34.accept:179 
+11-25 16:13:13.307  2142  3380 D WindowManager: prepareSync <SYNC_STATE_WAITING_FOR_DRAW>, mPrepareSyncSeqId=0, win=Window{d95fd1f u0 Splash Screen com.risa.app}
+11-25 16:13:13.307 31464 31787 V WindowManagerShell: Transition requested (#5544): android.os.BinderProxy@c68a6c5 TransitionRequestInfo { type = CLOSE, triggerTask = TaskInfo{userId=0 taskId=16986 effectiveUid=11143 displayId=0 isRunning=true baseIntent=Intent { act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10200000 cmp=com.risa.app/.MainActivity } baseActivity=ComponentInfo{com.risa.app/com.risa.app.MainActivity} topActivity=ComponentInfo{com.risa.app/com.risa.app.MainActivity} origActivity=null realActivity=ComponentInfo{com.risa.app/com.risa.app.MainActivity} numActivities=1 lastActiveTime=207035026 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 maxWidth=-1 maxHeight=-1 defaultMinSize=220 desktopDefaultMinSize=304 token=WCT{android.window.IWindowContainerToken$Stub$Proxy@cbd381a} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=Rect(0, 0 - 0, 1260) topActivityInfo=ActivityInfo{1c4ff4b com.risa.app.MainActivity} launchCookies=[android.os.BinderProxy@cb3e06a] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=true isVisible=true isVisibleRequested=true isTopActivityNoDisplay=false isSleeping=false locusId=null displayAreaFeatureId=1 isTopActivityTransparent=false isActivityStackTransparent=false lastNonFullscreenBounds=Rect(81, 559 - 999, 1729) capturedLink=null capturedLinkTimestamp=0 requestedVisibleTypes=-9 topActivityRequestOpenInBrowserEducationTimestamp=0 appCompatTaskInfo=AppCompatTaskInfo { topActivityInSizeCompat=false eligibleForLetterboxEducation= false isLetterboxEducationEnabled= false isLetterboxDoubleTapEnabled= false eligibleForUserAspectRatioButton= false topActivityBoundsLetterboxed= false isFromLetterboxDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 topActivityAppBounds=Rect(0, 0 - 2340, 1080) isUserFullscreenOverrideEnabled=false isSystemFullscreenOverrideEnabled=false hasMinAspectRatioOverride=false topActivityLetterboxBounds=null cameraCompatTaskInfo=CameraCompatTaskInfo { freeformCameraCompatMode=inactive} topActivityBounds=null topActivityInDisplayCompat=false singleTapFromLetterbox=false} topActivityMainWindowFrame=null originallySupportedMultiWindow=true hasWallpaper=false rootAffinity=null isTopTaskInStage=false CoverLauncherWidgetTask=false LaunchedFromAppsCoverLauncherTask=false LaunchedFromMultistarCoverLauncherTask=false isAllowedSeamlessRotation=false isTopTransparentActivity=false isAliasManaged=false hasConfigChanged=false snappingGuideBounds=null isAiKeyRemoveAppTask=false lastDesktopWindowingBounds=null lastExternalDesktopWindowingBounds=null safeCutoutInsets=null}, pipChange = null, remoteTransition = null, displayChange = null, flags = 16, debugId = 5544 }
+11-25 16:13:13.307  2142  3380 D ActivityTaskManager: scheduleTopResumedActivityChanged, onTop=false, r=ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986 f}}, caller=com.android.server.wm.ActivityTaskSupervisor.scheduleTopResumedActivityStateLossIfNeeded:19 com.android.server.wm.ActivityTaskSupervisor.updateTopResumedActivityIfNeeded:20 com.android.server.wm.TaskDisplayArea.positionChildAt:252 com.android.server.wm.WindowContainer.positionChildAt:84 com.android.server.wm.Task.positionChildAt:19 com.android.server.wm.Task.moveToFront:40 
+11-25 16:13:13.307  2142  3380 V WindowManager: Collecting in transition 5544: ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986 f}}, caller=com.android.server.wm.TransitionController.collect:7 com.android.server.wm.ActivityRecord.setVisibility:132 com.android.server.wm.ActivityRecord.finishIfPossible:87 com.android.server.wm.ActivityRecord.finishIfPossible:1 com.android.server.wm.RootWindowContainer$$ExternalSyntheticLambda34.accept:179 
+11-25 16:13:13.332  2142  4473 I ActivityManager: Process com.risa.app (pid 12151) has died: fg  TOP (303,2287)
+11-25 16:13:13.333  2142  4473 V WindowManager: Collecting in transition 5544: Task{7e0dc28 #16986 type=standard I=com.risa.app/.MainActivity}, caller=com.android.server.wm.Transition.collectClose:12 com.android.server.wm.WindowProcessController.handleAppDied$1:465 com.android.server.am.ActivityManagerService.handleAppDiedLocked:248 com.android.server.am.ActivityManagerService.appDiedLocked:570 com.android.server.am.ActivityManagerService$AppDeathRecipient.binderDied:17 
+11-25 16:13:13.333  2142  4473 V WindowManager: Collecting in transition 5544: ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986 f}}, caller=com.android.server.wm.TransitionController.collect:7 com.android.server.wm.ActivityRecord.onRemovedFromDisplay:258 com.android.server.wm.ActivityRecord.removeFromHistory:173 com.android.server.wm.WindowProcessController.handleAppDied$1:507 com.android.server.am.ActivityManagerService.handleAppDiedLocked:248 
+11-25 16:13:13.333  2142  2326 D SGM:FgCheckThread: getForegroundApp(), foregroundPkgName=com.risa.app
+11-25 16:13:13.334  2142  2326 D SGM:FgCheckThread: pkgName: com.risa.app is not in foreground
+11-25 16:13:13.334  2142  4473 V WindowManager: Collecting in transition 5544: ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986 f} isExiting}, caller=com.android.server.wm.WindowToken.finishFixedRotationTransform:132 com.android.server.wm.ActivityRecord.removeFromHistory:180 com.android.server.wm.WindowProcessController.handleAppDied$1:507 com.android.server.am.ActivityManagerService.handleAppDiedLocked:248 com.android.server.am.ActivityManagerService.appDiedLocked:570 
+11-25 16:13:13.334  6643  6643 I SDHMS:PowerAnomaly:Gatherer:AppError: update AppError : uid=11143, pkg=com.risa.app, errorType=crash
+11-25 16:13:13.337  6643  6643 I SDHMS:PowerAnomaly:Analyzer:AppError: analyze app error : uid=11143, pkg=com.risa.app, appErrorCount=9
+11-25 16:13:13.341  2142  2328 D ChangeTransitionController:    ChangeInfo{262e10 container=Task{7e0dc28 #16986 type=standard I=com.risa.app/.MainActivity} flags=0x0}
+11-25 16:13:13.341  2142  2328 D ChangeTransitionController:    ChangeInfo{15a9b0e container=ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986 f} isExiting} flags=0x8}
+11-25 16:13:13.341  2142  2328 V WindowManager: Start calculating TransitionInfo based on participants: {Task{9106c0 #16479 type=home I=com.sec.android.app.launcher/.activities.LauncherActivity}, Task{16c638d #1 type=home}, ActivityRecord{125698383 u0 com.sec.android.app.launcher/.activities.LauncherActivity t16479}, Task{7e0dc28 #16986 type=standard I=com.risa.app/.MainActivity}, WallpaperWindowToken{87efe56 showWhenLocked=false}_<system>, ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986 f} isExiting}}
+11-25 16:13:13.341  2142  2328 V WindowManager:   Final targets: [ChangeInfo{8294d0d container=Task{16c638d #1 type=home} flags=0x30}, ChangeInfo{262e10 container=Task{7e0dc28 #16986 type=standard I=com.risa.app/.MainActivity} flags=0x8}, ChangeInfo{2aaad09 container=WallpaperWindowToken{87efe56 showWhenLocked=false}_<system> flags=0x0}]
+11-25 16:13:13.342  2142  2328 V WindowManager:         {WCT{RemoteToken{697a964 Task{7e0dc28 #16986 type=standard I=com.risa.app/.MainActivity}}} m=CLOSE f=NO_ANIMATION leash=Surface(name=Task=16986)/@0xe8762f6 sb=Rect(0, 0 - 1080, 2340) eb=Rect(0, 0 - 1080, 2340) epz=Point(1080, 2340) d=0 taskParent=-1 inset=Rect(0, 0 - 0, 0) dim=true},
+11-25 16:13:13.345  1762  3753 I SurfaceFlinger: Capture layer list: 	 Splash Screen com.risa.app$_31464#74844(seamlessTransition:0)
+11-25 16:13:13.345  1762  1949 D RenderEngine: [SEC_SF_EFFECTS] drawLayersInternal,1483, Rendering layer Splash Screen com.risa.app$_31464#74844 at index 1
+11-25 16:13:13.348  2142  2313 V WindowManager: Sent Transition (#5544) createdAt=11-25 16:13:13.306 via request=TransitionRequestInfo { type = CLOSE, triggerTask = TaskInfo{userId=0 taskId=16986 effectiveUid=11143 displayId=0 isRunning=true baseIntent=Intent { act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10200000 cmp=com.risa.app/.MainActivity } baseActivity=ComponentInfo{com.risa.app/com.risa.app.MainActivity} topActivity=ComponentInfo{com.risa.app/com.risa.app.MainActivity} origActivity=null realActivity=ComponentInfo{com.risa.app/com.risa.app.MainActivity} numActivities=1 lastActiveTime=207035026 supportsMultiWindow=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 maxWidth=-1 maxHeight=-1 defaultMinSize=220 desktopDefaultMinSize=304 token=WCT{RemoteToken{697a964 Task{7e0dc28 #16986 type=standard I=com.risa.app/.MainActivity}}} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=Rect(0, 0 - 0, 1260) topActivityInfo=ActivityInfo{b87c7cd com.risa.app.MainActivity} launchCookies=[android.os.BinderProxy@d3eb882] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=true isVisible=true isVisibleRequested=true isTopActivityNoDisplay=false isSleeping=false locusId=null displayAreaFeatureId=1 isTopActivityTransparent=false isActivityStackTransparent=false lastNonFullscreenBounds=Rect(81, 559 - 999, 1729) capturedLink=null capturedLinkTimestamp=0 requestedVisibleTypes=-9 topActivityRequestOpenInBrowserEducationTimestamp=0 appCompatTaskInfo=AppCompatTaskInfo { topActivityInSizeCompat=false eligibleForLetterboxEducation= false isLetterboxEducationEnabled= false isLetterboxDoubleTapEnabled= false eligibleForUserAspectRatioButton= false topActivityBoundsLetterboxed= false isFromLetterboxDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 topActivityAppBounds=Rect(0, 0 - 2340, 1080) isUserFullscreenOverrideEnabled=false isSystemFullscreenOverrideEnabled=false hasMinAspectRatioOverride=false topActivityLetterboxBounds=null cameraCompatTaskInfo=CameraCompatTaskInfo { freeformCameraCompatMode=inactive} topActivityBounds=null topActivityInDisplayCompat=false singleTapFromLetterbox=false} topActivityMainWindowFrame=null originallySupportedMultiWindow=true hasWallpaper=false rootAffinity=null isTopTaskInStage=false CoverLauncherWidgetTask=false LaunchedFromAppsCoverLauncherTask=false LaunchedFromMultistarCoverLauncherTask=false isAllowedSeamlessRotation=false isTopTransparentActivity=false isAliasManaged=false hasConfigChanged=false snappingGuideBounds=null isAiKeyRemoveAppTask=false lastDesktopWindowingBounds=null lastExternalDesktopWindowingBounds=null safeCutoutInsets=null}, pipChange = null, remoteTransition = null, displayChange = null, flags = 16, debugId = 5544 }
+11-25 16:13:13.348  2142  2313 V WindowManager:         {WCT{RemoteToken{697a964 Task{7e0dc28 #16986 type=standard I=com.risa.app/.MainActivity}}} m=CLOSE f=NO_ANIMATION leash=Surface(name=Task=16986)/@0xe8762f6 sb=Rect(0, 0 - 1080, 2340) eb=Rect(0, 0 - 1080, 2340) epz=Point(1080, 2340) d=0 taskParent=-1 inset=Rect(0, 0 - 0, 0) dim=true},
+11-25 16:13:13.349  2142  2328 I WindowManager: notifyInsetsControlChanged, removed=false, win=Window{d95fd1f u0 Splash Screen com.risa.app}, caller=com.android.server.wm.InsetsStateController$$ExternalSyntheticLambda1.run:137 com.android.server.wm.WindowAnimator$$ExternalSyntheticLambda2.onTransactionCommitted:26 android.view.SurfaceControl$Transaction$$ExternalSyntheticLambda4.run:0 android.os.Handler.handleCallback:995 android.os.Handler.dispatchMessage:103 android.os.Looper.loopOnce:273 
+11-25 16:13:13.350 31464 31956 I InsetsController: onStateChanged: host=Splash Screen com.risa.app, from=android.view.ViewRootImpl.onInsetsStateChanged:3026, state=InsetsState: {mDisplayFrame=Rect(0, 0 - 2340, 1080), mDisplayCutout=DisplayCutout{insets=Rect(84, 0 - 0, 0) waterfall=Insets{left=0, top=0, right=0, bottom=0} boundingRect={Bounds=[Rect(0, 514 - 84, 565), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0)]} cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=1080 displayHeight=2340 physicalDisplayWidth=1080 physicalDisplayHeight=2340 density={2.8125} cutoutSpec={M 0,0 H -9.066666666666667 V 29.86666666666667 H 9.066666666666667 V 0 H 0 Z @dp} rotation={1} scale={1.0} physicalPixelDisplaySizeRatio={1.0}}} sideOverrides={}}, mRoundedCorners=RoundedCorners{[RoundedCorner{position=TopLeft, radius=101, center=Point(101, 101)}, RoundedCorner{position=TopRight, radius=101, center=Point(2239, 101)}, RoundedCorner{position=BottomRight, radius=101, center=Point(2239, 979)}, RoundedCorner{position=BottomLeft, radius=101, center=Point(101, 979)}]}  mRoundedCornerFrame=Rect(0, 0 - 1080, 2340), mPrivacyIndicatorBounds=PrivacyIndicatorBounds {static bounds=Rect(2216, 0 - 2340, 84) rotation=1}, mDisplayShape=DisplayShape{ spec=1406003047 displayWidth=1080 displayHeight=2340 physicalPixelDisplaySizeRatio=0.75 rotation=1 offsetX=0 offsetY=0 scale=1.0}, mSources= { InsetsSource: {7 mType=displayCutout mFrame=[0,0][84,1080] mVisible=true mFlags= mSideHint=LEFT mBoundingRects=null}, InsetsSource: {4bef0001 mType=navigationBars mFrame=[2205,0][2340,1080] mVisible=true mFlags= mSideHint=RIGHT mBoundingRects=null}, InsetsSource: {4bef0004 mType=systemGestures mFrame=[0,0][0,0] mVisible=true mFlags= mSideHint=NONE mBoundingRects=null}, InsetsSource: {4bef0005 mType=mandatorySystemGestures mFrame=[2205,0][2340,1080] mVisible=true mFlags= mSideHint=RIGHT mBoundingRects=null}, InsetsSource: {4bef0006 mType=tappableElement mFrame=[2205,0][2340,1080] mVisible=true mFlags= mSideHint=RIGHT mBoundingRects=null}, InsetsSource: {4bef0024 mType=systemGestures mFrame=[0,0][0,0] mVisible=true mFlags= mSideHint=NONE mBoundingRects=null}, InsetsSource: {59bb0000 mType=statusBars mFrame=[0,0][2340,84] mVisible=true mFlags= mSideHint=TOP mBoundingRects=null}, InsetsSource: {59bb0005 mType=mandatorySystemGestures mFrame=[0,0][2340,84] mVisible=true mFlags= mSideHint=TOP mBoundingRects=null}, InsetsSource: {59bb0006 mType=tappableElement mFrame=[0,0][2340,84] mVisible=true mFlags= mSideHint=TOP mBoundingRects=null} }
+11-25 16:13:13.356  2142  7016 V WindowManager: Schedule remove starting ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986 f} isExiting} startingWindow=Window{d95fd1f u0 Splash Screen com.risa.app} animate=true Callers=com.android.server.wm.ActivityRecord.onSyncTransactionCommitted:16 com.android.server.wm.BLASTSyncEngine$SyncGroup$1CommitCallback.onCommitted:104 com.android.server.wm.BLASTSyncEngine$SyncGroup$$ExternalSyntheticLambda0.onTransactionCommitted:8 android.view.SurfaceControl$Transaction$$ExternalSyntheticLambda4.run:0 com.android.server.SystemServerInitThreadPool$$ExternalSyntheticLambda0.execute:1 
+11-25 16:13:13.371  2142  7680 I WindowManager: Relayout Window{d95fd1f u0 Splash Screen com.risa.app}: viewVisibility=8 req=2340x1080 ty=3 d0
+11-25 16:13:13.375  2142  7680 D WindowManager: Starting window removed Window{d95fd1f u0 Splash Screen com.risa.app}
+11-25 16:13:13.375  2142  7680 V WindowManager: Remove Window{d95fd1f u0 Splash Screen com.risa.app}: mSurfaceControl=Surface(name=Splash Screen com.risa.app$_31464)/@0x2e405ff mAnimatingExit=false mRemoveOnExit=false mHasSurface=true surfaceShowing=true animating=false app-animation=false callers=com.android.server.wm.Session.remove:16 android.view.IWindowSession$Stub.onTransact:804 com.android.server.wm.Session.onTransact:1 android.os.Binder.execTransactInternal:1462 android.os.Binder.execTransact:1401 <bottom of call stack> 
+11-25 16:13:13.375  1762  1762 D SurfaceFlinger:        CLIENT |          135136851007422 | 00002100 | RGBA_8888    |    0.0    0.0 1080.0 1080.0 |    1    1 1079 1079 | Splash Screen com.risa.app$_31464#74844 (1)
+11-25 16:13:13.404  1762  1762 I SurfaceFlinger: [LayerHierarchy{RequestedLayerState{d95fd1f Splash Screen com.risa.app#74841 z=2147483647} 1 children}] reparent to OffscreenRoot
+11-25 16:13:13.404  1762  1762 I SurfaceFlinger: [LayerHierarchy{RequestedLayerState{d95fd1f Splash Screen com.risa.app#74841 z=2147483647} 1 children}] RelativeParent to null
+11-25 16:13:13.404  1762  1762 I SurfaceFlinger: [LayerHierarchy{RequestedLayerState{Splash Screen com.risa.app$_31464#74844} no children}] reparent to OffscreenRoot
+11-25 16:13:13.404  1762  1762 I SurfaceFlinger: [LayerHierarchy{RequestedLayerState{Splash Screen com.risa.app$_31464#74844} no children}] RelativeParent to null
+11-25 16:13:13.558  2142  7016 V WindowManager:    ChangeInfo{9524c7d container=Task{7e0dc28 #16986 type=standard I=com.risa.app/.MainActivity} flags=0x10}
+11-25 16:13:13.558  2142  7016 V WindowManager:    ChangeInfo{106d772 container=ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986 f} isExiting} flags=0x0}
+11-25 16:13:13.558  1762  1921 I SurfaceFlinger: id=74844 Removed Splash Screen com.risa.app$_31464#74844 (620)
+11-25 16:13:13.559  2142  7016 D ChangeTransitionController:    ChangeInfo{9524c7d container=Task{7e0dc28 #16986 type=standard I=com.risa.app/.MainActivity} flags=0x10}
+11-25 16:13:13.559  2142  7016 D ChangeTransitionController:    ChangeInfo{106d772 container=ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986 f} isExiting} flags=0x0}
+11-25 16:13:13.559  2142  7016 V WindowManager:    ChangeInfo{262e10 container=Task{7e0dc28 #16986 type=standard I=com.risa.app/.MainActivity} flags=0x8}
+11-25 16:13:13.559  2142  7016 V WindowManager:    ChangeInfo{15a9b0e container=ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986 f} isExiting} flags=0x8}
+11-25 16:13:13.561  1762  1921 I SurfaceFlinger: id=74847 Removed fcba9c5 ActivityRecordInputSink com.risa.app/.MainActivity#74847 (620)
+11-25 16:13:13.563  2142  7016 D ChangeTransitionController:    ChangeInfo{262e10 container=Task{7e0dc28 #16986 type=standard I=com.risa.app/.MainActivity} flags=0x8}
+11-25 16:13:13.563  2142  7016 D ChangeTransitionController:    ChangeInfo{15a9b0e container=ActivityRecord{187644491 u0 com.risa.app/.MainActivity t-1 f}} flags=0x8}
+11-25 16:13:13.571  1762  1762 I SurfaceFlinger: destroyed Splash Screen com.risa.app$_31464#74844 form LifecycleManager
+11-25 16:13:13.571  1762  1762 I SurfaceFlinger: id=74844 onLayerDestroyed from LayerHierarchyBuilder(RequestedLayerState{Splash Screen com.risa.app$_31464#74844 !handle})
+11-25 16:13:13.573  1762  1762 I Layer   : id=74844 Destroyed Splash Screen com.risa.app$_31464#74844
+11-25 16:13:13.573  1762  1762 I SurfaceFlinger: id=74841 Removed d95fd1f Splash Screen com.risa.app#74841 (618)
+11-25 16:13:13.588  1762  1762 I SurfaceFlinger: destroyed d95fd1f Splash Screen com.risa.app#74841 form LifecycleManager
+11-25 16:13:13.588  1762  1762 I SurfaceFlinger: [LayerHierarchy{RequestedLayerState{ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986}#74840} 1 children}] reparent to OffscreenRoot
+11-25 16:13:13.588  1762  1762 I SurfaceFlinger: [LayerHierarchy{RequestedLayerState{ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986}#74840} 1 children}] RelativeParent to null
+11-25 16:13:13.588  1762  1762 I SurfaceFlinger: id=74841 onLayerDestroyed from LayerHierarchyBuilder(RequestedLayerState{d95fd1f Splash Screen com.risa.app#74841 !handle z=2147483647})
+11-25 16:13:13.589  1762  1762 I Layer   : id=74841 Destroyed d95fd1f Splash Screen com.risa.app#74841
+11-25 16:13:13.589  1762  1762 I SurfaceFlinger: id=74840 Removed ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986}#74840 (613)
+11-25 16:13:13.604  1762  1762 I SurfaceFlinger: destroyed fcba9c5 ActivityRecordInputSink com.risa.app/.MainActivity#74847 form LifecycleManager
+11-25 16:13:13.604  1762  1762 I SurfaceFlinger: destroyed ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986}#74840 form LifecycleManager
+11-25 16:13:13.604  1762  1762 I SurfaceFlinger: id=74847 onLayerDestroyed from LayerHierarchyBuilder(RequestedLayerState{fcba9c5 ActivityRecordInputSink com.risa.app/.MainActivity#74847 !handle z=-2147483648})
+11-25 16:13:13.604  1762  1762 I SurfaceFlinger: id=74840 onLayerDestroyed from LayerHierarchyBuilder(RequestedLayerState{ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986}#74840 !handle})
+11-25 16:13:13.605  1762  1762 I Layer   : id=74847 Destroyed fcba9c5 ActivityRecordInputSink com.risa.app/.MainActivity#74847
+11-25 16:13:13.605  1762  1762 I Layer   : id=74840 Destroyed ActivityRecord{187644491 u0 com.risa.app/.MainActivity t16986}#74840
+11-25 16:13:13.808  2142  2326 W ActivityTaskManager: Activity top resumed state loss timeout for ActivityRecord{187644491 u0 com.risa.app/.MainActivity t-1 f}}
+11-25 16:13:18.100  2142  3803 I Pageboost: db update :com.risa.app ret 1

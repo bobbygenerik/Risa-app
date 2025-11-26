@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
@@ -18,16 +19,26 @@ class SearchPopup extends StatefulWidget {
 
 class _SearchPopupState extends State<SearchPopup> {
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _textFieldFocusNode = FocusNode();
+  final FocusNode _voiceButtonFocusNode = FocusNode();
 
   List<Channel> _liveTvResults = [];
   List<Content> _movieResults = [];
   List<Content> _seriesResults = [];
   bool _isSearching = false;
   bool _hasSearched = false;
+  
+  // Pagination
+  static const int _resultsPerSection = 12;
+  int _liveTvDisplayCount = _resultsPerSection;
+  int _moviesDisplayCount = _resultsPerSection;
+  int _seriesDisplayCount = _resultsPerSection;
 
   @override
   void dispose() {
     _searchController.dispose();
+    _textFieldFocusNode.dispose();
+    _voiceButtonFocusNode.dispose();
     super.dispose();
   }
 
@@ -90,6 +101,10 @@ class _SearchPopupState extends State<SearchPopup> {
       _movieResults = movies;
       _seriesResults = series;
       _isSearching = false;
+      // Reset pagination on new search
+      _liveTvDisplayCount = _resultsPerSection;
+      _moviesDisplayCount = _resultsPerSection;
+      _seriesDisplayCount = _resultsPerSection;
     });
   }
 
@@ -193,24 +208,37 @@ class _SearchPopupState extends State<SearchPopup> {
                 usePillStyle: true,
                 label: 'Voice',
                 onSearchResult: _handleVoiceResult,
+                focusNode: _voiceButtonFocusNode,
               ),
               const SizedBox(width: AppSizes.md),
               Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  autofocus: true,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    color: AppTheme.textPrimary,
+                child: Focus(
+                  onKeyEvent: (node, event) {
+                    if (event is KeyDownEvent) {
+                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                        _voiceButtonFocusNode.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                    }
+                    return KeyEventResult.ignored;
+                  },
+                  child: TextField(
+                    controller: _searchController,
+                    focusNode: _textFieldFocusNode,
+                    autofocus: true,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      color: AppTheme.textPrimary,
+                    ),
+                    decoration: const InputDecoration(
+                      hintText: 'Search channels, movies, series...',
+                      hintStyle: TextStyle(color: AppTheme.textSecondary),
+                      border: InputBorder.none,
+                    ),
+                    onChanged: _performSearch,
+                    onSubmitted: _performSearch,
+                    textInputAction: TextInputAction.search,
                   ),
-                  decoration: const InputDecoration(
-                    hintText: 'Search channels, movies, series...',
-                    hintStyle: TextStyle(color: AppTheme.textSecondary),
-                    border: InputBorder.none,
-                  ),
-                  onChanged: _performSearch,
-                  onSubmitted: _performSearch,
-                  textInputAction: TextInputAction.search,
                 ),
               ),
               IconButton(
@@ -279,7 +307,13 @@ class _SearchPopupState extends State<SearchPopup> {
             _liveTvResults.length,
             iconColor: AppTheme.accentPink,
           ),
-          _buildLiveTvGrid(),
+          _buildLiveTvGrid(_liveTvResults.take(_liveTvDisplayCount).toList()),
+          if (_liveTvResults.length > _liveTvDisplayCount)
+            _buildLoadMoreButton(() {
+              setState(() {
+                _liveTvDisplayCount += _resultsPerSection;
+              });
+            }),
           const SizedBox(height: AppSizes.xl),
         ],
         if (_movieResults.isNotEmpty) ...[
@@ -289,7 +323,13 @@ class _SearchPopupState extends State<SearchPopup> {
             _movieResults.length,
             iconColor: AppTheme.accentPink,
           ),
-          _buildContentGrid(_movieResults),
+          _buildContentGrid(_movieResults.take(_moviesDisplayCount).toList()),
+          if (_movieResults.length > _moviesDisplayCount)
+            _buildLoadMoreButton(() {
+              setState(() {
+                _moviesDisplayCount += _resultsPerSection;
+              });
+            }),
           const SizedBox(height: AppSizes.xl),
         ],
         if (_seriesResults.isNotEmpty) ...[
@@ -299,10 +339,39 @@ class _SearchPopupState extends State<SearchPopup> {
             _seriesResults.length,
             iconColor: AppTheme.accentPink,
           ),
-          _buildContentGrid(_seriesResults),
+          _buildContentGrid(_seriesResults.take(_seriesDisplayCount).toList()),
+          if (_seriesResults.length > _seriesDisplayCount)
+            _buildLoadMoreButton(() {
+              setState(() {
+                _seriesDisplayCount += _resultsPerSection;
+              });
+            }),
           const SizedBox(height: AppSizes.xl),
         ],
       ],
+    );
+  }
+
+  Widget _buildLoadMoreButton(VoidCallback onPressed) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSizes.md),
+        child: TextButton.icon(
+          onPressed: onPressed,
+          icon: const Icon(Icons.expand_more, color: AppTheme.primaryBlue),
+          label: const Text(
+            'Load More',
+            style: TextStyle(color: AppTheme.primaryBlue),
+          ),
+          style: TextButton.styleFrom(
+            backgroundColor: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24,
+              vertical: 12,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -347,7 +416,7 @@ class _SearchPopupState extends State<SearchPopup> {
     );
   }
 
-  Widget _buildLiveTvGrid() {
+  Widget _buildLiveTvGrid(List<Channel> channels) {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -357,11 +426,9 @@ class _SearchPopupState extends State<SearchPopup> {
         crossAxisSpacing: AppSizes.md,
         mainAxisSpacing: AppSizes.md,
       ),
-      itemCount: _liveTvResults.length > 8
-          ? 8
-          : _liveTvResults.length, // Limit to 8
+      itemCount: channels.length,
       itemBuilder: (context, index) {
-        final channel = _liveTvResults[index];
+        final channel = channels[index];
         return InkWell(
           onTap: () {
             Navigator.of(context).pop(); // Close popup

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/models/content.dart';
+import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 
@@ -15,7 +17,6 @@ class ContentDetailScreen extends StatefulWidget {
 }
 
 class _ContentDetailScreenState extends State<ContentDetailScreen> {
-  bool _isInMyList = false;
   bool _isDownloaded = false;
 
   @override
@@ -164,26 +165,30 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                     const SizedBox(width: AppSizes.md),
 
                     // My List button
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          _isInMyList = !_isInMyList;
-                        });
-                      },
-                      icon: Icon(_isInMyList ? Icons.check : Icons.add),
-                      label: const Text('My List'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTheme.textPrimary,
-                        side: BorderSide(
-                          color: AppTheme.textPrimary.withAlpha(
-                            (0.5 * 255).round(),
+                    Consumer<ContentProvider>(
+                      builder: (context, contentProvider, child) {
+                        final isInMyList = widget.content.isFavorite == true;
+                        return OutlinedButton.icon(
+                          onPressed: () async {
+                            // Toggle favorite in the content provider
+                            await contentProvider.toggleFavorite(widget.content.id);
+                          },
+                          icon: Icon(isInMyList ? Icons.check : Icons.add),
+                          label: const Text('My List'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppTheme.textPrimary,
+                            side: BorderSide(
+                              color: AppTheme.textPrimary.withAlpha(
+                                (0.5 * 255).round(),
+                              ),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSizes.lg,
+                              vertical: AppSizes.md,
+                            ),
                           ),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSizes.lg,
-                          vertical: AppSizes.md,
-                        ),
-                      ),
+                        );
+                      },
                     ),
 
                     const SizedBox(width: AppSizes.md),

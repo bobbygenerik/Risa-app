@@ -10,7 +10,6 @@ import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/service_validator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
-import 'package:iptv_player/widgets/tv_focusable.dart';
 
 class MoviesScreen extends StatefulWidget {
   const MoviesScreen({super.key});
@@ -25,6 +24,11 @@ class _MoviesScreenState extends State<MoviesScreen>
   int _featuredIndex = 0;
   final FocusNode _playFocus = FocusNode();
   List<Content> _curatedMovies = [];
+  final Map<String, String?> _tmdbArtCache = {};
+  
+  // Pagination for genre sections
+  final Map<String, int> _genreDisplayCounts = {};
+  static const int _itemsPerPage = 12;
 
   @override
   void dispose() {
@@ -71,12 +75,33 @@ class _MoviesScreenState extends State<MoviesScreen>
       });
       // prepare curated list (may perform TMDB lookups)
       _prepareCuratedList();
+      _preloadTMDBArtwork();
       // request focus so Play gets default focus when entering the screen
       final playFocusNode = _playFocus;
       Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) playFocusNode.requestFocus();
       });
     });
+  }
+
+  void _preloadTMDBArtwork() async {
+    final provider = Provider.of<ContentProvider>(context, listen: false);
+    final movies = provider.movies.take(30).toList();
+    
+    if (movies.isEmpty) return;
+    
+    final titles = movies.map((m) => m.title).toList();
+    
+    try {
+      final results = await TMDBService.getBestBackdropBatch(titles);
+      if (mounted) {
+        setState(() {
+          _tmdbArtCache.addAll(results);
+        });
+      }
+    } catch (e) {
+      debugPrint('MoviesScreen: Error batch-fetching TMDB art: $e');
+    }
   }
 
   @override
@@ -177,9 +202,7 @@ class _MoviesScreenState extends State<MoviesScreen>
               const SizedBox(height: AppSizes.xl),
               GoToSettingsButton(
                 onPressed: () {
-                  Future.delayed(const Duration(milliseconds: 100), () {
-                    if (context.mounted) context.go('/settings');
-                  });
+                  if (context.mounted) context.go('/settings');
                 },
               ),
             ],
@@ -224,7 +247,7 @@ class _MoviesScreenState extends State<MoviesScreen>
     if (movies.isEmpty) return const SizedBox.shrink();
 
     return SizedBox(
-      height: 220,
+      height: 240,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: FocusTraversalGroup(
@@ -239,73 +262,98 @@ class _MoviesScreenState extends State<MoviesScreen>
   }
 
   Widget _buildMovieCard(BuildContext context, Content movie) {
-    return TVFocusable(
-      focusMargin: const EdgeInsets.only(right: AppSizes.md),
-      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-      onPressed: () {
-        final encodedId = Uri.encodeComponent(movie.id);
-        context.push('/content/$encodedId', extra: movie);
-      },
-      child: SizedBox(
-        width: 140,
-        height: 220,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                child: Stack(
+    return Padding(
+      padding: const EdgeInsets.only(right: AppSizes.md),
+      child: Focus(
+        child: Builder(
+          builder: (context) {
+            final isFocused = Focus.of(context).hasFocus;
+            return GestureDetector(
+              onTap: () {
+                final encodedId = Uri.encodeComponent(movie.id);
+                context.push('/content/$encodedId', extra: movie);
+              },
+              child: Container(
+                width: 160,
+                height: 240,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                  border: isFocused
+                      ? Border.all(color: Colors.white, width: 2)
+                      : null,
+                  boxShadow: isFocused
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withAlpha((0.3 * 255).round()),
+                            offset: const Offset(0, 4),
+                            blurRadius: 8,
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      color: AppTheme.cardBackground,
-                      child: movie.imageUrl != null
-                          ? Image.network(
-                              movie.imageUrl!,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: double.infinity,
-                              errorBuilder: (context, error, stackTrace) {
-                                return _buildPlaceholder(movie.title);
-                              },
-                            )
-                          : _buildPlaceholder(movie.title),
-                    ),
-                    if (movie.watchProgress != null &&
-                        movie.watchProgress! > 0) ...[
-                      Positioned(
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        child: LinearProgressIndicator(
-                          value: movie.watchProgress!,
-                          backgroundColor: Colors.grey[800],
-                          color: AppTheme.primaryBlue,
-                          minHeight: 4,
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        child: Stack(
+                          children: [
+                            Container(
+                              color: AppTheme.cardBackground,
+                              child: movie.imageUrl != null
+                                  ? Image.network(
+                                      movie.imageUrl!,
+                                      fit: BoxFit.cover,
+                                      width: double.infinity,
+                                      height: double.infinity,
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return _buildPlaceholder(movie.title);
+                                      },
+                                    )
+                                  : _buildPlaceholder(movie.title),
+                            ),
+                            if (movie.watchProgress != null &&
+                                movie.watchProgress! > 0) ...[
+                              Positioned(
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                child: LinearProgressIndicator(
+                                  value: movie.watchProgress!,
+                                  backgroundColor: Colors.grey[800],
+                                  color: AppTheme.primaryBlue,
+                                  minHeight: 4,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
-                    ],
+                    ),
+                    const SizedBox(height: AppSizes.xs),
+                    Text(
+                      movie.title,
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(fontWeight: FontWeight.w600),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (movie.year != null || movie.rating != null)
+                      Text(
+                        '${movie.year ?? ''} ${movie.rating != null ? '★${movie.ratingDisplay}' : ''}',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: AppTheme.textSecondary),
+                      ),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: AppSizes.xs),
-            Text(
-              movie.title,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            if (movie.year != null || movie.rating != null)
-              Text(
-                '${movie.year ?? ''} ${movie.rating != null ? '★${movie.ratingDisplay}' : ''}',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
-              ),
-          ],
+            );
+          },
         ),
       ),
     );
@@ -313,22 +361,36 @@ class _MoviesScreenState extends State<MoviesScreen>
 
   Widget _buildPlaceholder(String title) {
     return Container(
-      color: AppTheme.cardBackground,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF1a1a2e),
+            const Color(0xFF16213e),
+            AppTheme.primaryBlue.withAlpha((0.2 * 255).round()),
+          ],
+        ),
+      ),
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               Icons.movie,
-              size: 40,
-              color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
+              size: 48,
+              color: Colors.white.withAlpha((0.2 * 255).round()),
             ),
             const SizedBox(height: 8),
             Padding(
               padding: const EdgeInsets.all(8),
               child: Text(
                 title,
-                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+                style: TextStyle(
+                  color: Colors.white.withAlpha((0.5 * 255).round()),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
                 textAlign: TextAlign.center,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
@@ -353,13 +415,38 @@ class _MoviesScreenState extends State<MoviesScreen>
       }
     }
 
-    // Build section for each genre
+    // Build section for each genre with pagination
     final sections = <Widget>[];
     for (final entry in genreMap.entries) {
+      final genre = entry.key;
+      final allMovies = entry.value;
+      final displayCount = _genreDisplayCounts[genre] ?? _itemsPerPage;
+      final displayMovies = allMovies.take(displayCount).toList();
+      
       sections.addAll([
-        _buildSectionHeader(context, entry.key),
+        _buildSectionHeader(context, genre),
         const SizedBox(height: AppSizes.md),
-        _buildMoviesRow(context, entry.value),
+        _buildMoviesRow(context, displayMovies),
+        if (allMovies.length > displayCount)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: TextButton(
+                onPressed: () {
+                  setState(() {
+                    _genreDisplayCounts[genre] = displayCount + _itemsPerPage;
+                  });
+                },
+                style: TextButton.styleFrom(
+                  backgroundColor: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
+                ),
+                child: const Text(
+                  'Load More',
+                  style: TextStyle(color: AppTheme.primaryBlue),
+                ),
+              ),
+            ),
+          ),
         const SizedBox(height: AppSizes.xl),
       ]);
     }
@@ -387,7 +474,7 @@ class _MoviesScreenState extends State<MoviesScreen>
         context.push('/content/$encodedId', extra: featuredMovie);
       },
       child: SizedBox(
-        height: 300,
+        height: 420,
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -395,7 +482,8 @@ class _MoviesScreenState extends State<MoviesScreen>
               Positioned.fill(
                 child: Image.network(
                   heroImage,
-                  fit: BoxFit.cover,
+                  fit: BoxFit.contain,
+                  alignment: Alignment.topCenter,
                   errorBuilder: (_, __, ___) => _buildBannerPlaceholder(),
                 ),
               )
@@ -438,38 +526,51 @@ class _MoviesScreenState extends State<MoviesScreen>
                           child: Builder(
                             builder: (ctx) {
                               final hasFocus = Focus.of(ctx).hasFocus;
-                              return Container(
-                                decoration: hasFocus
-                                    ? BoxDecoration(
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: AppTheme.primaryBlue,
-                                          width: 3,
+                              return GestureDetector(
+                                onTap: () {
+                                  final encodedId = Uri.encodeComponent(
+                                    featuredMovie.id,
+                                  );
+                                  context.push(
+                                    '/content/$encodedId',
+                                    extra: featuredMovie,
+                                  );
+                                },
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryBlue,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: hasFocus
+                                        ? Border.all(color: Colors.white, width: 2)
+                                        : null,
+                                    boxShadow: hasFocus
+                                        ? [
+                                            BoxShadow(
+                                              color: Colors.black.withAlpha((0.3 * 255).round()),
+                                              offset: const Offset(0, 4),
+                                              blurRadius: 8,
+                                            ),
+                                          ]
+                                        : null,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 14,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.play_arrow, color: Colors.white),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Watch',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
                                         ),
-                                      )
-                                    : null,
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    final encodedId = Uri.encodeComponent(
-                                      featuredMovie.id,
-                                    );
-                                    context.push(
-                                      '/content/$encodedId',
-                                      extra: featuredMovie,
-                                    );
-                                  },
-                                  icon: const Icon(Icons.play_arrow),
-                                  label: const Text('Play'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.primaryBlue,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 18,
-                                      vertical: 12,
-                                    ),
-                                    textStyle: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               );

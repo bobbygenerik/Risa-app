@@ -29,6 +29,7 @@ class _EPGScreenState extends State<EPGScreen> {
   Channel? _playingChannel;
   VideoPlayerController? _miniPlayerController;
   late DateTime _currentTime;
+  Set<String> _epgFavoriteChannelIds = {}; // EPG-specific favorites
 
   final ScrollController _horizontalScrollController = ScrollController();
   final ScrollController _verticalScrollController = ScrollController();
@@ -40,8 +41,26 @@ class _EPGScreenState extends State<EPGScreen> {
     _currentTime = DateTime.now();
     Future.delayed(const Duration(seconds: 1), _updateTime);
     
-    // Check if we're coming back from player with mini player data
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // Load EPG data on init
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final epgService = Provider.of<EpgService>(context, listen: false);
+      
+      // Load EPG favorites from SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final favoritesList = prefs.getStringList('epg_favorite_channels') ?? [];
+      setState(() {
+        _epgFavoriteChannelIds = Set.from(favoritesList);
+      });
+      
+      // Check if EPG URL is configured
+      final epgUrl = prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
+      
+      if (epgUrl != null && epgUrl.isNotEmpty && !epgService.hasData) {
+        debugPrint('EPG Screen: Loading EPG from URL: $epgUrl');
+        await epgService.loadEpgFromUrl(epgUrl);
+      }
+      
+      // Check if we're coming back from player with mini player data
       final routeState = GoRouterState.of(context);
       final extra = routeState.extra as Map<String, dynamic>?;
       
@@ -50,10 +69,8 @@ class _EPGScreenState extends State<EPGScreen> {
         final continuePlayback = extra['continuePlayback'] as bool? ?? false;
         
         if (channel != null && continuePlayback) {
-          // Auto-play the channel in mini player
-          Future.delayed(const Duration(milliseconds: 100), () {
-            _playChannelInMiniPlayer(channel);
-          });
+          // Auto-play the channel in mini player immediately
+          _playChannelInMiniPlayer(channel);
         }
       }
     });
@@ -98,8 +115,9 @@ class _EPGScreenState extends State<EPGScreen> {
         Uri.parse(channel.url),
       );
 
+      // Initialize and play immediately
       await _miniPlayerController!.initialize();
-      await _miniPlayerController!.play();
+      _miniPlayerController!.play(); // Start playing immediately without await
 
       if (mounted) {
         setState(() {});
@@ -127,6 +145,20 @@ class _EPGScreenState extends State<EPGScreen> {
     });
   }
 
+  Future<void> _toggleEpgFavorite(Channel channel) async {
+    setState(() {
+      if (_epgFavoriteChannelIds.contains(channel.id)) {
+        _epgFavoriteChannelIds.remove(channel.id);
+      } else {
+        _epgFavoriteChannelIds.add(channel.id);
+      }
+    });
+    
+    // Save to SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('epg_favorite_channels', _epgFavoriteChannelIds.toList());
+  }
+
   @override
   Widget build(BuildContext context) {
     // Keep using WillPopScope for now to remain compatible with current SDK.
@@ -148,7 +180,34 @@ class _EPGScreenState extends State<EPGScreen> {
 
           // Get categories
           final categories = channelProvider.getGroupedChannels();
-          final categoryNames = categories.keys.toList()..sort();
+          // Sort categories by the minimum sortOrder of channels in each category
+          final categoryNames = ['⭐ Favorites', ...categories.keys.toList()]..sort((a, b) {
+            // Keep Favorites at top
+            if (a == '⭐ Favorites') return -1;
+            if (b == '⭐ Favorites') return 1;
+            final aChannels = categories[a] ?? [];
+            final bChannels = categories[b] ?? [];
+            
+            // Get minimum sortOrder for each category
+            final aMinOrder = aChannels
+                .where((ch) => ch.sortOrder != null)
+                .map((ch) => ch.sortOrder!)
+                .fold<int?>(null, (min, order) => min == null ? order : (order < min ? order : min));
+            final bMinOrder = bChannels
+                .where((ch) => ch.sortOrder != null)
+                .map((ch) => ch.sortOrder!)
+                .fold<int?>(null, (min, order) => min == null ? order : (order < min ? order : min));
+            
+            // If both have sortOrder, compare them
+            if (aMinOrder != null && bMinOrder != null) {
+              return aMinOrder.compareTo(bMinOrder);
+            }
+            // If only one has sortOrder, it comes first
+            if (aMinOrder != null) return -1;
+            if (bMinOrder != null) return 1;
+            // Otherwise, alphabetical
+            return a.compareTo(b);
+          });
 
           // Filter channels by selected category and hidden status
           final filteredChannels =
@@ -156,7 +215,10 @@ class _EPGScreenState extends State<EPGScreen> {
                 // Filter by hidden status
                 if (ch.isHidden == true) return false;
                 // Filter by category
-                if (_selectedCategory != null &&
+                if (_selectedCategory == '⭐ Favorites') {
+                  // Show only EPG favorites
+                  return _epgFavoriteChannelIds.contains(ch.id);
+                } else if (_selectedCategory != null &&
                     ch.groupTitle != _selectedCategory) {
                   return false;
                 }
@@ -195,10 +257,7 @@ class _EPGScreenState extends State<EPGScreen> {
                           // Category sidebar
                           _buildCategorySidebar(categoryNames),
                           const VerticalDivider(width: 1, color: AppTheme.divider),
-                          // Channel list
-                          _buildChannelList(filteredChannels),
-                          const VerticalDivider(width: 1, color: AppTheme.divider),
-                          // Program grid
+                          // Program grid with channel names
                           Expanded(
                             child: _buildProgramGrid(filteredChannels, epgService),
                           ),
@@ -363,11 +422,16 @@ class _EPGScreenState extends State<EPGScreen> {
                 'Electronic Program Guide',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
+                  decoration: TextDecoration.none,
                 ),
               ),
               Text(
                 DateFormat('EEEE, MMM dd').format(_selectedDate),
-                style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppTheme.textSecondary,
+                  decoration: TextDecoration.none,
+                ),
               ),
             ],
           ),
@@ -378,28 +442,49 @@ class _EPGScreenState extends State<EPGScreen> {
             onPressed: epgService.isLoading
                 ? null
                 : () async {
-                    
                     final prefs = await SharedPreferences.getInstance();
                     final epgUrl = prefs.getString('epg_url') ?? 
                                    prefs.getString('custom_epg_url');
 
-                    if (epgUrl != null && epgUrl.isNotEmpty) {
-                      await epgService.refresh(epgUrl);
+                    if (epgUrl == null || epgUrl.isEmpty) {
                       if (mounted) {
                         showAppSnackBar(
                           context,
-                          SnackBar(
-                            content: Text(
-                              epgService.error != null
-                                  ? 'EPG refresh failed: ${epgService.error}'
-                                  : 'EPG data refreshed successfully',
-                            ),
-                            backgroundColor: epgService.error != null
-                                ? AppTheme.accentRed
-                                : AppTheme.accentGreen,
+                          const SnackBar(
+                            content: Text('No EPG URL configured'),
+                            backgroundColor: AppTheme.accentRed,
                           ),
                         );
                       }
+                      return;
+                    }
+
+                    if (mounted) {
+                      showAppSnackBar(
+                        context,
+                        const SnackBar(content: Text('Loading EPG data...')),
+                      );
+                    }
+
+                    await epgService.refresh(epgUrl);
+                    
+                    if (mounted) {
+                      final programCount = epgService.epgData.values
+                          .fold<int>(0, (sum, programs) => sum + programs.length);
+                      
+                      showAppSnackBar(
+                        context,
+                        SnackBar(
+                          content: Text(
+                            epgService.error != null
+                                ? 'EPG refresh failed: ${epgService.error}'
+                                : 'EPG loaded successfully! $programCount programs found.',
+                          ),
+                          backgroundColor: epgService.error != null
+                              ? AppTheme.accentRed
+                              : AppTheme.accentGreen,
+                        ),
+                      );
                     }
                   },
             tooltip: 'Refresh EPG Data',
@@ -417,8 +502,11 @@ class _EPGScreenState extends State<EPGScreen> {
   }
 
   Widget _buildCategorySidebar(List<String> categories) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final sidebarWidth = (screenWidth * 0.15).clamp(200.0, 350.0);
+    
     return Container(
-      width: 180,
+      width: sidebarWidth,
       decoration: BoxDecoration(
         color: Colors.white.withAlpha((0.05 * 255).round()),
         border: Border(
@@ -427,9 +515,9 @@ class _EPGScreenState extends State<EPGScreen> {
       ),
       child: Column(
         children: [
-          // All Channels option
+          // All Categories option
           _buildCategoryItem(
-            name: 'All Channels',
+            name: 'All Categories',
             isSelected: _selectedCategory == null,
             onTap: () {
               setState(() {
@@ -473,9 +561,6 @@ class _EPGScreenState extends State<EPGScreen> {
         onFocusChange: (_) => setState(() {}),
         child: Builder(builder: (context) {
           final bool isFocused = Focus.of(context).hasFocus;
-          final Color iconColor = isFocused
-              ? Colors.white
-              : (isSelected ? AppTheme.primaryBlue : AppTheme.textSecondary);
           final Color textColor = isFocused
               ? Colors.white
               : (isSelected ? AppTheme.primaryBlue : AppTheme.textSecondary);
@@ -513,17 +598,17 @@ class _EPGScreenState extends State<EPGScreen> {
                     ),
                   ),
                   if (isSelected) const SizedBox(width: AppSizes.sm),
-                  Icon(Icons.folder, size: 18, color: iconColor),
-                  const SizedBox(width: AppSizes.sm),
                   Expanded(
                     child: Text(
                       name,
                       style: TextStyle(
                         color: textColor,
+                        fontSize: 13,
                         fontWeight:
                             (isFocused || isSelected) ? FontWeight.bold : FontWeight.normal,
+                        decoration: TextDecoration.none,
                       ),
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -787,8 +872,11 @@ class _EPGScreenState extends State<EPGScreen> {
   }
 
   Widget _buildChannelList(List<Channel> channels) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final channelListWidth = (screenWidth * 0.18).clamp(250.0, 400.0);
+    
     return Container(
-      width: 200,
+      width: channelListWidth,
       color: AppTheme.sidebarBackground,
       child: Column(
         children: [
@@ -930,6 +1018,8 @@ class _EPGScreenState extends State<EPGScreen> {
   }
 
   Widget _buildProgramGrid(List<Channel> channels, EpgService epgService) {
+    debugPrint('EPG Grid: isLoading=${epgService.isLoading}, hasData=${epgService.hasData}, epgData keys=${epgService.epgData.keys.length}');
+    
     if (epgService.isLoading) {
       return const Center(
         child: Column(
@@ -1031,7 +1121,12 @@ class _EPGScreenState extends State<EPGScreen> {
 
   Widget _buildProgramRow(Channel channel, EpgService epgService) {
     // Get programs for this channel from EPG service
-    final programs = epgService.epgData[channel.tvgId ?? channel.id] ?? [];
+    final channelKey = channel.tvgId ?? channel.id;
+    final programs = epgService.epgData[channelKey] ?? [];
+    
+    if (programs.isEmpty) {
+      debugPrint('EPG Row: No programs for channel "${channel.name}" (tvgId: ${channel.tvgId}, id: ${channel.id}, looking for key: $channelKey)');
+    }
 
     // Filter programs for selected date
     final startOfDay = DateTime(
@@ -1046,25 +1141,138 @@ class _EPGScreenState extends State<EPGScreen> {
           program.endTime.isAfter(startOfDay);
     }).toList();
 
+    final isSelected = _selectedChannelId == channel.id;
+    final isPlaying = _playingChannel?.id == channel.id;
+
     return Container(
       height: 80,
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppTheme.divider, width: 0.5)),
+      decoration: BoxDecoration(
+        color: isSelected ? AppTheme.primaryBlue.withAlpha((0.2 * 255).round()) : null,
+        border: Border(
+          bottom: const BorderSide(color: AppTheme.divider, width: 0.5),
+          left: BorderSide(
+            color: isPlaying ? AppTheme.accentGreen : Colors.transparent,
+            width: 3,
+          ),
+        ),
       ),
-      child: dayPrograms.isEmpty
-          ? Center(
-              child: Text(
-                'No EPG data',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
+      child: Row(
+        children: [
+          // Channel info section (fixed width on left)
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _selectedChannelId = channel.id;
+              });
+              _playChannelInMiniPlayer(channel);
+            },
+            child: Container(
+              width: 200,
+              padding: const EdgeInsets.all(AppSizes.sm),
+              decoration: BoxDecoration(
+                color: AppTheme.sidebarBackground,
+                border: Border(
+                  right: BorderSide(color: AppTheme.divider, width: 1),
+                ),
               ),
-            )
-          : Row(
-              children: dayPrograms.map((program) {
-                return _buildProgramCell(program);
-              }).toList(),
+              child: Row(
+                children: [
+                  // Channel logo
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: AppTheme.cardBackground,
+                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                    ),
+                    child: channel.logoUrl != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                            child: Image.network(
+                              channel.logoUrl!,
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Center(
+                                  child: Icon(
+                                    Icons.tv,
+                                    color: AppTheme.primaryBlue,
+                                    size: 24,
+                                  ),
+                                );
+                              },
+                            ),
+                          )
+                        : const Center(
+                            child: Icon(
+                              Icons.tv,
+                              color: AppTheme.primaryBlue,
+                              size: 24,
+                            ),
+                          ),
+                  ),
+                  const SizedBox(width: AppSizes.sm),
+                  // Channel name
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          channel.name,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (channel.channelNumber != null)
+                          Text(
+                            '${channel.channelNumber}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                      ],
+                    ),
+                  ),
+                  // Favorite button
+                  IconButton(
+                    icon: Icon(
+                      _epgFavoriteChannelIds.contains(channel.id)
+                          ? Icons.favorite
+                          : Icons.favorite_border,
+                      color: _epgFavoriteChannelIds.contains(channel.id)
+                          ? AppTheme.accentPink
+                          : Colors.white.withAlpha((0.5 * 255).round()),
+                      size: 20,
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () => _toggleEpgFavorite(channel),
+                  ),
+                  const SizedBox(width: AppSizes.xs),
+                ],
+              ),
             ),
+          ),
+          // Programs section (scrollable)
+          Expanded(
+            child: dayPrograms.isEmpty
+                ? Center(
+                    child: Text(
+                      'No EPG data',
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: AppTheme.textSecondary),
+                    ),
+                  )
+                : Row(
+                    children: dayPrograms.map((program) {
+                      return _buildProgramCell(program);
+                    }).toList(),
+                  ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1526,7 +1734,13 @@ class _EPGScreenState extends State<EPGScreen> {
               // Update EPG source
               final localContext = context;
               if (localContext.mounted) {
-                showAppSnackBar(localContext, const SnackBar(content: Text('EPG source assigned')));
+                showAppSnackBar(
+                  localContext,
+                  const SnackBar(
+                    content: Text('EPG source assigned'),
+                    backgroundColor: AppTheme.accentGreen,
+                  ),
+                );
               }
             },
             child: const Text('Save'),

@@ -16,6 +16,9 @@ class BackgroundTaskManager {
     final epg = Provider.of<EpgService>(context, listen: false);
     final channelProvider = Provider.of<ChannelProvider>(context, listen: false);
 
+    // Load playlist immediately on startup to avoid placeholder screen
+    channelProvider.autoLoadPlaylist();
+
     // EPG refresh every 30 minutes
     _epgTimer?.cancel();
     _epgTimer = Timer.periodic(const Duration(minutes: 30), (_) async {

@@ -4,12 +4,6 @@ import android.app.PictureInPictureParams
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
-import android.media.AudioAttributes
-import android.media.AudioFormat
-import android.media.AudioPlaybackCaptureConfiguration
-import android.media.AudioRecord
-import android.media.projection.MediaProjection
-import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -32,19 +26,10 @@ class MainActivity : FlutterActivity() {
 
     private var isInPipMode = false
     private var transcriptionSink: EventChannel.EventSink? = null
-    private var audioCapturer: AudioPlaybackCapturer? = null
-    private var mediaProjectionManager: MediaProjectionManager? = null
-    private var mediaProjection: MediaProjection? = null
-    private var mediaProjectionCallback: MediaProjection.Callback? = null
-    private var pendingCaptureResult: MethodChannel.Result? = null
-    private var pendingSampleRate = 16000
-    private var pendingChannels = 1
+    private var audioCapturer: ExoPlayerAudioCapturer? = null
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-
-        mediaProjectionManager =
-            getSystemService(Context.MEDIA_PROJECTION_SERVICE) as? MediaProjectionManager
 
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, TRANSCRIPTION_AUDIO_STREAM)
             .setStreamHandler(object : EventChannel.StreamHandler {
@@ -126,7 +111,8 @@ class MainActivity : FlutterActivity() {
                     "startAudioCapture" -> {
                         val sampleRate = (call.argument<Any>("sampleRate") as? Number)?.toInt() ?: 16000
                         val channels = (call.argument<Any>("channels") as? Number)?.toInt() ?: 1
-                        startPlaybackCapture(sampleRate, channels, result)
+                        val streamUrl = call.argument<String>("streamUrl")
+                        startStreamCapture(sampleRate, channels, streamUrl, result)
                     }
 
                     "stopAudioCapture" -> {
@@ -139,43 +125,23 @@ class MainActivity : FlutterActivity() {
             }
     }
 
-    private fun startPlaybackCapture(sampleRate: Int, channels: Int, result: MethodChannel.Result) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            result.error("UNSUPPORTED", "Audio capture requires Android 10 or higher", null)
-            return
-        }
-
-        val manager = mediaProjectionManager
-        if (manager == null) {
-            result.error("UNAVAILABLE", "MediaProjection service unavailable", null)
-            return
-        }
-
+    private fun startStreamCapture(sampleRate: Int, channels: Int, streamUrl: String?, result: MethodChannel.Result) {
         val capturer = ensureAudioCapturer()
         if (capturer.isCapturing()) {
             result.success(true)
             return
         }
 
-        val projection = mediaProjection
-        if (projection == null) {
-            pendingSampleRate = sampleRate
-            pendingChannels = channels
-            pendingCaptureResult = result
-            try {
-                startActivityForResult(manager.createScreenCaptureIntent(), AUDIO_CAPTURE_REQUEST)
-            } catch (e: Exception) {
-                pendingCaptureResult = null
-                result.error("PERMISSION", "Unable to request capture permission: ${e.message}", null)
-            }
+        if (streamUrl == null || streamUrl.isEmpty()) {
+            result.error("INVALID_URL", "Stream URL is required for audio capture", null)
             return
         }
 
-        val started = capturer.start(projection, sampleRate, channels)
+        val started = capturer.start(streamUrl, sampleRate, channels)
         if (started) {
             result.success(true)
         } else {
-            result.error("CAPTURE_ERROR", "Failed to start audio capture", null)
+            result.error("CAPTURE_ERROR", "Failed to start audio capture from stream", null)
         }
     }
 
@@ -183,61 +149,20 @@ class MainActivity : FlutterActivity() {
         audioCapturer?.stop()
     }
 
-    private fun ensureAudioCapturer(): AudioPlaybackCapturer {
+    private fun ensureAudioCapturer(): ExoPlayerAudioCapturer {
         if (audioCapturer == null) {
-            audioCapturer = AudioPlaybackCapturer()
+            audioCapturer = ExoPlayerAudioCapturer(this)
             transcriptionSink?.let { audioCapturer?.setEventSink(it) }
         }
         return audioCapturer!!
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode != AUDIO_CAPTURE_REQUEST) return
 
-        val pending = pendingCaptureResult
-        pendingCaptureResult = null
-
-        if (resultCode == RESULT_OK && data != null) {
-            val manager = mediaProjectionManager
-            if (manager == null) {
-                pending?.error("UNAVAILABLE", "MediaProjection service unavailable", null)
-                return
-            }
-            mediaProjection = manager.getMediaProjection(resultCode, data)
-            mediaProjectionCallback = object : MediaProjection.Callback() {
-                override fun onStop() {
-                    audioCapturer?.stop()
-                    mediaProjection = null
-                }
-            }
-            mediaProjectionCallback?.let { callback ->
-                mediaProjection?.registerCallback(
-                    callback,
-                    Handler(Looper.getMainLooper()),
-                )
-            }
-
-            if (pending != null) {
-                startPlaybackCapture(pendingSampleRate, pendingChannels, pending)
-            }
-        } else {
-            pending?.error("PERMISSION_DENIED", "Audio capture permission denied", null)
-        }
-    }
 
     override fun onDestroy() {
         stopPlaybackCapture()
         transcriptionSink = null
         audioCapturer = null
-        try {
-            mediaProjectionCallback?.let { mediaProjection?.unregisterCallback(it) }
-        } catch (_: Exception) {
-        }
-        mediaProjection?.stop()
-        mediaProjection = null
-        mediaProjectionCallback = null
-        pendingCaptureResult = null
         super.onDestroy()
     }
 
@@ -274,100 +199,4 @@ class MainActivity : FlutterActivity() {
     }
 }
 
-private class AudioPlaybackCapturer {
-    private var audioRecord: AudioRecord? = null
-    private var captureThread: Thread? = null
-    private val isCapturing = AtomicBoolean(false)
-    private val mainHandler = Handler(Looper.getMainLooper())
-    private var eventSink: EventChannel.EventSink? = null
-
-    fun setEventSink(sink: EventChannel.EventSink?) {
-        mainHandler.post { eventSink = sink }
-    }
-
-    fun isCapturing(): Boolean = isCapturing.get()
-
-    fun start(
-        projection: MediaProjection,
-        sampleRate: Int,
-        channels: Int,
-    ): Boolean {
-        stop()
-
-        val channelMask = if (channels > 1) {
-            AudioFormat.CHANNEL_IN_STEREO
-        } else {
-            AudioFormat.CHANNEL_IN_MONO
-        }
-
-        val minBuffer = AudioRecord.getMinBufferSize(
-            sampleRate,
-            channelMask,
-            AudioFormat.ENCODING_PCM_16BIT,
-        )
-        if (minBuffer <= 0) {
-            Log.e("AudioCapturer", "Invalid buffer size (sampleRate=$sampleRate, channels=$channels)")
-            return false
-        }
-
-        val config = AudioPlaybackCaptureConfiguration.Builder(projection)
-            .addMatchingUsage(AudioAttributes.USAGE_MEDIA)
-            .addMatchingUsage(AudioAttributes.USAGE_GAME)
-            .build()
-
-        val format = AudioFormat.Builder()
-            .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-            .setSampleRate(sampleRate)
-            .setChannelMask(channelMask)
-            .build()
-
-        audioRecord = AudioRecord.Builder()
-            .setAudioFormat(format)
-            .setBufferSizeInBytes(minBuffer * 2)
-            .setAudioPlaybackCaptureConfig(config)
-            .build()
-
-        return try {
-            audioRecord?.startRecording()
-            isCapturing.set(true)
-            val bufferSize = minBuffer.coerceAtMost(4096)
-            captureThread = thread(start = true, name = "TranscriptionAudioCapture") {
-                val buffer = ByteArray(bufferSize)
-                while (isCapturing.get()) {
-                    val read = audioRecord?.read(buffer, 0, buffer.size) ?: break
-                    if (read > 0) {
-                        val chunk = buffer.copyOf(read)
-                        mainHandler.post { eventSink?.success(chunk) }
-                    }
-                }
-            }
-            true
-        } catch (e: Exception) {
-            Log.e("AudioCapturer", "Failed to start capture: ${e.message}")
-            isCapturing.set(false)
-            audioRecord?.release()
-            audioRecord = null
-            false
-        }
-    }
-
-    fun stop() {
-        if (!isCapturing.getAndSet(false)) {
-            audioRecord?.release()
-            audioRecord = null
-            return
-        }
-
-        try {
-            audioRecord?.stop()
-        } catch (_: Exception) {
-        }
-        audioRecord?.release()
-        audioRecord = null
-        try {
-            captureThread?.join(200)
-        } catch (_: Exception) {
-        }
-        captureThread = null
-    }
-}
+// ExoPlayerAudioCapturer implementation is in a separate file

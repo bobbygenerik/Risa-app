@@ -121,6 +121,19 @@ class _StartupLoaderState extends State<StartupLoader> {
       StartupProbe.mark('StartupLoader: continuing without TMDB init');
     }
 
+    // Load EPG data if URL is configured
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final epgUrl = prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
+      if (epgUrl != null && epgUrl.isNotEmpty) {
+        StartupProbe.mark('StartupLoader: Loading EPG data');
+        // Note: EpgService will be created later, this just ensures the URL is saved
+        debugPrint('EPG URL configured: $epgUrl');
+      }
+    } catch (e) {
+      debugPrint('Failed to check EPG URL: $e');
+    }
+
     // Small delay so the indicator is visible briefly on very fast devices
     await Future.delayed(const Duration(milliseconds: 150));
     StartupProbe.mark('StartupLoader: ready to enter MyApp');

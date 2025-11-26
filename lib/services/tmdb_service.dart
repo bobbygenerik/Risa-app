@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
@@ -21,6 +22,10 @@ class TMDBService {
   static const Duration _defaultTtl = Duration(hours: 24);
   static const int _maxCacheEntries = 200;
   static Future<void>? _cacheLoadFuture;
+  
+  // Batch request queue
+  static final Map<String, List<Function(String?)>> _pendingRequests = {};
+  static final Set<String> _processingRequests = {};
 
   static String _cacheKey(String prefix, String query, {int? year}) {
     return '$prefix:${query.toLowerCase().trim()}:${year ?? ''}';
@@ -265,6 +270,7 @@ class TMDBService {
 
   /// Returns the best available backdrop/poster URL for a given title.
   /// Prefers TV results first, falling back to movie matches.
+  /// This version batches requests to reduce API calls.
   static Future<String?> getBestBackdrop(String title, {int? year}) async {
     await init();
     final cacheKey = _cacheKey('art:best', title, year: year);
@@ -275,17 +281,88 @@ class TMDBService {
           : null;
     }
 
-    Map<String, dynamic>? details;
-    details = await getTVDetails(title, year: year);
-    details ??= await getMovieDetails(title, year: year);
+    // Check if this request is already being processed
+    if (_processingRequests.contains(cacheKey)) {
+      // Wait for the existing request to complete
+      final completer = Completer<String?>();
+      _pendingRequests.putIfAbsent(cacheKey, () => []).add(completer.complete);
+      return completer.future;
+    }
 
-    final image =
-        (details?['backdrop'] as String?) ?? (details?['poster'] as String?);
-    // Cache both hits and misses (shorter TTL for misses) to avoid spamming TMDB
-    _setCache(cacheKey, {
-      'image': image,
-    }, ttl: image == null ? const Duration(hours: 1) : null);
-    return image;
+    // Mark as processing
+    _processingRequests.add(cacheKey);
+
+    try {
+      Map<String, dynamic>? details;
+      details = await getTVDetails(title, year: year);
+      details ??= await getMovieDetails(title, year: year);
+
+      final image =
+          (details?['backdrop'] as String?) ?? (details?['poster'] as String?);
+      // Cache both hits and misses (shorter TTL for misses) to avoid spamming TMDB
+      _setCache(cacheKey, {
+        'image': image,
+      }, ttl: image == null ? const Duration(hours: 1) : null);
+      
+      // Notify all pending requests
+      final pending = _pendingRequests.remove(cacheKey);
+      if (pending != null) {
+        for (final callback in pending) {
+          callback(image);
+        }
+      }
+      
+      return image;
+    } finally {
+      _processingRequests.remove(cacheKey);
+    }
+  }
+
+  /// Batch fetch artwork for multiple titles at once.
+  /// Returns a map of title -> image URL (or null if not found).
+  /// This reduces API rate limiting issues.
+  static Future<Map<String, String?>> getBestBackdropBatch(
+    List<String> titles, {
+    int? year,
+  }) async {
+    await init();
+    final results = <String, String?>{};
+    
+    // First check cache
+    final uncached = <String>[];
+    for (final title in titles) {
+      final cacheKey = _cacheKey('art:best', title, year: year);
+      final cached = _getFromCache(cacheKey);
+      if (cached != null && cached.containsKey('image')) {
+        results[title] = (cached['image'] as String?)?.isNotEmpty == true
+            ? cached['image'] as String
+            : null;
+      } else {
+        uncached.add(title);
+      }
+    }
+    
+    // Fetch uncached in parallel with rate limiting
+    if (uncached.isNotEmpty) {
+      // Process in chunks of 5 to avoid rate limiting
+      const chunkSize = 5;
+      for (var i = 0; i < uncached.length; i += chunkSize) {
+        final chunk = uncached.skip(i).take(chunkSize).toList();
+        final futures = chunk.map((title) => getBestBackdrop(title, year: year));
+        final chunkResults = await Future.wait(futures);
+        
+        for (var j = 0; j < chunk.length; j++) {
+          results[chunk[j]] = chunkResults[j];
+        }
+        
+        // Small delay between chunks to respect rate limits
+        if (i + chunkSize < uncached.length) {
+          await Future.delayed(const Duration(milliseconds: 200));
+        }
+      }
+    }
+    
+    return results;
   }
 
   /// Initialize TMDBService (loads disk cache). Call once during app startup.

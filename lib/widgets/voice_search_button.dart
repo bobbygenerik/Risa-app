@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/services/voice_search_service.dart';
 import 'package:iptv_player/utils/app_theme.dart';
@@ -7,12 +8,14 @@ class VoiceSearchButton extends StatefulWidget {
   final Function(String)? onSearchResult;
   final bool usePillStyle;
   final String? label;
+  final FocusNode? focusNode;
 
   const VoiceSearchButton({
     super.key,
     this.onSearchResult,
     this.usePillStyle = false,
     this.label,
+    this.focusNode,
   });
 
   @override
@@ -174,10 +177,10 @@ class _VoiceSearchButtonState extends State<VoiceSearchButton>
         : Colors.white.withAlpha((0.05 * 255).round());
     final Color iconColor = isListening ? AppTheme.accentRed : Colors.white;
 
-    return GestureDetector(
+    final buttonWidget = GestureDetector(
       onTap: () => _toggleListening(voiceService),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(999),
@@ -205,6 +208,25 @@ class _VoiceSearchButtonState extends State<VoiceSearchButton>
         ),
       ),
     );
+
+    if (widget.focusNode != null) {
+      return Focus(
+        focusNode: widget.focusNode,
+        onKeyEvent: (node, event) {
+          if (event is KeyDownEvent) {
+            if (event.logicalKey == LogicalKeyboardKey.select ||
+                event.logicalKey == LogicalKeyboardKey.enter) {
+              _toggleListening(voiceService);
+              return KeyEventResult.handled;
+            }
+          }
+          return KeyEventResult.ignored;
+        },
+        child: buttonWidget,
+      );
+    }
+
+    return buttonWidget;
   }
 }
 

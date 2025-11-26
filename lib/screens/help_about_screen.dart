@@ -174,6 +174,10 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
           // Pressing UP from any tab should go to top bar
           FocusScope.of(context).previousFocus();
           return KeyEventResult.handled;
+        } else if (key == LogicalKeyboardKey.arrowDown) {
+          // Navigate down to content area
+          FocusScope.of(context).nextFocus();
+          return KeyEventResult.handled;
         } else if (key == LogicalKeyboardKey.arrowRight && index < 2) {
           setState(() {
             _selectedTab = index + 1;

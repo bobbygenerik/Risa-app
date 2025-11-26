@@ -361,9 +361,12 @@ class ChannelProvider with ChangeNotifier {
           debugPrint('ChannelProvider: Playlist cached to file (${file.path}, $totalBytes bytes)');
         }
 
+        // Do NOT auto-save EPG URL from M3U x-tvg-url attribute
+        // M3U playlists don't contain EPG data, only optionally reference external EPG
+        // Users should manually configure EPG URL in settings if needed
         if (parsed['epgUrl'] != null) {
-          debugPrint('ChannelProvider: Saving EPG URL: ${parsed['epgUrl']}');
-          await prefs.setString('epg_url', parsed['epgUrl']);
+          debugPrint('ChannelProvider: Found EPG URL in M3U: ${parsed['epgUrl']} (not auto-saving)');
+          // await prefs.setString('epg_url', parsed['epgUrl']); // Commented out
         }
 
         await _loadXtreamVOD(url);
@@ -445,10 +448,13 @@ class ChannelProvider with ChangeNotifier {
         _contentProvider!.loadSeries(_series);
       }
 
+      // Do NOT auto-save EPG URL from M3U x-tvg-url attribute
+      // M3U playlists don't contain EPG data, only optionally reference external EPG
       final epgUrl = parsed['epgUrl'] as String?;
       if (epgUrl != null && epgUrl.isNotEmpty) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('epg_url', epgUrl);
+        debugPrint('ChannelProvider: Found EPG URL in M3U: $epgUrl (not auto-saving)');
+        // final prefs = await SharedPreferences.getInstance();
+        // await prefs.setString('epg_url', epgUrl);
       }
 
       _isLoading = false;

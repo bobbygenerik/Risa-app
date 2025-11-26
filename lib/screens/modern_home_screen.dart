@@ -6,7 +6,6 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/content.dart';
-import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/epg_service.dart';
 
@@ -28,6 +27,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
   final FocusNode _heroFocusNode = FocusNode(debugLabel: 'HeroBanner');
   int _currentPage = 0;
   Timer? _autoScrollTimer;
+  final Map<String, String?> _tmdbArtCache = {};
 
   static const int _maxHeroChannels = 6;
   static const Duration _autoScrollDuration = Duration(seconds: 7);
@@ -47,6 +47,35 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
   void initState() {
     super.initState();
     _startAutoScroll();
+    _preloadHeroArtwork();
+  }
+
+  void _preloadHeroArtwork() async {
+    final channelProvider = Provider.of<ChannelProvider>(context, listen: false);
+    final epgService = Provider.of<EpgService>(context, listen: false);
+    final channels = channelProvider.channels.take(_maxHeroChannels).toList();
+    
+    if (channels.isEmpty) return;
+    
+    final titles = <String>[];
+    for (final channel in channels) {
+      final currentProgram = epgService.getCurrentProgram(channel.id);
+      final showTitle = currentProgram?.title.isNotEmpty == true 
+          ? currentProgram!.title 
+          : channel.name;
+      titles.add(showTitle);
+    }
+    
+    try {
+      final results = await TMDBService.getBestBackdropBatch(titles);
+      if (mounted) {
+        setState(() {
+          _tmdbArtCache.addAll(results);
+        });
+      }
+    } catch (e) {
+      debugPrint('HomeScreen: Error batch-fetching TMDB art: $e');
+    }
   }
 
   void _startAutoScroll() {
@@ -90,9 +119,39 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
     super.dispose();
   }
 
+  Future<void> _showExitConfirmation(BuildContext context) async {
+    final shouldExit = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Exit App?'),
+        content: const Text('Do you want to exit Stream Hub?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Exit'),
+          ),
+        ],
+      ),
+    );
+    
+    if (shouldExit == true && context.mounted) {
+      SystemNavigator.pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _showExitConfirmation(context);
+      },
+      child: Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -106,8 +165,34 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
       child: Consumer<ChannelProvider>(
         builder: (context, channelProvider, _) {
           final channels = channelProvider.channels;
+          final isLoading = channelProvider.isLoading;
           
-          // Show empty state if no channels available
+          // Show loading indicator if playlist is being loaded
+          if (isLoading && channels.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.accentOrange),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Loading Playlist...',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Please wait while we load your channels',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            );
+          }
+          
+          // Show empty state if no channels available and not loading
           if (channels.isEmpty) {
             return Center(
               child: Column(
@@ -132,9 +217,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
                   const SizedBox(height: 32),
                     GoToSettingsButton(
                       onPressed: () {
-                        Future.delayed(const Duration(milliseconds: 100), () {
-                          if (context.mounted) context.go('/settings');
-                        });
+                        if (context.mounted) context.go('/settings');
                       },
                     ),
                 ],
@@ -173,6 +256,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
             ),
           );
         },
+      ),
       ),
     );
   }
@@ -241,106 +325,122 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
                     final heroImage = snapshot.data;
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                      child: TVFocusable(
-                        borderRadius: BorderRadius.circular(24),
-                        onPressed: () => context.push('/player', extra: channel),
+                      child: Focus(
                         focusNode: index == _currentPage ? _heroFocusNode : null,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(24),
-                          child: Container(
-                            height: 400,
-                            width: double.infinity,
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  Color(0xFF050710),
-                                  Color(0xFF0d1140),
-                                ],
-                              ),
-                            ),
-                            child: Stack(
-                              children: [
-                                // Background image or gradient
-                                Container(
-                                  color: AppTheme.cardBackground,
-                                  child: heroImage != null && heroImage.isNotEmpty
-                                      ? Image.network(
-                                          heroImage.replaceFirst('/w1280', '/w780'),
-                                          fit: BoxFit.cover,
-                                          width: double.infinity,
-                                          height: double.infinity,
-                                          cacheWidth: 1280,
-                                          cacheHeight: 720,
-                                          errorBuilder: (_, __, ___) => _buildPlaceholderGradient(),
-                                        )
-                                      : _buildPlaceholderGradient(),
-                                ),
-                                // Channel logo overlay (top left)
-                                if (channel.logoUrl != null && channel.logoUrl!.isNotEmpty)
-                                  Positioned(
-                                    top: 20,
-                                    left: 20,
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withOpacity(0.7),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      padding: const EdgeInsets.all(6),
-                                      child: Image.network(
-                                        channel.logoUrl!,
-                                        width: 48,
-                                        height: 48,
-                                        fit: BoxFit.contain,
-                                        cacheWidth: 96,
-                                        cacheHeight: 96,
-                                        errorBuilder: (_, __, ___) => const Icon(Icons.live_tv, color: Colors.white, size: 32),
-                                      ),
-                                    ),
-                                  ),
-                                // Now Playing badge (top right)
-                                Positioned(
-                                  top: 20,
-                                  right: 20,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.accentOrange,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: const Text(
-                                      'NOW PLAYING',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                        letterSpacing: 1.2,
-                                      ),
-                                    ),
+                        child: Builder(
+                          builder: (context) {
+                            final isFocused = Focus.of(context).hasFocus;
+                            return GestureDetector(
+                              onTap: () => context.push('/player', extra: channel),
+                              child: Container(
+                                height: 400,
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(24),
+                                  border: isFocused
+                                      ? Border.all(color: Colors.white, width: 2)
+                                      : null,
+                                  boxShadow: isFocused
+                                      ? [
+                                          BoxShadow(
+                                            color: Colors.black.withAlpha((0.3 * 255).round()),
+                                            offset: const Offset(0, 4),
+                                            blurRadius: 8,
+                                          ),
+                                        ]
+                                      : null,
+                                  gradient: const LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      Color(0xFF050710),
+                                      Color(0xFF0d1140),
+                                    ],
                                   ),
                                 ),
-                                // Content overlay
-                                Positioned(
-                                  bottom: 0,
-                                  left: 0,
-                                  right: 0,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(24),
-                                    decoration: const BoxDecoration(
-                                      gradient: LinearGradient(
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                        colors: [
-                                          Color(0xFF050710),
-                                          Color(0xFF0d1140),
-                                        ],
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(24),
+                                  child: Stack(
+                                    children: [
+                                      // Background image or gradient
+                                      Container(
+                                        color: AppTheme.cardBackground,
+                                        child: heroImage != null && heroImage.isNotEmpty
+                                            ? Image.network(
+                                                heroImage.replaceFirst('/w1280', '/w780'),
+                                                fit: BoxFit.cover,
+                                                width: double.infinity,
+                                                height: double.infinity,
+                                                cacheWidth: 1280,
+                                                cacheHeight: 720,
+                                                errorBuilder: (_, __, ___) => _buildPlaceholderGradient(),
+                                              )
+                                            : _buildPlaceholderGradient(),
                                       ),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
+                                      // Channel logo overlay (top left)
+                                      if (channel.logoUrl != null && channel.logoUrl!.isNotEmpty)
+                                        Positioned(
+                                          top: 20,
+                                          left: 20,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: Colors.black.withOpacity(0.7),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            padding: const EdgeInsets.all(6),
+                                            child: Image.network(
+                                              channel.logoUrl!,
+                                              width: 48,
+                                              height: 48,
+                                              fit: BoxFit.contain,
+                                              cacheWidth: 96,
+                                              cacheHeight: 96,
+                                              errorBuilder: (_, __, ___) => const Icon(Icons.live_tv, color: Colors.white, size: 32),
+                                            ),
+                                          ),
+                                        ),
+                                      // Now Playing badge (top right)
+                                      Positioned(
+                                        top: 20,
+                                        right: 20,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.accentOrange,
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: const Text(
+                                            'NOW PLAYING',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                              letterSpacing: 1.2,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      // Content overlay
+                                      Positioned(
+                                        bottom: 0,
+                                        left: 0,
+                                        right: 0,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(24),
+                                          decoration: const BoxDecoration(
+                                            gradient: LinearGradient(
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                              colors: [
+                                                Color(0xFF050710),
+                                                Color(0xFF0d1140),
+                                              ],
+                                            ),
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
                                         Text(
                                           showTitle,
                                           style: const TextStyle(
@@ -406,21 +506,49 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
                             ),
                           ),
                         ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        );
+                      );
+                    },
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    ),
+  );
       },
     );
   }
 
   Future<String?> _getBestArt(String title) async {
-    final details = await TMDBService.getTVDetails(title) ?? await TMDBService.getMovieDetails(title);
-    return details?['backdrop'] ?? details?['poster'];
+    // Check local cache first
+    if (_tmdbArtCache.containsKey(title)) {
+      return _tmdbArtCache[title];
+    }
+    
+    try {
+      debugPrint('HomeScreen: Fetching TMDB art for: "$title"');
+      final details = await TMDBService.getTVDetails(title) ?? await TMDBService.getMovieDetails(title);
+      final art = details?['backdrop'] ?? details?['poster'];
+      if (art != null) {
+        debugPrint('HomeScreen: Found TMDB art for "$title": $art');
+      } else {
+        debugPrint('HomeScreen: No TMDB art found for "$title"');
+      }
+      
+      // Cache the result
+      if (mounted) {
+        setState(() {
+          _tmdbArtCache[title] = art;
+        });
+      }
+      
+      return art;
+    } catch (e) {
+      debugPrint('HomeScreen: Error fetching TMDB art for "$title": $e');
+      return null;
+    }
   }
 
   String _formatTime(DateTime time) {
@@ -509,45 +637,60 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
                 policy: WidgetOrderTraversalPolicy(),
                 child: Row(
                   children: movies.take(6).map((content) {
-                    return TVFocusable(
-                      focusMargin: const EdgeInsets.only(right: 16),
-                      borderRadius: BorderRadius.circular(12),
-                      onPressed: () => onTap(content),
-                      child: Container(
-                        width: 180,
-                        height: 280,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          color: AppTheme.cardBackground,
-                          border: Border.all(
-                            color: Colors.white.withAlpha((0.1 * 255).round()),
-                            width: 1,
-                          ),
-                        ),
-                        child: Stack(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: content.imageUrl != null
-                                  ? Image.network(
-                                      content.imageUrl!,
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                      height: double.infinity,
-                                      cacheWidth: 320,
-                                      cacheHeight: 480,
-                                      errorBuilder: (_, __, ___) =>
-                                      _buildCardPlaceholder(),
-                                    )
-                                  : _buildCardPlaceholder(),
-                            ),
-                            Positioned(
-                              bottom: 0,
-                              left: 0,
-                              right: 0,
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 16),
+                      child: Focus(
+                        child: Builder(
+                          builder: (context) {
+                            final isFocused = Focus.of(context).hasFocus;
+                            return GestureDetector(
+                              onTap: () => onTap(content),
                               child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: const BoxDecoration(
+                                width: 180,
+                                height: 280,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  color: AppTheme.cardBackground,
+                                  border: Border.all(
+                                    color: isFocused
+                                        ? Colors.white
+                                        : Colors.white.withAlpha((0.1 * 255).round()),
+                                    width: isFocused ? 2 : 1,
+                                  ),
+                                  boxShadow: isFocused
+                                      ? [
+                                          BoxShadow(
+                                            color: Colors.black.withAlpha((0.3 * 255).round()),
+                                            offset: const Offset(0, 4),
+                                            blurRadius: 8,
+                                          ),
+                                        ]
+                                      : null,
+                                ),
+                                child: Stack(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: content.imageUrl != null
+                                          ? Image.network(
+                                              content.imageUrl!,
+                                              fit: BoxFit.cover,
+                                              width: double.infinity,
+                                              height: double.infinity,
+                                              cacheWidth: 320,
+                                              cacheHeight: 480,
+                                              errorBuilder: (_, __, ___) =>
+                                              _buildCardPlaceholder(),
+                                            )
+                                          : _buildCardPlaceholder(),
+                                    ),
+                                    Positioned(
+                                      bottom: 0,
+                                      left: 0,
+                                      right: 0,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: const BoxDecoration(
                                   gradient: LinearGradient(
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
@@ -574,6 +717,10 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
                               ),
                             ),
                           ],
+                        ),
+                      ),
+                    );
+                          },
                         ),
                       ),
                     );
@@ -619,36 +766,55 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
                 policy: WidgetOrderTraversalPolicy(),
                 child: Row(
                   children: channels.map((channel) {
-                    return TVFocusable(
-                      focusMargin: const EdgeInsets.only(right: 16),
-                      borderRadius: BorderRadius.circular(12),
-                      onPressed: () => onTap(channel),
-                      child: Container(
-                        width: 200,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          color: AppTheme.cardBackground,
-                          border: Border.all(
-                            color: Colors.white.withAlpha((0.1 * 255).round()),
-                            width: 1,
-                          ),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: channel.logoUrl != null &&
-                                  channel.logoUrl!.isNotEmpty
-                                ? Image.network(
-                                  channel.logoUrl!,
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  cacheWidth: 320,
-                                  cacheHeight: 180,
-                                  errorBuilder: (_, __, ___) =>
-                                    _buildChannelPlaceholder(channel.name),
-                                )
-                              : _buildChannelPlaceholder(channel.name),
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 16),
+                      child: Focus(
+                        child: Builder(
+                          builder: (context) {
+                            final isFocused = Focus.of(context).hasFocus;
+                            return GestureDetector(
+                              onTap: () => onTap(channel),
+                              child: Container(
+                                width: 200,
+                                height: 120,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  color: AppTheme.cardBackground,
+                                  border: Border.all(
+                                    color: isFocused
+                                        ? Colors.white
+                                        : Colors.white.withAlpha((0.1 * 255).round()),
+                                    width: isFocused ? 2 : 1,
+                                  ),
+                                  boxShadow: isFocused
+                                      ? [
+                                          BoxShadow(
+                                            color: Colors.black.withAlpha((0.3 * 255).round()),
+                                            offset: const Offset(0, 4),
+                                            blurRadius: 8,
+                                          ),
+                                        ]
+                                      : null,
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: channel.logoUrl != null &&
+                                          channel.logoUrl!.isNotEmpty
+                                        ? Image.network(
+                                          channel.logoUrl!,
+                                          fit: BoxFit.cover,
+                                          width: double.infinity,
+                                          height: double.infinity,
+                                          cacheWidth: 320,
+                                          cacheHeight: 180,
+                                          errorBuilder: (_, __, ___) =>
+                                            _buildChannelPlaceholder(channel.name),
+                                        )
+                                      : _buildChannelPlaceholder(channel.name),
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     );

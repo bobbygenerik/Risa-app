@@ -6,19 +6,26 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/screens/enhanced_video_player_screen.dart';
+import 'package:iptv_player/widgets/channel_selection_dialog.dart';
 
 /// Multi-view screen for watching up to 4 streams simultaneously
 /// Supports 1, 2, or 4 player grid layouts with audio switching
 class MultiViewScreen extends StatefulWidget {
-  final List<Channel> channels;
+  final List<Channel>? channels;
+  final Channel? initialChannel;
 
-  const MultiViewScreen({super.key, required this.channels});
+  const MultiViewScreen({
+    super.key,
+    this.channels,
+    this.initialChannel,
+  });
 
   @override
   State<MultiViewScreen> createState() => _MultiViewScreenState();
 }
 
 class _MultiViewScreenState extends State<MultiViewScreen> {
+  late List<Channel> _channelsList;
   final List<VideoPlayerController?> _controllers = [null, null, null, null];
   final List<bool> _isInitialized = [false, false, false, false];
   final List<bool> _hasError = [false, false, false, false];
@@ -45,6 +52,14 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
   @override
   void initState() {
     super.initState();
+    // Initialize channels list from either channels or initialChannel
+    if (widget.channels != null && widget.channels!.isNotEmpty) {
+      _channelsList = widget.channels!;
+    } else if (widget.initialChannel != null) {
+      _channelsList = [widget.initialChannel!];
+    } else {
+      _channelsList = [];
+    }
     _loadSettings();
     _initializePlayers();
     _startControlsTimer();
@@ -60,10 +75,10 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
   }
 
   Future<void> _initializePlayers() async {
-    for (int i = 0; i < widget.channels.length && i < 4; i++) {
+    for (int i = 0; i < _channelsList.length && i < 4; i++) {
       try {
         _controllers[i] = VideoPlayerController.networkUrl(
-          Uri.parse(widget.channels[i].url),
+          Uri.parse(_channelsList[i].url),
         );
 
         await _controllers[i]!.initialize();
@@ -145,14 +160,15 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
   }
 
   void _expandPlayer(int index) {
-    if (index >= widget.channels.length) return;
+    if (index >= _channelsList.length) return;
 
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => EnhancedVideoPlayerScreen(
-          videoUrl: widget.channels[index].url,
-          title: widget.channels[index].name,
+          videoUrl: _channelsList[index].url,
+          title: _channelsList[index].name,
           isLive: true,
+          channel: _channelsList[index],
         ),
       ),
     );
@@ -163,6 +179,51 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
       _gridSize = size;
     });
     _startControlsTimer();
+  }
+
+  Future<void> _selectChannelForSlot(int index) async {
+    final channel = await showDialog<Channel>(
+      context: context,
+      builder: (context) => const ChannelSelectionDialog(),
+    );
+
+    if (channel != null) {
+      setState(() {
+        if (index >= _channelsList.length) {
+          _channelsList.add(channel);
+        } else {
+          _channelsList[index] = channel;
+        }
+      });
+
+      // Initialize the new player
+      try {
+        _controllers[index]?.dispose();
+        _controllers[index] = VideoPlayerController.networkUrl(
+          Uri.parse(channel.url),
+        );
+
+        await _controllers[index]!.initialize();
+        await _controllers[index]!.play();
+
+        // Mute by default unless it's the active audio player
+        if (index != _activeAudioPlayer) {
+          await _controllers[index]!.setVolume(0.0);
+        } else {
+          await _controllers[index]!.setVolume(1.0);
+        }
+
+        setState(() {
+          _isInitialized[index] = true;
+          _hasError[index] = false;
+        });
+      } catch (e) {
+        debugPrint('Error initializing new player $index: $e');
+        setState(() {
+          _hasError[index] = true;
+        });
+      }
+    }
   }
 
   void _handleKeyPress(KeyEvent event) {
@@ -228,7 +289,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
   }
 
   Widget _buildVideoGrid() {
-    final displayCount = _gridSize.clamp(1, widget.channels.length.clamp(1, 4));
+    final displayCount = _gridSize.clamp(1, _channelsList.length.clamp(1, 4));
 
     if (displayCount == 1) {
       return _buildPlayerTile(0, isSingle: true);
@@ -265,26 +326,54 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
   }
 
   Widget _buildPlayerTile(int index, {bool isSingle = false}) {
-    if (index >= widget.channels.length) {
-      return Container(
-        margin: const EdgeInsets.all(1),
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF050710),
-              Color(0xFF0d1140),
-            ],
-          ),
-        ),
-        child: const Center(
-          child: Text('No channel', style: TextStyle(color: Colors.white54)),
+    if (index >= _channelsList.length) {
+      return Focus(
+        child: Builder(
+          builder: (context) {
+            final isFocused = Focus.of(context).hasFocus;
+            return GestureDetector(
+              onTap: () => _selectChannelForSlot(index),
+              child: Container(
+                margin: const EdgeInsets.all(1),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF050710),
+                      Color(0xFF0d1140),
+                    ],
+                  ),
+                  border: isFocused ? Border.all(color: AppTheme.primaryBlue, width: 3) : null,
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.add_circle_outline,
+                        size: 48,
+                        color: isFocused ? Colors.white : Colors.white54,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Add Stream ${index + 1}',
+                        style: TextStyle(
+                          color: isFocused ? Colors.white : Colors.white54,
+                          fontWeight: isFocused ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       );
     }
 
-    final channel = widget.channels[index];
+    final channel = _channelsList[index];
     final controller = _controllers[index];
     final isInitialized = _isInitialized[index];
     final hasError = _hasError[index];
@@ -301,9 +390,20 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
         margin: const EdgeInsets.all(1),
         decoration: BoxDecoration(
           border: Border.all(
-            color: isFocused ? AppTheme.primaryBlue : Colors.transparent,
-            width: isFocused ? 3 : 0,
+            // Active audio player gets red accent border, focused player gets blue
+            color: hasAudio 
+                ? AppTheme.accentRed 
+                : (isFocused ? AppTheme.primaryBlue : Colors.transparent),
+            width: hasAudio ? 4 : (isFocused ? 3 : 0),
           ),
+          // Add a subtle glow effect to the active audio player
+          boxShadow: hasAudio ? [
+            BoxShadow(
+              color: AppTheme.accentRed.withOpacity(0.5),
+              blurRadius: 8,
+              spreadRadius: 2,
+            ),
+          ] : null,
         ),
         child: Stack(
           children: [
@@ -459,6 +559,32 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                   ),
                 ),
               ),
+            
+            // Active audio indicator (always visible)
+            if (hasAudio && !_showControls)
+              Positioned(
+                bottom: 8,
+                right: 8,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accentRed,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.accentRed.withOpacity(0.5),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.volume_up,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -484,13 +610,26 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
             ),
             child: Row(
               children: [
-                IconButton(
-                  icon: const Icon(
-                    Icons.arrow_back,
-                    color: Colors.white,
-                    size: 28,
+                Focus(
+                  child: Builder(
+                    builder: (context) {
+                      final isFocused = Focus.of(context).hasFocus;
+                      return Container(
+                        decoration: BoxDecoration(
+                          border: isFocused ? Border.all(color: Colors.white, width: 2) : null,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      );
+                    },
                   ),
-                  onPressed: () => Navigator.of(context).pop(),
                 ),
                 const SizedBox(width: 16),
                 const Text(
@@ -548,16 +687,29 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
 
   Widget _buildGridSizeButton(int size, IconData icon) {
     final isActive = _gridSize == size;
-    return Material(
-      color: isActive ? AppTheme.primaryBlue : Colors.white.withAlpha((0.2 * 255).round()),
-      borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        onTap: () => _changeGridSize(size),
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.all(8),
-          child: Icon(icon, color: Colors.white, size: 20),
-        ),
+    return Focus(
+      child: Builder(
+        builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
+          return Material(
+            color: isActive ? AppTheme.primaryBlue : Colors.white.withAlpha((0.2 * 255).round()),
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              decoration: BoxDecoration(
+                border: isFocused ? Border.all(color: Colors.white, width: 2) : null,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: InkWell(
+                onTap: () => _changeGridSize(size),
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  child: Icon(icon, color: Colors.white, size: 20),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
