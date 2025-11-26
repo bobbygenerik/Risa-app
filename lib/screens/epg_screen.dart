@@ -58,11 +58,16 @@ class _EPGScreenState extends State<EPGScreen> {
       debugPrint('EPG Screen: EPG URL = $epgUrl');
       debugPrint('EPG Screen: hasData = ${epgService.hasData}');
       debugPrint('EPG Screen: epgData.length = ${epgService.epgData.length}');
+      debugPrint('EPG Screen: isLoading = ${epgService.isLoading}');
       
       if (epgUrl != null && epgUrl.isNotEmpty) {
         if (!epgService.hasData) {
           debugPrint('EPG Screen: Loading EPG from URL: $epgUrl');
           await epgService.loadEpgFromUrl(epgUrl);
+          debugPrint('EPG Screen: After load - hasData = ${epgService.hasData}, epgData.length = ${epgService.epgData.length}');
+          if (epgService.epgData.isNotEmpty) {
+            debugPrint('EPG Screen: Sample channel IDs: ${epgService.epgData.keys.take(5).join(", ")}');
+          }
         } else {
           debugPrint('EPG Screen: EPG data already loaded (${epgService.epgData.length} channels)');
         }

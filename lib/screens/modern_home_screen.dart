@@ -28,6 +28,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
   int _currentPage = 0;
   Timer? _autoScrollTimer;
   final Map<String, String?> _tmdbArtCache = {};
+  List<Channel> _cachedFeaturedChannels = [];
 
   static const int _maxHeroChannels = 6;
   static const Duration _autoScrollDuration = Duration(seconds: 7);
@@ -59,7 +60,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
     
     final titles = <String>[];
     for (final channel in channels) {
-      final currentProgram = epgService.getCurrentProgram(channel.id);
+      final currentProgram = epgService.getCurrentProgram(channel.tvgId ?? channel.id);
       final showTitle = currentProgram?.title.isNotEmpty == true 
           ? currentProgram!.title 
           : channel.name;
@@ -103,7 +104,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
     if (channels.isEmpty) return;
     final idx = (page % channels.length + channels.length) % channels.length;
     final channel = channels[idx];
-    final currentProgram = epgService.getCurrentProgram(channel.id);
+    final currentProgram = epgService.getCurrentProgram(channel.tvgId ?? channel.id);
     final showTitle = currentProgram?.title.isNotEmpty == true ? currentProgram!.title : channel.name;
     _getBestArt(showTitle).then((url) {
       if (url != null && url.isNotEmpty) {
@@ -314,7 +315,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
               },
               itemBuilder: (context, index) {
                 final channel = channels[index];
-                final currentProgram = epgService.getCurrentProgram(channel.id);
+                final currentProgram = epgService.getCurrentProgram(channel.tvgId ?? channel.id);
                 final showTitle = currentProgram?.title.isNotEmpty == true ? currentProgram!.title : channel.name;
                 final startTime = currentProgram?.startTime;
                 final endTime = currentProgram?.endTime;
@@ -742,12 +743,19 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
   }) {
     return Consumer<ChannelProvider>(
       builder: (context, channelProvider, _) {
-        // Get random channels for featured section
-        final allChannels = List<Channel>.from(channelProvider.channels);
-        if (allChannels.isEmpty) return const SizedBox.shrink();
+        // Cache random channels on first build or when channel list changes
+        if (_cachedFeaturedChannels.isEmpty || 
+            _cachedFeaturedChannels.length != 6 ||
+            !channelProvider.channels.contains(_cachedFeaturedChannels.firstOrNull)) {
+          final allChannels = List<Channel>.from(channelProvider.channels);
+          if (allChannels.isEmpty) return const SizedBox.shrink();
+          
+          allChannels.shuffle();
+          _cachedFeaturedChannels = allChannels.take(6).toList();
+        }
         
-        allChannels.shuffle();
-        final channels = allChannels.take(6).toList();
+        final channels = _cachedFeaturedChannels;
+        if (channels.isEmpty) return const SizedBox.shrink();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,

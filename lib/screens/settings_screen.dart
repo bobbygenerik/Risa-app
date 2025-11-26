@@ -1136,7 +1136,6 @@ class _SettingsScreenState extends State<SettingsScreen>
                         context,
                         const SnackBar(
                           content: Text('Updating EPG data...'),
-                          backgroundColor: AppTheme.primaryBlue,
                         ),
                       );
                     },
