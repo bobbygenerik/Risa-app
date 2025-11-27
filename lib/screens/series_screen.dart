@@ -56,9 +56,10 @@ class _SeriesScreenState extends State<SeriesScreen>
   @override
   void initState() {
     super.initState();
+    _watchFocus.addListener(_onWatchFocusChange);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       _startCarousel();
-      _watchFocus.addListener(_onWatchFocusChange);
       _prepareCuratedSeriesList();
       _preloadTMDBArtwork();
       final focusNode = _watchFocus;
