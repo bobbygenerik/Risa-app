@@ -15,16 +15,21 @@ def create_icon(filename, width, height):
     
     # Dark blue gradient background
     radius = 15
+    if width <= 0 or height <= 0:
+        return
     for x in range(width):
         for y in range(height):
-            # Rounded rectangle check
-            dist = ((x - radius) ** 2 + (y - radius) ** 2) ** 0.5
-            if dist <= radius or x >= width - radius or y >= height - radius:
-                if x >= radius and x < width - radius and y >= radius and y < height - radius:
-                    r = int(26 + (x / width) * 20)
-                    g = int(37 + (y / height) * 20)
-                    b = int(64)
-                    img.putpixel((x, y), (r, g, b, 255))
+            try:
+                # Rounded rectangle check
+                dist = ((x - radius) ** 2 + (y - radius) ** 2) ** 0.5
+                if dist <= radius or x >= width - radius or y >= height - radius:
+                    if x >= radius and x < width - radius and y >= radius and y < height - radius:
+                        r = int(26 + (x / width) * 20)
+                        g = int(37 + (y / height) * 20)
+                        b = int(64)
+                        img.putpixel((x, y), (r, g, b, 255))
+            except (IndexError, ValueError, ZeroDivisionError, OverflowError):
+                pass
     
     # Draw play button in center
     center_x, center_y = width // 2, height // 2

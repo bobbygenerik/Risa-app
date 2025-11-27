@@ -17,8 +17,10 @@ echo ""
 
 # Create output directory
 echo "📁 Creating output directories..."
-mkdir -p "${BUILD_DIR}"
-mkdir -p "${OUT_DIR}"
+if ! mkdir -p "${BUILD_DIR}" || ! mkdir -p "${OUT_DIR}"; then
+    echo "❌ Failed to create output directories"
+    exit 1
+fi
 
 # Validate BrightScript files
 echo "✓ Validating BrightScript files..."
@@ -44,7 +46,10 @@ fi
 
 # Create a temporary staging directory for roku-deploy
 STAGING_DIR="${PROJECT_DIR}/.roku-staging"
-mkdir -p "${STAGING_DIR}"
+if ! mkdir -p "${STAGING_DIR}"; then
+    echo "❌ Failed to create staging directory"
+    exit 1
+fi
 
 # Copy files to staging
 cp -r "${PROJECT_DIR}/source" "${STAGING_DIR}/"

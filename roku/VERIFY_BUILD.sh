@@ -5,7 +5,10 @@ echo "IPTV Player - Roku Build Verify"
 echo "================================"
 echo ""
 
-cd /root/iptv-player/roku
+if ! cd /root/iptv-player/roku; then
+    echo "❌ Failed to change to roku directory"
+    exit 1
+fi
 
 echo "✓ Checking source files..."
 if [ -f "source/Main.brs" ]; then echo "  ✅ Main.brs"; else echo "  ❌ Main.brs MISSING"; fi

@@ -29,12 +29,18 @@ def create_icon(size):
     screen_rect = [margin, margin, size - margin, size - margin]
     
     # Outer TV frame (pink)
-    draw.rounded_rectangle(screen_rect, radius=size//10, fill=ACCENT_PINK, width=size//20)
+    try:
+        draw.rounded_rectangle(screen_rect, radius=size//10, fill=ACCENT_PINK, width=size//20)
+    except (ValueError, TypeError):
+        draw.rectangle(screen_rect, fill=ACCENT_PINK)
     
     # Inner screen (darker blue)
     inner_margin = margin + size // 15
     inner_rect = [inner_margin, inner_margin, size - inner_margin, size - inner_margin]
-    draw.rounded_rectangle(inner_rect, radius=size//12, fill=(20, 22, 90))
+    try:
+        draw.rounded_rectangle(inner_rect, radius=size//12, fill=(20, 22, 90))
+    except (ValueError, TypeError):
+        draw.rectangle(inner_rect, fill=(20, 22, 90))
     
     # Play button triangle in center
     center_x = size // 2
