@@ -505,15 +505,10 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   // Allow parent shell to request focus into this screen's sidebar
   void requestFirstSidebarFocus() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_menuFocusNodes.isNotEmpty) {
-        _menuFocusNodes[_tabController!.index.clamp(
-              0,
-              _menuFocusNodes.length - 1,
-            )]
-            .requestFocus();
-      }
-    });
+    if (_menuFocusNodes.isNotEmpty) {
+      final idx = _tabController!.index.clamp(0, _menuFocusNodes.length - 1);
+      _menuFocusNodes[idx].requestFocus();
+    }
   }
 
   void requestFirstContentFocus() {
