@@ -1134,26 +1134,100 @@ class _SettingsScreenState extends State<SettingsScreen>
             Row(
               children: [
                 Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      showAppSnackBar(
-                        context,
-                        const SnackBar(
-                          content: Text('Updating EPG data...'),
-                        ),
-                      );
+                  child: Focus(
+                    focusNode: _updateEpgButtonFocusNode,
+                    onKeyEvent: (node, event) {
+                      if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                        requestFirstSidebarFocus();
+                        return KeyEventResult.handled;
+                      }
+                      if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                        _clearEpgButtonFocusNode.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
                     },
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Update EPG'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryBlue,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Builder(
+                      builder: (context) {
+                        final isFocused = Focus.of(context).hasFocus;
+                        if (isFocused) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            final ctx = _updateEpgButtonFocusNode.context;
+                            if (ctx != null) {
+                              Scrollable.ensureVisible(
+                                ctx,
+                                duration: const Duration(milliseconds: 150),
+                                curve: Curves.easeOut,
+                                alignment: 0.6,
+                              );
+                            }
+                          });
+                        }
+                        return Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            border: isFocused
+                                ? Border.all(color: AppTheme.primaryBlue, width: 3)
+                                : null,
+                          ),
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              showAppSnackBar(
+                                context,
+                                const SnackBar(
+                                  content: Text('Updating EPG data...'),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Update EPG'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryBlue,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ),
                 const SizedBox(width: AppSizes.md),
                 Expanded(
-                  child: ElevatedButton.icon(
+                  child: Focus(
+                    focusNode: _clearEpgButtonFocusNode,
+                    onKeyEvent: (node, event) {
+                      if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                        _updateEpgButtonFocusNode.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child: Builder(
+                      builder: (context) {
+                        final isFocused = Focus.of(context).hasFocus;
+                        if (isFocused) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            final ctx = _clearEpgButtonFocusNode.context;
+                            if (ctx != null) {
+                              Scrollable.ensureVisible(
+                                ctx,
+                                duration: const Duration(milliseconds: 150),
+                                curve: Curves.easeOut,
+                                alignment: 0.6,
+                              );
+                            }
+                          });
+                        }
+                        return Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            border: isFocused
+                                ? Border.all(color: AppTheme.primaryBlue, width: 3)
+                                : null,
+                          ),
+                          child: ElevatedButton.icon(
                     onPressed: () async {
                       // Show confirmation dialog
                       final confirm = await showDialog<bool>(
@@ -1193,11 +1267,15 @@ class _SettingsScreenState extends State<SettingsScreen>
                         }
                       }
                     },
-                    icon: const Icon(Icons.delete_sweep),
-                    label: const Text('Clear EPG'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.shade700,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                            icon: const Icon(Icons.delete_sweep),
+                            label: const Text('Clear EPG'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red.shade700,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -1296,72 +1374,98 @@ class _SettingsScreenState extends State<SettingsScreen>
                         return KeyEventResult.handled;
                       }
                       if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                        // Stay on button
+                        _clearPlaylistCacheButtonFocusNode.requestFocus();
                         return KeyEventResult.handled;
                       }
                       return KeyEventResult.ignored;
                     },
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                    final url = _m3uUrlController.text.trim();
-                    if (url.isEmpty) {
-                      if (!mounted) return;
-                      showAppSnackBar(
-                        context,
-                        const SnackBar(content: Text('Please enter a valid M3U URL')),
-                      );
-                      return;
-                    }
-
-                    if (mounted) {
-                      showAppSnackBar(
-                        context,
-                        const SnackBar(content: Text('Loading playlist from URL...')),
-                      );
-                    }
-
-                    try {
-                      final provider = Provider.of<ChannelProvider>(
-                        context,
-                        listen: false,
-                      );
-                      await provider.loadPlaylistFromUrl(url);
-
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setString('m3u_url', url);
-                      await prefs.setString('playlist_type', 'm3u');
-
-                      if (!mounted) return;
-                      showAppSnackBar(
-                        context,
-                        SnackBar(
-                          content: Text(
-                            'Playlist loaded successfully! ${provider.channels.length} channels found.',
+                    child: Builder(
+                      builder: (context) {
+                        final isFocused = Focus.of(context).hasFocus;
+                        if (isFocused) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            final ctx = _loadM3uButtonFocusNode.context;
+                            if (ctx != null) {
+                              Scrollable.ensureVisible(
+                                ctx,
+                                duration: const Duration(milliseconds: 150),
+                                curve: Curves.easeOut,
+                                alignment: 0.6,
+                              );
+                            }
+                          });
+                        }
+                        return Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            border: isFocused
+                                ? Border.all(color: AppTheme.primaryBlue, width: 3)
+                                : null,
                           ),
-                          backgroundColor: AppTheme.accentGreen,
-                        ),
-                      );
-                    } catch (e) {
-                      if (mounted) {
-                        showAppSnackBar(
-                          context,
-                          SnackBar(
-                            content: Text(
-                              'Failed to load playlist: ${e.toString()}',
+                          child: ElevatedButton.icon(
+                            onPressed: () async {
+                              final url = _m3uUrlController.text.trim();
+                              if (url.isEmpty) {
+                                if (!mounted) return;
+                                showAppSnackBar(
+                                  context,
+                                  const SnackBar(content: Text('Please enter a valid M3U URL')),
+                                );
+                                return;
+                              }
+
+                              if (mounted) {
+                                showAppSnackBar(
+                                  context,
+                                  const SnackBar(content: Text('Loading playlist from URL...')),
+                                );
+                              }
+
+                              try {
+                                final provider = Provider.of<ChannelProvider>(
+                                  context,
+                                  listen: false,
+                                );
+                                await provider.loadPlaylistFromUrl(url);
+
+                                final prefs = await SharedPreferences.getInstance();
+                                await prefs.setString('m3u_url', url);
+                                await prefs.setString('playlist_type', 'm3u');
+
+                                if (!mounted) return;
+                                showAppSnackBar(
+                                  context,
+                                  SnackBar(
+                                    content: Text(
+                                      'Playlist loaded successfully! ${provider.channels.length} channels found.',
+                                    ),
+                                    backgroundColor: AppTheme.accentGreen,
+                                  ),
+                                );
+                              } catch (e) {
+                                if (mounted) {
+                                  showAppSnackBar(
+                                    context,
+                                    SnackBar(
+                                      content: Text(
+                                        'Failed to load playlist: ${e.toString()}',
+                                      ),
+                                      backgroundColor: AppTheme.accentRed,
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                            icon: const Icon(Icons.download),
+                            label: const Text('Load M3U Playlist'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryBlue,
                             ),
-                            backgroundColor: AppTheme.accentRed,
                           ),
                         );
-                      }
-                    }
-                  },
-                  icon: const Icon(Icons.download),
-                  label: const Text('Load M3U Playlist'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryBlue,
+                      },
+                    ),
                   ),
-                ),
-              ),
                 ],
               ),
             ],
@@ -1426,7 +1530,44 @@ class _SettingsScreenState extends State<SettingsScreen>
                     child: const Text('Clear'),
                   ),
                   const SizedBox(width: AppSizes.sm),
-                  ElevatedButton.icon(
+                  Focus(
+                    focusNode: _loadXtreamButtonFocusNode,
+                    onKeyEvent: (node, event) {
+                      if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                        requestFirstSidebarFocus();
+                        return KeyEventResult.handled;
+                      }
+                      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                        _clearPlaylistCacheButtonFocusNode.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child: Builder(
+                      builder: (context) {
+                        final isFocused = Focus.of(context).hasFocus;
+                        if (isFocused) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            final ctx = _loadXtreamButtonFocusNode.context;
+                            if (ctx != null) {
+                              Scrollable.ensureVisible(
+                                ctx,
+                                duration: const Duration(milliseconds: 150),
+                                curve: Curves.easeOut,
+                                alignment: 0.6,
+                              );
+                            }
+                          });
+                        }
+                        return Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            border: isFocused
+                                ? Border.all(color: AppTheme.primaryBlue, width: 3)
+                                : null,
+                          ),
+                          child: ElevatedButton.icon(
                     onPressed: () async {
                       final server = _xtreamServerController.text.trim();
                       final username = _xtreamUsernameController.text.trim();
@@ -1496,10 +1637,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                         }
                       }
                     },
-                    icon: const Icon(Icons.download),
-                    label: const Text('Load Playlist'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryBlue,
+                            icon: const Icon(Icons.download),
+                            label: const Text('Load Playlist'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryBlue,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],
@@ -1510,7 +1655,48 @@ class _SettingsScreenState extends State<SettingsScreen>
             const SizedBox(height: AppSizes.md),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
+              child: Focus(
+                focusNode: _clearPlaylistCacheButtonFocusNode,
+                onKeyEvent: (node, event) {
+                  if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                  if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                    requestFirstSidebarFocus();
+                    return KeyEventResult.handled;
+                  }
+                  if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                    if (_playlistInputMethod == 0) {
+                      _loadM3uButtonFocusNode.requestFocus();
+                    } else {
+                      _loadXtreamButtonFocusNode.requestFocus();
+                    }
+                    return KeyEventResult.handled;
+                  }
+                  return KeyEventResult.ignored;
+                },
+                child: Builder(
+                  builder: (context) {
+                    final isFocused = Focus.of(context).hasFocus;
+                    if (isFocused) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        final ctx = _clearPlaylistCacheButtonFocusNode.context;
+                        if (ctx != null) {
+                          Scrollable.ensureVisible(
+                            ctx,
+                            duration: const Duration(milliseconds: 150),
+                            curve: Curves.easeOut,
+                            alignment: 0.6,
+                          );
+                        }
+                      });
+                    }
+                    return Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        border: isFocused
+                            ? Border.all(color: AppTheme.primaryBlue, width: 3)
+                            : null,
+                      ),
+                      child: ElevatedButton.icon(
                 onPressed: () async {
                   final confirm = await showDialog<bool>(
                     context: context,
@@ -1543,10 +1729,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                     }
                   }
                 },
-                icon: const Icon(Icons.delete_sweep),
-                label: const Text('Clear Playlist Cache'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red.shade700,
+                        icon: const Icon(Icons.delete_sweep),
+                        label: const Text('Clear Playlist Cache'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.shade700,
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
@@ -3063,25 +3253,58 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget _buildSwitchTile(String title, bool value, {String? subtitle}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSizes.sm),
-      child: TVFocusable(
-        borderRadius: BorderRadius.circular(12),
-        child: SwitchListTile(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          title: Text(title),
-          subtitle: subtitle != null
-              ? Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.textSecondary,
+      child: Focus(
+        onKeyEvent: (node, event) {
+          if (event is! KeyDownEvent) return KeyEventResult.ignored;
+          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+            requestFirstSidebarFocus();
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: Builder(
+          builder: (context) {
+            final isFocused = Focus.of(context).hasFocus;
+            if (isFocused) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                Scrollable.ensureVisible(
+                  context,
+                  duration: const Duration(milliseconds: 150),
+                  curve: Curves.easeOut,
+                  alignment: 0.6,
+                );
+              });
+            }
+            return Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: isFocused
+                    ? Border.all(color: AppTheme.primaryBlue, width: 3)
+                    : null,
+              ),
+              child: TVFocusable(
+                borderRadius: BorderRadius.circular(12),
+                child: SwitchListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                )
-              : null,
-          value: value,
-          onChanged: (newValue) {
-            _handleSwitchTileChange(title, newValue);
+                  title: Text(title),
+                  subtitle: subtitle != null
+                      ? Text(
+                          subtitle,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary,
+                          ),
+                        )
+                      : null,
+                  value: value,
+                  onChanged: (newValue) {
+                    _handleSwitchTileChange(title, newValue);
+                  },
+                ),
+              ),
+            );
           },
         ),
       ),
@@ -3165,44 +3388,78 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget _buildAudioSwitchTile(String title, bool value, {String? subtitle}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSizes.sm),
-      child: TVFocusable(
-        borderRadius: BorderRadius.circular(12),
-        child: SwitchListTile(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          title: Text(title),
-          subtitle: subtitle != null
-              ? Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.textSecondary,
-                  ),
-                )
-              : null,
-          value: value,
-          onChanged: (newValue) async {
-            setState(() {
-              if (title == 'Audio Passthrough') {
-                _audioPassthrough = newValue;
-              } else if (title == 'Audio Boost') {
-                _audioBoost = newValue;
-              } else if (title == 'Normalize Audio') {
-                _normalizeAudio = newValue;
-              }
-            });
-
-            final prefs = await SharedPreferences.getInstance();
-            if (title == 'Audio Passthrough') {
-              await prefs.setBool('audio_passthrough', newValue);
-            } else if (title == 'Audio Boost') {
-              await prefs.setBool('audio_boost', newValue);
-            } else if (title == 'Normalize Audio') {
-              await prefs.setBool('normalize_audio', newValue);
+      child: Focus(
+        onKeyEvent: (node, event) {
+          if (event is! KeyDownEvent) return KeyEventResult.ignored;
+          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+            requestFirstSidebarFocus();
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: Builder(
+          builder: (context) {
+            final isFocused = Focus.of(context).hasFocus;
+            if (isFocused) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                Scrollable.ensureVisible(
+                  context,
+                  duration: const Duration(milliseconds: 150),
+                  curve: Curves.easeOut,
+                  alignment: 0.6,
+                );
+              });
             }
+            return Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: isFocused
+                    ? Border.all(color: AppTheme.primaryBlue, width: 3)
+                    : null,
+              ),
+              child: TVFocusable(
+                borderRadius: BorderRadius.circular(12),
+                child: SwitchListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  title: Text(title),
+                  subtitle: subtitle != null
+                      ? Text(
+                          subtitle,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary,
+                          ),
+                        )
+                      : null,
+                  value: value,
+                  onChanged: (newValue) async {
+                    setState(() {
+                      if (title == 'Audio Passthrough') {
+                        _audioPassthrough = newValue;
+                      } else if (title == 'Audio Boost') {
+                        _audioBoost = newValue;
+                      } else if (title == 'Normalize Audio') {
+                        _normalizeAudio = newValue;
+                      }
+                    });
+
+                    final prefs = await SharedPreferences.getInstance();
+                    if (title == 'Audio Passthrough') {
+                      await prefs.setBool('audio_passthrough', newValue);
+                    } else if (title == 'Audio Boost') {
+                      await prefs.setBool('audio_boost', newValue);
+                    } else if (title == 'Normalize Audio') {
+                      await prefs.setBool('normalize_audio', newValue);
+                    }
+                  },
+                ),
+              ),
+            );
           },
         ),
+      ),
       ),
     );
   }
@@ -3215,43 +3472,76 @@ class _SettingsScreenState extends State<SettingsScreen>
   ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSizes.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: AppSizes.sm),
-          TVFocusable(
-            borderRadius: BorderRadius.circular(10),
-            enableScale: false,
-            child: DropdownButtonFormField<String>(
-              initialValue: value,
-              dropdownColor: AppTheme.darkBackgroundOpacity(0.95),
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: AppTheme.highlight,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                  borderSide: const BorderSide(
-                    color: AppTheme.primaryBlue,
-                    width: 2,
-                  ),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
+      child: Focus(
+        onKeyEvent: (node, event) {
+          if (event is! KeyDownEvent) return KeyEventResult.ignored;
+          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+            requestFirstSidebarFocus();
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: Builder(
+          builder: (context) {
+            final isFocused = Focus.of(context).hasFocus;
+            if (isFocused) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                Scrollable.ensureVisible(
+                  context,
+                  duration: const Duration(milliseconds: 150),
+                  curve: Curves.easeOut,
+                  alignment: 0.6,
+                );
+              });
+            }
+            return Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: isFocused
+                    ? Border.all(color: AppTheme.primaryBlue, width: 3)
+                    : null,
               ),
-              items: items.map((item) {
-                return DropdownMenuItem(value: item, child: Text(item));
-              }).toList(),
-              onChanged: onChanged,
-            ),
-          ),
-        ],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: Theme.of(context).textTheme.bodyMedium),
+                  const SizedBox(height: AppSizes.sm),
+                  TVFocusable(
+                    borderRadius: BorderRadius.circular(10),
+                    enableScale: false,
+                    child: DropdownButtonFormField<String>(
+                      initialValue: value,
+                      dropdownColor: AppTheme.darkBackgroundOpacity(0.95),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: AppTheme.highlight,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                          borderSide: const BorderSide(
+                            color: AppTheme.primaryBlue,
+                            width: 2,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                      items: items.map((item) {
+                        return DropdownMenuItem(value: item, child: Text(item));
+                      }).toList(),
+                      onChanged: onChanged,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
