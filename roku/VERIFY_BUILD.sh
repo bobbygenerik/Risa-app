@@ -40,11 +40,29 @@ if [ -f "COMPLETION_SUMMARY.md" ]; then echo "  ✅ COMPLETION_SUMMARY.md"; else
 echo ""
 
 echo "✓ Source code statistics..."
-echo "  Main.brs: $(wc -l < source/Main.brs) lines"
-echo "  M3UParser.brs: $(wc -l < source/M3UParser.brs) lines"
-echo "  EPGService.brs: $(wc -l < source/EPGService.brs) lines"
+if [ -f "source/Main.brs" ]; then
+    echo "  Main.brs: $(wc -l < source/Main.brs) lines"
+    MAIN_LINES=$(wc -l < source/Main.brs)
+else
+    echo "  Main.brs: N/A"
+    MAIN_LINES=0
+fi
+if [ -f "source/M3UParser.brs" ]; then
+    echo "  M3UParser.brs: $(wc -l < source/M3UParser.brs) lines"
+    PARSER_LINES=$(wc -l < source/M3UParser.brs)
+else
+    echo "  M3UParser.brs: N/A"
+    PARSER_LINES=0
+fi
+if [ -f "source/EPGService.brs" ]; then
+    echo "  EPGService.brs: $(wc -l < source/EPGService.brs) lines"
+    EPG_LINES=$(wc -l < source/EPGService.brs)
+else
+    echo "  EPGService.brs: N/A"
+    EPG_LINES=0
+fi
 echo "  cloud_sync_service.brs: (archived)"
-TOTAL=$(($(wc -l < source/Main.brs) + $(wc -l < source/M3UParser.brs) + $(wc -l < source/EPGService.brs)))
+TOTAL=$((MAIN_LINES + PARSER_LINES + EPG_LINES))
 echo "  TOTAL: $TOTAL lines"
 echo ""
 
