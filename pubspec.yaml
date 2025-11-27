@@ -4,6 +4,7 @@ publish_to: 'none'
 # Version format: MAJOR.MINOR.PATCH+BUILD_NUMBER
 version: 1.0.0+1
 
+# Environment constraints - validated by Flutter tooling
 environment:
   sdk: ">=3.2.6 <4.0.0"
 
