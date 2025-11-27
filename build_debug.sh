@@ -24,11 +24,17 @@ echo ""
 echo "✅ Build complete!"
 echo ""
 echo "📊 APK Location:"
-find build/app/outputs/flutter-apk -name "*.apk" -type f
+if ! find build/app/outputs/flutter-apk -name "*.apk" -type f; then
+    echo "⚠️  No APK files found"
+fi
 
 echo ""
 echo "📏 APK Size:"
-du -h build/app/outputs/flutter-apk/*.apk
+if ls build/app/outputs/flutter-apk/*.apk 1> /dev/null 2>&1; then
+    du -h build/app/outputs/flutter-apk/*.apk
+else
+    echo "⚠️  No APK files found"
+fi
 
 echo ""
 echo "🐛 Debug APK ready for testing."

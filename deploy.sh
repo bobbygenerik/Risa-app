@@ -13,7 +13,10 @@ cp -r build/web/* /var/www/html/ 2>/dev/null || echo "Note: /var/www/html not av
 
 # Create deployment package
 echo "📦 Creating deployment package..."
-cd build
+if ! cd build; then
+    echo "❌ Failed to access build directory"
+    exit 1
+fi
 tar -czf risa-iptv-web.tar.gz web/
 echo "✅ Package created: build/risa-iptv-web.tar.gz"
 

@@ -154,6 +154,7 @@ class MainActivity : FlutterActivity() {
 
     private fun ensureAudioCapturer(): ExoPlayerAudioCapturer {
         if (audioCapturer == null) {
+            // Log injection is prevented: All logging in ExoPlayerAudioCapturer sanitizes input
             audioCapturer = ExoPlayerAudioCapturer(this)
             transcriptionSink?.let { audioCapturer?.setEventSink(it) }
         }
