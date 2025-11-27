@@ -140,6 +140,13 @@ class _SettingsScreenState extends State<SettingsScreen>
     });
     // Load settings - no setState during init
     _loadSettingsSync();
+    
+    // Auto-focus the first sidebar tab (General) when settings screen opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _menuFocusNodes.isNotEmpty) {
+        _menuFocusNodes[0].requestFocus();
+      }
+    });
   }
 
   final List<FocusNode> _menuFocusNodes = [];
