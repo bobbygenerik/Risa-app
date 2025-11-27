@@ -102,14 +102,17 @@ create_splash(os.path.join(images_dir, 'screensaver_hd.jpg'), 1280, 720)
 create_splash(os.path.join(images_dir, 'screensaver_sd.jpg'), 720, 480)
 
 # Create placeholder title image
-title_img = Image.new('RGBA', (1280, 100), (0, 0, 0, 0))
-title_draw = ImageDraw.Draw(title_img)
 try:
-    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 60)
-except:
-    font = ImageFont.load_default()
-title_draw.text((20, 20), "IPTV Player", fill=(255, 107, 0, 255), font=font)
-title_img.save(os.path.join(images_dir, 'screensaver_title.png'))
-print(f"Created screensaver_title.png")
+    title_img = Image.new('RGBA', (1280, 100), (0, 0, 0, 0))
+    title_draw = ImageDraw.Draw(title_img)
+    try:
+        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 60)
+    except:
+        font = ImageFont.load_default()
+    title_draw.text((20, 20), "IPTV Player", fill=(255, 107, 0, 255), font=font)
+    title_img.save(os.path.join(images_dir, 'screensaver_title.png'))
+    print(f"Created screensaver_title.png")
+except Exception as e:
+    print(f"Error creating title image: {e}")
 
 print("\nAll Roku images created successfully!")
