@@ -1511,7 +1511,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                               }
                             },
                             icon: const Icon(Icons.download),
-                            label: const Text('Load M3U Playlist'),
+                            label: const Text('Load Playlist'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTheme.primaryBlue,
                             ),
