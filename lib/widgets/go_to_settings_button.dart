@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 
 /// A unified button for 'Go to Settings' on all main screens.
@@ -14,6 +15,16 @@ class GoToSettingsButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Focus(
       focusNode: focusNode,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.select ||
+              event.logicalKey == LogicalKeyboardKey.enter) {
+            onPressed();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
       child: Builder(
         builder: (context) {
           final hasFocus = Focus.of(context).hasFocus;
