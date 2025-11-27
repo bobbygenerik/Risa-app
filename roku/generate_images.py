@@ -5,6 +5,9 @@ Generate Roku channel icons and splash screens
 import os
 from PIL import Image, ImageDraw, ImageFont
 
+# Get script directory (should be in roku/ folder)
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
 def create_directory(path):
     os.makedirs(path, exist_ok=True)
 
@@ -79,8 +82,7 @@ def create_splash(filename, width, height):
     print(f"Created {filename} ({width}x{height})")
 
 # Create images directory
-roku_root = '/root/iptv-player/roku'
-images_dir = os.path.join(roku_root, 'images')
+images_dir = os.path.join(SCRIPT_DIR, 'images')
 create_directory(images_dir)
 
 # Create icons
