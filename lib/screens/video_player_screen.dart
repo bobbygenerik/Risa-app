@@ -397,9 +397,35 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                     children: [
                       Row(
                         children: [
-                          IconButton(
-                            icon: const Icon(Icons.arrow_back, color: Colors.white, size: 32),
-                            onPressed: () => Navigator.of(context).pop(),
+                          Focus(
+                            autofocus: true,
+                            onKeyEvent: (node, event) {
+                              if (event is KeyDownEvent) {
+                                if (event.logicalKey == LogicalKeyboardKey.select ||
+                                    event.logicalKey == LogicalKeyboardKey.enter) {
+                                  Navigator.of(context).pop();
+                                  return KeyEventResult.handled;
+                                }
+                              }
+                              return KeyEventResult.ignored;
+                            },
+                            child: Builder(
+                              builder: (context) {
+                                final isFocused = Focus.of(context).hasFocus;
+                                return Container(
+                                  decoration: isFocused
+                                      ? BoxDecoration(
+                                          border: Border.all(color: Colors.white, width: 2),
+                                          borderRadius: BorderRadius.circular(24),
+                                        )
+                                      : null,
+                                  child: IconButton(
+                                    icon: const Icon(Icons.arrow_back, color: Colors.white, size: 32),
+                                    onPressed: () => Navigator.of(context).pop(),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
                           const SizedBox(width: 16),
                           Expanded(

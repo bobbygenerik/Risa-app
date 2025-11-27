@@ -892,69 +892,154 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    IconButton(
-                      icon: Icon(
-                        transcriptionService.isTranslating
-                            ? Icons.translate
-                            : Icons.translate_outlined,
-                        color: transcriptionService.isTranslating
-                            ? AppTheme.primaryBlue
-                            : Colors.white,
-                        size: 18,
-                      ),
-                      tooltip: transcriptionService.isTranslating
-                          ? 'Disable on-device translation'
-                          : 'Enable on-device translation',
-                      onPressed: () {
-                        transcriptionService.setTranslationEnabled(
-                          !transcriptionService.isTranslating,
-                        );
+                    Focus(
+                      onKeyEvent: (node, event) {
+                        if (event is KeyDownEvent &&
+                            (event.logicalKey == LogicalKeyboardKey.select ||
+                             event.logicalKey == LogicalKeyboardKey.enter)) {
+                          transcriptionService.setTranslationEnabled(
+                            !transcriptionService.isTranslating,
+                          );
+                          return KeyEventResult.handled;
+                        }
+                        return KeyEventResult.ignored;
                       },
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.download,
-                        color: Colors.white,
-                        size: 18,
+                      child: Builder(
+                        builder: (context) {
+                          final isFocused = Focus.of(context).hasFocus;
+                          return Container(
+                            decoration: isFocused
+                                ? BoxDecoration(
+                                    border: Border.all(color: Colors.white, width: 2),
+                                    borderRadius: BorderRadius.circular(20),
+                                  )
+                                : null,
+                            child: IconButton(
+                              icon: Icon(
+                                transcriptionService.isTranslating
+                                    ? Icons.translate
+                                    : Icons.translate_outlined,
+                                color: transcriptionService.isTranslating
+                                    ? AppTheme.primaryBlue
+                                    : Colors.white,
+                                size: 18,
+                              ),
+                              tooltip: transcriptionService.isTranslating
+                                  ? 'Disable on-device translation'
+                                  : 'Enable on-device translation',
+                              onPressed: () {
+                                transcriptionService.setTranslationEnabled(
+                                  !transcriptionService.isTranslating,
+                                );
+                              },
+                            ),
+                          );
+                        },
                       ),
-                      tooltip: 'Export transcript (copy SRT to clipboard)',
-                      onPressed: () async {
-                        final clipContext = context;
-                        try {
+                    ),
+                    Focus(
+                      onKeyEvent: (node, event) {
+                        if (event is KeyDownEvent &&
+                            (event.logicalKey == LogicalKeyboardKey.select ||
+                             event.logicalKey == LogicalKeyboardKey.enter)) {
                           final srt = transcriptionService.exportAsSRT();
-                          await Clipboard.setData(ClipboardData(text: srt));
-                          if (!clipContext.mounted) return;
+                          Clipboard.setData(ClipboardData(text: srt));
                           showAppSnackBar(
-                            clipContext,
+                            context,
                             const SnackBar(
                               content: Text('Transcript copied to clipboard'),
                             ),
                           );
-                        } catch (e) {
-                          if (!clipContext.mounted) return;
-                          showAppSnackBar(
-                            clipContext,
-                            const SnackBar(
-                              content: Text('Failed to export transcript'),
+                          return KeyEventResult.handled;
+                        }
+                        return KeyEventResult.ignored;
+                      },
+                      child: Builder(
+                        builder: (context) {
+                          final isFocused = Focus.of(context).hasFocus;
+                          return Container(
+                            decoration: isFocused
+                                ? BoxDecoration(
+                                    border: Border.all(color: Colors.white, width: 2),
+                                    borderRadius: BorderRadius.circular(20),
+                                  )
+                                : null,
+                            child: IconButton(
+                              icon: const Icon(
+                                Icons.download,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                              tooltip: 'Export transcript (copy SRT to clipboard)',
+                              onPressed: () async {
+                                final clipContext = context;
+                                try {
+                                  final srt = transcriptionService.exportAsSRT();
+                                  await Clipboard.setData(ClipboardData(text: srt));
+                                  if (!clipContext.mounted) return;
+                                  showAppSnackBar(
+                                    clipContext,
+                                    const SnackBar(
+                                      content: Text('Transcript copied to clipboard'),
+                                    ),
+                                  );
+                                } catch (e) {
+                                  if (!clipContext.mounted) return;
+                                  showAppSnackBar(
+                                    clipContext,
+                                    const SnackBar(
+                                      content: Text('Failed to export transcript'),
+                                    ),
+                                  );
+                                }
+                              },
                             ),
                           );
-                        }
-                      },
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.delete,
-                        color: Colors.white,
-                        size: 18,
+                        },
                       ),
-                      tooltip: 'Clear transcript',
-                      onPressed: () {
-                        transcriptionService.clearTranscriptions();
-                        showAppSnackBar(
-                          context,
-                          const SnackBar(content: Text('Transcripts cleared')),
-                        );
+                    ),
+                    Focus(
+                      onKeyEvent: (node, event) {
+                        if (event is KeyDownEvent &&
+                            (event.logicalKey == LogicalKeyboardKey.select ||
+                             event.logicalKey == LogicalKeyboardKey.enter)) {
+                          transcriptionService.clearTranscriptions();
+                          showAppSnackBar(
+                            context,
+                            const SnackBar(content: Text('Transcripts cleared')),
+                          );
+                          return KeyEventResult.handled;
+                        }
+                        return KeyEventResult.ignored;
                       },
+                      child: Builder(
+                        builder: (context) {
+                          final isFocused = Focus.of(context).hasFocus;
+                          return Container(
+                            decoration: isFocused
+                                ? BoxDecoration(
+                                    border: Border.all(color: Colors.white, width: 2),
+                                    borderRadius: BorderRadius.circular(20),
+                                  )
+                                : null,
+                            child: IconButton(
+                              icon: const Icon(
+                                Icons.delete,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                              tooltip: 'Clear transcript',
+                              onPressed: () {
+                                transcriptionService.clearTranscriptions();
+                                showAppSnackBar(
+                                  context,
+                                  const SnackBar(content: Text('Transcripts cleared')),
+                                );
+                              },
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ],
                 ),
@@ -1005,22 +1090,25 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   Widget _buildControlsOverlay() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0x99050710), Color(0x990d1140)],
+    return FocusTraversalGroup(
+      policy: ReadingOrderTraversalPolicy(),
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0x99050710), Color(0x990d1140)],
+          ),
         ),
-      ),
-      child: Column(
-        children: [
-          // Top bar with title and status
-          _buildTopBar(),
-          const Spacer(),
-          // Bottom bar with hints
-          _buildBottomBar(),
-        ],
+        child: Column(
+          children: [
+            // Top bar with title and status
+            _buildTopBar(),
+            const Spacer(),
+            // Bottom bar with hints
+            _buildBottomBar(),
+          ],
+        ),
       ),
     );
   }
@@ -1033,9 +1121,35 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         child: Row(
           children: [
             // Back button
-            IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white, size: 32),
-              onPressed: () => Navigator.of(context).pop(),
+            Focus(
+              autofocus: true,
+              onKeyEvent: (node, event) {
+                if (event is KeyDownEvent) {
+                  if (event.logicalKey == LogicalKeyboardKey.select ||
+                      event.logicalKey == LogicalKeyboardKey.enter) {
+                    Navigator.of(context).pop();
+                    return KeyEventResult.handled;
+                  }
+                }
+                return KeyEventResult.ignored;
+              },
+              child: Builder(
+                builder: (context) {
+                  final isFocused = Focus.of(context).hasFocus;
+                  return Container(
+                    decoration: isFocused
+                        ? BoxDecoration(
+                            border: Border.all(color: Colors.white, width: 2),
+                            borderRadius: BorderRadius.circular(24),
+                          )
+                        : null,
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white, size: 32),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  );
+                },
+              ),
             ),
             const SizedBox(width: 16),
             // Title
@@ -1089,13 +1203,40 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                 ),
               ),
             if (Platform.isAndroid && _nativeController != null)
-              IconButton(
-                icon: const Icon(Icons.list, color: Colors.white),
-                onPressed: () async {
-                  await _loadNativeAudioTracks();
-                  if (!mounted) return;
-                  _showNativeTracksDialog();
+              Focus(
+                onKeyEvent: (node, event) {
+                  if (event is KeyDownEvent) {
+                    if (event.logicalKey == LogicalKeyboardKey.select ||
+                        event.logicalKey == LogicalKeyboardKey.enter) {
+                      _loadNativeAudioTracks().then((_) {
+                        if (mounted) _showNativeTracksDialog();
+                      });
+                      return KeyEventResult.handled;
+                    }
+                  }
+                  return KeyEventResult.ignored;
                 },
+                child: Builder(
+                  builder: (context) {
+                    final isFocused = Focus.of(context).hasFocus;
+                    return Container(
+                      decoration: isFocused
+                          ? BoxDecoration(
+                              border: Border.all(color: Colors.white, width: 2),
+                              borderRadius: BorderRadius.circular(24),
+                            )
+                          : null,
+                      child: IconButton(
+                        icon: const Icon(Icons.list, color: Colors.white),
+                        onPressed: () async {
+                          await _loadNativeAudioTracks();
+                          if (!mounted) return;
+                          _showNativeTracksDialog();
+                        },
+                      ),
+                    );
+                  },
+                ),
               ),
           ],
         ),
@@ -1371,10 +1512,34 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                     ),
                   ),
                   const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () =>
-                        setState(() => _showSubtitleSelector = false),
+                  Focus(
+                    onKeyEvent: (node, event) {
+                      if (event is KeyDownEvent &&
+                          (event.logicalKey == LogicalKeyboardKey.select ||
+                           event.logicalKey == LogicalKeyboardKey.enter)) {
+                        setState(() => _showSubtitleSelector = false);
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child: Builder(
+                      builder: (context) {
+                        final isFocused = Focus.of(context).hasFocus;
+                        return Container(
+                          decoration: isFocused
+                              ? BoxDecoration(
+                                  border: Border.all(color: Colors.white, width: 2),
+                                  borderRadius: BorderRadius.circular(20),
+                                )
+                              : null,
+                          child: IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            onPressed: () =>
+                                setState(() => _showSubtitleSelector = false),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),
@@ -1640,9 +1805,33 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                     ),
                   ),
                   const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => setState(() => _showAudioSelector = false),
+                  Focus(
+                    onKeyEvent: (node, event) {
+                      if (event is KeyDownEvent &&
+                          (event.logicalKey == LogicalKeyboardKey.select ||
+                           event.logicalKey == LogicalKeyboardKey.enter)) {
+                        setState(() => _showAudioSelector = false);
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child: Builder(
+                      builder: (context) {
+                        final isFocused = Focus.of(context).hasFocus;
+                        return Container(
+                          decoration: isFocused
+                              ? BoxDecoration(
+                                  border: Border.all(color: Colors.white, width: 2),
+                                  borderRadius: BorderRadius.circular(20),
+                                )
+                              : null,
+                          child: IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            onPressed: () => setState(() => _showAudioSelector = false),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),
