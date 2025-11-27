@@ -143,7 +143,8 @@ class _MainShellState extends State<MainShell> {
     _contentFocusCallback = callback;
     _activeFocusToken = token;
     debugPrint('content_focus: Shell registered focus callback token=$token');
-    _scheduleContentFocusRequest();
+    // Don't auto-focus content - let the navbar keep focus
+    // User can press down arrow to focus content
     return token;
   }
 
