@@ -71,6 +71,11 @@ class _SettingsScreenState extends State<SettingsScreen>
   final FocusNode _clearM3uButtonFocusNode = FocusNode(debugLabel: 'ClearM3UButton');
   final FocusNode _clearXtreamButtonFocusNode = FocusNode(debugLabel: 'ClearXtreamButton');
   final FocusNode _customEpgUrlFocusNode = FocusNode(debugLabel: 'CustomEpgUrlField');
+  // EPG interval stepper buttons
+  final FocusNode _epgIntervalMinusFocusNode = FocusNode(debugLabel: 'EpgIntervalMinus');
+  final FocusNode _epgIntervalPlusFocusNode = FocusNode(debugLabel: 'EpgIntervalPlus');
+  final FocusNode _epgPastDaysMinusFocusNode = FocusNode(debugLabel: 'EpgPastDaysMinus');
+  final FocusNode _epgPastDaysPlusFocusNode = FocusNode(debugLabel: 'EpgPastDaysPlus');
   final Map<FocusNode, VoidCallback> _focusNodeListeners = {};
 
   // Playback Settings
@@ -259,6 +264,10 @@ class _SettingsScreenState extends State<SettingsScreen>
     _clearM3uButtonFocusNode.dispose();
     _clearXtreamButtonFocusNode.dispose();
     _customEpgUrlFocusNode.dispose();
+    _epgIntervalMinusFocusNode.dispose();
+    _epgIntervalPlusFocusNode.dispose();
+    _epgPastDaysMinusFocusNode.dispose();
+    _epgPastDaysPlusFocusNode.dispose();
     super.dispose();
   }
 
@@ -987,16 +996,52 @@ class _SettingsScreenState extends State<SettingsScreen>
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.remove_circle_outline),
-                    onPressed: epgUpdateInterval > 1
-                        ? () async {
-                            final newValue = epgUpdateInterval - 1;
-                            final prefs = await SharedPreferences.getInstance();
-                            await prefs.setInt('epg_update_interval', newValue);
-                            setState(() {});
-                          }
-                        : null,
+                  Focus(
+                    focusNode: _epgIntervalMinusFocusNode,
+                    onKeyEvent: (node, event) {
+                      if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                        requestFirstSidebarFocus();
+                        return KeyEventResult.handled;
+                      }
+                      if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                        _epgIntervalPlusFocusNode.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                      if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                        _customEpgUrlFocusNode.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                        _epgPastDaysMinusFocusNode.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child: Builder(
+                      builder: (context) {
+                        final isFocused = Focus.of(context).hasFocus;
+                        return IconButton(
+                          icon: Icon(
+                            Icons.remove_circle_outline,
+                            color: isFocused ? AppTheme.primaryBlue : null,
+                          ),
+                          style: IconButton.styleFrom(
+                            side: isFocused
+                                ? const BorderSide(color: AppTheme.primaryBlue, width: 2)
+                                : null,
+                          ),
+                          onPressed: epgUpdateInterval > 1
+                              ? () async {
+                                  final newValue = epgUpdateInterval - 1;
+                                  final prefs = await SharedPreferences.getInstance();
+                                  await prefs.setInt('epg_update_interval', newValue);
+                                  setState(() {});
+                                }
+                              : null,
+                        );
+                      },
+                    ),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1014,16 +1059,48 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ),
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.add_circle_outline),
-                    onPressed: epgUpdateInterval < 48
-                        ? () async {
-                            final newValue = epgUpdateInterval + 1;
-                            final prefs = await SharedPreferences.getInstance();
-                            await prefs.setInt('epg_update_interval', newValue);
-                            setState(() {});
-                          }
-                        : null,
+                  Focus(
+                    focusNode: _epgIntervalPlusFocusNode,
+                    onKeyEvent: (node, event) {
+                      if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                        _epgIntervalMinusFocusNode.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                      if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                        _customEpgUrlFocusNode.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                        _epgPastDaysPlusFocusNode.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child: Builder(
+                      builder: (context) {
+                        final isFocused = Focus.of(context).hasFocus;
+                        return IconButton(
+                          icon: Icon(
+                            Icons.add_circle_outline,
+                            color: isFocused ? AppTheme.primaryBlue : null,
+                          ),
+                          style: IconButton.styleFrom(
+                            side: isFocused
+                                ? const BorderSide(color: AppTheme.primaryBlue, width: 2)
+                                : null,
+                          ),
+                          onPressed: epgUpdateInterval < 48
+                              ? () async {
+                                  final newValue = epgUpdateInterval + 1;
+                                  final prefs = await SharedPreferences.getInstance();
+                                  await prefs.setInt('epg_update_interval', newValue);
+                                  setState(() {});
+                                }
+                              : null,
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),
@@ -1052,16 +1129,51 @@ class _SettingsScreenState extends State<SettingsScreen>
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.remove_circle_outline),
-                    onPressed: epgPastDays > 0
-                        ? () async {
-                            final newValue = epgPastDays - 1;
-                            final prefs = await SharedPreferences.getInstance();
-                            await prefs.setInt('epg_past_days', newValue);
-                            setState(() {});
-                          }
-                        : null,
+                  Focus(
+                    focusNode: _epgPastDaysMinusFocusNode,
+                    onKeyEvent: (node, event) {
+                      if (event is KeyDownEvent) {
+                        if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                          requestFirstSidebarFocus();
+                          return KeyEventResult.handled;
+                        } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                          _epgPastDaysPlusFocusNode.requestFocus();
+                          return KeyEventResult.handled;
+                        } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                          _epgIntervalMinusFocusNode.requestFocus();
+                          return KeyEventResult.handled;
+                        } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                          // Focus next element below
+                          FocusScope.of(context).nextFocus();
+                          return KeyEventResult.handled;
+                        }
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child: Builder(
+                      builder: (context) {
+                        final isFocused = Focus.of(context).hasFocus;
+                        return IconButton(
+                          icon: Icon(
+                            Icons.remove_circle_outline,
+                            color: isFocused ? AppTheme.primaryBlue : null,
+                          ),
+                          style: IconButton.styleFrom(
+                            side: isFocused
+                                ? const BorderSide(color: AppTheme.primaryBlue, width: 2)
+                                : null,
+                          ),
+                          onPressed: epgPastDays > 0
+                              ? () async {
+                                  final newValue = epgPastDays - 1;
+                                  final prefs = await SharedPreferences.getInstance();
+                                  await prefs.setInt('epg_past_days', newValue);
+                                  setState(() {});
+                                }
+                              : null,
+                        );
+                      },
+                    ),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1079,16 +1191,51 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ),
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.add_circle_outline),
-                    onPressed: epgPastDays < 30
-                        ? () async {
-                            final newValue = epgPastDays + 1;
-                            final prefs = await SharedPreferences.getInstance();
-                            await prefs.setInt('epg_past_days', newValue);
-                            setState(() {});
-                          }
-                        : null,
+                  Focus(
+                    focusNode: _epgPastDaysPlusFocusNode,
+                    onKeyEvent: (node, event) {
+                      if (event is KeyDownEvent) {
+                        if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                          _epgPastDaysMinusFocusNode.requestFocus();
+                          return KeyEventResult.handled;
+                        } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                          requestFirstSidebarFocus();
+                          return KeyEventResult.handled;
+                        } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                          _epgIntervalPlusFocusNode.requestFocus();
+                          return KeyEventResult.handled;
+                        } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                          // Focus next element below
+                          FocusScope.of(context).nextFocus();
+                          return KeyEventResult.handled;
+                        }
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child: Builder(
+                      builder: (context) {
+                        final isFocused = Focus.of(context).hasFocus;
+                        return IconButton(
+                          icon: Icon(
+                            Icons.add_circle_outline,
+                            color: isFocused ? AppTheme.primaryBlue : null,
+                          ),
+                          style: IconButton.styleFrom(
+                            side: isFocused
+                                ? const BorderSide(color: AppTheme.primaryBlue, width: 2)
+                                : null,
+                          ),
+                          onPressed: epgPastDays < 30
+                              ? () async {
+                                  final newValue = epgPastDays + 1;
+                                  final prefs = await SharedPreferences.getInstance();
+                                  await prefs.setInt('epg_past_days', newValue);
+                                  setState(() {});
+                                }
+                              : null,
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),
