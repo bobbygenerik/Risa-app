@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 // ignore_for_file: todo
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -56,6 +57,10 @@ void main() {
       // different zone" error when the framework is used later.
       WidgetsFlutterBinding.ensureInitialized();
       StartupProbe.mark('Flutter bindings initialized');
+      
+      // Global SSL bypass for IPTV providers with certificate issues
+      HttpOverrides.global = _SSLBypassHttpOverrides();
+      StartupProbe.mark('SSL bypass configured');
       
       // Register fvp (FFmpeg-based video player) for proper color handling
       // This fixes the multi-colored tint issue on live streams
@@ -1026,4 +1031,14 @@ Widget _buildPlaceholder(BuildContext context, String title, IconData icon) {
       ],
     ),
   );
+}
+
+/// Global SSL bypass for IPTV providers with certificate issues.
+/// Many IPTV servers have self-signed or misconfigured SSL certificates.
+class _SSLBypassHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+  }
 }
