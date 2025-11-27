@@ -1673,10 +1673,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 prefixIcon: Icons.link,
                 onLeftArrow: requestFirstSidebarFocus,
                 onUpArrow: () => _m3uTabFocusNode.requestFocus(),
-                onDownArrow: () {
-                  _focusLoadM3uButton();
-                  _loadM3uButtonFocusNode.requestFocus();
-                },
+                onDownArrow: () => _loadM3uButtonFocusNode.requestFocus(),
                 enableDirectionalNavigation: true,
               ),
               const SizedBox(height: AppSizes.md),
@@ -1878,6 +1875,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       onLeftArrow: () => _xtreamUsernameFocusNode.requestFocus(),
                       onUpArrow: () => _xtreamServerFocusNode.requestFocus(),
                       onDownArrow: () => _loadXtreamButtonFocusNode.requestFocus(),
+                      onRightArrow: () => _loadXtreamButtonFocusNode.requestFocus(),
                       enableDirectionalNavigation: true,
                     ),
                   ),
