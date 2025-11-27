@@ -5,18 +5,22 @@ Generate complete app icon set using the lone logo with dark theme background
 
 from PIL import Image, ImageDraw
 import os
+import sys
 
 # App colors - consistent with dark theme
 DARK_BACKGROUND = (28, 28, 30)  # #1C1C1E - main app background
 
-def create_icon(size):
+# Get project root directory
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+
+def create_icon(size, logo_path):
     """Create app icon using the lone logo"""
     # Create dark background
     img = Image.new('RGB', (size, size), DARK_BACKGROUND)
     
     try:
         # Load the lone logo
-        logo_path = '/root/iptv-player/assets/images/lonelogo (1).png'
         logo = Image.open(logo_path)
         
         # Convert to RGBA if needed
@@ -63,11 +67,12 @@ android_sizes = {
     'xxxhdpi': 192,
 }
 
-android_base_dir = '/root/iptv-player/android/app/src/main/res'
+logo_path = os.path.join(PROJECT_ROOT, 'assets', 'images', 'lonelogo (1).png')
+android_base_dir = os.path.join(PROJECT_ROOT, 'android', 'app', 'src', 'main', 'res')
 
 print("Generating Android app icons...")
 for density, size in android_sizes.items():
-    icon = create_icon(size)
+    icon = create_icon(size, logo_path)
     output_dir = os.path.join(android_base_dir, f'mipmap-{density}')
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, 'ic_launcher.png')
@@ -75,13 +80,13 @@ for density, size in android_sizes.items():
     print(f"  ✓ Android {density} ({size}x{size})")
 
 # Web icons
-web_dir = '/root/iptv-player/web/icons'
+web_dir = os.path.join(PROJECT_ROOT, 'web', 'icons')
 os.makedirs(web_dir, exist_ok=True)
 
 web_sizes = [192, 512]
 print("Generating web icons...")
 for web_size in web_sizes:
-    web_icon = create_icon(web_size)
+    web_icon = create_icon(web_size, logo_path)
     web_path = os.path.join(web_dir, f'Icon-{web_size}.png')
     web_icon.save(web_path, 'PNG')
     print(f"  ✓ Web icon ({web_size}x{web_size})")
@@ -91,22 +96,22 @@ for web_size in web_sizes:
     web_icon.save(maskable_path, 'PNG')
 
 # Favicon
-favicon = create_icon(32)
-favicon_path = '/root/iptv-player/web/favicon.png'
+favicon = create_icon(32, logo_path)
+favicon_path = os.path.join(PROJECT_ROOT, 'web', 'favicon.png')
 favicon.save(favicon_path, 'PNG')
 print("  ✓ Favicon (32x32)")
 
 # Linux desktop icon
-linux_dir = '/root/iptv-player/linux/runner'
+linux_dir = os.path.join(PROJECT_ROOT, 'linux', 'runner')
 os.makedirs(linux_dir, exist_ok=True)
-linux_icon = create_icon(128)
+linux_icon = create_icon(128, logo_path)
 linux_path = os.path.join(linux_dir, 'icon.png')
 linux_icon.save(linux_path, 'PNG')
 print("  ✓ Linux desktop icon (128x128)")
 
 # Preview
-preview = create_icon(512)
-preview_path = '/root/iptv-player/app_icon_preview.png'
+preview = create_icon(512, logo_path)
+preview_path = os.path.join(PROJECT_ROOT, 'app_icon_preview.png')
 preview.save(preview_path, 'PNG')
 print(f"  ✓ Preview saved: app_icon_preview.png")
 

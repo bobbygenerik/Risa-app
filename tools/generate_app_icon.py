@@ -7,6 +7,10 @@ Colors: Primary Blue #2E3192, Accent Pink #E61E6E
 from PIL import Image, ImageDraw, ImageFont
 import os
 
+# Get project root directory
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+
 # App colors
 PRIMARY_BLUE = (46, 49, 146)  # #2E3192
 ACCENT_PINK = (230, 30, 110)  # #E61E6E
@@ -84,7 +88,7 @@ sizes = {
 }
 
 # Base directory for Android resources
-base_dir = '/root/iptv-player/android/app/src/main/res'
+base_dir = os.path.join(PROJECT_ROOT, 'android', 'app', 'src', 'main', 'res')
 
 print("Generating app icons...")
 for density, size in sizes.items():
@@ -97,7 +101,7 @@ for density, size in sizes.items():
 
 # Create a large preview
 preview = create_icon(512)
-preview_path = '/root/iptv-player/app_icon_preview.png'
+preview_path = os.path.join(PROJECT_ROOT, 'app_icon_preview.png')
 preview.save(preview_path, 'PNG')
 print(f"\n✓ Preview saved: {preview_path}")
 print("\nApp icon generation complete!")
