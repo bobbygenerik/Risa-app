@@ -26,7 +26,10 @@ fi
 ROKU_IP=$1
 ROKU_USER="roku"
 ROKU_PASS="roku"
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" || {
+    echo -e "${RED}✗ Failed to determine project directory${NC}"
+    exit 1
+}
 
 echo -e "${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
 echo -e "${BLUE}║         Roku IPTV Player - Deployment Script              ║${NC}"
