@@ -165,7 +165,8 @@ class ExoPlayerAudioCapturer(private val context: Context) {
             exoPlayer = player
             isActive.set(true)
 
-            Log.d(TAG, "Started capturing audio from stream: $streamUrl")
+            val sanitizedUrl = streamUrl.replace("\n", "").replace("\r", "")
+            Log.d(TAG, "Started capturing audio from stream: $sanitizedUrl")
             return true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start stream capture: ${e.message}", e)

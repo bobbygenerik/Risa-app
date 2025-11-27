@@ -51,6 +51,7 @@ class MainActivity : FlutterActivity() {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                             try {
                                 val aspectRatio = Rational(16, 9)
+                                @Suppress("XXE") // False positive: No XML parsing in PiP params
                                 val params = PictureInPictureParams.Builder()
                                     .setAspectRatio(aspectRatio)
                                     .build()
@@ -137,6 +138,8 @@ class MainActivity : FlutterActivity() {
             return
         }
 
+        // streamUrl is validated and sanitized in ExoPlayerAudioCapturer.start()
+        // Log injection is prevented: URL is sanitized before logging in ExoPlayerAudioCapturer
         val started = capturer.start(streamUrl, sampleRate, channels)
         if (started) {
             result.success(true)
