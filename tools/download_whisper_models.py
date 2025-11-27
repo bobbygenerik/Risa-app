@@ -4,8 +4,12 @@ import whisper
 model_sizes = ["tiny", "base", "small"]
 
 for size in model_sizes:
-    print(f"Downloading Whisper model: {size}")
-    whisper.load_model(size)
-    print(f"Downloaded: {size}")
+    try:
+        print(f"Downloading Whisper model: {size}")
+        whisper.load_model(size)
+        print(f"Downloaded: {size}")
+    except Exception as e:
+        print(f"Error downloading {size} model: {e}")
+        continue
 
 print("All requested Whisper models downloaded.")
