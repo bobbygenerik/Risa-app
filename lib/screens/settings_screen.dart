@@ -76,6 +76,10 @@ class _SettingsScreenState extends State<SettingsScreen>
   final FocusNode _epgIntervalPlusFocusNode = FocusNode(debugLabel: 'EpgIntervalPlus');
   final FocusNode _epgPastDaysMinusFocusNode = FocusNode(debugLabel: 'EpgPastDaysMinus');
   final FocusNode _epgPastDaysPlusFocusNode = FocusNode(debugLabel: 'EpgPastDaysPlus');
+  // EPG section switches
+  final FocusNode _storeDescriptionsSwitchFocusNode = FocusNode(debugLabel: 'StoreDescriptionsSwitch');
+  final FocusNode _showLogosSwitchFocusNode = FocusNode(debugLabel: 'ShowLogosSwitch');
+  final FocusNode _showImagesSwitchFocusNode = FocusNode(debugLabel: 'ShowImagesSwitch');
   final Map<FocusNode, VoidCallback> _focusNodeListeners = {};
 
   // Playback Settings
@@ -268,6 +272,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     _epgIntervalPlusFocusNode.dispose();
     _epgPastDaysMinusFocusNode.dispose();
     _epgPastDaysPlusFocusNode.dispose();
+    _storeDescriptionsSwitchFocusNode.dispose();
+    _showLogosSwitchFocusNode.dispose();
+    _showImagesSwitchFocusNode.dispose();
     super.dispose();
   }
 
@@ -1242,18 +1249,50 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
 
             // 3. STORE PROGRAM DESCRIPTIONS TOGGLE
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Store Program Descriptions'),
-              subtitle: const Text(
-                'Save detailed program information (uses more storage)',
-              ),
-              value: storeDescriptions,
-              onChanged: (value) async {
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setBool('store_program_descriptions', value);
-                setState(() {});
+            Focus(
+              focusNode: _storeDescriptionsSwitchFocusNode,
+              onKeyEvent: (node, event) {
+                if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                  requestFirstSidebarFocus();
+                  return KeyEventResult.handled;
+                }
+                if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                  _epgPastDaysMinusFocusNode.requestFocus();
+                  return KeyEventResult.handled;
+                }
+                if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                  _showLogosSwitchFocusNode.requestFocus();
+                  return KeyEventResult.handled;
+                }
+                return KeyEventResult.ignored;
               },
+              child: Builder(
+                builder: (context) {
+                  final isFocused = Focus.of(context).hasFocus;
+                  return Container(
+                    decoration: isFocused
+                        ? BoxDecoration(
+                            border: Border.all(color: AppTheme.primaryBlue, width: 2),
+                            borderRadius: BorderRadius.circular(8),
+                          )
+                        : null,
+                    child: SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Store Program Descriptions'),
+                      subtitle: const Text(
+                        'Save detailed program information (uses more storage)',
+                      ),
+                      value: storeDescriptions,
+                      onChanged: (value) async {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setBool('store_program_descriptions', value);
+                        setState(() {});
+                      },
+                    ),
+                  );
+                },
+              ),
             ),
 
             const SizedBox(height: AppSizes.md),
@@ -1270,28 +1309,92 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             const SizedBox(height: AppSizes.sm),
 
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Show Channel Logos'),
-              subtitle: const Text('Display channel logos in EPG grid'),
-              value: showChannelLogos,
-              onChanged: (value) async {
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setBool('show_channel_logos', value);
-                setState(() {});
+            Focus(
+              focusNode: _showLogosSwitchFocusNode,
+              onKeyEvent: (node, event) {
+                if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                  requestFirstSidebarFocus();
+                  return KeyEventResult.handled;
+                }
+                if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                  _storeDescriptionsSwitchFocusNode.requestFocus();
+                  return KeyEventResult.handled;
+                }
+                if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                  _showImagesSwitchFocusNode.requestFocus();
+                  return KeyEventResult.handled;
+                }
+                return KeyEventResult.ignored;
               },
+              child: Builder(
+                builder: (context) {
+                  final isFocused = Focus.of(context).hasFocus;
+                  return Container(
+                    decoration: isFocused
+                        ? BoxDecoration(
+                            border: Border.all(color: AppTheme.primaryBlue, width: 2),
+                            borderRadius: BorderRadius.circular(8),
+                          )
+                        : null,
+                    child: SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Show Channel Logos'),
+                      subtitle: const Text('Display channel logos in EPG grid'),
+                      value: showChannelLogos,
+                      onChanged: (value) async {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setBool('show_channel_logos', value);
+                        setState(() {});
+                      },
+                    ),
+                  );
+                },
+              ),
             ),
 
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Show Program Images'),
-              subtitle: const Text('Display program thumbnails and posters'),
-              value: showProgramImages,
-              onChanged: (value) async {
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setBool('show_program_images', value);
-                setState(() {});
+            Focus(
+              focusNode: _showImagesSwitchFocusNode,
+              onKeyEvent: (node, event) {
+                if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                  requestFirstSidebarFocus();
+                  return KeyEventResult.handled;
+                }
+                if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                  _showLogosSwitchFocusNode.requestFocus();
+                  return KeyEventResult.handled;
+                }
+                if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                  _updateEpgButtonFocusNode.requestFocus();
+                  return KeyEventResult.handled;
+                }
+                return KeyEventResult.ignored;
               },
+              child: Builder(
+                builder: (context) {
+                  final isFocused = Focus.of(context).hasFocus;
+                  return Container(
+                    decoration: isFocused
+                        ? BoxDecoration(
+                            border: Border.all(color: AppTheme.primaryBlue, width: 2),
+                            borderRadius: BorderRadius.circular(8),
+                          )
+                        : null,
+                    child: SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Show Program Images'),
+                      subtitle: const Text('Display program thumbnails and posters'),
+                      value: showProgramImages,
+                      onChanged: (value) async {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setBool('show_program_images', value);
+                        setState(() {});
+                      },
+                    ),
+                  );
+                },
+              ),
             ),
 
             const SizedBox(height: AppSizes.lg),
@@ -1310,6 +1413,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                       }
                       if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
                         _clearEpgButtonFocusNode.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                      if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                        _showImagesSwitchFocusNode.requestFocus();
                         return KeyEventResult.handled;
                       }
                       return KeyEventResult.ignored;
@@ -1366,6 +1473,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                       if (event is! KeyDownEvent) return KeyEventResult.ignored;
                       if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
                         _updateEpgButtonFocusNode.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                      if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                        _showImagesSwitchFocusNode.requestFocus();
                         return KeyEventResult.handled;
                       }
                       return KeyEventResult.ignored;
