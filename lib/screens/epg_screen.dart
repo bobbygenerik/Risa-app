@@ -365,12 +365,12 @@ class _EPGScreenState extends State<EPGScreen> {
                 const SizedBox(height: AppSizes.xl),
                 BrandPrimaryButton(
                   icon: Icons.playlist_add_circle,
-                  label: 'Add Playlist or EPG',
+                  label: 'Add Playlist',
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSizes.xl,
                     vertical: AppSizes.md,
                   ),
-                  onPressed: () => context.go('/playlist-login'),
+                  onPressed: () => context.go('/settings'),
                 ),
               ],
             ),

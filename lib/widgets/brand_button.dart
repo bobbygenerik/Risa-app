@@ -70,30 +70,26 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
 
     final content = Stack(
       children: [
-        // Solid brand border on focus (use primary blue instead of pink)
+        // White border on focus for consistency with other buttons
         AnimatedContainer(
           duration: AppDurations.fast,
           decoration: BoxDecoration(
-            color: _focused ? AppTheme.primaryBlue : Colors.transparent,
             borderRadius: BorderRadius.circular(widget.borderRadius),
+            border: _focused
+                ? Border.all(color: Colors.white, width: 3)
+                : null,
+            boxShadow: _focused
+                ? [
+                    BoxShadow(
+                      color: Colors.white.withAlpha((0.5 * 255).round()),
+                      blurRadius: 12,
+                      spreadRadius: 2,
+                    ),
+                  ]
+                : null,
           ),
-          child: Padding(
-            padding: EdgeInsets.all(_focused ? 2 : 0),
-            child: innerButton,
-          ),
+          child: innerButton,
         ),
-        // Subtle white overlay on focus (very light)
-        if (_focused)
-          Positioned.fill(
-            child: IgnorePointer(
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(widget.borderRadius),
-                  color: Colors.white.withAlpha((0.04 * 255).round()),
-                ),
-              ),
-            ),
-          ),
       ],
     );
 
