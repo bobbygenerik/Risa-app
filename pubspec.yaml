@@ -5,6 +5,8 @@ publish_to: 'none'
 version: 1.0.0+1
 
 # Environment constraints - validated by Flutter tooling
+# SDK constraint format: ">=MIN_VERSION <MAX_VERSION"
+# Flutter pub will validate this when resolving dependencies
 environment:
   sdk: ">=3.2.6 <4.0.0"
 
