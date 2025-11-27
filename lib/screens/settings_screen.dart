@@ -1886,37 +1886,47 @@ class _SettingsScreenState extends State<SettingsScreen>
     FocusNode? focusNode,
     VoidCallback? onDownArrow,
   }) {
+    // Determine which tab this is based on the focusNode
+    final bool isM3uTab = focusNode == _m3uTabFocusNode;
+    final bool isXtreamTab = focusNode == _xtreamTabFocusNode;
+    
     return Focus(
       focusNode: focusNode,
       onKeyEvent: (node, event) {
         if (event is! KeyDownEvent) return KeyEventResult.ignored;
         final key = event.logicalKey;
+        
         // Left/right navigation between tabs
         if (key == LogicalKeyboardKey.arrowRight) {
-          if (_playlistInputMethod == 0) {
-            // Switch to Xtream tab and focus it
-            setState(() => _playlistInputMethod = 1);
+          if (isM3uTab) {
+            // From M3U tab, go to Xtream tab
             _xtreamTabFocusNode.requestFocus();
             return KeyEventResult.handled;
           }
-        } else if (key == LogicalKeyboardKey.arrowLeft || key == LogicalKeyboardKey.goBack) {
-          if (_playlistInputMethod == 1) {
-            // Switch to M3U tab and focus it
-            setState(() => _playlistInputMethod = 0);
+          // From Xtream tab, stay (rightmost)
+          return KeyEventResult.handled;
+        } else if (key == LogicalKeyboardKey.arrowLeft) {
+          if (isXtreamTab) {
+            // From Xtream tab, go to M3U tab
             _m3uTabFocusNode.requestFocus();
             return KeyEventResult.handled;
-          } else {
-            // On M3U tab, go back to sidebar
+          } else if (isM3uTab) {
+            // From M3U tab, go to sidebar
             requestFirstSidebarFocus();
             return KeyEventResult.handled;
           }
+          return KeyEventResult.handled;
+        } else if (key == LogicalKeyboardKey.goBack) {
+          // Back button always goes to sidebar
+          requestFirstSidebarFocus();
+          return KeyEventResult.handled;
         } else if (key == LogicalKeyboardKey.arrowDown) {
-          // Move to first input field for the selected tab
+          // Move to first input field for the CURRENT tab (the one we're focused on)
           if (onDownArrow != null) {
             onDownArrow();
-          } else if (_playlistInputMethod == 0) {
+          } else if (isM3uTab) {
             _m3uUrlFocusNode.requestFocus();
-          } else if (_playlistInputMethod == 1) {
+          } else if (isXtreamTab) {
             _xtreamServerFocusNode.requestFocus();
           }
           return KeyEventResult.handled;
