@@ -4073,43 +4073,67 @@ class _SettingsScreenState extends State<SettingsScreen>
             },
           ),
         },
-        child: TextField(
-          controller: controller,
-          focusNode: focusNode,
-          autofocus: false,
-          readOnly: !isEditable,
-          obscureText: obscureText,
-          keyboardType: keyboardType,
-          maxLines: obscureText ? 1 : maxLines,
-          onTap: () {
-            if (!isEditable) {
-              onEditableChanged(true);
-              Future.delayed(const Duration(milliseconds: 50), () {
-                focusNode.requestFocus();
-                SystemChannels.textInput.invokeMethod('TextInput.show');
-              });
+        child: Focus(
+          skipTraversal: true,
+          onKeyEvent: (node, event) {
+            // Intercept up/down arrows even in edit mode
+            if (event is! KeyDownEvent) return KeyEventResult.ignored;
+            if (event.logicalKey == LogicalKeyboardKey.arrowUp && onUpArrow != null) {
+              if (isEditable) {
+                onEditableChanged(false);
+                SystemChannels.textInput.invokeMethod('TextInput.hide');
+              }
+              onUpArrow();
+              return KeyEventResult.handled;
             }
+            if (event.logicalKey == LogicalKeyboardKey.arrowDown && onDownArrow != null) {
+              if (isEditable) {
+                onEditableChanged(false);
+                SystemChannels.textInput.invokeMethod('TextInput.hide');
+              }
+              onDownArrow();
+              return KeyEventResult.handled;
+            }
+            return KeyEventResult.ignored;
           },
-          decoration: InputDecoration(
-            hintText: hintText,
-            helperText: helperText,
-            labelText: labelText,
-            prefixIcon: prefixIcon != null ? Icon(prefixIcon) : null,
-            filled: true,
-            fillColor: AppTheme.highlight,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide.none,
+          child: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            autofocus: false,
+            readOnly: !isEditable,
+            obscureText: obscureText,
+            keyboardType: keyboardType,
+            maxLines: obscureText ? 1 : maxLines,
+            onTap: () {
+              if (!isEditable) {
+                onEditableChanged(true);
+                Future.delayed(const Duration(milliseconds: 50), () {
+                  focusNode.requestFocus();
+                  SystemChannels.textInput.invokeMethod('TextInput.show');
+                });
+              }
+            },
+            decoration: InputDecoration(
+              hintText: hintText,
+              helperText: helperText,
+              labelText: labelText,
+              prefixIcon: prefixIcon != null ? Icon(prefixIcon) : null,
+              filled: true,
+              fillColor: AppTheme.highlight,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 3),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 3),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           ),
         ),
       ),
