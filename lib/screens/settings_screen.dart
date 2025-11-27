@@ -951,7 +951,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               prefixIcon: Icons.link,
               enableDirectionalNavigation: true,
               onLeftArrow: requestFirstSidebarFocus,
-              onUpArrow: () => FocusScope.of(context).previousFocus(),
+              onUpArrow: () => _clearPlaylistCacheButtonFocusNode.requestFocus(),
               onDownArrow: () => FocusScope.of(context).nextFocus(),
             ),
             const SizedBox(height: AppSizes.xs),
@@ -1757,6 +1757,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                     } else {
                       _loadXtreamButtonFocusNode.requestFocus();
                     }
+                    return KeyEventResult.handled;
+                  }
+                  if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                    _customEpgUrlFocusNode.requestFocus();
                     return KeyEventResult.handled;
                   }
                   return KeyEventResult.ignored;
