@@ -1397,19 +1397,16 @@ class _SettingsScreenState extends State<SettingsScreen>
                     child: Builder(
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
-                        return Container(
-                          decoration: isFocused
-                              ? BoxDecoration(
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: AppTheme.primaryBlue, width: 3),
-                                )
-                              : null,
-                          child: TextButton(
-                            onPressed: () {
-                              _m3uUrlController.clear();
-                            },
-                            child: const Text('Clear'),
+                        return TextButton(
+                          onPressed: () {
+                            _m3uUrlController.clear();
+                          },
+                          style: TextButton.styleFrom(
+                            side: isFocused
+                                ? const BorderSide(color: AppTheme.primaryBlue, width: 3)
+                                : null,
                           ),
+                          child: const Text('Clear'),
                         );
                       },
                     ),
@@ -1451,73 +1448,68 @@ class _SettingsScreenState extends State<SettingsScreen>
                             }
                           });
                         }
-                        return Container(
-                          decoration: isFocused
-                              ? BoxDecoration(
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: AppTheme.primaryBlue, width: 3),
-                                )
-                              : null,
-                          child: ElevatedButton.icon(
-                            onPressed: () async {
-                              final url = _m3uUrlController.text.trim();
-                              if (url.isEmpty) {
-                                if (!mounted) return;
-                                showAppSnackBar(
-                                  context,
-                                  const SnackBar(content: Text('Please enter a valid M3U URL')),
-                                );
-                                return;
-                              }
+                        return ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryBlue,
+                            side: isFocused
+                                ? const BorderSide(color: AppTheme.primaryBlue, width: 3)
+                                : null,
+                          ),
+                          onPressed: () async {
+                            final url = _m3uUrlController.text.trim();
+                            if (url.isEmpty) {
+                              if (!mounted) return;
+                              showAppSnackBar(
+                                context,
+                                const SnackBar(content: Text('Please enter a valid M3U URL')),
+                              );
+                              return;
+                            }
 
+                            if (mounted) {
+                              showAppSnackBar(
+                                context,
+                                const SnackBar(content: Text('Loading playlist from URL...')),
+                              );
+                            }
+
+                            try {
+                              final provider = Provider.of<ChannelProvider>(
+                                context,
+                                listen: false,
+                              );
+                              await provider.loadPlaylistFromUrl(url);
+
+                              final prefs = await SharedPreferences.getInstance();
+                              await prefs.setString('m3u_url', url);
+                              await prefs.setString('playlist_type', 'm3u');
+
+                              if (!mounted) return;
+                              showAppSnackBar(
+                                context,
+                                SnackBar(
+                                  content: Text(
+                                    'Playlist loaded successfully! ${provider.channels.length} channels found.',
+                                  ),
+                                  backgroundColor: AppTheme.accentGreen,
+                                ),
+                              );
+                            } catch (e) {
                               if (mounted) {
-                                showAppSnackBar(
-                                  context,
-                                  const SnackBar(content: Text('Loading playlist from URL...')),
-                                );
-                              }
-
-                              try {
-                                final provider = Provider.of<ChannelProvider>(
-                                  context,
-                                  listen: false,
-                                );
-                                await provider.loadPlaylistFromUrl(url);
-
-                                final prefs = await SharedPreferences.getInstance();
-                                await prefs.setString('m3u_url', url);
-                                await prefs.setString('playlist_type', 'm3u');
-
-                                if (!mounted) return;
                                 showAppSnackBar(
                                   context,
                                   SnackBar(
                                     content: Text(
-                                      'Playlist loaded successfully! ${provider.channels.length} channels found.',
+                                      'Failed to load playlist: ${e.toString()}',
                                     ),
-                                    backgroundColor: AppTheme.accentGreen,
+                                    backgroundColor: AppTheme.accentRed,
                                   ),
                                 );
-                              } catch (e) {
-                                if (mounted) {
-                                  showAppSnackBar(
-                                    context,
-                                    SnackBar(
-                                      content: Text(
-                                        'Failed to load playlist: ${e.toString()}',
-                                      ),
-                                      backgroundColor: AppTheme.accentRed,
-                                    ),
-                                  );
-                                }
                               }
-                            },
-                            icon: const Icon(Icons.download),
-                            label: const Text('Load Playlist'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryBlue,
-                            ),
-                          ),
+                            }
+                          },
+                          icon: const Icon(Icons.download),
+                          label: const Text('Load Playlist'),
                         );
                       },
                     ),
@@ -1623,89 +1615,84 @@ class _SettingsScreenState extends State<SettingsScreen>
                             }
                           });
                         }
-                        return Container(
-                          decoration: isFocused
-                              ? BoxDecoration(
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: AppTheme.primaryBlue, width: 3),
-                                )
-                              : null,
-                          child: ElevatedButton.icon(
-                    onPressed: () async {
-                      final server = _xtreamServerController.text.trim();
-                      final username = _xtreamUsernameController.text.trim();
-                      final password = _xtreamPasswordController.text.trim();
-
-                      if (server.isEmpty ||
-                          username.isEmpty ||
-                          password.isEmpty) {
-                        if (!mounted) return;
-                        showAppSnackBar(
-                          context,
-                          const SnackBar(
-                            content: Text(
-                              'Please fill in all Xtream Codes fields',
-                            ),
+                        return ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryBlue,
+                            side: isFocused
+                                ? const BorderSide(color: AppTheme.primaryBlue, width: 3)
+                                : null,
                           ),
-                        );
-                        return;
-                      }
+                          onPressed: () async {
+                            final server = _xtreamServerController.text.trim();
+                            final username = _xtreamUsernameController.text.trim();
+                            final password = _xtreamPasswordController.text.trim();
 
-                      if (mounted) {
-                        showAppSnackBar(
-                          context,
-                          const SnackBar(
-                            content: Text('Loading Xtream Codes playlist...'),
-                          ),
-                        );
-                      }
+                            if (server.isEmpty ||
+                                username.isEmpty ||
+                                password.isEmpty) {
+                              if (!mounted) return;
+                              showAppSnackBar(
+                                context,
+                                const SnackBar(
+                                  content: Text(
+                                    'Please fill in all Xtream Codes fields',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
 
-                      final url =
-                          '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
+                            if (mounted) {
+                              showAppSnackBar(
+                                context,
+                                const SnackBar(
+                                  content: Text('Loading Xtream Codes playlist...'),
+                                ),
+                              );
+                            }
 
-                      try {
-                        final provider = Provider.of<ChannelProvider>(
-                          context,
-                          listen: false,
-                        );
-                        await provider.loadPlaylistFromUrl(url);
+                            final url =
+                                '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
 
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setString('xtream_server', server);
-                        await prefs.setString('xtream_username', username);
-                        await prefs.setString('xtream_password', password);
-                        await prefs.setString('playlist_type', 'xtream');
+                            try {
+                              final provider = Provider.of<ChannelProvider>(
+                                context,
+                                listen: false,
+                              );
+                              await provider.loadPlaylistFromUrl(url);
 
-                        if (!mounted) return;
-                        showAppSnackBar(
-                          context,
-                          SnackBar(
-                            content: Text(
-                              'Xtream playlist loaded! ${provider.channels.length} channels found.',
-                            ),
-                            backgroundColor: AppTheme.accentGreen,
-                          ),
-                        );
-                      } catch (e) {
-                        if (mounted) {
-                          showAppSnackBar(
-                            context,
-                            SnackBar(
-                              content: Text(
-                                'Failed to load Xtream playlist: ${e.toString()}',
-                              ),
-                              backgroundColor: AppTheme.accentRed,
-                            ),
-                          );
-                        }
-                      }
-                    },
-                            icon: const Icon(Icons.download),
-                            label: const Text('Load Playlist'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryBlue,
-                            ),
-                          ),
+                              final prefs = await SharedPreferences.getInstance();
+                              await prefs.setString('xtream_server', server);
+                              await prefs.setString('xtream_username', username);
+                              await prefs.setString('xtream_password', password);
+                              await prefs.setString('playlist_type', 'xtream');
+
+                              if (!mounted) return;
+                              showAppSnackBar(
+                                context,
+                                SnackBar(
+                                  content: Text(
+                                    'Xtream playlist loaded! ${provider.channels.length} channels found.',
+                                  ),
+                                  backgroundColor: AppTheme.accentGreen,
+                                ),
+                              );
+                            } catch (e) {
+                              if (mounted) {
+                                showAppSnackBar(
+                                  context,
+                                  SnackBar(
+                                    content: Text(
+                                      'Failed to load Xtream playlist: ${e.toString()}',
+                                    ),
+                                    backgroundColor: AppTheme.accentRed,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          icon: const Icon(Icons.download),
+                          label: const Text('Load Playlist'),
                         );
                       },
                     ),
@@ -1753,52 +1740,47 @@ class _SettingsScreenState extends State<SettingsScreen>
                         }
                       });
                     }
-                    return Container(
-                      decoration: isFocused
-                          ? BoxDecoration(
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: AppTheme.primaryBlue, width: 3),
-                            )
-                          : null,
-                      child: ElevatedButton.icon(
-                onPressed: () async {
-                  final confirm = await showDialog<bool>(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Clear Playlist Cache?'),
-                      content: const Text('Are you sure you want to clear the playlist cache? This will remove all locally cached playlist data.'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, false),
-                          child: const Text('Cancel'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, true),
-                          child: const Text('Clear', style: TextStyle(color: Colors.red)),
-                        ),
-                      ],
-                    ),
-                  );
-                  if (confirm == true) {
-                    Provider.of<ChannelProvider>(context, listen: false);
-                    await clearPlaylistCache();
-                    if (mounted) {
-                      showAppSnackBar(
-                        context,
-                        const SnackBar(
-                          content: Text('Playlist cache cleared'),
-                          backgroundColor: AppTheme.accentGreen,
-                        ),
-                      );
-                    }
-                  }
-                },
-                        icon: const Icon(Icons.delete_sweep),
-                        label: const Text('Clear Playlist Cache'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red.shade700,
-                        ),
+                    return ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade700,
+                        side: isFocused
+                            ? const BorderSide(color: AppTheme.primaryBlue, width: 3)
+                            : null,
                       ),
+                      onPressed: () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Clear Playlist Cache?'),
+                            content: const Text('Are you sure you want to clear the playlist cache? This will remove all locally cached playlist data.'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text('Clear', style: TextStyle(color: Colors.red)),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirm == true) {
+                          Provider.of<ChannelProvider>(context, listen: false);
+                          await clearPlaylistCache();
+                          if (mounted) {
+                            showAppSnackBar(
+                              context,
+                              const SnackBar(
+                                content: Text('Playlist cache cleared'),
+                                backgroundColor: AppTheme.accentGreen,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      icon: const Icon(Icons.delete_sweep),
+                      label: const Text('Clear Playlist Cache'),
                     );
                   },
                 ),
