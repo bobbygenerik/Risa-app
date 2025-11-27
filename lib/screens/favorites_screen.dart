@@ -5,7 +5,6 @@ import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
-import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 
 class FavoritesScreen extends StatefulWidget {
@@ -150,18 +149,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               context,
             ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
             textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: AppSizes.xl),
-          BrandPrimaryButton(
-            icon: Icons.home,
-            label: 'Browse Channels',
-            onPressed: () {
-              context.go('/home');
-            },
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSizes.xl,
-              vertical: AppSizes.md,
-            ),
           ),
         ],
       ),
