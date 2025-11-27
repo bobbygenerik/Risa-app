@@ -5,7 +5,10 @@ echo "🚀 Deploying RISA IPTV Web Version..."
 
 # Build for production
 echo "📦 Building web version..."
-flutter build web --release --web-renderer html
+if ! flutter build web --release --web-renderer html; then
+    echo "❌ Flutter build failed"
+    exit 1
+fi
 
 # Copy to deployment directory
 echo "📁 Preparing deployment files..."
