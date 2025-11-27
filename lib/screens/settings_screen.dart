@@ -599,17 +599,37 @@ class _SettingsScreenState extends State<SettingsScreen>
                         ),
                       ),
                       const SizedBox(height: AppSizes.md),
-                      TVFocusable(
-                        borderRadius: BorderRadius.circular(8),
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            final result = await context.push('/edit-profile');
-                            if (!mounted) return;
-                            if (result == true) {
-                              setState(() {});
-                            }
+                      Focus(
+                        onKeyEvent: (node, event) {
+                          if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                            requestFirstSidebarFocus();
+                            return KeyEventResult.handled;
+                          }
+                          return KeyEventResult.ignored;
+                        },
+                        child: Builder(
+                          builder: (context) {
+                            final isFocused = Focus.of(context).hasFocus;
+                            return Container(
+                              decoration: isFocused
+                                  ? BoxDecoration(
+                                      border: Border.all(color: AppTheme.primaryBlue, width: 2),
+                                      borderRadius: BorderRadius.circular(8),
+                                    )
+                                  : null,
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  final result = await context.push('/edit-profile');
+                                  if (!mounted) return;
+                                  if (result == true) {
+                                    setState(() {});
+                                  }
+                                },
+                                child: const Text('Edit Profile'),
+                              ),
+                            );
                           },
-                          child: const Text('Edit Profile'),
                         ),
                       ),
                     ],
@@ -779,15 +799,48 @@ class _SettingsScreenState extends State<SettingsScreen>
           title: 'Buffer Settings',
           children: [
             Text('Video Buffer Size: ${_videoBufferSize.round()}%'),
-            Slider(
-              value: _videoBufferSize,
-              min: 0,
-              max: 100,
-              divisions: 20,
-              label: '${_videoBufferSize.round()}%',
-              onChanged: (value) {
-                setState(() => _videoBufferSize = value);
+            Focus(
+              onKeyEvent: (node, event) {
+                if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                  if (_videoBufferSize > 0) {
+                    setState(() => _videoBufferSize = (_videoBufferSize - 5).clamp(0, 100));
+                    return KeyEventResult.handled;
+                  }
+                  requestFirstSidebarFocus();
+                  return KeyEventResult.handled;
+                }
+                if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                  if (_videoBufferSize < 100) {
+                    setState(() => _videoBufferSize = (_videoBufferSize + 5).clamp(0, 100));
+                    return KeyEventResult.handled;
+                  }
+                }
+                return KeyEventResult.ignored;
               },
+              child: Builder(
+                builder: (context) {
+                  final isFocused = Focus.of(context).hasFocus;
+                  return Container(
+                    decoration: isFocused
+                        ? BoxDecoration(
+                            border: Border.all(color: AppTheme.primaryBlue, width: 2),
+                            borderRadius: BorderRadius.circular(8),
+                          )
+                        : null,
+                    child: Slider(
+                      value: _videoBufferSize,
+                      min: 0,
+                      max: 100,
+                      divisions: 20,
+                      label: '${_videoBufferSize.round()}%',
+                      onChanged: (value) {
+                        setState(() => _videoBufferSize = value);
+                      },
+                    ),
+                  );
+                },
+              ),
             ),
             Text(
               'Higher buffer reduces stuttering but increases memory usage',
@@ -2135,18 +2188,38 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ),
                 ),
                 if (hasChannels)
-                  TextButton(
-                    onPressed: () {
-                      showAppSnackBar(
-                        context,
-                        SnackBar(
-                          content: Text(
-                            'First channel: ${provider.channels.first.name}',
-                          ),
-                        ),
-                      );
+                  Focus(
+                    onKeyEvent: (node, event) {
+                      if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                        requestFirstSidebarFocus();
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
                     },
-                    child: const Text('Inspect'),
+                    child: Builder(
+                      builder: (context) {
+                        final isFocused = Focus.of(context).hasFocus;
+                        return TextButton(
+                          style: TextButton.styleFrom(
+                            side: isFocused
+                                ? const BorderSide(color: AppTheme.primaryBlue, width: 2)
+                                : null,
+                          ),
+                          onPressed: () {
+                            showAppSnackBar(
+                              context,
+                              SnackBar(
+                                content: Text(
+                                  'First channel: ${provider.channels.first.name}',
+                                ),
+                              ),
+                            );
+                          },
+                          child: const Text('Inspect'),
+                        );
+                      },
+                    ),
                   ),
               ],
             ),
@@ -2661,17 +2734,50 @@ class _SettingsScreenState extends State<SettingsScreen>
           title: 'Buffer Settings',
           children: [
             Text('Video Buffer Size: ${_videoBufferSize.round()}%'),
-            Slider(
-              value: _videoBufferSize,
-              min: 0,
-              max: 100,
-              divisions: 20,
-              label: '${_videoBufferSize.round()}%',
-              onChanged: (value) {
-                setState(() {
-                  _videoBufferSize = value;
-                });
+            Focus(
+              onKeyEvent: (node, event) {
+                if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                  if (_videoBufferSize > 0) {
+                    setState(() => _videoBufferSize = (_videoBufferSize - 5).clamp(0, 100));
+                    return KeyEventResult.handled;
+                  }
+                  requestFirstSidebarFocus();
+                  return KeyEventResult.handled;
+                }
+                if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                  if (_videoBufferSize < 100) {
+                    setState(() => _videoBufferSize = (_videoBufferSize + 5).clamp(0, 100));
+                    return KeyEventResult.handled;
+                  }
+                }
+                return KeyEventResult.ignored;
               },
+              child: Builder(
+                builder: (context) {
+                  final isFocused = Focus.of(context).hasFocus;
+                  return Container(
+                    decoration: isFocused
+                        ? BoxDecoration(
+                            border: Border.all(color: AppTheme.primaryBlue, width: 2),
+                            borderRadius: BorderRadius.circular(8),
+                          )
+                        : null,
+                    child: Slider(
+                      value: _videoBufferSize,
+                      min: 0,
+                      max: 100,
+                      divisions: 20,
+                      label: '${_videoBufferSize.round()}%',
+                      onChanged: (value) {
+                        setState(() {
+                          _videoBufferSize = value;
+                        });
+                      },
+                    ),
+                  );
+                },
+              ),
             ),
             Text(
               'Higher buffer reduces stuttering but increases memory usage',
@@ -2702,16 +2808,39 @@ class _SettingsScreenState extends State<SettingsScreen>
               title: 'OpenSubtitles Integration',
               subtitle: 'FREE API - Automatic subtitle downloading',
               children: [
-                SwitchListTile(
-                  title: const Text('Enable OpenSubtitles'),
-                  subtitle: const Text('Automatically download subtitles'),
-                  value: _openSubtitlesEnabled,
-                  onChanged: (value) {
-                    setState(() {
-                      _openSubtitlesEnabled = value;
-                    });
-                    subtitleService.setEnabled(value);
+                Focus(
+                  onKeyEvent: (node, event) {
+                    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                    if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                      requestFirstSidebarFocus();
+                      return KeyEventResult.handled;
+                    }
+                    return KeyEventResult.ignored;
                   },
+                  child: Builder(
+                    builder: (context) {
+                      final isFocused = Focus.of(context).hasFocus;
+                      return Container(
+                        decoration: isFocused
+                            ? BoxDecoration(
+                                border: Border.all(color: AppTheme.primaryBlue, width: 2),
+                                borderRadius: BorderRadius.circular(8),
+                              )
+                            : null,
+                        child: SwitchListTile(
+                          title: const Text('Enable OpenSubtitles'),
+                          subtitle: const Text('Automatically download subtitles'),
+                          value: _openSubtitlesEnabled,
+                          onChanged: (value) {
+                            setState(() {
+                              _openSubtitlesEnabled = value;
+                            });
+                            subtitleService.setEnabled(value);
+                          },
+                        ),
+                      );
+                    },
+                  ),
                 ),
                 if (_openSubtitlesEnabled) ...[
                   const SizedBox(height: 16),
@@ -2759,41 +2888,84 @@ class _SettingsScreenState extends State<SettingsScreen>
                     enableDirectionalNavigation: true,
                   ),
                   const SizedBox(height: 16),
-                  SwitchListTile(
-                    title: const Text('Auto-download subtitles'),
-                    subtitle: const Text(
-                      'Download subtitles automatically when playing',
-                    ),
-                    value: _autoDownloadSubtitles,
-                    onChanged: (value) {
-                      setState(() {
-                        _autoDownloadSubtitles = value;
-                      });
-                      subtitleService.setAutoDownload(value);
+                  Focus(
+                    onKeyEvent: (node, event) {
+                      if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                        requestFirstSidebarFocus();
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
                     },
+                    child: Builder(
+                      builder: (context) {
+                        final isFocused = Focus.of(context).hasFocus;
+                        return Container(
+                          decoration: isFocused
+                              ? BoxDecoration(
+                                  border: Border.all(color: AppTheme.primaryBlue, width: 2),
+                                  borderRadius: BorderRadius.circular(8),
+                                )
+                              : null,
+                          child: SwitchListTile(
+                            title: const Text('Auto-download subtitles'),
+                            subtitle: const Text(
+                              'Download subtitles automatically when playing',
+                            ),
+                            value: _autoDownloadSubtitles,
+                            onChanged: (value) {
+                              setState(() {
+                                _autoDownloadSubtitles = value;
+                              });
+                              subtitleService.setAutoDownload(value);
+                            },
+                          ),
+                        );
+                      },
+                    ),
                   ),
                   const SizedBox(height: 8),
-                  ElevatedButton.icon(
-                    onPressed: () async {
-                      final localContext = context;
-                      final success = await subtitleService.authenticate();
-                      if (!localContext.mounted) return;
-                      showAppSnackBar(
-                        localContext,
-                        SnackBar(
-                          content: Text(
-                            success
-                                ? 'Connected successfully!'
-                                : 'Connection failed',
-                          ),
-                          backgroundColor: success
-                              ? Colors.green
-                              : AppTheme.accentRed,
-                        ),
-                      );
+                  Focus(
+                    onKeyEvent: (node, event) {
+                      if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                        requestFirstSidebarFocus();
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
                     },
-                    icon: const Icon(Icons.check_circle),
-                    label: const Text('Test Connection'),
+                    child: Builder(
+                      builder: (context) {
+                        final isFocused = Focus.of(context).hasFocus;
+                        return ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            side: isFocused
+                                ? const BorderSide(color: AppTheme.primaryBlue, width: 2)
+                                : null,
+                          ),
+                          onPressed: () async {
+                            final localContext = context;
+                            final success = await subtitleService.authenticate();
+                            if (!localContext.mounted) return;
+                            showAppSnackBar(
+                              localContext,
+                              SnackBar(
+                                content: Text(
+                                  success
+                                      ? 'Connected successfully!'
+                                      : 'Connection failed',
+                                ),
+                                backgroundColor: success
+                                    ? Colors.green
+                                    : AppTheme.accentRed,
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.check_circle),
+                          label: const Text('Test Connection'),
+                        );
+                      },
+                    ),
                   ),
                 ],
               ],
@@ -2808,18 +2980,41 @@ class _SettingsScreenState extends State<SettingsScreen>
               title: 'Real-Debrid Integration',
               subtitle: 'FREE API - Enhanced streaming for VOD and Catch-up',
               children: [
-                SwitchListTile(
-                  title: const Text('Enable Real-Debrid'),
-                  subtitle: const Text(
-                    'Use your Real-Debrid account for premium links',
-                  ),
-                  value: _realDebridEnabled,
-                  onChanged: (value) {
-                    setState(() {
-                      _realDebridEnabled = value;
-                    });
-                    rdService.setEnabled(value);
+                Focus(
+                  onKeyEvent: (node, event) {
+                    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                    if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                      requestFirstSidebarFocus();
+                      return KeyEventResult.handled;
+                    }
+                    return KeyEventResult.ignored;
                   },
+                  child: Builder(
+                    builder: (context) {
+                      final isFocused = Focus.of(context).hasFocus;
+                      return Container(
+                        decoration: isFocused
+                            ? BoxDecoration(
+                                border: Border.all(color: AppTheme.primaryBlue, width: 2),
+                                borderRadius: BorderRadius.circular(8),
+                              )
+                            : null,
+                        child: SwitchListTile(
+                          title: const Text('Enable Real-Debrid'),
+                          subtitle: const Text(
+                            'Use your Real-Debrid account for premium links',
+                          ),
+                          value: _realDebridEnabled,
+                          onChanged: (value) {
+                            setState(() {
+                              _realDebridEnabled = value;
+                            });
+                            rdService.setEnabled(value);
+                          },
+                        ),
+                      );
+                    },
+                  ),
                 ),
                 if (_realDebridEnabled) ...[
                   const SizedBox(height: 16),
@@ -2843,48 +3038,114 @@ class _SettingsScreenState extends State<SettingsScreen>
                     enableDirectionalNavigation: true,
                   ),
                   const SizedBox(height: 16),
-                  CheckboxListTile(
-                    title: const Text('Use for Catch-up TV'),
-                    value: _realDebridForCatchup,
-                    onChanged: (value) {
-                      setState(() {
-                        _realDebridForCatchup = value ?? true;
-                      });
-                      rdService.setEnableForCatchup(value ?? true);
+                  Focus(
+                    onKeyEvent: (node, event) {
+                      if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                        requestFirstSidebarFocus();
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
                     },
+                    child: Builder(
+                      builder: (context) {
+                        final isFocused = Focus.of(context).hasFocus;
+                        return Container(
+                          decoration: isFocused
+                              ? BoxDecoration(
+                                  border: Border.all(color: AppTheme.primaryBlue, width: 2),
+                                  borderRadius: BorderRadius.circular(8),
+                                )
+                              : null,
+                          child: CheckboxListTile(
+                            title: const Text('Use for Catch-up TV'),
+                            value: _realDebridForCatchup,
+                            onChanged: (value) {
+                              setState(() {
+                                _realDebridForCatchup = value ?? true;
+                              });
+                              rdService.setEnableForCatchup(value ?? true);
+                            },
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                  CheckboxListTile(
-                    title: const Text('Use for VOD/Movies'),
-                    value: _realDebridForVOD,
-                    onChanged: (value) {
-                      setState(() {
-                        _realDebridForVOD = value ?? true;
-                      });
-                      rdService.setEnableForVOD(value ?? true);
+                  Focus(
+                    onKeyEvent: (node, event) {
+                      if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                        requestFirstSidebarFocus();
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
                     },
+                    child: Builder(
+                      builder: (context) {
+                        final isFocused = Focus.of(context).hasFocus;
+                        return Container(
+                          decoration: isFocused
+                              ? BoxDecoration(
+                                  border: Border.all(color: AppTheme.primaryBlue, width: 2),
+                                  borderRadius: BorderRadius.circular(8),
+                                )
+                              : null,
+                          child: CheckboxListTile(
+                            title: const Text('Use for VOD/Movies'),
+                            value: _realDebridForVOD,
+                            onChanged: (value) {
+                              setState(() {
+                                _realDebridForVOD = value ?? true;
+                              });
+                              rdService.setEnableForVOD(value ?? true);
+                            },
+                          ),
+                        );
+                      },
+                    ),
                   ),
                   const SizedBox(height: 8),
-                  ElevatedButton.icon(
-                    onPressed: () async {
-                      final localContext = context;
-                      final success = await rdService.testConnection();
-                      if (!localContext.mounted) return;
-                      showAppSnackBar(
-                        localContext,
-                        SnackBar(
-                          content: Text(
-                            success
-                                ? 'Connected! Premium until ${rdService.premiumExpiryDate}'
-                                : 'Connection failed',
-                          ),
-                          backgroundColor: success
-                              ? Colors.green
-                              : AppTheme.accentRed,
-                        ),
-                      );
+                  Focus(
+                    onKeyEvent: (node, event) {
+                      if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                        requestFirstSidebarFocus();
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
                     },
-                    icon: const Icon(Icons.check_circle),
-                    label: const Text('Test Connection'),
+                    child: Builder(
+                      builder: (context) {
+                        final isFocused = Focus.of(context).hasFocus;
+                        return ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            side: isFocused
+                                ? const BorderSide(color: AppTheme.primaryBlue, width: 2)
+                                : null,
+                          ),
+                          onPressed: () async {
+                            final localContext = context;
+                            final success = await rdService.testConnection();
+                            if (!localContext.mounted) return;
+                            showAppSnackBar(
+                              localContext,
+                              SnackBar(
+                                content: Text(
+                                  success
+                                      ? 'Connected! Premium until ${rdService.premiumExpiryDate}'
+                                      : 'Connection failed',
+                                ),
+                                backgroundColor: success
+                                    ? Colors.green
+                                    : AppTheme.accentRed,
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.check_circle),
+                          label: const Text('Test Connection'),
+                        );
+                      },
+                    ),
                   ),
                   if (rdService.isAuthenticated) ...[
                     const SizedBox(height: 16),
@@ -2913,20 +3174,43 @@ class _SettingsScreenState extends State<SettingsScreen>
                 title: 'AI Video Upscaling',
                 subtitle: 'FREE - On-device AI upscaling',
                 children: [
-                  SwitchListTile(
-                    title: const Text('Enable AI Upscaling'),
-                    subtitle: const Text(
-                      'Enhance video quality with AI (2x upscaling)',
+                  Focus(
+                    onKeyEvent: (node, event) {
+                      if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                        requestFirstSidebarFocus();
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child: Builder(
+                      builder: (context) {
+                        final isFocused = Focus.of(context).hasFocus;
+                        return Container(
+                          decoration: isFocused
+                              ? BoxDecoration(
+                                  border: Border.all(color: AppTheme.primaryBlue, width: 2),
+                                  borderRadius: BorderRadius.circular(8),
+                                )
+                              : null,
+                          child: SwitchListTile(
+                            title: const Text('Enable AI Upscaling'),
+                            subtitle: const Text(
+                              'Enhance video quality with AI (2x upscaling)',
+                            ),
+                            value: _aiUpscalingEnabled,
+                            onChanged: aiService.isModelLoaded
+                                ? (value) {
+                                    setState(() {
+                                      _aiUpscalingEnabled = value;
+                                    });
+                                    aiService.setEnabled(value);
+                                  }
+                                : null,
+                          ),
+                        );
+                      },
                     ),
-                    value: _aiUpscalingEnabled,
-                    onChanged: aiService.isModelLoaded
-                        ? (value) {
-                            setState(() {
-                              _aiUpscalingEnabled = value;
-                            });
-                            aiService.setEnabled(value);
-                          }
-                        : null,
                   ),
                   if (!aiService.isModelLoaded) ...[
                     _buildAIModelDownloadCard(aiService),
@@ -3200,55 +3484,98 @@ class _SettingsScreenState extends State<SettingsScreen>
                 Row(
                   children: [
                     Expanded(
-                      child: TextField(
-                        controller: TextEditingController(text: recordingPath),
-                        autofocus: false,
-                        readOnly: true,
-                        decoration: const InputDecoration(
-                          hintText: 'No storage location selected',
-                          prefixIcon: Icon(Icons.folder_outlined),
-                          border: OutlineInputBorder(),
-                          filled: true,
-                          fillColor: AppTheme.cardBackground,
+                      child: Focus(
+                        onKeyEvent: (node, event) {
+                          if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                            requestFirstSidebarFocus();
+                            return KeyEventResult.handled;
+                          }
+                          return KeyEventResult.ignored;
+                        },
+                        child: Builder(
+                          builder: (context) {
+                            final isFocused = Focus.of(context).hasFocus;
+                            return Container(
+                              decoration: isFocused
+                                  ? BoxDecoration(
+                                      border: Border.all(color: AppTheme.primaryBlue, width: 2),
+                                      borderRadius: BorderRadius.circular(8),
+                                    )
+                                  : null,
+                              child: TextField(
+                                controller: TextEditingController(text: recordingPath),
+                                autofocus: false,
+                                readOnly: true,
+                                decoration: const InputDecoration(
+                                  hintText: 'No storage location selected',
+                                  prefixIcon: Icon(Icons.folder_outlined),
+                                  border: OutlineInputBorder(),
+                                  filled: true,
+                                  fillColor: AppTheme.cardBackground,
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ),
                     const SizedBox(width: AppSizes.sm),
-                    ElevatedButton.icon(
-                      onPressed: () async {
-                        final localContext = context;
-                        try {
-                          final result = await FilePicker.platform
-                              .getDirectoryPath();
-                          if (result != null) {
-                            final prefs = await SharedPreferences.getInstance();
-                            await prefs.setString(
-                              'recording_storage_path',
-                              result,
-                            );
-                            setState(() {});
-                            if (!localContext.mounted) return;
-                            showAppSnackBar(
-                              localContext,
-                              const SnackBar(
-                                content: Text('Recording location updated'),
-                                backgroundColor: AppTheme.accentGreen,
-                              ),
-                            );
-                          }
-                        } catch (e) {
-                          if (!localContext.mounted) return;
-                          showAppSnackBar(
-                            localContext,
-                            SnackBar(
-                              content: Text('Failed to select folder: $e'),
-                              backgroundColor: AppTheme.accentRed,
-                            ),
-                          );
+                    Focus(
+                      onKeyEvent: (node, event) {
+                        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                        if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                          requestFirstSidebarFocus();
+                          return KeyEventResult.handled;
                         }
+                        return KeyEventResult.ignored;
                       },
-                      icon: const Icon(Icons.create_new_folder),
-                      label: const Text('Browse'),
+                      child: Builder(
+                        builder: (context) {
+                          final isFocused = Focus.of(context).hasFocus;
+                          return ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              side: isFocused
+                                  ? const BorderSide(color: AppTheme.primaryBlue, width: 2)
+                                  : null,
+                            ),
+                            onPressed: () async {
+                              final localContext = context;
+                              try {
+                                final result = await FilePicker.platform
+                                    .getDirectoryPath();
+                                if (result != null) {
+                                  final prefs = await SharedPreferences.getInstance();
+                                  await prefs.setString(
+                                    'recording_storage_path',
+                                    result,
+                                  );
+                                  setState(() {});
+                                  if (!localContext.mounted) return;
+                                  showAppSnackBar(
+                                    localContext,
+                                    const SnackBar(
+                                      content: Text('Recording location updated'),
+                                      backgroundColor: AppTheme.accentGreen,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (!localContext.mounted) return;
+                                showAppSnackBar(
+                                  localContext,
+                                  SnackBar(
+                                    content: Text('Failed to select folder: $e'),
+                                    backgroundColor: AppTheme.accentRed,
+                                  ),
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.create_new_folder),
+                            label: const Text('Browse'),
+                          );
+                        },
+                      ),
                     ),
                   ],
                 ),
