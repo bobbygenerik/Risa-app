@@ -51,6 +51,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool _realDebridApiKeyEditable = false;
   bool _openSubtitlesUsernameEditable = false;
   bool _openSubtitlesPasswordEditable = false;
+  bool _customEpgUrlEditable = false;
 
   // Focus nodes for text fields and tab buttons
   final FocusNode _m3uUrlFocusNode = FocusNode();
@@ -69,6 +70,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   final FocusNode _xtreamTabFocusNode = FocusNode(debugLabel: 'XtreamTabButton');
   final FocusNode _clearM3uButtonFocusNode = FocusNode(debugLabel: 'ClearM3UButton');
   final FocusNode _clearXtreamButtonFocusNode = FocusNode(debugLabel: 'ClearXtreamButton');
+  final FocusNode _customEpgUrlFocusNode = FocusNode(debugLabel: 'CustomEpgUrlField');
   final Map<FocusNode, VoidCallback> _focusNodeListeners = {};
 
   // Playback Settings
@@ -256,6 +258,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     _xtreamTabFocusNode.dispose();
     _clearM3uButtonFocusNode.dispose();
     _clearXtreamButtonFocusNode.dispose();
+    _customEpgUrlFocusNode.dispose();
     super.dispose();
   }
 
@@ -944,22 +947,17 @@ class _SettingsScreenState extends State<SettingsScreen>
               ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: AppSizes.sm),
-            Focus(
-              canRequestFocus: true,
-              child: TextField(
-                controller: customEpgController,
-                autofocus: false,
-                decoration: InputDecoration(
-                  hintText: 'http://example.com/epg.xml.gz',
-                  prefixIcon: const Icon(Icons.link),
-                  filled: true,
-                  fillColor: AppTheme.highlight,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
+            _buildTVTextField(
+              controller: customEpgController,
+              focusNode: _customEpgUrlFocusNode,
+              isEditable: _customEpgUrlEditable,
+              onEditableChanged: (val) => setState(() => _customEpgUrlEditable = val),
+              hintText: 'http://example.com/epg.xml.gz',
+              prefixIcon: Icons.link,
+              enableDirectionalNavigation: true,
+              onLeftArrow: requestFirstSidebarFocus,
+              onUpArrow: () => FocusScope.of(context).previousFocus(),
+              onDownArrow: () => FocusScope.of(context).nextFocus(),
             ),
             const SizedBox(height: AppSizes.xs),
             const Text(
@@ -2458,6 +2456,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                     helperText: 'Create free account at opensubtitles.com',
                     prefixIcon: Icons.person,
                     onLeftArrow: requestFirstSidebarFocus,
+                    onUpArrow: () => FocusScope.of(context).previousFocus(),
+                    onDownArrow: () => _openSubtitlesPasswordFocusNode.requestFocus(),
                     enableDirectionalNavigation: true,
                   ),
                   const SizedBox(height: 16),
@@ -2478,6 +2478,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                     prefixIcon: Icons.lock,
                     obscureText: true,
                     onLeftArrow: requestFirstSidebarFocus,
+                    onUpArrow: () => _openSubtitlesUsernameFocusNode.requestFocus(),
+                    onDownArrow: () => FocusScope.of(context).nextFocus(),
                     enableDirectionalNavigation: true,
                   ),
                   const SizedBox(height: 16),
@@ -2560,6 +2562,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                     helperText: 'Get API key from real-debrid.com/apitoken',
                     prefixIcon: Icons.vpn_key,
                     onLeftArrow: requestFirstSidebarFocus,
+                    onUpArrow: () => FocusScope.of(context).previousFocus(),
+                    onDownArrow: () => FocusScope.of(context).nextFocus(),
                     enableDirectionalNavigation: true,
                   ),
                   const SizedBox(height: 16),
