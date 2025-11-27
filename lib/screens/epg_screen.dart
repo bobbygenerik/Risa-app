@@ -362,26 +362,6 @@ class _EPGScreenState extends State<EPGScreen> {
                       ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: AppSizes.sm),
-                Text(
-                  'Upload a playlist or EPG source to bring this screen to life. Your favorites, downloads, and guide will all share the same polished layout once data is loaded.',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: AppTheme.textSecondary),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: AppSizes.lg),
-                const Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: AppSizes.sm,
-                  runSpacing: AppSizes.sm,
-                  children: [
-                    _EmptyStateChip(icon: Icons.playlist_add, label: 'Upload Playlist'),
-                    _EmptyStateChip(icon: Icons.calendar_today, label: 'Add EPG URL'),
-                    _EmptyStateChip(icon: Icons.settings, label: 'Configure Sources'),
-                  ],
-                ),
                 const SizedBox(height: AppSizes.xl),
                 BrandPrimaryButton(
                   icon: Icons.playlist_add_circle,
@@ -391,23 +371,6 @@ class _EPGScreenState extends State<EPGScreen> {
                     vertical: AppSizes.md,
                   ),
                   onPressed: () => context.go('/playlist-login'),
-                ),
-                const SizedBox(height: AppSizes.md),
-                OutlinedButton.icon(
-                  onPressed: () => context.go('/settings'),
-                  icon: const Icon(Icons.settings_outlined, color: AppTheme.textPrimary),
-                  label: const Text('Open Settings'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.textPrimary,
-                    side: BorderSide(color: Colors.white.withAlpha((0.2 * 255).round())),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSizes.lg,
-                      vertical: AppSizes.md,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-                    ),
-                  ),
                 ),
               ],
             ),
@@ -1814,43 +1777,5 @@ class _EPGScreenState extends State<EPGScreen> {
         showAppSnackBar(localContext, const SnackBar(content: Text('Channel not available')));
       }
     }
-  }
-}
-
-class _EmptyStateChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-
-  const _EmptyStateChip({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSizes.md,
-        vertical: AppSizes.sm,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white.withAlpha((0.08 * 255).round()),
-        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-        border: Border.all(
-          color: Colors.white.withAlpha((0.16 * 255).round()),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: AppTheme.primaryBlue),
-          const SizedBox(width: AppSizes.xs),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.textSecondary,
-                  fontWeight: FontWeight.w500,
-                ),
-          ),
-        ],
-      ),
-    );
   }
 }
