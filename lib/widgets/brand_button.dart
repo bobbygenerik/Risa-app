@@ -70,18 +70,18 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
 
     final content = Stack(
       children: [
-        // White border on focus for consistency with other buttons
+        // Blue border on focus for consistency with app theme
         AnimatedContainer(
           duration: AppDurations.fast,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(widget.borderRadius),
             border: _focused
-                ? Border.all(color: Colors.white, width: 3)
+                ? Border.all(color: AppTheme.primaryBlue, width: 3)
                 : null,
             boxShadow: _focused
                 ? [
                     BoxShadow(
-                      color: Colors.white.withAlpha((0.5 * 255).round()),
+                      color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
                       blurRadius: 12,
                       spreadRadius: 2,
                     ),
