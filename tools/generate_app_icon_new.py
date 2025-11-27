@@ -6,17 +6,20 @@ Generate app icon using the lone logo with dark theme background
 from PIL import Image, ImageDraw
 import os
 
+# Get project root directory
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+
 # App colors - consistent with dark theme
 DARK_BACKGROUND = (28, 28, 30)  # #1C1C1E - main app background
 
-def create_icon(size):
+def create_icon(size, logo_path):
     """Create app icon using the lone logo"""
     # Create dark background
     img = Image.new('RGB', (size, size), DARK_BACKGROUND)
     
     try:
         # Load the lone logo
-        logo_path = '/root/iptv-player/assets/images/lonelogo (1).png'
         logo = Image.open(logo_path)
         
         # Convert to RGBA if needed
@@ -64,11 +67,12 @@ sizes = {
 }
 
 # Base directory for Android resources
-base_dir = '/root/iptv-player/android/app/src/main/res'
+logo_path = os.path.join(PROJECT_ROOT, 'assets', 'images', 'lonelogo (1).png')
+base_dir = os.path.join(PROJECT_ROOT, 'android', 'app', 'src', 'main', 'res')
 
 print("Generating app icons with lone logo...")
 for density, size in sizes.items():
-    icon = create_icon(size)
+    icon = create_icon(size, logo_path)
     output_dir = os.path.join(base_dir, f'mipmap-{density}')
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, 'ic_launcher.png')
@@ -76,12 +80,12 @@ for density, size in sizes.items():
     print(f"  ✓ Created {density} ({size}x{size}): {output_path}")
 
 # Create web icons
-web_dir = '/root/iptv-player/web/icons'
+web_dir = os.path.join(PROJECT_ROOT, 'web', 'icons')
 os.makedirs(web_dir, exist_ok=True)
 
 web_sizes = [192, 512]
 for web_size in web_sizes:
-    web_icon = create_icon(web_size)
+    web_icon = create_icon(web_size, logo_path)
     web_path = os.path.join(web_dir, f'Icon-{web_size}.png')
     web_icon.save(web_path, 'PNG')
     print(f"  ✓ Created web icon ({web_size}x{web_size}): {web_path}")
@@ -91,14 +95,14 @@ for web_size in web_sizes:
     web_icon.save(maskable_path, 'PNG')
 
 # Create favicon
-favicon = create_icon(32)
-favicon_path = '/root/iptv-player/web/favicon.png'
+favicon = create_icon(32, logo_path)
+favicon_path = os.path.join(PROJECT_ROOT, 'web', 'favicon.png')
 favicon.save(favicon_path, 'PNG')
 print(f"  ✓ Created favicon: {favicon_path}")
 
 # Create preview
-preview = create_icon(512)
-preview_path = '/root/iptv-player/app_icon_preview.png'
+preview = create_icon(512, logo_path)
+preview_path = os.path.join(PROJECT_ROOT, 'app_icon_preview.png')
 preview.save(preview_path, 'PNG')
 print(f"  ✓ Preview saved: {preview_path}")
 
