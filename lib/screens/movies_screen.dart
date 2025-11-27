@@ -33,8 +33,17 @@ class _MoviesScreenState extends State<MoviesScreen>
   @override
   void dispose() {
     _carouselTimer?.cancel();
+    _playFocus.removeListener(_onPlayFocusChange);
     _playFocus.dispose();
     super.dispose();
+  }
+
+  void _onPlayFocusChange() {
+    if (_playFocus.hasFocus) {
+      _carouselTimer?.cancel();
+    } else {
+      _startCarousel();
+    }
   }
 
   @override
@@ -65,14 +74,7 @@ class _MoviesScreenState extends State<MoviesScreen>
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startCarousel();
-      // pause carousel when hero play button receives focus
-      _playFocus.addListener(() {
-        if (_playFocus.hasFocus) {
-          _carouselTimer?.cancel();
-        } else {
-          _startCarousel();
-        }
-      });
+      _playFocus.addListener(_onPlayFocusChange);
       // prepare curated list (may perform TMDB lookups)
       _prepareCuratedList();
       _preloadTMDBArtwork();
@@ -265,6 +267,18 @@ class _MoviesScreenState extends State<MoviesScreen>
     return Padding(
       padding: const EdgeInsets.only(right: AppSizes.md),
       child: Focus(
+        onKeyEvent: (node, event) {
+          if (event is KeyDownEvent) {
+            if (event.logicalKey == LogicalKeyboardKey.select ||
+                event.logicalKey == LogicalKeyboardKey.enter ||
+                event.logicalKey == LogicalKeyboardKey.space) {
+              final encodedId = Uri.encodeComponent(movie.id);
+              context.push('/content/$encodedId', extra: movie);
+              return KeyEventResult.handled;
+            }
+          }
+          return KeyEventResult.ignored;
+        },
         child: Builder(
           builder: (context) {
             final isFocused = Focus.of(context).hasFocus;

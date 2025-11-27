@@ -100,9 +100,9 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
 
   @override
   Widget build(BuildContext context) {
-    // Android TV screen size detection (TV usually > 50 inches diagonal)
+    // Android TV screen size detection (use >= for 1080p TVs)
     final size = MediaQuery.of(context).size;
-    final isTV = size.width > 1920 && size.height > 1080;
+    final isTV = size.width >= 1920 || size.height >= 1080;
     final scale = isTV ? 1.8 : 1.0;
     final router = GoRouter.of(context);
     
@@ -228,7 +228,7 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                     curve: Curves.easeOut,
                     decoration: BoxDecoration(
                         color: _searchButtonFocusNode.hasFocus
-                          ? Colors.white.withValues(alpha: 0.08)
+                          ? Colors.white.withAlpha((0.08 * 255).round())
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(12),
                       border: _searchButtonFocusNode.hasFocus
@@ -277,7 +277,7 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                     curve: Curves.easeOut,
                     decoration: BoxDecoration(
                         color: _overflowButtonFocusNode.hasFocus
-                          ? Colors.white.withValues(alpha: 0.08)
+                          ? Colors.white.withAlpha((0.08 * 255).round())
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(12),
                       border: _overflowButtonFocusNode.hasFocus

@@ -33,8 +33,17 @@ class _SeriesScreenState extends State<SeriesScreen>
   @override
   void dispose() {
     _carouselTimer?.cancel();
+    _watchFocus.removeListener(_onWatchFocusChange);
     _watchFocus.dispose();
     super.dispose();
+  }
+
+  void _onWatchFocusChange() {
+    if (_watchFocus.hasFocus) {
+      _carouselTimer?.cancel();
+    } else {
+      _startCarousel();
+    }
   }
 
   @override
@@ -49,13 +58,7 @@ class _SeriesScreenState extends State<SeriesScreen>
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startCarousel();
-      _watchFocus.addListener(() {
-        if (_watchFocus.hasFocus) {
-          _carouselTimer?.cancel();
-        } else {
-          _startCarousel();
-        }
-      });
+      _watchFocus.addListener(_onWatchFocusChange);
       _prepareCuratedSeriesList();
       _preloadTMDBArtwork();
       final focusNode = _watchFocus;
@@ -369,6 +372,18 @@ class _SeriesScreenState extends State<SeriesScreen>
     return Padding(
       padding: const EdgeInsets.only(right: AppSizes.md),
       child: Focus(
+        onKeyEvent: (node, event) {
+          if (event is KeyDownEvent) {
+            if (event.logicalKey == LogicalKeyboardKey.select ||
+                event.logicalKey == LogicalKeyboardKey.enter ||
+                event.logicalKey == LogicalKeyboardKey.space) {
+              final encodedId = Uri.encodeComponent(firstEpisode.id);
+              context.push('/content/$encodedId', extra: firstEpisode);
+              return KeyEventResult.handled;
+            }
+          }
+          return KeyEventResult.ignored;
+        },
         child: Builder(
           builder: (context) {
             final isFocused = Focus.of(context).hasFocus;

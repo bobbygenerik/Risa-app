@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 
 /// Wrapper widget that provides consistent focus animations for TV cards.
@@ -60,6 +61,17 @@ class _FocusableCardState extends State<FocusableCard> {
       focusNode: widget.focusNode,
       autofocus: widget.autofocus,
       onFocusChange: _handleFocusChange,
+      onKeyEvent: (node, event) {
+        if (widget.onTap != null && event is KeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.select ||
+              event.logicalKey == LogicalKeyboardKey.enter ||
+              event.logicalKey == LogicalKeyboardKey.space) {
+            widget.onTap!();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
       child: AnimatedScale(
         scale: _isFocused ? 1.08 : 1.0,
         duration: widget.animationDuration,

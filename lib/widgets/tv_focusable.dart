@@ -69,7 +69,7 @@ class _TVFocusableState extends State<TVFocusable> {
           return KeyEventResult.ignored;
         },
         child: AnimatedScale(
-          scale: _hasFocus && widget.enableScale ? (widget.focusScale + 0.04) : 1.0,
+          scale: _hasFocus && widget.enableScale ? widget.focusScale : 1.0,
           duration: const Duration(milliseconds: 100),
           curve: Curves.easeOut,
           child: AnimatedContainer(

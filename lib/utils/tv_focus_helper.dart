@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/app_theme.dart';
@@ -7,8 +9,11 @@ import 'package:iptv_player/utils/app_theme.dart';
 class TVFocusHelper {
   /// Check if running on Android TV
   static bool get isAndroidTV {
-    // This will be true when running on Android TV
-    return true; // Can be enhanced with platform detection
+    if (kIsWeb) return false;
+    if (!Platform.isAndroid) return false;
+    // On Android, assume TV if screen is large (basic heuristic)
+    // More sophisticated detection would require platform channels
+    return true; // Requires platform channel for precise detection
   }
 
   /// Create a focusable widget optimized for TV remote control

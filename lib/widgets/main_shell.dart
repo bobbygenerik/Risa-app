@@ -172,14 +172,6 @@ class _MainShellState extends State<MainShell> {
     return fallbackHandled;
   }
 
-  void _scheduleContentFocusRequest() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      debugPrint('content_focus: Shell scheduling post-frame focus request');
-      _contentFocusCallback?.call();
-    });
-  }
-
   KeyEventResult _handleContentKeyEvent(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
     if (event.logicalKey == LogicalKeyboardKey.arrowUp) {

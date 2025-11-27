@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 // ignore_for_file: todo
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -67,11 +68,14 @@ void main() {
       fvp.registerWith();
       StartupProbe.mark('FVP video player registered');
       
-      SystemChrome.setPreferredOrientations([
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ]);
-      StartupProbe.mark('Preferred orientations locked');
+      // Only lock landscape on Android TV, allow portrait on mobile
+      if (!kIsWeb && Platform.isAndroid) {
+        SystemChrome.setPreferredOrientations([
+          DeviceOrientation.landscapeLeft,
+          DeviceOrientation.landscapeRight,
+        ]);
+        StartupProbe.mark('Preferred orientations locked (Android TV)');
+      }
 
       FlutterError.onError = (FlutterErrorDetails details) {
         FlutterError.presentError(details);

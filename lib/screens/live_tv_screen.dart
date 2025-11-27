@@ -596,6 +596,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   return Padding(
                     padding: const EdgeInsets.only(right: 16),
                     child: Focus(
+                      onKeyEvent: (node, event) {
+                        if (event is KeyDownEvent) {
+                          if (event.logicalKey == LogicalKeyboardKey.select ||
+                              event.logicalKey == LogicalKeyboardKey.enter ||
+                              event.logicalKey == LogicalKeyboardKey.space) {
+                            context.push('/player', extra: channel);
+                            return KeyEventResult.handled;
+                          }
+                        }
+                        return KeyEventResult.ignored;
+                      },
                       child: Builder(
                         builder: (context) {
                           final isFocused = Focus.of(context).hasFocus;
@@ -684,14 +695,27 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               if (totalPages > 1)
                 Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_ios, size: 16),
-                      color: _currentChannelPage > 0 
-                          ? AppTheme.textPrimary 
-                          : AppTheme.textSecondary,
-                      onPressed: _currentChannelPage > 0
-                          ? () => setState(() => _currentChannelPage--)
-                          : null,
+                    Focus(
+                      onKeyEvent: (node, event) {
+                        if (event is KeyDownEvent && _currentChannelPage > 0) {
+                          if (event.logicalKey == LogicalKeyboardKey.select ||
+                              event.logicalKey == LogicalKeyboardKey.enter ||
+                              event.logicalKey == LogicalKeyboardKey.space) {
+                            setState(() => _currentChannelPage--);
+                            return KeyEventResult.handled;
+                          }
+                        }
+                        return KeyEventResult.ignored;
+                      },
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back_ios, size: 16),
+                        color: _currentChannelPage > 0 
+                            ? AppTheme.textPrimary 
+                            : AppTheme.textSecondary,
+                        onPressed: _currentChannelPage > 0
+                            ? () => setState(() => _currentChannelPage--)
+                            : null,
+                      ),
                     ),
                     Text(
                       'Page ${_currentChannelPage + 1} of $totalPages',
@@ -700,14 +724,27 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         fontSize: 14,
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.arrow_forward_ios, size: 16),
-                      color: _currentChannelPage < totalPages - 1
-                          ? AppTheme.textPrimary
-                          : AppTheme.textSecondary,
-                      onPressed: _currentChannelPage < totalPages - 1
-                          ? () => setState(() => _currentChannelPage++)
-                          : null,
+                    Focus(
+                      onKeyEvent: (node, event) {
+                        if (event is KeyDownEvent && _currentChannelPage < totalPages - 1) {
+                          if (event.logicalKey == LogicalKeyboardKey.select ||
+                              event.logicalKey == LogicalKeyboardKey.enter ||
+                              event.logicalKey == LogicalKeyboardKey.space) {
+                            setState(() => _currentChannelPage++);
+                            return KeyEventResult.handled;
+                          }
+                        }
+                        return KeyEventResult.ignored;
+                      },
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_forward_ios, size: 16),
+                        color: _currentChannelPage < totalPages - 1
+                            ? AppTheme.textPrimary
+                            : AppTheme.textSecondary,
+                        onPressed: _currentChannelPage < totalPages - 1
+                            ? () => setState(() => _currentChannelPage++)
+                            : null,
+                      ),
                     ),
                   ],
                 ),
@@ -726,6 +763,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   return Padding(
                     padding: const EdgeInsets.only(right: 16),
                     child: Focus(
+                      onKeyEvent: (node, event) {
+                        if (event is KeyDownEvent) {
+                          if (event.logicalKey == LogicalKeyboardKey.select ||
+                              event.logicalKey == LogicalKeyboardKey.enter ||
+                              event.logicalKey == LogicalKeyboardKey.space) {
+                            context.push('/player', extra: channel);
+                            return KeyEventResult.handled;
+                          }
+                        }
+                        return KeyEventResult.ignored;
+                      },
                       child: Builder(
                         builder: (context) {
                           final isFocused = Focus.of(context).hasFocus;
