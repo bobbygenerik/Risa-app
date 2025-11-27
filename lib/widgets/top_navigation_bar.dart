@@ -286,12 +286,12 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                     ),
                     child: PopupMenuButton<String>(
                       key: _overflowMenuKey,
-                      color: Colors.black.withAlpha((0.85 * 255).round()),
+                      color: AppTheme.sidebarBackground,
                       elevation: 20,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                         side: BorderSide(
-                          color: AppTheme.darkBackgroundOpacity(0.12),
+                          color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
                           width: 1.0,
                         ),
                       ),
