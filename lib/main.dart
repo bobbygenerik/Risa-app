@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
+import 'package:fvp/fvp.dart' as fvp;
 import 'package:iptv_player/utils/startup_probe.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
@@ -55,6 +56,12 @@ void main() {
       // different zone" error when the framework is used later.
       WidgetsFlutterBinding.ensureInitialized();
       StartupProbe.mark('Flutter bindings initialized');
+      
+      // Register fvp (FFmpeg-based video player) for proper color handling
+      // This fixes the multi-colored tint issue on live streams
+      fvp.registerWith();
+      StartupProbe.mark('FVP video player registered');
+      
       SystemChrome.setPreferredOrientations([
         DeviceOrientation.landscapeLeft,
         DeviceOrientation.landscapeRight,
