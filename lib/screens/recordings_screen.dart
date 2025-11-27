@@ -299,12 +299,39 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () {
-                context.go('/settings');
-              },
-              icon: const Icon(Icons.settings),
-              label: const Text('Go to Settings'),
+            Focus(
+              child: Builder(
+                builder: (context) {
+                  final hasFocus = Focus.of(context).hasFocus;
+                  return Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: hasFocus
+                          ? Border.all(color: AppTheme.primaryBlue, width: 3)
+                          : null,
+                      boxShadow: hasFocus
+                          ? [
+                              BoxShadow(
+                                color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
+                                blurRadius: 12,
+                                spreadRadius: 2,
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        context.go('/settings');
+                      },
+                      icon: const Icon(Icons.settings),
+                      label: const Text('Go to Settings'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryBlue,
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
             const SizedBox(height: 16),
             const Padding(

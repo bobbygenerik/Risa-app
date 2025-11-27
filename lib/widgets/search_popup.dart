@@ -35,6 +35,15 @@ class _SearchPopupState extends State<SearchPopup> {
   int _seriesDisplayCount = _resultsPerSection;
 
   @override
+  void initState() {
+    super.initState();
+    // Auto-focus the text field when popup opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _textFieldFocusNode.requestFocus();
+    });
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     _textFieldFocusNode.dispose();
@@ -455,9 +464,9 @@ class _SearchPopupState extends State<SearchPopup> {
                     borderRadius: BorderRadius.circular(AppSizes.radiusMd),
                     border: Border.all(
                       color: isFocused
-                          ? Colors.white
+                          ? AppTheme.primaryBlue
                           : AppTheme.textSecondary.withAlpha((0.1 * 255).round()),
-                      width: isFocused ? 2 : 1,
+                      width: isFocused ? 3 : 1,
                     ),
                   ),
             child: Column(

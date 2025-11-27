@@ -24,14 +24,15 @@ class GoToSettingsButton extends StatelessWidget {
                 color: AppTheme.primaryBlue,
                 borderRadius: BorderRadius.circular(12),
                 border: hasFocus
-                    ? Border.all(color: Colors.white, width: 2)
+                    ? Border.all(color: Colors.white, width: 3)
                     : null,
                 boxShadow: hasFocus
                     ? [
                         BoxShadow(
-                          color: Colors.black.withAlpha((0.3 * 255).round()),
-                          offset: const Offset(0, 4),
-                          blurRadius: 8,
+                          color: Colors.white.withAlpha((0.5 * 255).round()),
+                          offset: const Offset(0, 0),
+                          blurRadius: 12,
+                          spreadRadius: 2,
                         ),
                       ]
                     : null,

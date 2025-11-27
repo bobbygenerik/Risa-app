@@ -222,7 +222,20 @@ class _VoiceSearchButtonState extends State<VoiceSearchButton>
           }
           return KeyEventResult.ignored;
         },
-        child: buttonWidget,
+        child: Builder(
+          builder: (context) {
+            final isFocused = Focus.of(context).hasFocus;
+            return Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                border: isFocused
+                    ? Border.all(color: AppTheme.primaryBlue, width: 3)
+                    : null,
+              ),
+              child: buttonWidget,
+            );
+          },
+        ),
       );
     }
 
