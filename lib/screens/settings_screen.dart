@@ -281,7 +281,15 @@ class _SettingsScreenState extends State<SettingsScreen>
         // ignore: deprecated_member_use
         onPopInvoked: (didPop) {
           if (didPop) return;
-          context.go('/home');
+          // Check if any sidebar menu item has focus
+          final sidebarHasFocus = _menuFocusNodes.any((node) => node.hasFocus);
+          if (sidebarHasFocus) {
+            // If already on sidebar, exit to home
+            context.go('/home');
+          } else {
+            // If in content area, go back to sidebar
+            requestFirstSidebarFocus();
+          }
         },
         child: Container(
           decoration: const BoxDecoration(
@@ -305,7 +313,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                   onKeyEvent: (node, event) {
                     if (event is! KeyDownEvent) return KeyEventResult.ignored;
                     final key = event.logicalKey;
-                    if (key == LogicalKeyboardKey.arrowLeft) {
+                    if (key == LogicalKeyboardKey.arrowLeft ||
+                        key == LogicalKeyboardKey.goBack) {
                       requestFirstSidebarFocus();
                       return KeyEventResult.handled;
                     }
