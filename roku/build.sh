@@ -5,7 +5,11 @@
 
 set -e
 
-PROJECT_DIR="/root/iptv-player/roku"
+# Get script directory
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" || {
+    echo "❌ Failed to determine project directory"
+    exit 1
+}
 BUILD_DIR="${PROJECT_DIR}/build"
 OUT_DIR="${PROJECT_DIR}/out"
 PKG_FILE="${OUT_DIR}/iptv-player.pkg"
