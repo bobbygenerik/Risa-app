@@ -490,7 +490,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
     () async {
       try {
-        final client = io.HttpClient();
+        final client = io.HttpClient()
+          ..badCertificateCallback = (cert, host, port) => true;
         final request = await client.getUrl(uri);
         final response = await request.close();
         final body = await response.transform(const Utf8Decoder()).join();

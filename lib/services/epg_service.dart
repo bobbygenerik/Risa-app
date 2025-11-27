@@ -102,7 +102,8 @@ class EpgService with ChangeNotifier {
         debugPrint('Fetching EPG from URL (attempt ${retryCount + 1}/$_maxRetries)...');
         
         // Use streaming to handle large EPG files efficiently
-        final client = HttpClient();
+        final client = HttpClient()
+          ..badCertificateCallback = (cert, host, port) => true;
         final request = await client.getUrl(Uri.parse(url));
         final response = await request.close();
 
