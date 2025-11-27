@@ -1576,13 +1576,46 @@ class _SettingsScreenState extends State<SettingsScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TextButton(
-                    onPressed: () {
-                      _xtreamServerController.clear();
-                      _xtreamUsernameController.clear();
-                      _xtreamPasswordController.clear();
+                  Focus(
+                    focusNode: _clearXtreamButtonFocusNode,
+                    onKeyEvent: (node, event) {
+                      if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                      if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                        _xtreamPasswordFocusNode.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                        requestFirstSidebarFocus();
+                        return KeyEventResult.handled;
+                      }
+                      if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                        _loadXtreamButtonFocusNode.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                        _clearPlaylistCacheButtonFocusNode.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
                     },
-                    child: const Text('Clear'),
+                    child: Builder(
+                      builder: (context) {
+                        final isFocused = Focus.of(context).hasFocus;
+                        return TextButton(
+                          onPressed: () {
+                            _xtreamServerController.clear();
+                            _xtreamUsernameController.clear();
+                            _xtreamPasswordController.clear();
+                          },
+                          style: TextButton.styleFrom(
+                            side: isFocused
+                                ? const BorderSide(color: AppTheme.primaryBlue, width: 3)
+                                : null,
+                          ),
+                          child: const Text('Clear'),
+                        );
+                      },
+                    ),
                   ),
                   const SizedBox(width: AppSizes.sm),
                   Focus(
@@ -1590,7 +1623,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                     onKeyEvent: (node, event) {
                       if (event is! KeyDownEvent) return KeyEventResult.ignored;
                       if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                        requestFirstSidebarFocus();
+                        _clearXtreamButtonFocusNode.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                      if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                        _xtreamPasswordFocusNode.requestFocus();
                         return KeyEventResult.handled;
                       }
                       if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
