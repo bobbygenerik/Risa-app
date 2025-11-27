@@ -1707,9 +1707,10 @@ class _SettingsScreenState extends State<SettingsScreen>
             
             // Clear Playlist Cache Button (shown for both M3U and Xtream)
             const SizedBox(height: AppSizes.md),
-            SizedBox(
-              width: double.infinity,
-              child: Focus(
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Focus(
                 focusNode: _clearPlaylistCacheButtonFocusNode,
                 onKeyEvent: (node, event) {
                   if (event is! KeyDownEvent) return KeyEventResult.ignored;
@@ -1793,6 +1794,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   },
                 ),
               ),
+              ],
             ),
           ],
         ),
