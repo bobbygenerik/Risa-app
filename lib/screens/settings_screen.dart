@@ -1396,12 +1396,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
                         return Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            border: isFocused
-                                ? Border.all(color: AppTheme.primaryBlue, width: 3)
-                                : null,
-                          ),
+                          decoration: isFocused
+                              ? BoxDecoration(
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: AppTheme.primaryBlue, width: 3),
+                                )
+                              : null,
                           child: TextButton(
                             onPressed: () {
                               _m3uUrlController.clear();
@@ -1450,12 +1450,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                           });
                         }
                         return Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            border: isFocused
-                                ? Border.all(color: AppTheme.primaryBlue, width: 3)
-                                : null,
-                          ),
+                          decoration: isFocused
+                              ? BoxDecoration(
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: AppTheme.primaryBlue, width: 3),
+                                )
+                              : null,
                           child: ElevatedButton.icon(
                             onPressed: () async {
                               final url = _m3uUrlController.text.trim();
@@ -1622,12 +1622,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                           });
                         }
                         return Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            border: isFocused
-                                ? Border.all(color: AppTheme.primaryBlue, width: 3)
-                                : null,
-                          ),
+                          decoration: isFocused
+                              ? BoxDecoration(
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: AppTheme.primaryBlue, width: 3),
+                                )
+                              : null,
                           child: ElevatedButton.icon(
                     onPressed: () async {
                       final server = _xtreamServerController.text.trim();
@@ -1752,12 +1752,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                       });
                     }
                     return Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        border: isFocused
-                            ? Border.all(color: AppTheme.primaryBlue, width: 3)
-                            : null,
-                      ),
+                      decoration: isFocused
+                          ? BoxDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: AppTheme.primaryBlue, width: 3),
+                            )
+                          : null,
                       child: ElevatedButton.icon(
                 onPressed: () async {
                   final confirm = await showDialog<bool>(
