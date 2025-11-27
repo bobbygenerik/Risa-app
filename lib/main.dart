@@ -45,13 +45,14 @@ import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/profile_provider.dart';
 import 'package:iptv_player/services/background_task_manager.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
+import 'package:iptv_player/services/ssl_handler.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
   StartupProbe.mark('main() entry');
   runZonedGuarded(
-    () {
+    () async {
       // Ensure the Flutter bindings are created inside the same Zone
       // that will run the application. Creating the binding outside
       // the guarded zone can cause a "bindings initialized in a
@@ -59,9 +60,10 @@ void main() {
       WidgetsFlutterBinding.ensureInitialized();
       StartupProbe.mark('Flutter bindings initialized');
       
-      // Global SSL bypass for IPTV providers with certificate issues
-      HttpOverrides.global = _SSLBypassHttpOverrides();
-      StartupProbe.mark('SSL bypass configured');
+      // Initialize SSL handler for IPTV providers with certificate issues
+      await SSLHandler.init();
+      HttpOverrides.global = IPTVHttpOverrides();
+      StartupProbe.mark('SSL handler configured');
       
       // Register fvp (FFmpeg-based video player) for proper color handling
       // This fixes the multi-colored tint issue on live streams
@@ -1037,12 +1039,4 @@ Widget _buildPlaceholder(BuildContext context, String title, IconData icon) {
   );
 }
 
-/// Global SSL bypass for IPTV providers with certificate issues.
-/// Many IPTV servers have self-signed or misconfigured SSL certificates.
-class _SSLBypassHttpOverrides extends HttpOverrides {
-  @override
-  HttpClient createHttpClient(SecurityContext? context) {
-    return super.createHttpClient(context)
-      ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
-  }
-}
+
