@@ -67,6 +67,8 @@ class _SettingsScreenState extends State<SettingsScreen>
   final FocusNode _clearEpgButtonFocusNode = FocusNode(debugLabel: 'ClearEPGButton');
   final FocusNode _m3uTabFocusNode = FocusNode(debugLabel: 'M3UTabButton');
   final FocusNode _xtreamTabFocusNode = FocusNode(debugLabel: 'XtreamTabButton');
+  final FocusNode _clearM3uButtonFocusNode = FocusNode(debugLabel: 'ClearM3UButton');
+  final FocusNode _clearXtreamButtonFocusNode = FocusNode(debugLabel: 'ClearXtreamButton');
   final Map<FocusNode, VoidCallback> _focusNodeListeners = {};
 
   // Playback Settings
@@ -246,6 +248,14 @@ class _SettingsScreenState extends State<SettingsScreen>
     _openSubtitlesPasswordController.dispose();
     _openSubtitlesPasswordFocusNode.dispose();
     _loadM3uButtonFocusNode.dispose();
+    _loadXtreamButtonFocusNode.dispose();
+    _clearPlaylistCacheButtonFocusNode.dispose();
+    _updateEpgButtonFocusNode.dispose();
+    _clearEpgButtonFocusNode.dispose();
+    _m3uTabFocusNode.dispose();
+    _xtreamTabFocusNode.dispose();
+    _clearM3uButtonFocusNode.dispose();
+    _clearXtreamButtonFocusNode.dispose();
     super.dispose();
   }
 
@@ -1349,6 +1359,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 helperText: 'Enter M3U URL and click Load',
                 prefixIcon: Icons.link,
                 onLeftArrow: requestFirstSidebarFocus,
+                onUpArrow: () => _m3uTabFocusNode.requestFocus(),
                 onDownArrow: () {
                   _focusLoadM3uButton();
                   _loadM3uButtonFocusNode.requestFocus();
@@ -1359,11 +1370,47 @@ class _SettingsScreenState extends State<SettingsScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TextButton(
-                    onPressed: () {
-                      _m3uUrlController.clear();
+                  Focus(
+                    focusNode: _clearM3uButtonFocusNode,
+                    onKeyEvent: (node, event) {
+                      if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                      if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                        _m3uUrlFocusNode.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                        requestFirstSidebarFocus();
+                        return KeyEventResult.handled;
+                      }
+                      if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                        _loadM3uButtonFocusNode.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                        _clearPlaylistCacheButtonFocusNode.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
                     },
-                    child: const Text('Clear'),
+                    child: Builder(
+                      builder: (context) {
+                        final isFocused = Focus.of(context).hasFocus;
+                        return Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            border: isFocused
+                                ? Border.all(color: AppTheme.primaryBlue, width: 3)
+                                : null,
+                          ),
+                          child: TextButton(
+                            onPressed: () {
+                              _m3uUrlController.clear();
+                            },
+                            child: const Text('Clear'),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                   const SizedBox(width: AppSizes.sm),
                   Focus(
@@ -1377,7 +1424,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         return KeyEventResult.handled;
                       }
                       if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                        requestFirstSidebarFocus();
+                        _clearM3uButtonFocusNode.requestFocus();
                         return KeyEventResult.handled;
                       }
                       if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
