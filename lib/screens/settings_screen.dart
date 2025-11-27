@@ -61,6 +61,10 @@ class _SettingsScreenState extends State<SettingsScreen>
   final FocusNode _openSubtitlesUsernameFocusNode = FocusNode();
   final FocusNode _openSubtitlesPasswordFocusNode = FocusNode();
   final FocusNode _loadM3uButtonFocusNode = FocusNode(debugLabel: 'LoadM3UButton');
+  final FocusNode _loadXtreamButtonFocusNode = FocusNode(debugLabel: 'LoadXtreamButton');
+  final FocusNode _clearPlaylistCacheButtonFocusNode = FocusNode(debugLabel: 'ClearPlaylistCacheButton');
+  final FocusNode _updateEpgButtonFocusNode = FocusNode(debugLabel: 'UpdateEPGButton');
+  final FocusNode _clearEpgButtonFocusNode = FocusNode(debugLabel: 'ClearEPGButton');
   final FocusNode _m3uTabFocusNode = FocusNode(debugLabel: 'M3UTabButton');
   final FocusNode _xtreamTabFocusNode = FocusNode(debugLabel: 'XtreamTabButton');
   final Map<FocusNode, VoidCallback> _focusNodeListeners = {};
