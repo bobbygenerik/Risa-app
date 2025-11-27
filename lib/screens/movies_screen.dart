@@ -72,9 +72,10 @@ class _MoviesScreenState extends State<MoviesScreen>
   @override
   void initState() {
     super.initState();
+    _playFocus.addListener(_onPlayFocusChange);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       _startCarousel();
-      _playFocus.addListener(_onPlayFocusChange);
       // prepare curated list (may perform TMDB lookups)
       _prepareCuratedList();
       _preloadTMDBArtwork();
