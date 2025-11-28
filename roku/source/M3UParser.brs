@@ -11,26 +11,32 @@ function ParseM3U(url as string) as object
     channels = []
     lines = content.split(chr(10))
     
-    for i = 0 to lines.count() - 1
+    i = 0
+    while i < lines.count()
         line = lines[i].trim()
         
-        ' Skip empty lines and comment lines
-        if line = "" or left(line, 1) = "#"
-            continue for
+        if line = ""
+            i = i + 1
+            continue while
         end if
         
-        ' Look for EXTINF lines (extended M3U info)
         if left(line, 7) = "#EXTINF"
-            ' Parse EXTINF metadata
             channel = ParseExtInf(line)
             
-            ' Next line should be the URL
-            if i + 1 < lines.count()
-                channel.url = lines[i + 1].trim()
-                channels.push(channel)
-            end if
+            i = i + 1
+            while i < lines.count()
+                urlLine = lines[i].trim()
+                if urlLine <> "" and left(urlLine, 1) <> "#"
+                    channel.url = urlLine
+                    channels.push(channel)
+                    exit while
+                end if
+                i = i + 1
+            end while
         end if
-    end for
+        
+        i = i + 1
+    end while
     
     return channels
 end function

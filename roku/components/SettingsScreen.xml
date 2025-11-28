@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SettingsScreen.xml - Settings screen matching Android app settings layout -->
+<component name="SettingsScreen" extends="Group">
+    <interface>
+        <field id="visible" type="boolean" value="false" onChange="onVisibleChange" />
+        <field id="settingsChanged" type="boolean" alwaysNotify="true" />
+    </interface>
+    <script type="text/brightscript" uri="pkg:/components/SettingsScreen.brs" />
+    
+    <children>
+        <!-- Background -->
+        <Rectangle id="background" width="1920" height="1080" color="0x050710FF" />
+        
+        <!-- Header -->
+        <Label translation="[60,40]" text="Settings" 
+            font="font:HugeBoldSystemFont" color="0xFFFFFFFF" />
+        
+        <!-- Settings tabs (left side) -->
+        <LabelList id="tabList" translation="[60,120]" 
+            itemSize="[300,60]" numRows="6" 
+            font="font:MediumBoldSystemFont" color="0xFFFFFFFF"
+            focusedColor="0xFF6600FF" />
+        
+        <!-- Settings content (right side) -->
+        <Group id="settingsContent" translation="[400,120]">
+            
+            <!-- General Settings -->
+            <Group id="generalSettings" visible="true">
+                <Label translation="[0,0]" text="General" font="font:LargeBoldSystemFont" color="0xFFFFFFFF" />
+                
+                <Group translation="[0,60]">
+                    <Label text="App Theme" font="font:MediumSystemFont" color="0xCCCCCCFF" />
+                    <LabelList id="themeSelector" translation="[0,30]" itemSize="[400,50]" numRows="3" 
+                        font="font:MediumSystemFont" color="0xFFFFFFFF" />
+                </Group>
+                
+                <Group translation="[0,220]">
+                    <Label text="Auto-play next episode" font="font:MediumSystemFont" color="0xCCCCCCFF" />
+                    <LabelList id="autoPlaySelector" translation="[0,30]" itemSize="[400,50]" numRows="2" 
+                        font="font:MediumSystemFont" color="0xFFFFFFFF" />
+                </Group>
+                
+                <Group translation="[0,360]">
+                    <Label text="Resume on startup" font="font:MediumSystemFont" color="0xCCCCCCFF" />
+                    <LabelList id="resumeSelector" translation="[0,30]" itemSize="[400,50]" numRows="2" 
+                        font="font:MediumSystemFont" color="0xFFFFFFFF" />
+                </Group>
+            </Group>
+            
+            <!-- Playback Settings -->
+            <Group id="playbackSettings" visible="false">
+                <Label translation="[0,0]" text="Playback" font="font:LargeBoldSystemFont" color="0xFFFFFFFF" />
+                
+                <Group translation="[0,60]">
+                    <Label text="Buffer Size" font="font:MediumSystemFont" color="0xCCCCCCFF" />
+                    <LabelList id="bufferSelector" translation="[0,30]" itemSize="[400,50]" numRows="4" 
+                        font="font:MediumSystemFont" color="0xFFFFFFFF" />
+                </Group>
+                
+                <Group translation="[0,280]">
+                    <Label text="Default Audio Track" font="font:MediumSystemFont" color="0xCCCCCCFF" />
+                    <LabelList id="audioTrackSelector" translation="[0,30]" itemSize="[400,50]" numRows="3" 
+                        font="font:MediumSystemFont" color="0xFFFFFFFF" />
+                </Group>
+                
+                <Group translation="[0,440]">
+                    <Label text="Default Subtitles" font="font:MediumSystemFont" color="0xCCCCCCFF" />
+                    <LabelList id="subtitleSelector" translation="[0,30]" itemSize="[400,50]" numRows="3" 
+                        font="font:MediumSystemFont" color="0xFFFFFFFF" />
+                </Group>
+            </Group>
+            
+            <!-- Playlist Settings -->
+            <Group id="playlistSettings" visible="false">
+                <Label translation="[0,0]" text="Playlist" font="font:LargeBoldSystemFont" color="0xFFFFFFFF" />
+                
+                <Group translation="[0,60]">
+                    <Label text="Current Playlist" font="font:MediumSystemFont" color="0xCCCCCCFF" />
+                    <Label id="currentPlaylistLabel" translation="[0,30]" width="1200" 
+                        font="font:MediumSystemFont" color="0xFFFFFFFF" text="None configured" />
+                </Group>
+                
+                <Group translation="[0,120]">
+                    <LabelList id="playlistActions" translation="[0,30]" itemSize="[400,50]" numRows="4" 
+                        font="font:MediumSystemFont" color="0xFF6600FF" />
+                </Group>
+            </Group>
+            
+            <!-- Account Settings -->
+            <Group id="accountSettings" visible="false">
+                <Label translation="[0,0]" text="Account" font="font:LargeBoldSystemFont" color="0xFFFFFFFF" />
+                
+                <Group translation="[0,60]">
+                    <Label text="Xtream Codes Server" font="font:MediumSystemFont" color="0xCCCCCCFF" />
+                    <Label id="serverLabel" translation="[0,30]" width="1200" 
+                        font="font:MediumSystemFont" color="0xFFFFFFFF" text="Not configured" />
+                </Group>
+                
+                <Group translation="[0,120]">
+                    <Label text="Username" font="font:MediumSystemFont" color="0xCCCCCCFF" />
+                    <Label id="usernameLabel" translation="[0,30]" width="1200" 
+                        font="font:MediumSystemFont" color="0xFFFFFFFF" text="" />
+                </Group>
+                
+                <Group translation="[0,200]">
+                    <Label text="Status" font="font:MediumSystemFont" color="0xCCCCCCFF" />
+                    <Label id="statusLabel" translation="[0,30]" width="1200" 
+                        font="font:MediumSystemFont" color="0x00FF00FF" text="Connected" />
+                </Group>
+                
+                <Group translation="[0,300]">
+                    <LabelList id="accountActions" translation="[0,0]" itemSize="[400,50]" numRows="3" 
+                        font="font:MediumSystemFont" color="0xFF6600FF" />
+                </Group>
+            </Group>
+            
+            <!-- About -->
+            <Group id="aboutSettings" visible="false">
+                <Label translation="[0,0]" text="About" font="font:LargeBoldSystemFont" color="0xFFFFFFFF" />
+                
+                <Group translation="[0,60]">
+                    <Label text="RISA IPTV" font="font:LargeBoldSystemFont" color="0xFF6600FF" />
+                    <Label translation="[0,40]" text="Version 1.0.0" font="font:MediumSystemFont" color="0xCCCCCCFF" />
+                    <Label translation="[0,80]" width="1200" 
+                        text="A modern IPTV player for Roku devices. Supports M3U playlists and Xtream Codes API."
+                        font="font:SmallSystemFont" color="0xAAAAAAFF" wrap="true" />
+                </Group>
+                
+                <Group translation="[0,200]">
+                    <LabelList id="aboutActions" translation="[0,0]" itemSize="[400,50]" numRows="3" 
+                        font="font:MediumSystemFont" color="0xFF6600FF" />
+                </Group>
+            </Group>
+            
+        </Group>
+        
+        <!-- Keyboard overlay for text input -->
+        <Keyboard id="keyboard" visible="false" translation="[460,240]" />
+        
+    </children>
+</component>

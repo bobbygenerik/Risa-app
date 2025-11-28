@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component name="MovieLoaderTask" extends="Task">
+    <interface>
+        <field id="server" type="string" />
+        <field id="username" type="string" />
+        <field id="password" type="string" />
+        <field id="movies" type="assocarray" />
+        <field id="error" type="string" />
+    </interface>
+    <script type="text/brightscript">
+        <![CDATA[
+        sub init()
+            m.top.functionName = "loadMovies"
+        end sub
+        
+        sub loadMovies()
+            server = m.top.server
+            username = m.top.username
+            password = m.top.password
+            
+            if server = "" or username = "" or password = ""
+                m.top.error = "Missing Xtream Codes credentials"
+                return
+            end if
+            
+            ' Fetch movie categories
+            categoriesUrl = server + "/player_api.php?username=" + username + "&password=" + password + "&action=get_vod_categories"
+            categories = FetchJson(categoriesUrl)
+            
+            if categories = invalid
+                m.top.error = "Failed to load movie categories"
+                return
+            end if
+            
+            ' Fetch all movies
+            moviesUrl = server + "/player_api.php?username=" + username + "&password=" + password + "&action=get_vod_streams"
+            allMovies = FetchJson(moviesUrl)
+            
+            if allMovies = invalid
+                m.top.error = "Failed to load movies"
+                return
+            end if
+            
+            ' Organize movies by category
+            moviesByCategory = {}
+            categoryNames = {}
+            
+            ' Build category name lookup
+            for each cat in categories
+                categoryNames[cat.category_id.toStr()] = cat.category_name
+            end for
+            
+            ' Group movies by category
+            for each movie in allMovies
+                catId = movie.category_id.toStr()
+                catName = categoryNames[catId]
+                if catName = invalid then catName = "Uncategorized"
+                
+                if moviesByCategory[catName] = invalid
+                    moviesByCategory[catName] = []
+                end if
+                
+                movieData = {
+                    id: movie.stream_id.toStr(),
+                    title: movie.name,
+                    imageUrl: movie.stream_icon,
+                    year: movie.year,
+                    rating: movie.rating,
+                    categoryId: catId,
+                    categoryName: catName,
+                    containerExtension: movie.container_extension,
+                    url: server + "/movie/" + username + "/" + password + "/" + movie.stream_id.toStr() + "." + movie.container_extension
+                }
+                
+                moviesByCategory[catName].Push(movieData)
+            end for
+            
+            m.top.movies = {
+                categories: categories,
+                moviesByCategory: moviesByCategory,
+                totalCount: allMovies.Count()
+            }
+        end sub
+        
+        function FetchJson(url as string) as object
+            http = CreateObject("roUrlTransfer")
+            http.setUrl(url)
+            http.setCertificatesFile("common:/certs/ca-bundle.crt")
+            http.initClientCertificates()
+            http.setConnectionTimeout(30)
+            http.setReadTimeout(60)
+            
+            response = http.getToString()
+            if response = "" or response = invalid then return invalid
+            
+            return ParseJson(response)
+        end function
+        ]]>
+    </script>
+</component>

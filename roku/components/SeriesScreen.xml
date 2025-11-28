@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SeriesScreen.xml - Series browsing screen matching Android app layout -->
+<component name="SeriesScreen" extends="Group">
+    <interface>
+        <field id="visible" type="boolean" value="false" onChange="onVisibleChange" />
+        <field id="xtreamServer" type="string" />
+        <field id="xtreamUsername" type="string" />
+        <field id="xtreamPassword" type="string" />
+        <field id="seriesSelected" type="assocarray" alwaysNotify="true" />
+        <field id="episodeSelected" type="assocarray" alwaysNotify="true" />
+    </interface>
+    <script type="text/brightscript" uri="pkg:/components/SeriesScreen.brs" />
+    
+    <children>
+        <!-- Background -->
+        <Rectangle id="background" width="1920" height="1080" color="0x050710FF" />
+        
+        <!-- Hero section -->
+        <Group id="heroSection" translation="[0,60]">
+            <!-- Hero background image -->
+            <Poster id="heroImage" width="1920" height="400" loadDisplayMode="scaleToZoom" />
+            <!-- Gradient overlay -->
+            <Rectangle width="1920" height="400" color="0x00000066" />
+            <Rectangle width="1920" height="150" translation="[0,250]" color="0x05071099" />
+            
+            <!-- Hero content -->
+            <Label id="heroTitle" translation="[60,280]" width="1200" 
+                font="font:HugeBoldSystemFont" color="0xFFFFFFFF" />
+            <Label id="heroYear" translation="[60,340]" width="200" 
+                font="font:MediumSystemFont" color="0x888888FF" />
+            <Label id="heroRating" translation="[160,340]" width="100" 
+                font="font:MediumSystemFont" color="0xFF6600FF" />
+            <Label id="heroGenre" translation="[280,340]" width="600" 
+                font="font:MediumSystemFont" color="0xAAAAAAFF" />
+        </Group>
+        
+        <!-- Series grid by category -->
+        <RowList id="seriesGrid" translation="[40,480]" 
+            itemComponentName="ContentItem" 
+            numRows="3"
+            itemSize="[200,300]" 
+            itemSpacing="[20,30]"
+            rowItemSize="[[200,300]]"
+            rowItemSpacing="[[20,30]]"
+            showRowLabel="[true]"
+            rowLabelOffset="[[0,-50]]"
+            rowLabelColor="0xFFFFFFFF"
+            visible="true" />
+        
+        <!-- Loading indicator -->
+        <Group id="loadingGroup" translation="[860,500]">
+            <Label id="loadingLabel" text="Loading Series..." 
+                font="font:LargeBoldSystemFont" color="0xFFFFFFFF" />
+            <BusySpinner id="spinner" translation="[80,60]" />
+        </Group>
+        
+        <!-- Error message -->
+        <Label id="errorLabel" translation="[60,500]" width="1800" 
+            font="font:MediumSystemFont" color="0xFF6666FF" visible="false" />
+        
+        <!-- Category filter menu -->
+        <Group id="categoryMenu" visible="false">
+            <Rectangle width="1920" height="1080" color="0x000000DD" />
+            <Rectangle translation="[660,100]" width="600" height="880" color="0x1a1a1aFF" />
+            <Label translation="[700,140]" text="Categories" 
+                font="font:LargeBoldSystemFont" color="0xFFFFFFFF" />
+            <LabelList id="categoryList" translation="[700,200]" 
+                itemSize="[520,60]" numRows="12" 
+                font="font:MediumSystemFont" color="0xFFFFFFFF" />
+        </Group>
+        
+        <!-- Series detail view (seasons/episodes) -->
+        <Group id="detailView" visible="false">
+            <Rectangle width="1920" height="1080" color="0x050710FF" />
+            
+            <!-- Series info header -->
+            <Group id="detailHeader" translation="[0,0]">
+                <Poster id="detailBackdrop" width="1920" height="500" loadDisplayMode="scaleToZoom" />
+                <Rectangle width="1920" height="500" color="0x00000088" />
+                
+                <Poster id="detailPoster" translation="[60,120]" width="200" height="300" loadDisplayMode="scaleToZoom" />
+                <Label id="detailTitle" translation="[300,140]" width="1500" 
+                    font="font:HugeBoldSystemFont" color="0xFFFFFFFF" />
+                <Label id="detailMeta" translation="[300,210]" width="1500" 
+                    font="font:MediumSystemFont" color="0xAAAAAAFF" />
+                <Label id="detailPlot" translation="[300,260]" width="1500" height="160" 
+                    font="font:SmallSystemFont" color="0xCCCCCCFF" wrap="true" maxLines="5" />
+            </Group>
+            
+            <!-- Season selector -->
+            <LabelList id="seasonList" translation="[60,520]" 
+                itemSize="[150,50]" numRows="1" 
+                font="font:MediumBoldSystemFont" color="0xFFFFFFFF" />
+            
+            <!-- Episode list -->
+            <RowList id="episodeGrid" translation="[60,600]" 
+                itemComponentName="ContentItem" 
+                numRows="2"
+                itemSize="[300,200]" 
+                itemSpacing="[20,20]"
+                rowItemSize="[[300,200]]"
+                rowItemSpacing="[[20,20]]"
+                showRowLabel="[false]" />
+        </Group>
+    </children>
+</component>

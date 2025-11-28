@@ -7,7 +7,11 @@
   "rootDir": ".",
   "outDir": "./out",
   "files": [
-    "source/**/*.brs",
+    "source/Main.brs",
+    "source/M3UParser.brs",
+    "source/EPGService.brs",
+    "source/FavoritesService.brs",
+    "source/HistoryService.brs",
     "components/**/*",
     "images/**/*",
     "manifest"

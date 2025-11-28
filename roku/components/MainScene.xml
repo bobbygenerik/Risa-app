@@ -1,12 +1,120 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- MainScene.xml - Main app scene with tab navigation (Live TV, Movies, Series) -->
 <component name="MainScene" extends="Scene">
     <script type="text/brightscript" uri="pkg:/components/MainScene.brs" />
     <children>
-        <!-- Full-screen debug overlay so launch is unmistakable -->
-        <Group id="root" width="1920" height="1080">
-            <Rectangle width="1920" height="1080" color="0xFF000000" opacity="1.0" />
-            <Label id="debugLabel" translation="[960,540]" horizAlign="center" vertAlign="center" width="1600" height="600"
-                text="RISA IPTV DEV\n\n(Launching...)" textAlign="center" wrap="true" textColor="0xFFFFFFFF" font="font:LargeSystemFont" />
+        <!-- Background -->
+        <Rectangle id="appBackground" width="1920" height="1080" color="0x050710FF" />
+        
+        <!-- Top Navigation Bar -->
+        <Group id="navBar" translation="[0,0]">
+            <Rectangle width="1920" height="60" color="0x000000CC" />
+            
+            <!-- Logo -->
+            <Label id="appLogo" translation="[30,15]" text="RISA" 
+                font="font:LargeBoldSystemFont" color="0xFF6600FF" />
+            
+            <!-- Navigation tabs -->
+            <Group id="navTabs" translation="[200,0]">
+                <ButtonGroup id="tabButtons" translation="[0,10]" 
+                    layoutDirection="horiz" 
+                    horizAlignment="left" />
+            </Group>
+            
+            <!-- Time display -->
+            <Label id="timeLabel" translation="[1780,15]" 
+                font="font:MediumSystemFont" color="0xCCCCCCFF" 
+                horizAlign="right" width="100" />
+            
+            <!-- Settings button -->
+            <Label id="settingsBtn" translation="[1650,15]" text="⚙"
+                font="font:LargeSystemFont" color="0xCCCCCCFF" />
+        </Group>
+        
+        <!-- Status/Loading indicator -->
+        <Group id="loadingOverlay" translation="[860,500]" visible="false">
+            <Label id="statusLabel" text="Loading..." 
+                font="font:LargeBoldSystemFont" color="0xFFFFFFFF" />
+            <BusySpinner id="spinner" translation="[80,60]" />
+        </Group>
+        
+        <!-- Error display -->
+        <Label id="errorLabel" translation="[60,500]" width="1800" 
+            font="font:MediumSystemFont" color="0xFF6666FF" visible="false" />
+        
+        <!-- ========== LIVE TV SCREEN ========== -->
+        <Group id="liveTVScreen" translation="[0,60]" visible="true">
+            <!-- Hero section -->
+            <Group id="heroSection" translation="[0,0]" visible="false">
+                <Poster id="heroImage" width="1920" height="400" loadDisplayMode="scaleToZoom" />
+                <Rectangle width="1920" height="400" color="0x00000044" />
+                <Rectangle width="1920" height="150" translation="[0,250]" color="0x05071099" />
+                
+                <!-- Logo badge -->
+                <Rectangle translation="[60,30]" width="90" height="90" color="0x000000BB">
+                    <Poster id="heroLogo" translation="[10,10]" width="70" height="70" 
+                        loadDisplayMode="scaleToFit" />
+                </Rectangle>
+                
+                <Label id="heroTitle" translation="[60,250]" width="1200" 
+                    font="font:HugeBoldSystemFont" color="0xFFFFFFFF" />
+                <Label id="heroTime" translation="[60,310]" width="400" 
+                    font="font:MediumSystemFont" color="0x888888FF" />
+                <Rectangle id="heroProgress" translation="[60,350]" width="800" height="6" 
+                    color="0xFFFFFF3D">
+                    <Rectangle id="heroProgressBar" width="0" height="6" color="0xFF6600FF" />
+                </Rectangle>
+                <Label id="heroChannel" translation="[60,370]" width="800" 
+                    font="font:MediumSystemFont" color="0xCCCCCCFF" />
+            </Group>
+            
+            <!-- Channel grid -->
+            <RowList id="channelGrid" translation="[40,420]" 
+                itemComponentName="ChannelItem" 
+                numRows="3"
+                itemSize="[200,280]" 
+                itemSpacing="[16,24]"
+                rowItemSize="[[200,280]]"
+                rowItemSpacing="[[16,24]]"
+                showRowLabel="[true]"
+                rowLabelOffset="[[0,-50]]"
+                rowLabelColor="0xFFFFFFFF"
+                visible="false" />
+        </Group>
+        
+        <!-- ========== MOVIES SCREEN (embedded) ========== -->
+        <MoviesScreen id="moviesScreen" visible="false" />
+        
+        <!-- ========== SERIES SCREEN (embedded) ========== -->
+        <SeriesScreen id="seriesScreen" visible="false" />
+        
+        <!-- ========== SETTINGS SCREEN ========== -->
+        <SettingsScreen id="settingsScreen" visible="false" />
+        
+        <!-- ========== VIDEO PLAYER ========== -->
+        <Video id="videoPlayer" width="1920" height="1080" visible="false" enableUI="true" />
+        
+        <!-- ========== SEARCH OVERLAY ========== -->
+        <Group id="searchOverlay" visible="false">
+            <Rectangle width="1920" height="1080" color="0x000000DD" />
+            <Rectangle translation="[360,200]" width="1200" height="680" color="0x1a1a1aFF" />
+            <Label translation="[400,240]" text="Search" 
+                font="font:LargeBoldSystemFont" color="0xFFFFFFFF" />
+            <Keyboard id="searchKeyboard" translation="[400,300]" />
+            <LabelList id="searchResults" translation="[900,300]" 
+                itemSize="[620,60]" numRows="8" 
+                font="font:MediumSystemFont" color="0xFFFFFFFF" />
+        </Group>
+        
+        <!-- ========== CATEGORY MENU ========== -->
+        <Group id="categoryMenu" visible="false">
+            <Rectangle width="1920" height="1080" color="0x000000DD" />
+            <Rectangle translation="[660,100]" width="600" height="880" color="0x1a1a1aFF" />
+            <Label translation="[700,140]" text="Categories" 
+                font="font:LargeBoldSystemFont" color="0xFFFFFFFF" />
+            <LabelList id="categoryList" translation="[700,200]" 
+                itemSize="[520,60]" numRows="12" 
+                font="font:MediumSystemFont" color="0xFFFFFFFF" />
         </Group>
     </children>
 </component>

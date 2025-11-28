@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component name="SeriesInfoTask" extends="Task">
+    <interface>
+        <field id="server" type="string" />
+        <field id="username" type="string" />
+        <field id="password" type="string" />
+        <field id="seriesId" type="string" />
+        <field id="seriesInfo" type="assocarray" />
+        <field id="error" type="string" />
+    </interface>
+    <script type="text/brightscript">
+        <![CDATA[
+        sub init()
+            m.top.functionName = "loadSeriesInfo"
+        end sub
+        
+        sub loadSeriesInfo()
+            server = m.top.server
+            username = m.top.username
+            password = m.top.password
+            seriesId = m.top.seriesId
+            
+            if server = "" or username = "" or password = "" or seriesId = ""
+                m.top.error = "Missing parameters"
+                return
+            end if
+            
+            ' Fetch series info including seasons and episodes
+            infoUrl = server + "/player_api.php?username=" + username + "&password=" + password + "&action=get_series_info&series_id=" + seriesId
+            info = FetchJson(infoUrl)
+            
+            if info = invalid
+                m.top.error = "Failed to load series info"
+                return
+            end if
+            
+            ' Parse seasons and episodes
+            seasons = []
+            if info.episodes <> invalid
+                for each seasonNum in info.episodes
+                    seasonData = {
+                        seasonNumber: seasonNum,
+                        episodes: []
+                    }
+                    
+                    episodeList = info.episodes[seasonNum]
+                    for each ep in episodeList
+                        episodeData = {
+                            id: ep.id.toStr(),
+                            episodeNumber: ep.episode_num,
+                            title: ep.title,
+                            containerExtension: ep.container_extension,
+                            duration: ep.duration,
+                            plot: ep.plot,
+                            url: server + "/series/" + username + "/" + password + "/" + ep.id.toStr() + "." + ep.container_extension
+                        }
+                        seasonData.episodes.Push(episodeData)
+                    end for
+                    
+                    seasons.Push(seasonData)
+                end for
+            end if
+            
+            m.top.seriesInfo = {
+                info: info.info,
+                seasons: seasons
+            }
+        end sub
+        
+        function FetchJson(url as string) as object
+            http = CreateObject("roUrlTransfer")
+            http.setUrl(url)
+            http.setCertificatesFile("common:/certs/ca-bundle.crt")
+            http.initClientCertificates()
+            http.setConnectionTimeout(30)
+            http.setReadTimeout(60)
+            
+            response = http.getToString()
+            if response = "" or response = invalid then return invalid
+            
+            return ParseJson(response)
+        end function
+        ]]>
+    </script>
+</component>

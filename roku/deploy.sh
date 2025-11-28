@@ -1,126 +1,67 @@
 #!/bin/bash
-# Deploy Roku IPTV Player to Roku Device
-# Usage: ./deploy.sh <roku-device-ip>
+# Roku IPTV App - Deploy Script
 
 set -e
 
-# Colors
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
+ROKU_IP=$1
+ROKU_PASSWORD=$2
 
-# Check arguments
-if [ $# -eq 0 ]; then
-    echo -e "${YELLOW}Usage: ./deploy.sh <roku-device-ip>${NC}"
+if [ -z "$ROKU_IP" ]; then
+    echo "❌ Error: Roku IP address required"
     echo ""
-    echo "Example: ./deploy.sh 192.168.1.100"
+    echo "Usage: ./deploy.sh <ROKU_IP> <PASSWORD>"
+    echo "Example: ./deploy.sh 192.168.1.100 mypassword"
     echo ""
     echo "To find your Roku IP:"
-    echo "  1. On Roku: Settings → Network → IP Address"
-    echo "  2. Or scan network: nmap -sn 192.168.1.0/24 | grep roku"
+    echo "  Settings → Network → About"
     exit 1
 fi
 
-ROKU_IP=$1
-ROKU_USER="roku"
-ROKU_PASS="roku"
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" || {
-    echo -e "${RED}✗ Failed to determine project directory${NC}"
-    exit 1
-}
-
-echo -e "${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║         Roku IPTV Player - Deployment Script              ║${NC}"
-echo -e "${BLUE}╚════════════════════════════════════════════════════════════╝${NC}"
-echo ""
-echo -e "${GREEN}📱 Roku Device IP:${NC} $ROKU_IP"
-echo -e "${GREEN}📁 Project Dir:${NC}   $PROJECT_DIR"
-echo ""
-
-# Step 1: Verify device is reachable
-echo -e "${YELLOW}[1/4]${NC} Checking device connectivity..."
-if ! ping -c 1 -W 2 "$ROKU_IP" &> /dev/null; then
-    echo -e "${RED}✗ Cannot reach device at $ROKU_IP${NC}"
-    echo "Please verify:"
-    echo "  1. Roku IP address is correct"
-    echo "  2. Roku device is powered on"
-    echo "  3. Device is on same network as this machine"
+if [ -z "$ROKU_PASSWORD" ]; then
+    echo "❌ Error: Roku developer password required"
+    echo ""
+    echo "Usage: ./deploy.sh <ROKU_IP> <PASSWORD>"
+    echo ""
+    echo "To enable developer mode:"
+    echo "  Press: Home 3x, Up 2x, Right, Left, Right, Left, Right"
     exit 1
 fi
-echo -e "${GREEN}✓ Device reachable${NC}"
-echo ""
 
-# Step 2: Verify build artifacts exist
-echo -e "${YELLOW}[2/4]${NC} Checking build artifacts..."
-if [ ! -f "$PROJECT_DIR/out/roku.zip" ]; then
-    echo -e "${RED}✗ Build artifacts not found at $PROJECT_DIR/out/roku.zip${NC}"
-    echo "Please run: npm run build"
-    exit 1
+cd "$(dirname "$0")"
+
+if [ ! -f "out/roku.zip" ]; then
+    echo "📦 Package not found. Building..."
+    ./build.sh
 fi
-echo -e "${GREEN}✓ Build artifacts ready${NC}"
-PACKAGE_SIZE=$(ls -lh "$PROJECT_DIR/out/roku.zip" | awk '{print $5}')
-echo "  Size: $PACKAGE_SIZE"
+
+echo "🚀 Deploying to Roku at $ROKU_IP..."
 echo ""
 
-# Step 3: Deploy to device
-echo -e "${YELLOW}[3/4]${NC} Deploying to Roku device..."
-echo "Target: $ROKU_IP:8060"
-echo ""
+# Deploy package
+curl -s -u "rokudev:$ROKU_PASSWORD" \
+    -F "mysubmit=Install" \
+    -F "archive=@out/roku.zip" \
+    "http://$ROKU_IP:80/plugin_install" > /tmp/roku_deploy.html
 
-if command -v rookudev &> /dev/null; then
-    # Using rookudev
-    rookudev build --device "$ROKU_IP" --username "$ROKU_USER" --password "$ROKU_PASS"
-    DEPLOY_STATUS=$?
-elif command -v roku-deploy &> /dev/null; then
-    # Using roku-deploy
-    roku-deploy --host "$ROKU_IP" --user "$ROKU_USER" --password "$ROKU_PASS" --out roku.pkg "$PROJECT_DIR/out/"
-    DEPLOY_STATUS=$?
+# Check result
+if grep -q "Install Success" /tmp/roku_deploy.html; then
+    echo "✅ Deployment successful!"
+    echo ""
+    echo "📺 App installed on Roku"
+    echo "   Launch from home screen: RISA IPTV"
+    echo ""
+    echo "🔍 Debug console:"
+    echo "   telnet $ROKU_IP 8085"
+elif grep -q "Identical to previous version" /tmp/roku_deploy.html; then
+    echo "⚠️  Package identical to previous version"
+    echo "   App already up to date"
 else
-    echo -e "${RED}✗ Deployment tool not found${NC}"
-    echo "Install one of:"
-    echo "  • npm install -g roku-deploy"
-    echo "  • npm install -g rookudev"
-    exit 1
-fi
-
-if [ $DEPLOY_STATUS -eq 0 ]; then
-    echo -e "${GREEN}✓ Deployment successful!${NC}"
-else
-    echo -e "${RED}✗ Deployment failed${NC}"
+    echo "❌ Deployment failed"
     echo ""
     echo "Troubleshooting:"
-    echo "  1. Verify developer mode is enabled on Roku"
-    echo "  2. Try telnet: telnet $ROKU_IP 8085"
-    echo "  3. Check logs: curl http://$ROKU_IP:8085/logs/lines"
+    echo "  1. Verify Roku IP: $ROKU_IP"
+    echo "  2. Check developer mode is enabled"
+    echo "  3. Verify password is correct"
+    echo "  4. Try: ping $ROKU_IP"
     exit 1
-fi
-echo ""
-
-# Step 4: Verify deployment
-echo -e "${YELLOW}[4/4]${NC} Verifying deployment..."
-sleep 2
-
-# Check if device responds
-if curl -s "http://$ROKU_IP:8060/" &> /dev/null; then
-    echo -e "${GREEN}✓ Device is responding${NC}"
-    echo ""
-    echo -e "${GREEN}╔════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${GREEN}║           ✅ DEPLOYMENT SUCCESSFUL!                        ║${NC}"
-    echo -e "${GREEN}╚════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
-    echo -e "${BLUE}Next steps:${NC}"
-    echo "  1. Look for 'IPTV Player' on your Roku home screen"
-    echo "  2. Launch the channel"
-    echo "  3. Go to Settings and enter your M3U playlist URL"
-    echo "  4. Browse channels and test playback"
-    echo ""
-    echo -e "${BLUE}Debugging:${NC}"
-    echo "  • View logs: telnet $ROKU_IP 8085"
-    echo "  • Get device info: rookudev info --device $ROKU_IP"
-    echo "  • View HTTP logs: curl http://$ROKU_IP:8085/logs/lines"
-else
-    echo -e "${YELLOW}⚠ Device not responding yet (may still be initializing)${NC}"
-    echo "Try launching the channel on your Roku device in a moment"
 fi

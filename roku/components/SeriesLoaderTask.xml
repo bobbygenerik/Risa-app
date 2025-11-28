@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component name="SeriesLoaderTask" extends="Task">
+    <interface>
+        <field id="server" type="string" />
+        <field id="username" type="string" />
+        <field id="password" type="string" />
+        <field id="series" type="assocarray" />
+        <field id="error" type="string" />
+    </interface>
+    <script type="text/brightscript">
+        <![CDATA[
+        sub init()
+            m.top.functionName = "loadSeries"
+        end sub
+        
+        sub loadSeries()
+            server = m.top.server
+            username = m.top.username
+            password = m.top.password
+            
+            if server = "" or username = "" or password = ""
+                m.top.error = "Missing Xtream Codes credentials"
+                return
+            end if
+            
+            ' Fetch series categories
+            categoriesUrl = server + "/player_api.php?username=" + username + "&password=" + password + "&action=get_series_categories"
+            categories = FetchJson(categoriesUrl)
+            
+            if categories = invalid
+                m.top.error = "Failed to load series categories"
+                return
+            end if
+            
+            ' Fetch all series
+            seriesUrl = server + "/player_api.php?username=" + username + "&password=" + password + "&action=get_series"
+            allSeries = FetchJson(seriesUrl)
+            
+            if allSeries = invalid
+                m.top.error = "Failed to load series"
+                return
+            end if
+            
+            ' Organize series by category
+            seriesByCategory = {}
+            categoryNames = {}
+            
+            ' Build category name lookup
+            for each cat in categories
+                categoryNames[cat.category_id.toStr()] = cat.category_name
+            end for
+            
+            ' Group series by category
+            for each show in allSeries
+                catId = show.category_id.toStr()
+                catName = categoryNames[catId]
+                if catName = invalid then catName = "Uncategorized"
+                
+                if seriesByCategory[catName] = invalid
+                    seriesByCategory[catName] = []
+                end if
+                
+                seriesData = {
+                    id: show.series_id.toStr(),
+                    title: show.name,
+                    imageUrl: show.cover,
+                    year: show.year,
+                    rating: show.rating,
+                    categoryId: catId,
+                    categoryName: catName,
+                    plot: show.plot,
+                    cast: show.cast,
+                    director: show.director,
+                    genre: show.genre
+                }
+                
+                seriesByCategory[catName].Push(seriesData)
+            end for
+            
+            m.top.series = {
+                categories: categories,
+                seriesByCategory: seriesByCategory,
+                totalCount: allSeries.Count()
+            }
+        end sub
+        
+        function FetchJson(url as string) as object
+            http = CreateObject("roUrlTransfer")
+            http.setUrl(url)
+            http.setCertificatesFile("common:/certs/ca-bundle.crt")
+            http.initClientCertificates()
+            http.setConnectionTimeout(30)
+            http.setReadTimeout(60)
+            
+            response = http.getToString()
+            if response = "" or response = invalid then return invalid
+            
+            return ParseJson(response)
+        end function
+        ]]>
+    </script>
+</component>

@@ -53,47 +53,44 @@ function ParseEPGXML(xml as object) as object
         programs: []
     }
     
-    ' Extract channels
-    if xml.channel <> invalid
-        if type(xml.channel) = "roArray"
-            for each channel in xml.channel
-                channelData = {
-                    id: channel@id,
-                    displayName: channel.getChildElements()[0].getText()
-                }
-                epgData.channels.push(channelData)
-            end for
+    channels = xml.GetNamedElements("channel")
+    for each channel in channels
+        channelData = {
+            id: channel.getAttributes().id,
+            displayName: ""
+        }
+        
+        displayNames = channel.GetNamedElements("display-name")
+        if displayNames.count() > 0
+            channelData.displayName = displayNames[0].getText()
         end if
-    end if
+        
+        epgData.channels.push(channelData)
+    end for
     
-    ' Extract programs
-    if xml.programme <> invalid
-        if type(xml.programme) = "roArray"
-            for each program in xml.programme
-                programData = {
-                    channelId: program@channel,
-                    start: program@start,
-                    stop: program@stop,
-                    title: "",
-                    description: ""
-                }
-                
-                ' Extract title
-                titleElement = program.getNamedElements("title")[0]
-                if titleElement <> invalid
-                    programData.title = titleElement.getText()
-                end if
-                
-                ' Extract description
-                descElement = program.getNamedElements("desc")[0]
-                if descElement <> invalid
-                    programData.description = descElement.getText()
-                end if
-                
-                epgData.programs.push(programData)
-            end for
+    programs = xml.GetNamedElements("programme")
+    for each program in programs
+        attrs = program.getAttributes()
+        programData = {
+            channelId: attrs.channel,
+            start: attrs.start,
+            stop: attrs.stop,
+            title: "",
+            description: ""
+        }
+        
+        titleElements = program.GetNamedElements("title")
+        if titleElements.count() > 0
+            programData.title = titleElements[0].getText()
         end if
-    end if
+        
+        descElements = program.GetNamedElements("desc")
+        if descElements.count() > 0
+            programData.description = descElements[0].getText()
+        end if
+        
+        epgData.programs.push(programData)
+    end for
     
     return epgData
 end function
