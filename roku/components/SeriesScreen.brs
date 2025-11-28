@@ -31,7 +31,7 @@ sub Init()
     m.allSeries = []
     m.categories = []
     m.currentCategory = "All"
-    m.seriesByCategory = {}
+    m.seriesByCategory = CreateObject("roAssociativeArray")
     m.currentHeroIndex = 0
     m.currentView = "grid"
     m.isLoaded = false

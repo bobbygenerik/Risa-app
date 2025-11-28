@@ -21,7 +21,7 @@ sub Init()
     m.allMovies = []
     m.categories = []
     m.currentCategory = "All"
-    m.moviesByCategory = {}
+    m.moviesByCategory = CreateObject("roAssociativeArray")
     m.currentHeroIndex = 0
     m.currentView = "grid"
     m.isLoaded = false

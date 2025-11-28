@@ -59,17 +59,17 @@ sub SaveWatchProgress(content as object, positionSeconds as integer, durationSec
         progressPercent = Int((positionSeconds / durationSeconds) * 100)
     end if
     
-    data = FormatJson({
-        id: contentId,
-        url: content.url,
-        title: content.title,
-        imageUrl: content.imageUrl,
-        contentType: content.contentType,
-        position: positionSeconds,
-        duration: durationSeconds,
-        progressPercent: progressPercent,
-        lastWatched: CreateObject("roDateTime").AsSeconds()
-    })
+    dataObj = CreateObject("roAssociativeArray")
+    dataObj.id = contentId
+    dataObj.url = content.url
+    dataObj.title = content.title
+    dataObj.imageUrl = content.imageUrl
+    dataObj.contentType = content.contentType
+    dataObj.position = positionSeconds
+    dataObj.duration = durationSeconds
+    dataObj.progressPercent = progressPercent
+    dataObj.lastWatched = CreateObject("roDateTime").AsSeconds()
+    data = FormatJson(dataObj)
     
     registry.Write(key, data)
     registry.Flush()
@@ -224,12 +224,12 @@ sub SaveLastChannel(channel as object)
     if channel = invalid then return
     
     registry = CreateObject("roRegistrySection", "History")
-    data = FormatJson({
-        url: channel.url,
-        title: channel.title,
-        logo: channel.logo,
-        group: channel.group
-    })
+    dataObj = CreateObject("roAssociativeArray")
+    dataObj.url = channel.url
+    dataObj.title = channel.title
+    dataObj.logo = channel.logo
+    dataObj.group = channel.group
+    data = FormatJson(dataObj)
     registry.Write("lastChannel", data)
     registry.Flush()
 end sub

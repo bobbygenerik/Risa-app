@@ -20,12 +20,15 @@ print("📦 Creating package...")
 with zipfile.ZipFile('out/roku.zip', 'w', zipfile.ZIP_DEFLATED) as z:
     z.write('manifest', 'manifest')
     
-    sources = ['source/Main.brs', 'source/M3UParser.brs', 'source/EPGService.brs']
-    for f in sources:
-        if os.path.exists(f):
-            z.write(f, f)
-            print(f"  ✓ {f}")
+    # Include all source files
+    for root, dirs, files in os.walk('source'):
+        for file in files:
+            if file.endswith('.brs') and not file.endswith(('.bak', '.backup', '.disabled')):
+                path = os.path.join(root, file)
+                z.write(path, path)
+                print(f"  ✓ {path}")
     
+    # Include all components
     for root, dirs, files in os.walk('components'):
         for file in files:
             if not file.endswith(('.bak', '.backup')):
@@ -33,11 +36,13 @@ with zipfile.ZipFile('out/roku.zip', 'w', zipfile.ZIP_DEFLATED) as z:
                 z.write(path, path)
                 print(f"  ✓ {path}")
     
+    # Include all images
     for root, dirs, files in os.walk('images'):
         for file in files:
             if not file.endswith(('.bak', '.backup')):
                 path = os.path.join(root, file)
                 z.write(path, path)
+                print(f"  ✓ {path}")
 
 size = os.path.getsize('out/roku.zip')
 print(f"\n✅ Build complete: out/roku.zip ({size/1024:.1f} KB)")

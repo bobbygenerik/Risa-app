@@ -29,13 +29,12 @@ function XtreamGetLiveStreams(server as string, username as string, password as 
     
     channels = []
     for each stream in json
-        channel = {
-            title: stream.name,
-            url: server + "/live/" + username + "/" + password + "/" + stream.stream_id.toStr() + ".m3u8",
-            logo: stream.stream_icon,
-            group: stream.category_name,
-            tvgId: stream.epg_channel_id
-        }
+        channel = CreateObject("roAssociativeArray")
+        channel.title = stream.name
+        channel.url = server + "/live/" + username + "/" + password + "/" + stream.stream_id.toStr() + ".m3u8"
+        channel.logo = stream.stream_icon
+        channel.group = stream.category_name
+        channel.tvgId = stream.epg_channel_id
         channels.push(channel)
     end for
     

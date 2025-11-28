@@ -1,5 +1,5 @@
 function GetCategories(channels as object) as object
-    categories = {}
+    categories = CreateObject("roAssociativeArray")
     
     for each channel in channels
         group = channel.group

@@ -43,13 +43,13 @@ sub SaveFavoriteChannel(channel as object)
     registry = CreateObject("roRegistrySection", "Favorites")
     key = "channel_" + GetMD5(channel.url)
     
-    data = FormatJson({
-        url: channel.url,
-        title: channel.title,
-        logo: channel.logo,
-        group: channel.group,
-        addedTime: CreateObject("roDateTime").AsSeconds()
-    })
+    dataObj = CreateObject("roAssociativeArray")
+    dataObj.url = channel.url
+    dataObj.title = channel.title
+    dataObj.logo = channel.logo
+    dataObj.group = channel.group
+    dataObj.addedTime = CreateObject("roDateTime").AsSeconds()
+    data = FormatJson(dataObj)
     
     registry.Write(key, data)
     registry.Flush()
@@ -61,13 +61,13 @@ sub SaveFavoriteContent(content as object)
     registry = CreateObject("roRegistrySection", "Favorites")
     key = "content_" + content.id
     
-    data = FormatJson({
-        id: content.id,
-        title: content.title,
-        imageUrl: content.imageUrl,
-        contentType: content.contentType,
-        addedTime: CreateObject("roDateTime").AsSeconds()
-    })
+    dataObj = CreateObject("roAssociativeArray")
+    dataObj.id = content.id
+    dataObj.title = content.title
+    dataObj.imageUrl = content.imageUrl
+    dataObj.contentType = content.contentType
+    dataObj.addedTime = CreateObject("roDateTime").AsSeconds()
+    data = FormatJson(dataObj)
     
     registry.Write(key, data)
     registry.Flush()

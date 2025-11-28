@@ -44,13 +44,12 @@ end function
 function ParseExtInf(extinf as string) as object
     ' Parse: #EXTINF:-1 tvg-id="..." tvg-logo="..." group-title="..." tvg-name="...",Channel Name
     
-    channel = {
-        tvgId: "",
-        logo: "",
-        group: "",
-        title: "",
-        url: ""
-    }
+    channel = CreateObject("roAssociativeArray")
+    channel.tvgId = ""
+    channel.logo = ""
+    channel.group = ""
+    channel.title = ""
+    channel.url = ""
     
     ' Extract attributes using regex-like parsing
     ' Parse tvg-id

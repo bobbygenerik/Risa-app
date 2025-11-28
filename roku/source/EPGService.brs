@@ -48,17 +48,15 @@ function ParseEPGXML(xml as object) as object
     ' Parse XMLTV format EPG
     ' Returns object with channels and programs
     
-    epgData = {
-        channels: [],
-        programs: []
-    }
+    epgData = CreateObject("roAssociativeArray")
+    epgData.channels = []
+    epgData.programs = []
     
     channels = xml.GetNamedElements("channel")
     for each channel in channels
-        channelData = {
-            id: channel.getAttributes().id,
-            displayName: ""
-        }
+        channelData = CreateObject("roAssociativeArray")
+        channelData.id = channel.getAttributes().id
+        channelData.displayName = ""
         
         displayNames = channel.GetNamedElements("display-name")
         if displayNames.count() > 0
@@ -71,13 +69,12 @@ function ParseEPGXML(xml as object) as object
     programs = xml.GetNamedElements("programme")
     for each program in programs
         attrs = program.getAttributes()
-        programData = {
-            channelId: attrs.channel,
-            start: attrs.start,
-            stop: attrs.stop,
-            title: "",
-            description: ""
-        }
+        programData = CreateObject("roAssociativeArray")
+        programData.channelId = attrs.channel
+        programData.start = attrs.start
+        programData.stop = attrs.stop
+        programData.title = ""
+        programData.description = ""
         
         titleElements = program.GetNamedElements("title")
         if titleElements.count() > 0
@@ -99,11 +96,10 @@ function GetCurrentProgram(channelId as string) as object
     ' Get current program for a channel
     ' Returns program object with title and description
     
-    program = {
-        title: "Current Program",
-        description: "Program description",
-        timeRemaining: 30
-    }
+    program = CreateObject("roAssociativeArray")
+    program.title = "Current Program"
+    program.description = "Program description"
+    program.timeRemaining = 30
     
     return program
 end function

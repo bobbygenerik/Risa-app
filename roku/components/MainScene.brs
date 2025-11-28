@@ -3,9 +3,8 @@
 sub Init()
     ' Navigation
     m.navBar = m.top.findNode("navBar")
-    m.tabButtons = m.top.findNode("tabButtons")
+    m.tabList = m.top.findNode("tabList")
     m.timeLabel = m.top.findNode("timeLabel")
-    m.settingsBtn = m.top.findNode("settingsBtn")
     
     ' Loading/Error
     m.loadingOverlay = m.top.findNode("loadingOverlay")
@@ -21,6 +20,7 @@ sub Init()
     m.heroChannel = m.top.findNode("heroChannel")
     m.heroTime = m.top.findNode("heroTime")
     m.heroProgressBar = m.top.findNode("heroProgressBar")
+    m.heroProgressBg = m.top.findNode("heroProgressBg")
     m.channelGrid = m.top.findNode("channelGrid")
     
     ' Screens
@@ -38,7 +38,7 @@ sub Init()
     m.categoryMenu = m.top.findNode("categoryMenu")
     m.categoryList = m.top.findNode("categoryList")
     
-    ' Setup tab buttons
+    ' Setup tab navigation
     SetupNavTabs()
     
     ' Observers
@@ -88,9 +88,23 @@ sub Init()
 end sub
 
 sub SetupNavTabs()
-    buttons = m.tabButtons
-    buttons.buttons = ["Live TV", "Movies", "Series"]
-    buttons.observeField("buttonSelected", "onTabSelected")
+    ' Create content for tab list
+    tabContent = CreateObject("roSGNode", "ContentNode")
+    
+    tab1 = CreateObject("roSGNode", "ContentNode")
+    tab1.title = "Live TV"
+    tabContent.appendChild(tab1)
+    
+    tab2 = CreateObject("roSGNode", "ContentNode")
+    tab2.title = "Movies"
+    tabContent.appendChild(tab2)
+    
+    tab3 = CreateObject("roSGNode", "ContentNode")
+    tab3.title = "Series"
+    tabContent.appendChild(tab3)
+    
+    m.tabList.content = tabContent
+    m.tabList.observeField("itemSelected", "onTabSelected")
 end sub
 
 sub updateClock()
@@ -245,7 +259,12 @@ function ParseM3U(content as string) as object
 end function
 
 function ParseExtInf(extinf as string) as object
-    channel = {tvgId: "", logo: "", group: "Uncategorized", title: "", url: ""}
+    channel = CreateObject("roAssociativeArray")
+    channel.tvgId = ""
+    channel.logo = ""
+    channel.group = "Uncategorized"
+    channel.title = ""
+    channel.url = ""
     
     tvgIdMatch = ExtractAttribute(extinf, "tvg-id")
     if tvgIdMatch <> "" then channel.tvgId = tvgIdMatch
@@ -283,7 +302,7 @@ function ExtractAttribute(line as string, attributeName as string) as string
 end function
 
 sub ExtractCategories()
-    categoryMap = {}
+    categoryMap = CreateObject("roAssociativeArray")
     for each channel in m.allChannels
         if channel.group <> "" and channel.group <> invalid
             categoryMap[channel.group] = true
@@ -307,7 +326,7 @@ sub DisplayChannels()
     
     content = CreateObject("roSGNode", "ContentNode")
     
-    categoryGroups = {}
+    categoryGroups = CreateObject("roAssociativeArray")
     for each channel in m.channels
         cat = channel.group
         if cat = "" or cat = invalid then cat = "Uncategorized"
@@ -461,12 +480,12 @@ end sub
 
 sub SaveLastChannel(channel as object)
     registry = CreateObject("roRegistrySection", "History")
-    data = FormatJson({
-        url: channel.url,
-        title: channel.title,
-        logo: channel.logo,
-        group: channel.group
-    })
+    dataObj = CreateObject("roAssociativeArray")
+    dataObj.url = channel.url
+    dataObj.title = channel.title
+    dataObj.logo = channel.logo
+    dataObj.group = channel.group
+    data = FormatJson(dataObj)
     registry.Write("lastChannel", data)
     registry.Flush()
 end sub

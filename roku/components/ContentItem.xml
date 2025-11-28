@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- ContentItem.xml - Generic content card for movies/series/episodes -->
+<!-- ContentItem.xml - Modern content card for movies/series/episodes -->
 <component name="ContentItem" extends="Group">
     <interface>
         <field id="itemContent" type="node" onChange="showContent" />
@@ -8,35 +8,43 @@
     
     <children>
         <!-- Card background -->
-        <Rectangle id="background" width="200" height="300" color="0x1a1a1aFF" />
+        <Rectangle id="background" width="160" height="240" color="0x1a1a2eFF" />
         
         <!-- Focus border -->
-        <Rectangle id="focusBorder" width="204" height="304" translation="[-2,-2]" color="0xFF6600FF" opacity="0.0" />
+        <Rectangle id="focusBorder" width="164" height="244" translation="[-2,-2]" 
+            color="0x2E3192FF" opacity="0.0" />
         
         <!-- Poster image -->
-        <Poster id="poster" width="200" height="300" loadDisplayMode="scaleToZoom" />
+        <Poster id="poster" width="160" height="240" loadDisplayMode="scaleToZoom" />
         
         <!-- Gradient overlay for text -->
-        <Rectangle width="200" height="120" translation="[0,180]">
-            <Rectangle width="200" height="120" color="0x000000FF" opacity="0.8" />
-        </Rectangle>
+        <Rectangle width="160" height="100" translation="[0,140]" color="0x000000CC" />
         
         <!-- Title -->
-        <Label id="title" translation="[10,230]" width="180" height="60" 
-            font="font:SmallBoldSystemFont" color="0xFFFFFFFF" 
-            wrap="true" maxLines="2" />
+        <Label id="title" translation="[8,180]" width="144" height="55" 
+            font="font:SmallBoldSystemFont" color="0xE8E8E8FF" 
+            wrap="true" maxLines="2" vertAlign="bottom" />
         
-        <!-- Rating badge (optional) -->
-        <Group id="ratingGroup" translation="[10,10]" visible="false">
-            <Rectangle width="40" height="24" color="0xFF6600FF" />
-            <Label id="rating" translation="[5,2]" width="30" height="20" 
+        <!-- Rating badge (top right) -->
+        <Group id="ratingGroup" translation="[118,8]" visible="false">
+            <Rectangle width="36" height="22" color="0xFF6B35FF" />
+            <Label id="rating" translation="[3,2]" width="30" height="18" 
                 font="font:SmallSystemFont" color="0xFFFFFFFF" 
                 horizAlign="center" />
         </Group>
         
+        <!-- NEW badge (top left) - for new releases -->
+        <Group id="newBadge" translation="[8,8]" visible="false">
+            <Rectangle width="40" height="22" color="0x4CAF50FF" />
+            <Label translation="[5,2]" text="NEW" 
+                font="font:SmallSystemFont" color="0xFFFFFFFF" />
+        </Group>
+        
         <!-- Progress bar for continue watching -->
-        <Rectangle id="progressBg" translation="[0,290]" width="200" height="4" color="0x333333FF" visible="false" />
-        <Rectangle id="progressBar" translation="[0,290]" width="0" height="4" color="0xFF6600FF" visible="false" />
+        <Rectangle id="progressBg" translation="[0,236]" width="160" height="4" 
+            color="0xFFFFFF33" visible="false" />
+        <Rectangle id="progressBar" translation="[0,236]" width="0" height="4" 
+            color="0xFF6B35FF" visible="false" />
     </children>
     
     <script type="text/brightscript">
@@ -48,6 +56,7 @@
             m.title = m.top.findNode("title")
             m.ratingGroup = m.top.findNode("ratingGroup")
             m.rating = m.top.findNode("rating")
+            m.newBadge = m.top.findNode("newBadge")
             m.progressBg = m.top.findNode("progressBg")
             m.progressBar = m.top.findNode("progressBar")
         end sub
@@ -64,6 +73,8 @@
                 m.poster.uri = content.hdPosterUrl
             else if content.SDPosterUrl <> invalid and content.SDPosterUrl <> ""
                 m.poster.uri = content.SDPosterUrl
+            else if content.posterUrl <> invalid and content.posterUrl <> ""
+                m.poster.uri = content.posterUrl
             end if
             
             ' Set rating if available
@@ -78,7 +89,7 @@
             if content.progressPercent <> invalid and content.progressPercent > 0
                 m.progressBg.visible = true
                 m.progressBar.visible = true
-                m.progressBar.width = 200 * (content.progressPercent / 100.0)
+                m.progressBar.width = 160 * (content.progressPercent / 100.0)
             else
                 m.progressBg.visible = false
                 m.progressBar.visible = false
@@ -87,13 +98,12 @@
         
         sub onFocusPercentChange()
             focusPercent = m.top.focusPercent
-            if focusPercent > 0
+            if focusPercent > 0.5
                 m.focusBorder.opacity = 1.0
-                ' Scale up slightly when focused
-                m.top.scale = [1.05, 1.05]
+                m.background.color = "0x2E319244"
             else
                 m.focusBorder.opacity = 0.0
-                m.top.scale = [1.0, 1.0]
+                m.background.color = "0x1a1a2eFF"
             end if
         end sub
         ]]>

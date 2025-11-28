@@ -27,9 +27,3 @@ rsg_version=1.2
 
 # Disable screensaver during playback
 screensaver_private=true
-
-# Enable audio and video playback
-bs_libs_required=roku_ads,googleima
-
-# Scene Graph
-sg_component_libs_provided=

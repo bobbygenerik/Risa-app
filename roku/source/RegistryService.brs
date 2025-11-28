@@ -62,7 +62,7 @@ function RegistryReadInt(section as string, key as string, defaultValue as integ
 end function
 
 sub RegistryWriteInt(section as string, key as string, value as integer)
-    RegistryWrite(section, key, str(value))
+    RegistryWrite(section, key, value.toStr())
 end sub
 
 ' ================== CONFIG HELPERS ==================
@@ -142,15 +142,30 @@ end function
 ' ================== WATCH HISTORY ==================
 
 sub SaveWatchPosition(contentId as string, position as integer, duration as integer)
-    RegistryWrite("WatchHistory", contentId + "_pos", str(position))
-    RegistryWrite("WatchHistory", contentId + "_dur", str(duration))
-    RegistryWrite("WatchHistory", contentId + "_time", str(CreateObject("roDateTime").AsSeconds()))
+    RegistryWrite("WatchHistory", contentId + "_pos", position.toStr())
+    RegistryWrite("WatchHistory", contentId + "_dur", duration.toStr())
+    RegistryWrite("WatchHistory", contentId + "_time", CreateObject("roDateTime").AsSeconds().toStr())
 end sub
 
 function GetWatchPosition(contentId as string) as object
-    pos = RegistryReadInt("WatchHistory", contentId + "_pos", 0)
-    dur = RegistryReadInt("WatchHistory", contentId + "_dur", 0)
-    return { position: pos, duration: dur }
+    posValue = RegistryRead("WatchHistory", contentId + "_pos")
+    durValue = RegistryRead("WatchHistory", contentId + "_dur")
+    
+    result = CreateObject("roAssociativeArray")
+    
+    if posValue <> "" and posValue <> invalid
+        result.position = val(posValue)
+    else
+        result.position = 0
+    end if
+    
+    if durValue <> "" and durValue <> invalid
+        result.duration = val(durValue)
+    else
+        result.duration = 0
+    end if
+    
+    return result
 end function
 
 sub ClearWatchHistory()
