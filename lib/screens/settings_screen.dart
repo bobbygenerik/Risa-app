@@ -8,6 +8,7 @@ import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 import 'package:iptv_player/services/opensubtitles_service.dart';
 import 'package:iptv_player/services/real_debrid_service.dart';
 import 'package:iptv_player/services/whisper_speech_service.dart';
+import 'package:iptv_player/services/epg_service.dart';
 import 'package:iptv_player/services/ai_model_manager.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:provider/provider.dart';
@@ -80,6 +81,8 @@ class _SettingsScreenState extends State<SettingsScreen>
   final FocusNode _storeDescriptionsSwitchFocusNode = FocusNode(debugLabel: 'StoreDescriptionsSwitch');
   final FocusNode _showLogosSwitchFocusNode = FocusNode(debugLabel: 'ShowLogosSwitch');
   final FocusNode _showImagesSwitchFocusNode = FocusNode(debugLabel: 'ShowImagesSwitch');
+  final FocusNode _editProfileButtonFocusNode = FocusNode(debugLabel: 'EditProfileButton');
+  final FocusNode _browseStorageButtonFocusNode = FocusNode(debugLabel: 'BrowseStorageButton');
   final Map<FocusNode, VoidCallback> _focusNodeListeners = {};
 
   // Playback Settings
@@ -275,6 +278,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     _storeDescriptionsSwitchFocusNode.dispose();
     _showLogosSwitchFocusNode.dispose();
     _showImagesSwitchFocusNode.dispose();
+    _editProfileButtonFocusNode.dispose();
+    _browseStorageButtonFocusNode.dispose();
     super.dispose();
   }
 
@@ -284,6 +289,12 @@ class _SettingsScreenState extends State<SettingsScreen>
       if (_tabController!.index == 0) {
         // General tab - focus M3U tab button
         _m3uTabFocusNode.requestFocus();
+      } else if (_tabController!.index == 1) {
+        // Account tab
+        _editProfileButtonFocusNode.requestFocus();
+      } else if (_tabController!.index == 4) {
+        // Recordings tab
+        _browseStorageButtonFocusNode.requestFocus();
       } else {
         // For other tabs, traverse to the first focusable element in the content scope
         FocusScope.of(context).nextFocus();
@@ -464,7 +475,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                                 : Colors.transparent,
                             border: Border.all(
                               color: isFocused
-                                  ? Colors.white
+                                  ? AppTheme.primaryBlue
                                   : (isSelected
                                       ? AppTheme.primaryBlue.withAlpha(
                                           (0.5 * 255).round(),
@@ -600,6 +611,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ),
                       const SizedBox(height: AppSizes.md),
                       Focus(
+                        focusNode: _editProfileButtonFocusNode,
                         onKeyEvent: (node, event) {
                           if (event is! KeyDownEvent) return KeyEventResult.ignored;
                           if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
@@ -611,22 +623,27 @@ class _SettingsScreenState extends State<SettingsScreen>
                         child: Builder(
                           builder: (context) {
                             final isFocused = Focus.of(context).hasFocus;
-                            return Container(
-                              decoration: isFocused
-                                  ? BoxDecoration(
-                                      border: Border.all(color: AppTheme.primaryBlue, width: 2),
-                                      borderRadius: BorderRadius.circular(8),
-                                    )
-                                  : null,
-                              child: ElevatedButton(
-                                onPressed: () async {
-                                  final result = await context.push('/edit-profile');
-                                  if (!mounted) return;
-                                  if (result == true) {
-                                    setState(() {});
-                                  }
-                                },
-                                child: const Text('Edit Profile'),
+                            return AnimatedScale(
+                              scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                              duration: TVFocusStyle.animationDuration,
+                              curve: TVFocusStyle.animationCurve,
+                              child: AnimatedContainer(
+                                duration: TVFocusStyle.animationDuration,
+                                curve: TVFocusStyle.animationCurve,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                                ),
+                                child: ElevatedButton(
+                                  onPressed: () async {
+                                    final result = await context.push('/edit-profile');
+                                    if (!mounted) return;
+                                    if (result == true) {
+                                      setState(() {});
+                                    }
+                                  },
+                                  child: const Text('Edit Profile'),
+                                ),
                               ),
                             );
                           },
@@ -1081,24 +1098,40 @@ class _SettingsScreenState extends State<SettingsScreen>
                     child: Builder(
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
-                        return IconButton(
-                          icon: Icon(
-                            Icons.remove_circle_outline,
-                            color: isFocused ? AppTheme.primaryBlue : null,
+                        if (isFocused) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            final ctx = _epgIntervalMinusFocusNode.context;
+                            if (ctx != null) {
+                              Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 150), curve: Curves.easeOut, alignment: 0.5);
+                            }
+                          });
+                        }
+                        return AnimatedScale(
+                          scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                          duration: TVFocusStyle.animationDuration,
+                          curve: TVFocusStyle.animationCurve,
+                          child: AnimatedContainer(
+                            duration: TVFocusStyle.animationDuration,
+                            curve: TVFocusStyle.animationCurve,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                            ),
+                            child: IconButton(
+                              icon: Icon(
+                                Icons.remove_circle_outline,
+                                color: isFocused ? AppTheme.primaryBlue : null,
+                              ),
+                              onPressed: epgUpdateInterval > 1
+                                  ? () async {
+                                      final newValue = epgUpdateInterval - 1;
+                                      final prefs = await SharedPreferences.getInstance();
+                                      await prefs.setInt('epg_update_interval', newValue);
+                                      setState(() {});
+                                    }
+                                  : null,
+                            ),
                           ),
-                          style: IconButton.styleFrom(
-                            side: isFocused
-                                ? const BorderSide(color: AppTheme.primaryBlue, width: 2)
-                                : null,
-                          ),
-                          onPressed: epgUpdateInterval > 1
-                              ? () async {
-                                  final newValue = epgUpdateInterval - 1;
-                                  final prefs = await SharedPreferences.getInstance();
-                                  await prefs.setInt('epg_update_interval', newValue);
-                                  setState(() {});
-                                }
-                              : null,
                         );
                       },
                     ),
@@ -1140,24 +1173,40 @@ class _SettingsScreenState extends State<SettingsScreen>
                     child: Builder(
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
-                        return IconButton(
-                          icon: Icon(
-                            Icons.add_circle_outline,
-                            color: isFocused ? AppTheme.primaryBlue : null,
+                        if (isFocused) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            final ctx = _epgIntervalPlusFocusNode.context;
+                            if (ctx != null) {
+                              Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 150), curve: Curves.easeOut, alignment: 0.5);
+                            }
+                          });
+                        }
+                        return AnimatedScale(
+                          scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                          duration: TVFocusStyle.animationDuration,
+                          curve: TVFocusStyle.animationCurve,
+                          child: AnimatedContainer(
+                            duration: TVFocusStyle.animationDuration,
+                            curve: TVFocusStyle.animationCurve,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                            ),
+                            child: IconButton(
+                              icon: Icon(
+                                Icons.add_circle_outline,
+                                color: isFocused ? AppTheme.primaryBlue : null,
+                              ),
+                              onPressed: epgUpdateInterval < 48
+                                  ? () async {
+                                      final newValue = epgUpdateInterval + 1;
+                                      final prefs = await SharedPreferences.getInstance();
+                                      await prefs.setInt('epg_update_interval', newValue);
+                                      setState(() {});
+                                    }
+                                  : null,
+                            ),
                           ),
-                          style: IconButton.styleFrom(
-                            side: isFocused
-                                ? const BorderSide(color: AppTheme.primaryBlue, width: 2)
-                                : null,
-                          ),
-                          onPressed: epgUpdateInterval < 48
-                              ? () async {
-                                  final newValue = epgUpdateInterval + 1;
-                                  final prefs = await SharedPreferences.getInstance();
-                                  await prefs.setInt('epg_update_interval', newValue);
-                                  setState(() {});
-                                }
-                              : null,
                         );
                       },
                     ),
@@ -1203,8 +1252,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                           _epgIntervalMinusFocusNode.requestFocus();
                           return KeyEventResult.handled;
                         } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                          // Focus next element below
-                          FocusScope.of(context).nextFocus();
+                          // Explicitly go to the next section
+                          _storeDescriptionsSwitchFocusNode.requestFocus();
                           return KeyEventResult.handled;
                         }
                       }
@@ -1213,24 +1262,40 @@ class _SettingsScreenState extends State<SettingsScreen>
                     child: Builder(
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
-                        return IconButton(
-                          icon: Icon(
-                            Icons.remove_circle_outline,
-                            color: isFocused ? AppTheme.primaryBlue : null,
+                        if (isFocused) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            final ctx = _epgPastDaysMinusFocusNode.context;
+                            if (ctx != null) {
+                              Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 150), curve: Curves.easeOut, alignment: 0.5);
+                            }
+                          });
+                        }
+                        return AnimatedScale(
+                          scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                          duration: TVFocusStyle.animationDuration,
+                          curve: TVFocusStyle.animationCurve,
+                          child: AnimatedContainer(
+                            duration: TVFocusStyle.animationDuration,
+                            curve: TVFocusStyle.animationCurve,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                            ),
+                            child: IconButton(
+                              icon: Icon(
+                                Icons.remove_circle_outline,
+                                color: isFocused ? AppTheme.primaryBlue : null,
+                              ),
+                              onPressed: epgPastDays > 0
+                                  ? () async {
+                                      final newValue = epgPastDays - 1;
+                                      final prefs = await SharedPreferences.getInstance();
+                                      await prefs.setInt('epg_past_days', newValue);
+                                      setState(() {});
+                                    }
+                                  : null,
+                            ),
                           ),
-                          style: IconButton.styleFrom(
-                            side: isFocused
-                                ? const BorderSide(color: AppTheme.primaryBlue, width: 2)
-                                : null,
-                          ),
-                          onPressed: epgPastDays > 0
-                              ? () async {
-                                  final newValue = epgPastDays - 1;
-                                  final prefs = await SharedPreferences.getInstance();
-                                  await prefs.setInt('epg_past_days', newValue);
-                                  setState(() {});
-                                }
-                              : null,
                         );
                       },
                     ),
@@ -1265,8 +1330,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                           _epgIntervalPlusFocusNode.requestFocus();
                           return KeyEventResult.handled;
                         } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                          // Focus next element below
-                          FocusScope.of(context).nextFocus();
+                          // Explicitly go to the next section
+                          _storeDescriptionsSwitchFocusNode.requestFocus();
                           return KeyEventResult.handled;
                         }
                       }
@@ -1275,24 +1340,40 @@ class _SettingsScreenState extends State<SettingsScreen>
                     child: Builder(
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
-                        return IconButton(
-                          icon: Icon(
-                            Icons.add_circle_outline,
-                            color: isFocused ? AppTheme.primaryBlue : null,
+                        if (isFocused) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            final ctx = _epgPastDaysPlusFocusNode.context;
+                            if (ctx != null) {
+                              Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 150), curve: Curves.easeOut, alignment: 0.5);
+                            }
+                          });
+                        }
+                        return AnimatedScale(
+                          scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                          duration: TVFocusStyle.animationDuration,
+                          curve: TVFocusStyle.animationCurve,
+                          child: AnimatedContainer(
+                            duration: TVFocusStyle.animationDuration,
+                            curve: TVFocusStyle.animationCurve,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                            ),
+                            child: IconButton(
+                              icon: Icon(
+                                Icons.add_circle_outline,
+                                color: isFocused ? AppTheme.primaryBlue : null,
+                              ),
+                              onPressed: epgPastDays < 30
+                                  ? () async {
+                                      final newValue = epgPastDays + 1;
+                                      final prefs = await SharedPreferences.getInstance();
+                                      await prefs.setInt('epg_past_days', newValue);
+                                      setState(() {});
+                                    }
+                                  : null,
+                            ),
                           ),
-                          style: IconButton.styleFrom(
-                            side: isFocused
-                                ? const BorderSide(color: AppTheme.primaryBlue, width: 2)
-                                : null,
-                          ),
-                          onPressed: epgPastDays < 30
-                              ? () async {
-                                  final newValue = epgPastDays + 1;
-                                  final prefs = await SharedPreferences.getInstance();
-                                  await prefs.setInt('epg_past_days', newValue);
-                                  setState(() {});
-                                }
-                              : null,
                         );
                       },
                     ),
@@ -1318,30 +1399,45 @@ class _SettingsScreenState extends State<SettingsScreen>
                   _showLogosSwitchFocusNode.requestFocus();
                   return KeyEventResult.handled;
                 }
+                if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                  // Toggle the switch
+                  final newValue = !storeDescriptions;
+                  (() async {
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setBool('store_program_descriptions', newValue);
+                    if (context.mounted) setState(() {});
+                  })();
+                  return KeyEventResult.handled;
+                }
                 return KeyEventResult.ignored;
               },
               child: Builder(
                 builder: (context) {
                   final isFocused = Focus.of(context).hasFocus;
-                  return Container(
-                    decoration: isFocused
-                        ? BoxDecoration(
-                            border: Border.all(color: AppTheme.primaryBlue, width: 2),
-                            borderRadius: BorderRadius.circular(8),
-                          )
-                        : null,
-                    child: SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Store Program Descriptions'),
-                      subtitle: const Text(
-                        'Save detailed program information (uses more storage)',
+                  return AnimatedScale(
+                    scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                    duration: TVFocusStyle.animationDuration,
+                    curve: TVFocusStyle.animationCurve,
+                    child: AnimatedContainer(
+                      duration: TVFocusStyle.animationDuration,
+                      curve: TVFocusStyle.animationCurve,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
                       ),
-                      value: storeDescriptions,
-                      onChanged: (value) async {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setBool('store_program_descriptions', value);
-                        setState(() {});
-                      },
+                      child: SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Store Program Descriptions'),
+                        subtitle: const Text(
+                          'Save detailed program information (uses more storage)',
+                        ),
+                        value: storeDescriptions,
+                        onChanged: (value) async {
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setBool('store_program_descriptions', value);
+                          setState(() {});
+                        },
+                      ),
                     ),
                   );
                 },
@@ -1378,28 +1474,43 @@ class _SettingsScreenState extends State<SettingsScreen>
                   _showImagesSwitchFocusNode.requestFocus();
                   return KeyEventResult.handled;
                 }
+                if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                  // Toggle the switch
+                  final newValue = !showChannelLogos;
+                  (() async {
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setBool('show_channel_logos', newValue);
+                    if (context.mounted) setState(() {});
+                  })();
+                  return KeyEventResult.handled;
+                }
                 return KeyEventResult.ignored;
               },
               child: Builder(
                 builder: (context) {
                   final isFocused = Focus.of(context).hasFocus;
-                  return Container(
-                    decoration: isFocused
-                        ? BoxDecoration(
-                            border: Border.all(color: AppTheme.primaryBlue, width: 2),
-                            borderRadius: BorderRadius.circular(8),
-                          )
-                        : null,
-                    child: SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Show Channel Logos'),
-                      subtitle: const Text('Display channel logos in EPG grid'),
-                      value: showChannelLogos,
-                      onChanged: (value) async {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setBool('show_channel_logos', value);
-                        setState(() {});
-                      },
+                  return AnimatedScale(
+                    scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                    duration: TVFocusStyle.animationDuration,
+                    curve: TVFocusStyle.animationCurve,
+                    child: AnimatedContainer(
+                      duration: TVFocusStyle.animationDuration,
+                      curve: TVFocusStyle.animationCurve,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                      ),
+                      child: SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Show Channel Logos'),
+                        subtitle: const Text('Display channel logos in EPG grid'),
+                        value: showChannelLogos,
+                        onChanged: (value) async {
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setBool('show_channel_logos', value);
+                          setState(() {});
+                        },
+                      ),
                     ),
                   );
                 },
@@ -1422,28 +1533,43 @@ class _SettingsScreenState extends State<SettingsScreen>
                   _updateEpgButtonFocusNode.requestFocus();
                   return KeyEventResult.handled;
                 }
+                if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                  // Toggle the switch
+                  final newValue = !showProgramImages;
+                  (() async {
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setBool('show_program_images', newValue);
+                    if (context.mounted) setState(() {});
+                  })();
+                  return KeyEventResult.handled;
+                }
                 return KeyEventResult.ignored;
               },
               child: Builder(
                 builder: (context) {
                   final isFocused = Focus.of(context).hasFocus;
-                  return Container(
-                    decoration: isFocused
-                        ? BoxDecoration(
-                            border: Border.all(color: AppTheme.primaryBlue, width: 2),
-                            borderRadius: BorderRadius.circular(8),
-                          )
-                        : null,
-                    child: SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Show Program Images'),
-                      subtitle: const Text('Display program thumbnails and posters'),
-                      value: showProgramImages,
-                      onChanged: (value) async {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setBool('show_program_images', value);
-                        setState(() {});
-                      },
+                  return AnimatedScale(
+                    scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                    duration: TVFocusStyle.animationDuration,
+                    curve: TVFocusStyle.animationCurve,
+                    child: AnimatedContainer(
+                      duration: TVFocusStyle.animationDuration,
+                      curve: TVFocusStyle.animationCurve,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                      ),
+                      child: SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Show Program Images'),
+                        subtitle: const Text('Display program thumbnails and posters'),
+                        value: showProgramImages,
+                        onChanged: (value) async {
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setBool('show_program_images', value);
+                          setState(() {});
+                        },
+                      ),
                     ),
                   );
                 },
@@ -1490,27 +1616,34 @@ class _SettingsScreenState extends State<SettingsScreen>
                             }
                           });
                         }
-                        return Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            border: isFocused
-                                ? Border.all(color: AppTheme.primaryBlue, width: 3)
-                                : null,
-                          ),
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              showAppSnackBar(
-                                context,
-                                const SnackBar(
-                                  content: Text('Updating EPG data...'),
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('Update EPG'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryBlue,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                        return AnimatedScale(
+                          scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                          duration: TVFocusStyle.animationDuration,
+                          curve: TVFocusStyle.animationCurve,
+                          child: AnimatedContainer(
+                            duration: TVFocusStyle.animationDuration,
+                            curve: TVFocusStyle.animationCurve,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: isFocused
+                                  ? TVFocusStyle.focusedShadow
+                                  : null,
+                            ),
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                showAppSnackBar(
+                                  context,
+                                  const SnackBar(
+                                    content: Text('Updating EPG data...'),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Update EPG'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primaryBlue,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
                             ),
                           ),
                         );
@@ -1550,14 +1683,20 @@ class _SettingsScreenState extends State<SettingsScreen>
                             }
                           });
                         }
-                        return Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            border: isFocused
-                                ? Border.all(color: AppTheme.primaryBlue, width: 3)
-                                : null,
-                          ),
-                          child: ElevatedButton.icon(
+                        return AnimatedScale(
+                          scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                          duration: TVFocusStyle.animationDuration,
+                          curve: TVFocusStyle.animationCurve,
+                          child: AnimatedContainer(
+                            duration: TVFocusStyle.animationDuration,
+                            curve: TVFocusStyle.animationCurve,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: isFocused
+                                  ? TVFocusStyle.focusedShadow
+                                  : null,
+                            ),
+                            child: ElevatedButton.icon(
                     onPressed: () async {
                       // Show confirmation dialog
                       final confirm = await showDialog<bool>(
@@ -1584,11 +1723,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                       );
 
                       if (confirm == true) {
-                        // TODO: Implement EPG data clearing
-                        final localContext = context;
-                        if (localContext.mounted) {
+                        final epgService = Provider.of<EpgService>(context, listen: false);
+                        await epgService.clearCache();
+
+                        if (context.mounted) {
                           showAppSnackBar(
-                            localContext,
+                            context,
                             const SnackBar(
                               content: Text('EPG data cleared'),
                               backgroundColor: AppTheme.accentGreen,
@@ -1604,7 +1744,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
                           ),
-                        );
+                        ),
+                      );
                       },
                     ),
                   ),
@@ -1697,8 +1838,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                         return KeyEventResult.handled;
                       }
                       if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                        _clearPlaylistCacheButtonFocusNode.requestFocus();
-                        return KeyEventResult.handled;
+                        // Skip to next section if needed, or stay here
+                        return KeyEventResult.ignored;
                       }
                       return KeyEventResult.ignored;
                     },
@@ -1738,6 +1879,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                         _clearPlaylistCacheButtonFocusNode.requestFocus();
                         return KeyEventResult.handled;
                       }
+                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                        _loadM3uPlaylist();
+                        return KeyEventResult.handled;
+                      }
                       return KeyEventResult.ignored;
                     },
                     child: Builder(
@@ -1751,73 +1896,33 @@ class _SettingsScreenState extends State<SettingsScreen>
                                 ctx,
                                 duration: const Duration(milliseconds: 150),
                                 curve: Curves.easeOut,
-                                alignment: 0.6,
+                                alignment: 0.5,
                               );
                             }
                           });
                         }
-                        return ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryBlue,
-                            side: isFocused
-                                ? const BorderSide(color: AppTheme.primaryBlue, width: 3)
-                                : null,
+                        return AnimatedScale(
+                          scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                          duration: TVFocusStyle.animationDuration,
+                          curve: TVFocusStyle.animationCurve,
+                          child: AnimatedContainer(
+                            duration: TVFocusStyle.animationDuration,
+                            curve: TVFocusStyle.animationCurve,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: isFocused
+                                  ? TVFocusStyle.focusedShadow
+                                  : null,
+                            ),
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primaryBlue,
+                              ),
+                              onPressed: _loadM3uPlaylist,
+                              icon: const Icon(Icons.play_arrow),
+                              label: const Text('Load Playlist'),
+                            ),
                           ),
-                          onPressed: () async {
-                            final url = _m3uUrlController.text.trim();
-                            if (url.isEmpty) {
-                              if (!mounted) return;
-                              showAppSnackBar(
-                                context,
-                                const SnackBar(content: Text('Please enter a valid M3U URL')),
-                              );
-                              return;
-                            }
-
-                            if (mounted) {
-                              showAppSnackBar(
-                                context,
-                                const SnackBar(content: Text('Loading playlist from URL...')),
-                              );
-                            }
-
-                            try {
-                              final provider = Provider.of<ChannelProvider>(
-                                context,
-                                listen: false,
-                              );
-                              await provider.loadPlaylistFromUrl(url);
-
-                              final prefs = await SharedPreferences.getInstance();
-                              await prefs.setString('m3u_url', url);
-                              await prefs.setString('playlist_type', 'm3u');
-
-                              if (!mounted) return;
-                              showAppSnackBar(
-                                context,
-                                SnackBar(
-                                  content: Text(
-                                    'Playlist loaded successfully! ${provider.channels.length} channels found.',
-                                  ),
-                                  backgroundColor: AppTheme.accentGreen,
-                                ),
-                              );
-                            } catch (e) {
-                              if (mounted) {
-                                showAppSnackBar(
-                                  context,
-                                  SnackBar(
-                                    content: Text(
-                                      'Failed to load playlist: ${e.toString()}',
-                                    ),
-                                    backgroundColor: AppTheme.accentRed,
-                                  ),
-                                );
-                              }
-                            }
-                          },
-                          icon: const Icon(Icons.download),
-                          label: const Text('Load Playlist'),
                         );
                       },
                     ),
@@ -1902,7 +2007,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                         return KeyEventResult.handled;
                       }
                       if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                        _clearPlaylistCacheButtonFocusNode.requestFocus();
+                         // Skip to next section if needed, or stay here
+                        return KeyEventResult.ignored;
+                      }
+                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                        _clearXtreamFields();
                         return KeyEventResult.handled;
                       }
                       return KeyEventResult.ignored;
@@ -1911,11 +2020,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
                         return TextButton(
-                          onPressed: () {
-                            _xtreamServerController.clear();
-                            _xtreamUsernameController.clear();
-                            _xtreamPasswordController.clear();
-                          },
+                          onPressed: _clearXtreamFields,
                           style: TextButton.styleFrom(
                             side: isFocused
                                 ? const BorderSide(color: AppTheme.primaryBlue, width: 3)
@@ -1943,6 +2048,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                         _clearPlaylistCacheButtonFocusNode.requestFocus();
                         return KeyEventResult.handled;
                       }
+                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                        _loadXtreamPlaylist();
+                        return KeyEventResult.handled;
+                      }
                       return KeyEventResult.ignored;
                     },
                     child: Builder(
@@ -1956,89 +2065,33 @@ class _SettingsScreenState extends State<SettingsScreen>
                                 ctx,
                                 duration: const Duration(milliseconds: 150),
                                 curve: Curves.easeOut,
-                                alignment: 0.6,
+                                alignment: 0.5,
                               );
                             }
                           });
                         }
-                        return ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryBlue,
-                            side: isFocused
-                                ? const BorderSide(color: AppTheme.primaryBlue, width: 3)
-                                : null,
+                        return AnimatedScale(
+                          scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                          duration: TVFocusStyle.animationDuration,
+                          curve: TVFocusStyle.animationCurve,
+                          child: AnimatedContainer(
+                            duration: TVFocusStyle.animationDuration,
+                            curve: TVFocusStyle.animationCurve,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: isFocused
+                                  ? TVFocusStyle.focusedShadow
+                                  : null,
+                            ),
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primaryBlue,
+                              ),
+                              onPressed: _loadXtreamPlaylist,
+                              icon: const Icon(Icons.play_arrow),
+                              label: const Text('Load Playlist'),
+                            ),
                           ),
-                          onPressed: () async {
-                            final server = _xtreamServerController.text.trim();
-                            final username = _xtreamUsernameController.text.trim();
-                            final password = _xtreamPasswordController.text.trim();
-
-                            if (server.isEmpty ||
-                                username.isEmpty ||
-                                password.isEmpty) {
-                              if (!mounted) return;
-                              showAppSnackBar(
-                                context,
-                                const SnackBar(
-                                  content: Text(
-                                    'Please fill in all Xtream Codes fields',
-                                  ),
-                                ),
-                              );
-                              return;
-                            }
-
-                            if (mounted) {
-                              showAppSnackBar(
-                                context,
-                                const SnackBar(
-                                  content: Text('Loading Xtream Codes playlist...'),
-                                ),
-                              );
-                            }
-
-                            final url =
-                                '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
-
-                            try {
-                              final provider = Provider.of<ChannelProvider>(
-                                context,
-                                listen: false,
-                              );
-                              await provider.loadPlaylistFromUrl(url);
-
-                              final prefs = await SharedPreferences.getInstance();
-                              await prefs.setString('xtream_server', server);
-                              await prefs.setString('xtream_username', username);
-                              await prefs.setString('xtream_password', password);
-                              await prefs.setString('playlist_type', 'xtream');
-
-                              if (!mounted) return;
-                              showAppSnackBar(
-                                context,
-                                SnackBar(
-                                  content: Text(
-                                    'Xtream playlist loaded! ${provider.channels.length} channels found.',
-                                  ),
-                                  backgroundColor: AppTheme.accentGreen,
-                                ),
-                              );
-                            } catch (e) {
-                              if (mounted) {
-                                showAppSnackBar(
-                                  context,
-                                  SnackBar(
-                                    content: Text(
-                                      'Failed to load Xtream playlist: ${e.toString()}',
-                                    ),
-                                    backgroundColor: AppTheme.accentRed,
-                                  ),
-                                );
-                              }
-                            }
-                          },
-                          icon: const Icon(Icons.download),
-                          label: const Text('Load Playlist'),
                         );
                       },
                     ),
@@ -2072,6 +2125,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                     _customEpgUrlFocusNode.requestFocus();
                     return KeyEventResult.handled;
                   }
+                  if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                    _clearPlaylistCache();
+                    return KeyEventResult.handled;
+                  }
                   return KeyEventResult.ignored;
                 },
                 child: Builder(
@@ -2090,47 +2147,28 @@ class _SettingsScreenState extends State<SettingsScreen>
                         }
                       });
                     }
-                    return ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red.shade700,
-                        side: isFocused
-                            ? const BorderSide(color: AppTheme.primaryBlue, width: 3)
-                            : null,
-                      ),
-                      onPressed: () async {
-                        final confirm = await showDialog<bool>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Clear Playlist Cache?'),
-                            content: const Text('Are you sure you want to clear the playlist cache? This will remove all locally cached playlist data.'),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: const Text('Cancel'),
-                              ),
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                child: const Text('Clear', style: TextStyle(color: Colors.red)),
-                              ),
-                            ],
+                    return AnimatedScale(
+                      scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                      duration: TVFocusStyle.animationDuration,
+                      curve: TVFocusStyle.animationCurve,
+                      child: AnimatedContainer(
+                        duration: TVFocusStyle.animationDuration,
+                        curve: TVFocusStyle.animationCurve,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: isFocused
+                              ? TVFocusStyle.focusedShadow
+                              : null,
+                        ),
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red.shade700,
                           ),
-                        );
-                        if (confirm == true) {
-                          Provider.of<ChannelProvider>(context, listen: false);
-                          await clearPlaylistCache();
-                          if (mounted) {
-                            showAppSnackBar(
-                              context,
-                              const SnackBar(
-                                content: Text('Playlist cache cleared'),
-                                backgroundColor: AppTheme.accentGreen,
-                              ),
-                            );
-                          }
-                        }
-                      },
-                      icon: const Icon(Icons.delete_sweep),
-                      label: const Text('Clear Playlist Cache'),
+                          onPressed: _clearPlaylistCache,
+                          icon: const Icon(Icons.delete_sweep),
+                          label: const Text('Clear Playlist Cache'),
+                        ),
+                      ),
                     );
                   },
                 ),
@@ -2193,6 +2231,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                         requestFirstSidebarFocus();
                         return KeyEventResult.handled;
                       }
+                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                        _inspectPlaylist();
+                        return KeyEventResult.handled;
+                      }
                       return KeyEventResult.ignored;
                     },
                     child: Builder(
@@ -2204,16 +2246,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                                 ? const BorderSide(color: AppTheme.primaryBlue, width: 2)
                                 : null,
                           ),
-                          onPressed: () {
-                            showAppSnackBar(
-                              context,
-                              SnackBar(
-                                content: Text(
-                                  'First channel: ${provider.channels.first.name}',
-                                ),
-                              ),
-                            );
-                          },
+                          onPressed: _inspectPlaylist,
                           child: const Text('Inspect'),
                         );
                       },
@@ -2284,12 +2317,12 @@ class _SettingsScreenState extends State<SettingsScreen>
           requestFirstSidebarFocus();
           return KeyEventResult.handled;
         } else if (key == LogicalKeyboardKey.arrowDown) {
-          // Move to first input field for the CURRENT tab (the one we're focused on)
-          if (onDownArrow != null) {
-            onDownArrow();
-          } else if (isM3uTab) {
+          // Always navigate to the currently visible input fields (based on selected mode)
+          if (_playlistInputMethod == 0) {
+            // M3U mode is active - go to M3U URL field
             _m3uUrlFocusNode.requestFocus();
-          } else if (isXtreamTab) {
+          } else {
+            // Xtream mode is active - go to Xtream server field
             _xtreamServerFocusNode.requestFocus();
           }
           return KeyEventResult.handled;
@@ -2307,40 +2340,46 @@ class _SettingsScreenState extends State<SettingsScreen>
           final isFocused = Focus.of(context).hasFocus;
           return GestureDetector(
             onTap: onTap,
-            child: Container(
-              decoration: BoxDecoration(
-                // When focused, show white border; when selected but not focused, show blue background
-                color: isFocused
-                    ? AppTheme.primaryBlue.withAlpha((0.5 * 255).round())
-                    : (isSelected
-                        ? AppTheme.primaryBlue.withAlpha((0.3 * 255).round())
-                        : Colors.transparent),
-                borderRadius: BorderRadius.circular(AppSizes.radiusMd - 2),
-                border: isFocused
-                    ? Border.all(color: Colors.white, width: 2)
-                    : null,
-              ),
-              alignment: Alignment.center,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    icon,
-                    color: (isFocused || isSelected) ? Colors.white : AppTheme.textSecondary,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    title,
-                    style: TextStyle(
+            child: AnimatedScale(
+              scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+              duration: TVFocusStyle.animationDuration,
+              curve: TVFocusStyle.animationCurve,
+              child: AnimatedContainer(
+                duration: TVFocusStyle.animationDuration,
+                curve: TVFocusStyle.animationCurve,
+                decoration: BoxDecoration(
+                  color: isFocused
+                      ? AppTheme.primaryBlue.withAlpha((0.5 * 255).round())
+                      : (isSelected
+                          ? AppTheme.primaryBlue.withAlpha((0.3 * 255).round())
+                          : Colors.transparent),
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMd - 2),
+                  boxShadow: isFocused
+                      ? TVFocusStyle.focusedShadow
+                      : null,
+                ),
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      icon,
                       color: (isFocused || isSelected) ? Colors.white : AppTheme.textSecondary,
-                      fontWeight: (isFocused || isSelected)
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                      fontSize: 13,
+                      size: 18,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: (isFocused || isSelected) ? Colors.white : AppTheme.textSecondary,
+                        fontWeight: (isFocused || isSelected)
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -2689,7 +2728,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ],
                   if (!aiService.isModelLoaded)
                     Padding(
-                      padding: const EdgeInsets.all(AppSizes.md),
+                      padding: const EdgeInsets.only(top: AppSizes.md),
                       child: _buildAIModelDownloadCard(aiService),
                     ),
                 ],
@@ -2813,28 +2852,32 @@ class _SettingsScreenState extends State<SettingsScreen>
                       requestFirstSidebarFocus();
                       return KeyEventResult.handled;
                     }
+                    if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                      _toggleOpenSubtitlesEnabled(!_openSubtitlesEnabled);
+                      return KeyEventResult.handled;
+                    }
                     return KeyEventResult.ignored;
                   },
                   child: Builder(
                     builder: (context) {
                       final isFocused = Focus.of(context).hasFocus;
-                      return Container(
-                        decoration: isFocused
-                            ? BoxDecoration(
-                                border: Border.all(color: AppTheme.primaryBlue, width: 2),
-                                borderRadius: BorderRadius.circular(8),
-                              )
-                            : null,
-                        child: SwitchListTile(
-                          title: const Text('Enable OpenSubtitles'),
-                          subtitle: const Text('Automatically download subtitles'),
-                          value: _openSubtitlesEnabled,
-                          onChanged: (value) {
-                            setState(() {
-                              _openSubtitlesEnabled = value;
-                            });
-                            subtitleService.setEnabled(value);
-                          },
+                      return AnimatedScale(
+                        scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                        duration: TVFocusStyle.animationDuration,
+                        curve: TVFocusStyle.animationCurve,
+                        child: AnimatedContainer(
+                          duration: TVFocusStyle.animationDuration,
+                          curve: TVFocusStyle.animationCurve,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                          ),
+                          child: SwitchListTile(
+                            title: const Text('Enable OpenSubtitles'),
+                            subtitle: const Text('Automatically download subtitles'),
+                            value: _openSubtitlesEnabled,
+                            onChanged: _toggleOpenSubtitlesEnabled,
+                          ),
                         ),
                       );
                     },
@@ -2893,30 +2936,34 @@ class _SettingsScreenState extends State<SettingsScreen>
                         requestFirstSidebarFocus();
                         return KeyEventResult.handled;
                       }
+                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                        _toggleAutoDownloadSubtitles(!_autoDownloadSubtitles);
+                        return KeyEventResult.handled;
+                      }
                       return KeyEventResult.ignored;
                     },
                     child: Builder(
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
-                        return Container(
-                          decoration: isFocused
-                              ? BoxDecoration(
-                                  border: Border.all(color: AppTheme.primaryBlue, width: 2),
-                                  borderRadius: BorderRadius.circular(8),
-                                )
-                              : null,
-                          child: SwitchListTile(
-                            title: const Text('Auto-download subtitles'),
-                            subtitle: const Text(
-                              'Download subtitles automatically when playing',
+                        return AnimatedScale(
+                          scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                          duration: TVFocusStyle.animationDuration,
+                          curve: TVFocusStyle.animationCurve,
+                          child: AnimatedContainer(
+                            duration: TVFocusStyle.animationDuration,
+                            curve: TVFocusStyle.animationCurve,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
                             ),
-                            value: _autoDownloadSubtitles,
-                            onChanged: (value) {
-                              setState(() {
-                                _autoDownloadSubtitles = value;
-                              });
-                              subtitleService.setAutoDownload(value);
-                            },
+                            child: SwitchListTile(
+                              title: const Text('Auto-download subtitles'),
+                              subtitle: const Text(
+                                'Download subtitles automatically when playing',
+                              ),
+                              value: _autoDownloadSubtitles,
+                              onChanged: _toggleAutoDownloadSubtitles,
+                            ),
                           ),
                         );
                       },
@@ -2930,6 +2977,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                         requestFirstSidebarFocus();
                         return KeyEventResult.handled;
                       }
+                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                        _testOpenSubtitlesConnection();
+                        return KeyEventResult.handled;
+                      }
                       return KeyEventResult.ignored;
                     },
                     child: Builder(
@@ -2941,24 +2992,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                                 ? const BorderSide(color: AppTheme.primaryBlue, width: 2)
                                 : null,
                           ),
-                          onPressed: () async {
-                            final localContext = context;
-                            final success = await subtitleService.authenticate();
-                            if (!localContext.mounted) return;
-                            showAppSnackBar(
-                              localContext,
-                              SnackBar(
-                                content: Text(
-                                  success
-                                      ? 'Connected successfully!'
-                                      : 'Connection failed',
-                                ),
-                                backgroundColor: success
-                                    ? Colors.green
-                                    : AppTheme.accentRed,
-                              ),
-                            );
-                          },
+                          onPressed: _testOpenSubtitlesConnection,
                           icon: const Icon(Icons.check_circle),
                           label: const Text('Test Connection'),
                         );
@@ -2985,30 +3019,34 @@ class _SettingsScreenState extends State<SettingsScreen>
                       requestFirstSidebarFocus();
                       return KeyEventResult.handled;
                     }
+                    if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                      _toggleRealDebridEnabled(!_realDebridEnabled);
+                      return KeyEventResult.handled;
+                    }
                     return KeyEventResult.ignored;
                   },
                   child: Builder(
                     builder: (context) {
                       final isFocused = Focus.of(context).hasFocus;
-                      return Container(
-                        decoration: isFocused
-                            ? BoxDecoration(
-                                border: Border.all(color: AppTheme.primaryBlue, width: 2),
-                                borderRadius: BorderRadius.circular(8),
-                              )
-                            : null,
-                        child: SwitchListTile(
-                          title: const Text('Enable Real-Debrid'),
-                          subtitle: const Text(
-                            'Use your Real-Debrid account for premium links',
+                      return AnimatedScale(
+                        scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                        duration: TVFocusStyle.animationDuration,
+                        curve: TVFocusStyle.animationCurve,
+                        child: AnimatedContainer(
+                          duration: TVFocusStyle.animationDuration,
+                          curve: TVFocusStyle.animationCurve,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
                           ),
-                          value: _realDebridEnabled,
-                          onChanged: (value) {
-                            setState(() {
-                              _realDebridEnabled = value;
-                            });
-                            rdService.setEnabled(value);
-                          },
+                          child: SwitchListTile(
+                            title: const Text('Enable Real-Debrid'),
+                            subtitle: const Text(
+                              'Use your Real-Debrid account for premium links',
+                            ),
+                            value: _realDebridEnabled,
+                            onChanged: _toggleRealDebridEnabled,
+                          ),
                         ),
                       );
                     },
@@ -3043,27 +3081,31 @@ class _SettingsScreenState extends State<SettingsScreen>
                         requestFirstSidebarFocus();
                         return KeyEventResult.handled;
                       }
+                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                        _toggleRealDebridForCatchup(!_realDebridForCatchup);
+                        return KeyEventResult.handled;
+                      }
                       return KeyEventResult.ignored;
                     },
                     child: Builder(
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
-                        return Container(
-                          decoration: isFocused
-                              ? BoxDecoration(
-                                  border: Border.all(color: AppTheme.primaryBlue, width: 2),
-                                  borderRadius: BorderRadius.circular(8),
-                                )
-                              : null,
-                          child: CheckboxListTile(
-                            title: const Text('Use for Catch-up TV'),
-                            value: _realDebridForCatchup,
-                            onChanged: (value) {
-                              setState(() {
-                                _realDebridForCatchup = value ?? true;
-                              });
-                              rdService.setEnableForCatchup(value ?? true);
-                            },
+                        return AnimatedScale(
+                          scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                          duration: TVFocusStyle.animationDuration,
+                          curve: TVFocusStyle.animationCurve,
+                          child: AnimatedContainer(
+                            duration: TVFocusStyle.animationDuration,
+                            curve: TVFocusStyle.animationCurve,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                            ),
+                            child: CheckboxListTile(
+                              title: const Text('Use for Catch-up TV'),
+                              value: _realDebridForCatchup,
+                              onChanged: _toggleRealDebridForCatchup,
+                            ),
                           ),
                         );
                       },
@@ -3076,27 +3118,31 @@ class _SettingsScreenState extends State<SettingsScreen>
                         requestFirstSidebarFocus();
                         return KeyEventResult.handled;
                       }
+                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                        _toggleRealDebridForVOD(!_realDebridForVOD);
+                        return KeyEventResult.handled;
+                      }
                       return KeyEventResult.ignored;
                     },
                     child: Builder(
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
-                        return Container(
-                          decoration: isFocused
-                              ? BoxDecoration(
-                                  border: Border.all(color: AppTheme.primaryBlue, width: 2),
-                                  borderRadius: BorderRadius.circular(8),
-                                )
-                              : null,
-                          child: CheckboxListTile(
-                            title: const Text('Use for VOD/Movies'),
-                            value: _realDebridForVOD,
-                            onChanged: (value) {
-                              setState(() {
-                                _realDebridForVOD = value ?? true;
-                              });
-                              rdService.setEnableForVOD(value ?? true);
-                            },
+                        return AnimatedScale(
+                          scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                          duration: TVFocusStyle.animationDuration,
+                          curve: TVFocusStyle.animationCurve,
+                          child: AnimatedContainer(
+                            duration: TVFocusStyle.animationDuration,
+                            curve: TVFocusStyle.animationCurve,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                            ),
+                            child: CheckboxListTile(
+                              title: const Text('Use for VOD/Movies'),
+                              value: _realDebridForVOD,
+                              onChanged: _toggleRealDebridForVOD,
+                            ),
                           ),
                         );
                       },
@@ -3110,6 +3156,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                         requestFirstSidebarFocus();
                         return KeyEventResult.handled;
                       }
+                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                        _testRealDebridConnection();
+                        return KeyEventResult.handled;
+                      }
                       return KeyEventResult.ignored;
                     },
                     child: Builder(
@@ -3121,24 +3171,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                                 ? const BorderSide(color: AppTheme.primaryBlue, width: 2)
                                 : null,
                           ),
-                          onPressed: () async {
-                            final localContext = context;
-                            final success = await rdService.testConnection();
-                            if (!localContext.mounted) return;
-                            showAppSnackBar(
-                              localContext,
-                              SnackBar(
-                                content: Text(
-                                  success
-                                      ? 'Connected! Premium until ${rdService.premiumExpiryDate}'
-                                      : 'Connection failed',
-                                ),
-                                backgroundColor: success
-                                    ? Colors.green
-                                    : AppTheme.accentRed,
-                              ),
-                            );
-                          },
+                          onPressed: _testRealDebridConnection,
                           icon: const Icon(Icons.check_circle),
                           label: const Text('Test Connection'),
                         );
@@ -3179,6 +3212,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                         requestFirstSidebarFocus();
                         return KeyEventResult.handled;
                       }
+                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                        if (aiService.isModelLoaded) {
+                          _toggleAiUpscalingEnabled(!_aiUpscalingEnabled);
+                        }
+                        return KeyEventResult.handled;
+                      }
                       return KeyEventResult.ignored;
                     },
                     child: Builder(
@@ -3198,12 +3237,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                             ),
                             value: _aiUpscalingEnabled,
                             onChanged: aiService.isModelLoaded
-                                ? (value) {
-                                    setState(() {
-                                      _aiUpscalingEnabled = value;
-                                    });
-                                    aiService.setEnabled(value);
-                                  }
+                                ? _toggleAiUpscalingEnabled
                                 : null,
                           ),
                         );
@@ -3481,12 +3515,42 @@ class _SettingsScreenState extends State<SettingsScreen>
                 const SizedBox(height: AppSizes.sm),
                 Row(
                   children: [
-                    Expanded(
-                      child: Focus(
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                          decoration: BoxDecoration(
+                            color: AppTheme.cardBackground,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppTheme.divider),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.folder_outlined, color: AppTheme.textSecondary),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  recordingPath.isEmpty ? 'No storage location selected' : recordingPath,
+                                  style: TextStyle(
+                                    color: recordingPath.isEmpty ? AppTheme.textSecondary : AppTheme.textPrimary,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    const SizedBox(width: AppSizes.sm),
+                      Focus(
+                        focusNode: _browseStorageButtonFocusNode,
                         onKeyEvent: (node, event) {
                           if (event is! KeyDownEvent) return KeyEventResult.ignored;
                           if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
                             requestFirstSidebarFocus();
+                            return KeyEventResult.handled;
+                          }
+                          if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                            _browseStorage();
                             return KeyEventResult.handled;
                           }
                           return KeyEventResult.ignored;
@@ -3494,82 +3558,15 @@ class _SettingsScreenState extends State<SettingsScreen>
                         child: Builder(
                           builder: (context) {
                             final isFocused = Focus.of(context).hasFocus;
-                            return Container(
-                              decoration: isFocused
-                                  ? BoxDecoration(
-                                      border: Border.all(color: AppTheme.primaryBlue, width: 2),
-                                      borderRadius: BorderRadius.circular(8),
-                                    )
-                                  : null,
-                              child: TextField(
-                                controller: TextEditingController(text: recordingPath),
-                                autofocus: false,
-                                readOnly: true,
-                                decoration: const InputDecoration(
-                                  hintText: 'No storage location selected',
-                                  prefixIcon: Icon(Icons.folder_outlined),
-                                  border: OutlineInputBorder(),
-                                  filled: true,
-                                  fillColor: AppTheme.cardBackground,
-                                ),
+                            return ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primaryBlue,
+                                side: isFocused
+                                    ? const BorderSide(color: Colors.white, width: 3)
+                                    : null,
                               ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSizes.sm),
-                    Focus(
-                      onKeyEvent: (node, event) {
-                        if (event is! KeyDownEvent) return KeyEventResult.ignored;
-                        if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                          requestFirstSidebarFocus();
-                          return KeyEventResult.handled;
-                        }
-                        return KeyEventResult.ignored;
-                      },
-                      child: Builder(
-                        builder: (context) {
-                          final isFocused = Focus.of(context).hasFocus;
-                          return ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              side: isFocused
-                                  ? const BorderSide(color: AppTheme.primaryBlue, width: 2)
-                                  : null,
-                            ),
-                            onPressed: () async {
-                              final localContext = context;
-                              try {
-                                final result = await FilePicker.platform
-                                    .getDirectoryPath();
-                                if (result != null) {
-                                  final prefs = await SharedPreferences.getInstance();
-                                  await prefs.setString(
-                                    'recording_storage_path',
-                                    result,
-                                  );
-                                  setState(() {});
-                                  if (!localContext.mounted) return;
-                                  showAppSnackBar(
-                                    localContext,
-                                    const SnackBar(
-                                      content: Text('Recording location updated'),
-                                      backgroundColor: AppTheme.accentGreen,
-                                    ),
-                                  );
-                                }
-                              } catch (e) {
-                                if (!localContext.mounted) return;
-                                showAppSnackBar(
-                                  localContext,
-                                  SnackBar(
-                                    content: Text('Failed to select folder: $e'),
-                                    backgroundColor: AppTheme.accentRed,
-                                  ),
-                                );
-                              }
-                            },
-                            icon: const Icon(Icons.create_new_folder),
+                            onPressed: _browseStorage,
+                            icon: const Icon(Icons.folder_open),
                             label: const Text('Browse'),
                           );
                         },
@@ -3623,27 +3620,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                 _buildSwitchTile('Show Program Images', _showProgramImages),
               ],
             ),
-            _buildSectionCard(
-              title: 'Actions',
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () {
-                    final localContext = context;
-                    if (localContext.mounted) {
-                      showAppSnackBar(
-                        localContext,
-                        const SnackBar(content: Text('Updating EPG data...')),
-                      );
-                    }
-                    // TODO: Implement EPG update functionality
-                  },
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Update EPG Now'),
-                ),
               ],
-            ),
-          ],
-        );
+            );
       },
     );
   }
@@ -3947,6 +3925,10 @@ class _SettingsScreenState extends State<SettingsScreen>
             requestFirstSidebarFocus();
             return KeyEventResult.handled;
           }
+          if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+            _handleSwitchTileChange(title, !value);
+            return KeyEventResult.handled;
+          }
           return KeyEventResult.ignored;
         },
         child: Builder(
@@ -3962,33 +3944,45 @@ class _SettingsScreenState extends State<SettingsScreen>
                 );
               });
             }
-            return Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                border: isFocused
-                    ? Border.all(color: AppTheme.primaryBlue, width: 3)
-                    : null,
-              ),
-              child: TVFocusable(
-                borderRadius: BorderRadius.circular(12),
-                child: SwitchListTile(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            return AnimatedScale(
+              scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+              duration: TVFocusStyle.animationDuration,
+              curve: TVFocusStyle.animationCurve,
+              child: AnimatedContainer(
+                duration: TVFocusStyle.animationDuration,
+                curve: TVFocusStyle.animationCurve,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: isFocused
+                      ? TVFocusStyle.focusedShadow
+                      : TVFocusStyle.defaultShadow,
+                ),
+                child: Theme(
+                  data: Theme.of(context).copyWith(
+                    splashColor: Colors.transparent,
+                    highlightColor: Colors.transparent,
+                    hoverColor: Colors.transparent,
                   ),
-                  title: Text(title),
-                  subtitle: subtitle != null
-                      ? Text(
-                          subtitle,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppTheme.textSecondary,
-                          ),
-                        )
-                      : null,
-                  value: value,
-                  onChanged: (newValue) {
-                    _handleSwitchTileChange(title, newValue);
-                  },
+                  child: SwitchListTile(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    tileColor: AppTheme.cardBackground,
+                    title: Text(title),
+                    subtitle: subtitle != null
+                        ? Text(
+                            subtitle,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.textSecondary,
+                            ),
+                          )
+                        : null,
+                    value: value,
+                    onChanged: (newValue) {
+                      _handleSwitchTileChange(title, newValue);
+                    },
+                  ),
                 ),
               ),
             );
@@ -4082,6 +4076,10 @@ class _SettingsScreenState extends State<SettingsScreen>
             requestFirstSidebarFocus();
             return KeyEventResult.handled;
           }
+          if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+            _handleAudioSwitchTileChange(title, !value);
+            return KeyEventResult.handled;
+          }
           return KeyEventResult.ignored;
         },
         child: Builder(
@@ -4122,24 +4120,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       : null,
                   value: value,
                   onChanged: (newValue) async {
-                    setState(() {
-                      if (title == 'Audio Passthrough') {
-                        _audioPassthrough = newValue;
-                      } else if (title == 'Audio Boost') {
-                        _audioBoost = newValue;
-                      } else if (title == 'Normalize Audio') {
-                        _normalizeAudio = newValue;
-                      }
-                    });
-
-                    final prefs = await SharedPreferences.getInstance();
-                    if (title == 'Audio Passthrough') {
-                      await prefs.setBool('audio_passthrough', newValue);
-                    } else if (title == 'Audio Boost') {
-                      await prefs.setBool('audio_boost', newValue);
-                    } else if (title == 'Normalize Audio') {
-                      await prefs.setBool('normalize_audio', newValue);
-                    }
+                    _handleAudioSwitchTileChange(title, newValue);
                   },
                 ),
               ),
@@ -4148,6 +4129,27 @@ class _SettingsScreenState extends State<SettingsScreen>
         ),
       ),
     );
+  }
+
+  Future<void> _handleAudioSwitchTileChange(String title, bool newValue) async {
+    setState(() {
+      if (title == 'Audio Passthrough') {
+        _audioPassthrough = newValue;
+      } else if (title == 'Audio Boost') {
+        _audioBoost = newValue;
+      } else if (title == 'Normalize Audio') {
+        _normalizeAudio = newValue;
+      }
+    });
+
+    final prefs = await SharedPreferences.getInstance();
+    if (title == 'Audio Passthrough') {
+      await prefs.setBool('audio_passthrough', newValue);
+    } else if (title == 'Audio Boost') {
+      await prefs.setBool('audio_boost', newValue);
+    } else if (title == 'Normalize Audio') {
+      await prefs.setBool('normalize_audio', newValue);
+    }
   }
 
   Widget _buildDropdown(
@@ -4214,13 +4216,17 @@ class _SettingsScreenState extends State<SettingsScreen>
                         ),
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
-                          vertical: 12,
+                          vertical: 8,
                         ),
                       ),
                       items: items.map((item) {
                         return DropdownMenuItem(value: item, child: Text(item));
                       }).toList(),
                       onChanged: onChanged,
+                      // Ensure dropdown opens on focus + select
+                      onTap: () {
+                         // Default behavior
+                      },
                     ),
                   ),
                 ],
@@ -4307,6 +4313,22 @@ class _SettingsScreenState extends State<SettingsScreen>
     }
     focusNode.addListener(listener);
     _focusNodeListeners[focusNode] = listener;
+
+    // Ensure visibility when focused
+    focusNode.addListener(() {
+      if (focusNode.hasFocus) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (focusNode.context != null) {
+            Scrollable.ensureVisible(
+              focusNode.context!,
+              duration: const Duration(milliseconds: 150),
+              curve: Curves.easeOut,
+              alignment: 0.5,
+            );
+          }
+        });
+      }
+    });
 
     final shortcutMap = <ShortcutActivator, Intent>{
       LogicalKeySet(LogicalKeyboardKey.select): const _ToggleEditIntent(),
@@ -5206,6 +5228,292 @@ class _SettingsScreenState extends State<SettingsScreen>
     } catch (e) {
       return '⚠ Unable to access: ${e.toString()}';
     }
+  }
+
+  // === Extracted Methods for D-Pad Support ===
+
+  Future<void> _loadM3uPlaylist() async {
+    final url = _m3uUrlController.text.trim();
+    if (url.isEmpty) {
+      if (!mounted) return;
+      showAppSnackBar(
+        context,
+        const SnackBar(content: Text('Please enter a valid M3U URL')),
+      );
+      return;
+    }
+
+    if (mounted) {
+      showAppSnackBar(
+        context,
+        const SnackBar(content: Text('Loading playlist from URL...')),
+      );
+    }
+
+    try {
+      final provider = Provider.of<ChannelProvider>(context, listen: false);
+      await provider.loadPlaylistFromUrl(url);
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('m3u_url', url);
+      await prefs.setString('playlist_type', 'm3u');
+
+      if (!mounted) return;
+      showAppSnackBar(
+        context,
+        SnackBar(
+          content: Text(
+            'Playlist loaded successfully! ${provider.channels.length} channels found.',
+          ),
+          backgroundColor: AppTheme.accentGreen,
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        showAppSnackBar(
+          context,
+          SnackBar(
+            content: Text('Failed to load playlist: ${e.toString()}'),
+            backgroundColor: AppTheme.accentRed,
+          ),
+        );
+      }
+    }
+  }
+
+  void _clearXtreamFields() {
+    _xtreamServerController.clear();
+    _xtreamUsernameController.clear();
+    _xtreamPasswordController.clear();
+  }
+
+  Future<void> _loadXtreamPlaylist() async {
+    final server = _xtreamServerController.text.trim();
+    final username = _xtreamUsernameController.text.trim();
+    final password = _xtreamPasswordController.text.trim();
+
+    if (server.isEmpty || username.isEmpty || password.isEmpty) {
+      if (!mounted) return;
+      showAppSnackBar(
+        context,
+        const SnackBar(content: Text('Please fill in all Xtream Codes fields')),
+      );
+      return;
+    }
+
+    if (mounted) {
+      showAppSnackBar(
+        context,
+        const SnackBar(content: Text('Loading Xtream Codes playlist...')),
+      );
+    }
+
+    final url =
+        '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
+
+    try {
+      final provider = Provider.of<ChannelProvider>(context, listen: false);
+      await provider.loadPlaylistFromUrl(url);
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('xtream_server', server);
+      await prefs.setString('xtream_username', username);
+      await prefs.setString('xtream_password', password);
+      await prefs.setString('playlist_type', 'xtream');
+
+      if (!mounted) return;
+      showAppSnackBar(
+        context,
+        SnackBar(
+          content: Text(
+            'Xtream playlist loaded! ${provider.channels.length} channels found.',
+          ),
+          backgroundColor: AppTheme.accentGreen,
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        showAppSnackBar(
+          context,
+          SnackBar(
+            content: Text('Failed to load Xtream playlist: ${e.toString()}'),
+            backgroundColor: AppTheme.accentRed,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _clearPlaylistCache() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear Playlist Cache?'),
+        content: const Text(
+          'Are you sure you want to clear the playlist cache? This will remove all locally cached playlist data.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Clear', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      if (!mounted) return;
+      
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('m3u_url');
+      await prefs.remove('playlist_type');
+      await prefs.remove('xtream_server');
+      await prefs.remove('xtream_username');
+      await prefs.remove('xtream_password');
+      
+      try {
+         // Provider.of<ChannelProvider>(context, listen: false).clearChannels(); 
+      } catch (_) {}
+
+      if (mounted) {
+        showAppSnackBar(
+          context,
+          const SnackBar(
+            content: Text('Playlist cache cleared'),
+            backgroundColor: AppTheme.accentGreen,
+          ),
+        );
+      }
+    }
+  }
+
+  void _inspectPlaylist() {
+    final provider = Provider.of<ChannelProvider>(context, listen: false);
+    if (provider.channels.isEmpty) {
+      showAppSnackBar(
+        context,
+        const SnackBar(content: Text('No channels loaded')),
+      );
+      return;
+    }
+    showAppSnackBar(
+      context,
+      SnackBar(content: Text('First channel: ${provider.channels.first.name}')),
+    );
+  }
+
+  Future<void> _browseStorage() async {
+    final localContext = context;
+    try {
+      final result = await FilePicker.platform.getDirectoryPath();
+      if (result != null) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('recording_storage_path', result);
+        if (mounted) setState(() {});
+        if (!localContext.mounted) return;
+        showAppSnackBar(
+          localContext,
+          const SnackBar(
+            content: Text('Recording location updated'),
+            backgroundColor: AppTheme.accentGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!localContext.mounted) return;
+      showAppSnackBar(
+        localContext,
+        SnackBar(
+          content: Text('Failed to select folder: $e'),
+          backgroundColor: AppTheme.accentRed,
+        ),
+      );
+    }
+  }
+
+  void _toggleOpenSubtitlesEnabled(bool? value) {
+    if (value == null) return;
+    setState(() {
+      _openSubtitlesEnabled = value;
+    });
+    Provider.of<OpenSubtitlesService>(context, listen: false).setEnabled(value);
+  }
+
+  void _toggleAutoDownloadSubtitles(bool? value) {
+    if (value == null) return;
+    setState(() {
+      _autoDownloadSubtitles = value;
+    });
+    Provider.of<OpenSubtitlesService>(context, listen: false).setAutoDownload(value);
+  }
+
+  Future<void> _testOpenSubtitlesConnection() async {
+    final localContext = context;
+    final service = Provider.of<OpenSubtitlesService>(context, listen: false);
+    final success = await service.authenticate();
+    if (!localContext.mounted) return;
+    showAppSnackBar(
+      localContext,
+      SnackBar(
+        content: Text(
+          success ? 'Connected successfully!' : 'Connection failed',
+        ),
+        backgroundColor: success ? Colors.green : AppTheme.accentRed,
+      ),
+    );
+  }
+
+  void _toggleRealDebridEnabled(bool? value) {
+    if (value == null) return;
+    setState(() {
+      _realDebridEnabled = value;
+    });
+    Provider.of<RealDebridService>(context, listen: false).setEnabled(value);
+  }
+
+  void _toggleRealDebridForCatchup(bool? value) {
+    if (value == null) return;
+    setState(() {
+      _realDebridForCatchup = value ?? true;
+    });
+    Provider.of<RealDebridService>(context, listen: false).setEnableForCatchup(value ?? true);
+  }
+
+  void _toggleRealDebridForVOD(bool? value) {
+    if (value == null) return;
+    setState(() {
+      _realDebridForVOD = value ?? true;
+    });
+    Provider.of<RealDebridService>(context, listen: false).setEnableForVOD(value ?? true);
+  }
+
+  Future<void> _testRealDebridConnection() async {
+    final localContext = context;
+    final service = Provider.of<RealDebridService>(context, listen: false);
+    final success = await service.testConnection();
+    if (!localContext.mounted) return;
+    showAppSnackBar(
+      localContext,
+      SnackBar(
+        content: Text(
+          success
+              ? 'Connected! Premium until ${service.premiumExpiryDate}'
+              : 'Connection failed',
+        ),
+        backgroundColor: success ? Colors.green : AppTheme.accentRed,
+      ),
+    );
+  }
+
+  void _toggleAiUpscalingEnabled(bool? value) {
+    if (value == null) return;
+    setState(() {
+      _aiUpscalingEnabled = value;
+    });
+    Provider.of<AIUpscalingService>(context, listen: false).setEnabled(value);
   }
 }
 
