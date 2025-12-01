@@ -42,6 +42,9 @@ class _EPGScreenState extends State<EPGScreen> {
     _currentTime = DateTime.now();
     Future.delayed(const Duration(seconds: 1), _updateTime);
     
+    // Hide system UI for immersive experience
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    
     // Load EPG data on init
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final epgService = Provider.of<EpgService>(context, listen: false);
@@ -112,6 +115,8 @@ class _EPGScreenState extends State<EPGScreen> {
 
   @override
   void dispose() {
+    // Restore system UI when leaving
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _horizontalScrollController.dispose();
     _verticalScrollController.dispose();
     _miniPlayerController?.dispose();
@@ -391,7 +396,7 @@ class _EPGScreenState extends State<EPGScreen> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.tv, color: AppTheme.primaryBlue, size: 24),
+          const Icon(Icons.dvr, color: AppTheme.primaryBlue, size: 24),
           const SizedBox(width: AppSizes.md),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -588,11 +593,11 @@ class _EPGScreenState extends State<EPGScreen> {
                   Expanded(
                     child: Text(
                       name,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      style: TextStyle(
                         color: textColor,
+                        fontSize: 14,
                         fontWeight:
-                            (isFocused || isSelected) ? FontWeight.bold : FontWeight.normal,
-                        decoration: TextDecoration.none,
+                            (isFocused || isSelected) ? FontWeight.w600 : FontWeight.w500,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -706,7 +711,7 @@ class _EPGScreenState extends State<EPGScreen> {
                                   fit: BoxFit.contain,
                                   errorBuilder: (context, error, stackTrace) {
                                     return const Icon(
-                                      Icons.tv,
+                                      Icons.dvr,
                                       color: AppTheme.primaryBlue,
                                     );
                                   },
@@ -863,7 +868,7 @@ class _EPGScreenState extends State<EPGScreen> {
     
     return Container(
       width: channelListWidth,
-      color: AppTheme.sidebarBackground,
+      color: Colors.white.withAlpha((0.05 * 255).round()),
       child: Column(
         children: [
           // Header
@@ -954,7 +959,7 @@ class _EPGScreenState extends State<EPGScreen> {
                             errorBuilder: (context, error, stackTrace) {
                               return const Center(
                                 child: Icon(
-                                  Icons.tv,
+                                  Icons.dvr,
                                   color: AppTheme.primaryBlue,
                                   size: 24,
                                 ),
@@ -964,7 +969,7 @@ class _EPGScreenState extends State<EPGScreen> {
                         )
                       : const Center(
                           child: Icon(
-                            Icons.tv,
+                            Icons.dvr,
                             color: AppTheme.primaryBlue,
                             size: 24,
                           ),
@@ -1006,79 +1011,90 @@ class _EPGScreenState extends State<EPGScreen> {
   Widget _buildProgramGrid(List<Channel> channels, EpgService epgService) {
     debugPrint('EPG Grid: isLoading=${epgService.isLoading}, hasData=${epgService.hasData}, epgData keys=${epgService.epgData.keys.length}');
     
-    if (epgService.isLoading) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: AppSizes.md),
-            Text('Loading EPG data...'),
-          ],
-        ),
-      );
-    }
-
-    if (!epgService.hasData) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.calendar_today,
-              size: 60,
-              color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
-            ),
-            const SizedBox(height: AppSizes.md),
-            Text(
-              'No EPG Data Available',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: AppSizes.sm),
-            Text(
-              'Configure EPG URL in Settings',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Column(
+    // Show loading overlay but still display the grid structure
+    final bool isLoading = epgService.isLoading;
+    
+    // Always show the grid with channels, even without EPG data
+    return Stack(
       children: [
-        // Time header
-        _buildTimeHeader(),
-        const Divider(height: 1, color: AppTheme.divider),
-
-        // Programs grid
-        Expanded(
-          child: SingleChildScrollView(
-            controller: _horizontalScrollController,
-            scrollDirection: Axis.horizontal,
-            child: SizedBox(
-              width: _calculateGridWidth(),
-              child: ListView.builder(
-                controller: _verticalScrollController,
-                itemCount: channels.length,
-                itemBuilder: (context, index) {
-                  final channel = channels[index];
-                  return _buildProgramRow(channel, epgService);
-                },
+        Column(
+          children: [
+            // Info banner when no EPG data
+            if (!epgService.hasData && !isLoading)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: AppSizes.md, vertical: AppSizes.sm),
+                color: AppTheme.primaryBlue.withAlpha((0.2 * 255).round()),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline, size: 18, color: AppTheme.primaryBlue),
+                    const SizedBox(width: AppSizes.sm),
+                    Expanded(
+                      child: Text(
+                        'No EPG data loaded. Configure EPG URL in Settings to see program schedules.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            // Time header and programs grid - both scroll horizontally
+            Expanded(
+              child: SingleChildScrollView(
+                controller: _horizontalScrollController,
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: _calculateGridWidth(),
+                  child: Column(
+                    children: [
+                      // Time header inside the scrollable area
+                      _buildTimeHeader(),
+                      const Divider(height: 1, color: AppTheme.divider),
+                      // Programs grid
+                      Expanded(
+                        child: ListView.builder(
+                          controller: _verticalScrollController,
+                          itemCount: channels.length,
+                          itemBuilder: (context, index) {
+                            final channel = channels[index];
+                            return _buildProgramRow(channel, epgService);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        // Loading overlay
+        if (isLoading)
+          Positioned.fill(
+            child: Container(
+              color: Colors.black.withAlpha((0.5 * 255).round()),
+              child: const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: AppSizes.md),
+                    Text('Loading EPG data...'),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
       ],
     );
   }
 
   Widget _buildTimeHeader() {
     final hours = _isHourlyView ? 24 : 48;
+    final totalWidth = hours * (_isHourlyView ? 120.0 : 60.0);
 
     return Container(
       height: 60,
+      width: totalWidth,
       child: Row(
         children: List.generate(hours, (index) {
           final hour = _isHourlyView ? index : index ~/ 2;
@@ -1145,22 +1161,43 @@ class _EPGScreenState extends State<EPGScreen> {
       child: Row(
         children: [
           // Channel info section (fixed width on left)
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                _selectedChannelId = channel.id;
-              });
-              _playChannelInMiniPlayer(channel);
+          Focus(
+            onKeyEvent: (node, event) {
+              if (event is KeyDownEvent && 
+                  (event.logicalKey == LogicalKeyboardKey.select || 
+                   event.logicalKey == LogicalKeyboardKey.enter)) {
+                setState(() {
+                  _selectedChannelId = channel.id;
+                });
+                _playChannelInMiniPlayer(channel);
+                return KeyEventResult.handled;
+              }
+              return KeyEventResult.ignored;
             },
-            child: Container(
-              width: 200,
-              padding: const EdgeInsets.all(AppSizes.sm),
-              decoration: BoxDecoration(
-                color: AppTheme.sidebarBackground,
-                border: Border(
-                  right: BorderSide(color: AppTheme.divider, width: 1),
-                ),
-              ),
+            child: Builder(
+              builder: (context) {
+                final isFocused = Focus.of(context).hasFocus;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedChannelId = channel.id;
+                    });
+                    _playChannelInMiniPlayer(channel);
+                  },
+                  child: Container(
+                    width: 200,
+                    padding: const EdgeInsets.all(AppSizes.sm),
+                    decoration: BoxDecoration(
+                      color: isFocused 
+                          ? AppTheme.primaryBlue.withAlpha((0.3 * 255).round())
+                          : Colors.white.withAlpha((0.05 * 255).round()),
+                      border: Border(
+                        right: BorderSide(color: AppTheme.divider, width: 1),
+                        top: isFocused ? const BorderSide(color: AppTheme.primaryBlue, width: 2) : BorderSide.none,
+                        bottom: isFocused ? const BorderSide(color: AppTheme.primaryBlue, width: 2) : BorderSide.none,
+                        left: isFocused ? const BorderSide(color: AppTheme.primaryBlue, width: 2) : BorderSide.none,
+                      ),
+                    ),
               child: Row(
                 children: [
                   // Channel logo
@@ -1180,7 +1217,7 @@ class _EPGScreenState extends State<EPGScreen> {
                               errorBuilder: (context, error, stackTrace) {
                                 return const Center(
                                   child: Icon(
-                                    Icons.tv,
+                                    Icons.dvr,
                                     color: AppTheme.primaryBlue,
                                     size: 24,
                                   ),
@@ -1190,7 +1227,7 @@ class _EPGScreenState extends State<EPGScreen> {
                           )
                         : const Center(
                             child: Icon(
-                              Icons.tv,
+                              Icons.dvr,
                               color: AppTheme.primaryBlue,
                               size: 24,
                             ),
@@ -1236,9 +1273,12 @@ class _EPGScreenState extends State<EPGScreen> {
                   ),
                   const SizedBox(width: AppSizes.xs),
                 ],
-              ),
-            ),
-          ),
+                  ),
+                ),
+              );
+          },
+        ),
+      ),
           // Programs section (scrollable)
           Expanded(
             child: dayPrograms.isEmpty
@@ -1369,7 +1409,7 @@ class _EPGScreenState extends State<EPGScreen> {
                             ],
                           ),
                         ),
-                        child: const Icon(Icons.tv, size: 64),
+                        child: const Icon(Icons.dvr, size: 64),
                       );
                     },
                   ),

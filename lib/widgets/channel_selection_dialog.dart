@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/channel.dart';
 import '../providers/channel_provider.dart';
+import 'package:iptv_player/widgets/tv_focusable.dart';
 
 class ChannelSelectionDialog extends StatefulWidget {
   const ChannelSelectionDialog({super.key});
@@ -64,14 +65,21 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
                           final isFocused = Focus.of(context).hasFocus;
                           return GestureDetector(
                             onTap: () => Navigator.pop(context),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                border: isFocused ? Border.all(color: Colors.blue, width: 2) : null,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: IconButton(
-                                icon: const Icon(Icons.close, color: Colors.white),
-                                onPressed: () => Navigator.pop(context),
+                            child: AnimatedScale(
+                              scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                              duration: TVFocusStyle.animationDuration,
+                              curve: TVFocusStyle.animationCurve,
+                              child: AnimatedContainer(
+                                duration: TVFocusStyle.animationDuration,
+                                curve: TVFocusStyle.animationCurve,
+                                decoration: BoxDecoration(
+                                  boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(Icons.close, color: Colors.white),
+                                  onPressed: () => Navigator.pop(context),
+                                ),
                               ),
                             ),
                           );

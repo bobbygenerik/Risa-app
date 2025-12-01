@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/services/epg_service.dart';
@@ -12,6 +13,7 @@ import 'package:iptv_player/widgets/content_focus_provider.dart';
 import 'package:iptv_player/widgets/go_to_settings_button.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/service_validator.dart';
+import 'package:iptv_player/widgets/tv_focusable.dart';
 
 /// A focused Live TV screen. Shows a hero for the currently airing program
 /// on a featured channel, plus channel rows below.
@@ -35,6 +37,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   // Pagination for All Channels section
   static const int _channelsPerPage = 20;
   int _currentChannelPage = 0;
+  
+  // Track if initial load is complete to show splash screen
+  bool _showSplash = true;
+  bool _heroImageReady = false;
 
   @override
   void initState() {
@@ -44,6 +50,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => _startCarouselIfNeeded(),
     );
+  }
+  
+  void _onChannelsReady() {
+    // Called when channels are loaded - wait a brief moment for hero to prepare
+    if (!_showSplash) return;
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted && _showSplash) {
+        setState(() => _showSplash = false);
+      }
+    });
   }
 
   @override
@@ -95,12 +111,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         _featuredIndex = (_featuredIndex + 1) % channels.length;
       });
     });
-
-    // Default focus to the watch button
-    final watchFocusNode = _watchFocus;
-    Future.delayed(const Duration(milliseconds: 120), () {
-      if (mounted) watchFocusNode.requestFocus();
-    });
+    // Focus is managed by navigation bar - don't auto-focus content
   }
 
   @override
@@ -116,6 +127,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       child: Consumer2<ChannelProvider, EpgService>(
         builder: (context, channelProvider, epgService, _) {
           final channels = channelProvider.channels;
+          
+          // Show splash while loading OR while preparing hero after channels load
+          if (_showSplash) {
+            // Trigger transition once channels are available
+            if (channels.isNotEmpty) {
+              _onChannelsReady();
+            }
+            return _buildSplashLoading();
+          }
 
           if (channels.isEmpty) {
             return Center(
@@ -222,10 +242,20 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             // Background image if available, otherwise gradient with TV icon
             if (heroImage != null && heroImage.isNotEmpty)
               Positioned.fill(
-                child: Image.network(
-                  heroImage,
+                child: CachedNetworkImage(
+                  imageUrl: heroImage,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _buildDefaultHeroBackground(),
+                  placeholder: (_, __) => _buildShimmerHeroBackground(),
+                  errorWidget: (_, __, ___) => _buildDefaultHeroBackground(),
+                  imageBuilder: (context, imageProvider) {
+                    // Mark hero as ready when image loads
+                    if (!_heroImageReady) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) setState(() => _heroImageReady = true);
+                      });
+                    }
+                    return Image(image: imageProvider, fit: BoxFit.cover);
+                  },
                 ),
               )
             else
@@ -261,12 +291,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                           channel.logoUrl!.isNotEmpty)
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            channel.logoUrl!,
+                          child: CachedNetworkImage(
+                            imageUrl: channel.logoUrl!,
                             height: 64,
                             width: 120,
                             fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) =>
+                            errorWidget: (_, __, ___) =>
                                 const SizedBox.shrink(),
                           ),
                         ),
@@ -349,51 +379,59 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      // TV-friendly watch button with subtle focus styling
+                      // TV-friendly watch button with modern focus styling (glow effect)
                       Padding(
                         padding: const EdgeInsets.only(right: 12),
                         child: Focus(
                           focusNode: _watchFocus,
+                          onKeyEvent: (node, event) {
+                            if (event is KeyDownEvent &&
+                                (event.logicalKey == LogicalKeyboardKey.select ||
+                                 event.logicalKey == LogicalKeyboardKey.enter ||
+                                 event.logicalKey == LogicalKeyboardKey.gameButtonA)) {
+                              context.push('/player', extra: channel);
+                              return KeyEventResult.handled;
+                            }
+                            return KeyEventResult.ignored;
+                          },
                           child: Builder(
                             builder: (context) {
                               final isFocused = Focus.of(context).hasFocus;
                               return GestureDetector(
                                 onTap: () => context.push('/player', extra: channel),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.primaryBlue,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: isFocused
-                                        ? Border.all(color: Colors.white, width: 2)
-                                        : null,
-                                    boxShadow: isFocused
-                                        ? [
-                                            BoxShadow(
-                                              color: Colors.black.withAlpha((0.3 * 255).round()),
-                                              offset: const Offset(0, 4),
-                                              blurRadius: 8,
-                                            ),
-                                          ]
-                                        : null,
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 24,
-                                    vertical: 14,
-                                  ),
-                                  child: const Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.play_arrow, color: Colors.white),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        'Watch',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w700,
+                                child: AnimatedScale(
+                                  scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                                  duration: TVFocusStyle.animationDuration,
+                                  curve: TVFocusStyle.animationCurve,
+                                  child: AnimatedContainer(
+                                    duration: TVFocusStyle.animationDuration,
+                                    curve: TVFocusStyle.animationCurve,
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.primaryBlue,
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: isFocused
+                                          ? TVFocusStyle.focusedShadow
+                                          : TVFocusStyle.defaultShadow,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 14,
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.play_arrow, color: Colors.white),
+                                        SizedBox(width: 8),
+                                        Text(
+                                          'Watch',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w700,
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
                               );
@@ -401,55 +439,59 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                           ),
                         ),
                       ),
-                      // Guide button with subtle focus styling
+                      // Guide button with modern focus styling
                       Focus(
+                        onKeyEvent: (node, event) {
+                          if (event is KeyDownEvent &&
+                              (event.logicalKey == LogicalKeyboardKey.select ||
+                               event.logicalKey == LogicalKeyboardKey.enter ||
+                               event.logicalKey == LogicalKeyboardKey.gameButtonA)) {
+                            context.go('/epg');
+                            return KeyEventResult.handled;
+                          }
+                          return KeyEventResult.ignored;
+                        },
                         child: Builder(
                           builder: (context) {
                             final isFocused = Focus.of(context).hasFocus;
                             return GestureDetector(
                               onTap: () => context.go('/epg'),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: isFocused
-                                        ? Colors.white
-                                        : AppTheme.primaryBlue.withAlpha(
-                                            (0.7 * 255).round(),
-                                          ),
-                                    width: isFocused ? 2 : 1.5,
+                              child: AnimatedScale(
+                                scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                                duration: TVFocusStyle.animationDuration,
+                                curve: TVFocusStyle.animationCurve,
+                                child: AnimatedContainer(
+                                  duration: TVFocusStyle.animationDuration,
+                                  curve: TVFocusStyle.animationCurve,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
+                                    boxShadow: isFocused
+                                        ? TVFocusStyle.focusedShadow
+                                        : TVFocusStyle.defaultShadow,
                                   ),
-                                  boxShadow: isFocused
-                                      ? [
-                                          BoxShadow(
-                                            color: Colors.black.withAlpha((0.3 * 255).round()),
-                                            offset: const Offset(0, 4),
-                                            blurRadius: 8,
-                                          ),
-                                        ]
-                                      : null,
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 22,
-                                  vertical: 14,
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.schedule,
-                                      color: AppTheme.textPrimary,
-                                    ),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'Guide',
-                                      style: TextStyle(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 22,
+                                    vertical: 14,
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.dvr,
                                         color: AppTheme.textPrimary,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
                                       ),
-                                    ),
-                                  ],
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Guide',
+                                        style: TextStyle(
+                                          color: AppTheme.textPrimary,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             );
@@ -488,11 +530,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (channel != null) {
       final channelKey = 'channel_${channel.id}';
       final cachedChannelArt = _programArtwork[channelKey];
-      if (cachedChannelArt != null && cachedChannelArt.isNotEmpty) {
-        return cachedChannelArt;
+      // If we have a cached result (including empty string meaning "not found"), use it
+      if (_programArtwork.containsKey(channelKey)) {
+        return cachedChannelArt?.isNotEmpty == true ? cachedChannelArt : null;
       }
       
-      // Fetch TMDB artwork based on channel name if enabled
+      // Fetch TMDB artwork based on channel name if enabled and not already fetching
       if (_tmdbEnabled && !_artworkRequests.contains(channelKey)) {
         _fetchChannelArtwork(channel);
       }
@@ -510,7 +553,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Future<void> _fetchChannelArtwork(Channel channel) async {
     final channelKey = 'channel_${channel.id}';
-    if (_artworkRequests.contains(channelKey)) return;
+    if (_artworkRequests.contains(channelKey) || _programArtwork.containsKey(channelKey)) return;
     _artworkRequests.add(channelKey);
     try {
       debugPrint('LiveTV: Fetching TMDB art for channel: "${channel.name}"');
@@ -531,13 +574,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           _programArtwork[channelKey] = '';
         });
       }
-    } finally {
-      _artworkRequests.remove(channelKey);
     }
+    // Don't remove from _artworkRequests - keep it to prevent re-fetching
   }
 
   Future<void> _fetchProgramArtwork(Program program) async {
-    if (_artworkRequests.contains(program.id)) return;
+    if (_artworkRequests.contains(program.id) || _programArtwork.containsKey(program.id)) return;
     _artworkRequests.add(program.id);
     try {
       debugPrint('LiveTV: Fetching TMDB art for: "${program.title}"');
@@ -558,9 +600,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           _programArtwork[program.id] = '';
         });
       }
-    } finally {
-      _artworkRequests.remove(program.id);
     }
+    // Don't remove from _artworkRequests - keep it to prevent re-fetching
   }
 
   Widget _buildChannelSection(
@@ -612,41 +653,38 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                           final isFocused = Focus.of(context).hasFocus;
                           return GestureDetector(
                             onTap: () => context.push('/player', extra: channel),
-                            child: Container(
-                              width: 200,
-                              height: 120,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                color: AppTheme.cardBackground,
-                                border: Border.all(
-                                  color: isFocused
-                                      ? Colors.white
-                                      : Colors.white.withAlpha((0.1 * 255).round()),
-                                  width: isFocused ? 2 : 1,
+                            child: AnimatedScale(
+                              scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                              duration: TVFocusStyle.animationDuration,
+                              curve: TVFocusStyle.animationCurve,
+                              child: AnimatedContainer(
+                                duration: TVFocusStyle.animationDuration,
+                                curve: TVFocusStyle.animationCurve,
+                                width: 200,
+                                height: 120,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  color: AppTheme.cardBackground,
+                                  boxShadow: isFocused
+                                      ? TVFocusStyle.focusedShadow
+                                      : TVFocusStyle.defaultShadow,
                                 ),
-                                boxShadow: isFocused
-                                    ? [
-                                        BoxShadow(
-                                          color: Colors.black.withAlpha((0.3 * 255).round()),
-                                          offset: const Offset(0, 4),
-                                          blurRadius: 8,
-                                        ),
-                                      ]
-                                    : null,
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: channel.logoUrl != null &&
-                                        channel.logoUrl!.isNotEmpty
-                                    ? Image.network(
-                                        channel.logoUrl!,
-                                        fit: BoxFit.cover,
-                                        width: double.infinity,
-                                        height: double.infinity,
-                                        errorBuilder: (_, __, ___) =>
-                                            _buildChannelPlaceholder(channel.name),
-                                      )
-                                    : _buildChannelPlaceholder(channel.name),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: channel.logoUrl != null &&
+                                          channel.logoUrl!.isNotEmpty
+                                      ? CachedNetworkImage(
+                                          imageUrl: channel.logoUrl!,
+                                          fit: BoxFit.cover,
+                                          width: double.infinity,
+                                          height: double.infinity,
+                                          placeholder: (_, __) =>
+                                              _buildChannelPlaceholder(channel.name),
+                                          errorWidget: (_, __, ___) =>
+                                              _buildChannelPlaceholder(channel.name),
+                                        )
+                                      : _buildChannelPlaceholder(channel.name),
+                                ),
                               ),
                             ),
                           );
@@ -779,41 +817,38 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                           final isFocused = Focus.of(context).hasFocus;
                           return GestureDetector(
                             onTap: () => context.push('/player', extra: channel),
-                            child: Container(
-                              width: 200,
-                              height: 120,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                color: AppTheme.cardBackground,
-                                border: Border.all(
-                                  color: isFocused
-                                      ? Colors.white
-                                      : Colors.white.withAlpha((0.1 * 255).round()),
-                                  width: isFocused ? 2 : 1,
+                            child: AnimatedScale(
+                              scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                              duration: TVFocusStyle.animationDuration,
+                              curve: TVFocusStyle.animationCurve,
+                              child: AnimatedContainer(
+                                duration: TVFocusStyle.animationDuration,
+                                curve: TVFocusStyle.animationCurve,
+                                width: 200,
+                                height: 120,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  color: AppTheme.cardBackground,
+                                  boxShadow: isFocused
+                                      ? TVFocusStyle.focusedShadow
+                                      : TVFocusStyle.defaultShadow,
                                 ),
-                                boxShadow: isFocused
-                                    ? [
-                                        BoxShadow(
-                                          color: Colors.black.withAlpha((0.3 * 255).round()),
-                                          offset: const Offset(0, 4),
-                                          blurRadius: 8,
-                                        ),
-                                      ]
-                                    : null,
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: channel.logoUrl != null &&
-                                        channel.logoUrl!.isNotEmpty
-                                    ? Image.network(
-                                        channel.logoUrl!,
-                                        fit: BoxFit.cover,
-                                        width: double.infinity,
-                                        height: double.infinity,
-                                        errorBuilder: (_, __, ___) =>
-                                            _buildChannelPlaceholder(channel.name),
-                                      )
-                                    : _buildChannelPlaceholder(channel.name),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: channel.logoUrl != null &&
+                                          channel.logoUrl!.isNotEmpty
+                                      ? CachedNetworkImage(
+                                          imageUrl: channel.logoUrl!,
+                                          fit: BoxFit.cover,
+                                          width: double.infinity,
+                                          height: double.infinity,
+                                          placeholder: (_, __) =>
+                                              _buildChannelPlaceholder(channel.name),
+                                          errorWidget: (_, __, ___) =>
+                                              _buildChannelPlaceholder(channel.name),
+                                        )
+                                      : _buildChannelPlaceholder(channel.name),
+                                ),
                               ),
                             ),
                           );
@@ -857,6 +892,106 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSplashLoading() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Animated logo/icon
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.8, end: 1.0),
+            duration: const Duration(milliseconds: 800),
+            curve: Curves.easeInOut,
+            builder: (context, scale, child) {
+              return Transform.scale(
+                scale: scale,
+                child: child,
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
+                    AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
+                  ],
+                ),
+              ),
+              child: const Icon(
+                Icons.live_tv,
+                size: 64,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          const SizedBox(height: 32),
+          // Loading indicator
+          SizedBox(
+            width: 32,
+            height: 32,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                AppTheme.primaryBlue.withAlpha((0.8 * 255).round()),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Loading channels...',
+            style: TextStyle(
+              color: Colors.white.withAlpha((0.6 * 255).round()),
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildShimmerHeroBackground() {
+    // A subtle shimmer/pulse effect while loading
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.3, end: 0.5),
+      duration: const Duration(milliseconds: 1000),
+      curve: Curves.easeInOut,
+      builder: (context, opacity, child) {
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFF1a1a2e),
+                Color.lerp(
+                  const Color(0xFF16213e),
+                  AppTheme.primaryBlue,
+                  opacity - 0.3,
+                )!,
+              ],
+            ),
+          ),
+          child: Center(
+            child: SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  Colors.white.withAlpha((0.3 * 255).round()),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

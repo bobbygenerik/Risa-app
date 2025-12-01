@@ -43,8 +43,8 @@ class NativeExoPlayerController {
       if (e is Map) {
         try {
           out.add(Map<String, dynamic>.from(e));
-        } catch (_) {
-          // ignore invalid entries
+        } catch (e) {
+          debugPrint('Error parsing audio track: $e');
         }
       }
     }
@@ -59,7 +59,9 @@ class NativeExoPlayerController {
     try {
       final res = await _channel.invokeMethod('enableAIUpscaling');
       if (res is bool) return res;
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error enabling AI upscaling: $e');
+    }
     return false;
   }
 
@@ -68,7 +70,9 @@ class NativeExoPlayerController {
     try {
       final res = await _channel.invokeMethod('disableAIUpscaling');
       if (res is bool) return res;
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error disabling AI upscaling: $e');
+    }
     return false;
   }
 
@@ -77,7 +81,9 @@ class NativeExoPlayerController {
     try {
       final res = await _channel.invokeMethod('setAIQuality', {'quality': quality});
       if (res is bool) return res;
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error setting AI quality: $e');
+    }
     return false;
   }
 
@@ -86,7 +92,9 @@ class NativeExoPlayerController {
     try {
       final res = await _channel.invokeMethod('setGPUDelegateEnabled', {'enabled': enabled});
       if (res is bool) return res;
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error setting GPU delegate: $e');
+    }
     return false;
   }
 
@@ -95,7 +103,9 @@ class NativeExoPlayerController {
     try {
       final res = await _channel.invokeMethod('getUpscalerProfile');
       if (res is Map) return Map<String, dynamic>.from(res);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error getting upscaler profile: $e');
+    }
     return {};
   }
 
@@ -104,7 +114,9 @@ class NativeExoPlayerController {
     try {
       final res = await _channel.invokeMethod('setOverlapPercent', {'percent': percent});
       if (res is bool) return res;
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error setting overlap percent: $e');
+    }
     return false;
   }
 
@@ -113,7 +125,9 @@ class NativeExoPlayerController {
     try {
       final res = await _channel.invokeMethod('setAdaptiveEnabled', {'enabled': enabled});
       if (res is bool) return res;
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error setting adaptive enabled: $e');
+    }
     return false;
   }
 
@@ -123,7 +137,9 @@ class NativeExoPlayerController {
     try {
       final res = await _channel.invokeMethod('setAdaptiveTargetMs', {'ms': ms});
       if (res is bool) return res;
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error setting adaptive target ms: $e');
+    }
     return false;
   }
 
@@ -134,7 +150,9 @@ class NativeExoPlayerController {
     try {
       final res = await _channel.invokeMethod('upscaleCurrentFrame');
       if (res is String) return res;
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error upscaling current frame: $e');
+    }
     return null;
   }
 
@@ -144,7 +162,9 @@ class NativeExoPlayerController {
     try {
       final res = await _channel.invokeMethod('saveUpscaledCurrentFrame');
       if (res is String) return res;
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error saving upscaled frame: $e');
+    }
     return null;
   }
 
@@ -153,7 +173,9 @@ class NativeExoPlayerController {
     try {
       final res = await _channel.invokeMethod('loadAIModel', {'path': path});
       if (res is bool) return res;
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error loading AI model: $e');
+    }
     return false;
   }
 }

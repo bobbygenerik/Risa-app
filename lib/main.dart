@@ -80,6 +80,13 @@ void main() {
       }
 
       FlutterError.onError = (FlutterErrorDetails details) {
+        // Suppress rate-limit errors from image loading (HTTP 429)
+        final exception = details.exception;
+        if (exception.toString().contains('429') ||
+            exception.toString().contains('rate limit')) {
+          debugPrint('Suppressed image error: ${details.exception}');
+          return;
+        }
         FlutterError.presentError(details);
         Zone.current.handleUncaughtError(
           details.exception,
@@ -189,6 +196,16 @@ class _ErrorHandler {
   static bool _errorDispatchScheduled = false;
 
   static void reportError(Object error, StackTrace stack) {
+    // Filter out HTTP 429 (rate limit) errors from image loading
+    // These are handled gracefully by error widgets, no need to show a global error
+    final errorString = error.toString();
+    if (errorString.contains('429') || 
+        errorString.contains('rate limit') ||
+        errorString.contains('HttpException') && errorString.contains('imgur')) {
+      debugPrint('Suppressed rate-limit error: $error');
+      return;
+    }
+    
     debugPrint('Unhandled app error: $error');
     debugPrint(stack.toString());
     _pendingError = _AppError(error, stack);

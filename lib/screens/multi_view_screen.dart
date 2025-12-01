@@ -7,6 +7,7 @@ import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/screens/enhanced_video_player_screen.dart';
 import 'package:iptv_player/widgets/channel_selection_dialog.dart';
+import 'package:iptv_player/widgets/tv_focusable.dart';
 
 /// Multi-view screen for watching up to 4 streams simultaneously
 /// Supports 1, 2, or 4 player grid layouts with audio switching
@@ -33,6 +34,8 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
   int _activeAudioPlayer = 0; // Which player's audio is active
   int _focusedPlayer = 0; // Which player has focus for controls
   final FocusNode _screenFocusNode = FocusNode();
+  final FocusScopeNode _controlsFocusScope = FocusScopeNode();
+  final List<FocusNode> _playerFocusNodes = List.generate(4, (_) => FocusNode());
 
   // Settings loaded from SharedPreferences
   // These fields are persisted for future playback tuning but not yet applied
@@ -110,17 +113,34 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
     for (var controller in _controllers) {
       controller?.dispose();
     }
+    for (var node in _playerFocusNodes) {
+      node.dispose();
+    }
+    _controlsFocusScope.dispose();
     super.dispose();
   }
 
   void _startControlsTimer() {
     _controlsTimer?.cancel();
     setState(() => _showControls = true);
-    _controlsTimer = Timer(const Duration(seconds: 3), () {
+    _controlsTimer = Timer(const Duration(seconds: 5), () {
       if (mounted) {
         setState(() => _showControls = false);
+        // Return focus to the currently focused player
+        if (_focusedPlayer < _playerFocusNodes.length) {
+          _playerFocusNodes[_focusedPlayer].requestFocus();
+        }
       }
     });
+    
+    // If showing controls, move focus to overlay
+    if (_showControls) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _showControls) {
+          _controlsFocusScope.requestFocus();
+        }
+      });
+    }
   }
 
   void _switchAudioPlayer(int index) {
@@ -342,37 +362,44 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
             final isFocused = Focus.of(context).hasFocus;
             return GestureDetector(
               onTap: () => _selectChannelForSlot(index),
-              child: Container(
-                margin: const EdgeInsets.all(1),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFF050710),
-                      Color(0xFF0d1140),
-                    ],
+              child: AnimatedScale(
+                scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                duration: TVFocusStyle.animationDuration,
+                curve: TVFocusStyle.animationCurve,
+                child: AnimatedContainer(
+                  duration: TVFocusStyle.animationDuration,
+                  curve: TVFocusStyle.animationCurve,
+                  margin: const EdgeInsets.all(1),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFF050710),
+                        Color(0xFF0d1140),
+                      ],
+                    ),
+                    boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
                   ),
-                  border: isFocused ? Border.all(color: AppTheme.primaryBlue, width: 3) : null,
-                ),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.add_circle_outline,
-                        size: 48,
-                        color: isFocused ? Colors.white : Colors.white54,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Add Stream ${index + 1}',
-                        style: TextStyle(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.add_circle_outline,
+                          size: 48,
                           color: isFocused ? Colors.white : Colors.white54,
-                          fontWeight: isFocused ? FontWeight.bold : FontWeight.normal,
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 8),
+                        Text(
+                          'Add Stream ${index + 1}',
+                          style: TextStyle(
+                            color: isFocused ? Colors.white : Colors.white54,
+                            fontWeight: isFocused ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -390,6 +417,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
     final hasAudio = _activeAudioPlayer == index;
 
     return Focus(
+      focusNode: _playerFocusNodes[index],
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent) {
           if (event.logicalKey == LogicalKeyboardKey.select || 
@@ -620,116 +648,186 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
   }
 
   Widget _buildControlsOverlay() {
-    return SafeArea(
-      child: Column(
-        children: [
-          // Top bar
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF050710),
-                  Color(0xFF0d1140),
-                ],
-              )
-            ),
-            child: Row(
-              children: [
-                Focus(
-                  onKeyEvent: (node, event) {
-                    if (event is KeyDownEvent && 
-                        (event.logicalKey == LogicalKeyboardKey.select || 
-                         event.logicalKey == LogicalKeyboardKey.enter)) {
-                      Navigator.of(context).pop();
-                      return KeyEventResult.handled;
-                    }
-                    return KeyEventResult.ignored;
-                  },
-                  child: Builder(
-                    builder: (context) {
-                      final isFocused = Focus.of(context).hasFocus;
-                      return Container(
-                        decoration: BoxDecoration(
-                          border: isFocused ? Border.all(color: Colors.white, width: 2) : null,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: IconButton(
-                          icon: const Icon(
-                            Icons.arrow_back,
-                            color: Colors.white,
-                            size: 28,
-                          ),
-                          onPressed: () => Navigator.of(context).pop(),
-                        ),
-                      );
-                    },
+    final isPlaying = _controllers[_focusedPlayer]?.value.isPlaying ?? false;
+    
+    // Reset timer on any key activity within controls
+    return KeyboardListener(
+      focusNode: FocusNode(skipTraversal: true),
+      onKeyEvent: (event) {
+        if (event is KeyDownEvent) {
+          _startControlsTimer();
+        }
+      },
+      child: SafeArea(
+        child: FocusScope(
+          node: _controlsFocusScope,
+          child: Column(
+            children: [
+              // Top bar - no background
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: Row(
+                  children: [
+                    // Back button - matches video player style (no border box)
+                    Focus(
+                      onKeyEvent: (node, event) {
+                        if (event is KeyDownEvent) {
+                          if (event.logicalKey == LogicalKeyboardKey.select ||
+                              event.logicalKey == LogicalKeyboardKey.enter) {
+                            Navigator.of(context).pop();
+                            return KeyEventResult.handled;
+                          }
+                        }
+                        return KeyEventResult.ignored;
+                      },
+                      child: Builder(
+                        builder: (context) {
+                          final isFocused = Focus.of(context).hasFocus;
+                          return Container(
+                            decoration: isFocused
+                                ? BoxDecoration(
+                                    border: Border.all(color: AppTheme.primaryBlue, width: 2),
+                                    borderRadius: BorderRadius.circular(24),
+                                  )
+                                : null,
+                            child: IconButton(
+                              icon: const Icon(Icons.arrow_back, color: Colors.white, size: 32),
+                              onPressed: () => Navigator.of(context).pop(),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    const Text(
+                      'Multi-View',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        shadows: [
+                          Shadow(color: Colors.black, blurRadius: 4),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    // Grid size selector
+                    _buildOverlayButton(
+                      icon: Icons.crop_square,
+                      label: '1',
+                      onTap: () => _changeGridSize(1),
+                      isActive: _gridSize == 1,
+                    ),
+                    const SizedBox(width: 8),
+                    _buildOverlayButton(
+                      icon: Icons.view_column,
+                      label: '2',
+                      onTap: () => _changeGridSize(2),
+                      isActive: _gridSize == 2,
+                    ),
+                    const SizedBox(width: 8),
+                    _buildOverlayButton(
+                      icon: Icons.grid_view,
+                      label: '4',
+                      onTap: () => _changeGridSize(4),
+                      isActive: _gridSize == 4,
+                    ),
+                  ],
+                ),
+              ),
+
+              const Spacer(),
+
+              // Bottom bar - real control buttons that match video player overlay
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Left side button (Audio matches Fullscreen width)
+                      _buildOverlayButton(
+                        icon: Icons.multitrack_audio,
+                        label: 'Audio',
+                        onTap: () => _switchAudioPlayer(_focusedPlayer),
+                        minWidth: 130,  // Match Fullscreen
+                      ),
+                      const SizedBox(width: 16),
+                      // Center play controls
+                      _buildOverlayButton(
+                        icon: Icons.replay_10,
+                        label: '-10s',
+                        onTap: () {
+                          final controller = _controllers[_focusedPlayer];
+                          if (controller != null) {
+                            final position = controller.value.position;
+                            controller.seekTo(position - const Duration(seconds: 10));
+                          }
+                          _startControlsTimer();
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      _buildOverlayButton(
+                        icon: isPlaying ? Icons.pause : Icons.play_arrow,
+                        label: isPlaying ? 'Pause' : 'Play',
+                        onTap: () => _togglePlayPause(_focusedPlayer),
+                      ),
+                      const SizedBox(width: 8),
+                      _buildOverlayButton(
+                        icon: Icons.forward_10,
+                        label: '+10s',
+                        onTap: () {
+                          final controller = _controllers[_focusedPlayer];
+                          if (controller != null) {
+                            final position = controller.value.position;
+                            controller.seekTo(position + const Duration(seconds: 10));
+                          }
+                          _startControlsTimer();
+                        },
+                      ),
+                      const SizedBox(width: 16),
+                      // Right side button (Fullscreen matches Audio width)
+                      _buildOverlayButton(
+                        icon: Icons.fullscreen,
+                        label: 'Fullscreen',
+                        onTap: () => _expandPlayer(_focusedPlayer),
+                        minWidth: 130,  // Match Audio
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 16),
-                const Text(
-                  'Multi-View',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Spacer(),
-                // Grid size selector
-                _buildGridSizeButton(1, Icons.crop_square),
-                const SizedBox(width: 8),
-                _buildGridSizeButton(2, Icons.view_column),
-                const SizedBox(width: 8),
-                _buildGridSizeButton(4, Icons.grid_view),
-              ],
-            ),
+              ),
+            ],
           ),
-
-          const Spacer(),
-
-          // Bottom bar with hints
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF050710),
-                  Color(0xFF0d1140),
-                ],
-              )
-            ),
-            child: Wrap(
-              spacing: 12,
-              runSpacing: 8,
-              alignment: WrapAlignment.center,
-              children: [
-                _buildHint('1-4', 'Select'),
-                _buildHint('A', 'Audio'),
-                _buildHint('M', 'Mute'),
-                _buildHint('SPACE', 'Play/Pause'),
-                _buildHint('F', 'Fullscreen'),
-                _buildHint('BACK', 'Exit'),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildGridSizeButton(int size, IconData icon) {
-    final isActive = _gridSize == size;
+  Widget _buildOverlayButton({
+    required IconData icon,
+    required String label,
+    VoidCallback? onTap,
+    bool isActive = false,
+    bool isDisabled = false,
+    double? minWidth,
+  }) {
+    final borderRadius = BorderRadius.circular(18);
+    final gradient = isActive
+        ? const LinearGradient(
+            colors: [Color(0xFF0057FF), Color(0xFF00C9FF)],
+          )
+        : null;
+
+    final backgroundColor = Colors.white.withValues(alpha: isActive ? 0.18 : 0.08);
+
     return Focus(
       onKeyEvent: (node, event) {
-        if (event is KeyDownEvent && 
+        if (event is KeyDownEvent && !isDisabled && onTap != null &&
             (event.logicalKey == LogicalKeyboardKey.select || 
              event.logicalKey == LogicalKeyboardKey.enter)) {
-          _changeGridSize(size);
+          onTap();
           return KeyEventResult.handled;
         }
         return KeyEventResult.ignored;
@@ -737,39 +835,62 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
       child: Builder(
         builder: (context) {
           final isFocused = Focus.of(context).hasFocus;
-          return Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () => _changeGridSize(size),
-              borderRadius: BorderRadius.circular(12),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  gradient: isActive
-                      ? const LinearGradient(
-                          colors: [Color(0xFF6F5BFF), Color(0xFFB86BFF)],
-                        )
-                      : null,
-                  color: isActive ? null : Colors.white.withValues(alpha: 0.08),
-                  border: Border.all(
-                    color: isFocused 
-                        ? Colors.white
-                        : Colors.white.withValues(alpha: 0.15),
-                    width: isFocused ? 2 : 1,
+          return Opacity(
+            opacity: isDisabled ? 0.45 : 1.0,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: borderRadius,
+                onTap: isDisabled ? null : onTap,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
                   ),
-                  boxShadow: isActive || isFocused
-                      ? [
-                          BoxShadow(
-                            color: isFocused ? const Color(0x88FFFFFF) : const Color(0x550057FF),
-                            blurRadius: 18,
-                            offset: const Offset(0, 6),
+                  constraints: minWidth != null ? BoxConstraints(minWidth: minWidth) : null,
+                  decoration: BoxDecoration(
+                    borderRadius: borderRadius,
+                    gradient: gradient,
+                    color: backgroundColor,
+                    border: Border.all(
+                      color: isFocused 
+                          ? AppTheme.primaryBlue
+                          : Colors.white.withValues(alpha: 0.15),
+                      width: isFocused ? 3 : 1,
+                    ),
+                    boxShadow: isActive || isFocused
+                        ? [
+                            BoxShadow(
+                              color: isFocused ? AppTheme.primaryBlue.withAlpha((0.6 * 255).round()) : const Color(0x550057FF),
+                              blurRadius: 18,
+                              offset: const Offset(0, 6),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        icon,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                      if (label.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          label,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
                           ),
-                        ]
-                      : null,
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-                child: Icon(icon, color: Colors.white, size: 20),
               ),
             ),
           );
@@ -778,18 +899,4 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
     );
   }
 
-  Widget _buildHint(String key, String action) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white.withAlpha((0.2 * 255).round()),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: Colors.white.withAlpha((0.3 * 255).round())),
-      ),
-      child: Text(
-        '$key: $action',
-        style: const TextStyle(color: Colors.white, fontSize: 11),
-      ),
-    );
-  }
 }

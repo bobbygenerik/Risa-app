@@ -10,6 +10,7 @@ import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/service_validator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
+import 'package:iptv_player/widgets/tv_focusable.dart';
 
 class MoviesScreen extends StatefulWidget {
   const MoviesScreen({super.key});
@@ -23,6 +24,7 @@ class _MoviesScreenState extends State<MoviesScreen>
   Timer? _carouselTimer;
   int _featuredIndex = 0;
   final FocusNode _playFocus = FocusNode();
+  final FocusNode _settingsFocus = FocusNode();
   List<Content> _curatedMovies = [];
   final Map<String, String?> _tmdbArtCache = {};
   
@@ -35,6 +37,7 @@ class _MoviesScreenState extends State<MoviesScreen>
     _carouselTimer?.cancel();
     _playFocus.removeListener(_onPlayFocusChange);
     _playFocus.dispose();
+    _settingsFocus.dispose();
     super.dispose();
   }
 
@@ -49,7 +52,12 @@ class _MoviesScreenState extends State<MoviesScreen>
   @override
   bool handleContentFocusRequest() {
     if (!mounted) return false;
-    _playFocus.requestFocus();
+    final contentProvider = Provider.of<ContentProvider>(context, listen: false);
+    if (contentProvider.movies.isEmpty) {
+      _settingsFocus.requestFocus();
+    } else {
+      _playFocus.requestFocus();
+    }
     return true;
   }
 
@@ -79,11 +87,7 @@ class _MoviesScreenState extends State<MoviesScreen>
       // prepare curated list (may perform TMDB lookups)
       _prepareCuratedList();
       _preloadTMDBArtwork();
-      // request focus so Play gets default focus when entering the screen
-      final playFocusNode = _playFocus;
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted) playFocusNode.requestFocus();
-      });
+      // Focus is managed by navigation bar - don't auto-focus content
     });
   }
 
@@ -204,6 +208,7 @@ class _MoviesScreenState extends State<MoviesScreen>
               ),
               const SizedBox(height: AppSizes.xl),
               GoToSettingsButton(
+                focusNode: _settingsFocus,
                 onPressed: () {
                   if (context.mounted) context.go('/settings');
                 },
@@ -288,48 +293,45 @@ class _MoviesScreenState extends State<MoviesScreen>
                 final encodedId = Uri.encodeComponent(movie.id);
                 context.push('/content/$encodedId', extra: movie);
               },
-              child: Container(
-                width: 160,
-                height: 240,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                  border: isFocused
-                      ? Border.all(color: Colors.white, width: 2)
-                      : null,
-                  boxShadow: isFocused
-                      ? [
-                          BoxShadow(
-                            color: Colors.black.withAlpha((0.3 * 255).round()),
-                            offset: const Offset(0, 4),
-                            blurRadius: 8,
-                          ),
-                        ]
-                      : null,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                        child: Stack(
-                          children: [
-                            Container(
-                              color: AppTheme.cardBackground,
-                              child: movie.imageUrl != null
-                                  ? Image.network(
-                                      movie.imageUrl!,
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                      height: double.infinity,
-                                      errorBuilder: (context, error, stackTrace) {
-                                        return _buildPlaceholder(movie.title);
-                                      },
-                                    )
-                                  : _buildPlaceholder(movie.title),
-                            ),
-                            if (movie.watchProgress != null &&
-                                movie.watchProgress! > 0) ...[
+              child: AnimatedScale(
+                scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                duration: TVFocusStyle.animationDuration,
+                curve: TVFocusStyle.animationCurve,
+                child: AnimatedContainer(
+                  duration: TVFocusStyle.animationDuration,
+                  curve: TVFocusStyle.animationCurve,
+                  width: 160,
+                  height: 240,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    boxShadow: isFocused
+                        ? TVFocusStyle.focusedShadow
+                        : TVFocusStyle.defaultShadow,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                          child: Stack(
+                            children: [
+                              Container(
+                                color: AppTheme.cardBackground,
+                                child: movie.imageUrl != null
+                                    ? Image.network(
+                                        movie.imageUrl!,
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return _buildPlaceholder(movie.title);
+                                        },
+                                      )
+                                    : _buildPlaceholder(movie.title),
+                              ),
+                              if (movie.watchProgress != null &&
+                                  movie.watchProgress! > 0) ...[
                               Positioned(
                                 bottom: 0,
                                 left: 0,
@@ -367,7 +369,8 @@ class _MoviesScreenState extends State<MoviesScreen>
                   ],
                 ),
               ),
-            );
+            ),
+          );
           },
         ),
       ),

@@ -83,6 +83,9 @@ class _SettingsScreenState extends State<SettingsScreen>
   final FocusNode _showImagesSwitchFocusNode = FocusNode(debugLabel: 'ShowImagesSwitch');
   final FocusNode _editProfileButtonFocusNode = FocusNode(debugLabel: 'EditProfileButton');
   final FocusNode _browseStorageButtonFocusNode = FocusNode(debugLabel: 'BrowseStorageButton');
+  // First focusable elements for Playback and AI tabs
+  final FocusNode _playbackFirstFocusNode = FocusNode(debugLabel: 'PlaybackFirstSwitch');
+  final FocusNode _aiFirstFocusNode = FocusNode(debugLabel: 'AIFirstSwitch');
   final Map<FocusNode, VoidCallback> _focusNodeListeners = {};
 
   // Playback Settings
@@ -280,6 +283,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     _showImagesSwitchFocusNode.dispose();
     _editProfileButtonFocusNode.dispose();
     _browseStorageButtonFocusNode.dispose();
+    _playbackFirstFocusNode.dispose();
+    _aiFirstFocusNode.dispose();
     super.dispose();
   }
 
@@ -292,12 +297,15 @@ class _SettingsScreenState extends State<SettingsScreen>
       } else if (_tabController!.index == 1) {
         // Account tab
         _editProfileButtonFocusNode.requestFocus();
+      } else if (_tabController!.index == 2) {
+        // Playback tab - focus first switch
+        _playbackFirstFocusNode.requestFocus();
+      } else if (_tabController!.index == 3) {
+        // AI Features tab - focus first switch
+        _aiFirstFocusNode.requestFocus();
       } else if (_tabController!.index == 4) {
         // Recordings tab
         _browseStorageButtonFocusNode.requestFocus();
-      } else {
-        // For other tabs, traverse to the first focusable element in the content scope
-        FocusScope.of(context).nextFocus();
       }
     });
   }
@@ -537,6 +545,113 @@ class _SettingsScreenState extends State<SettingsScreen>
       _menuFocusNodes[idx].requestFocus();
     }
   }
+  
+  Future<void> _handleUpdateEpg() async {
+    // Get EPG URL from preferences
+    final prefs = await SharedPreferences.getInstance();
+    final epgUrl = prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
+    
+    if (epgUrl == null || epgUrl.isEmpty) {
+      if (mounted) {
+        showAppSnackBar(
+          context,
+          const SnackBar(
+            content: Text('No EPG URL configured. Set a custom EPG URL or load a playlist with EPG.'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+      return;
+    }
+    
+    if (mounted) {
+      showAppSnackBar(
+        context,
+        const SnackBar(
+          content: Text('Updating EPG data...'),
+        ),
+      );
+    }
+    
+    try {
+      final epgService = Provider.of<EpgService>(context, listen: false);
+      await epgService.loadEpgFromUrl(epgUrl, forceRefresh: true);
+      
+      if (mounted) {
+        if (epgService.hasData) {
+          showAppSnackBar(
+            context,
+            SnackBar(
+              content: Text('EPG updated: ${epgService.epgData.length} channels loaded'),
+              backgroundColor: AppTheme.accentGreen,
+            ),
+          );
+        } else if (epgService.error != null) {
+          showAppSnackBar(
+            context,
+            SnackBar(
+              content: Text('EPG update failed: ${epgService.error}'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        showAppSnackBar(
+          context,
+          SnackBar(
+            content: Text('EPG update error: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
+  }
+  
+  Future<void> _handleClearEpg() async {
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear EPG Data'),
+        content: const Text(
+          'Are you sure you want to clear all EPG data? This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Clear',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      final epgService = Provider.of<EpgService>(context, listen: false);
+      await epgService.clearCache();
+
+      if (mounted) {
+        showAppSnackBar(
+          context,
+          const SnackBar(
+            content: Text('EPG data cleared'),
+            backgroundColor: AppTheme.accentGreen,
+          ),
+        );
+      }
+    }
+  }
 
   void requestFirstContentFocus() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -676,7 +791,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         _buildSectionCard(
           title: 'Video Settings',
           children: [
-            _buildSwitchTile('Hardware Acceleration', _hardwareAcceleration),
+            _buildSwitchTile('Hardware Acceleration', _hardwareAcceleration, focusNode: _playbackFirstFocusNode),
             _buildSwitchTile('Hardware Decoding', _hardwareDecoding),
             _buildSwitchTile(
               'Hardware Post-Processing',
@@ -1586,6 +1701,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                     focusNode: _updateEpgButtonFocusNode,
                     onKeyEvent: (node, event) {
                       if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                      if (event.logicalKey == LogicalKeyboardKey.select ||
+                          event.logicalKey == LogicalKeyboardKey.enter) {
+                        // Trigger the Update EPG action
+                        _handleUpdateEpg();
+                        return KeyEventResult.handled;
+                      }
                       if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
                         requestFirstSidebarFocus();
                         return KeyEventResult.handled;
@@ -1630,14 +1751,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                                   : null,
                             ),
                             child: ElevatedButton.icon(
-                              onPressed: () {
-                                showAppSnackBar(
-                                  context,
-                                  const SnackBar(
-                                    content: Text('Updating EPG data...'),
-                                  ),
-                                );
-                              },
+                              onPressed: _handleUpdateEpg,
                               icon: const Icon(Icons.refresh),
                               label: const Text('Update EPG'),
                               style: ElevatedButton.styleFrom(
@@ -1657,6 +1771,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                     focusNode: _clearEpgButtonFocusNode,
                     onKeyEvent: (node, event) {
                       if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                      if (event.logicalKey == LogicalKeyboardKey.select ||
+                          event.logicalKey == LogicalKeyboardKey.enter) {
+                        // Trigger the Clear EPG action
+                        _handleClearEpg();
+                        return KeyEventResult.handled;
+                      }
                       if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
                         _updateEpgButtonFocusNode.requestFocus();
                         return KeyEventResult.handled;
@@ -2846,6 +2966,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               subtitle: 'FREE API - Automatic subtitle downloading',
               children: [
                 Focus(
+                  focusNode: _aiFirstFocusNode,
                   onKeyEvent: (node, event) {
                     if (event is! KeyDownEvent) return KeyEventResult.ignored;
                     if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
@@ -3915,10 +4036,11 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildSwitchTile(String title, bool value, {String? subtitle}) {
+  Widget _buildSwitchTile(String title, bool value, {String? subtitle, FocusNode? focusNode}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSizes.sm),
       child: Focus(
+        focusNode: focusNode,
         onKeyEvent: (node, event) {
           if (event is! KeyDownEvent) return KeyEventResult.ignored;
           if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
@@ -4160,44 +4282,41 @@ class _SettingsScreenState extends State<SettingsScreen>
   ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSizes.md),
-      child: Focus(
-        onKeyEvent: (node, event) {
-          if (event is! KeyDownEvent) return KeyEventResult.ignored;
-          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-            requestFirstSidebarFocus();
-            return KeyEventResult.handled;
-          }
-          return KeyEventResult.ignored;
-        },
-        child: Builder(
-          builder: (context) {
-            final isFocused = Focus.of(context).hasFocus;
-            if (isFocused) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                Scrollable.ensureVisible(
-                  context,
-                  duration: const Duration(milliseconds: 150),
-                  curve: Curves.easeOut,
-                  alignment: 0.6,
-                );
-              });
-            }
-            return Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                border: isFocused
-                    ? Border.all(color: AppTheme.primaryBlue, width: 3)
-                    : null,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label, style: Theme.of(context).textTheme.bodyMedium),
-                  const SizedBox(height: AppSizes.sm),
-                  TVFocusable(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(height: AppSizes.sm),
+          Focus(
+            onKeyEvent: (node, event) {
+              if (event is! KeyDownEvent) return KeyEventResult.ignored;
+              if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                requestFirstSidebarFocus();
+                return KeyEventResult.handled;
+              }
+              return KeyEventResult.ignored;
+            },
+            child: Builder(
+              builder: (context) {
+                final isFocused = Focus.of(context).hasFocus;
+                if (isFocused) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    Scrollable.ensureVisible(
+                      context,
+                      duration: const Duration(milliseconds: 150),
+                      curve: Curves.easeOut,
+                      alignment: 0.6,
+                    );
+                  });
+                }
+                return Container(
+                  decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
-                    enableScale: false,
-                    child: DropdownButtonFormField<String>(
+                    border: isFocused
+                        ? Border.all(color: AppTheme.primaryBlue, width: 3)
+                        : null,
+                  ),
+                  child: DropdownButtonFormField<String>(
                       initialValue: value,
                       dropdownColor: AppTheme.darkBackgroundOpacity(0.95),
                       decoration: InputDecoration(
@@ -4219,21 +4338,20 @@ class _SettingsScreenState extends State<SettingsScreen>
                           vertical: 8,
                         ),
                       ),
-                      items: items.map((item) {
-                        return DropdownMenuItem(value: item, child: Text(item));
-                      }).toList(),
-                      onChanged: onChanged,
-                      // Ensure dropdown opens on focus + select
-                      onTap: () {
-                         // Default behavior
-                      },
-                    ),
+                    items: items.map((item) {
+                      return DropdownMenuItem(value: item, child: Text(item));
+                    }).toList(),
+                    onChanged: onChanged,
+                    // Ensure dropdown opens on focus + select
+                    onTap: () {
+                       // Default behavior
+                    },
                   ),
-                ],
-              ),
-            );
-          },
-        ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

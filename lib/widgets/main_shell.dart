@@ -46,6 +46,14 @@ class _MainShellState extends State<MainShell> {
       }
     });
 
+    // Ensure navbar gets focus on initial load (after a short delay to let content build)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) _requestNavFocus();
+      });
+    });
+
     if (kForceSearchPopup) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || _autoSearchTriggered) return;
@@ -74,6 +82,18 @@ class _MainShellState extends State<MainShell> {
   // Overflow menu handled within `TopNavigationBar` now; removed temporary handler
 
   @override
+  void didUpdateWidget(MainShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If the active tab changes (e.g. returning from a full-screen page like Settings),
+    // we want to ensure focus is restored to the navigation bar, specifically the active tab.
+    if (widget.activeTab != oldWidget.activeTab) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _requestNavFocus();
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -90,33 +110,41 @@ class _MainShellState extends State<MainShell> {
         ),
         child: Column(
           children: [
-            // Fixed navigation bar - never changes
-            TopNavigationBar(
-              activeTab: widget.activeTab ?? 'home',
-              tabs: [
-                NavTab(id: 'home', label: 'Live TV', icon: Icons.live_tv, route: '/home'),
-                NavTab(id: 'movies', label: 'Movies', icon: Icons.movie, route: '/movies'),
-                NavTab(id: 'series', label: 'Series', icon: Icons.tv, route: '/series'),
-              ],
-              currentTime: _currentTime,
-              showLogoAndTime: true,
-              onSearch: _showSearchDialog,
-              onFocusContent: _requestContentFocus,
-              onNavFocusRegistration: _setNavFocusRequester,
+            // Fixed navigation bar - wrapped in FocusTraversalGroup to prevent
+            // focus from escaping to content when pressing left/right
+            FocusTraversalGroup(
+              policy: WidgetOrderTraversalPolicy(),
+              child: TopNavigationBar(
+                activeTab: widget.activeTab ?? 'home',
+                tabs: [
+                  NavTab(id: 'home', label: 'Live TV', icon: Icons.live_tv, route: '/home'),
+                  NavTab(id: 'movies', label: 'Movies', icon: Icons.movie, route: '/movies'),
+                  NavTab(id: 'series', label: 'Series', icon: Icons.tv, route: '/series'),
+                ],
+                currentTime: _currentTime,
+                showLogoAndTime: true,
+                onSearch: _showSearchDialog,
+                onFocusContent: _requestContentFocus,
+                onNavFocusRegistration: _setNavFocusRequester,
+              ),
             ),
             // Content area - changes when navigating between tabs
             Expanded(
-              child: Focus(
-                canRequestFocus: false,
-                skipTraversal: true,
-                onKeyEvent: _handleContentKeyEvent,
-                child: FocusScope(
-                  node: _contentFocusScope,
-                  child: ContentFocusProvider(
-                    registerFocusCallback: _registerContentFocusCallback,
-                    unregisterFocusCallback: _unregisterContentFocusCallback,
-                    requestNavFocus: _requestNavFocus,
-                    child: widget.child,
+              child: FocusTraversalGroup(
+                policy: WidgetOrderTraversalPolicy(),
+                child: Focus(
+                  canRequestFocus: false,
+                  skipTraversal: true,
+                  onKeyEvent: _handleContentKeyEvent,
+                  child: FocusScope(
+                    node: _contentFocusScope,
+                    autofocus: false,
+                    child: ContentFocusProvider(
+                      registerFocusCallback: _registerContentFocusCallback,
+                      unregisterFocusCallback: _unregisterContentFocusCallback,
+                      requestNavFocus: _requestNavFocus,
+                      child: widget.child,
+                    ),
                   ),
                 ),
               ),

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
+import 'package:iptv_player/widgets/tv_focusable.dart';
 
 class HelpAboutScreen extends StatefulWidget {
   const HelpAboutScreen({super.key});
@@ -201,24 +202,29 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
       child: Builder(
         builder: (context) {
           final isFocused = Focus.of(context).hasFocus;
-          return AnimatedContainer(
-            duration: AppDurations.fast,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            decoration: BoxDecoration(
-              gradient: isSelected ? AppTheme.brandGradient : null,
-              color: isSelected ? null : Colors.transparent,
-              borderRadius: BorderRadius.circular(8),
-              border: isFocused ? Border.all(color: AppTheme.primaryBlue, width: 2) : null,
-            ),
-            child: Text(
-              label,
-              style: TextStyle(
-                color: AppTheme.textPrimary,
-                fontWeight: (isSelected || isFocused) ? FontWeight.bold : FontWeight.normal,
-                fontSize: 16,
+          return AnimatedScale(
+            scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+            duration: TVFocusStyle.animationDuration,
+            curve: TVFocusStyle.animationCurve,
+            child: AnimatedContainer(
+              duration: AppDurations.fast,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: isSelected ? AppTheme.brandGradient : null,
+                color: isSelected ? null : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+              ),
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontWeight: (isSelected || isFocused) ? FontWeight.bold : FontWeight.normal,
+                  fontSize: 16,
+                ),
               ),
             ),
-          ); // AnimatedContainer closes
+          ); // AnimatedScale closes
         }, // builder function closes
       ), // Builder widget closes
     ), // Focus widget closes
@@ -349,7 +355,7 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
         const SizedBox(height: AppSizes.md),
         _buildFeatureItem(Icons.live_tv, 'Live TV streaming'),
         _buildFeatureItem(Icons.movie, 'Movies & Series on demand'),
-        _buildFeatureItem(Icons.calendar_today, 'Electronic Program Guide (EPG)'),
+        _buildFeatureItem(Icons.dvr, 'Electronic Program Guide (EPG)'),
         _buildFeatureItem(Icons.favorite, 'Favorites management'),
         _buildFeatureItem(Icons.search, 'Quick search'),
         _buildFeatureItem(Icons.video_library, 'Recording support'),

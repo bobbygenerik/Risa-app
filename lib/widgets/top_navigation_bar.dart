@@ -57,6 +57,8 @@ class NavTab {
 class _TopNavigationBarState extends State<TopNavigationBar> {
   late List<FocusNode> _tabFocusNodes;
   late int _activeTabIndex;
+  int _focusedTabIndex = 0; // Track which tab has visual focus (may differ from active during navigation)
+  bool _isNavigating = false; // Block focus stealing during navigation
   late FocusNode _searchButtonFocusNode;
   late FocusNode _overflowButtonFocusNode;
   final GlobalKey<PopupMenuButtonState<String>> _overflowMenuKey =
@@ -69,6 +71,7 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
     _searchButtonFocusNode = FocusNode(debugLabel: 'NavSearchButton');
     _overflowButtonFocusNode = FocusNode(debugLabel: 'NavOverflowButton');
     _activeTabIndex = _resolveActiveTabIndex(widget.activeTab);
+    _focusedTabIndex = _activeTabIndex;
     WidgetsBinding.instance.addPostFrameCallback((_) => _focusActiveTab());
     widget.onNavFocusRegistration?.call(_requestActiveTabFocus);
   }
@@ -79,6 +82,10 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
     final newIndex = _resolveActiveTabIndex(widget.activeTab);
     if (newIndex != _activeTabIndex) {
       _activeTabIndex = newIndex;
+      // Only update focused index if we're not in the middle of navigating
+      if (!_isNavigating) {
+        _focusedTabIndex = newIndex;
+      }
       WidgetsBinding.instance.addPostFrameCallback((_) => _focusActiveTab());
     }
     if (oldWidget.onNavFocusRegistration != widget.onNavFocusRegistration &&
@@ -307,14 +314,12 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                           if (value == 'settings') router.go('/settings');
                           if (value == 'favorites') router.go('/favorites');
                           if (value == 'downloads') router.go('/downloads');
-                          if (value == 'guide') router.go('/epg');
                         });
                       },
                       itemBuilder: (context) => [
                         PopupMenuItem(value: 'settings', child: Row(children: [Icon(Icons.settings, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Settings', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
                         PopupMenuItem(value: 'favorites', child: Row(children: [Icon(Icons.favorite_outline, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Favorites', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
                         PopupMenuItem(value: 'downloads', child: Row(children: [Icon(Icons.download, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Downloads', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
-                        PopupMenuItem(value: 'guide', child: Row(children: [Icon(Icons.schedule, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Guide', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
                       ],
                     ),
                   ),
@@ -386,7 +391,13 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
   }
 
   bool _requestActiveTabFocus() {
-    return _focusActiveTab(force: true);
+    // Force focus on the active tab
+    if (_tabFocusNodes.isNotEmpty) {
+      final index = _activeTabIndex.clamp(0, _tabFocusNodes.length - 1);
+      _tabFocusNodes[index].requestFocus();
+      return true;
+    }
+    return false;
   }
 
   void _handleContentFocusFromNav(FocusNode origin) {
@@ -394,6 +405,45 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
     if (!moved && origin.canRequestFocus) {
       origin.requestFocus();
     }
+  }
+
+  /// Navigate to a tab by index - handles focus, navigation, and focus restoration
+  void _navigateToTab(int targetIndex) {
+    if (targetIndex < 0 || targetIndex >= widget.tabs.length) return;
+    
+    final tab = widget.tabs[targetIndex];
+    final isAlreadyActive = widget.activeTab == tab.id;
+    
+    debugPrint('nav_focus: _navigateToTab to $targetIndex (${tab.id}), isAlreadyActive=$isAlreadyActive');
+    
+    // Set navigating flag to block focus stealing
+    _isNavigating = true;
+    _focusedTabIndex = targetIndex;
+    
+    // Focus the target tab
+    _tabFocusNodes[targetIndex].requestFocus();
+    
+    // Navigate if not already on this route
+    if (!isAlreadyActive) {
+      final router = GoRouter.of(context);
+      router.go(tab.route);
+    }
+    
+    // After navigation settles, restore focus and clear the flag
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _tabFocusNodes[targetIndex].requestFocus();
+        // Clear navigating flag after a delay to let the new screen settle
+        Future.delayed(const Duration(milliseconds: 150), () {
+          if (mounted) {
+            _isNavigating = false;
+            debugPrint('nav_focus: Navigation complete, focus protection disabled');
+          }
+        });
+      });
+    });
   }
 
   Widget _buildTabButton(int index, double scale) {
@@ -404,12 +454,28 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
 
     return Focus(
       focusNode: _tabFocusNodes[index],
-      onFocusChange: (_) => setState(() {}),
+      onFocusChange: (hasFocus) {
+        // During navigation, block any focus stealing attempts
+        if (_isNavigating && !hasFocus) {
+          debugPrint('nav_focus: Tab $index blocked focus loss during navigation');
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted || !_isNavigating) return;
+            _tabFocusNodes[_focusedTabIndex].requestFocus();
+          });
+          return;
+        }
+        
+        if (hasFocus) {
+          _focusedTabIndex = index;
+        }
+        setState(() {});
+        debugPrint('nav_focus: Tab $index (${tab.id}) focus changed to $hasFocus, isActive=$isActive');
+      },
       onKeyEvent: (node, event) {
         if (event is! KeyDownEvent) return KeyEventResult.ignored;
         if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
           final prev = (index - 1) < 0 ? widget.tabs.length - 1 : index - 1;
-          _tabFocusNodes[prev].requestFocus();
+          _navigateToTab(prev);
           return KeyEventResult.handled;
         }
         if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
@@ -419,7 +485,11 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
             return KeyEventResult.handled;
           }
           final next = (index + 1) % widget.tabs.length;
-          _tabFocusNodes[next].requestFocus();
+          _navigateToTab(next);
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+          // Stay in nav bar - don't let focus escape upward
           return KeyEventResult.handled;
         }
         if (event.logicalKey == LogicalKeyboardKey.arrowDown) {

@@ -72,6 +72,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
   // TV Remote control
   final FocusNode _playerFocusNode = FocusNode();
+  final FocusScopeNode _controlsFocusScope = FocusScopeNode();
   bool _controlsVisible = true;
   Timer? _controlsTimer;
 
@@ -162,15 +163,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
       // Convert HTTPS to HTTP for streams to avoid SSL handshake errors
       // Many IPTV providers have SSL certificate issues
-      String processedUrl = widget.videoUrl;
-      if (processedUrl.startsWith('https://')) {
-        processedUrl = processedUrl.replaceFirst('https://', 'http://');
-        debugPrint('VideoPlayer: Converted HTTPS to HTTP for SSL bypass: $processedUrl');
-      }
-
       // Initialize video player
       _videoPlayerController = VideoPlayerController.networkUrl(
-        Uri.parse(processedUrl),
+        Uri.parse(widget.videoUrl),
         videoPlayerOptions: VideoPlayerOptions(
           mixWithOthers: false,
           allowBackgroundPlayback: false,
@@ -178,7 +173,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         httpHeaders: {
           'User-Agent':
               'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Referer': processedUrl,
+          'Referer': widget.videoUrl,
         },
       );
 
@@ -208,10 +203,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         allowMuting: true,
         showControls: false,
         showControlsOnInitialize: false,
-        placeholder: Container(
-          color: Colors.black,
-          child: const Center(child: CircularProgressIndicator()),
-        ),
+        placeholder: null,
         errorBuilder: (context, errorMessage) {
           return Center(
             child: Column(
@@ -274,7 +266,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
   void _startControlsTimer() {
     _controlsTimer?.cancel();
-    _controlsTimer = Timer(const Duration(seconds: 3), () {
+    _controlsTimer = Timer(const Duration(seconds: 5), () {
       if (mounted) {
         setState(() => _controlsVisible = false);
       }
@@ -284,11 +276,21 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   void _showControls() {
     setState(() => _controlsVisible = true);
     _startControlsTimer();
+    // Move focus to controls overlay
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _controlsVisible) {
+        _controlsFocusScope.requestFocus();
+      }
+    });
   }
 
   void _hideControls() {
     _controlsTimer?.cancel();
     setState(() => _controlsVisible = false);
+    // Return focus to player (background) to capture hotkeys
+    if (mounted) {
+      _playerFocusNode.requestFocus();
+    }
   }
 
   void _togglePlayPause() {
@@ -299,7 +301,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       } else {
         _videoPlayerController.play();
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error toggling play/pause: $e');
+    }
   }
 
   void _seekRelative(Duration offset) {
@@ -311,7 +315,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       if (target < Duration.zero) target = Duration.zero;
       if (target > duration) target = duration;
       _videoPlayerController.seekTo(target);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error seeking: $e');
+    }
   }
 
   void _openSubtitleSelector() {
@@ -350,24 +356,38 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   void _handleKeyPress(KeyEvent event) {
     if (event is! KeyDownEvent) return;
 
-    // If player not ready yet, ignore key presses to avoid accessing
-    // the controller before initialization.
-    if (!_isInitialized) return;
-
     final bool isBackKey = event.logicalKey == LogicalKeyboardKey.escape ||
         event.logicalKey == LogicalKeyboardKey.goBack;
 
-    // If overlay is visible and user presses back, hide it (don't exit)
-    if (_controlsVisible && isBackKey) {
-      _hideControls();
-      return;
+    // Always allow back key to exit the player (even during error state)
+    if (isBackKey) {
+      // If overlay is visible and no error, hide overlay first
+      if (_controlsVisible && !_hasError) {
+        _hideControls();
+        return;
+      }
+      // If overlay is not visible and no error, show it first
+      if (!_controlsVisible && !_hasError && _isInitialized) {
+        _showControls();
+        return;
+      }
+      // If there's an error OR overlay visible, exit the player
+      if (_hasError || _controlsVisible) {
+        if (widget.isLive && widget.channel != null) {
+          context.go(
+            '/epg',
+            extra: {'channel': widget.channel, 'continuePlayback': true},
+          );
+        } else {
+          Navigator.of(context).pop();
+        }
+        return;
+      }
     }
 
-    // If overlay is not visible and back is pressed, show it first
-    if (!_controlsVisible && isBackKey) {
-      _showControls();
-      return;
-    }
+    // If player not ready yet, ignore other key presses to avoid accessing
+    // the controller before initialization.
+    if (!_isInitialized) return;
 
     // For all other keys, show the overlay if hidden
     if (!_controlsVisible) {
@@ -383,6 +403,18 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       return;
     }
 
+    // When overlay is hidden, up/down should switch channels for live TV
+    if (!_controlsVisible && widget.isLive && widget.channel != null) {
+      if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+        _switchToPreviousChannel();
+        return;
+      }
+      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+        _switchToNextChannel();
+        return;
+      }
+    }
+
     switch (event.logicalKey) {
       case LogicalKeyboardKey.select:
       case LogicalKeyboardKey.enter:
@@ -395,12 +427,13 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
             } else {
               _videoPlayerController.play();
             }
-          } catch (_) {}
+          } catch (e) {
+            debugPrint('Error toggling play/pause (key): $e');
+          }
         }
         break;
 
       case LogicalKeyboardKey.mediaTrackNext:
-      case LogicalKeyboardKey.channelUp:
         // Next audio track (cycle and switch)
         if ((widget.audioTracks != null && widget.audioTracks!.isNotEmpty) ||
             (_useVlcBackend && _vlcAudioTrackLabels.isNotEmpty)) {
@@ -414,8 +447,14 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         }
         break;
 
+      case LogicalKeyboardKey.channelUp:
+        // Channel up switches to previous channel (lower number)
+        if (widget.isLive && widget.channel != null) {
+          _switchToPreviousChannel();
+        }
+        break;
+
       case LogicalKeyboardKey.mediaTrackPrevious:
-      case LogicalKeyboardKey.channelDown:
         // Previous audio track (cycle and switch)
         if ((widget.audioTracks != null && widget.audioTracks!.isNotEmpty) ||
             (_useVlcBackend && _vlcAudioTrackLabels.isNotEmpty)) {
@@ -429,6 +468,13 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
             }
           });
           _switchAudioTrack(_selectedAudioTrack);
+        }
+        break;
+
+      case LogicalKeyboardKey.channelDown:
+        // Channel down switches to next channel (higher number)
+        if (widget.isLive && widget.channel != null) {
+          _switchToNextChannel();
         }
         break;
 
@@ -448,20 +494,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         }
         break;
 
-      case LogicalKeyboardKey.escape:
-      case LogicalKeyboardKey.goBack:
-        // Exit player - navigate to EPG with mini player if this is live TV
-        if (widget.isLive && widget.channel != null) {
-          // For live TV, go back to EPG with mini player
-          context.go(
-            '/epg',
-            extra: {'channel': widget.channel, 'continuePlayback': true},
-          );
-        } else {
-          // For VOD, just pop
-          Navigator.of(context).pop();
-        }
-        break;
+      // Back key is handled above, before the switch statement
     }
   }
 
@@ -811,6 +844,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
     // On Android, prefer the native ExoPlayer platform view for better native
     // audio-track support and performance. This will be a no-op on other platforms.
+    //
+    // NOTE: NativeExoPlayer disabled to fix color tint issues on some Android TV devices.
+    // The 'fvp' package (registered in main.dart) provides correct color handling via FFmpeg.
+    /*
     if (Platform.isAndroid) {
       if (!_nativeExoCapabilityResolved) {
         return const Center(child: CircularProgressIndicator());
@@ -832,6 +869,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         );
       }
     }
+    */
     // Default: Chewie/video_player
     if (_chewieController == null) {
       return const Center(child: CircularProgressIndicator());
@@ -1091,26 +1129,39 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   Widget _buildControlsOverlay() {
-    return FocusTraversalGroup(
-      policy: ReadingOrderTraversalPolicy(),
-      child: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0x99050710), Color(0x990d1140)],
+    // Reset timer on any key activity within controls to prevent overlay from hiding during navigation
+    return KeyboardListener(
+      focusNode: FocusNode(skipTraversal: true),
+      onKeyEvent: (event) {
+        // Reset the timer on any key press to keep controls visible while navigating
+        if (event is KeyDownEvent) {
+          _startControlsTimer();
+        }
+      },
+      child: FocusScope(
+        node: _controlsFocusScope,
+        child: FocusTraversalGroup(
+          policy: ReadingOrderTraversalPolicy(),
+          child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0x99050710), Color(0x990d1140)],
+            ),
+          ),
+          child: Column(
+            children: [
+              // Top bar with title and status
+              _buildTopBar(),
+              const Spacer(),
+              // Bottom bar with hints
+              _buildBottomBar(),
+            ],
           ),
         ),
-        child: Column(
-          children: [
-            // Top bar with title and status
-            _buildTopBar(),
-            const Spacer(),
-            // Bottom bar with hints
-            _buildBottomBar(),
-          ],
-        ),
       ),
+    ),
     );
   }
 
@@ -1123,7 +1174,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           children: [
             // Back button
             Focus(
-              autofocus: true,
               onKeyEvent: (node, event) {
                 if (event is KeyDownEvent) {
                   if (event.logicalKey == LogicalKeyboardKey.select ||
@@ -1140,7 +1190,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                   return Container(
                     decoration: isFocused
                         ? BoxDecoration(
-                            border: Border.all(color: Colors.white, width: 2),
+                            border: Border.all(color: AppTheme.primaryBlue, width: 2),
                             borderRadius: BorderRadius.circular(24),
                           )
                         : null,
@@ -1183,6 +1233,52 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
               ),
             ),
             const SizedBox(width: 12),
+            // Guide button (for Live TV)
+            if (widget.isLive && widget.channel != null)
+              Focus(
+                onKeyEvent: (node, event) {
+                  if (event is KeyDownEvent) {
+                    if (event.logicalKey == LogicalKeyboardKey.select ||
+                        event.logicalKey == LogicalKeyboardKey.enter) {
+                      context.go(
+                        '/epg',
+                        extra: {
+                          'channel': widget.channel,
+                          'continuePlayback': true,
+                        },
+                      );
+                      return KeyEventResult.handled;
+                    }
+                  }
+                  return KeyEventResult.ignored;
+                },
+                child: Builder(
+                  builder: (context) {
+                    final isFocused = Focus.of(context).hasFocus;
+                    return Container(
+                      decoration: isFocused
+                          ? BoxDecoration(
+                              border: Border.all(color: AppTheme.primaryBlue, width: 2),
+                              borderRadius: BorderRadius.circular(24),
+                            )
+                          : null,
+                      child: IconButton(
+                        icon: const Icon(Icons.tv_rounded, color: Colors.white, size: 28),
+                        tooltip: 'Guide',
+                        onPressed: () {
+                          context.go(
+                            '/epg',
+                            extra: {
+                              'channel': widget.channel,
+                              'continuePlayback': true,
+                            },
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
             // Status indicators
             if (widget.isLive)
               Container(
@@ -1271,99 +1367,66 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         _selectedSubtitleIndex >= 0 ||
         _selectedSubtitleIndex == _subtitleIndexTranscription;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 24,
-            offset: Offset(0, 12),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // First row: Rewind, Play/Pause, Fast Forward (centered)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildControlButton(
-                icon: Icons.replay_10,
-                label: '-10s',
-                onTap: () => _seekRelative(const Duration(seconds: -10)),
-              ),
-              const SizedBox(width: 12),
-              _buildControlButton(
-                icon: isPlaying ? Icons.pause : Icons.play_arrow,
-                label: isPlaying ? 'Pause' : 'Play',
-                onTap: _togglePlayPause,
-                isPrimary: true,
-              ),
-              const SizedBox(width: 12),
-              _buildControlButton(
-                icon: Icons.forward_10,
-                label: '+10s',
-                onTap: () => _seekRelative(const Duration(seconds: 10)),
-              ),
-            ],
+          // Left side buttons (Subtitles matches Multi-View width, Audio matches PiP width)
+          _buildControlButton(
+            icon: Icons.subtitles,
+            label: 'Subtitles',
+            onTap: _openSubtitleSelector,
+            isActive: subtitleActive,
+            minWidth: 130,  // Match Multi-View
           ),
-          const SizedBox(height: 12),
-          // Second row: Other controls
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              _buildControlButton(
-                icon: Icons.subtitles,
-                label: 'Subtitles',
-                onTap: _openSubtitleSelector,
-                isActive: subtitleActive,
-              ),
-              _buildControlButton(
-                icon: Icons.multitrack_audio,
-                label: 'Audio',
-                onTap: hasAudioTracks ? _openAudioSelector : null,
-                isActive: _showAudioSelector,
-                isDisabled: !hasAudioTracks,
-              ),
-              _buildControlButton(
-                icon: Icons.tv_rounded,
-                label: 'Guide',
-                onTap: () {
-                  if (widget.isLive && widget.channel != null) {
-                    context.go(
-                      '/epg',
-                      extra: {
-                        'channel': widget.channel,
-                        'continuePlayback': true,
-                      },
-                    );
-                  } else {
-                    Navigator.of(context).pop();
-                  }
-                },
-              ),
-              if (_isPipSupported)
-                _buildControlButton(
-                  icon: Icons.picture_in_picture_alt,
-                  label: 'PiP',
-                  onTap: _togglePip,
-                  isActive: _isPipActive,
-                ),
-              if (widget.channel != null)
-                _buildControlButton(
-                  icon: Icons.grid_view,
-                  label: 'Multi-View',
-                  onTap: _openMultiView,
-                ),
-            ],
+          const SizedBox(width: 8),
+          _buildControlButton(
+            icon: Icons.multitrack_audio,
+            label: 'Audio',
+            onTap: hasAudioTracks ? _openAudioSelector : null,
+            isActive: _showAudioSelector,
+            isDisabled: !hasAudioTracks,
+            minWidth: 90,  // Match PiP
           ),
+          const SizedBox(width: 16),
+          // Center play controls
+          _buildControlButton(
+            icon: Icons.replay_10,
+            label: '-10s',
+            onTap: () => _seekRelative(const Duration(seconds: -10)),
+          ),
+          const SizedBox(width: 8),
+          _buildControlButton(
+            icon: isPlaying ? Icons.pause : Icons.play_arrow,
+            label: isPlaying ? 'Pause' : 'Play',
+            onTap: _togglePlayPause,
+          ),
+          const SizedBox(width: 8),
+          _buildControlButton(
+            icon: Icons.forward_10,
+            label: '+10s',
+            onTap: () => _seekRelative(const Duration(seconds: 10)),
+          ),
+          const SizedBox(width: 16),
+          // Right side buttons (PiP matches Audio width, Multi-View matches Subtitles width)
+          if (_isPipSupported)
+            _buildControlButton(
+              icon: Icons.picture_in_picture_alt,
+              label: 'PiP',
+              onTap: _togglePip,
+              isActive: _isPipActive,
+              minWidth: 90,  // Match Audio
+            ),
+          if (_isPipSupported && widget.channel != null)
+            const SizedBox(width: 8),
+          if (widget.channel != null)
+            _buildControlButton(
+              icon: Icons.grid_view,
+              label: 'Multi-View',
+              onTap: _openMultiView,
+              minWidth: 130,  // Match Subtitles
+            ),
         ],
       ),
     );
@@ -1373,24 +1436,18 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     required IconData icon,
     required String label,
     VoidCallback? onTap,
-    bool isPrimary = false,
     bool isActive = false,
     bool isDisabled = false,
+    double? minWidth,
   }) {
     final borderRadius = BorderRadius.circular(18);
-    final gradient = isPrimary
+    final gradient = isActive
         ? const LinearGradient(
-            colors: [Color(0xFF6F5BFF), Color(0xFFB86BFF)],
+            colors: [Color(0xFF0057FF), Color(0xFF00C9FF)],
           )
-        : (isActive
-            ? const LinearGradient(
-                colors: [Color(0xFF0057FF), Color(0xFF00C9FF)],
-              )
-            : null);
+        : null;
 
-    final backgroundColor = isPrimary
-      ? null
-      : Colors.white.withValues(alpha: isActive ? 0.18 : 0.08);
+    final backgroundColor = Colors.white.withValues(alpha: isActive ? 0.18 : 0.08);
 
     return Focus(
       onKeyEvent: (node, event) {
@@ -1414,24 +1471,25 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                 onTap: isDisabled ? null : onTap,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isPrimary ? 22 : 16,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
                     vertical: 12,
                   ),
+                  constraints: minWidth != null ? BoxConstraints(minWidth: minWidth) : null,
                   decoration: BoxDecoration(
                     borderRadius: borderRadius,
                     gradient: gradient,
                     color: backgroundColor,
                     border: Border.all(
                       color: isFocused 
-                          ? Colors.white
-                          : Colors.white.withValues(alpha: isPrimary ? 0.0 : 0.15),
-                      width: isFocused ? 2 : 1,
+                          ? AppTheme.primaryBlue
+                          : Colors.white.withValues(alpha: 0.15),
+                      width: isFocused ? 3 : 1,
                     ),
-                    boxShadow: isPrimary || isActive || isFocused
+                    boxShadow: isActive || isFocused
                         ? [
                             BoxShadow(
-                              color: isFocused ? const Color(0x88FFFFFF) : const Color(0x550057FF),
+                              color: isFocused ? AppTheme.primaryBlue.withAlpha((0.6 * 255).round()) : const Color(0x550057FF),
                               blurRadius: 18,
                               offset: const Offset(0, 6),
                             ),
@@ -1444,16 +1502,16 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                       Icon(
                         icon,
                         color: Colors.white,
-                        size: isPrimary ? 26 : 22,
+                        size: 22,
                       ),
                       if (label.isNotEmpty) ...[
                         const SizedBox(width: 8),
                         Text(
                           label,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.white,
-                            fontSize: isPrimary ? 16 : 14,
-                            fontWeight: isPrimary ? FontWeight.w600 : FontWeight.w500,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],

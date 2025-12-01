@@ -10,6 +10,7 @@ import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/service_validator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
+import 'package:iptv_player/widgets/tv_focusable.dart';
 
 class SeriesScreen extends StatefulWidget {
   const SeriesScreen({super.key});
@@ -23,6 +24,7 @@ class _SeriesScreenState extends State<SeriesScreen>
   Timer? _carouselTimer;
   int _featuredIndex = 0;
   final FocusNode _watchFocus = FocusNode();
+  final FocusNode _settingsFocus = FocusNode();
   List<Content> _curatedSeries = [];
   final Map<String, String?> _tmdbArtCache = {};
   
@@ -35,6 +37,7 @@ class _SeriesScreenState extends State<SeriesScreen>
     _carouselTimer?.cancel();
     _watchFocus.removeListener(_onWatchFocusChange);
     _watchFocus.dispose();
+    _settingsFocus.dispose();
     super.dispose();
   }
 
@@ -49,7 +52,12 @@ class _SeriesScreenState extends State<SeriesScreen>
   @override
   bool handleContentFocusRequest() {
     if (!mounted) return false;
-    _watchFocus.requestFocus();
+    final contentProvider = Provider.of<ContentProvider>(context, listen: false);
+    if (contentProvider.series.isEmpty) {
+      _settingsFocus.requestFocus();
+    } else {
+      _watchFocus.requestFocus();
+    }
     return true;
   }
 
@@ -62,10 +70,7 @@ class _SeriesScreenState extends State<SeriesScreen>
       _startCarousel();
       _prepareCuratedSeriesList();
       _preloadTMDBArtwork();
-      final focusNode = _watchFocus;
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (mounted) focusNode.requestFocus();
-      });
+      // Focus is managed by navigation bar - don't auto-focus content
     });
   }
 
@@ -292,6 +297,7 @@ class _SeriesScreenState extends State<SeriesScreen>
               ),
               const SizedBox(height: AppSizes.xl),
               GoToSettingsButton(
+                focusNode: _settingsFocus,
                 onPressed: () {
                   if (context.mounted) context.go('/settings');
                 },
@@ -393,89 +399,87 @@ class _SeriesScreenState extends State<SeriesScreen>
                 final encodedId = Uri.encodeComponent(firstEpisode.id);
                 context.push('/content/$encodedId', extra: firstEpisode);
               },
-              child: Container(
-                width: 160,
-                height: 240,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                  border: isFocused
-                      ? Border.all(color: Colors.white, width: 2)
-                      : null,
-                  boxShadow: isFocused
-                      ? [
-                          BoxShadow(
-                            color: Colors.black.withAlpha((0.3 * 255).round()),
-                            offset: const Offset(0, 4),
-                            blurRadius: 8,
-                          ),
-                        ]
-                      : null,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                        child: Stack(
-                          children: [
-                            Container(
-                              color: AppTheme.cardBackground,
-                              child: firstEpisode.imageUrl != null
-                                  ? Image.network(
-                                      firstEpisode.imageUrl!,
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                      height: double.infinity,
-                                      errorBuilder: (context, error, stackTrace) {
-                                        return _buildPlaceholder(title);
-                                      },
-                                    )
-                                  : _buildPlaceholder(title),
-                            ),
-                            Positioned(
-                              top: 8,
-                              right: 8,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primaryBlue,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  '${episodes.length} EP',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
+              child: AnimatedScale(
+                scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                duration: TVFocusStyle.animationDuration,
+                curve: TVFocusStyle.animationCurve,
+                child: AnimatedContainer(
+                  duration: TVFocusStyle.animationDuration,
+                  curve: TVFocusStyle.animationCurve,
+                  width: 160,
+                  height: 240,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    boxShadow: isFocused
+                        ? TVFocusStyle.focusedShadow
+                        : TVFocusStyle.defaultShadow,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                          child: Stack(
+                            children: [
+                              Container(
+                                color: AppTheme.cardBackground,
+                                child: firstEpisode.imageUrl != null
+                                    ? Image.network(
+                                        firstEpisode.imageUrl!,
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return _buildPlaceholder(title);
+                                        },
+                                      )
+                                    : _buildPlaceholder(title),
+                              ),
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryBlue,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '${episodes.length} EP',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: AppSizes.xs),
-                    Text(
-                      title,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (firstEpisode.year != null || firstEpisode.rating != null)
+                      const SizedBox(height: AppSizes.xs),
                       Text(
-                        '${firstEpisode.year ?? ''} ${firstEpisode.rating != null ? '★${firstEpisode.ratingDisplay}' : ''}',
+                        title,
                         style: Theme.of(
                           context,
-                        ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
+                        ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                  ],
+                      if (firstEpisode.year != null || firstEpisode.rating != null)
+                        Text(
+                          '${firstEpisode.year ?? ''} ${firstEpisode.rating != null ? '★${firstEpisode.ratingDisplay}' : ''}',
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             );
