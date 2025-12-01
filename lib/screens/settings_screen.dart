@@ -65,6 +65,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   final FocusNode _loadM3uButtonFocusNode = FocusNode(debugLabel: 'LoadM3UButton');
   final FocusNode _loadXtreamButtonFocusNode = FocusNode(debugLabel: 'LoadXtreamButton');
   final FocusNode _clearPlaylistCacheButtonFocusNode = FocusNode(debugLabel: 'ClearPlaylistCacheButton');
+  final FocusNode _savedPlaylistFocusNode = FocusNode(debugLabel: 'SavedPlaylistButton');
   final FocusNode _updateEpgButtonFocusNode = FocusNode(debugLabel: 'UpdateEPGButton');
   final FocusNode _clearEpgButtonFocusNode = FocusNode(debugLabel: 'ClearEPGButton');
   final FocusNode _m3uTabFocusNode = FocusNode(debugLabel: 'M3UTabButton');
@@ -267,6 +268,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     _loadM3uButtonFocusNode.dispose();
     _loadXtreamButtonFocusNode.dispose();
     _clearPlaylistCacheButtonFocusNode.dispose();
+    _savedPlaylistFocusNode.dispose();
     _updateEpgButtonFocusNode.dispose();
     _clearEpgButtonFocusNode.dispose();
     _m3uTabFocusNode.dispose();
@@ -1152,7 +1154,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               prefixIcon: Icons.link,
               enableDirectionalNavigation: true,
               onLeftArrow: requestFirstSidebarFocus,
-              onUpArrow: () => _clearPlaylistCacheButtonFocusNode.requestFocus(),
+              onUpArrow: () => _savedPlaylistFocusNode.requestFocus(),
               onDownArrow: () => FocusScope.of(context).nextFocus(),
             ),
             const SizedBox(height: AppSizes.xs),
@@ -2242,7 +2244,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     return KeyEventResult.handled;
                   }
                   if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                    _customEpgUrlFocusNode.requestFocus();
+                    _savedPlaylistFocusNode.requestFocus();
                     return KeyEventResult.handled;
                   }
                   if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
@@ -2378,20 +2380,6 @@ class _SettingsScreenState extends State<SettingsScreen>
         );
       },
     );
-  }
-
-  void _focusLoadM3uButton() {
-    if (!_loadM3uButtonFocusNode.canRequestFocus) return;
-    FocusScope.of(context).requestFocus(_loadM3uButtonFocusNode);
-    final buttonContext = _loadM3uButtonFocusNode.context;
-    if (buttonContext != null) {
-      Scrollable.ensureVisible(
-        buttonContext,
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOut,
-        alignment: 0.6,
-      );
-    }
   }
 
   Widget _buildTabButton({
@@ -3823,30 +3811,71 @@ class _SettingsScreenState extends State<SettingsScreen>
                 const SizedBox(height: AppSizes.lg),
 
                 if (!hasPlaylist)
-                  Container(
-                    padding: const EdgeInsets.all(AppSizes.md),
-                    decoration: BoxDecoration(
-                      color: AppTheme.cardBackground,
-                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                      border: Border.all(color: AppTheme.divider),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.info_outline, color: AppTheme.textSecondary),
-                        SizedBox(width: AppSizes.md),
-                        Expanded(
-                          child: Text(
-                            'No saved playlist found. Use the fields above to add a playlist.',
-                            style: TextStyle(color: AppTheme.textSecondary),
+                  Focus(
+                    focusNode: _savedPlaylistFocusNode,
+                    onKeyEvent: (node, event) {
+                      if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                      if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                        _clearPlaylistCacheButtonFocusNode.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                        _customEpgUrlFocusNode.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                        requestFirstSidebarFocus();
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child: Builder(
+                      builder: (context) {
+                        final isFocused = Focus.of(context).hasFocus;
+                        return AnimatedContainer(
+                          duration: TVFocusStyle.animationDuration,
+                          padding: const EdgeInsets.all(AppSizes.md),
+                          decoration: BoxDecoration(
+                            color: AppTheme.cardBackground,
+                            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                            border: Border.all(
+                              color: isFocused ? AppTheme.primaryBlue : AppTheme.divider,
+                              width: isFocused ? 2 : 1,
+                            ),
                           ),
-                        ),
-                      ],
+                          child: const Row(
+                            children: [
+                              Icon(Icons.info_outline, color: AppTheme.textSecondary),
+                              SizedBox(width: AppSizes.md),
+                              Expanded(
+                                child: Text(
+                                  'No saved playlist found. Use the fields above to add a playlist.',
+                                  style: TextStyle(color: AppTheme.textSecondary),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
                   )
                 else
                   Focus(
+                    focusNode: _savedPlaylistFocusNode,
                     onKeyEvent: (node, event) {
                       if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                      if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                        _clearPlaylistCacheButtonFocusNode.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                        _customEpgUrlFocusNode.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                        requestFirstSidebarFocus();
+                        return KeyEventResult.handled;
+                      }
                       if (event.logicalKey == LogicalKeyboardKey.select ||
                           event.logicalKey == LogicalKeyboardKey.enter) {
                         context.go('/playlist-editor');
@@ -3854,29 +3883,49 @@ class _SettingsScreenState extends State<SettingsScreen>
                       }
                       return KeyEventResult.ignored;
                     },
-                    child: GestureDetector(
-                      onTap: () => context.go('/playlist-editor'),
-                      child: Container(
-                        padding: const EdgeInsets.all(AppSizes.md),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryBlue.withAlpha(
-                            (0.1 * 255).round(),
-                          ),
-                          borderRadius: BorderRadius.circular(
-                            AppSizes.radiusMd,
-                          ),
-                          border: Border.all(
-                            color: AppTheme.primaryBlue.withAlpha(
-                              (0.3 * 255).round(),
+                    child: Builder(
+                      builder: (context) {
+                        final isFocused = Focus.of(context).hasFocus;
+                        if (isFocused) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            final ctx = _savedPlaylistFocusNode.context;
+                            if (ctx != null) {
+                              Scrollable.ensureVisible(
+                                ctx,
+                                duration: const Duration(milliseconds: 150),
+                                curve: Curves.easeOut,
+                                alignment: 0.5,
+                              );
+                            }
+                          });
+                        }
+                        return GestureDetector(
+                          onTap: () => context.go('/playlist-editor'),
+                          child: AnimatedContainer(
+                            duration: TVFocusStyle.animationDuration,
+                            curve: TVFocusStyle.animationCurve,
+                            padding: const EdgeInsets.all(AppSizes.md),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryBlue.withAlpha(
+                                (0.1 * 255).round(),
+                              ),
+                              borderRadius: BorderRadius.circular(
+                                AppSizes.radiusMd,
+                              ),
+                              border: Border.all(
+                                color: isFocused 
+                                    ? AppTheme.primaryBlue
+                                    : AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
+                                width: isFocused ? 2 : 1,
+                              ),
+                              boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
                             ),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Icon(
+                                Row(
+                                  children: [
+                                    const Icon(
                                   Icons.playlist_play,
                                   color: AppTheme.primaryBlue,
                                   size: 24,
@@ -3962,8 +4011,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                           ],
                         ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
+                ),
+              ),
               ],
             ),
           ),
@@ -5595,17 +5646,17 @@ class _SettingsScreenState extends State<SettingsScreen>
   void _toggleRealDebridForCatchup(bool? value) {
     if (value == null) return;
     setState(() {
-      _realDebridForCatchup = value ?? true;
+      _realDebridForCatchup = value;
     });
-    Provider.of<RealDebridService>(context, listen: false).setEnableForCatchup(value ?? true);
+    Provider.of<RealDebridService>(context, listen: false).setEnableForCatchup(value);
   }
 
   void _toggleRealDebridForVOD(bool? value) {
     if (value == null) return;
     setState(() {
-      _realDebridForVOD = value ?? true;
+      _realDebridForVOD = value;
     });
-    Provider.of<RealDebridService>(context, listen: false).setEnableForVOD(value ?? true);
+    Provider.of<RealDebridService>(context, listen: false).setEnableForVOD(value);
   }
 
   Future<void> _testRealDebridConnection() async {
