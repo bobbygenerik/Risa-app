@@ -16,7 +16,14 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 
 class EPGScreen extends StatefulWidget {
-  const EPGScreen({super.key});
+  final Channel? initialChannel;
+  final bool continuePlayback;
+  
+  const EPGScreen({
+    super.key,
+    this.initialChannel,
+    this.continuePlayback = false,
+  });
 
   @override
   State<EPGScreen> createState() => _EPGScreenState();
@@ -80,17 +87,9 @@ class _EPGScreenState extends State<EPGScreen> {
       }
       
       // Check if we're coming back from player with mini player data
-      final routeState = GoRouterState.of(context);
-      final extra = routeState.extra as Map<String, dynamic>?;
-      
-      if (extra != null) {
-        final channel = extra['channel'] as Channel?;
-        final continuePlayback = extra['continuePlayback'] as bool? ?? false;
-        
-        if (channel != null && continuePlayback) {
-          // Auto-play the channel in mini player immediately
-          _playChannelInMiniPlayer(channel);
-        }
+      if (widget.initialChannel != null && widget.continuePlayback) {
+        // Auto-play the channel in mini player immediately
+        _playChannelInMiniPlayer(widget.initialChannel!);
       }
     });
   }
@@ -121,6 +120,17 @@ class _EPGScreenState extends State<EPGScreen> {
     _verticalScrollController.dispose();
     _miniPlayerController?.dispose();
     super.dispose();
+  }
+
+  /// Scroll the channel list back to the top when category changes
+  void _scrollChannelListToTop() {
+    if (_verticalScrollController.hasClients) {
+      _verticalScrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   void _playChannelInMiniPlayer(Channel channel) async {
@@ -515,6 +525,8 @@ class _EPGScreenState extends State<EPGScreen> {
               setState(() {
                 _selectedCategory = null;
               });
+              // Scroll channel list to top
+              _scrollChannelListToTop();
             },
           ),
           const Divider(height: 1, color: AppTheme.divider),
@@ -531,6 +543,8 @@ class _EPGScreenState extends State<EPGScreen> {
                     setState(() {
                       _selectedCategory = category;
                     });
+                    // Scroll channel list to top
+                    _scrollChannelListToTop();
                   },
                 );
               },

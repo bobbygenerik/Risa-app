@@ -34,10 +34,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   final Set<String> _artworkRequests = {};
   late final bool _tmdbEnabled;
   
-  // Pagination for All Channels section
-  static const int _channelsPerPage = 20;
-  int _currentChannelPage = 0;
-  
   // Track if initial load is complete to show splash screen
   bool _showSplash = true;
   bool _heroImageReady = false;
@@ -128,16 +124,21 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         builder: (context, channelProvider, epgService, _) {
           final channels = channelProvider.channels;
           
-          // Show splash only while actually loading channels
-          // If not loading and no channels, skip straight to empty state
-          if (_showSplash && channelProvider.isLoading) {
+          // Show splash while:
+          // 1. We're actively loading channels, OR
+          // 2. Channels are empty and we haven't finished initial load yet
+          // This ensures splash shows during the initial 500ms delay before loading starts
+          final shouldShowLoading = channelProvider.isLoading || 
+              (channels.isEmpty && !channelProvider.hasLoadedPlaylist);
+          
+          if (_showSplash && shouldShowLoading) {
             // Trigger transition once channels are available
             if (channels.isNotEmpty) {
               _onChannelsReady();
             }
             return _buildSplashLoading();
-          } else if (_showSplash && !channelProvider.isLoading) {
-            // Not loading anymore, dismiss splash immediately
+          } else if (_showSplash && !shouldShowLoading) {
+            // Loading done (or no playlist to load), dismiss splash immediately
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted && _showSplash) {
                 setState(() => _showSplash = false);
@@ -196,7 +197,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   channels.take(6).toList(),
                 ),
                 const SizedBox(height: 24),
-                _buildPaginatedChannelSection(context, 'All Channels', channels),
+                // Build category rows instead of All Channels
+                ..._buildCategoryRows(context, channelProvider.getGroupedChannels()),
                 const SizedBox(height: 40),
               ],
             ),
@@ -540,12 +542,24 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       final cachedChannelArt = _programArtwork[channelKey];
       // If we have a cached result (including empty string meaning "not found"), use it
       if (_programArtwork.containsKey(channelKey)) {
-        return cachedChannelArt?.isNotEmpty == true ? cachedChannelArt : null;
+        if (cachedChannelArt?.isNotEmpty == true) {
+          return cachedChannelArt;
+        }
+        // TMDB returned nothing, use channel logo as final fallback
+        if (channel.logoUrl != null && channel.logoUrl!.isNotEmpty) {
+          return channel.logoUrl;
+        }
+        return null;
       }
       
       // Fetch TMDB artwork based on channel name if enabled and not already fetching
       if (_tmdbEnabled && !_artworkRequests.contains(channelKey)) {
         _fetchChannelArtwork(channel);
+      }
+      
+      // While waiting for TMDB, use channel logo if available
+      if (channel.logoUrl != null && channel.logoUrl!.isNotEmpty) {
+        return channel.logoUrl;
       }
     }
     
@@ -653,6 +667,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                             context.push('/player', extra: channel);
                             return KeyEventResult.handled;
                           }
+                          // Navigate up to hero Watch button
+                          if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                            _watchFocus.requestFocus();
+                            return KeyEventResult.handled;
+                          }
                         }
                         return KeyEventResult.ignored;
                       },
@@ -710,168 +729,26 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
-  Widget _buildPaginatedChannelSection(
+  /// Build category rows from grouped channels
+  List<Widget> _buildCategoryRows(
     BuildContext context,
-    String title,
-    List<Channel> allChannels,
+    Map<String, List<Channel>> groupedChannels,
   ) {
-    if (allChannels.isEmpty) return const SizedBox.shrink();
+    if (groupedChannels.isEmpty) return [];
 
-    final totalPages = (allChannels.length / _channelsPerPage).ceil();
-    final startIdx = _currentChannelPage * _channelsPerPage;
-    final endIdx = (startIdx + _channelsPerPage).clamp(0, allChannels.length);
-    final pageChannels = allChannels.sublist(startIdx, endIdx);
+    // Sort categories alphabetically, but put "Uncategorized" at the end
+    final sortedCategories = groupedChannels.keys.toList()
+      ..sort((a, b) {
+        if (a == 'Uncategorized') return 1;
+        if (b == 'Uncategorized') return -1;
+        return a.toLowerCase().compareTo(b.toLowerCase());
+      });
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: AppTheme.textPrimary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              if (totalPages > 1)
-                Row(
-                  children: [
-                    Focus(
-                      onKeyEvent: (node, event) {
-                        if (event is KeyDownEvent && _currentChannelPage > 0) {
-                          if (event.logicalKey == LogicalKeyboardKey.select ||
-                              event.logicalKey == LogicalKeyboardKey.enter ||
-                              event.logicalKey == LogicalKeyboardKey.space) {
-                            setState(() => _currentChannelPage--);
-                            return KeyEventResult.handled;
-                          }
-                        }
-                        return KeyEventResult.ignored;
-                      },
-                      child: IconButton(
-                        icon: const Icon(Icons.arrow_back_ios, size: 16),
-                        color: _currentChannelPage > 0 
-                            ? AppTheme.textPrimary 
-                            : AppTheme.textSecondary,
-                        onPressed: _currentChannelPage > 0
-                            ? () => setState(() => _currentChannelPage--)
-                            : null,
-                      ),
-                    ),
-                    Text(
-                      'Page ${_currentChannelPage + 1} of $totalPages',
-                      style: const TextStyle(
-                        color: AppTheme.textSecondary,
-                        fontSize: 14,
-                      ),
-                    ),
-                    Focus(
-                      onKeyEvent: (node, event) {
-                        if (event is KeyDownEvent && _currentChannelPage < totalPages - 1) {
-                          if (event.logicalKey == LogicalKeyboardKey.select ||
-                              event.logicalKey == LogicalKeyboardKey.enter ||
-                              event.logicalKey == LogicalKeyboardKey.space) {
-                            setState(() => _currentChannelPage++);
-                            return KeyEventResult.handled;
-                          }
-                        }
-                        return KeyEventResult.ignored;
-                      },
-                      child: IconButton(
-                        icon: const Icon(Icons.arrow_forward_ios, size: 16),
-                        color: _currentChannelPage < totalPages - 1
-                            ? AppTheme.textPrimary
-                            : AppTheme.textSecondary,
-                        onPressed: _currentChannelPage < totalPages - 1
-                            ? () => setState(() => _currentChannelPage++)
-                            : null,
-                      ),
-                    ),
-                  ],
-                ),
-            ],
-          ),
-        ),
-        SizedBox(
-          height: 140,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: FocusTraversalGroup(
-              policy: WidgetOrderTraversalPolicy(),
-              child: Row(
-                children: pageChannels.map((channel) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 16),
-                    child: Focus(
-                      onKeyEvent: (node, event) {
-                        if (event is KeyDownEvent) {
-                          if (event.logicalKey == LogicalKeyboardKey.select ||
-                              event.logicalKey == LogicalKeyboardKey.enter ||
-                              event.logicalKey == LogicalKeyboardKey.space) {
-                            context.push('/player', extra: channel);
-                            return KeyEventResult.handled;
-                          }
-                        }
-                        return KeyEventResult.ignored;
-                      },
-                      child: Builder(
-                        builder: (context) {
-                          final isFocused = Focus.of(context).hasFocus;
-                          return GestureDetector(
-                            onTap: () => context.push('/player', extra: channel),
-                            child: AnimatedScale(
-                              scale: isFocused ? TVFocusStyle.focusScale : 1.0,
-                              duration: TVFocusStyle.animationDuration,
-                              curve: TVFocusStyle.animationCurve,
-                              child: AnimatedContainer(
-                                duration: TVFocusStyle.animationDuration,
-                                curve: TVFocusStyle.animationCurve,
-                                width: 200,
-                                height: 120,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  color: AppTheme.cardBackground,
-                                  boxShadow: isFocused
-                                      ? TVFocusStyle.focusedShadow
-                                      : TVFocusStyle.defaultShadow,
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: channel.logoUrl != null &&
-                                          channel.logoUrl!.isNotEmpty
-                                      ? CachedNetworkImage(
-                                          imageUrl: channel.logoUrl!,
-                                          fit: BoxFit.cover,
-                                          width: double.infinity,
-                                          height: double.infinity,
-                                          placeholder: (_, __) =>
-                                              _buildChannelPlaceholder(channel.name),
-                                          errorWidget: (_, __, ___) =>
-                                              _buildChannelPlaceholder(channel.name),
-                                        )
-                                      : _buildChannelPlaceholder(channel.name),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
-      ],
-    );
+    return sortedCategories.map((category) {
+      final channels = groupedChannels[category] ?? [];
+      if (channels.isEmpty) return const SizedBox.shrink();
+      return _buildChannelSection(context, category, channels);
+    }).toList();
   }
 
   Widget _buildChannelPlaceholder(String name) {

@@ -36,7 +36,6 @@ Future<void> clearPlaylistCache() async {
 class ChannelProvider with ChangeNotifier {
   static const String _playlistCacheFileName = 'playlist_cache.m3u';
   static const String _playlistCacheFilePathKey = 'cached_playlist_file';
-  static const int _maxChannelsToLoad = 10000; // Prevent UI overwhelm
   static const int _debugCaptureBytes =
       512 * 1024; // capture 512 KB for previews
 
@@ -158,12 +157,6 @@ class ChannelProvider with ChangeNotifier {
           var series = (parsed['series'] as List<dynamic>)
               .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
               .toList();
-          
-          // Limit channels to prevent UI overwhelm
-          if (channels.length > _maxChannelsToLoad) {
-            debugPrint('ChannelProvider: WARNING - Playlist has ${channels.length} channels, limiting to $_maxChannelsToLoad');
-            channels = channels.sublist(0, _maxChannelsToLoad);
-          }
           
           _channels = channels;
           _movies = movies;
@@ -354,11 +347,6 @@ class ChannelProvider with ChangeNotifier {
             .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
             .toList();
         
-        // Limit channels to prevent UI overwhelm
-        if (channels.length > _maxChannelsToLoad) {
-          debugPrint('ChannelProvider: WARNING - Playlist has ${channels.length} channels, limiting to $_maxChannelsToLoad');
-          channels = channels.sublist(0, _maxChannelsToLoad);
-        }
         _channels = channels;
         
         debugPrint('ChannelProvider: Parsed ${_channels.length} channels (isolate)');
@@ -501,11 +489,6 @@ class ChannelProvider with ChangeNotifier {
           .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
           .toList();
 
-      // Limit channels to prevent UI overwhelm
-      if (channels.length > _maxChannelsToLoad) {
-        debugPrint('ChannelProvider: WARNING - Playlist has ${channels.length} channels, limiting to $_maxChannelsToLoad');
-        channels = channels.sublist(0, _maxChannelsToLoad);
-      }
       _channels = channels;
 
       debugPrint('ChannelProvider: Parsed ${_channels.length} channels (direct client)');
@@ -573,12 +556,6 @@ class ChannelProvider with ChangeNotifier {
       final seriesMaps = (parsed['series'] as List<dynamic>? ?? [])
           .map((show) => Content.fromMap(Map<String, dynamic>.from(show as Map)))
           .toList();
-
-      // Limit channels to prevent UI overwhelm
-      if (channelMaps.length > _maxChannelsToLoad) {
-        debugPrint('ChannelProvider: WARNING - Playlist has ${channelMaps.length} channels, limiting to $_maxChannelsToLoad');
-        channelMaps = channelMaps.sublist(0, _maxChannelsToLoad);
-      }
 
       _channels = channelMaps;
       _movies = movieMaps;

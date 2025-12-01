@@ -39,6 +39,9 @@ class _SettingsScreenState extends State<SettingsScreen>
   // Playlist Input Method (0 = M3U, 1 = Xtream)
   int _playlistInputMethod = 0;
 
+  // EPG Settings
+  late final TextEditingController _customEpgUrlController;
+
   // Integration Settings - Late initialization
   late final TextEditingController _realDebridApiKeyController;
   late final TextEditingController _openSubtitlesUsernameController;
@@ -142,9 +145,13 @@ class _SettingsScreenState extends State<SettingsScreen>
     _xtreamServerController = TextEditingController();
     _xtreamUsernameController = TextEditingController();
     _xtreamPasswordController = TextEditingController();
+    _customEpgUrlController = TextEditingController();
     _realDebridApiKeyController = TextEditingController();
     _openSubtitlesUsernameController = TextEditingController();
     _openSubtitlesPasswordController = TextEditingController();
+
+    // Add listener to save custom EPG URL when changed
+    _customEpgUrlController.addListener(_saveCustomEpgUrl);
 
     _tabController = TabController(
       length: 5,
@@ -179,6 +186,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     _xtreamServerController.text = prefs.getString('xtream_server') ?? '';
     _xtreamUsernameController.text = prefs.getString('xtream_username') ?? '';
     _xtreamPasswordController.text = prefs.getString('xtream_password') ?? '';
+    _customEpgUrlController.text = prefs.getString('custom_epg_url') ?? '';
     _realDebridApiKeyController.text =
         prefs.getString('realdebrid_api_key') ?? '';
     _openSubtitlesUsernameController.text =
@@ -240,6 +248,12 @@ class _SettingsScreenState extends State<SettingsScreen>
     }
   }
 
+  // Save custom EPG URL when the text field changes
+  void _saveCustomEpgUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('custom_epg_url', _customEpgUrlController.text);
+  }
+
   @override
   void dispose() {
     _focusNodeListeners.forEach((node, listener) {
@@ -259,6 +273,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     _xtreamUsernameFocusNode.dispose();
     _xtreamPasswordController.dispose();
     _xtreamPasswordFocusNode.dispose();
+    _customEpgUrlController.removeListener(_saveCustomEpgUrl);
+    _customEpgUrlController.dispose();
     _realDebridApiKeyController.dispose();
     _realDebridApiKeyFocusNode.dispose();
     _openSubtitlesUsernameController.dispose();
@@ -1018,7 +1034,6 @@ class _SettingsScreenState extends State<SettingsScreen>
 
         final data = snapshot.data!;
         final epgUrl = data['epg_url'] as String?;
-        final customEpgUrl = data['custom_epg_url'] as String?;
         final playlistType = data['playlist_type'] as String?;
         final m3uUrl = data['m3u_url'] as String?;
         final xtreamServer = data['xtream_server'] as String?;
@@ -1045,10 +1060,6 @@ class _SettingsScreenState extends State<SettingsScreen>
             providerName = 'Xtream Codes';
           }
         }
-
-        final TextEditingController customEpgController = TextEditingController(
-          text: customEpgUrl ?? '',
-        );
 
         return _buildSectionCard(
           title: 'EPG (Electronic Program Guide)',
@@ -1146,7 +1157,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             const SizedBox(height: AppSizes.sm),
             _buildTVTextField(
-              controller: customEpgController,
+              controller: _customEpgUrlController,
               focusNode: _customEpgUrlFocusNode,
               isEditable: _customEpgUrlEditable,
               onEditableChanged: (val) => setState(() => _customEpgUrlEditable = val),

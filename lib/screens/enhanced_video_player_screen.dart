@@ -160,6 +160,17 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   Future<void> _initializePlayer() async {
     try {
       debugPrint('VideoPlayer: Initializing player for: ${widget.videoUrl}');
+      
+      // Validate URL before attempting to initialize
+      if (widget.videoUrl.isEmpty) {
+        throw Exception('Video URL is empty');
+      }
+      
+      final uri = Uri.tryParse(widget.videoUrl);
+      if (uri == null || !uri.hasScheme || (!uri.isScheme('http') && !uri.isScheme('https'))) {
+        throw Exception('Invalid video URL: ${widget.videoUrl}');
+      }
+      
       // If audioTracks are provided and non-empty, prefer the VLC backend
       // which supports real audio-track switching via setAudioTrack().
       // VLC DISABLED: flutter_vlc_player causes build errors
@@ -169,7 +180,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       // Many IPTV providers have SSL certificate issues
       // Initialize video player
       _videoPlayerController = VideoPlayerController.networkUrl(
-        Uri.parse(widget.videoUrl),
+        uri,
         videoPlayerOptions: VideoPlayerOptions(
           mixWithOthers: false,
           allowBackgroundPlayback: false,
@@ -184,6 +195,20 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       debugPrint('VideoPlayer: Awaiting initialization...');
       await _videoPlayerController.initialize();
       debugPrint('VideoPlayer: Initialized successfully');
+
+      // Add error listener to catch runtime playback errors
+      _videoPlayerController.addListener(() {
+        if (_videoPlayerController.value.hasError && !_hasError) {
+          final error = _videoPlayerController.value.errorDescription ?? 'Unknown playback error';
+          debugPrint('VideoPlayer: Runtime error: $error');
+          if (mounted) {
+            setState(() {
+              _hasError = true;
+              _errorMessage = 'Playback failed: $error\n\nURL: ${widget.videoUrl}';
+            });
+          }
+        }
+      });
 
       // Skip subtitle controller initialization - causes UnimplementedError
       // Only initialize if subtitles are explicitly provided and needed
@@ -763,13 +788,31 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   void _openMultiView() {
     if (widget.channel == null) return;
     
+    // Pause/mute the current player before opening multi-view to avoid audio overlap
+    try {
+      _videoPlayerController.pause();
+      _videoPlayerController.setVolume(0.0);
+    } catch (e) {
+      debugPrint('Failed to pause/mute player before multi-view: $e');
+    }
+    
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => MultiViewScreen(
           initialChannel: widget.channel,
         ),
       ),
-    );
+    ).then((_) {
+      // Resume playback when returning from multi-view
+      if (mounted) {
+        try {
+          _videoPlayerController.setVolume(1.0);
+          _videoPlayerController.play();
+        } catch (e) {
+          debugPrint('Failed to resume player after multi-view: $e');
+        }
+      }
+    });
   }
 
   /// Try to enter Android PiP mode via platform channel.

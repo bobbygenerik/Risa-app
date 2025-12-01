@@ -118,12 +118,23 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
     // so the screen's hero/gradient shows through (matches other screens).
     // location can be used in future conditional styling; currently unused
 
-    // Make the top nav transparent always and use a moving highlighter
-    // under tabs for a cleaner, less-blocky look.
+    // Semi-transparent nav bar with gradient fade so content scrolling
+    // behind it doesn't clash visually
     final navBar = Container(
       height: AppSizes.appBarHeight * scale,
       padding: EdgeInsets.symmetric(horizontal: AppSizes.xl * scale, vertical: AppSizes.sm * scale),
-      decoration: const BoxDecoration(color: Colors.transparent),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            const Color(0xFF050710).withValues(alpha: 0.95),
+            const Color(0xFF050710).withValues(alpha: 0.85),
+            const Color(0xFF050710).withValues(alpha: 0.0),
+          ],
+          stops: const [0.0, 0.7, 1.0],
+        ),
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,

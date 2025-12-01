@@ -431,6 +431,10 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
           } else if (event.logicalKey == LogicalKeyboardKey.keyA) {
             _switchAudioPlayer(index);
             return KeyEventResult.handled;
+          } else if (event.logicalKey == LogicalKeyboardKey.keyC) {
+            // Change channel on this slot
+            _selectChannelForSlot(index);
+            return KeyEventResult.handled;
           }
         }
         return KeyEventResult.ignored;
@@ -454,7 +458,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
           // Add a subtle glow effect to the active audio player
           boxShadow: hasAudio ? [
             BoxShadow(
-              color: AppTheme.accentRed.withOpacity(0.5),
+              color: AppTheme.accentRed.withValues(alpha: 0.5),
               blurRadius: 8,
               spreadRadius: 2,
             ),
@@ -557,6 +561,41 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      // Change channel button (when focused)
+                      if (isFocused)
+                        GestureDetector(
+                          onTap: () => _selectChannelForSlot(index),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryBlue,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.swap_horiz,
+                                  size: 14,
+                                  color: Colors.white,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Change',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      const SizedBox(width: 8),
                       // Audio indicator
                       if (hasAudio)
                         Container(
@@ -627,7 +666,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: AppTheme.accentRed.withOpacity(0.5),
+                        color: AppTheme.accentRed.withValues(alpha: 0.5),
                         blurRadius: 8,
                         spreadRadius: 2,
                       ),

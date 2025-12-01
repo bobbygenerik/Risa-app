@@ -839,8 +839,18 @@ final _router = GoRouter(
     ),
     GoRoute(
       path: '/epg',
-      pageBuilder: (context, state) =>
-          _fadeSlidePage(key: state.pageKey, child: const EPGScreen()),
+      pageBuilder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        final channel = extra?['channel'] as Channel?;
+        final continuePlayback = extra?['continuePlayback'] as bool? ?? false;
+        return _fadeSlidePage(
+          key: state.pageKey,
+          child: EPGScreen(
+            initialChannel: channel,
+            continuePlayback: continuePlayback,
+          ),
+        );
+      },
     ),
     GoRoute(
       path: '/recordings',
