@@ -318,7 +318,7 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                       },
                       itemBuilder: (context) => [
                         PopupMenuItem(value: 'settings', child: Row(children: [Icon(Icons.settings, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Settings', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
-                        PopupMenuItem(value: 'favorites', child: Row(children: [Icon(Icons.favorite_outline, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Favorites', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
+                        PopupMenuItem(value: 'favorites', child: Row(children: [Icon(Icons.playlist_add_check, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('My List', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
                         PopupMenuItem(value: 'downloads', child: Row(children: [Icon(Icons.download, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Downloads', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
                       ],
                     ),

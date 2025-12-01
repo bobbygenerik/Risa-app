@@ -89,10 +89,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.favorite, color: AppTheme.accentRed, size: 24),
+          const Icon(Icons.playlist_add_check, color: AppTheme.primaryBlue, size: 24),
           const SizedBox(width: AppSizes.md),
           Text(
-            'Favorites',
+            'My List',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),

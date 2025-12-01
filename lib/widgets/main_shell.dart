@@ -95,6 +95,12 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
+    // Calculate nav bar height for TV scaling
+    final size = MediaQuery.of(context).size;
+    final isTV = size.width >= 1920 || size.height >= 1080;
+    final scale = isTV ? 1.8 : 1.0;
+    final navBarHeight = 64.0 * scale; // AppSizes.appBarHeight * scale
+    
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Container(
@@ -108,28 +114,10 @@ class _MainShellState extends State<MainShell> {
                 ],
               )
         ),
-        child: Column(
+        child: Stack(
           children: [
-            // Fixed navigation bar - wrapped in FocusTraversalGroup to prevent
-            // focus from escaping to content when pressing left/right
-            FocusTraversalGroup(
-              policy: WidgetOrderTraversalPolicy(),
-              child: TopNavigationBar(
-                activeTab: widget.activeTab ?? 'home',
-                tabs: [
-                  NavTab(id: 'home', label: 'Live TV', icon: Icons.live_tv, route: '/home'),
-                  NavTab(id: 'movies', label: 'Movies', icon: Icons.movie, route: '/movies'),
-                  NavTab(id: 'series', label: 'Series', icon: Icons.tv, route: '/series'),
-                ],
-                currentTime: _currentTime,
-                showLogoAndTime: true,
-                onSearch: _showSearchDialog,
-                onFocusContent: _requestContentFocus,
-                onNavFocusRegistration: _setNavFocusRequester,
-              ),
-            ),
-            // Content area - changes when navigating between tabs
-            Expanded(
+            // Content area - fills entire screen, content can show behind nav bar
+            Positioned.fill(
               child: FocusTraversalGroup(
                 policy: WidgetOrderTraversalPolicy(),
                 child: Focus(
@@ -146,6 +134,29 @@ class _MainShellState extends State<MainShell> {
                       child: widget.child,
                     ),
                   ),
+                ),
+              ),
+            ),
+            // Navigation bar overlayed on top - completely transparent
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: navBarHeight,
+              child: FocusTraversalGroup(
+                policy: WidgetOrderTraversalPolicy(),
+                child: TopNavigationBar(
+                  activeTab: widget.activeTab ?? 'home',
+                  tabs: [
+                    NavTab(id: 'home', label: 'Live TV', icon: Icons.live_tv, route: '/home'),
+                    NavTab(id: 'movies', label: 'Movies', icon: Icons.movie, route: '/movies'),
+                    NavTab(id: 'series', label: 'Series', icon: Icons.tv, route: '/series'),
+                  ],
+                  currentTime: _currentTime,
+                  showLogoAndTime: true,
+                  onSearch: _showSearchDialog,
+                  onFocusContent: _requestContentFocus,
+                  onNavFocusRegistration: _setNavFocusRequester,
                 ),
               ),
             ),

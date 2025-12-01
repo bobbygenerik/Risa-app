@@ -255,6 +255,9 @@ class _EPGScreenState extends State<EPGScreen> {
                 return a.name.compareTo(b.name);
               });
 
+          // Calculate header height for offset
+          const headerHeight = 72.0; // Approximate header height
+          
           return Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -268,10 +271,11 @@ class _EPGScreenState extends State<EPGScreen> {
             ),
             child: Stack(
               children: [
+                // Content layer - starts from top, header overlays on top
                 Column(
                   children: [
-                    _buildHeader(epgService),
-                    Divider(height: 1, color: AppTheme.darkBackgroundOpacity(0.12), thickness: 2),
+                    // Spacer for header area
+                    const SizedBox(height: headerHeight),
                     Expanded(
                       child: Row(
                         children: [
@@ -286,6 +290,14 @@ class _EPGScreenState extends State<EPGScreen> {
                       ),
                     ),
                   ],
+                ),
+                
+                // Transparent header overlay
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: _buildHeader(epgService),
                 ),
 
                 // Mini player overlay
@@ -388,11 +400,8 @@ class _EPGScreenState extends State<EPGScreen> {
   Widget _buildHeader(EpgService epgService) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
-      decoration: BoxDecoration(
-        color: Colors.white.withAlpha((0.08 * 255).round()),
-        border: Border(
-          bottom: BorderSide(color: AppTheme.darkBackgroundOpacity(0.12), width: 2),
-        ),
+      decoration: const BoxDecoration(
+        color: Colors.transparent,
       ),
       child: Row(
         children: [
@@ -598,6 +607,7 @@ class _EPGScreenState extends State<EPGScreen> {
                         fontSize: 14,
                         fontWeight:
                             (isFocused || isSelected) ? FontWeight.w600 : FontWeight.w500,
+                        decoration: TextDecoration.none,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,

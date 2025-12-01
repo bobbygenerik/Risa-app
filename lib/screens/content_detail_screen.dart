@@ -22,6 +22,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF050710),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -68,31 +69,32 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
               : _buildHeroPlaceholder(),
         ),
 
-        // Top navigation
+        // Top navigation - transparent with safe area
         Positioned(
           top: 0,
           left: 0,
           right: 0,
-          child: Container(
-            padding: const EdgeInsets.all(AppSizes.md),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF050710), Color(0xFF0d1140)],
-              ),
-            ),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(
-                    Icons.arrow_back,
-                    color: AppTheme.textPrimary,
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSizes.md),
+              child: Row(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withAlpha((0.3 * 255).round()),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: AppTheme.textPrimary,
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                    ),
                   ),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                const Spacer(),
-              ],
+                  const Spacer(),
+                ],
+              ),
             ),
           ),
         ),
@@ -167,7 +169,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                     // My List button
                     Consumer<ContentProvider>(
                       builder: (context, contentProvider, child) {
-                        final isInMyList = widget.content.isFavorite == true;
+                        final isInMyList = contentProvider.isInFavorites(widget.content.id);
                         return OutlinedButton.icon(
                           onPressed: () async {
                             // Toggle favorite in the content provider

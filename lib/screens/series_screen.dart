@@ -687,13 +687,13 @@ class _SeriesScreenState extends State<SeriesScreen>
                                     horizontal: 24,
                                     vertical: 14,
                                   ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.play_arrow, color: Colors.white),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        'Watch',
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.info_outline, color: Colors.white),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'More Info',
                                         style: TextStyle(
                                           color: Colors.white,
                                           fontSize: 16,

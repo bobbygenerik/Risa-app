@@ -102,6 +102,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   bool _nativeExoAvailable = false;
   bool _nativeExoCapabilityResolved = false;
 
+  // Playback speed (for VOD content)
+  double _playbackSpeed = 1.0;
+  static const List<double> _speedOptions = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+
   @override
   void initState() {
     super.initState();
@@ -736,6 +740,24 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         SnackBar(content: Text('Picture-in-Picture not available: $e')),
       );
     }
+  }
+
+  void _cyclePlaybackSpeed() {
+    final currentIndex = _speedOptions.indexOf(_playbackSpeed);
+    final nextIndex = (currentIndex + 1) % _speedOptions.length;
+    final newSpeed = _speedOptions[nextIndex];
+    
+    setState(() {
+      _playbackSpeed = newSpeed;
+    });
+    
+    // Apply to video player
+    _videoPlayerController.setPlaybackSpeed(newSpeed);
+  }
+
+  String _getSpeedLabel() {
+    if (_playbackSpeed == 1.0) return 'Speed';
+    return '${_playbackSpeed}x';
   }
 
   void _openMultiView() {
@@ -1409,7 +1431,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
             onTap: () => _seekRelative(const Duration(seconds: 10)),
           ),
           const SizedBox(width: 16),
-          // Right side buttons (PiP matches Audio width, Multi-View matches Subtitles width)
+          // Right side buttons (PiP matches Audio width, Speed/Multi-View matches Subtitles width)
           if (_isPipSupported)
             _buildControlButton(
               icon: Icons.picture_in_picture_alt,
@@ -1418,13 +1440,22 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
               isActive: _isPipActive,
               minWidth: 90,  // Match Audio
             ),
-          if (_isPipSupported && widget.channel != null)
+          if (_isPipSupported)
             const SizedBox(width: 8),
+          // Show Multi-View for live TV, Speed for VOD content
           if (widget.channel != null)
             _buildControlButton(
               icon: Icons.grid_view,
               label: 'Multi-View',
               onTap: _openMultiView,
+              minWidth: 130,  // Match Subtitles
+            )
+          else
+            _buildControlButton(
+              icon: Icons.speed,
+              label: _getSpeedLabel(),
+              onTap: _cyclePlaybackSpeed,
+              isActive: _playbackSpeed != 1.0,
               minWidth: 130,  // Match Subtitles
             ),
         ],

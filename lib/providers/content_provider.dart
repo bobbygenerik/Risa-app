@@ -109,6 +109,23 @@ class ContentProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Get content by ID (returns null if not found)
+  Content? getContentById(String contentId) {
+    final movieIndex = _movies.indexWhere((m) => m.id == contentId);
+    if (movieIndex != -1) return _movies[movieIndex];
+    
+    final seriesIndex = _series.indexWhere((s) => s.id == contentId);
+    if (seriesIndex != -1) return _series[seriesIndex];
+    
+    return null;
+  }
+
+  /// Check if content is in favorites
+  bool isInFavorites(String contentId) {
+    final content = getContentById(contentId);
+    return content?.isFavorite ?? false;
+  }
+
   /// Get favorite content
   List<Content> get favoriteContent {
     final favoriteMovies = _movies.where((m) => m.isFavorite == true).toList();
