@@ -1285,7 +1285,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                             )
                           : null,
                       child: IconButton(
-                        icon: const Icon(Icons.tv_rounded, color: Colors.white, size: 28),
+                        icon: const Icon(Icons.dvr, color: Colors.white, size: 28),
                         tooltip: 'Guide',
                         onPressed: () {
                           context.go(
@@ -1389,15 +1389,17 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         _selectedSubtitleIndex >= 0 ||
         _selectedSubtitleIndex == _subtitleIndexTranscription;
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Left side buttons (Subtitles matches Multi-View width, Audio matches PiP width)
-          _buildControlButton(
-            icon: Icons.subtitles,
-            label: 'Subtitles',
+    return Center(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Left side buttons (Subtitles matches Multi-View width, Audio matches PiP width)
+            _buildControlButton(
+              icon: Icons.subtitles,
+              label: 'Subtitles',
             onTap: _openSubtitleSelector,
             isActive: subtitleActive,
             minWidth: 130,  // Match Multi-View
@@ -1432,16 +1434,16 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           ),
           const SizedBox(width: 16),
           // Right side buttons (PiP matches Audio width, Speed/Multi-View matches Subtitles width)
-          if (_isPipSupported)
-            _buildControlButton(
-              icon: Icons.picture_in_picture_alt,
-              label: 'PiP',
-              onTap: _togglePip,
-              isActive: _isPipActive,
-              minWidth: 90,  // Match Audio
-            ),
-          if (_isPipSupported)
-            const SizedBox(width: 8),
+          // Always show PiP button for symmetry (disabled if not supported)
+          _buildControlButton(
+            icon: Icons.picture_in_picture_alt,
+            label: 'PiP',
+            onTap: _isPipSupported ? _togglePip : null,
+            isActive: _isPipActive,
+            isDisabled: !_isPipSupported,
+            minWidth: 90,  // Match Audio
+          ),
+          const SizedBox(width: 8),
           // Show Multi-View for live TV, Speed for VOD content
           if (widget.channel != null)
             _buildControlButton(
@@ -1459,6 +1461,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
               minWidth: 130,  // Match Subtitles
             ),
         ],
+      ),
       ),
     );
   }

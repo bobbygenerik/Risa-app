@@ -739,12 +739,11 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
               const Spacer(),
 
               // Bottom bar - real control buttons that match video player overlay
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       // Left side button (Audio matches Fullscreen width)
                       _buildOverlayButton(
