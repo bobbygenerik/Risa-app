@@ -48,6 +48,9 @@ class ChannelProvider with ChangeNotifier {
   ContentProvider? _contentProvider;
   bool _hasLoadedPlaylist = false;
   String? _lastM3UContent; // Store last content for debugging
+  
+  // Cached grouped channels to avoid recomputing on every access
+  Map<String, List<Channel>>? _cachedGroupedChannels;
 
   final M3UParserService _parserService = M3UParserService();
 
@@ -121,6 +124,7 @@ class ChannelProvider with ChangeNotifier {
         _channels = [];
         _movies = [];
         _series = [];
+        _cachedGroupedChannels = null;
         notifyListeners();
       }
       // Ensure stale cache does not resurrect old playlists when none are saved
@@ -159,6 +163,7 @@ class ChannelProvider with ChangeNotifier {
               .toList();
           
           _channels = channels;
+          _cachedGroupedChannels = null; // Clear cache when channels change
           _movies = movies;
           _series = series;
           
@@ -348,6 +353,7 @@ class ChannelProvider with ChangeNotifier {
             .toList();
         
         _channels = channels;
+        _cachedGroupedChannels = null; // Clear cache when channels change
         
         debugPrint('ChannelProvider: Parsed ${_channels.length} channels (isolate)');
         debugPrint('ChannelProvider: Parsed ${_movies.length} movies, ${_series.length} series (isolate)');
@@ -489,7 +495,8 @@ class ChannelProvider with ChangeNotifier {
           .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
           .toList();
 
-      _channels = channels;
+_channels = channels;
+      _cachedGroupedChannels = null; // Clear cache when channels change
 
       debugPrint('ChannelProvider: Parsed ${_channels.length} channels (direct client)');
 
@@ -557,7 +564,8 @@ class ChannelProvider with ChangeNotifier {
           .map((show) => Content.fromMap(Map<String, dynamic>.from(show as Map)))
           .toList();
 
-      _channels = channelMaps;
+_channels = channelMaps;
+      _cachedGroupedChannels = null; // Clear cache when channels change
       _movies = movieMaps;
       _series = seriesMaps;
 
@@ -586,9 +594,14 @@ class ChannelProvider with ChangeNotifier {
     }
   }
 
-  /// Get channels grouped by category
+  /// Get channels grouped by category (cached for performance)
   Map<String, List<Channel>> getGroupedChannels() {
-    return _parserService.groupChannelsByCategory(_channels);
+    // Return cached version if available
+    if (_cachedGroupedChannels != null) {
+      return _cachedGroupedChannels!;
+    }
+    _cachedGroupedChannels = _parserService.groupChannelsByCategory(_channels);
+    return _cachedGroupedChannels!;
   }
 
   /// Add channel to favorites

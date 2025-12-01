@@ -738,9 +738,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         return a.toLowerCase().compareTo(b.toLowerCase());
       });
 
-    return sortedCategories.map((category) {
-      final channels = groupedChannels[category] ?? [];
-      if (channels.isEmpty) return const SizedBox.shrink();
+    // Limit to first 20 categories to prevent UI freeze with large playlists
+    final limitedCategories = sortedCategories.take(20).toList();
+
+    return limitedCategories.map((category) {
+      final allChannels = groupedChannels[category] ?? [];
+      if (allChannels.isEmpty) return const SizedBox.shrink();
+      // Limit to first 30 channels per category for performance
+      final channels = allChannels.take(30).toList();
       return _buildChannelSection(context, category, channels);
     }).toList();
   }
