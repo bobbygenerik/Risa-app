@@ -128,13 +128,21 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         builder: (context, channelProvider, epgService, _) {
           final channels = channelProvider.channels;
           
-          // Show splash while loading OR while preparing hero after channels load
-          if (_showSplash) {
+          // Show splash only while actually loading channels
+          // If not loading and no channels, skip straight to empty state
+          if (_showSplash && channelProvider.isLoading) {
             // Trigger transition once channels are available
             if (channels.isNotEmpty) {
               _onChannelsReady();
             }
             return _buildSplashLoading();
+          } else if (_showSplash && !channelProvider.isLoading) {
+            // Not loading anymore, dismiss splash immediately
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && _showSplash) {
+                setState(() => _showSplash = false);
+              }
+            });
           }
 
           if (channels.isEmpty) {
