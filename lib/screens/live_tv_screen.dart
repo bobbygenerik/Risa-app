@@ -124,21 +124,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         builder: (context, channelProvider, epgService, _) {
           final channels = channelProvider.channels;
           
-          // Show splash while:
-          // 1. We're actively loading channels, OR
-          // 2. Channels are empty and we haven't finished initial load yet
-          // This ensures splash shows during the initial 500ms delay before loading starts
-          final shouldShowLoading = channelProvider.isLoading || 
-              (channels.isEmpty && !channelProvider.hasLoadedPlaylist);
-          
-          if (_showSplash && shouldShowLoading) {
+          // Show splash only while actively loading channels
+          if (_showSplash && channelProvider.isLoading) {
             // Trigger transition once channels are available
             if (channels.isNotEmpty) {
               _onChannelsReady();
             }
             return _buildSplashLoading();
-          } else if (_showSplash && !shouldShowLoading) {
-            // Loading done (or no playlist to load), dismiss splash immediately
+          } else if (_showSplash && !channelProvider.isLoading) {
+            // Not loading, dismiss splash immediately
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted && _showSplash) {
                 setState(() => _showSplash = false);
