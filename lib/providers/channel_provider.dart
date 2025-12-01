@@ -34,7 +34,6 @@ Future<void> clearPlaylistCache() async {
 }
 
 class ChannelProvider with ChangeNotifier {
-  static const int _maxCacheBytes = 5 * 1024 * 1024; // 5 MB cache cap
   static const String _playlistCacheFileName = 'playlist_cache.m3u';
   static const String _playlistCacheFilePathKey = 'cached_playlist_file';
   static const int _debugCaptureBytes =
@@ -351,34 +350,32 @@ class ChannelProvider with ChangeNotifier {
         }
 
 
-        // Download all bytes first (streaming to memory, but in background isolate)
-        final playlistBytes = <int>[];
+        // Stream download directly to temp file to avoid OOM on large playlists
+        final dir = await getApplicationDocumentsDirectory();
+        final tempFile = File('${dir.path}/temp_playlist.m3u');
+        final sink = tempFile.openWrite();
         final debugBuilder = BytesBuilder();
-        final cacheBuilder = BytesBuilder();
-        bool cacheWithinLimit = true;
         int totalBytes = 0;
 
-        await for (final chunk in streamedResponse.stream) {
-          totalBytes += chunk.length;
-          playlistBytes.addAll(chunk);
-          if (debugBuilder.length < _debugCaptureBytes) {
-            final remaining = _debugCaptureBytes - debugBuilder.length;
-            debugBuilder.add(
-              chunk.length <= remaining ? chunk : chunk.sublist(0, remaining),
-            );
-          }
-          if (cacheWithinLimit) {
-            if (totalBytes <= _maxCacheBytes) {
-              cacheBuilder.add(chunk);
-            } else {
-              cacheWithinLimit = false;
+        try {
+          await for (final chunk in streamedResponse.stream) {
+            totalBytes += chunk.length;
+            sink.add(chunk);
+            if (debugBuilder.length < _debugCaptureBytes) {
+              final remaining = _debugCaptureBytes - debugBuilder.length;
+              debugBuilder.add(
+                chunk.length <= remaining ? chunk : chunk.sublist(0, remaining),
+              );
             }
           }
+          await sink.flush();
+        } finally {
+          await sink.close();
         }
-        debugPrint('ChannelProvider: Downloaded $totalBytes bytes');
+        debugPrint('ChannelProvider: Downloaded $totalBytes bytes to temp file');
 
-        // Parse playlist in background isolate
-        final parsed = await compute(parsePlaylistInIsolate, playlistBytes);
+        // Parse playlist from file in background isolate (memory efficient)
+        final parsed = await compute(parsePlaylistFromFile, tempFile.path);
         _channels = (parsed['channels'] as List<dynamic>)
             .map((c) => Channel.fromMap(Map<String, dynamic>.from(c)))
             .toList();
@@ -400,26 +397,19 @@ class ChannelProvider with ChangeNotifier {
             ? utf8.decode(debugBuilder.takeBytes(), allowMalformed: true)
             : null;
 
-        // Cache smaller playlists (<5MB) in SharedPreferences, larger ones as a file
+        // Use the temp file as cache (rename it to cache file)
         final prefs = await SharedPreferences.getInstance();
         final now = DateTime.now().millisecondsSinceEpoch;
-        if (cacheWithinLimit) {
-          await prefs.setString(
-            'cached_playlist',
-            utf8.decode(cacheBuilder.takeBytes(), allowMalformed: true),
-          );
+        final cacheFile = File('${dir.path}/$_playlistCacheFileName');
+        if (await tempFile.exists()) {
+          if (await cacheFile.exists()) {
+            await cacheFile.delete();
+          }
+          await tempFile.rename(cacheFile.path);
+          await prefs.setString(_playlistCacheFilePathKey, cacheFile.path);
           await prefs.setInt('cache_timestamp', now);
-          await prefs.remove(_playlistCacheFilePathKey);
-          debugPrint('ChannelProvider: Playlist cached in SharedPreferences ($totalBytes bytes)');
-        } else {
-          // Save to file
-          final dir = await getApplicationDocumentsDirectory();
-          final file = File('${dir.path}/$_playlistCacheFileName');
-          await file.writeAsBytes(cacheBuilder.takeBytes());
-          await prefs.setString(_playlistCacheFilePathKey, file.path);
-          await prefs.setInt('cache_timestamp', now);
-          await prefs.remove('cached_playlist');
-          debugPrint('ChannelProvider: Playlist cached to file (${file.path}, $totalBytes bytes)');
+          await prefs.remove('cached_playlist'); // Remove old SharedPreferences cache if any
+          debugPrint('ChannelProvider: Playlist cached to file (${cacheFile.path}, $totalBytes bytes)');
         }
 
         // Auto-save EPG URL from M3U x-tvg-url attribute
@@ -505,19 +495,26 @@ class ChannelProvider with ChangeNotifier {
         throw Exception('HTTP ${response.statusCode}: Failed to load playlist');
       }
 
-      // Download all bytes
-      final playlistBytes = <int>[];
+      // Stream download directly to temp file to avoid OOM on large playlists
+      final dir = await getApplicationDocumentsDirectory();
+      final tempFile = File('${dir.path}/temp_playlist.m3u');
+      final sink = tempFile.openWrite();
       int totalBytes = 0;
 
-      await for (final chunk in response) {
-        totalBytes += chunk.length;
-        playlistBytes.addAll(chunk);
+      try {
+        await for (final chunk in response) {
+          totalBytes += chunk.length;
+          sink.add(chunk);
+        }
+        await sink.flush();
+      } finally {
+        await sink.close();
       }
       
-      debugPrint('ChannelProvider: Downloaded $totalBytes bytes (direct client)');
+      debugPrint('ChannelProvider: Downloaded $totalBytes bytes to temp file (direct client)');
 
-      // Parse in background
-      final parsed = await compute(parsePlaylistInIsolate, playlistBytes);
+      // Parse from file in background isolate (memory efficient)
+      final parsed = await compute(parsePlaylistFromFile, tempFile.path);
       _channels = (parsed['channels'] as List<dynamic>)
           .map((c) => Channel.fromMap(Map<String, dynamic>.from(c)))
           .toList();
@@ -535,17 +532,19 @@ class ChannelProvider with ChangeNotifier {
         _contentProvider!.loadSeries(_series);
       }
 
-      // Cache the playlist
+      // Use the temp file as cache
       final prefs = await SharedPreferences.getInstance();
       final now = DateTime.now().millisecondsSinceEpoch;
-      
-      if (totalBytes <= _maxCacheBytes) {
-        await prefs.setString(
-          'cached_playlist',
-          utf8.decode(playlistBytes, allowMalformed: true),
-        );
+      final cacheFile = File('${dir.path}/$_playlistCacheFileName');
+      if (await tempFile.exists()) {
+        if (await cacheFile.exists()) {
+          await cacheFile.delete();
+        }
+        await tempFile.rename(cacheFile.path);
+        await prefs.setString(_playlistCacheFilePathKey, cacheFile.path);
         await prefs.setInt('cache_timestamp', now);
-        debugPrint('ChannelProvider: Playlist cached ($totalBytes bytes)');
+        await prefs.remove('cached_playlist');
+        debugPrint('ChannelProvider: Playlist cached to file (${cacheFile.path}, $totalBytes bytes)');
       }
 
       // Auto-save EPG URL
