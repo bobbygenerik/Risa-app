@@ -15,6 +15,20 @@ import '../services/xtream_codes_service.dart';
 import 'package:http/http.dart' as http;
 import 'content_provider.dart';
 
+/// Isolate function to extract unique category names only (fast)
+List<String> _extractCategoriesInIsolate(List<String?> groupTitles) {
+  final Set<String> categories = {};
+  for (final title in groupTitles) {
+    categories.add(title ?? 'Uncategorized');
+  }
+  final sorted = categories.toList()..sort((a, b) {
+    if (a == 'Uncategorized') return 1;
+    if (b == 'Uncategorized') return -1;
+    return a.toLowerCase().compareTo(b.toLowerCase());
+  });
+  return sorted;
+}
+
 /// Clear both SharedPreferences and file-based playlist cache
 Future<void> clearPlaylistCache() async {
   final prefs = await SharedPreferences.getInstance();
@@ -49,10 +63,12 @@ class ChannelProvider with ChangeNotifier {
   bool _hasLoadedPlaylist = false;
   String? _lastM3UContent; // Store last content for debugging
   
-  // Cached grouped channels to avoid recomputing on every access
-  Map<String, List<Channel>>? _cachedGroupedChannels;
-
-  final M3UParserService _parserService = M3UParserService();
+  // Cached category list (lightweight - just strings)
+  List<String>? _cachedCategories;
+  
+  // Flag to track if categories are being computed
+  bool _isGroupingChannels = false;
+  bool get isGroupingChannels => _isGroupingChannels;
 
   // Set the ContentProvider reference for VOD sync
   void setContentProvider(ContentProvider provider) {
@@ -124,7 +140,7 @@ class ChannelProvider with ChangeNotifier {
         _channels = [];
         _movies = [];
         _series = [];
-        _cachedGroupedChannels = null;
+        _cachedCategories = null;
         notifyListeners();
       }
       // Ensure stale cache does not resurrect old playlists when none are saved
@@ -163,7 +179,9 @@ class ChannelProvider with ChangeNotifier {
               .toList();
           
           _channels = channels;
-          _cachedGroupedChannels = null; // Clear cache when channels change
+          _cachedCategories = null; // Clear cache when channels change
+          // Trigger async category extraction in background (non-blocking)
+          _computeCategoriesAsync();
           _movies = movies;
           _series = series;
           
@@ -353,7 +371,9 @@ class ChannelProvider with ChangeNotifier {
             .toList();
         
         _channels = channels;
-        _cachedGroupedChannels = null; // Clear cache when channels change
+        _cachedCategories = null; // Clear cache when channels change
+        // Trigger async category extraction in background (non-blocking)
+        _computeCategoriesAsync();
         
         debugPrint('ChannelProvider: Parsed ${_channels.length} channels (isolate)');
         debugPrint('ChannelProvider: Parsed ${_movies.length} movies, ${_series.length} series (isolate)');
@@ -495,8 +515,10 @@ class ChannelProvider with ChangeNotifier {
           .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
           .toList();
 
-_channels = channels;
-      _cachedGroupedChannels = null; // Clear cache when channels change
+      _channels = channels;
+      _cachedCategories = null; // Clear cache when channels change
+      // Trigger async category extraction in background (non-blocking)
+      _computeCategoriesAsync();
 
       debugPrint('ChannelProvider: Parsed ${_channels.length} channels (direct client)');
 
@@ -565,7 +587,7 @@ _channels = channels;
           .toList();
 
 _channels = channelMaps;
-      _cachedGroupedChannels = null; // Clear cache when channels change
+      _cachedCategories = null; // Clear cache when channels change
       _movies = movieMaps;
       _series = seriesMaps;
 
@@ -594,14 +616,72 @@ _channels = channelMaps;
     }
   }
 
-  /// Get channels grouped by category (cached for performance)
-  Map<String, List<Channel>> getGroupedChannels() {
-    // Return cached version if available
-    if (_cachedGroupedChannels != null) {
-      return _cachedGroupedChannels!;
+  /// Get list of category names (lightweight - computed in isolate)
+  List<String> getCategories() {
+    if (_cachedCategories != null) {
+      return _cachedCategories!;
     }
-    _cachedGroupedChannels = _parserService.groupChannelsByCategory(_channels);
-    return _cachedGroupedChannels!;
+    if (_isGroupingChannels) {
+      return [];
+    }
+    // Trigger async computation
+    _computeCategoriesAsync();
+    return [];
+  }
+  
+  /// Get channels for a specific category (on-demand, limited)
+  List<Channel> getChannelsForCategory(String category, {int limit = 20}) {
+    final result = <Channel>[];
+    for (final channel in _channels) {
+      if (result.length >= limit) break;
+      final channelCategory = channel.groupTitle ?? 'Uncategorized';
+      if (channelCategory == category) {
+        result.add(channel);
+      }
+    }
+    return result;
+  }
+  
+  /// Compute categories in isolate (lightweight - just strings)
+  Future<void> _computeCategoriesAsync() async {
+    if (_cachedCategories != null || _isGroupingChannels) return;
+    _isGroupingChannels = true;
+    notifyListeners();
+    
+    try {
+      // Just extract groupTitle strings - very lightweight
+      final groupTitles = _channels.map((c) => c.groupTitle).toList();
+      
+      // Run category extraction in isolate
+      _cachedCategories = await compute(_extractCategoriesInIsolate, groupTitles);
+      
+      debugPrint('ChannelProvider: Found ${_cachedCategories!.length} categories from ${_channels.length} channels');
+    } catch (e) {
+      debugPrint('ChannelProvider: Error extracting categories: $e');
+      // Fallback - just use a few hardcoded
+      _cachedCategories = ['All Channels'];
+    }
+    
+    _isGroupingChannels = false;
+    notifyListeners();
+  }
+
+  /// Get all category names for dropdowns/selectors (returns cached list)
+  List<String> getAllCategoryNames() {
+    return _cachedCategories ?? getCategories();
+  }
+
+  /// Home screen version - builds limited map for display
+  Map<String, List<Channel>> getGroupedChannels() {
+    final categories = getCategories();
+    if (categories.isEmpty) return {};
+    
+    final result = <String, List<Channel>>{};
+    // Only process first 10 categories with 20 channels each for home screen
+    for (final category in categories.take(10)) {
+      result[category] = getChannelsForCategory(category, limit: 20);
+    }
+    return result;
   }
 
   /// Add channel to favorites

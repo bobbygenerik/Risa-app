@@ -25,8 +25,7 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
         padding: const EdgeInsets.all(16),
         child: Consumer<ChannelProvider>(
           builder: (context, channelProvider, child) {
-            final groupedChannels = channelProvider.getGroupedChannels();
-            final categories = groupedChannels.keys.toList();
+            final categories = channelProvider.getAllCategoryNames();
             final allChannels = channelProvider.channels;
             
             List<Channel> filteredChannels = allChannels;

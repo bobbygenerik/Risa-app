@@ -209,36 +209,9 @@ class _EPGScreenState extends State<EPGScreen> {
             return _buildEmptyState(context);
           }
 
-          // Get categories
-          final categories = channelProvider.getGroupedChannels();
-          // Sort categories by the minimum sortOrder of channels in each category
-          final categoryNames = ['⭐ Favorites', ...categories.keys.toList()]..sort((a, b) {
-            // Keep Favorites at top
-            if (a == '⭐ Favorites') return -1;
-            if (b == '⭐ Favorites') return 1;
-            final aChannels = categories[a] ?? [];
-            final bChannels = categories[b] ?? [];
-            
-            // Get minimum sortOrder for each category
-            final aMinOrder = aChannels
-                .where((ch) => ch.sortOrder != null)
-                .map((ch) => ch.sortOrder!)
-                .fold<int?>(null, (min, order) => min == null ? order : (order < min ? order : min));
-            final bMinOrder = bChannels
-                .where((ch) => ch.sortOrder != null)
-                .map((ch) => ch.sortOrder!)
-                .fold<int?>(null, (min, order) => min == null ? order : (order < min ? order : min));
-            
-            // If both have sortOrder, compare them
-            if (aMinOrder != null && bMinOrder != null) {
-              return aMinOrder.compareTo(bMinOrder);
-            }
-            // If only one has sortOrder, it comes first
-            if (aMinOrder != null) return -1;
-            if (bMinOrder != null) return 1;
-            // Otherwise, alphabetical
-            return a.compareTo(b);
-          });
+          // Get category names (lightweight - no channel grouping)
+          final categoryList = channelProvider.getAllCategoryNames();
+          final categoryNames = ['⭐ Favorites', ...categoryList];
 
           // Filter channels by selected category and hidden status
           final filteredChannels =

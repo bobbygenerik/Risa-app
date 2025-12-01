@@ -180,6 +180,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           final currentProgram = epgService.getCurrentProgram(
             featuredChannel.tvgId ?? featuredChannel.id,
           );
+          
+          // Get grouped channels (may be empty while computing in background)
+          final groupedChannels = channelProvider.getGroupedChannels();
+          final isGrouping = channelProvider.isGroupingChannels;
 
           return SingleChildScrollView(
             child: Column(
@@ -191,8 +195,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   channels.take(6).toList(),
                 ),
                 const SizedBox(height: 24),
-                // Build category rows instead of All Channels
-                ..._buildCategoryRows(context, channelProvider.getGroupedChannels()),
+                // Show loading indicator while categories are being computed
+                if (isGrouping && groupedChannels.isEmpty)
+                  _buildCategoryLoadingIndicator()
+                else
+                  // Build category rows (limited for performance)
+                  ..._buildCategoryRows(context, groupedChannels),
                 const SizedBox(height: 40),
               ],
             ),
@@ -730,24 +738,43 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   ) {
     if (groupedChannels.isEmpty) return [];
 
-    // Sort categories alphabetically, but put "Uncategorized" at the end
-    final sortedCategories = groupedChannels.keys.toList()
-      ..sort((a, b) {
-        if (a == 'Uncategorized') return 1;
-        if (b == 'Uncategorized') return -1;
-        return a.toLowerCase().compareTo(b.toLowerCase());
-      });
-
-    // Limit to first 20 categories to prevent UI freeze with large playlists
-    final limitedCategories = sortedCategories.take(20).toList();
-
-    return limitedCategories.map((category) {
-      final allChannels = groupedChannels[category] ?? [];
-      if (allChannels.isEmpty) return const SizedBox.shrink();
-      // Limit to first 30 channels per category for performance
-      final channels = allChannels.take(30).toList();
-      return _buildChannelSection(context, category, channels);
+    // Provider already returns sorted categories with limited channels
+    return groupedChannels.entries.map((entry) {
+      final channels = entry.value;
+      if (channels.isEmpty) return const SizedBox.shrink();
+      return _buildChannelSection(context, entry.key, channels);
     }).toList();
+  }
+  
+  Widget _buildCategoryLoadingIndicator() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      child: Center(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  AppTheme.primaryBlue.withAlpha((0.7 * 255).round()),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Loading categories...',
+              style: TextStyle(
+                color: AppTheme.textSecondary.withAlpha((0.8 * 255).round()),
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildChannelPlaceholder(String name) {
