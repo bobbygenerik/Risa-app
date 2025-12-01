@@ -36,6 +36,7 @@ Future<void> clearPlaylistCache() async {
 class ChannelProvider with ChangeNotifier {
   static const String _playlistCacheFileName = 'playlist_cache.m3u';
   static const String _playlistCacheFilePathKey = 'cached_playlist_file';
+  static const int _maxChannelsToLoad = 10000; // Prevent UI overwhelm
   static const int _debugCaptureBytes =
       512 * 1024; // capture 512 KB for previews
 
@@ -129,44 +130,61 @@ class ChannelProvider with ChangeNotifier {
       return; // No saved playlist
     }
 
-    // First, try to load from cache (SharedPreferences or file)
-    final cachedPlaylist = prefs.getString('cached_playlist');
+    // Load from file-based cache (handles large playlists via streaming)
     final cacheTimestamp = prefs.getInt('cache_timestamp');
     final cacheFilePath = prefs.getString(_playlistCacheFilePathKey);
     final cacheAge = cacheTimestamp != null
         ? DateTime.now().millisecondsSinceEpoch - cacheTimestamp
         : null;
 
-    bool loadedFromCache = false;
-    if (cachedPlaylist != null && cacheAge != null && cacheAge < 21600000) {
-      debugPrint('ChannelProvider: Loading from SharedPreferences cache (${(cacheAge / 60000).round()} minutes old)');
-      StartupProbe.mark('ChannelProvider.autoLoadPlaylist: using cache');
-      try {
-        await loadPlaylistFromString(cachedPlaylist);
-        _hasLoadedPlaylist = true;
-        debugPrint('ChannelProvider: Cache loaded successfully with [0m${_channels.length} channels');
-        StartupProbe.mark('ChannelProvider.autoLoadPlaylist: cache load finished');
-        _refreshCacheInBackground(prefs, playlistType);
-        return;
-      } catch (e) {
-        debugPrint('ChannelProvider: SharedPreferences cache load failed: $e, trying file cache');
-      }
-    }
-    // Try file-based cache if present and fresh
-    if (!loadedFromCache && cacheFilePath != null && cacheAge != null && cacheAge < 21600000) {
+    // Try file-based cache if present and fresh - use streaming parser to avoid OOM
+    if (cacheFilePath != null && cacheAge != null && cacheAge < 21600000) {
       try {
         final file = File(cacheFilePath);
         if (await file.exists()) {
-          final fileContent = await file.readAsString();
-          await loadPlaylistFromString(fileContent);
+          debugPrint('ChannelProvider: Loading from file cache (streaming parser)...');
+          _isLoading = true;
+          notifyListeners();
+          
+          // Parse from file in isolate to avoid blocking main thread and OOM
+          final parsed = await compute(parsePlaylistFromFile, cacheFilePath);
+          
+          var channels = (parsed['channels'] as List<dynamic>)
+              .map((c) => Channel.fromMap(Map<String, dynamic>.from(c)))
+              .toList();
+          var movies = (parsed['movies'] as List<dynamic>)
+              .map((m) => Content.fromMap(Map<String, dynamic>.from(m)))
+              .toList();
+          var series = (parsed['series'] as List<dynamic>)
+              .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
+              .toList();
+          
+          // Limit channels to prevent UI overwhelm
+          if (channels.length > _maxChannelsToLoad) {
+            debugPrint('ChannelProvider: WARNING - Playlist has ${channels.length} channels, limiting to $_maxChannelsToLoad');
+            channels = channels.sublist(0, _maxChannelsToLoad);
+          }
+          
+          _channels = channels;
+          _movies = movies;
+          _series = series;
+          
+          if (_contentProvider != null) {
+            _contentProvider!.loadMovies(_movies);
+            _contentProvider!.loadSeries(_series);
+          }
+          
+          _isLoading = false;
           _hasLoadedPlaylist = true;
+          notifyListeners();
           debugPrint('ChannelProvider: File cache loaded successfully with ${_channels.length} channels');
           StartupProbe.mark('ChannelProvider.autoLoadPlaylist: file cache load finished');
-          _refreshCacheInBackground(prefs, playlistType);
           return;
         }
       } catch (e) {
         debugPrint('ChannelProvider: File cache load failed: $e, loading from network');
+        _isLoading = false;
+        notifyListeners();
       }
       debugPrint('ChannelProvider: File cache expired or not found, loading from network');
     }
@@ -211,58 +229,8 @@ class ChannelProvider with ChangeNotifier {
     }
   }
 
-  /// Refresh cache in background without blocking UI
-  Future<void> _refreshCacheInBackground(
-    SharedPreferences prefs,
-    String? playlistType,
-  ) async {
-    debugPrint('ChannelProvider: Refreshing cache in background...');
-    try {
-      String? playlistUrl;
-
-      if (playlistType == 'm3u') {
-        playlistUrl = prefs.getString('m3u_url');
-      } else if (playlistType == 'xtream') {
-        final server = prefs.getString('xtream_server');
-        final username = prefs.getString('xtream_username');
-        final password = prefs.getString('xtream_password');
-        if (server != null && username != null && password != null) {
-          playlistUrl =
-              '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
-        }
-      }
-
-      if (playlistUrl != null && playlistUrl.isNotEmpty) {
-        // Download without showing loading state
-        final client = http.Client();
-        try {
-          final response = await client
-              .get(
-                Uri.parse(playlistUrl),
-                headers: {
-                  'User-Agent':
-                      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
-                  'Accept': '*/*',
-                },
-              )
-              .timeout(const Duration(seconds: 90));
-
-          if (response.statusCode == 200) {
-            await prefs.setString('cached_playlist', response.body);
-            await prefs.setInt(
-              'cache_timestamp',
-              DateTime.now().millisecondsSinceEpoch,
-            );
-            debugPrint('ChannelProvider: Cache updated successfully');
-          }
-        } finally {
-          client.close();
-        }
-      }
-    } catch (e) {
-      debugPrint('ChannelProvider: Background cache refresh failed: $e');
-    }
-  }
+  // NOTE: Background cache refresh removed - file-based caching is now used exclusively
+  // The cache is refreshed when the user loads a playlist from network
 
   /// Load channels from M3U URL
   Future<void> loadPlaylistFromUrl(String url) async {
@@ -376,7 +344,7 @@ class ChannelProvider with ChangeNotifier {
 
         // Parse playlist from file in background isolate (memory efficient)
         final parsed = await compute(parsePlaylistFromFile, tempFile.path);
-        _channels = (parsed['channels'] as List<dynamic>)
+        var channels = (parsed['channels'] as List<dynamic>)
             .map((c) => Channel.fromMap(Map<String, dynamic>.from(c)))
             .toList();
         _movies = (parsed['movies'] as List<dynamic>)
@@ -385,6 +353,14 @@ class ChannelProvider with ChangeNotifier {
         _series = (parsed['series'] as List<dynamic>)
             .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
             .toList();
+        
+        // Limit channels to prevent UI overwhelm
+        if (channels.length > _maxChannelsToLoad) {
+          debugPrint('ChannelProvider: WARNING - Playlist has ${channels.length} channels, limiting to $_maxChannelsToLoad');
+          channels = channels.sublist(0, _maxChannelsToLoad);
+        }
+        _channels = channels;
+        
         debugPrint('ChannelProvider: Parsed ${_channels.length} channels (isolate)');
         debugPrint('ChannelProvider: Parsed ${_movies.length} movies, ${_series.length} series (isolate)');
 
@@ -515,7 +491,7 @@ class ChannelProvider with ChangeNotifier {
 
       // Parse from file in background isolate (memory efficient)
       final parsed = await compute(parsePlaylistFromFile, tempFile.path);
-      _channels = (parsed['channels'] as List<dynamic>)
+      var channels = (parsed['channels'] as List<dynamic>)
           .map((c) => Channel.fromMap(Map<String, dynamic>.from(c)))
           .toList();
       _movies = (parsed['movies'] as List<dynamic>)
@@ -524,6 +500,13 @@ class ChannelProvider with ChangeNotifier {
       _series = (parsed['series'] as List<dynamic>)
           .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
           .toList();
+
+      // Limit channels to prevent UI overwhelm
+      if (channels.length > _maxChannelsToLoad) {
+        debugPrint('ChannelProvider: WARNING - Playlist has ${channels.length} channels, limiting to $_maxChannelsToLoad');
+        channels = channels.sublist(0, _maxChannelsToLoad);
+      }
+      _channels = channels;
 
       debugPrint('ChannelProvider: Parsed ${_channels.length} channels (direct client)');
 
@@ -580,16 +563,22 @@ class ChannelProvider with ChangeNotifier {
     try {
       final parsed = await compute(_parsePlaylistInIsolate, content);
 
-        final channelMaps = (parsed['channels'] as List<dynamic>? ?? [])
+      var channelMaps = (parsed['channels'] as List<dynamic>? ?? [])
           .map((channel) =>
             Channel.fromMap(Map<String, dynamic>.from(channel as Map)))
           .toList();
-        final movieMaps = (parsed['movies'] as List<dynamic>? ?? [])
+      final movieMaps = (parsed['movies'] as List<dynamic>? ?? [])
           .map((movie) => Content.fromMap(Map<String, dynamic>.from(movie as Map)))
           .toList();
-        final seriesMaps = (parsed['series'] as List<dynamic>? ?? [])
+      final seriesMaps = (parsed['series'] as List<dynamic>? ?? [])
           .map((show) => Content.fromMap(Map<String, dynamic>.from(show as Map)))
           .toList();
+
+      // Limit channels to prevent UI overwhelm
+      if (channelMaps.length > _maxChannelsToLoad) {
+        debugPrint('ChannelProvider: WARNING - Playlist has ${channelMaps.length} channels, limiting to $_maxChannelsToLoad');
+        channelMaps = channelMaps.sublist(0, _maxChannelsToLoad);
+      }
 
       _channels = channelMaps;
       _movies = movieMaps;
