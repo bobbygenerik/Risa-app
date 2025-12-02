@@ -281,17 +281,69 @@ class ChannelProvider with ChangeNotifier {
         ? DateTime.now().millisecondsSinceEpoch - cacheTimestamp
         : null;
 
-    // Try file-based cache if present and fresh - use streaming parser to avoid OOM
+    // First, try to load from pre-parsed JSON cache (much faster!)
+    if (cacheAge != null && cacheAge < 21600000) {
+      final dir = await getApplicationDocumentsDirectory();
+      final jsonCacheFile = File('${dir.path}/parsed_playlist_cache.json');
+      
+      if (await jsonCacheFile.exists()) {
+        try {
+          debugPrint('ChannelProvider: Loading from pre-parsed JSON cache...');
+          final cacheLoadStart = DateTime.now();
+          
+          final jsonString = await jsonCacheFile.readAsString();
+          final parsed = json.decode(jsonString) as Map<String, dynamic>;
+          
+          _channelMaps = (parsed['channels'] as List<dynamic>)
+              .map((c) => Map<String, dynamic>.from(c as Map))
+              .toList();
+          _channelCache.clear();
+          
+          _movies = (parsed['movies'] as List<dynamic>)
+              .map((m) => Content.fromMap(Map<String, dynamic>.from(m as Map)))
+              .toList();
+          _series = (parsed['series'] as List<dynamic>)
+              .map((s) => Content.fromMap(Map<String, dynamic>.from(s as Map)))
+              .toList();
+          
+          _cachedCategories = null;
+          _computeCategoriesAsync();
+          
+          if (_contentProvider != null) {
+            _contentProvider!.loadMovies(_movies);
+            _contentProvider!.loadSeries(_series);
+          }
+          
+          _isLoading = false;
+          _hasLoadedPlaylist = true;
+          notifyListeners();
+          
+          final totalCacheLoad = DateTime.now().difference(cacheLoadStart);
+          debugPrint('ChannelProvider: JSON cache loaded in ${totalCacheLoad.inMilliseconds}ms with ${_channelMaps.length} channels');
+          StartupProbe.mark('ChannelProvider.autoLoadPlaylist: JSON cache load finished');
+          return;
+        } catch (e) {
+          debugPrint('ChannelProvider: JSON cache load failed: $e, trying M3U cache');
+        }
+      }
+    }
+
+    // Fallback: Try file-based M3U cache if present and fresh - use streaming parser
     if (cacheFilePath != null && cacheAge != null && cacheAge < 21600000) {
       try {
         final file = File(cacheFilePath);
         if (await file.exists()) {
-          debugPrint('ChannelProvider: Loading from file cache (streaming parser)...');
+          debugPrint('ChannelProvider: Loading from M3U file cache (streaming parser)...');
+          final cacheLoadStart = DateTime.now();
           
           // Parse from file in isolate to avoid blocking main thread and OOM
+          final parseStart = DateTime.now();
           final parsed = await compute(parsePlaylistFromFile, cacheFilePath);
+          final parseDuration = DateTime.now().difference(parseStart);
+          debugPrint('ChannelProvider: Cache isolate parsing took ${parseDuration.inMilliseconds}ms');
           
-          // Store raw maps - don't convert to Channel objects on main thread!
+          // Store raw maps - already in map format from optimized parser
+          final mapStart = DateTime.now();
           _channelMaps = (parsed['channels'] as List<dynamic>)
               .map((c) => Map<String, dynamic>.from(c))
               .toList();
@@ -303,6 +355,8 @@ class ChannelProvider with ChangeNotifier {
           var series = (parsed['series'] as List<dynamic>)
               .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
               .toList();
+          final mapDuration = DateTime.now().difference(mapStart);
+          debugPrint('ChannelProvider: Cache map conversion took ${mapDuration.inMilliseconds}ms');
           
           _cachedCategories = null; // Clear cache when channels change
           // Trigger async category extraction in background (non-blocking)
@@ -315,10 +369,14 @@ class ChannelProvider with ChangeNotifier {
             _contentProvider!.loadSeries(_series);
           }
           
+          // Save to JSON cache for faster loading next time
+          _saveJsonCache(parsed);
+          
           _isLoading = false;
           _hasLoadedPlaylist = true;
           notifyListeners();
-          debugPrint('ChannelProvider: File cache loaded successfully with ${_channelMaps.length} channels');
+          final totalCacheLoad = DateTime.now().difference(cacheLoadStart);
+          debugPrint('ChannelProvider: File cache loaded in ${totalCacheLoad.inMilliseconds}ms with ${_channelMaps.length} channels');
           StartupProbe.mark('ChannelProvider.autoLoadPlaylist: file cache load finished');
           return;
         }
@@ -465,6 +523,8 @@ class ChannelProvider with ChangeNotifier {
         final sink = tempFile.openWrite();
         final debugBuilder = BytesBuilder();
         int totalBytes = 0;
+        
+        final downloadStart = DateTime.now();
 
         try {
           await for (final chunk in streamedResponse.stream) {
@@ -481,12 +541,17 @@ class ChannelProvider with ChangeNotifier {
         } finally {
           await sink.close();
         }
-        debugPrint('ChannelProvider: Downloaded $totalBytes bytes to temp file');
+        final downloadDuration = DateTime.now().difference(downloadStart);
+        debugPrint('ChannelProvider: Downloaded $totalBytes bytes in ${downloadDuration.inMilliseconds}ms');
 
         // Parse playlist from file in background isolate (memory efficient)
+        final parseStart = DateTime.now();
         final parsed = await compute(parsePlaylistFromFile, tempFile.path);
+        final parseDuration = DateTime.now().difference(parseStart);
+        debugPrint('ChannelProvider: Isolate parsing took ${parseDuration.inMilliseconds}ms');
         
-        // Store raw maps - don't convert to Channel objects on main thread!
+        // Store raw maps - already in map format from optimized parser
+        final mapStart = DateTime.now();
         _channelMaps = (parsed['channels'] as List<dynamic>)
             .map((c) => Map<String, dynamic>.from(c))
             .toList();
@@ -498,6 +563,8 @@ class ChannelProvider with ChangeNotifier {
         _series = (parsed['series'] as List<dynamic>)
             .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
             .toList();
+        final mapDuration = DateTime.now().difference(mapStart);
+        debugPrint('ChannelProvider: Map conversion took ${mapDuration.inMilliseconds}ms');
         
         _cachedCategories = null; // Clear cache when channels change
         // Trigger async category extraction in background (non-blocking)
@@ -529,6 +596,9 @@ class ChannelProvider with ChangeNotifier {
           await prefs.remove('cached_playlist'); // Remove old SharedPreferences cache if any
           debugPrint('ChannelProvider: Playlist cached to file (${cacheFile.path}, $totalBytes bytes)');
         }
+        
+        // Save to JSON cache for faster loading next time
+        _saveJsonCache(parsed);
 
         // Auto-save EPG URL from M3U x-tvg-url attribute
         final epgUrl = parsed['epgUrl'] as String?;
@@ -772,6 +842,45 @@ class ChannelProvider with ChangeNotifier {
       }
     }
     return result;
+  }
+  
+  /// Save parsed playlist data to JSON cache for fast loading
+  Future<void> _saveJsonCache(Map<String, dynamic> parsed) async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final jsonCacheFile = File('${dir.path}/parsed_playlist_cache.json');
+      
+      // Remove genres from maps (they're not needed and slow down JSON encoding)
+      final channelMaps = (parsed['channels'] as List<dynamic>).map((c) {
+        final map = Map<String, dynamic>.from(c as Map);
+        map.remove('genres'); // Not needed for channels
+        return map;
+      }).toList();
+      
+      final movieMaps = (parsed['movies'] as List<dynamic>).map((m) {
+        final map = Map<String, dynamic>.from(m as Map);
+        map.remove('genres'); // Can be regenerated
+        return map;
+      }).toList();
+      
+      final seriesMaps = (parsed['series'] as List<dynamic>).map((s) {
+        final map = Map<String, dynamic>.from(s as Map);
+        map.remove('genres'); // Can be regenerated
+        return map;
+      }).toList();
+      
+      final jsonData = json.encode({
+        'channels': channelMaps,
+        'movies': movieMaps,
+        'series': seriesMaps,
+        'epgUrl': parsed['epgUrl'],
+      });
+      
+      await jsonCacheFile.writeAsString(jsonData);
+      debugPrint('ChannelProvider: Saved JSON cache (${jsonData.length} bytes)');
+    } catch (e) {
+      debugPrint('ChannelProvider: Failed to save JSON cache: $e');
+    }
   }
   
   /// Compute categories in isolate (lightweight - just strings)

@@ -179,6 +179,15 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
     _startControlsTimer();
   }
 
+  /// Return to previous screen with the currently active audio channel
+  void _returnWithActiveChannel() {
+    Channel? activeChannel;
+    if (_activeAudioPlayer < _channelsList.length) {
+      activeChannel = _channelsList[_activeAudioPlayer];
+    }
+    Navigator.of(context).pop(activeChannel);
+  }
+
   void _expandPlayer(int index) {
     if (index >= _channelsList.length) return;
 
@@ -281,7 +290,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
           break;
         case LogicalKeyboardKey.escape:
         case LogicalKeyboardKey.goBack:
-          Navigator.of(context).pop();
+          _returnWithActiveChannel();
           break;
       }
     }
@@ -309,7 +318,8 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
   }
 
   Widget _buildVideoGrid() {
-    final displayCount = _gridSize.clamp(1, _channelsList.length.clamp(1, 4));
+    // Always show tiles based on grid size, empty slots will show "Add Stream" button
+    final displayCount = _gridSize;
 
     if (displayCount == 1) {
       return _buildPlayerTile(0, isSingle: true);
@@ -449,16 +459,16 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
         margin: const EdgeInsets.all(1),
         decoration: BoxDecoration(
           border: Border.all(
-            // Active audio player gets red accent border, focused player gets blue
+            // Active audio player gets blue accent border, focused player gets lighter blue
             color: hasAudio 
-                ? AppTheme.accentRed 
-                : (isFocused ? AppTheme.primaryBlue : Colors.transparent),
+                ? AppTheme.primaryBlue 
+                : (isFocused ? AppTheme.primaryBlue.withValues(alpha: 0.6) : Colors.transparent),
             width: hasAudio ? 4 : (isFocused ? 3 : 0),
           ),
           // Add a subtle glow effect to the active audio player
           boxShadow: hasAudio ? [
             BoxShadow(
-              color: AppTheme.accentRed.withValues(alpha: 0.5),
+              color: AppTheme.primaryBlue.withValues(alpha: 0.5),
               blurRadius: 8,
               spreadRadius: 2,
             ),
@@ -662,11 +672,11 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppTheme.accentRed,
+                    color: AppTheme.primaryBlue,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: AppTheme.accentRed.withValues(alpha: 0.5),
+                        color: AppTheme.primaryBlue.withValues(alpha: 0.5),
                         blurRadius: 8,
                         spreadRadius: 2,
                       ),
@@ -713,7 +723,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                         if (event is KeyDownEvent) {
                           if (event.logicalKey == LogicalKeyboardKey.select ||
                               event.logicalKey == LogicalKeyboardKey.enter) {
-                            Navigator.of(context).pop();
+                            _returnWithActiveChannel();
                             return KeyEventResult.handled;
                           }
                         }
@@ -731,7 +741,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                                 : null,
                             child: IconButton(
                               icon: const Icon(Icons.arrow_back, color: Colors.white, size: 32),
-                              onPressed: () => Navigator.of(context).pop(),
+                              onPressed: _returnWithActiveChannel,
                             ),
                           );
                         },

@@ -778,15 +778,28 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       debugPrint('Failed to pause/mute player before multi-view: $e');
     }
     
-    Navigator.of(context).push(
+    Navigator.of(context).push<Channel>(
       MaterialPageRoute(
         builder: (context) => MultiViewScreen(
           initialChannel: widget.channel,
         ),
       ),
-    ).then((_) {
-      // Resume playback when returning from multi-view
-      if (mounted) {
+    ).then((returnedChannel) {
+      // If a different channel was returned, switch to it
+      if (mounted && returnedChannel != null && returnedChannel.url != widget.channel?.url) {
+        // Navigate to the new channel
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => EnhancedVideoPlayerScreen(
+              videoUrl: returnedChannel.url,
+              title: returnedChannel.name,
+              isLive: true,
+              channel: returnedChannel,
+            ),
+          ),
+        );
+      } else if (mounted) {
+        // Resume playback of the same channel
         try {
           _videoPlayerController.setVolume(1.0);
           _videoPlayerController.play();

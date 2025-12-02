@@ -41,6 +41,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   // EPG Settings
   late final TextEditingController _customEpgUrlController;
+  late final TextEditingController _secondaryEpgUrlController;
 
   // Integration Settings - Late initialization
   late final TextEditingController _realDebridApiKeyController;
@@ -56,6 +57,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool _openSubtitlesUsernameEditable = false;
   bool _openSubtitlesPasswordEditable = false;
   bool _customEpgUrlEditable = false;
+  bool _secondaryEpgUrlEditable = false;
 
   // Focus nodes for text fields and tab buttons
   final FocusNode _m3uUrlFocusNode = FocusNode();
@@ -76,6 +78,8 @@ class _SettingsScreenState extends State<SettingsScreen>
   final FocusNode _clearM3uButtonFocusNode = FocusNode(debugLabel: 'ClearM3UButton');
   final FocusNode _clearXtreamButtonFocusNode = FocusNode(debugLabel: 'ClearXtreamButton');
   final FocusNode _customEpgUrlFocusNode = FocusNode(debugLabel: 'CustomEpgUrlField');
+  final FocusNode _secondaryEpgUrlFocusNode = FocusNode(debugLabel: 'SecondaryEpgUrlField');
+  final FocusNode _viewUnmatchedChannelsFocusNode = FocusNode(debugLabel: 'ViewUnmatchedChannels');
   // EPG interval stepper buttons
   final FocusNode _epgIntervalMinusFocusNode = FocusNode(debugLabel: 'EpgIntervalMinus');
   final FocusNode _epgIntervalPlusFocusNode = FocusNode(debugLabel: 'EpgIntervalPlus');
@@ -146,12 +150,14 @@ class _SettingsScreenState extends State<SettingsScreen>
     _xtreamUsernameController = TextEditingController();
     _xtreamPasswordController = TextEditingController();
     _customEpgUrlController = TextEditingController();
+    _secondaryEpgUrlController = TextEditingController();
     _realDebridApiKeyController = TextEditingController();
     _openSubtitlesUsernameController = TextEditingController();
     _openSubtitlesPasswordController = TextEditingController();
 
     // Add listener to save custom EPG URL when changed
     _customEpgUrlController.addListener(_saveCustomEpgUrl);
+    _secondaryEpgUrlController.addListener(_saveSecondaryEpgUrl);
 
     _tabController = TabController(
       length: 5,
@@ -187,6 +193,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     _xtreamUsernameController.text = prefs.getString('xtream_username') ?? '';
     _xtreamPasswordController.text = prefs.getString('xtream_password') ?? '';
     _customEpgUrlController.text = prefs.getString('custom_epg_url') ?? '';
+    _secondaryEpgUrlController.text = prefs.getString('secondary_epg_url') ?? '';
     _realDebridApiKeyController.text =
         prefs.getString('realdebrid_api_key') ?? '';
     _openSubtitlesUsernameController.text =
@@ -254,6 +261,12 @@ class _SettingsScreenState extends State<SettingsScreen>
     await prefs.setString('custom_epg_url', _customEpgUrlController.text);
   }
 
+  // Save secondary EPG URL when the text field changes
+  void _saveSecondaryEpgUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('secondary_epg_url', _secondaryEpgUrlController.text);
+  }
+
   @override
   void dispose() {
     _focusNodeListeners.forEach((node, listener) {
@@ -275,6 +288,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     _xtreamPasswordFocusNode.dispose();
     _customEpgUrlController.removeListener(_saveCustomEpgUrl);
     _customEpgUrlController.dispose();
+    _secondaryEpgUrlController.removeListener(_saveSecondaryEpgUrl);
+    _secondaryEpgUrlController.dispose();
     _realDebridApiKeyController.dispose();
     _realDebridApiKeyFocusNode.dispose();
     _openSubtitlesUsernameController.dispose();
@@ -292,6 +307,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     _clearM3uButtonFocusNode.dispose();
     _clearXtreamButtonFocusNode.dispose();
     _customEpgUrlFocusNode.dispose();
+    _secondaryEpgUrlFocusNode.dispose();
+    _viewUnmatchedChannelsFocusNode.dispose();
     _epgIntervalMinusFocusNode.dispose();
     _epgIntervalPlusFocusNode.dispose();
     _epgPastDaysMinusFocusNode.dispose();
@@ -568,8 +585,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     // Get EPG URL from preferences
     final prefs = await SharedPreferences.getInstance();
     final epgUrl = prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
+    final secondaryEpgUrl = prefs.getString('secondary_epg_url');
     
-    if (epgUrl == null || epgUrl.isEmpty) {
+    if ((epgUrl == null || epgUrl.isEmpty) && (secondaryEpgUrl == null || secondaryEpgUrl.isEmpty)) {
       if (mounted) {
         showAppSnackBar(
           context,
@@ -594,14 +612,28 @@ class _SettingsScreenState extends State<SettingsScreen>
     
     try {
       final epgService = Provider.of<EpgService>(context, listen: false);
-      await epgService.loadEpgFromUrl(epgUrl, forceRefresh: true);
+      
+      // Load primary EPG
+      if (epgUrl != null && epgUrl.isNotEmpty) {
+        await epgService.loadEpgFromUrl(epgUrl, forceRefresh: true);
+      }
+      
+      // Load secondary EPG if configured
+      if (secondaryEpgUrl != null && secondaryEpgUrl.isNotEmpty) {
+        await epgService.loadSecondaryEpgFromUrl(secondaryEpgUrl, forceRefresh: true);
+      }
       
       if (mounted) {
         if (epgService.hasData) {
+          final primaryCount = epgService.epgData.length;
+          final secondaryCount = epgService.secondaryEpgData.length;
+          final message = secondaryCount > 0
+              ? 'EPG updated: $primaryCount primary + $secondaryCount supplementary channels'
+              : 'EPG updated: $primaryCount channels loaded';
           showAppSnackBar(
             context,
             SnackBar(
-              content: Text('EPG updated: ${epgService.epgData.length} channels loaded'),
+              content: Text(message),
               backgroundColor: AppTheme.accentGreen,
             ),
           );
@@ -628,6 +660,163 @@ class _SettingsScreenState extends State<SettingsScreen>
         );
       }
     }
+  }
+  
+  void _showUnmatchedChannelsDialog() {
+    final epgService = Provider.of<EpgService>(context, listen: false);
+    final channelProvider = Provider.of<ChannelProvider>(context, listen: false);
+    final channels = channelProvider.channels;
+    
+    if (channels.isEmpty) {
+      showAppSnackBar(
+        context,
+        const SnackBar(
+          content: Text('No channels loaded. Load a playlist first.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+    
+    final stats = epgService.getMatchingStats(channels);
+    final analysis = epgService.analyzeChannelMatches(channels);
+    final unmatched = analysis['unmatched'] ?? [];
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.analytics, color: AppTheme.primaryBlue),
+            const SizedBox(width: 8),
+            const Expanded(child: Text('EPG Matching Analysis')),
+          ],
+        ),
+        content: SizedBox(
+          width: MediaQuery.of(context).size.width * 0.8,
+          height: MediaQuery.of(context).size.height * 0.6,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Statistics summary
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.dialogBackground,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatCard(
+                            'Matched',
+                            '${stats['matched']}',
+                            Colors.green,
+                            Icons.check_circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildStatCard(
+                            'Unmatched',
+                            '${stats['unmatched']}',
+                            Colors.orange,
+                            Icons.warning,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'EPG Sources: ${stats['primaryChannels']} primary + ${stats['secondaryChannels']} secondary channels',
+                      style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 16),
+              Text(
+                'Channels Without EPG (${unmatched.length}):',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              
+              // Unmatched channels list
+              Expanded(
+                child: unmatched.isEmpty
+                    ? const Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.celebration, size: 48, color: Colors.green),
+                            SizedBox(height: 8),
+                            Text('All channels have EPG data!', style: TextStyle(color: Colors.green)),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: unmatched.length,
+                        itemBuilder: (context, index) {
+                          final channel = unmatched[index];
+                          return ListTile(
+                            dense: true,
+                            leading: const Icon(Icons.tv_off, size: 20, color: Colors.orange),
+                            title: Text(channel['name'] ?? 'Unknown', style: const TextStyle(fontSize: 13)),
+                            subtitle: Text(
+                              'ID: ${channel['tvgId']} • ${channel['group']}',
+                              style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+              
+              if (unmatched.isNotEmpty) ...[
+                const Divider(),
+                const Text(
+                  'Tip: Try adding a secondary EPG source that includes these channels.',
+                  style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: AppTheme.textSecondary),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildStatCard(String label, String value, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+              Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+            ],
+          ),
+        ],
+      ),
+    );
   }
   
   Future<void> _handleClearEpg() async {
@@ -1166,7 +1355,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               enableDirectionalNavigation: true,
               onLeftArrow: requestFirstSidebarFocus,
               onUpArrow: () => _savedPlaylistFocusNode.requestFocus(),
-              onDownArrow: () => FocusScope.of(context).nextFocus(),
+              onDownArrow: () => _secondaryEpgUrlFocusNode.requestFocus(),
             ),
             const SizedBox(height: AppSizes.xs),
             const Text(
@@ -1175,6 +1364,87 @@ class _SettingsScreenState extends State<SettingsScreen>
                 fontSize: 11,
                 color: AppTheme.textSecondary,
                 fontStyle: FontStyle.italic,
+              ),
+            ),
+
+            const SizedBox(height: AppSizes.md),
+            
+            // Secondary EPG URL Input
+            Text(
+              'Secondary EPG URL (Supplementary)',
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: AppSizes.sm),
+            _buildTVTextField(
+              controller: _secondaryEpgUrlController,
+              focusNode: _secondaryEpgUrlFocusNode,
+              isEditable: _secondaryEpgUrlEditable,
+              onEditableChanged: (val) => setState(() => _secondaryEpgUrlEditable = val),
+              hintText: 'http://example.com/secondary-epg.xml',
+              prefixIcon: Icons.add_link,
+              enableDirectionalNavigation: true,
+              onLeftArrow: requestFirstSidebarFocus,
+              onUpArrow: () => _customEpgUrlFocusNode.requestFocus(),
+              onDownArrow: () => _viewUnmatchedChannelsFocusNode.requestFocus(),
+            ),
+            const SizedBox(height: AppSizes.xs),
+            const Text(
+              'Additional EPG source for channels missing from primary EPG (e.g., ITV2, ITV3)',
+              style: TextStyle(
+                fontSize: 11,
+                color: AppTheme.textSecondary,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+
+            const SizedBox(height: AppSizes.md),
+            
+            // View Unmatched Channels Button
+            Focus(
+              focusNode: _viewUnmatchedChannelsFocusNode,
+              onKeyEvent: (node, event) {
+                if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                  requestFirstSidebarFocus();
+                  return KeyEventResult.handled;
+                }
+                if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                  _secondaryEpgUrlFocusNode.requestFocus();
+                  return KeyEventResult.handled;
+                }
+                return KeyEventResult.ignored;
+              },
+              child: Builder(
+                builder: (context) {
+                  final isFocused = Focus.of(context).hasFocus;
+                  return AnimatedScale(
+                    scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                    duration: TVFocusStyle.animationDuration,
+                    curve: TVFocusStyle.animationCurve,
+                    child: AnimatedContainer(
+                      duration: TVFocusStyle.animationDuration,
+                      curve: TVFocusStyle.animationCurve,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                      ),
+                      child: OutlinedButton.icon(
+                        onPressed: _showUnmatchedChannelsDialog,
+                        icon: const Icon(Icons.search_off),
+                        label: const Text('View Channels Without EPG'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.orange,
+                          side: BorderSide(
+                            color: isFocused ? AppTheme.primaryBlue : Colors.orange.withValues(alpha: 0.5),
+                            width: isFocused ? 2 : 1,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
 
