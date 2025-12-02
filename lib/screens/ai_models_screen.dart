@@ -433,7 +433,7 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.cardBackground,
+        backgroundColor: AppTheme.dialogBackground,
         title: const Text('Delete Model?'),
         content: Text(
           'Are you sure you want to delete ${model.name}?\n\n'

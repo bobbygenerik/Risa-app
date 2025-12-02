@@ -70,7 +70,7 @@ class _VoiceSearchButtonState extends State<VoiceSearchButton>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.cardBackground,
+        backgroundColor: AppTheme.dialogBackground,
         title: const Row(
           children: [
             Icon(Icons.search, color: AppTheme.primaryBlue),

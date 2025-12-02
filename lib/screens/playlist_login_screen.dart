@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
+import 'package:iptv_player/services/epg_service.dart';
 // import 'package:iptv_player/models/saved_playlist.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
@@ -102,7 +103,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
     try {
       await channelProvider.loadPlaylistFromUrl(url);
 
-      final channelCount = channelProvider.channels.length;
+      final channelCount = channelProvider.channelCount;
       final movieCount = channelProvider.movies.length;
       final seriesCount = channelProvider.series.length;
 
@@ -200,7 +201,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
 
       await channelProvider.loadPlaylistFromUrl(url);
 
-      final channelCount = channelProvider.channels.length;
+      final channelCount = channelProvider.channelCount;
       final movieCount = channelProvider.movies.length;
       final seriesCount = channelProvider.series.length;
 
@@ -210,6 +211,20 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
       await prefs.setString('xtream_username', username);
       await prefs.setString('xtream_password', password);
       await prefs.setString('playlist_type', 'xtream');
+      
+      // Build and save EPG URL for Xtream codes
+      final epgUrl = '$server/xmltv.php?username=$username&password=$password';
+      await prefs.setString('epg_url', epgUrl);
+      
+      // Auto-load EPG data
+      if (mounted) {
+        try {
+          final epgService = Provider.of<EpgService>(context, listen: false);
+          epgService.loadEpgFromUrl(epgUrl); // Load in background, don't await
+        } catch (e) {
+          debugPrint('Failed to start EPG load: $e');
+        }
+      }
 
       if (mounted) {
         if (channelCount == 0 && movieCount == 0 && seriesCount == 0) {
@@ -316,7 +331,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.cardBackground,
+        backgroundColor: AppTheme.dialogBackground,
         title: const Text('M3U Content Analysis'),
         content: Container(
           width: double.maxFinite,

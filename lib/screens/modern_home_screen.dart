@@ -9,6 +9,8 @@ import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/epg_service.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
+import 'package:iptv_player/widgets/channel_logo_widget.dart';
+import 'package:iptv_player/widgets/program_artwork_widget.dart';
 
 import 'package:iptv_player/widgets/go_to_settings_button.dart';
 
@@ -61,7 +63,10 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
     
     final titles = <String>[];
     for (final channel in channels) {
-      final currentProgram = epgService.getCurrentProgram(channel.tvgId ?? channel.id);
+      final currentProgram = epgService.getCurrentProgram(
+        channel.tvgId ?? channel.id,
+        channelName: channel.name,
+      );
       final showTitle = currentProgram?.title.isNotEmpty == true 
           ? currentProgram!.title 
           : channel.name;
@@ -105,7 +110,10 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
     if (channels.isEmpty) return;
     final idx = (page % channels.length + channels.length) % channels.length;
     final channel = channels[idx];
-    final currentProgram = epgService.getCurrentProgram(channel.tvgId ?? channel.id);
+    final currentProgram = epgService.getCurrentProgram(
+      channel.tvgId ?? channel.id,
+      channelName: channel.name,
+    );
     final showTitle = currentProgram?.title.isNotEmpty == true ? currentProgram!.title : channel.name;
     _getBestArt(showTitle).then((url) {
       if (url != null && url.isNotEmpty) {
@@ -316,7 +324,10 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
               },
               itemBuilder: (context, index) {
                 final channel = channels[index];
-                final currentProgram = epgService.getCurrentProgram(channel.tvgId ?? channel.id);
+                final currentProgram = epgService.getCurrentProgram(
+                  channel.tvgId ?? channel.id,
+                  channelName: channel.name,
+                );
                 final showTitle = currentProgram?.title.isNotEmpty == true ? currentProgram!.title : channel.name;
                 final startTime = currentProgram?.startTime;
                 final endTime = currentProgram?.endTime;
@@ -386,25 +397,25 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
                                                 )
                                               : _buildPlaceholderGradient(),
                                         ),
-                                        // Channel logo overlay (top left)
-                                        if (channel.logoUrl != null && channel.logoUrl!.isNotEmpty)
-                                          Positioned(
-                                            top: 20,
-                                            left: 20,
-                                            child: Container(
-                                              decoration: BoxDecoration(
-                                                color: Colors.black.withOpacity(0.7),
-                                                borderRadius: BorderRadius.circular(8),
-                                              ),
+                                        // Channel logo overlay (top left) - with enrichment
+                                        Positioned(
+                                          top: 20,
+                                          left: 20,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: Colors.black.withOpacity(0.7),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
                                             padding: const EdgeInsets.all(6),
-                                            child: Image.network(
-                                              channel.logoUrl!,
+                                            child: ChannelLogoWidget(
+                                              channelName: channel.name,
+                                              logoUrl: channel.logoUrl,
+                                              tvgId: channel.tvgId,
                                               width: 48,
                                               height: 48,
                                               fit: BoxFit.contain,
-                                              cacheWidth: 96,
-                                              cacheHeight: 96,
-                                              errorBuilder: (_, __, ___) => const Icon(Icons.live_tv, color: Colors.white, size: 32),
+                                              borderRadius: BorderRadius.circular(4),
+                                              errorWidget: const Icon(Icons.live_tv, color: Colors.white, size: 32),
                                             ),
                                           ),
                                         ),
@@ -826,19 +837,15 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
                                   ),
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(12),
-                                    child: channel.logoUrl != null &&
-                                            channel.logoUrl!.isNotEmpty
-                                          ? Image.network(
-                                            channel.logoUrl!,
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: double.infinity,
-                                            cacheWidth: 320,
-                                            cacheHeight: 180,
-                                            errorBuilder: (_, __, ___) =>
-                                              _buildChannelPlaceholder(channel.name),
-                                          )
-                                        : _buildChannelPlaceholder(channel.name),
+                                    child: ProgramArtworkWidget(
+                                      channel: channel,
+                                      width: double.infinity,
+                                      height: double.infinity,
+                                      fit: BoxFit.cover,
+                                      borderRadius: BorderRadius.circular(12),
+                                      placeholder: _buildChannelPlaceholder(channel.name),
+                                      errorWidget: _buildChannelPlaceholder(channel.name),
+                                    ),
                                   ),
                                 ),
                               ),

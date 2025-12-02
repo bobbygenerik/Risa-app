@@ -14,7 +14,8 @@ class CategoryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<ChannelProvider>(
       builder: (context, channelProvider, child) {
-        final channels = channelProvider.filterByCategory(category);
+        // Get total count without converting all channels
+        final totalCount = channelProvider.getChannelCountForCategory(category);
 
         return Padding(
           padding: const EdgeInsets.all(AppSizes.lg),
@@ -37,7 +38,7 @@ class CategoryScreen extends StatelessWidget {
                   ),
                   const Spacer(),
                   Text(
-                    '${channels.length} channels',
+                    '$totalCount channels',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: AppTheme.textSecondary,
                     ),
@@ -46,22 +47,24 @@ class CategoryScreen extends StatelessWidget {
               ),
               const SizedBox(height: AppSizes.xl),
 
-              // Channels Grid
+              // Channels Grid - lazy loading with GridView.builder
               Expanded(
-                child: channels.isEmpty
+                child: totalCount == 0
                     ? _buildEmptyState()
                     : GridView.builder(
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount:
-                              6, // Increased from 4 to 6 for smaller cards
+                          crossAxisCount: 6,
                           crossAxisSpacing: AppSizes.md,
                           mainAxisSpacing: AppSizes.md,
-                          childAspectRatio:
-                              0.85, // Adjusted ratio for better proportions
+                          childAspectRatio: 0.85,
                         ),
-                        itemCount: channels.length,
+                        itemCount: totalCount,
                         itemBuilder: (context, index) {
-                          final channel = channels[index];
+                          // Lazy load channel at this index
+                          final channel = channelProvider.getChannelInCategoryAtIndex(category, index);
+                          if (channel == null) {
+                            return const SizedBox.shrink();
+                          }
                           return _buildChannelCard(
                             context,
                             channel,

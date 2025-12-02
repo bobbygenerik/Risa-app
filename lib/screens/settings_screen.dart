@@ -712,7 +712,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     children: [
                       CircleAvatar(
                         radius: 50,
-                        backgroundColor: AppTheme.cardBackground,
+                        backgroundColor: AppTheme.dialogBackground,
                         backgroundImage:
                             profileImagePath != null &&
                                 profileImagePath.isNotEmpty
@@ -2319,12 +2319,23 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget _buildPlaylistStatusCard() {
     return Consumer<ChannelProvider>(
       builder: (context, provider, _) {
-        final hasChannels = provider.channels.isNotEmpty;
-        final statusText = hasChannels
-            ? 'Loaded ${provider.channels.length} live channels'
-            : provider.isLoading
-            ? 'Loading playlist...'
-            : 'No playlist loaded';
+        final hasChannels = provider.hasChannels;
+        final movieCount = provider.movies.length;
+        final seriesCount = provider.series.length;
+        
+        // Build status text with movies/series if available
+        String statusText;
+        if (hasChannels) {
+          final parts = <String>['${provider.channelCount} live channels'];
+          if (movieCount > 0) parts.add('$movieCount movies');
+          if (seriesCount > 0) parts.add('$seriesCount series');
+          statusText = 'Loaded ${parts.join(', ')}';
+        } else if (provider.isLoading) {
+          statusText = 'Loading playlist...';
+        } else {
+          statusText = 'No playlist loaded';
+        }
+        
         final previewLine =
             provider.lastM3UContent?.split('\n').first ?? 'Unavailable';
         final subtitle = hasChannels
@@ -4707,7 +4718,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.cardBackground,
+        backgroundColor: AppTheme.dialogBackground,
         title: Text(isTarget ? 'Select Target Language' : 'Select Source Language'),
         content: SizedBox(
           width: double.maxFinite,
@@ -4752,7 +4763,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.cardBackground,
+        backgroundColor: AppTheme.dialogBackground,
         title: const Text('Export Transcriptions'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -5147,7 +5158,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppTheme.cardBackground,
+        backgroundColor: AppTheme.dialogBackground,
         title: const Text('Delete model?'),
         content: Text(
           'Delete ${model.name}? This frees up ${model.sizeFormatted}. '
@@ -5301,7 +5312,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.cardBackground,
+        backgroundColor: AppTheme.dialogBackground,
         title: const Text('Clear Transcriptions?'),
         content: Text(
           'This will delete all ${service.transcriptions.length} saved transcription entries.',
@@ -5443,7 +5454,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         context,
         SnackBar(
           content: Text(
-            'Playlist loaded successfully! ${provider.channels.length} channels found.',
+            'Playlist loaded successfully! ${provider.channelCount} channels found.',
           ),
           backgroundColor: AppTheme.accentGreen,
         ),
@@ -5500,13 +5511,23 @@ class _SettingsScreenState extends State<SettingsScreen>
       await prefs.setString('xtream_username', username);
       await prefs.setString('xtream_password', password);
       await prefs.setString('playlist_type', 'xtream');
+      
+      // Auto-generate and save EPG URL for Xtream codes
+      final epgUrl = '$server/xmltv.php?username=$username&password=$password';
+      await prefs.setString('epg_url', epgUrl);
+      
+      // Load EPG in background
+      if (mounted) {
+        final epgService = Provider.of<EpgService>(context, listen: false);
+        epgService.loadEpgFromUrl(epgUrl); // Load in background
+      }
 
       if (!mounted) return;
       showAppSnackBar(
         context,
         SnackBar(
           content: Text(
-            'Xtream playlist loaded! ${provider.channels.length} channels found.',
+            'Xtream playlist loaded! ${provider.channelCount} channels found.',
           ),
           backgroundColor: AppTheme.accentGreen,
         ),

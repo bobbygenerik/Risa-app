@@ -16,17 +16,25 @@ import 'package:http/http.dart' as http;
 import 'content_provider.dart';
 
 /// Isolate function to extract unique category names only (fast)
+/// Preserves the order categories first appear in the playlist
 List<String> _extractCategoriesInIsolate(List<String?> groupTitles) {
-  final Set<String> categories = {};
+  final List<String> categories = [];
+  final Set<String> seen = {};
   for (final title in groupTitles) {
-    categories.add(title ?? 'Uncategorized');
+    final category = title ?? 'Uncategorized';
+    if (!seen.contains(category)) {
+      seen.add(category);
+      // Add Uncategorized at the end
+      if (category != 'Uncategorized') {
+        categories.add(category);
+      }
+    }
   }
-  final sorted = categories.toList()..sort((a, b) {
-    if (a == 'Uncategorized') return 1;
-    if (b == 'Uncategorized') return -1;
-    return a.toLowerCase().compareTo(b.toLowerCase());
-  });
-  return sorted;
+  // Add Uncategorized at the end if it exists
+  if (seen.contains('Uncategorized')) {
+    categories.add('Uncategorized');
+  }
+  return categories;
 }
 
 /// Clear both SharedPreferences and file-based playlist cache
@@ -53,7 +61,11 @@ class ChannelProvider with ChangeNotifier {
   static const int _debugCaptureBytes =
       512 * 1024; // capture 512 KB for previews
 
-  List<Channel> _channels = [];
+  // Store raw channel data as maps to avoid expensive conversion on main thread
+  List<Map<String, dynamic>> _channelMaps = [];
+  // Cache of converted Channel objects (populated on-demand)
+  final Map<int, Channel> _channelCache = {};
+  
   final List<Channel> _favoriteChannels = [];
   List<Content> _movies = [];
   List<Content> _series = [];
@@ -62,6 +74,7 @@ class ChannelProvider with ChangeNotifier {
   ContentProvider? _contentProvider;
   bool _hasLoadedPlaylist = false;
   String? _lastM3UContent; // Store last content for debugging
+  bool _disposed = false; // Track if provider is disposed
   
   // Cached category list (lightweight - just strings)
   List<String>? _cachedCategories;
@@ -69,6 +82,19 @@ class ChannelProvider with ChangeNotifier {
   // Flag to track if categories are being computed
   bool _isGroupingChannels = false;
   bool get isGroupingChannels => _isGroupingChannels;
+  
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+  
+  @override
+  void notifyListeners() {
+    if (!_disposed) {
+      super.notifyListeners();
+    }
+  }
 
   // Set the ContentProvider reference for VOD sync
   void setContentProvider(ContentProvider provider) {
@@ -78,7 +104,94 @@ class ChannelProvider with ChangeNotifier {
   // Watch count tracking (channelId -> count)
   Map<String, int> _watchCounts = {};
 
-  List<Channel> get channels => _channels;
+  /// Get channel count without converting all channels
+  int get channelCount => _channelMaps.length;
+  
+  /// Quick check if there are any channels (no conversion needed)
+  bool get hasChannels => _channelMaps.isNotEmpty;
+  
+  /// Get channels - returns limited list for UI (lazy conversion)
+  List<Channel> get channels {
+    // For UI, return more channels but still limit to prevent freeze
+    // Use getChannelAt() or getChannelsForCategory() for specific access
+    final limit = _channelMaps.length < 500 ? _channelMaps.length : 500;
+    return List.generate(limit, (i) => _getChannelAt(i));
+  }
+  
+  /// Get a specific channel by index (cached conversion)
+  Channel _getChannelAt(int index) {
+    if (index < 0 || index >= _channelMaps.length) {
+      throw RangeError.index(index, _channelMaps, 'index');
+    }
+    return _channelCache.putIfAbsent(
+      index,
+      () => Channel.fromMap(_channelMaps[index]),
+    );
+  }
+  
+  /// Find a channel by ID (lazy conversion)
+  Channel? getChannelById(String id) {
+    for (int i = 0; i < _channelMaps.length; i++) {
+      if (_channelMaps[i]['id'] == id) {
+        return _getChannelAt(i);
+      }
+    }
+    return null;
+  }
+  
+  /// Get filtered channels for EPG/search (with limit for performance)
+  List<Channel> getFilteredChannels({
+    String? category,
+    Set<String>? favoriteIds,
+    bool excludeHidden = true,
+    int limit = 500,
+  }) {
+    final result = <Channel>[];
+    for (int i = 0; i < _channelMaps.length && result.length < limit; i++) {
+      final map = _channelMaps[i];
+      
+      // Filter by hidden
+      if (excludeHidden && map['isHidden'] == true) continue;
+      
+      // Filter by category
+      if (category != null) {
+        final channelCategory = (map['groupTitle'] as String?) ?? 'Uncategorized';
+        if (channelCategory != category) continue;
+      }
+      
+      // Filter by favorites
+      if (favoriteIds != null) {
+        final channelId = map['id'] as String?;
+        if (channelId == null || !favoriteIds.contains(channelId)) continue;
+      }
+      
+      result.add(_getChannelAt(i));
+    }
+    return result;
+  }
+  
+  /// Get next channel in the list (for channel surfing)
+  Channel? getNextChannel(String currentChannelId) {
+    for (int i = 0; i < _channelMaps.length; i++) {
+      if (_channelMaps[i]['id'] == currentChannelId) {
+        final nextIndex = (i + 1) % _channelMaps.length;
+        return _getChannelAt(nextIndex);
+      }
+    }
+    return null;
+  }
+  
+  /// Get previous channel in the list (for channel surfing)
+  Channel? getPreviousChannel(String currentChannelId) {
+    for (int i = 0; i < _channelMaps.length; i++) {
+      if (_channelMaps[i]['id'] == currentChannelId) {
+        final prevIndex = (i - 1 + _channelMaps.length) % _channelMaps.length;
+        return _getChannelAt(prevIndex);
+      }
+    }
+    return null;
+  }
+  
   List<Channel> get favoriteChannels => _favoriteChannels;
   List<Content> get movies => _movies;
   List<Content> get series => _series;
@@ -87,15 +200,19 @@ class ChannelProvider with ChangeNotifier {
   bool get hasLoadedPlaylist => _hasLoadedPlaylist;
   String? get lastM3UContent => _lastM3UContent; // Expose for debugging
   
-  /// Get channels sorted by watch count (most watched first)
+  /// Get channels sorted by watch count (most watched first) - limited
   List<Channel> get mostWatchedChannels {
-    final sorted = List<Channel>.from(_channels);
-    sorted.sort((a, b) {
-      final aCount = _watchCounts[a.id] ?? 0;
-      final bCount = _watchCounts[b.id] ?? 0;
-      return bCount.compareTo(aCount); // Descending order
+    // Sort indices by watch count, then convert limited number
+    final indices = List.generate(_channelMaps.length, (i) => i);
+    indices.sort((a, b) {
+      final aId = _channelMaps[a]['id'] as String? ?? '';
+      final bId = _channelMaps[b]['id'] as String? ?? '';
+      final aCount = _watchCounts[aId] ?? 0;
+      final bCount = _watchCounts[bId] ?? 0;
+      return bCount.compareTo(aCount);
     });
-    return sorted;
+    // Only return top 50 most watched
+    return indices.take(50).map((i) => _getChannelAt(i)).toList();
   }
 
   /// Track when a channel is watched
@@ -127,6 +244,11 @@ class ChannelProvider with ChangeNotifier {
   Future<void> autoLoadPlaylist() async {
     if (_hasLoadedPlaylist) return; // Already loaded
 
+    // Set loading immediately so UI shows loading state
+    // Use Future.microtask to avoid calling notifyListeners during build
+    _isLoading = true;
+    Future.microtask(() => notifyListeners());
+
     StartupProbe.mark('ChannelProvider.autoLoadPlaylist invoked');
     await _loadWatchCounts();
     debugPrint('ChannelProvider: Auto-loading playlist...');
@@ -134,14 +256,17 @@ class ChannelProvider with ChangeNotifier {
     final playlistType = prefs.getString('playlist_type');
 
     if (playlistType == null) {
+      _isLoading = false;
+      Future.microtask(() => notifyListeners());
       StartupProbe.mark('ChannelProvider.autoLoadPlaylist: no saved playlist');
       debugPrint('ChannelProvider: No saved playlist found');
-      if (_channels.isNotEmpty || _movies.isNotEmpty || _series.isNotEmpty) {
-        _channels = [];
+      if (_channelMaps.isNotEmpty || _movies.isNotEmpty || _series.isNotEmpty) {
+        _channelMaps = [];
+        _channelCache.clear();
         _movies = [];
         _series = [];
         _cachedCategories = null;
-        notifyListeners();
+        Future.microtask(() => notifyListeners());
       }
       // Ensure stale cache does not resurrect old playlists when none are saved
       await prefs.remove('cached_playlist');
@@ -162,15 +287,16 @@ class ChannelProvider with ChangeNotifier {
         final file = File(cacheFilePath);
         if (await file.exists()) {
           debugPrint('ChannelProvider: Loading from file cache (streaming parser)...');
-          _isLoading = true;
-          notifyListeners();
           
           // Parse from file in isolate to avoid blocking main thread and OOM
           final parsed = await compute(parsePlaylistFromFile, cacheFilePath);
           
-          var channels = (parsed['channels'] as List<dynamic>)
-              .map((c) => Channel.fromMap(Map<String, dynamic>.from(c)))
+          // Store raw maps - don't convert to Channel objects on main thread!
+          _channelMaps = (parsed['channels'] as List<dynamic>)
+              .map((c) => Map<String, dynamic>.from(c))
               .toList();
+          _channelCache.clear();
+          
           var movies = (parsed['movies'] as List<dynamic>)
               .map((m) => Content.fromMap(Map<String, dynamic>.from(m)))
               .toList();
@@ -178,7 +304,6 @@ class ChannelProvider with ChangeNotifier {
               .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
               .toList();
           
-          _channels = channels;
           _cachedCategories = null; // Clear cache when channels change
           // Trigger async category extraction in background (non-blocking)
           _computeCategoriesAsync();
@@ -193,7 +318,7 @@ class ChannelProvider with ChangeNotifier {
           _isLoading = false;
           _hasLoadedPlaylist = true;
           notifyListeners();
-          debugPrint('ChannelProvider: File cache loaded successfully with ${_channels.length} channels');
+          debugPrint('ChannelProvider: File cache loaded successfully with ${_channelMaps.length} channels');
           StartupProbe.mark('ChannelProvider.autoLoadPlaylist: file cache load finished');
           return;
         }
@@ -360,9 +485,13 @@ class ChannelProvider with ChangeNotifier {
 
         // Parse playlist from file in background isolate (memory efficient)
         final parsed = await compute(parsePlaylistFromFile, tempFile.path);
-        var channels = (parsed['channels'] as List<dynamic>)
-            .map((c) => Channel.fromMap(Map<String, dynamic>.from(c)))
+        
+        // Store raw maps - don't convert to Channel objects on main thread!
+        _channelMaps = (parsed['channels'] as List<dynamic>)
+            .map((c) => Map<String, dynamic>.from(c))
             .toList();
+        _channelCache.clear();
+        
         _movies = (parsed['movies'] as List<dynamic>)
             .map((m) => Content.fromMap(Map<String, dynamic>.from(m)))
             .toList();
@@ -370,12 +499,11 @@ class ChannelProvider with ChangeNotifier {
             .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
             .toList();
         
-        _channels = channels;
         _cachedCategories = null; // Clear cache when channels change
         // Trigger async category extraction in background (non-blocking)
         _computeCategoriesAsync();
         
-        debugPrint('ChannelProvider: Parsed ${_channels.length} channels (isolate)');
+        debugPrint('ChannelProvider: Parsed ${_channelMaps.length} channels (isolate)');
         debugPrint('ChannelProvider: Parsed ${_movies.length} movies, ${_series.length} series (isolate)');
 
         if (_contentProvider != null) {
@@ -505,9 +633,13 @@ class ChannelProvider with ChangeNotifier {
 
       // Parse from file in background isolate (memory efficient)
       final parsed = await compute(parsePlaylistFromFile, tempFile.path);
-      var channels = (parsed['channels'] as List<dynamic>)
-          .map((c) => Channel.fromMap(Map<String, dynamic>.from(c)))
+      
+      // Store raw maps - don't convert to Channel objects on main thread!
+      _channelMaps = (parsed['channels'] as List<dynamic>)
+          .map((c) => Map<String, dynamic>.from(c))
           .toList();
+      _channelCache.clear();
+      
       _movies = (parsed['movies'] as List<dynamic>)
           .map((m) => Content.fromMap(Map<String, dynamic>.from(m)))
           .toList();
@@ -515,12 +647,11 @@ class ChannelProvider with ChangeNotifier {
           .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
           .toList();
 
-      _channels = channels;
       _cachedCategories = null; // Clear cache when channels change
       // Trigger async category extraction in background (non-blocking)
       _computeCategoriesAsync();
 
-      debugPrint('ChannelProvider: Parsed ${_channels.length} channels (direct client)');
+      debugPrint('ChannelProvider: Parsed ${_channelMaps.length} channels (direct client)');
 
       if (_contentProvider != null) {
         _contentProvider!.loadMovies(_movies);
@@ -575,10 +706,12 @@ class ChannelProvider with ChangeNotifier {
     try {
       final parsed = await compute(_parsePlaylistInIsolate, content);
 
-      var channelMaps = (parsed['channels'] as List<dynamic>? ?? [])
-          .map((channel) =>
-            Channel.fromMap(Map<String, dynamic>.from(channel as Map)))
+      // Store raw maps - don't convert to Channel objects on main thread!
+      _channelMaps = (parsed['channels'] as List<dynamic>? ?? [])
+          .map((channel) => Map<String, dynamic>.from(channel as Map))
           .toList();
+      _channelCache.clear();
+      
       final movieMaps = (parsed['movies'] as List<dynamic>? ?? [])
           .map((movie) => Content.fromMap(Map<String, dynamic>.from(movie as Map)))
           .toList();
@@ -586,7 +719,6 @@ class ChannelProvider with ChangeNotifier {
           .map((show) => Content.fromMap(Map<String, dynamic>.from(show as Map)))
           .toList();
 
-_channels = channelMaps;
       _cachedCategories = null; // Clear cache when channels change
       _movies = movieMaps;
       _series = seriesMaps;
@@ -629,14 +761,14 @@ _channels = channelMaps;
     return [];
   }
   
-  /// Get channels for a specific category (on-demand, limited)
+  /// Get channels for a specific category (on-demand, limited, lazy conversion)
   List<Channel> getChannelsForCategory(String category, {int limit = 20}) {
     final result = <Channel>[];
-    for (final channel in _channels) {
-      if (result.length >= limit) break;
-      final channelCategory = channel.groupTitle ?? 'Uncategorized';
+    for (int i = 0; i < _channelMaps.length && result.length < limit; i++) {
+      final channelMap = _channelMaps[i];
+      final channelCategory = (channelMap['groupTitle'] as String?) ?? 'Uncategorized';
       if (channelCategory == category) {
-        result.add(channel);
+        result.add(_getChannelAt(i));
       }
     }
     return result;
@@ -649,13 +781,13 @@ _channels = channelMaps;
     notifyListeners();
     
     try {
-      // Just extract groupTitle strings - very lightweight
-      final groupTitles = _channels.map((c) => c.groupTitle).toList();
+      // Just extract groupTitle strings from maps - very lightweight
+      final groupTitles = _channelMaps.map((m) => m['groupTitle'] as String?).toList();
       
       // Run category extraction in isolate
       _cachedCategories = await compute(_extractCategoriesInIsolate, groupTitles);
       
-      debugPrint('ChannelProvider: Found ${_cachedCategories!.length} categories from ${_channels.length} channels');
+      debugPrint('ChannelProvider: Found ${_cachedCategories!.length} categories from ${_channelMaps.length} channels');
     } catch (e) {
       debugPrint('ChannelProvider: Error extracting categories: $e');
       // Fallback - just use a few hardcoded
@@ -677,9 +809,9 @@ _channels = channelMaps;
     if (categories.isEmpty) return {};
     
     final result = <String, List<Channel>>{};
-    // Only process first 10 categories with 20 channels each for home screen
-    for (final category in categories.take(10)) {
-      result[category] = getChannelsForCategory(category, limit: 20);
+    // Only process first 15 categories with 30 channels each for home screen
+    for (final category in categories.take(15)) {
+      result[category] = getChannelsForCategory(category, limit: 30);
     }
     return result;
   }
@@ -752,22 +884,63 @@ _channels = channelMaps;
     return _favoriteChannels.any((c) => c.id == channel.id);
   }
 
-  /// Search channels by name
-  List<Channel> searchChannels(String query) {
-    if (query.isEmpty) return _channels;
-
-    return _channels
-        .where(
-          (channel) => channel.name.toLowerCase().contains(query.toLowerCase()),
-        )
-        .toList();
+  /// Search channels by name (limited results for performance)
+  List<Channel> searchChannels(String query, {int limit = 50}) {
+    if (query.isEmpty) return channels; // Returns limited list via getter
+    
+    final lowerQuery = query.toLowerCase();
+    final result = <Channel>[];
+    for (int i = 0; i < _channelMaps.length && result.length < limit; i++) {
+      final name = (_channelMaps[i]['name'] as String?) ?? '';
+      if (name.toLowerCase().contains(lowerQuery)) {
+        result.add(_getChannelAt(i));
+      }
+    }
+    return result;
   }
 
-  /// Filter channels by category
-  List<Channel> filterByCategory(String category) {
-    return _channels
-        .where((channel) => channel.groupTitle == category)
-        .toList();
+  /// Filter channels by category with pagination support
+  List<Channel> filterByCategory(String category, {int offset = 0, int limit = 100}) {
+    final result = <Channel>[];
+    int skipped = 0;
+    for (int i = 0; i < _channelMaps.length && result.length < limit; i++) {
+      final channelCategory = (_channelMaps[i]['groupTitle'] as String?) ?? 'Uncategorized';
+      if (channelCategory == category) {
+        if (skipped < offset) {
+          skipped++;
+          continue;
+        }
+        result.add(_getChannelAt(i));
+      }
+    }
+    return result;
+  }
+  
+  /// Get count of channels in a category (no conversion needed)
+  int getChannelCountForCategory(String category) {
+    int count = 0;
+    for (int i = 0; i < _channelMaps.length; i++) {
+      final channelCategory = (_channelMaps[i]['groupTitle'] as String?) ?? 'Uncategorized';
+      if (channelCategory == category) {
+        count++;
+      }
+    }
+    return count;
+  }
+  
+  /// Get a channel at a specific index within a category (for lazy loading)
+  Channel? getChannelInCategoryAtIndex(String category, int index) {
+    int found = 0;
+    for (int i = 0; i < _channelMaps.length; i++) {
+      final channelCategory = (_channelMaps[i]['groupTitle'] as String?) ?? 'Uncategorized';
+      if (channelCategory == category) {
+        if (found == index) {
+          return _getChannelAt(i);
+        }
+        found++;
+      }
+    }
+    return null;
   }
 }
 

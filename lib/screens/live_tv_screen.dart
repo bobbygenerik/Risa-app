@@ -14,6 +14,8 @@ import 'package:iptv_player/widgets/go_to_settings_button.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/service_validator.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
+import 'package:iptv_player/widgets/channel_logo_widget.dart';
+import 'package:iptv_player/widgets/program_artwork_widget.dart';
 
 /// A focused Live TV screen. Shows a hero for the currently airing program
 /// on a featured channel, plus channel rows below.
@@ -179,6 +181,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           final featuredChannel = channels[_featuredIndex];
           final currentProgram = epgService.getCurrentProgram(
             featuredChannel.tvgId ?? featuredChannel.id,
+            channelName: featuredChannel.name,
           );
           
           // Get grouped channels (may be empty while computing in background)
@@ -299,19 +302,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      if (channel.logoUrl != null &&
-                          channel.logoUrl!.isNotEmpty)
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: CachedNetworkImage(
-                            imageUrl: channel.logoUrl!,
-                            height: 64,
-                            width: 120,
-                            fit: BoxFit.contain,
-                            errorWidget: (_, __, ___) =>
-                                const SizedBox.shrink(),
-                          ),
-                        ),
+                      // Channel logo with enrichment
+                      ChannelLogoWidget(
+                        channelName: channel.name,
+                        logoUrl: channel.logoUrl,
+                        tvgId: channel.tvgId,
+                        width: 120,
+                        height: 64,
+                        fit: BoxFit.contain,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       const SizedBox(width: 16),
                       Expanded(
                         child: Column(
@@ -477,7 +477,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                   curve: TVFocusStyle.animationCurve,
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(12),
-                                    color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
+                                    color: AppTheme.primaryBlue, // Solid color
                                     boxShadow: isFocused
                                         ? TVFocusStyle.focusedShadow
                                         : TVFocusStyle.defaultShadow,
@@ -700,19 +700,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                 ),
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(12),
-                                  child: channel.logoUrl != null &&
-                                          channel.logoUrl!.isNotEmpty
-                                      ? CachedNetworkImage(
-                                          imageUrl: channel.logoUrl!,
-                                          fit: BoxFit.cover,
-                                          width: double.infinity,
-                                          height: double.infinity,
-                                          placeholder: (_, __) =>
-                                              _buildChannelPlaceholder(channel.name),
-                                          errorWidget: (_, __, ___) =>
-                                              _buildChannelPlaceholder(channel.name),
-                                        )
-                                      : _buildChannelPlaceholder(channel.name),
+                                  child: ProgramArtworkWidget(
+                                    channel: channel,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    fit: BoxFit.cover,
+                                    borderRadius: BorderRadius.circular(12),
+                                    placeholder: _buildChannelPlaceholder(channel.name),
+                                    errorWidget: _buildChannelPlaceholder(channel.name),
+                                  ),
                                 ),
                               ),
                             ),

@@ -135,7 +135,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
           context,
           SnackBar(
             content: Text(
-              '✓ Loaded "${playlist.name}" - ${channelProvider.channels.length} channels',
+              '✓ Loaded "${playlist.name}" - ${channelProvider.channelCount} channels',
             ),
             backgroundColor: AppTheme.accentGreen,
           ),

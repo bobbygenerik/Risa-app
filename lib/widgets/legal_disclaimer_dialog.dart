@@ -14,7 +14,7 @@ class _LegalDisclaimerDialogState extends State<LegalDisclaimerDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: AppTheme.cardBackground,
+      backgroundColor: AppTheme.dialogBackground,
       child: Container(
         width: 600,
         padding: const EdgeInsets.all(AppSizes.xxl),

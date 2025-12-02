@@ -150,26 +150,7 @@ class M3UParserService {
         }
       } else if (!line.startsWith('#') && currentInfo != null) {
         final channelName = _extractChannelName(currentInfo!);
-        final channel = Channel(
-          id:
-              DateTime.now().millisecondsSinceEpoch.toString() +
-              logicalIndex.toString(),
-          name: channelName,
-          url: line,
-          logoUrl: currentAttributes['tvg-logo'],
-          groupTitle: currentAttributes['group-title'],
-          tvgId: currentAttributes['tvg-id'],
-          attributes: currentAttributes,
-          sortOrder: channelCount, // Preserve playlist order
-        );
-        channels.add(channel);
-        channelCount++;
-        if (channelCount <= 3) {
-          debugPrint(
-            'M3UParser: (stream) Added channel #$channelCount: $channelName',
-          );
-        }
-
+        
         final groupTitle =
             currentAttributes['group-title']?.toLowerCase() ?? '';
         final looksSeries = _looksLikeSeries(channelName, groupTitle, line);
@@ -193,6 +174,27 @@ class M3UParserService {
               logicalIndex,
             ),
           );
+        } else {
+          // Only add to channels if NOT a movie and NOT a series (i.e., live TV)
+          final channel = Channel(
+            id:
+                DateTime.now().millisecondsSinceEpoch.toString() +
+                logicalIndex.toString(),
+            name: channelName,
+            url: line,
+            logoUrl: currentAttributes['tvg-logo'],
+            groupTitle: currentAttributes['group-title'],
+            tvgId: currentAttributes['tvg-id'],
+            attributes: currentAttributes,
+            sortOrder: channelCount, // Preserve playlist order
+          );
+          channels.add(channel);
+          channelCount++;
+          if (channelCount <= 3) {
+            debugPrint(
+              'M3UParser: (stream) Added channel #$channelCount: $channelName',
+            );
+          }
         }
 
         currentInfo = null;

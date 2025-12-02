@@ -521,7 +521,13 @@ class _MyAppState extends State<MyApp> {
               return service;
             },
           ),
-          ChangeNotifierProvider(create: (_) => EpgService()),
+          ChangeNotifierProvider(
+            create: (_) {
+              final service = EpgService();
+              _runDeferred(service.initialize);
+              return service;
+            },
+          ),
           // Drive sync service removed.
           ChangeNotifierProvider(
             create: (_) {

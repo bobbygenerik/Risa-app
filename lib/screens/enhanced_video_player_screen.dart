@@ -610,23 +610,15 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   // Removed _getSubtitleType - subtitle support disabled
 
   void _switchToNextChannel() {
+    if (widget.channel == null) return;
+    
     final channelProvider = Provider.of<ChannelProvider>(
       context,
       listen: false,
     );
-    final channels = channelProvider.channels;
-
-    if (channels.isEmpty || widget.channel == null) return;
-
-    // Find current channel index
-    final currentIndex = channels.indexWhere(
-      (ch) => ch.id == widget.channel!.id,
-    );
-    if (currentIndex == -1) return;
-
-    // Get next channel (wrap around to first if at end)
-    final nextIndex = (currentIndex + 1) % channels.length;
-    final nextChannel = channels[nextIndex];
+    
+    final nextChannel = channelProvider.getNextChannel(widget.channel!.id);
+    if (nextChannel == null) return;
 
     // Navigate to next channel with mini player support
     if (mounted) {
@@ -635,29 +627,19 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   void _switchToPreviousChannel() {
+    if (widget.channel == null) return;
+    
     final channelProvider = Provider.of<ChannelProvider>(
       context,
       listen: false,
     );
-    final channels = channelProvider.channels;
-
-    if (channels.isEmpty || widget.channel == null) return;
-
-    // Find current channel index
-    final currentIndex = channels.indexWhere(
-      (ch) => ch.id == widget.channel!.id,
-    );
-    if (currentIndex == -1) return;
-
-    // Get previous channel (wrap around to last if at start)
-    final previousIndex = (currentIndex - 1) < 0
-        ? channels.length - 1
-        : (currentIndex - 1);
-    final previousChannel = channels[previousIndex];
+    
+    final prevChannel = channelProvider.getPreviousChannel(widget.channel!.id);
+    if (prevChannel == null) return;
 
     // Navigate to previous channel with mini player support
     if (mounted) {
-      context.go('/player', extra: previousChannel);
+      context.go('/player', extra: prevChannel);
     }
   }
 

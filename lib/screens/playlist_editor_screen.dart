@@ -148,7 +148,7 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.cardBackground,
+        backgroundColor: AppTheme.dialogBackground,
         title: const Text('Delete Playlist?'),
         content: const Text(
           'This will remove all saved playlist data and credentials. This action cannot be undone.',
@@ -187,7 +187,12 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
             backgroundColor: AppTheme.accentGreen,
           ),
         );
-        context.pop();
+        // Use go instead of pop to navigate safely
+        if (GoRouter.of(context).canPop()) {
+          context.pop();
+        } else {
+          context.go('/settings');
+        }
       }
     }
   }

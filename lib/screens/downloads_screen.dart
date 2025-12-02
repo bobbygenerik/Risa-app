@@ -107,7 +107,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.cardBackground,
+        backgroundColor: AppTheme.dialogBackground,
         title: const Text('Delete File?'),
         content: Text(
           'Are you sure you want to delete "${path.basename(file.path)}"?\n\nThis action cannot be undone.',
