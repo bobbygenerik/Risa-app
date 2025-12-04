@@ -29,6 +29,7 @@ class LiveTVScreen extends StatefulWidget {
 class _LiveTVScreenState extends State<LiveTVScreen>
   with ContentFocusRegistrant<LiveTVScreen> {
   Timer? _carouselTimer;
+  Timer? _progressTimer;
   int _featuredIndex = 0;
   final FocusNode _watchFocus = FocusNode();
   final FocusNode _heroFocus = FocusNode();
@@ -49,6 +50,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => _startCarouselIfNeeded(),
     );
+    // Start progress bar update timer (updates every minute)
+    _progressTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() {}); // Refresh to update progress
+    });
   }
   
   void _onChannelsReady() {
@@ -64,6 +69,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   @override
   void dispose() {
     _carouselTimer?.cancel();
+    _progressTimer?.cancel();
     _watchFocus.dispose();
     _heroFocus.dispose();
     _settingsButtonFocus.dispose();
