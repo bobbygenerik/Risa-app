@@ -425,18 +425,27 @@ class _SeriesScreenState extends State<SeriesScreen>
                             children: [
                               Container(
                                 color: AppTheme.cardBackground,
-                                child: firstEpisode.imageUrl != null
+                                child: firstEpisode.imageUrl != null && firstEpisode.imageUrl!.isNotEmpty
                                     ? CachedNetworkImage(
                                         imageUrl: firstEpisode.imageUrl!,
                                         fit: BoxFit.cover,
                                         width: double.infinity,
                                         height: double.infinity,
+                                        httpHeaders: const {
+                                          'User-Agent': 'Mozilla/5.0',
+                                        },
+                                        fadeInDuration: const Duration(milliseconds: 200),
+                                        placeholderFadeInDuration: const Duration(milliseconds: 200),
                                         placeholder: (context, url) => Container(
                                           color: AppTheme.cardBackground,
                                           child: const Center(
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white30),
+                                            child: SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white30),
+                                              ),
                                             ),
                                           ),
                                         ),
