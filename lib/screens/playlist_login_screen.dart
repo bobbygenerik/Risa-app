@@ -297,12 +297,34 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
 
   void _showError(String message) {
     if (mounted) {
-      showAppSnackBar(
-        context,
-        SnackBar(
-          content: Text(message),
-          backgroundColor: AppTheme.accentRed,
-          duration: const Duration(seconds: 6),
+      // Use dialog for detailed error messages (better for multi-line technical details)
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: AppTheme.dialogBackground,
+          title: Row(
+            children: [
+              Icon(Icons.error_outline, color: AppTheme.accentRed, size: 28),
+              const SizedBox(width: 12),
+              const Text('Error', style: TextStyle(color: AppTheme.textPrimary)),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: SelectableText(
+              message,
+              style: const TextStyle(
+                color: AppTheme.textPrimary,
+                fontSize: 14,
+                height: 1.5,
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK', style: TextStyle(color: AppTheme.primaryBlue)),
+            ),
+          ],
         ),
       );
     }
