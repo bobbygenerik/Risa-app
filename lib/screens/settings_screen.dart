@@ -2593,19 +2593,6 @@ class _SettingsScreenState extends State<SettingsScreen>
         final movieCount = provider.movies.length;
         final seriesCount = provider.series.length;
         
-        // Build status text with movies/series if available
-        String statusText;
-        if (hasChannels) {
-          final parts = <String>['${provider.channelCount} live channels'];
-          if (movieCount > 0) parts.add('$movieCount movies');
-          if (seriesCount > 0) parts.add('$seriesCount series');
-          statusText = 'Loaded ${parts.join(', ')}';
-        } else if (provider.isLoading) {
-          statusText = 'Loading playlist...';
-        } else {
-          statusText = 'No playlist loaded';
-        }
-        
         final previewLine =
             provider.lastM3UContent?.split('\n').first ?? 'Unavailable';
         final subtitle = hasChannels
@@ -2628,13 +2615,59 @@ class _SettingsScreenState extends State<SettingsScreen>
                 ),
                 const SizedBox(width: AppSizes.sm),
                 Expanded(
-                  child: Text(
-                    statusText,
-                    style: const TextStyle(
-                      color: AppTheme.textPrimary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (hasChannels) ...[
+                        Text(
+                          '${provider.channelCount} live channels',
+                          style: const TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (movieCount > 0) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            '$movieCount movies',
+                            style: const TextStyle(
+                              color: AppTheme.textPrimary,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                        if (seriesCount > 0) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            '$seriesCount series',
+                            style: const TextStyle(
+                              color: AppTheme.textPrimary,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ] else if (provider.isLoading)
+                        const Text(
+                          'Loading playlist...',
+                          style: TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        )
+                      else
+                        const Text(
+                          'No playlist loaded',
+                          style: TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 if (hasChannels)

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:isolate';
 import 'package:http/http.dart' as http;
 import 'package:iptv_player/config/tmdb_config.dart';
+import 'package:iptv_player/config/omdb_config.dart';
 import 'package:path_provider/path_provider.dart';
 
 class _CacheItem {
@@ -16,6 +17,8 @@ class _CacheItem {
 class TMDBService {
   static const String _apiKey = TMDBConfig.apiKey;
   static const String _baseUrl = 'https://api.themoviedb.org/3';
+  static const String _omdbApiKey = OMDbConfig.apiKey;
+  static const String _omdbBaseUrl = 'https://www.omdbapi.com';
   // Simple in-memory cache: key -> _CacheItem
   // TTL defaults to 24 hours. Evicts oldest entries when size grows too large.
   static final Map<String, _CacheItem> _cache = {};
@@ -222,6 +225,47 @@ class TMDBService {
     return null;
   }
 
+  /// Fetch artwork from OMDb API as fallback
+  static Future<Map<String, dynamic>?> _getOMDbDetails(
+    String title, {
+    int? year,
+    String type = 'movie', // 'movie' or 'series'
+  }) async {
+    try {
+      var searchUrl = '$_omdbBaseUrl/?apikey=$_omdbApiKey&t=${Uri.encodeComponent(title)}';
+      if (year != null) {
+        searchUrl += '&y=$year';
+      }
+      searchUrl += '&type=$type';
+
+      final response = await http.get(Uri.parse(searchUrl));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        
+        if (data['Response'] == 'True') {
+          final poster = data['Poster'] as String?;
+          // OMDb returns 'N/A' for missing posters
+          final validPoster = (poster != null && poster != 'N/A') ? poster : null;
+          
+          return {
+            'rating': data['imdbRating'] != null && data['imdbRating'] != 'N/A'
+                ? double.tryParse(data['imdbRating'] as String)
+                : null,
+            'poster': validPoster,
+            'backdrop': validPoster, // OMDb doesn't have separate backdrops, use poster
+            'overview': data['Plot'] as String?,
+            'release_date': data['Year'] as String?,
+          };
+        }
+      }
+    } catch (e) {
+      print('OMDb API error: $e');
+    }
+
+    return null;
+  }
+
   static Future<Map<String, dynamic>?> getTVDetails(
     String title, {
     int? year,
@@ -296,10 +340,21 @@ class TMDBService {
       Map<String, dynamic>? details;
       details = await getTVDetails(title, year: year);
       details ??= await getMovieDetails(title, year: year);
+      
+      // If TMDB didn't find anything, try OMDb as fallback
+      if (details == null || (details['backdrop'] == null && details['poster'] == null)) {
+        print('TMDB miss for "$title", trying OMDb...');
+        final omdbTV = await _getOMDbDetails(title, year: year, type: 'series');
+        final omdbMovie = await _getOMDbDetails(title, year: year, type: 'movie');
+        details = omdbTV ?? omdbMovie;
+        if (details != null) {
+          print('OMDb found artwork for "$title"');
+        }
+      }
 
       final image =
           (details?['backdrop'] as String?) ?? (details?['poster'] as String?);
-      // Cache both hits and misses (shorter TTL for misses) to avoid spamming TMDB
+      // Cache both hits and misses (shorter TTL for misses) to avoid spamming APIs
       _setCache(cacheKey, {
         'image': image,
       }, ttl: image == null ? const Duration(hours: 1) : null);
