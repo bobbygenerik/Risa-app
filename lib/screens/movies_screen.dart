@@ -727,6 +727,7 @@ class _MoviesScreenState extends State<MoviesScreen>
 
       final candidates = movies.take(20).toList();
       final List<Content> curated = [];
+      final List<Content> enhancedMovies = [];
 
       if (ServiceValidator.isTmdbAvailable) {
         for (final m in candidates) {
@@ -741,7 +742,9 @@ class _MoviesScreenState extends State<MoviesScreen>
                 imageUrl: details['poster'] ?? m.imageUrl,
                 rating: (details['rating'] as double?) ?? m.rating,
                 description: details['overview'] ?? m.description,
+                genres: (details['genres'] as List<String>?) ?? m.genres,
               );
+              enhancedMovies.add(patched);
               curated.add(patched);
             } else if (m.backdropUrl != null || m.imageUrl != null) {
               curated.add(m);
@@ -750,6 +753,18 @@ class _MoviesScreenState extends State<MoviesScreen>
             // ignore per-item TMDB failures
           }
           if (curated.length >= 12) break;
+        }
+        
+        // Update the provider with enhanced metadata (including genres)
+        if (enhancedMovies.isNotEmpty) {
+          final allMovies = movies.map((m) {
+            final enhanced = enhancedMovies.firstWhere(
+              (e) => e.id == m.id,
+              orElse: () => m,
+            );
+            return enhanced;
+          }).toList();
+          provider.loadMovies(allMovies);
         }
       } else {
         curated.addAll(

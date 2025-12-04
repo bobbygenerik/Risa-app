@@ -138,6 +138,7 @@ class _SeriesScreenState extends State<SeriesScreen>
 
       final candidates = series.take(20).toList();
       final List<Content> curated = [];
+      final List<Content> enhancedSeries = [];
 
       if (ServiceValidator.isTmdbAvailable) {
         for (final s in candidates) {
@@ -152,7 +153,9 @@ class _SeriesScreenState extends State<SeriesScreen>
                 imageUrl: details['poster'] ?? s.imageUrl,
                 rating: (details['rating'] as double?) ?? s.rating,
                 description: details['overview'] ?? s.description,
+                genres: (details['genres'] as List<String>?) ?? s.genres,
               );
+              enhancedSeries.add(patched);
               curated.add(patched);
             } else if (s.backdropUrl != null || s.imageUrl != null) {
               curated.add(s);
@@ -161,6 +164,18 @@ class _SeriesScreenState extends State<SeriesScreen>
             // ignore per-item failures
           }
           if (curated.length >= 12) break;
+        }
+        
+        // Update the provider with enhanced metadata (including genres)
+        if (enhancedSeries.isNotEmpty) {
+          final allSeries = series.map((s) {
+            final enhanced = enhancedSeries.firstWhere(
+              (e) => e.id == s.id,
+              orElse: () => s,
+            );
+            return enhanced;
+          }).toList();
+          provider.loadSeries(allSeries);
         }
       } else {
         curated.addAll(

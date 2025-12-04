@@ -30,6 +30,48 @@ class TMDBService {
   // Batch request queue
   static final Map<String, List<Function(String?)>> _pendingRequests = {};
   static final Set<String> _processingRequests = {};
+  
+  // TMDB Genre ID to Name mapping
+  static const Map<int, String> _movieGenres = {
+    28: 'Action',
+    12: 'Adventure',
+    16: 'Animation',
+    35: 'Comedy',
+    80: 'Crime',
+    99: 'Documentary',
+    18: 'Drama',
+    10751: 'Family',
+    14: 'Fantasy',
+    36: 'History',
+    27: 'Horror',
+    10402: 'Music',
+    9648: 'Mystery',
+    10749: 'Romance',
+    878: 'Science Fiction',
+    10770: 'TV Movie',
+    53: 'Thriller',
+    10752: 'War',
+    37: 'Western',
+  };
+  
+  static const Map<int, String> _tvGenres = {
+    10759: 'Action & Adventure',
+    16: 'Animation',
+    35: 'Comedy',
+    80: 'Crime',
+    99: 'Documentary',
+    18: 'Drama',
+    10751: 'Family',
+    10762: 'Kids',
+    9648: 'Mystery',
+    10763: 'News',
+    10764: 'Reality',
+    10765: 'Sci-Fi & Fantasy',
+    10766: 'Soap',
+    10767: 'Talk',
+    10768: 'War & Politics',
+    37: 'Western',
+  };
 
   static String _cacheKey(String prefix, String query, {int? year}) {
     return '$prefix:${query.toLowerCase().trim()}:${year ?? ''}';
@@ -204,6 +246,17 @@ class TMDBService {
 
         if (results.isNotEmpty) {
           final movie = results.first;
+          
+          // Map genre IDs to genre names
+          final genreIds = movie['genre_ids'] as List?;
+          final List<String> genres = [];
+          if (genreIds != null) {
+            for (final id in genreIds) {
+              final genreName = _movieGenres[id as int];
+              if (genreName != null) genres.add(genreName);
+            }
+          }
+          
           final result = {
             'rating': movie['vote_average'] as double?,
             'poster': movie['poster_path'] != null
@@ -214,6 +267,7 @@ class TMDBService {
                 : null,
             'overview': movie['overview'] as String?,
             'release_date': movie['release_date'] as String?,
+            'genres': genres.isNotEmpty ? genres : null,
           };
           _setCache(cacheKey, result);
           return result;
@@ -291,6 +345,17 @@ class TMDBService {
 
         if (results.isNotEmpty) {
           final show = results.first;
+          
+          // Map genre IDs to genre names
+          final genreIds = show['genre_ids'] as List?;
+          final List<String> genres = [];
+          if (genreIds != null) {
+            for (final id in genreIds) {
+              final genreName = _tvGenres[id as int];
+              if (genreName != null) genres.add(genreName);
+            }
+          }
+          
           final result = {
             'rating': show['vote_average'] as double?,
             'poster': show['poster_path'] != null
@@ -301,6 +366,7 @@ class TMDBService {
                 : null,
             'overview': show['overview'] as String?,
             'first_air_date': show['first_air_date'] as String?,
+            'genres': genres.isNotEmpty ? genres : null,
           };
           _setCache(cacheKey, result);
           return result;

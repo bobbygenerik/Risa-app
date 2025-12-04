@@ -43,21 +43,79 @@ class ContentProvider with ChangeNotifier {
 
   /// Initialize and load saved watch history
   Future<void> initialize() async {
+    // Load cached movies/series with TMDB metadata first
+    final cachedMovies = await loadMoviesCache();
+    final cachedSeries = await loadSeriesCache();
+    
+    if (cachedMovies.isNotEmpty) {
+      _movies = cachedMovies;
+      debugPrint('ContentProvider: Loaded ${cachedMovies.length} cached movies with metadata');
+    }
+    
+    if (cachedSeries.isNotEmpty) {
+      _series = cachedSeries;
+      debugPrint('ContentProvider: Loaded ${cachedSeries.length} cached series with metadata');
+    }
+    
     await _loadWatchHistory();
     _updateContinueWatching();
   }
 
   /// Load movies from M3U VOD or Xtream API
   void loadMovies(List<Content> movies) {
-    _movies = movies;
+    // Merge with cached movies to preserve TMDB metadata (genres, ratings, etc.)
+    final mergedMovies = movies.map((newMovie) {
+      // Find matching cached movie by ID
+      final cached = _movies.firstWhere(
+        (m) => m.id == newMovie.id,
+        orElse: () => newMovie,
+      );
+      
+      // If cached movie has more metadata, use it
+      if (cached.id == newMovie.id && (cached.genres != null || cached.rating != null)) {
+        return cached.copyWith(
+          // Update fields that might change from M3U
+          title: newMovie.title,
+          videoUrl: newMovie.videoUrl,
+          imageUrl: newMovie.imageUrl ?? cached.imageUrl,
+        );
+      }
+      return newMovie;
+    }).toList();
+    
+    _movies = mergedMovies;
     _updateHighlights();
     notifyListeners();
+    // Save to cache for persistence
+    _saveMoviesCache();
   }
 
   /// Load series from M3U VOD or Xtream API
   void loadSeries(List<Content> series) {
-    _series = series;
+    // Merge with cached series to preserve TMDB metadata (genres, ratings, etc.)
+    final mergedSeries = series.map((newSeries) {
+      // Find matching cached series by ID
+      final cached = _series.firstWhere(
+        (s) => s.id == newSeries.id,
+        orElse: () => newSeries,
+      );
+      
+      // If cached series has more metadata, use it
+      if (cached.id == newSeries.id && (cached.genres != null || cached.rating != null)) {
+        return cached.copyWith(
+          // Update fields that might change from M3U
+          title: newSeries.title,
+          videoUrl: newSeries.videoUrl,
+          imageUrl: newSeries.imageUrl ?? cached.imageUrl,
+        );
+      }
+      return newSeries;
+    }).toList();
+    
+    _series = mergedSeries;
     notifyListeners();
+    // Save to cache for persistence
+    _saveSeriesCache();
   }
 
   /// Update watch progress for content
@@ -174,6 +232,62 @@ class ContentProvider with ChangeNotifier {
       ..sort((a, b) => (b.rating ?? 0).compareTo(a.rating ?? 0));
 
     _highlights = [...topMovies.take(5), ...topSeries.take(5)];
+  }
+
+  /// Save all movies to cache (including TMDB metadata like genres)
+  Future<void> _saveMoviesCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final moviesList = _movies.map((m) => m.toMap()).toList();
+      await prefs.setString('movies_cache', jsonEncode(moviesList));
+    } catch (e) {
+      debugPrint('Error saving movies cache: $e');
+    }
+  }
+
+  /// Save all series to cache (including TMDB metadata like genres)
+  Future<void> _saveSeriesCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final seriesList = _series.map((s) => s.toMap()).toList();
+      await prefs.setString('series_cache', jsonEncode(seriesList));
+    } catch (e) {
+      debugPrint('Error saving series cache: $e');
+    }
+  }
+
+  /// Load movies from cache (restores TMDB metadata including genres)
+  Future<List<Content>> loadMoviesCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final moviesJson = prefs.getString('movies_cache');
+      if (moviesJson != null) {
+        final List<dynamic> moviesList = jsonDecode(moviesJson);
+        return moviesList
+            .map((m) => Content.fromMap(m as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('Error loading movies cache: $e');
+    }
+    return [];
+  }
+
+  /// Load series from cache (restores TMDB metadata including genres)
+  Future<List<Content>> loadSeriesCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final seriesJson = prefs.getString('series_cache');
+      if (seriesJson != null) {
+        final List<dynamic> seriesList = jsonDecode(seriesJson);
+        return seriesList
+            .map((s) => Content.fromMap(s as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('Error loading series cache: $e');
+    }
+    return [];
   }
 
   /// Save watch history to SharedPreferences
