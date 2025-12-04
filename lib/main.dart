@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
-import 'package:fvp/fvp.dart' as fvp;
 import 'package:iptv_player/utils/startup_probe.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
@@ -23,6 +22,7 @@ import 'package:iptv_player/services/opensubtitles_service.dart';
 import 'package:iptv_player/services/real_debrid_service.dart';
 import 'package:iptv_player/widgets/main_shell.dart';
 import 'package:iptv_player/widgets/legal_disclaimer_dialog.dart';
+import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/screens/epg_screen.dart';
 import 'package:iptv_player/screens/settings_screen.dart';
 import 'package:iptv_player/screens/playlist_editor_screen.dart';
@@ -64,11 +64,6 @@ void main() {
       await SSLHandler.init();
       HttpOverrides.global = IPTVHttpOverrides();
       StartupProbe.mark('SSL handler configured');
-      
-      // Register fvp (FFmpeg-based video player) for proper color handling
-      // This fixes the multi-colored tint issue on live streams
-      fvp.registerWith();
-      StartupProbe.mark('FVP video player registered');
       
       // Only lock landscape on Android TV, allow portrait on mobile
       if (!kIsWeb && Platform.isAndroid) {
@@ -284,9 +279,28 @@ class _GlobalErrorScreen extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: onDismiss,
-                  child: const Text('Dismiss'),
+                Focus(
+                  autofocus: true,
+                  child: Builder(
+                    builder: (context) {
+                      final isFocused = Focus.of(context).hasFocus;
+                      return AnimatedScale(
+                        scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                        duration: TVFocusStyle.animationDuration,
+                        child: AnimatedContainer(
+                          duration: TVFocusStyle.animationDuration,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: isFocused ? TVFocusStyle.focusedShadow : TVFocusStyle.defaultShadow,
+                          ),
+                          child: ElevatedButton(
+                            onPressed: onDismiss,
+                            child: const Text('Dismiss'),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ],
             ),

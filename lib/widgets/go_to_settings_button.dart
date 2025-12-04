@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/widgets/tv_focusable.dart';
 
 /// A unified button for 'Go to Settings' on all main screens.
 /// - Consistent size and style
-/// - No default glow/focus overlay
-/// - Subtle border on focus
+/// - Standard TVFocusStyle glow effect
 class GoToSettingsButton extends StatelessWidget {
   final VoidCallback onPressed;
   final FocusNode? focusNode;
@@ -28,41 +28,35 @@ class GoToSettingsButton extends StatelessWidget {
       child: Builder(
         builder: (context) {
           final hasFocus = Focus.of(context).hasFocus;
-          return GestureDetector(
-            onTap: onPressed,
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppTheme.primaryBlue,
-                borderRadius: BorderRadius.circular(12),
-                border: hasFocus
-                    ? Border.all(color: AppTheme.primaryBlue, width: 3)
-                    : null,
-                boxShadow: hasFocus
-                    ? [
-                        BoxShadow(
-                          color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
-                          blurRadius: 12,
-                          spreadRadius: 2,
-                        ),
-                      ]
-                    : null,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.settings, color: Colors.white, size: 20),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Go to Settings',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
+          return AnimatedScale(
+            scale: hasFocus ? TVFocusStyle.focusScale : 1.0,
+            duration: TVFocusStyle.animationDuration,
+            child: GestureDetector(
+              onTap: onPressed,
+              child: AnimatedContainer(
+                duration: TVFocusStyle.animationDuration,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryBlue,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: hasFocus ? TVFocusStyle.focusedShadow : TVFocusStyle.defaultShadow,
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.settings, color: Colors.white, size: 20),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Go to Settings',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           );

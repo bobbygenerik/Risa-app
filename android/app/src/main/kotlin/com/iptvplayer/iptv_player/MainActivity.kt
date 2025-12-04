@@ -10,6 +10,7 @@ import android.os.Looper
 import android.util.Log
 import android.util.Rational
 import androidx.annotation.NonNull
+import androidx.media3.common.util.UnstableApi
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
@@ -17,6 +18,7 @@ import io.flutter.plugin.common.MethodChannel
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 
+@UnstableApi
 class MainActivity : FlutterActivity() {
     private val PIP_CHANNEL = "com.streamhub.iptv/pip"
     private val AUDIO_CHANNEL = "com.streamhub.iptv/audio"
@@ -30,6 +32,12 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        // Register ExoPlayer platform view for native video rendering on Android TV
+        flutterEngine
+            .platformViewsController
+            .registry
+            .registerViewFactory("com.streamhub.iptv/exoplayer", ExoPlayerViewFactory(flutterEngine.dartExecutor.binaryMessenger))
 
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, TRANSCRIPTION_AUDIO_STREAM)
             .setStreamHandler(object : EventChannel.StreamHandler {

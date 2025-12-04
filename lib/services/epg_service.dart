@@ -137,18 +137,30 @@ class EpgService with ChangeNotifier {
     // Try to load from cache first (fast, no network)
     final cacheLoaded = await _loadFromCache();
     if (cacheLoaded) {
-      debugPrint('EpgService: Loaded ${_epgData.length} channels from cache');
-      return;
+      debugPrint('EpgService: Loaded ${_epgData.length} channels from primary cache');
+    } else {
+      // If no cache, try to load from URL if configured
+      final prefs = await SharedPreferences.getInstance();
+      final epgUrl = prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
+      if (epgUrl != null && epgUrl.isNotEmpty) {
+        debugPrint('EpgService: No cache, loading primary EPG from URL: $epgUrl');
+        await loadEpgFromUrl(epgUrl);
+      } else {
+        debugPrint('EpgService: No EPG URL configured');
+      }
     }
     
-    // If no cache, try to load from URL if configured
-    final prefs = await SharedPreferences.getInstance();
-    final epgUrl = prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
-    if (epgUrl != null && epgUrl.isNotEmpty) {
-      debugPrint('EpgService: No cache, loading from URL: $epgUrl');
-      await loadEpgFromUrl(epgUrl);
+    // Also try to load secondary EPG (supplementary)
+    final secondaryCacheLoaded = await _loadSecondaryFromCache();
+    if (secondaryCacheLoaded) {
+      debugPrint('EpgService: Loaded ${_secondaryEpgData.length} channels from secondary cache');
     } else {
-      debugPrint('EpgService: No EPG URL configured');
+      final prefs = await SharedPreferences.getInstance();
+      final secondaryUrl = prefs.getString('secondary_epg_url');
+      if (secondaryUrl != null && secondaryUrl.isNotEmpty) {
+        debugPrint('EpgService: Loading secondary EPG from URL: $secondaryUrl');
+        await loadSecondaryEpgFromUrl(secondaryUrl);
+      }
     }
   }
 

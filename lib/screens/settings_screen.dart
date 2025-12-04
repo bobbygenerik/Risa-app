@@ -3959,20 +3959,28 @@ class _SettingsScreenState extends State<SettingsScreen>
                         child: Builder(
                           builder: (context) {
                             final isFocused = Focus.of(context).hasFocus;
-                            return ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primaryBlue,
-                                side: isFocused
-                                    ? const BorderSide(color: Colors.white, width: 3)
-                                    : null,
+                            return AnimatedScale(
+                              scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                              duration: TVFocusStyle.animationDuration,
+                              child: AnimatedContainer(
+                                duration: TVFocusStyle.animationDuration,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  boxShadow: isFocused ? TVFocusStyle.focusedShadow : TVFocusStyle.defaultShadow,
+                                ),
+                                child: ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.primaryBlue,
+                                  ),
+                                  onPressed: _browseStorage,
+                                  icon: const Icon(Icons.folder_open),
+                                  label: const Text('Browse'),
+                                ),
                               ),
-                            onPressed: _browseStorage,
-                            icon: const Icon(Icons.folder_open),
-                            label: const Text('Browse'),
-                          );
-                        },
+                            );
+                          },
+                        ),
                       ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: AppSizes.sm),
@@ -5153,12 +5161,30 @@ class _SettingsScreenState extends State<SettingsScreen>
       actionWidgets.add(_buildActiveSpeechModelChip());
     } else {
       actionWidgets.add(
-        OutlinedButton.icon(
-          onPressed: () {
-            whisperService.setSelectedModel(model.id);
-          },
-          icon: const Icon(Icons.radio_button_unchecked, size: 18),
-          label: const Text('Set Active'),
+        Focus(
+          child: Builder(
+            builder: (context) {
+              final isFocused = Focus.of(context).hasFocus;
+              return AnimatedScale(
+                scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                duration: TVFocusStyle.animationDuration,
+                child: AnimatedContainer(
+                  duration: TVFocusStyle.animationDuration,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: isFocused ? TVFocusStyle.focusedShadow : TVFocusStyle.defaultShadow,
+                  ),
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      whisperService.setSelectedModel(model.id);
+                    },
+                    icon: const Icon(Icons.radio_button_unchecked, size: 18),
+                    label: const Text('Set Active'),
+                  ),
+                ),
+              );
+            },
+          ),
         ),
       );
     }
@@ -5191,32 +5217,68 @@ class _SettingsScreenState extends State<SettingsScreen>
       );
       if (status != ModelDownloadStatus.bundled) {
         actionWidgets.add(
-          OutlinedButton.icon(
-            onPressed: () {
-              _deleteSpeechModel(whisperService, model);
-            },
-            icon: const Icon(Icons.delete_outline, size: 18),
-            label: const Text('Delete'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppTheme.accentRed,
+          Focus(
+            child: Builder(
+              builder: (context) {
+                final isFocused = Focus.of(context).hasFocus;
+                return AnimatedScale(
+                  scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                  duration: TVFocusStyle.animationDuration,
+                  child: AnimatedContainer(
+                    duration: TVFocusStyle.animationDuration,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: isFocused ? TVFocusStyle.focusedShadow : TVFocusStyle.defaultShadow,
+                    ),
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        _deleteSpeechModel(whisperService, model);
+                      },
+                      icon: const Icon(Icons.delete_outline, size: 18),
+                      label: const Text('Delete'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.accentRed,
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         );
       }
     } else if (needsDownload || needsRetry) {
       actionWidgets.add(
-        ElevatedButton.icon(
-          onPressed: () {
-            _downloadSpeechModel(whisperService, model);
-          },
-          icon: Icon(needsRetry ? Icons.refresh : Icons.download),
-          label: Text(
-            needsRetry
-                ? 'Re-download ${model.sizeFormatted}'
-                : 'Download ${model.sizeFormatted}',
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.primaryBlue,
+        Focus(
+          child: Builder(
+            builder: (context) {
+              final isFocused = Focus.of(context).hasFocus;
+              return AnimatedScale(
+                scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                duration: TVFocusStyle.animationDuration,
+                child: AnimatedContainer(
+                  duration: TVFocusStyle.animationDuration,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: isFocused ? TVFocusStyle.focusedShadow : TVFocusStyle.defaultShadow,
+                  ),
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      _downloadSpeechModel(whisperService, model);
+                    },
+                    icon: Icon(needsRetry ? Icons.refresh : Icons.download),
+                    label: Text(
+                      needsRetry
+                          ? 'Re-download ${model.sizeFormatted}'
+                          : 'Download ${model.sizeFormatted}',
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryBlue,
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         ),
       );

@@ -3,7 +3,6 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
-  fvp
   record_linux
   url_launcher_linux
 )

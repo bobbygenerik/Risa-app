@@ -904,10 +904,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
     // On Android, prefer the native ExoPlayer platform view for better native
     // audio-track support and performance. This will be a no-op on other platforms.
-    //
-    // NOTE: NativeExoPlayer disabled to fix color tint issues on some Android TV devices.
-    // The 'fvp' package (registered in main.dart) provides correct color handling via FFmpeg.
-    /*
     if (Platform.isAndroid) {
       if (!_nativeExoCapabilityResolved) {
         return const Center(child: CircularProgressIndicator());
@@ -929,7 +925,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         );
       }
     }
-    */
+    
     // Default: Chewie/video_player
     if (_chewieController == null) {
       return const Center(child: CircularProgressIndicator());

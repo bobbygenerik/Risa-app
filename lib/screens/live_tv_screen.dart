@@ -477,13 +477,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                   curve: TVFocusStyle.animationCurve,
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(12),
-                                    color: AppTheme.primaryBlue, // Solid color
+                                    color: AppTheme.primaryBlue.withAlpha((0.85 * 255).round()),
                                     boxShadow: isFocused
                                         ? TVFocusStyle.focusedShadow
                                         : TVFocusStyle.defaultShadow,
                                   ),
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 22,
+                                    horizontal: 24,
                                     vertical: 14,
                                   ),
                                   child: const Row(
@@ -491,13 +491,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                     children: [
                                       Icon(
                                         Icons.dvr,
-                                        color: AppTheme.textPrimary,
+                                        color: Colors.white,
                                       ),
                                       SizedBox(width: 8),
                                       Text(
                                         'Guide',
                                         style: TextStyle(
-                                          color: AppTheme.textPrimary,
+                                          color: Colors.white,
                                           fontSize: 16,
                                           fontWeight: FontWeight.w700,
                                         ),
