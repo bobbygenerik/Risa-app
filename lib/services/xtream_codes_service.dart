@@ -18,35 +18,39 @@ class XtreamCodesService {
     http.Client? client,
   }) : _client = client ?? http.Client();
 
-  /// Create HTTP client with custom certificate validation
+  /// Create HTTP client with custom certificate validation and TLS support
   static HttpClient _createHttpClient() {
     final client = HttpClient();
+    // Accept self-signed certificates
     client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+    // Set connection timeout
+    client.connectionTimeout = const Duration(seconds: 15);
     return client;
   }
 
   /// Make HTTP request with optional SSL bypass fallback
   Future<http.Response> _makeRequest(String url) async {
+    // Always use low-level HttpClient for Xtream Codes to handle SSL/TLS properly
+    final httpClient = _createHttpClient();
     try {
-      // Try with standard client first
-      final response = await _client.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
-      return response;
+      final uri = Uri.parse(url);
+      final request = await httpClient.getUrl(uri);
+      
+      // Set headers to ensure compatibility
+      request.headers.set('User-Agent', 'Mozilla/5.0');
+      request.headers.set('Accept', '*/*');
+      
+      final response = await request.close();
+      final body = await response.transform(utf8.decoder).join();
+      
+      return http.Response(body, response.statusCode, headers: {
+        'content-type': response.headers.contentType?.toString() ?? 'application/json',
+      });
     } catch (e) {
-      // If the normal client fails (often due to SSL issues), attempt with a low-level HttpClient
-      debugPrint('XtreamCodes: Standard request failed, trying with SSL bypass: $e');
-
-      final httpClient = _createHttpClient();
-      try {
-        final request = await httpClient.getUrl(Uri.parse(url));
-        final response = await request.close();
-
-        final body = await response.transform(utf8.decoder).join();
-        return http.Response(body, response.statusCode, headers: {
-          'content-type': response.headers.contentType?.toString() ?? 'application/json',
-        });
-      } finally {
-        httpClient.close();
-      }
+      debugPrint('XtreamCodes: Request failed for $url: $e');
+      rethrow;
+    } finally {
+      httpClient.close();
     }
   }
 
