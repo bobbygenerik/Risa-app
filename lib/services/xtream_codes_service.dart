@@ -91,14 +91,14 @@ class XtreamCodesService {
   }
 
   /// Fetch movies from a specific category
-  Future<List<Content>> getMoviesByCategory(String categoryId) async {
+  Future<List<Content>> getMoviesByCategory(String categoryId, {String? categoryName}) async {
     try {
       final url = '$_apiBase?username=$username&password=$password&action=get_vod_streams&category_id=$categoryId';
       final response = await _makeRequest(url);
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        return data.map((movie) => _parseMovie(movie as Map<String, dynamic>)).toList();
+        return data.map((movie) => _parseMovie(movie as Map<String, dynamic>, categoryName)).toList();
       }
       return [];
     } catch (e) {
@@ -121,7 +121,7 @@ class XtreamCodesService {
         final categoryName = category['category_name'] ?? 'Unknown';
         debugPrint('XtreamCodes: Fetching movies from "$categoryName" (ID: $categoryId)...');
 
-        final movies = await getMoviesByCategory(categoryId);
+        final movies = await getMoviesByCategory(categoryId, categoryName: categoryName);
         debugPrint('XtreamCodes: Found ${movies.length} movies in "$categoryName"');
         allMovies.addAll(movies);
       }
@@ -135,14 +135,14 @@ class XtreamCodesService {
   }
 
   /// Fetch series from a specific category
-  Future<List<Content>> getSeriesByCategory(String categoryId) async {
+  Future<List<Content>> getSeriesByCategory(String categoryId, {String? categoryName}) async {
     try {
       final url = '$_apiBase?username=$username&password=$password&action=get_series&category_id=$categoryId';
       final response = await _makeRequest(url);
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        return data.map((series) => _parseSeries(series as Map<String, dynamic>)).toList();
+        return data.map((series) => _parseSeries(series as Map<String, dynamic>, categoryName)).toList();
       }
       return [];
     } catch (e) {
@@ -165,7 +165,7 @@ class XtreamCodesService {
         final categoryName = category['category_name'] ?? 'Unknown';
         debugPrint('XtreamCodes: Fetching series from "$categoryName" (ID: $categoryId)...');
 
-        final series = await getSeriesByCategory(categoryId);
+        final series = await getSeriesByCategory(categoryId, categoryName: categoryName);
         debugPrint('XtreamCodes: Found ${series.length} series in "$categoryName"');
         allSeries.addAll(series);
       }
@@ -211,7 +211,7 @@ class XtreamCodesService {
   }
 
   /// Parse movie JSON to Content object
-  Content _parseMovie(Map<String, dynamic> data) {
+  Content _parseMovie(Map<String, dynamic> data, [String? categoryName]) {
     final streamId = data['stream_id'].toString();
     final containerExtension = data['container_extension'] ?? 'mp4';
     final videoUrl = '$serverUrl/movie/$username/$password/$streamId.$containerExtension';
@@ -226,14 +226,14 @@ class XtreamCodesService {
           ? 'https://image.tmdb.org/t/p/original${data['backdrop_path']}'
           : null,
       rating: _parseRating(data['rating']),
-      genres: _parseGenres(data['category_id']),
+      genres: categoryName != null ? [categoryName] : null,
       year: _parseYear(data['added']),
       addedDate: _parseDate(data['added']),
     );
   }
 
   /// Parse series JSON to Content object
-  Content _parseSeries(Map<String, dynamic> data) {
+  Content _parseSeries(Map<String, dynamic> data, [String? categoryName]) {
     final seriesId = data['series_id'].toString();
 
     return Content(
@@ -245,7 +245,7 @@ class XtreamCodesService {
           ? 'https://image.tmdb.org/t/p/original${data['backdrop_path']}'
           : null,
       rating: _parseRating(data['rating']),
-      genres: _parseGenres(data['category_id']),
+      genres: categoryName != null ? [categoryName] : null,
       year: _parseYear(data['last_modified']),
       addedDate: _parseDate(data['last_modified']),
     );
@@ -257,12 +257,6 @@ class XtreamCodesService {
     if (rating is double) return rating;
     if (rating is int) return rating.toDouble();
     if (rating is String) return double.tryParse(rating);
-    return null;
-  }
-
-  /// Parse genres from category (simplified - you might want to maintain a category map)
-  List<String>? _parseGenres(dynamic categoryId) {
-    // This is simplified - in a real implementation, you'd map category IDs to genre names
     return null;
   }
 
