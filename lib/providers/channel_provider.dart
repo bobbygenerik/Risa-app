@@ -13,6 +13,7 @@ import '../services/m3u_parser_service.dart';
 import 'playlist_isolate.dart';
 import '../services/xtream_codes_service.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
 import 'content_provider.dart';
 
 /// Isolate function to extract unique category names only (fast)
@@ -461,10 +462,22 @@ class ChannelProvider with ChangeNotifier {
         'ChannelProvider: Starting streamed download with 90 second timeout...',
       );
 
-      // Allow insecure connections for IPTV providers with SSL issues
-      HttpOverrides.global = _MyHttpOverrides();
+      // Create HttpClient with improved TLS handling
+      final ioClient = HttpClient(context: SecurityContext(withTrustedRoots: true))
+        ..badCertificateCallback = (cert, host, port) {
+          debugPrint('ChannelProvider: Accepting cert from $host:$port');
+          return true;
+        }
+        ..connectionTimeout = const Duration(seconds: 90)
+        ..idleTimeout = const Duration(seconds: 90);
+      
+      try {
+        ioClient.findProxy = (uri) => 'DIRECT';
+      } catch (e) {
+        debugPrint('ChannelProvider: Could not set proxy: $e');
+      }
 
-      http.Client client = http.Client();
+      http.Client client = IOClient(ioClient);
       
       try {
         final request = http.Request('GET', Uri.parse(url));
