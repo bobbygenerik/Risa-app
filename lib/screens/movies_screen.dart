@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -26,6 +27,7 @@ class _MoviesScreenState extends State<MoviesScreen>
   Timer? _carouselTimer;
   int _featuredIndex = 0;
   final FocusNode _playFocus = FocusNode();
+  final FocusNode _heroFocus = FocusNode();
   final FocusNode _settingsFocus = FocusNode();
   List<Content> _curatedMovies = [];
   final Map<String, String?> _tmdbArtCache = {};
@@ -39,6 +41,7 @@ class _MoviesScreenState extends State<MoviesScreen>
     _carouselTimer?.cancel();
     _playFocus.removeListener(_onPlayFocusChange);
     _playFocus.dispose();
+    _heroFocus.dispose();
     _settingsFocus.dispose();
     super.dispose();
   }
@@ -85,12 +88,44 @@ class _MoviesScreenState extends State<MoviesScreen>
     _playFocus.addListener(_onPlayFocusChange);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      
+      // Prioritize newly added content with artwork for hero banner
+      final provider = Provider.of<ContentProvider>(context, listen: false);
+      if (provider.movies.isNotEmpty) {
+        _featuredIndex = _findNewestContentWithArtwork(provider.movies);
+      }
+      
       _startCarousel();
       // prepare curated list (may perform TMDB lookups)
       _prepareCuratedList();
       _preloadTMDBArtwork();
       // Focus is managed by navigation bar - don't auto-focus content
     });
+  }
+
+  /// Find the newest content (from end of list) that has artwork for hero banner
+  int _findNewestContentWithArtwork(List<Content> items) {
+    // Check last 20 items (newest content) for artwork
+    final recentCount = items.length.clamp(1, 20);
+    final recentItems = items.sublist(items.length - recentCount);
+    
+    // Find first recent item with backdrop or image
+    for (int i = recentItems.length - 1; i >= 0; i--) {
+      final item = recentItems[i];
+      if (item.backdropUrl != null || item.imageUrl != null) {
+        return items.length - recentCount + i;
+      }
+    }
+    
+    // Fallback: find any item with artwork from the entire list
+    for (int i = items.length - 1; i >= 0; i--) {
+      if (items[i].backdropUrl != null || items[i].imageUrl != null) {
+        return i;
+      }
+    }
+    
+    // Last resort: return first item
+    return 0;
   }
 
   void _preloadTMDBArtwork() async {
@@ -515,7 +550,34 @@ class _MoviesScreenState extends State<MoviesScreen>
 
   Widget _buildHeroBannerOverlay(BuildContext context, Content featuredMovie) {
     final heroImage = featuredMovie.backdropUrl ?? featuredMovie.imageUrl;
-    return GestureDetector(
+    final provider = Provider.of<ContentProvider>(context, listen: false);
+    final displayMovies = _curatedMovies.isNotEmpty ? _curatedMovies : provider.movies;
+    
+    return Focus(
+      focusNode: _heroFocus,
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        if (displayMovies.isEmpty) return KeyEventResult.ignored;
+        
+        if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+          _carouselTimer?.cancel();
+          setState(() {
+            _featuredIndex = (_featuredIndex - 1 + displayMovies.length) % displayMovies.length;
+          });
+          _startCarousel();
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+          _carouselTimer?.cancel();
+          setState(() {
+            _featuredIndex = (_featuredIndex + 1) % displayMovies.length;
+          });
+          _startCarousel();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: GestureDetector(
       onTap: () {
         final encodedId = Uri.encodeComponent(featuredMovie.id);
         context.push('/content/$encodedId', extra: featuredMovie);
@@ -649,6 +711,7 @@ class _MoviesScreenState extends State<MoviesScreen>
             ),
           ],
         ),
+      ),
       ),
     );
   }

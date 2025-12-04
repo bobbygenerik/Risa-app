@@ -1,4 +1,5 @@
 // ignore_for_file: sized_box_for_whitespace
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -43,6 +44,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
   final ScrollController _horizontalScrollController = ScrollController();
   final ScrollController _verticalScrollController = ScrollController();
   final FocusNode _firstContentFocusNode = FocusNode();
+  Timer? _epgRefreshTimer;
 
   @override
   void initState() {
@@ -53,6 +55,9 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     );
     _currentTime = DateTime.now();
     Future.delayed(const Duration(seconds: 1), _updateTime);
+    
+    // Start EPG auto-refresh timer (check every 30 minutes)
+    _startEpgAutoRefresh();
     
     // Hide system UI for immersive experience
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
@@ -72,16 +77,11 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
       debugPrint('EPG Screen: epgData.length = ${epgService.epgData.length}');
       debugPrint('EPG Screen: isLoading = ${epgService.isLoading}');
       
-      // EPG service auto-initializes from cache via provider
-      // Only load from URL if no data after initialization
-      if (!epgService.hasData && !epgService.isLoading) {
-        final epgUrl = prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
-        if (epgUrl != null && epgUrl.isNotEmpty) {
-          debugPrint('EPG Screen: No cached data, loading from URL: $epgUrl');
-          await epgService.loadEpgFromUrl(epgUrl);
-        }
-      } else {
-        debugPrint('EPG Screen: EPG data already loaded (${epgService.epgData.length} channels)');
+      // Always refresh EPG when screen opens (like playlist does)
+      final epgUrl = prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
+      if (epgUrl != null && epgUrl.isNotEmpty && !epgService.isLoading) {
+        debugPrint('EPG Screen: Refreshing EPG data from URL: $epgUrl');
+        await epgService.refresh(epgUrl);
       }
       
       // Scroll to current time position (no animation for initial load)
@@ -128,6 +128,25 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     Future.delayed(const Duration(seconds: 1), _updateTime);
   }
 
+  void _startEpgAutoRefresh() {
+    _epgRefreshTimer?.cancel();
+    _epgRefreshTimer = Timer.periodic(const Duration(minutes: 30), (timer) async {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      
+      final epgService = Provider.of<EpgService>(context, listen: false);
+      final prefs = await SharedPreferences.getInstance();
+      final epgUrl = prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
+      
+      if (epgUrl != null && epgUrl.isNotEmpty && !epgService.isLoading) {
+        debugPrint('EPG Screen: Auto-refreshing EPG data...');
+        await epgService.refresh(epgUrl);
+      }
+    });
+  }
+
   String _formatTime(DateTime time) {
     // 12-hour format with AM/PM
     final hour = time.hour % 12 == 0 ? 12 : time.hour % 12;
@@ -150,6 +169,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     _horizontalScrollController.dispose();
     _verticalScrollController.dispose();
     _miniPlayerController?.dispose();
+    _epgRefreshTimer?.cancel();
     super.dispose();
   }
 
@@ -1365,7 +1385,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     final totalWidth = 12 * cellWidth; // 12 hours
 
     return Container(
-      height: 80,
+      height: 56,
       width: totalWidth,
       decoration: const BoxDecoration(
         border: Border(
@@ -1565,7 +1585,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     final isPlaying = _playingChannel?.id == channel.id;
 
     return Container(
-      height: 80,
+      height: 56,
       clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
         color: isSelected ? AppTheme.primaryBlue.withAlpha((0.2 * 255).round()) : null,
@@ -1606,7 +1626,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                   onLongPress: () => _showChannelContextMenu(context, channel),
                   child: Container(
                     width: 200,
-                    height: 80, // Fixed height to match parent
+                    height: 56, // Fixed height to match parent
                     padding: const EdgeInsets.symmetric(horizontal: AppSizes.sm, vertical: 4),
                     decoration: BoxDecoration(
                       color: isFocused 

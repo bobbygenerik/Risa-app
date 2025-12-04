@@ -31,6 +31,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Timer? _carouselTimer;
   int _featuredIndex = 0;
   final FocusNode _watchFocus = FocusNode();
+  final FocusNode _heroFocus = FocusNode();
   final FocusNode _settingsButtonFocus = FocusNode();
   final Map<String, String?> _programArtwork = {};
   final Set<String> _artworkRequests = {};
@@ -64,6 +65,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   void dispose() {
     _carouselTimer?.cancel();
     _watchFocus.dispose();
+    _heroFocus.dispose();
     _settingsButtonFocus.dispose();
     super.dispose();
   }
@@ -191,7 +193,34 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           return SingleChildScrollView(
             child: Column(
               children: [
-                _buildHero(context, featuredChannel, currentProgram),
+                Focus(
+                  focusNode: _heroFocus,
+                  onKeyEvent: (node, event) {
+                    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                    final provider = Provider.of<ChannelProvider>(context, listen: false);
+                    final channels = provider.channels;
+                    if (channels.isEmpty) return KeyEventResult.ignored;
+                    
+                    if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                      _carouselTimer?.cancel();
+                      setState(() {
+                        _featuredIndex = (_featuredIndex - 1 + channels.length) % channels.length;
+                      });
+                      _startCarouselIfNeeded();
+                      return KeyEventResult.handled;
+                    }
+                    if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                      _carouselTimer?.cancel();
+                      setState(() {
+                        _featuredIndex = (_featuredIndex + 1) % channels.length;
+                      });
+                      _startCarouselIfNeeded();
+                      return KeyEventResult.handled;
+                    }
+                    return KeyEventResult.ignored;
+                  },
+                  child: _buildHero(context, featuredChannel, currentProgram),
+                ),
                 _buildChannelSection(
                   context,
                   'Featured Channels',

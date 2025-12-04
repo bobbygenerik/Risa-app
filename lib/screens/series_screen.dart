@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -26,6 +27,7 @@ class _SeriesScreenState extends State<SeriesScreen>
   Timer? _carouselTimer;
   int _featuredIndex = 0;
   final FocusNode _watchFocus = FocusNode();
+  final FocusNode _heroFocus = FocusNode();
   final FocusNode _settingsFocus = FocusNode();
   List<Content> _curatedSeries = [];
   final Map<String, String?> _tmdbArtCache = {};
@@ -39,6 +41,7 @@ class _SeriesScreenState extends State<SeriesScreen>
     _carouselTimer?.cancel();
     _watchFocus.removeListener(_onWatchFocusChange);
     _watchFocus.dispose();
+    _heroFocus.dispose();
     _settingsFocus.dispose();
     super.dispose();
   }
@@ -69,11 +72,43 @@ class _SeriesScreenState extends State<SeriesScreen>
     _watchFocus.addListener(_onWatchFocusChange);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      
+      // Prioritize newly added content with artwork for hero banner
+      final provider = Provider.of<ContentProvider>(context, listen: false);
+      if (provider.series.isNotEmpty) {
+        _featuredIndex = _findNewestContentWithArtwork(provider.series);
+      }
+      
       _startCarousel();
       _prepareCuratedSeriesList();
       _preloadTMDBArtwork();
       // Focus is managed by navigation bar - don't auto-focus content
     });
+  }
+
+  /// Find the newest content (from end of list) that has artwork for hero banner
+  int _findNewestContentWithArtwork(List<Content> items) {
+    // Check last 20 items (newest content) for artwork
+    final recentCount = items.length.clamp(1, 20);
+    final recentItems = items.sublist(items.length - recentCount);
+    
+    // Find first recent item with backdrop or image
+    for (int i = recentItems.length - 1; i >= 0; i--) {
+      final item = recentItems[i];
+      if (item.backdropUrl != null || item.imageUrl != null) {
+        return items.length - recentCount + i;
+      }
+    }
+    
+    // Fallback: find any item with artwork from the entire list
+    for (int i = items.length - 1; i >= 0; i--) {
+      if (items[i].backdropUrl != null || items[i].imageUrl != null) {
+        return i;
+      }
+    }
+    
+    // Last resort: return first item
+    return 0;
   }
 
   void _preloadTMDBArtwork() async {
@@ -622,7 +657,34 @@ class _SeriesScreenState extends State<SeriesScreen>
 
   Widget _buildHeroBannerOverlay(BuildContext context, Content featuredSeries) {
     final heroImage = featuredSeries.backdropUrl ?? featuredSeries.imageUrl;
-    return GestureDetector(
+    final provider = Provider.of<ContentProvider>(context, listen: false);
+    final displaySeries = _curatedSeries.isNotEmpty ? _curatedSeries : provider.series;
+    
+    return Focus(
+      focusNode: _heroFocus,
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        if (displaySeries.isEmpty) return KeyEventResult.ignored;
+        
+        if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+          _carouselTimer?.cancel();
+          setState(() {
+            _featuredIndex = (_featuredIndex - 1 + displaySeries.length) % displaySeries.length;
+          });
+          _startCarousel();
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+          _carouselTimer?.cancel();
+          setState(() {
+            _featuredIndex = (_featuredIndex + 1) % displaySeries.length;
+          });
+          _startCarousel();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: GestureDetector(
       onTap: () {
         final encodedId = Uri.encodeComponent(featuredSeries.id);
         context.push('/content/$encodedId', extra: featuredSeries);
@@ -755,6 +817,7 @@ class _SeriesScreenState extends State<SeriesScreen>
             ),
           ],
         ),
+      ),
       ),
     );
   }
