@@ -9,6 +9,7 @@ import 'package:iptv_player/widgets/go_to_settings_button.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/service_validator.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 
@@ -319,12 +320,22 @@ class _MoviesScreenState extends State<MoviesScreen>
                               Container(
                                 color: AppTheme.cardBackground,
                                 child: movie.imageUrl != null
-                                    ? Image.network(
-                                        movie.imageUrl!,
+                                    ? CachedNetworkImage(
+                                        imageUrl: movie.imageUrl!,
                                         fit: BoxFit.cover,
                                         width: double.infinity,
                                         height: double.infinity,
-                                        errorBuilder: (context, error, stackTrace) {
+                                        placeholder: (context, url) => Container(
+                                          color: AppTheme.cardBackground,
+                                          child: const Center(
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white30),
+                                            ),
+                                          ),
+                                        ),
+                                        errorWidget: (context, url, error) {
+                                          debugPrint('Movie image failed: ${movie.title} - $url - $error');
                                           return _buildPlaceholder(movie.title);
                                         },
                                       )
@@ -498,11 +509,15 @@ class _MoviesScreenState extends State<MoviesScreen>
           children: [
             if (heroImage != null)
               Positioned.fill(
-                child: Image.network(
-                  heroImage,
+                child: CachedNetworkImage(
+                  imageUrl: heroImage,
                   fit: BoxFit.contain,
                   alignment: Alignment.topCenter,
-                  errorBuilder: (_, __, ___) => _buildBannerPlaceholder(),
+                  placeholder: (context, url) => _buildBannerPlaceholder(),
+                  errorWidget: (context, url, error) {
+                    debugPrint('Movie hero banner failed: $url - $error');
+                    return _buildBannerPlaceholder();
+                  },
                 ),
               )
             else

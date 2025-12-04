@@ -216,15 +216,23 @@ class XtreamCodesService {
     final containerExtension = data['container_extension'] ?? 'mp4';
     final videoUrl = '$serverUrl/movie/$username/$password/$streamId.$containerExtension';
 
+    final imageUrl = data['stream_icon'];
+    final backdropPath = data['backdrop_path'];
+    final backdropUrl = backdropPath != null
+        ? 'https://image.tmdb.org/t/p/original$backdropPath'
+        : null;
+
+    if (imageUrl != null || backdropUrl != null) {
+      debugPrint('Movie "${data['name']}": imageUrl=$imageUrl, backdropUrl=$backdropUrl');
+    }
+
     return Content(
       id: 'movie_$streamId',
       title: data['name'] ?? 'Unknown',
       type: ContentType.movie,
       videoUrl: videoUrl,
-      imageUrl: data['stream_icon'],
-      backdropUrl: data['backdrop_path'] != null
-          ? 'https://image.tmdb.org/t/p/original${data['backdrop_path']}'
-          : null,
+      imageUrl: imageUrl,
+      backdropUrl: backdropUrl,
       rating: _parseRating(data['rating']),
       genres: categoryName != null ? [categoryName] : null,
       year: _parseYear(data['added']),
@@ -236,14 +244,22 @@ class XtreamCodesService {
   Content _parseSeries(Map<String, dynamic> data, [String? categoryName]) {
     final seriesId = data['series_id'].toString();
 
+    final cover = data['cover'];
+    final backdropPath = data['backdrop_path'];
+    final backdropUrl = backdropPath != null
+        ? 'https://image.tmdb.org/t/p/original$backdropPath'
+        : null;
+
+    if (cover != null || backdropUrl != null) {
+      debugPrint('Series \"${data['name']}\": cover=$cover, backdropUrl=$backdropUrl');
+    }
+
     return Content(
       id: 'series_$seriesId',
       title: data['name'] ?? 'Unknown',
       type: ContentType.series,
-      imageUrl: data['cover'],
-      backdropUrl: data['backdrop_path'] != null
-          ? 'https://image.tmdb.org/t/p/original${data['backdrop_path']}'
-          : null,
+      imageUrl: cover,
+      backdropUrl: backdropUrl,
       rating: _parseRating(data['rating']),
       genres: categoryName != null ? [categoryName] : null,
       year: _parseYear(data['last_modified']),
