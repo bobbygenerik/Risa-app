@@ -196,8 +196,10 @@ class _ErrorHandler {
     final errorString = error.toString();
     if (errorString.contains('429') || 
         errorString.contains('rate limit') ||
-        errorString.contains('HttpException') && errorString.contains('imgur')) {
-      debugPrint('Suppressed rate-limit error: $error');
+        errorString.contains('HttpException') && errorString.contains('imgur') ||
+        errorString.contains('SocketException') && errorString.contains('image.tmdb.org') ||
+        errorString.contains('ClientException') && errorString.contains('SocketException')) {
+      debugPrint('Suppressed network/image error: $error');
       return;
     }
     

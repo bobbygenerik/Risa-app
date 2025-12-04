@@ -88,27 +88,10 @@ class _SeriesScreenState extends State<SeriesScreen>
 
   /// Find the newest content (from end of list) that has artwork for hero banner
   int _findNewestContentWithArtwork(List<Content> items) {
-    // Check last 20 items (newest content) for artwork
-    final recentCount = items.length.clamp(1, 20);
-    final recentItems = items.sublist(items.length - recentCount);
-    
-    // Find first recent item with backdrop or image
-    for (int i = recentItems.length - 1; i >= 0; i--) {
-      final item = recentItems[i];
-      if (item.backdropUrl != null || item.imageUrl != null) {
-        return items.length - recentCount + i;
-      }
-    }
-    
-    // Fallback: find any item with artwork from the entire list
-    for (int i = items.length - 1; i >= 0; i--) {
-      if (items[i].backdropUrl != null || items[i].imageUrl != null) {
-        return i;
-      }
-    }
-    
-    // Last resort: return first item
-    return 0;
+    // Select randomly from the last 12 items (newest content)
+    final recentCount = items.length.clamp(1, 12);
+    final randomOffset = Random().nextInt(recentCount);
+    return items.length - recentCount + randomOffset;
   }
 
   void _preloadTMDBArtwork() async {
