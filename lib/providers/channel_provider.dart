@@ -634,13 +634,17 @@ class ChannelProvider with ChangeNotifier {
 
       // Provide more helpful error messages
       if (e.toString().contains('HandshakeException') ||
-          e.toString().contains('WRONG_VERSION_NUMBER')) {
+          e.toString().contains('WRONG_VERSION_NUMBER') ||
+          e.toString().contains('wrong version number')) {
         _errorMessage =
-            'SSL/TLS Error: Server security configuration issue.\n\n'
-            'This usually means:\n'
-            '• The server URL should use HTTPS (not HTTP)\n'
-            '• Or the server has SSL certificate problems\n\n'
-            'Try changing http:// to https:// in your URL.';
+            'SSL/TLS Handshake Error\n\n'
+            'Technical details:\n$e\n\n'
+            'Possible causes:\n'
+            '• Server requires specific TLS version\n'
+            '• SSL certificate is invalid or expired\n'
+            '• Firewall or proxy blocking connection\n\n'
+            'The app is configured to accept all certificates.\n'
+            'This is a server-side compatibility issue.';
       } else if (e.toString().contains('SocketException')) {
         final socketError = e.toString();
         _errorMessage =
