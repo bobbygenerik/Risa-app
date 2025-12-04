@@ -462,8 +462,8 @@ class ChannelProvider with ChangeNotifier {
         'ChannelProvider: Starting streamed download with 90 second timeout...',
       );
 
-      // Create HttpClient with improved TLS handling
-      final ioClient = HttpClient(context: SecurityContext(withTrustedRoots: true))
+      // Create HttpClient with maximum TLS compatibility (no SecurityContext)
+      final ioClient = HttpClient()
         ..badCertificateCallback = (cert, host, port) {
           debugPrint('ChannelProvider: Accepting cert from $host:$port');
           return true;
