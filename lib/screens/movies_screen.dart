@@ -420,13 +420,18 @@ class _MoviesScreenState extends State<MoviesScreen>
     // Group movies by genre
     final genreMap = <String, List<Content>>{};
     for (final movie in movies) {
-      if (movie.genres != null) {
+      if (movie.genres != null && movie.genres!.isNotEmpty) {
         for (final genre in movie.genres!) {
           genreMap.putIfAbsent(genre, () => []).add(movie);
         }
       } else {
         genreMap.putIfAbsent('Other', () => []).add(movie);
       }
+    }
+    
+    debugPrint('Movies: Total=${movies.length}, Genres=${genreMap.keys.join(", ")}');
+    for (final entry in genreMap.entries) {
+      debugPrint('  ${entry.key}: ${entry.value.length} movies');
     }
 
     // Build section for each genre with pagination
