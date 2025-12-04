@@ -547,10 +547,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         if (cachedChannelArt?.isNotEmpty == true) {
           return cachedChannelArt;
         }
-        // TMDB returned nothing, use channel logo as final fallback
-        if (channel.logoUrl != null && channel.logoUrl!.isNotEmpty) {
-          return channel.logoUrl;
-        }
+        // TMDB returned nothing - don't use low-quality channel logo for hero banner
         return null;
       }
       
@@ -559,10 +556,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         _fetchChannelArtwork(channel);
       }
       
-      // While waiting for TMDB, use channel logo if available
-      if (channel.logoUrl != null && channel.logoUrl!.isNotEmpty) {
-        return channel.logoUrl;
-      }
+      // While waiting for TMDB, don't use channel logo (too low quality for hero banner)
+      return null;
     }
     
     return null;
