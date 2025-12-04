@@ -1156,6 +1156,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                         Expanded(
                           child: ListView.builder(
                             controller: _verticalScrollController,
+                            physics: const NeverScrollableScrollPhysics(),
                             itemCount: channels.length,
                             itemBuilder: (context, index) {
                               final channel = channels[index];
