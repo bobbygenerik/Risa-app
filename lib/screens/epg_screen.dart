@@ -1161,6 +1161,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                             // Programs grid (scrolls both ways)
                             Expanded(
                               child: ListView.builder(
+                                controller: _verticalScrollController,
                                 itemCount: channels.length,
                                 itemBuilder: (context, index) {
                                   final channel = channels[index];
@@ -1391,7 +1392,10 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                 final leftOffset = (minutesFromStart / 60) * cellWidth;
                 
                 final visibleDuration = programEnd.difference(programStart).inMinutes;
-                final width = ((visibleDuration / 60) * cellWidth).clamp(30.0, totalWidth - leftOffset);
+                final calculatedWidth = (visibleDuration / 60) * cellWidth;
+                final maxWidth = (totalWidth - leftOffset).clamp(0.0, double.infinity);
+                final minWidth = maxWidth < 30.0 ? maxWidth : 30.0;
+                final width = calculatedWidth.clamp(minWidth, maxWidth);
                 
                 return Positioned(
                   left: leftOffset,
@@ -1763,7 +1767,10 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     
     // Calculate width based on visible duration within the day
     final visibleDuration = displayEnd.difference(displayStart).inMinutes;
-    final double width = (visibleDuration > 0 ? (visibleDuration / 60) * cellWidth : cellWidth / 2).clamp(30.0, 24 * cellWidth).toDouble();
+    final calculatedWidth = visibleDuration > 0 ? (visibleDuration / 60) * cellWidth : cellWidth / 2;
+    final maxWidth = 24 * cellWidth;
+    final minWidth = maxWidth < 30.0 ? maxWidth : 30.0;
+    final double width = calculatedWidth.clamp(minWidth, maxWidth);
     
     final isLive = program.isCurrentlyPlaying;
     final hasCatchup = program.hasCatchup;

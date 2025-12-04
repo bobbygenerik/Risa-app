@@ -280,7 +280,7 @@ class _GlobalErrorScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 Focus(
-                  autofocus: true,
+                  autofocus: false,
                   child: Builder(
                     builder: (context) {
                       final isFocused = Focus.of(context).hasFocus;
