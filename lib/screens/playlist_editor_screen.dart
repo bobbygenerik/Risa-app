@@ -504,13 +504,12 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
               Row(
               children: [
                 Expanded(
-                  child: OutlinedButton.icon(
+                  child: ElevatedButton.icon(
                     onPressed: _deletePlaylist,
                     icon: const Icon(Icons.delete_outline),
                     label: const Text('Delete Playlist'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.accentRed,
-                      side: const BorderSide(color: AppTheme.accentRed),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.accentRed,
                       padding: const EdgeInsets.all(AppSizes.md),
                     ),
                   ),
