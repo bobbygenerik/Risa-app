@@ -591,43 +591,10 @@ class M3UParserService {
   /// Extract genres from group title
   List<String>? _extractGenres(String? groupTitle) {
     if (groupTitle == null || groupTitle.isEmpty) return null;
-
-    // Common genre keywords
-    final genres = <String>[];
-    final lower = groupTitle.toLowerCase();
-
-    if (lower.contains('action')) {
-      genres.add('Action');
-    }
-    if (lower.contains('comedy')) {
-      genres.add('Comedy');
-    }
-    if (lower.contains('drama')) {
-      genres.add('Drama');
-    }
-    if (lower.contains('horror')) {
-      genres.add('Horror');
-    }
-    if (lower.contains('sci-fi') || lower.contains('scifi')) {
-      genres.add('Sci-Fi');
-    }
-    if (lower.contains('thriller')) {
-      genres.add('Thriller');
-    }
-    if (lower.contains('romance')) {
-      genres.add('Romance');
-    }
-    if (lower.contains('documentary')) {
-      genres.add('Documentary');
-    }
-    if (lower.contains('kids') || lower.contains('children')) {
-      genres.add('Kids');
-    }
-    if (lower.contains('sport')) {
-      genres.add('Sports');
-    }
-
-    return genres.isNotEmpty ? genres : null;
+    
+    // Use the group-title directly as the genre/category
+    // This matches the Xtream Codes behavior where category_name becomes the genre
+    return [groupTitle];
   }
 
   /// Fast VOD detection - checks URL patterns without toLowerCase()

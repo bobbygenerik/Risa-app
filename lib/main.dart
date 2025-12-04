@@ -617,11 +617,15 @@ class _MyAppState extends State<MyApp> {
                 final media = MediaQuery.of(context);
                 final resolvedChild = child ?? const SizedBox.shrink();
                 _maybePromptForProfile(profileProvider);
-                // Using textScaleFactor is deprecated in newer Flutter versions.
-                // Keep current behavior but silence the deprecation until a
-                // larger migration to TextScaler is performed.
-                // ignore: deprecated_member_use
-                final mediaData = media.copyWith(textScaleFactor: 0.95);
+                // Scale entire UI to 80% for Android TV to fit more content
+                // This scales EVERYTHING (not just text) to show ~25% more content
+                final scaledSize = media.size / 0.80;
+                final mediaData = media.copyWith(
+                  size: scaledSize,
+                  // Also scale text slightly
+                  // ignore: deprecated_member_use
+                  textScaleFactor: 0.85,
+                );
                 return MediaQuery(data: mediaData, child: resolvedChild);
               },
             );
