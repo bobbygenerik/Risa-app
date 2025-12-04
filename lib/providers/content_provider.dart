@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 import '../models/content.dart';
 
 /// Manages VOD content (movies, series), watch history, and continue watching
@@ -237,9 +239,11 @@ class ContentProvider with ChangeNotifier {
   /// Save all movies to cache (including TMDB metadata like genres)
   Future<void> _saveMoviesCache() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/movies_cache.json');
       final moviesList = _movies.map((m) => m.toMap()).toList();
-      await prefs.setString('movies_cache', jsonEncode(moviesList));
+      await file.writeAsString(jsonEncode(moviesList));
+      debugPrint('Saved ${_movies.length} movies to cache file');
     } catch (e) {
       debugPrint('Error saving movies cache: $e');
     }
@@ -248,9 +252,11 @@ class ContentProvider with ChangeNotifier {
   /// Save all series to cache (including TMDB metadata like genres)
   Future<void> _saveSeriesCache() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/series_cache.json');
       final seriesList = _series.map((s) => s.toMap()).toList();
-      await prefs.setString('series_cache', jsonEncode(seriesList));
+      await file.writeAsString(jsonEncode(seriesList));
+      debugPrint('Saved ${_series.length} series to cache file');
     } catch (e) {
       debugPrint('Error saving series cache: $e');
     }
@@ -259,10 +265,12 @@ class ContentProvider with ChangeNotifier {
   /// Load movies from cache (restores TMDB metadata including genres)
   Future<List<Content>> loadMoviesCache() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final moviesJson = prefs.getString('movies_cache');
-      if (moviesJson != null) {
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/movies_cache.json');
+      if (await file.exists()) {
+        final moviesJson = await file.readAsString();
         final List<dynamic> moviesList = jsonDecode(moviesJson);
+        debugPrint('Loaded ${moviesList.length} movies from cache file');
         return moviesList
             .map((m) => Content.fromMap(m as Map<String, dynamic>))
             .toList();
@@ -276,10 +284,12 @@ class ContentProvider with ChangeNotifier {
   /// Load series from cache (restores TMDB metadata including genres)
   Future<List<Content>> loadSeriesCache() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final seriesJson = prefs.getString('series_cache');
-      if (seriesJson != null) {
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/series_cache.json');
+      if (await file.exists()) {
+        final seriesJson = await file.readAsString();
         final List<dynamic> seriesList = jsonDecode(seriesJson);
+        debugPrint('Loaded ${seriesList.length} series from cache file');
         return seriesList
             .map((s) => Content.fromMap(s as Map<String, dynamic>))
             .toList();
