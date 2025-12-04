@@ -527,19 +527,27 @@ class M3UParserService {
   }
 
   /// Create movie content from M3U data
+  /// Create movie content from M3U data
   Content _createMovieContent(
     String title,
     String url,
     Map<String, String> attributes,
     int index,
   ) {
+    final groupTitle = attributes['group-title'];
+    final genres = _extractGenres(groupTitle);
+    
+    if (index < 5) {
+      debugPrint('M3U Movie: "$title" - group-title: "$groupTitle" - genres: $genres');
+    }
+    
     return Content(
       id: 'movie_${DateTime.now().millisecondsSinceEpoch}_$index',
       title: title,
       type: ContentType.movie,
       videoUrl: url,
       imageUrl: attributes['tvg-logo'],
-      genres: _extractGenres(attributes['group-title']),
+      genres: genres,
       addedDate: DateTime.now(),
     );
   }
@@ -590,10 +598,16 @@ class M3UParserService {
 
   /// Extract genres from group title
   List<String>? _extractGenres(String? groupTitle) {
-    if (groupTitle == null || groupTitle.isEmpty) return null;
+    debugPrint('M3U _extractGenres called with: "$groupTitle"');
+    
+    if (groupTitle == null || groupTitle.isEmpty) {
+      debugPrint('M3U _extractGenres returning null (empty groupTitle)');
+      return null;
+    }
     
     // Use the group-title directly as the genre/category
     // This matches the Xtream Codes behavior where category_name becomes the genre
+    debugPrint('M3U _extractGenres returning: [$groupTitle]');
     return [groupTitle];
   }
 
