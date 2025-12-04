@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
+import 'package:iptv_player/widgets/vod_card_image.dart';
 
 class MoviesScreen extends StatefulWidget {
   const MoviesScreen({super.key});
@@ -319,36 +320,11 @@ class _MoviesScreenState extends State<MoviesScreen>
                             children: [
                               Container(
                                 color: AppTheme.cardBackground,
-                                child: movie.imageUrl != null && movie.imageUrl!.isNotEmpty
-                                    ? CachedNetworkImage(
-                                        imageUrl: movie.imageUrl!,
-                                        fit: BoxFit.cover,
-                                        width: double.infinity,
-                                        height: double.infinity,
-                                        httpHeaders: const {
-                                          'User-Agent': 'Mozilla/5.0',
-                                        },
-                                        fadeInDuration: const Duration(milliseconds: 200),
-                                        placeholderFadeInDuration: const Duration(milliseconds: 200),
-                                        placeholder: (context, url) => Container(
-                                          color: AppTheme.cardBackground,
-                                          child: const Center(
-                                            child: SizedBox(
-                                              width: 20,
-                                              height: 20,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white30),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        errorWidget: (context, url, error) {
-                                          debugPrint('Movie image failed: ${movie.title} - $url - $error');
-                                          return _buildPlaceholder(movie.title);
-                                        },
-                                      )
-                                    : _buildPlaceholder(movie.title),
+                                child: VodCardImage(
+                                  content: movie,
+                                  fit: BoxFit.cover,
+                                  placeholder: _buildPlaceholder(movie.title),
+                                ),
                               ),
                               if (movie.watchProgress != null &&
                                   movie.watchProgress! > 0) ...[
