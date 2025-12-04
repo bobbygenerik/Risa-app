@@ -837,15 +837,19 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
                                   ),
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(12),
-                                    child: ProgramArtworkWidget(
-                                      channel: channel,
-                                      width: double.infinity,
-                                      height: double.infinity,
-                                      fit: BoxFit.cover,
-                                      borderRadius: BorderRadius.circular(12),
-                                      placeholder: _buildChannelPlaceholder(channel.name),
-                                      errorWidget: _buildChannelPlaceholder(channel.name),
-                                    ),
+                                    child: channel.logoUrl != null && channel.logoUrl!.isNotEmpty
+                                        ? CachedNetworkImage(
+                                            imageUrl: channel.logoUrl!,
+                                            width: double.infinity,
+                                            height: double.infinity,
+                                            fit: BoxFit.contain,
+                                            httpHeaders: const {
+                                              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                                            },
+                                            placeholder: (context, url) => _buildChannelPlaceholder(channel.name),
+                                            errorWidget: (context, url, error) => _buildChannelPlaceholder(channel.name),
+                                          )
+                                        : _buildChannelPlaceholder(channel.name),
                                   ),
                                 ),
                               ),

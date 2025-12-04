@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/utils/app_theme.dart';
@@ -136,15 +137,16 @@ class CategoryScreen extends StatelessWidget {
                         child: Center(
                           child: Padding(
                             padding: const EdgeInsets.all(AppSizes.sm),
-                            child: Image.network(
-                              channel.logoUrl!,
-                              fit: BoxFit
-                                  .contain, // Changed from cover to contain
+                            child: CachedNetworkImage(
+                              imageUrl: channel.logoUrl!,
+                              fit: BoxFit.contain,
                               width: double.infinity,
                               height: double.infinity,
-                              errorBuilder: (context, error, stackTrace) {
-                                return _buildChannelPlaceholder(channel.name);
+                              httpHeaders: const {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                               },
+                              placeholder: (context, url) => _buildChannelPlaceholder(channel.name),
+                              errorWidget: (context, url, error) => _buildChannelPlaceholder(channel.name),
                             ),
                           ),
                         ),
