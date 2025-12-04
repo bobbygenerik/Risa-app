@@ -22,9 +22,21 @@ class XtreamCodesService {
 
   /// Create HTTP client that bypasses SSL certificate verification
   static http.Client _createDefaultClient() {
-    final ioClient = HttpClient();
-    ioClient.badCertificateCallback = (cert, host, port) => true;
-    ioClient.connectionTimeout = const Duration(seconds: 15);
+    final ioClient = HttpClient(context: SecurityContext(withTrustedRoots: true))
+      ..badCertificateCallback = (cert, host, port) {
+        debugPrint('XtreamCodes: Accepting cert from $host:$port');
+        return true;
+      }
+      ..connectionTimeout = const Duration(seconds: 15)
+      ..idleTimeout = const Duration(seconds: 15);
+    
+    // Force using all available security contexts
+    try {
+      ioClient.findProxy = (uri) => 'DIRECT';
+    } catch (e) {
+      debugPrint('XtreamCodes: Could not set proxy: $e');
+    }
+    
     return IOClient(ioClient);
   }
 
