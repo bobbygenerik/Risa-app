@@ -535,7 +535,13 @@ class M3UParserService {
     int index,
   ) {
     final groupTitle = attributes['group-title'];
-    final genres = _extractGenres(groupTitle);
+    var genres = _extractGenres(groupTitle);
+    
+    // If no genres from group-title, try to detect from title
+    if (genres == null || genres.isEmpty) {
+      genres = _detectGenresFromTitle(title);
+    }
+    
     final imageUrl = attributes['tvg-logo'];
     
     if (index < 5) {
@@ -565,6 +571,13 @@ class M3UParserService {
     int index,
   ) {
     final seasonEpisode = _extractSeasonEpisode(title);
+    final groupTitle = attributes['group-title'];
+    var genres = _extractGenres(groupTitle);
+    
+    // If no genres from group-title, try to detect from title
+    if (genres == null || genres.isEmpty) {
+      genres = _detectGenresFromTitle(title);
+    }
 
     return Content(
       id: 'series_${DateTime.now().millisecondsSinceEpoch}_$index',
@@ -574,7 +587,7 @@ class M3UParserService {
       imageUrl: attributes['tvg-logo'],
       seasonNumber: seasonEpisode['season'],
       episodeNumber: seasonEpisode['episode'],
-      genres: _extractGenres(attributes['group-title']),
+      genres: genres,
       addedDate: DateTime.now(),
     );
   }
@@ -610,10 +623,82 @@ class M3UParserService {
       return null;
     }
     
-    // Use the group-title directly as the genre/category
-    // This matches the Xtream Codes behavior where category_name becomes the genre
-    debugPrint('M3U _extractGenres returning: [$groupTitle]');
-    return [groupTitle];
+    // Clean up the group-title
+    final cleaned = groupTitle.trim();
+    
+    // Check for common category patterns and extract meaningful genres
+    final lower = cleaned.toLowerCase();
+    
+    // Map common category names to proper genres
+    final genreMap = {
+      'action': 'Action',
+      'comedy': 'Comedy',
+      'drama': 'Drama',
+      'horror': 'Horror',
+      'thriller': 'Thriller',
+      'sci-fi': 'Sci-Fi',
+      'scifi': 'Sci-Fi',
+      'science fiction': 'Sci-Fi',
+      'romance': 'Romance',
+      'documentary': 'Documentary',
+      'animation': 'Animation',
+      'animated': 'Animation',
+      'adventure': 'Adventure',
+      'fantasy': 'Fantasy',
+      'crime': 'Crime',
+      'mystery': 'Mystery',
+      'western': 'Western',
+      'war': 'War',
+      'musical': 'Musical',
+      'sport': 'Sports',
+      'sports': 'Sports',
+      'family': 'Family',
+      'kids': 'Kids',
+      'bollywood': 'Bollywood',
+      'nollywood': 'Nollywood',
+      'korean': 'Korean',
+      'anime': 'Anime',
+      'martial arts': 'Martial Arts',
+      'superhero': 'Superhero',
+    };
+    
+    // Check if the group-title matches any known genre
+    for (final entry in genreMap.entries) {
+      if (lower.contains(entry.key)) {
+        debugPrint('M3U _extractGenres found genre "${entry.value}" from "$groupTitle"');
+        return [entry.value];
+      }
+    }
+    
+    // If no match, use the group-title directly as the genre
+    debugPrint('M3U _extractGenres returning: [$cleaned]');
+    return [cleaned];
+  }
+
+  /// Try to detect genre from movie/series title
+  List<String>? _detectGenresFromTitle(String title) {
+    final lower = title.toLowerCase();
+    
+    // Common keywords in titles
+    if (lower.contains('action') || lower.contains('mission')) return ['Action'];
+    if (lower.contains('comedy') || lower.contains('funny')) return ['Comedy'];
+    if (lower.contains('horror') || lower.contains('scary')) return ['Horror'];
+    if (lower.contains('romance') || lower.contains('love')) return ['Romance'];
+    if (lower.contains('thriller')) return ['Thriller'];
+    if (lower.contains('drama')) return ['Drama'];
+    if (lower.contains('adventure')) return ['Adventure'];
+    if (lower.contains('fantasy') || lower.contains('magic')) return ['Fantasy'];
+    if (lower.contains('sci-fi') || lower.contains('scifi') || lower.contains('space')) return ['Sci-Fi'];
+    if (lower.contains('documentary') || lower.contains('docu')) return ['Documentary'];
+    if (lower.contains('animation') || lower.contains('cartoon')) return ['Animation'];
+    if (lower.contains('crime') || lower.contains('detective')) return ['Crime'];
+    if (lower.contains('western') || lower.contains('cowboy')) return ['Western'];
+    if (lower.contains('war') || lower.contains('battle')) return ['War'];
+    if (lower.contains('superhero') || lower.contains('marvel') || lower.contains('dc comics')) return ['Superhero'];
+    if (lower.contains('anime')) return ['Anime'];
+    if (lower.contains('bollywood')) return ['Bollywood'];
+    
+    return null;
   }
 
   /// Fast VOD detection - checks URL patterns without toLowerCase()
