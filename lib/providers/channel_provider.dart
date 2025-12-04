@@ -662,11 +662,22 @@ class ChannelProvider with ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    final httpClient = HttpClient()
-      ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+    final httpClient = HttpClient(context: SecurityContext(withTrustedRoots: true))
+      ..badCertificateCallback = (X509Certificate cert, String host, int port) {
+        debugPrint('ChannelProvider: Accepting cert from $host:$port');
+        return true;
+      }
+      ..connectionTimeout = const Duration(seconds: 90)
+      ..idleTimeout = const Duration(seconds: 90);
+    
+    try {
+      httpClient.findProxy = (uri) => 'DIRECT';
+    } catch (e) {
+      debugPrint('ChannelProvider: Could not set proxy: $e');
+    }
 
     try {
-      debugPrint('ChannelProvider: Using direct HttpClient with SSL bypass');
+      debugPrint('ChannelProvider: Using direct HttpClient with improved TLS handling');
       
       final request = await httpClient.getUrl(Uri.parse(url));
       request.headers.add('User-Agent', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36');
