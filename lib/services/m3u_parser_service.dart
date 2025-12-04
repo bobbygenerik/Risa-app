@@ -536,9 +536,14 @@ class M3UParserService {
   ) {
     final groupTitle = attributes['group-title'];
     final genres = _extractGenres(groupTitle);
+    final imageUrl = attributes['tvg-logo'];
     
     if (index < 5) {
-      debugPrint('M3U Movie: "$title" - group-title: "$groupTitle" - genres: $genres');
+      debugPrint('M3U Movie #$index: "$title"');
+      debugPrint('  group-title: "$groupTitle"');
+      debugPrint('  tvg-logo: "$imageUrl"');
+      debugPrint('  url: "$url"');
+      debugPrint('  genres: $genres');
     }
     
     return Content(
@@ -546,7 +551,7 @@ class M3UParserService {
       title: title,
       type: ContentType.movie,
       videoUrl: url,
-      imageUrl: attributes['tvg-logo'],
+      imageUrl: imageUrl,
       genres: genres,
       addedDate: DateTime.now(),
     );
