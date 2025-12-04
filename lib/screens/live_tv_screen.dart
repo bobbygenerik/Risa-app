@@ -303,14 +303,22 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       // Channel logo with enrichment
-                      ChannelLogoWidget(
-                        channelName: channel.name,
-                        logoUrl: channel.logoUrl,
-                        tvgId: channel.tvgId,
+                      Container(
                         width: 120,
                         height: 64,
-                        fit: BoxFit.contain,
-                        borderRadius: BorderRadius.circular(8),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ChannelLogoWidget(
+                          channelName: channel.name,
+                          logoUrl: channel.logoUrl,
+                          tvgId: channel.tvgId,
+                          width: 104,
+                          height: 48,
+                          fit: BoxFit.contain,
+                        ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
