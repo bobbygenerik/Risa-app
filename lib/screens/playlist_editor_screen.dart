@@ -100,6 +100,8 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
   }
 
   Future<void> _updatePlaylist() async {
+    setState(() => _isLoading = true);
+    
     try {
       final provider = Provider.of<ChannelProvider>(context, listen: false);
       
@@ -123,21 +125,71 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
       }
 
       if (mounted) {
+        setState(() => _isLoading = false);
+        
+        // Save settings after successful update
+        await _saveSettings();
+        
         showAppSnackBar(
           context,
           SnackBar(
-            content: Text('Playlist updated! ${provider.channels.length} channels found.'),
+            content: Text('Playlist updated! ${provider.channels.length} channels, ${provider.movies.length} movies, ${provider.series.length} series found.'),
             backgroundColor: AppTheme.accentGreen,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
-        showAppSnackBar(
-          context,
-          SnackBar(
-            content: Text('Failed to update playlist: ${e.toString()}'),
-            backgroundColor: AppTheme.accentRed,
+        setState(() => _isLoading = false);
+        
+        final provider = Provider.of<ChannelProvider>(context, listen: false);
+        final errorMessage = provider.errorMessage ?? e.toString();
+        
+        // Show detailed error in dialog instead of snackbar
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: AppTheme.dialogBackground,
+            title: Row(
+              children: [
+                Icon(Icons.error_outline, color: AppTheme.accentRed, size: 28),
+                const SizedBox(width: 12),
+                const Text('Update Failed'),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Failed to update playlist. Please check your connection and try again in a few moments.',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Error details:', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                  const SizedBox(height: 8),
+                  SelectableText(
+                    errorMessage,
+                    style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                  ),
+                  if (errorMessage.contains('429'))
+                    const Padding(
+                      padding: EdgeInsets.only(top: 16),
+                      child: Text(
+                        'ℹ️ HTTP 429 means the server is rate-limiting requests. Please wait a few minutes before trying again.',
+                        style: TextStyle(fontSize: 12, color: AppTheme.accentOrange),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
           ),
         );
       }
