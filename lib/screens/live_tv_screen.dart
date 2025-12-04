@@ -48,12 +48,25 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _tmdbEnabled = ServiceValidator.isTmdbAvailable;
     // Start carousel once the widget is built — will be updated when channels load
     WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _startCarouselIfNeeded(),
+      (_) {
+        _startCarouselIfNeeded();
+        // Load EPG data to populate program info and progress bars
+        _loadEpgData();
+      },
     );
     // Start progress bar update timer (updates every minute)
     _progressTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       if (mounted) setState(() {}); // Refresh to update progress
     });
+  }
+
+  Future<void> _loadEpgData() async {
+    final epgService = Provider.of<EpgService>(context, listen: false);
+    
+    // If EPG has no data, try to load from cache or URL
+    if (!epgService.hasData && !epgService.isLoading) {
+      await epgService.initialize();
+    }
   }
   
   void _onChannelsReady() {
