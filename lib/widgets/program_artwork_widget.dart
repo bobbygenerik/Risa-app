@@ -72,6 +72,8 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
     
     _programTitle = currentProgram?.title;
     
+    debugPrint('ProgramArtwork: Channel "${widget.channel.name}" - searching for "$searchTitle"');
+    
     // Check cache
     if (_artworkCache.containsKey(searchTitle)) {
       if (mounted) {

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:iptv_player/config/tmdb_config.dart';
 import 'package:iptv_player/config/omdb_config.dart';
@@ -141,7 +142,7 @@ class TMDBService {
         }
       }
     } catch (e) {
-      print('TMDB API error: $e');
+      debugPrint('TMDB API error: $e');
     }
 
     return null;
@@ -176,7 +177,7 @@ class TMDBService {
         }
       }
     } catch (e) {
-      print('TMDB API error: $e');
+      debugPrint('TMDB API error: $e');
     }
 
     return null;
@@ -219,7 +220,7 @@ class TMDBService {
         }
       }
     } catch (e) {
-      print('TMDB API error: $e');
+      debugPrint('TMDB API error: $e');
     }
 
     return null;
@@ -260,7 +261,7 @@ class TMDBService {
         }
       }
     } catch (e) {
-      print('OMDb API error: $e');
+      debugPrint('OMDb API error for "$title": $e');
     }
 
     return null;
@@ -306,7 +307,7 @@ class TMDBService {
         }
       }
     } catch (e) {
-      print('TMDB API error: $e');
+      debugPrint('TMDB API error: $e');
     }
 
     return null;
@@ -343,13 +344,17 @@ class TMDBService {
       
       // If TMDB didn't find anything, try OMDb as fallback
       if (details == null || (details['backdrop'] == null && details['poster'] == null)) {
-        print('TMDB miss for "$title", trying OMDb...');
+        debugPrint('TMDB miss for "$title", trying OMDb as fallback...');
         final omdbTV = await _getOMDbDetails(title, year: year, type: 'series');
         final omdbMovie = await _getOMDbDetails(title, year: year, type: 'movie');
         details = omdbTV ?? omdbMovie;
         if (details != null) {
-          print('OMDb found artwork for "$title"');
+          debugPrint('OMDb found artwork for "$title": ${details['backdrop'] ?? details['poster']}');
+        } else {
+          debugPrint('No artwork found for "$title" in TMDB or OMDb');
         }
+      } else {
+        debugPrint('TMDB found artwork for "$title": ${details['backdrop'] ?? details['poster']}');
       }
 
       final image =

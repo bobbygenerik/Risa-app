@@ -572,18 +572,46 @@ class _SeriesScreenState extends State<SeriesScreen>
           Center(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
-              child: TextButton(
-                onPressed: () {
-                  setState(() {
-                    _genreDisplayCounts[genre] = displayCount + _itemsPerPage;
-                  });
-                },
-                style: TextButton.styleFrom(
-                  backgroundColor: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
-                ),
-                child: const Text(
-                  'Load More',
-                  style: TextStyle(color: AppTheme.primaryBlue),
+              child: Focus(
+                autofocus: false,
+                child: Builder(
+                  builder: (context) {
+                    final isFocused = Focus.of(context).hasFocus;
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: isFocused ? [
+                          BoxShadow(
+                            color: AppTheme.primaryBlue.withAlpha((0.6 * 255).round()),
+                            blurRadius: 20,
+                            spreadRadius: 2,
+                          ),
+                        ] : null,
+                      ),
+                      child: TextButton(
+                        onPressed: () {
+                          debugPrint('Load More pressed for genre: $genre');
+                          setState(() {
+                            _genreDisplayCounts[genre] = displayCount + _itemsPerPage;
+                          });
+                        },
+                        style: TextButton.styleFrom(
+                          backgroundColor: isFocused
+                              ? AppTheme.primaryBlue
+                              : AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        ),
+                        child: Text(
+                          'Load More ($genre)',
+                          style: TextStyle(
+                            color: isFocused ? Colors.white : AppTheme.primaryBlue,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
