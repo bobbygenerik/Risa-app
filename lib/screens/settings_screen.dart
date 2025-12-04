@@ -685,6 +685,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.dialogBackground,
         title: Row(
           children: [
             const Icon(Icons.analytics, color: AppTheme.primaryBlue),
@@ -824,6 +825,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.dialogBackground,
         title: const Text('Clear EPG Data'),
         content: const Text(
           'Are you sure you want to clear all EPG data? This cannot be undone.',
@@ -2105,6 +2107,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       final confirm = await showDialog<bool>(
                         context: context,
                         builder: (context) => AlertDialog(
+                          backgroundColor: AppTheme.dialogBackground,
                           title: const Text('Clear EPG Data'),
                           content: const Text(
                             'Are you sure you want to clear all EPG data? This cannot be undone.',
@@ -5914,6 +5917,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.dialogBackground,
         title: const Text('Clear Playlist Cache?'),
         content: const Text(
           'Are you sure you want to clear the playlist cache? This will remove all locally cached playlist data.',

@@ -335,7 +335,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       Container(
                         width: 120,
                         height: 64,
-                        padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: Colors.black.withOpacity(0.3),
                           borderRadius: BorderRadius.circular(8),
@@ -344,8 +343,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                           channelName: channel.name,
                           logoUrl: channel.logoUrl,
                           tvgId: channel.tvgId,
-                          width: 104,
-                          height: 48,
+                          width: 120,
+                          height: 64,
                           fit: BoxFit.contain,
                         ),
                       ),

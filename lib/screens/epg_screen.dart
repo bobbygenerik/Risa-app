@@ -994,7 +994,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     final isPlaying = _playingChannel?.id == channel.id;
 
     return Container(
-      height: 80,
+      height: 56,
       decoration: BoxDecoration(
         color: isSelected ? AppTheme.primaryBlue.withAlpha((0.2 * 255).round()) : null,
         border: Border(
