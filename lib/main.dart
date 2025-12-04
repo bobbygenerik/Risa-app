@@ -617,12 +617,12 @@ class _MyAppState extends State<MyApp> {
                 final media = MediaQuery.of(context);
                 final resolvedChild = child ?? const SizedBox.shrink();
                 _maybePromptForProfile(profileProvider);
-                // Scale entire UI to 80% for Android TV to fit more content
-                // This scales EVERYTHING (not just text) to show ~25% more content
-                final scaledSize = media.size / 0.80;
+                // Scale entire UI to 125% (make screen appear larger) to fit more content
+                // This makes widgets think the screen is 25% bigger, so they render smaller
+                final scaledSize = media.size * 1.25;
                 final mediaData = media.copyWith(
                   size: scaledSize,
-                  // Also scale text slightly
+                  // Also scale text to 85%
                   // ignore: deprecated_member_use
                   textScaleFactor: 0.85,
                 );
