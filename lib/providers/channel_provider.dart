@@ -878,23 +878,17 @@ class ChannelProvider with ChangeNotifier {
       final dir = await getApplicationDocumentsDirectory();
       final jsonCacheFile = File('${dir.path}/parsed_playlist_cache.json');
       
-      // Remove genres from maps (they're not needed and slow down JSON encoding)
+      // Keep genres in cache - they're essential for categorization
       final channelMaps = (parsed['channels'] as List<dynamic>).map((c) {
-        final map = Map<String, dynamic>.from(c as Map);
-        map.remove('genres'); // Not needed for channels
-        return map;
+        return Map<String, dynamic>.from(c as Map);
       }).toList();
       
       final movieMaps = (parsed['movies'] as List<dynamic>).map((m) {
-        final map = Map<String, dynamic>.from(m as Map);
-        map.remove('genres'); // Can be regenerated
-        return map;
+        return Map<String, dynamic>.from(m as Map);
       }).toList();
       
       final seriesMaps = (parsed['series'] as List<dynamic>).map((s) {
-        final map = Map<String, dynamic>.from(s as Map);
-        map.remove('genres'); // Can be regenerated
-        return map;
+        return Map<String, dynamic>.from(s as Map);
       }).toList();
       
       final jsonData = json.encode({
