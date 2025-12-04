@@ -1251,7 +1251,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
             },
             onLongPress: () => _showChannelContextMenu(context, channel),
             child: Container(
-              height: 80,
+              height: 56,
               padding: const EdgeInsets.symmetric(horizontal: AppSizes.sm, vertical: 4),
               decoration: BoxDecoration(
                 color: isFocused 

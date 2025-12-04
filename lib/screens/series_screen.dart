@@ -195,6 +195,10 @@ class _SeriesScreenState extends State<SeriesScreen>
         final limited = curated.length > 12 ? curated.sublist(0, 12) : curated;
         setState(() {
           _curatedSeries = limited;
+          // Reset featured index to random position in curated list for variety
+          if (limited.isNotEmpty) {
+            _featuredIndex = Random().nextInt(limited.length);
+          }
         });
       }
     } catch (e) {

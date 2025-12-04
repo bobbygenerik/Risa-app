@@ -446,10 +446,18 @@ class _MoviesScreenState extends State<MoviesScreen>
         genreMap.putIfAbsent('Other', () => []).add(movie);
       }
     }
-    
+
     debugPrint('Movies: Total=${movies.length}, Genres=${genreMap.keys.join(", ")}');
     for (final entry in genreMap.entries) {
       debugPrint('  ${entry.key}: ${entry.value.length} movies');
+    }
+    
+    // Log first 3 movies to help debug genre issues
+    if (movies.isNotEmpty) {
+      debugPrint('Sample movies for genre debugging:');
+      for (final movie in movies.take(3)) {
+        debugPrint('  Title: "${movie.title}", Genres: ${movie.genres?.join(", ") ?? "NONE"}');
+      }
     }
 
     // Build section for each genre with pagination
@@ -769,6 +777,10 @@ class _MoviesScreenState extends State<MoviesScreen>
 
         setState(() {
           _curatedMovies = limited;
+          // Reset featured index to random position in curated list for variety
+          if (limited.isNotEmpty) {
+            _featuredIndex = Random().nextInt(limited.length);
+          }
         });
       }
     } catch (e) {
