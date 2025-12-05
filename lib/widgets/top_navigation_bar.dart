@@ -322,12 +322,14 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                         // Slight delay to allow menu to dismiss before navigating
                         Future.delayed(const Duration(milliseconds: 100), () {
                           if (!mounted) return;
+                          if (value == 'guide') router.go('/epg');
                           if (value == 'settings') router.go('/settings');
                           if (value == 'favorites') router.go('/favorites');
                           if (value == 'downloads') router.go('/downloads');
                         });
                       },
                       itemBuilder: (context) => [
+                        PopupMenuItem(value: 'guide', child: Row(children: [Icon(Icons.dvr, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Guide', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
                         PopupMenuItem(value: 'settings', child: Row(children: [Icon(Icons.settings, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Settings', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
                         PopupMenuItem(value: 'favorites', child: Row(children: [Icon(Icons.playlist_add_check, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('My List', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),
                         PopupMenuItem(value: 'downloads', child: Row(children: [Icon(Icons.download, color: AppTheme.primaryBlue, size: 16 * scale), SizedBox(width: 12 * scale), Text('Downloads', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14 * scale, fontWeight: FontWeight.w500))])),

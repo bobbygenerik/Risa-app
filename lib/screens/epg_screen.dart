@@ -1906,7 +1906,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                         ),
                       )
                     : Stack(
-                        clipBehavior: Clip.none,
+                        clipBehavior: Clip.hardEdge,
                         children: dayPrograms.map((program) {
                           // Calculate position based on start time
                           final cellWidth = _isHourlyView ? 120.0 : 60.0;
