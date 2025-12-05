@@ -1208,8 +1208,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           ),
           child: Column(
             children: [
-              // Top bar with title and status
-              _buildTopBar(),
+              // Top bar with title and status - excluded from bottom bar traversal
+              ExcludeFocus(
+                child: _buildTopBar(),
+              ),
               const Spacer(),
               // Bottom bar with hints
               _buildBottomBar(),
@@ -1230,6 +1232,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           children: [
             // Back button
             Focus(
+              autofocus: false,
               onKeyEvent: (node, event) {
                 if (event is KeyDownEvent) {
                   if (event.logicalKey == LogicalKeyboardKey.select ||

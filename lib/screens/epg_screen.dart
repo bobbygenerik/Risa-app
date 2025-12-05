@@ -45,6 +45,9 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
   final ScrollController _horizontalScrollController = ScrollController();
   final ScrollController _verticalScrollController = ScrollController();
   final FocusNode _firstContentFocusNode = FocusNode();
+  final FocusNode _miniPlayerCloseFocus = FocusNode();
+  final FocusNode _miniPlayerMaximizeFocus = FocusNode();
+  final FocusNode _refreshButtonFocus = FocusNode();
   Timer? _epgRefreshTimer;
 
   @override
@@ -172,6 +175,9 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     _horizontalScrollController.dispose();
     _verticalScrollController.dispose();
     _miniPlayerController?.dispose();
+    _miniPlayerCloseFocus.dispose();
+    _miniPlayerMaximizeFocus.dispose();
+    _refreshButtonFocus.dispose();
     _epgRefreshTimer?.cancel();
     super.dispose();
   }
@@ -265,7 +271,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
 
           // Get category names (lightweight - no channel grouping)
           final categoryList = channelProvider.getAllCategoryNames();
-          final categoryNames = ['⭐ Favorites', ...categoryList];
+          final categoryNames = ['⭐ Favorites', ...categoryList]; // Favorites first, then categories
 
           // Get filtered channels based on selection (limited for performance)
           List<Channel> filteredChannels;
@@ -475,8 +481,19 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
           ),
           const Spacer(),
           // Refresh button with spinning animation when loading
-          IconButton(
-            icon: AnimatedBuilder(
+          Focus(
+            focusNode: _refreshButtonFocus,
+            onKeyEvent: (node, event) {
+              if (event is KeyDownEvent &&
+                  event.logicalKey == LogicalKeyboardKey.arrowDown &&
+                  _playingChannel != null) {
+                _miniPlayerCloseFocus.requestFocus();
+                return KeyEventResult.handled;
+              }
+              return KeyEventResult.ignored;
+            },
+            child: IconButton(
+              icon: AnimatedBuilder(
               animation: _refreshAnimationController,
               builder: (context, child) {
                 return Transform.rotate(
@@ -538,7 +555,8 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                       );
                     }
                   },
-            tooltip: 'Refresh EPG Data',
+              tooltip: 'Refresh EPG Data',
+            ),
           ),
           const SizedBox(width: AppSizes.sm),
           // "Now" button to jump to current time
@@ -575,42 +593,22 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
           right: BorderSide(color: Colors.white.withAlpha((0.1 * 255).round()), width: 1),
         ),
       ),
-      child: Column(
-        children: [
-          // All Categories option
-          _buildCategoryItem(
-            name: 'All Categories',
-            isSelected: _selectedCategory == null,
+      child: ListView.builder(
+        itemCount: categories.length,
+        itemBuilder: (context, index) {
+          final category = categories[index];
+          return _buildCategoryItem(
+            name: category,
+            isSelected: _selectedCategory == category,
             onTap: () {
               setState(() {
-                _selectedCategory = null;
+                _selectedCategory = category;
               });
               // Scroll channel list to top
               _scrollChannelListToTop();
             },
-          ),
-          const Divider(height: 1, color: AppTheme.divider),
-          // Category list
-          Expanded(
-            child: ListView.builder(
-              itemCount: categories.length,
-              itemBuilder: (context, index) {
-                final category = categories[index];
-                return _buildCategoryItem(
-                  name: category,
-                  isSelected: _selectedCategory == category,
-                  onTap: () {
-                    setState(() {
-                      _selectedCategory = category;
-                    });
-                    // Scroll channel list to top
-                    _scrollChannelListToTop();
-                  },
-                );
-              },
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -635,7 +633,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
         final bool isFocused = Focus.of(context).hasFocus;
         final Color textColor = isFocused
             ? Colors.white
-            : (isSelected ? AppTheme.primaryBlue : AppTheme.textSecondary);
+            : AppTheme.textSecondary; // Remove purple color when selected
         return GestureDetector(
           onTap: onTap,
           behavior: HitTestBehavior.opaque,
@@ -830,15 +828,49 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                               ],
                             ),
                           ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.close,
-                              color: Colors.white,
-                              size: 20,
+                          Focus(
+                            focusNode: _miniPlayerCloseFocus,
+                            onKeyEvent: (node, event) {
+                              if (event is KeyDownEvent) {
+                                if (event.logicalKey == LogicalKeyboardKey.select ||
+                                    event.logicalKey == LogicalKeyboardKey.enter) {
+                                  _closeMiniPlayer();
+                                  return KeyEventResult.handled;
+                                }
+                                if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                                  _refreshButtonFocus.requestFocus();
+                                  return KeyEventResult.handled;
+                                }
+                                if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                                  _miniPlayerMaximizeFocus.requestFocus();
+                                  return KeyEventResult.handled;
+                                }
+                              }
+                              return KeyEventResult.ignored;
+                            },
+                            child: Builder(
+                              builder: (context) {
+                                final isFocused = Focus.of(context).hasFocus;
+                                return Container(
+                                  decoration: isFocused
+                                      ? BoxDecoration(
+                                          border: Border.all(color: AppTheme.primaryBlue, width: 2),
+                                          borderRadius: BorderRadius.circular(4),
+                                        )
+                                      : null,
+                                  child: IconButton(
+                                    icon: const Icon(
+                                      Icons.close,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    onPressed: _closeMiniPlayer,
+                                  ),
+                                );
+                              },
                             ),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            onPressed: _closeMiniPlayer,
                           ),
                         ],
                       ),
@@ -849,11 +881,35 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                   Positioned(
                     bottom: 8,
                     right: 8,
-                    child: IconButton(
-                      icon: const Icon(Icons.fullscreen, color: Colors.white),
-                      onPressed: _expandMiniPlayer,
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.black.withAlpha((0.5 * 255).round()),
+                    child: Focus(
+                      focusNode: _miniPlayerMaximizeFocus,
+                      onKeyEvent: (node, event) {
+                        if (event is KeyDownEvent) {
+                          if (event.logicalKey == LogicalKeyboardKey.select ||
+                              event.logicalKey == LogicalKeyboardKey.enter) {
+                            _expandMiniPlayer();
+                            return KeyEventResult.handled;
+                          }
+                          if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                            _miniPlayerCloseFocus.requestFocus();
+                            return KeyEventResult.handled;
+                          }
+                        }
+                        return KeyEventResult.ignored;
+                      },
+                      child: Builder(
+                        builder: (context) {
+                          final isFocused = Focus.of(context).hasFocus;
+                          return IconButton(
+                            icon: const Icon(Icons.fullscreen, color: Colors.white),
+                            onPressed: _expandMiniPlayer,
+                            style: IconButton.styleFrom(
+                              backgroundColor: isFocused
+                                  ? AppTheme.primaryBlue.withAlpha((0.7 * 255).round())
+                                  : Colors.black.withAlpha((0.5 * 255).round()),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ),
@@ -996,99 +1052,114 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     final isSelected = _selectedChannelId == channel.id;
     final isPlaying = _playingChannel?.id == channel.id;
 
-    return Container(
-      height: 56,
-      decoration: BoxDecoration(
-        color: isSelected ? AppTheme.primaryBlue.withAlpha((0.2 * 255).round()) : null,
-        border: Border(
-          bottom: const BorderSide(color: AppTheme.divider, width: 0.5),
-          left: BorderSide(
-            color: isPlaying ? AppTheme.accentGreen : Colors.transparent,
-            width: 3,
-          ),
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            setState(() {
-              _selectedChannelId = channel.id;
-            });
-            // Play in mini player
-            _playChannelInMiniPlayer(channel);
-          },
-          onLongPress: () {
-            _showChannelOptions(channel);
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(AppSizes.sm),
-            child: Row(
-              children: [
-                // Channel logo
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: AppTheme.cardBackground,
-                    borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                  ),
-                  child: channel.logoUrl != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(
-                            AppSizes.radiusSm,
-                          ),
-                          child: Image.network(
-                            channel.logoUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Center(
+    return Focus(
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent &&
+            (event.logicalKey == LogicalKeyboardKey.select ||
+             event.logicalKey == LogicalKeyboardKey.enter)) {
+          setState(() {
+            _selectedChannelId = channel.id;
+          });
+          _playChannelInMiniPlayer(channel);
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Builder(
+        builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
+          
+          return Container(
+            height: 56,
+            decoration: BoxDecoration(
+              color: isSelected ? AppTheme.primaryBlue.withAlpha((0.2 * 255).round()) : null,
+              border: Border(
+                bottom: const BorderSide(color: AppTheme.divider, width: 0.5),
+                left: BorderSide(
+                  color: isPlaying ? AppTheme.primaryBlue : Colors.transparent,
+                  width: 3,
+                ),
+              ),
+            ),
+            child: Material(
+              color: isFocused ? AppTheme.primaryBlue.withAlpha((0.1 * 255).round()) : Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  setState(() {
+                    _selectedChannelId = channel.id;
+                  });
+                  _playChannelInMiniPlayer(channel);
+                },
+                onLongPress: () {
+                  _showChannelOptions(channel);
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSizes.sm),
+                  child: Row(
+                    children: [
+                      // Channel logo
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: AppTheme.cardBackground,
+                          borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                        ),
+                        child: channel.logoUrl != null
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                                child: Image.network(
+                                  channel.logoUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return const Center(
+                                      child: Icon(
+                                        Icons.dvr,
+                                        color: AppTheme.primaryBlue,
+                                        size: 24,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              )
+                            : const Center(
                                 child: Icon(
                                   Icons.dvr,
                                   color: AppTheme.primaryBlue,
                                   size: 24,
                                 ),
-                              );
-                            },
-                          ),
-                        )
-                      : const Center(
-                          child: Icon(
-                            Icons.dvr,
-                            color: AppTheme.primaryBlue,
-                            size: 24,
-                          ),
-                        ),
-                ),
-
-                const SizedBox(width: AppSizes.sm),
-
-                // Channel info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        channel.name,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                              ),
                       ),
-                      if (channel.channelNumber != null)
-                        Text(
-                          '${channel.channelNumber}',
-                          style: Theme.of(context).textTheme.bodySmall,
+                      const SizedBox(width: AppSizes.sm),
+                      // Channel info
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              channel.name,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (channel.channelNumber != null)
+                              Text(
+                                '${channel.channelNumber}',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                          ],
                         ),
+                      ),
                     ],
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

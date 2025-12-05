@@ -30,7 +30,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   with ContentFocusRegistrant<LiveTVScreen> {
   Timer? _carouselTimer;
   int _featuredIndex = 0;
+  final ScrollController _scrollController = ScrollController();
   final FocusNode _watchFocus = FocusNode();
+  final FocusNode _guideFocus = FocusNode();
   final FocusNode _heroFocus = FocusNode();
   final FocusNode _settingsButtonFocus = FocusNode();
   final Map<String, String?> _programArtwork = {};
@@ -102,7 +104,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   @override
   void dispose() {
     _carouselTimer?.cancel();
+    _scrollController.dispose();
     _watchFocus.dispose();
+    _guideFocus.dispose();
     _heroFocus.dispose();
     _settingsButtonFocus.dispose();
     super.dispose();
@@ -250,6 +254,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           final isGrouping = channelProvider.isGroupingChannels;
 
           return SingleChildScrollView(
+            controller: _scrollController,
             child: Column(
               children: [
                 Focus(
@@ -532,12 +537,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         child: Focus(
                           focusNode: _watchFocus,
                           onKeyEvent: (node, event) {
-                            if (event is KeyDownEvent &&
-                                (event.logicalKey == LogicalKeyboardKey.select ||
-                                 event.logicalKey == LogicalKeyboardKey.enter ||
-                                 event.logicalKey == LogicalKeyboardKey.gameButtonA)) {
-                              context.push('/player', extra: channel);
-                              return KeyEventResult.handled;
+                            if (event is KeyDownEvent) {
+                              if (event.logicalKey == LogicalKeyboardKey.select ||
+                                  event.logicalKey == LogicalKeyboardKey.enter ||
+                                  event.logicalKey == LogicalKeyboardKey.gameButtonA) {
+                                context.push('/player', extra: channel);
+                                return KeyEventResult.handled;
+                              }
+                              if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                                _guideFocus.requestFocus();
+                                return KeyEventResult.handled;
+                              }
                             }
                             return KeyEventResult.ignored;
                           },
@@ -588,13 +598,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       ),
                       // Guide button with modern focus styling
                       Focus(
+                        focusNode: _guideFocus,
                         onKeyEvent: (node, event) {
-                          if (event is KeyDownEvent &&
-                              (event.logicalKey == LogicalKeyboardKey.select ||
-                               event.logicalKey == LogicalKeyboardKey.enter ||
-                               event.logicalKey == LogicalKeyboardKey.gameButtonA)) {
-                            context.go('/epg');
-                            return KeyEventResult.handled;
+                          if (event is KeyDownEvent) {
+                            if (event.logicalKey == LogicalKeyboardKey.select ||
+                                event.logicalKey == LogicalKeyboardKey.enter ||
+                                event.logicalKey == LogicalKeyboardKey.gameButtonA) {
+                              context.go('/epg');
+                              return KeyEventResult.handled;
+                            }
+                            if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                              _watchFocus.requestFocus();
+                              return KeyEventResult.handled;
+                            }
                           }
                           return KeyEventResult.ignored;
                         },
@@ -802,6 +818,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                           // Navigate up to hero Watch button
                           if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
                             _watchFocus.requestFocus();
+                            // Scroll to top to show the hero banner
+                            _scrollController.animateTo(
+                              0,
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                            );
                             return KeyEventResult.handled;
                           }
                         }
