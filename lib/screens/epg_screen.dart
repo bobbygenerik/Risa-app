@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
+import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/services/epg_service.dart';
@@ -2649,54 +2650,142 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
               ),
             ),
             const Divider(height: 1),
+            const SizedBox(height: 8),
             
             // Watch Catchup option (only if has catchup and not live)
             if (hasCatchup && !isLive && isPast)
-              ListTile(
-                leading: const Icon(Icons.replay, color: Color(0xFFcc5a2d)),
-                title: const Text('Watch Catchup'),
-                subtitle: const Text('Watch from the beginning'),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _playCatchup(program);
-                },
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: TVFocusable(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _playCatchup(program);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFcc5a2d).withAlpha((0.15 * 255).round()),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.replay, color: Color(0xFFcc5a2d)),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Watch Catchup', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                              const SizedBox(height: 2),
+                              Text('Watch from the beginning', 
+                                style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             
             // Record option (for future or live programs)
             if (!isPast || isLive)
-              ListTile(
-                leading: const Icon(Icons.fiber_manual_record, color: AppTheme.accentRed),
-                title: Text(isLive ? 'Record Now' : 'Schedule Recording'),
-                subtitle: Text(isLive 
-                    ? 'Start recording this program' 
-                    : 'Record when it airs'),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _scheduleRecording(program);
-                },
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: TVFocusable(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _scheduleRecording(program);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.accentRed.withAlpha((0.15 * 255).round()),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.fiber_manual_record, color: AppTheme.accentRed),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(isLive ? 'Record Now' : 'Schedule Recording', 
+                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                              const SizedBox(height: 2),
+                              Text(isLive ? 'Start recording this program' : 'Record when it airs',
+                                style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             
             // Set Reminder (for future programs)
             if (isFuture)
-              ListTile(
-                leading: const Icon(Icons.alarm_add, color: AppTheme.primaryBlue),
-                title: const Text('Set Reminder'),
-                subtitle: const Text('Get notified when it starts'),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _setReminder(program);
-                },
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: TVFocusable(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _setReminder(program);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryBlue.withAlpha((0.15 * 255).round()),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.alarm_add, color: AppTheme.primaryBlue),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Set Reminder', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                              const SizedBox(height: 2),
+                              Text('Get notified when it starts', 
+                                style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             
             // View Details
-            ListTile(
-              leading: const Icon(Icons.info_outline, color: AppTheme.textSecondary),
-              title: const Text('View Details'),
-              onTap: () {
-                Navigator.pop(ctx);
-                _showProgramDetails(program);
-              },
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: TVFocusable(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _showProgramDetails(program);
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppTheme.cardBackground,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: AppTheme.textSecondary),
+                      const SizedBox(width: 16),
+                      const Text('View Details', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                    ],
+                  ),
+                ),
+              ),
             ),
+            const SizedBox(height: 8),
             
             const SizedBox(height: 8),
           ],
