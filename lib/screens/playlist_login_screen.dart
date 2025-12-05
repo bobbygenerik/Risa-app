@@ -794,6 +794,14 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                 onKeyEvent: (node, event) {
                   if (event is! KeyDownEvent) return KeyEventResult.ignored;
                   final key = event.logicalKey;
+                  
+                  // Right arrow: go to password field
+                  if (!_xtreamUsernameEditable && key == LogicalKeyboardKey.arrowRight) {
+                    _xtreamPasswordFocusNode.requestFocus();
+                    return KeyEventResult.handled;
+                  }
+                  
+                  // Enter/Select: start editing
                   if (key == LogicalKeyboardKey.select ||
                       key == LogicalKeyboardKey.enter) {
                     setState(() => _xtreamUsernameEditable = true);
@@ -860,6 +868,14 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                 onKeyEvent: (node, event) {
                   if (event is! KeyDownEvent) return KeyEventResult.ignored;
                   final key = event.logicalKey;
+                  
+                  // Left arrow: go back to username field
+                  if (!_xtreamPasswordEditable && key == LogicalKeyboardKey.arrowLeft) {
+                    _xtreamUsernameFocusNode.requestFocus();
+                    return KeyEventResult.handled;
+                  }
+                  
+                  // Enter/Select: start editing
                   if (key == LogicalKeyboardKey.select ||
                       key == LogicalKeyboardKey.enter) {
                     setState(() => _xtreamPasswordEditable = true);
