@@ -771,11 +771,20 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
         if (_cachedFeaturedChannels.isEmpty || 
             _cachedFeaturedChannels.length != 6 ||
             !channelProvider.channels.contains(_cachedFeaturedChannels.firstOrNull)) {
-          final allChannels = List<Channel>.from(channelProvider.channels);
-          if (allChannels.isEmpty) return const SizedBox.shrink();
-          
-          allChannels.shuffle();
-          _cachedFeaturedChannels = allChannels.take(6).toList();
+          // Filter to channels with logos for better hero display
+          final allChannels = channelProvider.channels
+              .where((ch) => ch.logoUrl != null && ch.logoUrl!.isNotEmpty)
+              .toList();
+          if (allChannels.isEmpty) {
+            // Fallback to all channels if none have logos
+            final fallback = List<Channel>.from(channelProvider.channels);
+            if (fallback.isEmpty) return const SizedBox.shrink();
+            fallback.shuffle();
+            _cachedFeaturedChannels = fallback.take(6).toList();
+          } else {
+            allChannels.shuffle();
+            _cachedFeaturedChannels = allChannels.take(6).toList();
+          }
         }
         
         final channels = _cachedFeaturedChannels;

@@ -104,8 +104,8 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
       await channelProvider.loadPlaylistFromUrl(url);
 
       final channelCount = channelProvider.channelCount;
-      final movieCount = channelProvider.movies.length;
-      final seriesCount = channelProvider.series.length;
+      final movieCount = channelProvider.moviesCount;
+      final seriesCount = channelProvider.seriesCount;
 
       // Save credentials for auto-load on next startup
       final prefs = await SharedPreferences.getInstance();
@@ -202,8 +202,8 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
       await channelProvider.loadPlaylistFromUrl(url);
 
       final channelCount = channelProvider.channelCount;
-      final movieCount = channelProvider.movies.length;
-      final seriesCount = channelProvider.series.length;
+      final movieCount = channelProvider.moviesCount;
+      final seriesCount = channelProvider.seriesCount;
 
       // Save credentials for auto-load on next startup
       final prefs = await SharedPreferences.getInstance();

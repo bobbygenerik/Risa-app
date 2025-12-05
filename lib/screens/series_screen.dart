@@ -88,10 +88,25 @@ class _SeriesScreenState extends State<SeriesScreen>
 
   /// Find the newest content (from end of list) that has artwork for hero banner
   int _findNewestContentWithArtwork(List<Content> items) {
-    // Select randomly from the last 12 items (newest content)
-    final recentCount = items.length.clamp(1, 12);
+    // Filter to only items with backdrop or image
+    final itemsWithArt = <int>[];
+    for (int i = 0; i < items.length; i++) {
+      final item = items[i];
+      if (item.backdropUrl != null || item.imageUrl != null) {
+        itemsWithArt.add(i);
+      }
+    }
+    
+    if (itemsWithArt.isEmpty) {
+      // Fallback to first item if none have artwork
+      return 0;
+    }
+    
+    // Select randomly from the last 12 items with artwork (newest content)
+    final recentCount = itemsWithArt.length.clamp(1, 12);
+    final startIndex = itemsWithArt.length - recentCount;
     final randomOffset = Random().nextInt(recentCount);
-    return items.length - recentCount + randomOffset;
+    return itemsWithArt[startIndex + randomOffset];
   }
 
   void _preloadTMDBArtwork() async {
@@ -124,7 +139,22 @@ class _SeriesScreenState extends State<SeriesScreen>
       if (series.isEmpty) return;
       if (mounted) {
         setState(() {
-          _featuredIndex = (_featuredIndex + 1) % series.length;
+          // Find next item with artwork
+          int attempts = 0;
+          int nextIndex = (_featuredIndex + 1) % series.length;
+          while (attempts < series.length) {
+            final show = series[nextIndex];
+            if (show.backdropUrl != null || show.imageUrl != null) {
+              _featuredIndex = nextIndex;
+              break;
+            }
+            nextIndex = (nextIndex + 1) % series.length;
+            attempts++;
+          }
+          // If no items with artwork found, just use next index
+          if (attempts >= series.length) {
+            _featuredIndex = (_featuredIndex + 1) % series.length;
+          }
         });
       }
     });
@@ -566,11 +596,13 @@ class _SeriesScreenState extends State<SeriesScreen>
   }
 
   List<Widget> _buildGenreSections(BuildContext context, List<Content> series) {
-    // Group series by genre
+    // Group series by genre (prefer TMDB genres, fallback to M3U genres)
     final genreMap = <String, List<Content>>{};
     for (final show in series) {
-      if (show.genres != null) {
-        for (final genre in show.genres!) {
+      // Use allGenres getter which prefers tmdbGenres over genres
+      final showGenres = show.allGenres;
+      if (showGenres.isNotEmpty) {
+        for (final genre in showGenres) {
           genreMap.putIfAbsent(genre, () => []).add(show);
         }
       } else {

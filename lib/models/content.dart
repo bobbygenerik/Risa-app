@@ -11,7 +11,8 @@ class Content {
   final int? year;
   final double? rating;
   final String? duration;
-  final List<String>? genres;
+  final List<String>? genres; // From M3U group-title (fallback)
+  final List<String>? tmdbGenres; // From TMDB API (preferred)
   final List<String>? cast;
   final String? director;
   final String? videoUrl;
@@ -34,6 +35,7 @@ class Content {
     this.rating,
     this.duration,
     this.genres,
+    this.tmdbGenres,
     this.cast,
     this.director,
     this.videoUrl,
@@ -57,7 +59,14 @@ class Content {
     return title;
   }
 
-  String? get genre => genres?.isNotEmpty == true ? genres!.first : null;
+  String? get genre {
+    // Prefer TMDB genres, fallback to M3U genres
+    final genreList = tmdbGenres ?? genres;
+    return genreList?.isNotEmpty == true ? genreList?.first : null;
+  }
+  
+  // Get all genres (TMDB preferred, M3U fallback)
+  List<String> get allGenres => tmdbGenres ?? genres ?? [];
 
   String get ratingDisplay =>
       rating != null ? rating!.toStringAsFixed(1) : 'N/A';
@@ -78,6 +87,7 @@ class Content {
       rating: map['rating']?.toDouble(),
       duration: map['duration'],
       genres: map['genres'] != null ? List<String>.from(map['genres']) : null,
+      tmdbGenres: map['tmdbGenres'] != null ? List<String>.from(map['tmdbGenres']) : null,
       cast: map['cast'] != null ? List<String>.from(map['cast']) : null,
       director: map['director'],
       videoUrl: map['videoUrl'],
@@ -107,6 +117,7 @@ class Content {
       'rating': rating,
       'duration': duration,
       'genres': genres,
+      'tmdbGenres': tmdbGenres,
       'cast': cast,
       'director': director,
       'videoUrl': videoUrl,
@@ -131,6 +142,7 @@ class Content {
     double? rating,
     String? duration,
     List<String>? genres,
+    List<String>? tmdbGenres,
     List<String>? cast,
     String? director,
     String? videoUrl,
@@ -153,6 +165,7 @@ class Content {
       rating: rating ?? this.rating,
       duration: duration ?? this.duration,
       genres: genres ?? this.genres,
+      tmdbGenres: tmdbGenres ?? this.tmdbGenres,
       cast: cast ?? this.cast,
       director: director ?? this.director,
       videoUrl: videoUrl ?? this.videoUrl,

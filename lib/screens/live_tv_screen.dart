@@ -48,11 +48,36 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     // Start carousel once the widget is built — will be updated when channels load
     WidgetsBinding.instance.addPostFrameCallback(
       (_) {
+        _findInitialChannelWithArtwork();
         _startCarouselIfNeeded();
         // Load EPG data to populate program info and progress bars
         _loadEpgData();
       },
     );
+  }
+  
+  void _findInitialChannelWithArtwork() {
+    final channelProvider = Provider.of<ChannelProvider>(context, listen: false);
+    final channels = channelProvider.channels;
+    if (channels.isEmpty) return;
+    
+    final epgService = Provider.of<EpgService>(context, listen: false);
+    
+    // Try to find a channel with artwork for initial display
+    for (int i = 0; i < channels.length && i < 20; i++) {
+      final channel = channels[i];
+      final program = epgService.getCurrentProgram(
+        channel.tvgId ?? channel.id,
+        channelName: channel.name,
+      );
+      final heroImage = _resolveHeroImage(program);
+      if (heroImage != null && heroImage.isNotEmpty) {
+        setState(() {
+          _featuredIndex = i;
+        });
+        return;
+      }
+    }
   }
 
   Future<void> _loadEpgData() async {
@@ -121,7 +146,28 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       final channels = channelProvider.channels;
       if (channels.isEmpty) return;
       setState(() {
-        _featuredIndex = (_featuredIndex + 1) % channels.length;
+        // Find next channel with artwork for hero
+        int attempts = 0;
+        int nextIndex = (_featuredIndex + 1) % channels.length;
+        while (attempts < channels.length) {
+          final channel = channels[nextIndex];
+          final epgService = Provider.of<EpgService>(context, listen: false);
+          final program = epgService.getCurrentProgram(
+            channel.tvgId ?? channel.id,
+            channelName: channel.name,
+          );
+          final heroImage = _resolveHeroImage(program);
+          if (heroImage != null && heroImage.isNotEmpty) {
+            _featuredIndex = nextIndex;
+            break;
+          }
+          nextIndex = (nextIndex + 1) % channels.length;
+          attempts++;
+        }
+        // If no channels with artwork found, just use next index
+        if (attempts >= channels.length) {
+          _featuredIndex = (_featuredIndex + 1) % channels.length;
+        }
       });
     });
     // Focus is managed by navigation bar - don't auto-focus content
@@ -217,7 +263,27 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
                       _carouselTimer?.cancel();
                       setState(() {
-                        _featuredIndex = (_featuredIndex - 1 + channels.length) % channels.length;
+                        // Find previous channel with artwork
+                        int attempts = 0;
+                        int prevIndex = (_featuredIndex - 1 + channels.length) % channels.length;
+                        while (attempts < channels.length) {
+                          final channel = channels[prevIndex];
+                          final epgService = Provider.of<EpgService>(context, listen: false);
+                          final program = epgService.getCurrentProgram(
+                            channel.tvgId ?? channel.id,
+                            channelName: channel.name,
+                          );
+                          final heroImage = _resolveHeroImage(program);
+                          if (heroImage != null && heroImage.isNotEmpty) {
+                            _featuredIndex = prevIndex;
+                            break;
+                          }
+                          prevIndex = (prevIndex - 1 + channels.length) % channels.length;
+                          attempts++;
+                        }
+                        if (attempts >= channels.length) {
+                          _featuredIndex = (_featuredIndex - 1 + channels.length) % channels.length;
+                        }
                       });
                       _startCarouselIfNeeded();
                       return KeyEventResult.handled;
@@ -225,7 +291,27 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
                       _carouselTimer?.cancel();
                       setState(() {
-                        _featuredIndex = (_featuredIndex + 1) % channels.length;
+                        // Find next channel with artwork
+                        int attempts = 0;
+                        int nextIndex = (_featuredIndex + 1) % channels.length;
+                        while (attempts < channels.length) {
+                          final channel = channels[nextIndex];
+                          final epgService = Provider.of<EpgService>(context, listen: false);
+                          final program = epgService.getCurrentProgram(
+                            channel.tvgId ?? channel.id,
+                            channelName: channel.name,
+                          );
+                          final heroImage = _resolveHeroImage(program);
+                          if (heroImage != null && heroImage.isNotEmpty) {
+                            _featuredIndex = nextIndex;
+                            break;
+                          }
+                          nextIndex = (nextIndex + 1) % channels.length;
+                          attempts++;
+                        }
+                        if (attempts >= channels.length) {
+                          _featuredIndex = (_featuredIndex + 1) % channels.length;
+                        }
                       });
                       _startCarouselIfNeeded();
                       return KeyEventResult.handled;

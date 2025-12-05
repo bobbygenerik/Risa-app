@@ -76,7 +76,22 @@ class _MoviesScreenState extends State<MoviesScreen>
       if (movies.isEmpty) return;
       if (mounted) {
         setState(() {
-          _featuredIndex = (_featuredIndex + 1) % movies.length;
+          // Find next item with artwork
+          int attempts = 0;
+          int nextIndex = (_featuredIndex + 1) % movies.length;
+          while (attempts < movies.length) {
+            final movie = movies[nextIndex];
+            if (movie.backdropUrl != null || movie.imageUrl != null) {
+              _featuredIndex = nextIndex;
+              break;
+            }
+            nextIndex = (nextIndex + 1) % movies.length;
+            attempts++;
+          }
+          // If no items with artwork found, just use next index
+          if (attempts >= movies.length) {
+            _featuredIndex = (_featuredIndex + 1) % movies.length;
+          }
         });
       }
     });
@@ -105,10 +120,25 @@ class _MoviesScreenState extends State<MoviesScreen>
 
   /// Find the newest content (from end of list) that has artwork for hero banner
   int _findNewestContentWithArtwork(List<Content> items) {
-    // Select randomly from the last 12 items (newest content)
-    final recentCount = items.length.clamp(1, 12);
+    // Filter to only items with backdrop or image
+    final itemsWithArt = <int>[];
+    for (int i = 0; i < items.length; i++) {
+      final item = items[i];
+      if (item.backdropUrl != null || item.imageUrl != null) {
+        itemsWithArt.add(i);
+      }
+    }
+    
+    if (itemsWithArt.isEmpty) {
+      // Fallback to first item if none have artwork
+      return 0;
+    }
+    
+    // Select randomly from the last 12 items with artwork (newest content)
+    final recentCount = itemsWithArt.length.clamp(1, 12);
+    final startIndex = itemsWithArt.length - recentCount;
     final randomOffset = Random().nextInt(recentCount);
-    return items.length - recentCount + randomOffset;
+    return itemsWithArt[startIndex + randomOffset];
   }
 
   void _preloadTMDBArtwork() async {
@@ -435,11 +465,13 @@ class _MoviesScreenState extends State<MoviesScreen>
   }
 
   List<Widget> _buildGenreSections(BuildContext context, List<Content> movies) {
-    // Group movies by genre
+    // Group movies by genre (prefer TMDB genres, fallback to M3U genres)
     final genreMap = <String, List<Content>>{};
     for (final movie in movies) {
-      if (movie.genres != null && movie.genres!.isNotEmpty) {
-        for (final genre in movie.genres!) {
+      // Use allGenres getter which prefers tmdbGenres over genres
+      final movieGenres = movie.allGenres;
+      if (movieGenres.isNotEmpty) {
+        for (final genre in movieGenres) {
           genreMap.putIfAbsent(genre, () => []).add(movie);
         }
       } else {
@@ -456,7 +488,7 @@ class _MoviesScreenState extends State<MoviesScreen>
     if (movies.isNotEmpty) {
       debugPrint('Sample movies for genre debugging:');
       for (final movie in movies.take(3)) {
-        debugPrint('  Title: "${movie.title}", Genres: ${movie.genres?.join(", ") ?? "NONE"}');
+        debugPrint('  Title: "${movie.title}", TMDB Genres: ${movie.tmdbGenres?.join(", ") ?? "NONE"}, M3U Genres: ${movie.genres?.join(", ") ?? "NONE"}');
       }
     }
 

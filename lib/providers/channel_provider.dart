@@ -15,6 +15,7 @@ import '../services/xtream_codes_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 import 'content_provider.dart';
+import '../services/tmdb_enrichment_service.dart';
 
 /// Isolate function to extract unique category names only (fast)
 /// Preserves the order categories first appear in the playlist
@@ -68,14 +69,26 @@ class ChannelProvider with ChangeNotifier {
   final Map<int, Channel> _channelCache = {};
   
   final List<Channel> _favoriteChannels = [];
-  List<Content> _movies = [];
-  List<Content> _series = [];
+  // Store VOD content count only - lazy load actual content on demand
+  int _moviesCount = 0;
+  int _seriesCount = 0;
+  // Cache file paths for lazy VOD loading
+  String? _moviesCachePath;
+  String? _seriesCachePath;
   bool _isLoading = false;
   String? _errorMessage;
   ContentProvider? _contentProvider;
   bool _hasLoadedPlaylist = false;
   String? _lastM3UContent; // Store last content for debugging
   bool _disposed = false; // Track if provider is disposed
+  // Loading progress for UI feedback
+  double _loadingProgress = 0.0;
+  String _loadingStatus = '';
+  
+  // TMDB enrichment service for background genre enrichment
+  final TMDBEnrichmentService _enrichmentService = TMDBEnrichmentService();
+  bool _isEnriching = false;
+  bool get isEnriching => _isEnriching;
   
   // Cached category list (lightweight - just strings)
   List<String>? _cachedCategories;
@@ -194,8 +207,53 @@ class ChannelProvider with ChangeNotifier {
   }
   
   List<Channel> get favoriteChannels => _favoriteChannels;
-  List<Content> get movies => _movies;
-  List<Content> get series => _series;
+  int get moviesCount => _moviesCount;
+  int get seriesCount => _seriesCount;
+  double get loadingProgress => _loadingProgress;
+  String get loadingStatus => _loadingStatus;
+  
+  /// Load movies on-demand (paginated)
+  Future<List<Content>> getMovies({int offset = 0, int limit = 50}) async {
+    if (_moviesCachePath == null) return [];
+    try {
+      final file = File(_moviesCachePath!);
+      if (!await file.exists()) return [];
+      
+      final jsonStr = await file.readAsString();
+      final List<dynamic> allMovies = json.decode(jsonStr);
+      
+      return allMovies
+          .skip(offset)
+          .take(limit)
+          .map((m) => Content.fromMap(Map<String, dynamic>.from(m)))
+          .toList();
+    } catch (e) {
+      debugPrint('ChannelProvider: Error loading movies: $e');
+      return [];
+    }
+  }
+  
+  /// Load series on-demand (paginated)
+  Future<List<Content>> getSeries({int offset = 0, int limit = 50}) async {
+    if (_seriesCachePath == null) return [];
+    try {
+      final file = File(_seriesCachePath!);
+      if (!await file.exists()) return [];
+      
+      final jsonStr = await file.readAsString();
+      final List<dynamic> allSeries = json.decode(jsonStr);
+      
+      final end = (offset + limit).clamp(0, allSeries.length);
+      return allSeries
+          .skip(offset)
+          .take(limit)
+          .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
+          .toList();
+    } catch (e) {
+      debugPrint('ChannelProvider: Error loading series: $e');
+      return [];
+    }
+  }
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get hasLoadedPlaylist => _hasLoadedPlaylist;
@@ -261,11 +319,13 @@ class ChannelProvider with ChangeNotifier {
       Future.microtask(() => notifyListeners());
       StartupProbe.mark('ChannelProvider.autoLoadPlaylist: no saved playlist');
       debugPrint('ChannelProvider: No saved playlist found');
-      if (_channelMaps.isNotEmpty || _movies.isNotEmpty || _series.isNotEmpty) {
+      if (_channelMaps.isNotEmpty || _moviesCount > 0 || _seriesCount > 0) {
         _channelMaps = [];
         _channelCache.clear();
-        _movies = [];
-        _series = [];
+        _moviesCount = 0;
+        _seriesCount = 0;
+        _moviesCachePath = null;
+        _seriesCachePath = null;
         _cachedCategories = null;
         Future.microtask(() => notifyListeners());
       }
@@ -300,19 +360,29 @@ class ChannelProvider with ChangeNotifier {
               .toList();
           _channelCache.clear();
           
-          _movies = (parsed['movies'] as List<dynamic>)
-              .map((m) => Content.fromMap(Map<String, dynamic>.from(m as Map)))
-              .toList();
-          _series = (parsed['series'] as List<dynamic>)
-              .map((s) => Content.fromMap(Map<String, dynamic>.from(s as Map)))
-              .toList();
+          // Store VOD counts only - save full data to separate files for lazy loading
+          final dir = await getApplicationDocumentsDirectory();
+          final List<dynamic> movies = parsed['movies'] as List<dynamic>;
+          final List<dynamic> series = parsed['series'] as List<dynamic>;
+          
+          _moviesCount = movies.length;
+          _seriesCount = series.length;
+          
+          // Save movies/series to separate cache files for on-demand loading
+          _moviesCachePath = '${dir.path}/movies_cache.json';
+          _seriesCachePath = '${dir.path}/series_cache.json';
+          await File(_moviesCachePath!).writeAsString(json.encode(movies));
+          await File(_seriesCachePath!).writeAsString(json.encode(series));
           
           _cachedCategories = null;
           _computeCategoriesAsync();
           
+          // Load only first batch of VOD for ContentProvider (pagination)
           if (_contentProvider != null) {
-            _contentProvider!.loadMovies(_movies);
-            _contentProvider!.loadSeries(_series);
+            final firstMovies = await getMovies(limit: 100);
+            final firstSeries = await getSeries(limit: 100);
+            _contentProvider!.loadMovies(firstMovies);
+            _contentProvider!.loadSeries(firstSeries);
           }
           
           _isLoading = false;
@@ -320,7 +390,7 @@ class ChannelProvider with ChangeNotifier {
           notifyListeners();
           
           final totalCacheLoad = DateTime.now().difference(cacheLoadStart);
-          debugPrint('ChannelProvider: JSON cache loaded in ${totalCacheLoad.inMilliseconds}ms with ${_channelMaps.length} channels');
+          debugPrint('ChannelProvider: JSON cache loaded in ${totalCacheLoad.inMilliseconds}ms with ${_channelMaps.length} channels, $_moviesCount movies, $_seriesCount series');
           StartupProbe.mark('ChannelProvider.autoLoadPlaylist: JSON cache load finished');
           return;
         } catch (e) {
@@ -350,24 +420,31 @@ class ChannelProvider with ChangeNotifier {
               .toList();
           _channelCache.clear();
           
-          var movies = (parsed['movies'] as List<dynamic>)
-              .map((m) => Content.fromMap(Map<String, dynamic>.from(m)))
-              .toList();
-          var series = (parsed['series'] as List<dynamic>)
-              .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
-              .toList();
+          final List<dynamic> movies = parsed['movies'] as List<dynamic>;
+          final List<dynamic> series = parsed['series'] as List<dynamic>;
+          
+          _moviesCount = movies.length;
+          _seriesCount = series.length;
+          
+          // Save movies/series to separate cache files for on-demand loading
+          final dir = await getApplicationDocumentsDirectory();
+          _moviesCachePath = '${dir.path}/movies_cache.json';
+          _seriesCachePath = '${dir.path}/series_cache.json';
+          await File(_moviesCachePath!).writeAsString(json.encode(movies));
+          await File(_seriesCachePath!).writeAsString(json.encode(series));
+          
           final mapDuration = DateTime.now().difference(mapStart);
           debugPrint('ChannelProvider: Cache map conversion took ${mapDuration.inMilliseconds}ms');
           
           _cachedCategories = null; // Clear cache when channels change
           // Trigger async category extraction in background (non-blocking)
           _computeCategoriesAsync();
-          _movies = movies;
-          _series = series;
           
           if (_contentProvider != null) {
-            _contentProvider!.loadMovies(_movies);
-            _contentProvider!.loadSeries(_series);
+            final firstMovies = await getMovies(limit: 100);
+            final firstSeries = await getSeries(limit: 100);
+            _contentProvider!.loadMovies(firstMovies);
+            _contentProvider!.loadSeries(firstSeries);
           }
           
           // Save to JSON cache for faster loading next time
@@ -538,6 +615,9 @@ class ChannelProvider with ChangeNotifier {
         int totalBytes = 0;
         
         final downloadStart = DateTime.now();
+        _loadingStatus = 'Downloading playlist...';
+        _loadingProgress = 0.0;
+        notifyListeners();
 
         try {
           await for (final chunk in streamedResponse.stream) {
@@ -549,6 +629,12 @@ class ChannelProvider with ChangeNotifier {
                 chunk.length <= remaining ? chunk : chunk.sublist(0, remaining),
               );
             }
+            // Update progress (estimate)
+            if (totalBytes % (1024 * 1024) == 0) { // Every MB
+              _loadingProgress = 0.3; // Download is 30% of total work
+              _loadingStatus = 'Downloaded ${(totalBytes / (1024 * 1024)).toStringAsFixed(1)} MB...';
+              notifyListeners();
+            }
           }
           await sink.flush();
         } finally {
@@ -558,10 +644,18 @@ class ChannelProvider with ChangeNotifier {
         debugPrint('ChannelProvider: Downloaded $totalBytes bytes in ${downloadDuration.inMilliseconds}ms');
 
         // Parse playlist from file in background isolate (memory efficient)
+        _loadingStatus = 'Parsing playlist...';
+        _loadingProgress = 0.5;
+        notifyListeners();
+        
         final parseStart = DateTime.now();
         final parsed = await compute(parsePlaylistFromFile, tempFile.path);
         final parseDuration = DateTime.now().difference(parseStart);
         debugPrint('ChannelProvider: Isolate parsing took ${parseDuration.inMilliseconds}ms');
+        
+        _loadingStatus = 'Processing channels...';
+        _loadingProgress = 0.7;
+        notifyListeners();
         
         // Store raw maps - already in map format from optimized parser
         final mapStart = DateTime.now();
@@ -570,12 +664,21 @@ class ChannelProvider with ChangeNotifier {
             .toList();
         _channelCache.clear();
         
-        _movies = (parsed['movies'] as List<dynamic>)
-            .map((m) => Content.fromMap(Map<String, dynamic>.from(m)))
-            .toList();
-        _series = (parsed['series'] as List<dynamic>)
-            .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
-            .toList();
+        final List<dynamic> movies = parsed['movies'] as List<dynamic>;
+        final List<dynamic> series = parsed['series'] as List<dynamic>;
+        
+        _moviesCount = movies.length;
+        _seriesCount = series.length;
+        
+        // Save VOD to separate cache files for lazy loading (avoid OOM)
+        _loadingStatus = 'Saving VOD content...';
+        _loadingProgress = 0.8;
+        notifyListeners();
+        
+        _moviesCachePath = '${dir.path}/movies_cache.json';
+        _seriesCachePath = '${dir.path}/series_cache.json';
+        await File(_moviesCachePath!).writeAsString(json.encode(movies));
+        await File(_seriesCachePath!).writeAsString(json.encode(series));
         final mapDuration = DateTime.now().difference(mapStart);
         debugPrint('ChannelProvider: Map conversion took ${mapDuration.inMilliseconds}ms');
         
@@ -584,11 +687,18 @@ class ChannelProvider with ChangeNotifier {
         _computeCategoriesAsync();
         
         debugPrint('ChannelProvider: Parsed ${_channelMaps.length} channels (isolate)');
-        debugPrint('ChannelProvider: Parsed ${_movies.length} movies, ${_series.length} series (isolate)');
+        debugPrint('ChannelProvider: Parsed $_moviesCount movies, $_seriesCount series (isolate)');
+
+        _loadingStatus = 'Loading initial VOD content...';
+        _loadingProgress = 0.9;
+        notifyListeners();
 
         if (_contentProvider != null) {
-          _contentProvider!.loadMovies(_movies);
-          _contentProvider!.loadSeries(_series);
+          // Load only first 100 items initially to avoid OOM
+          final firstMovies = await getMovies(limit: 100);
+          final firstSeries = await getSeries(limit: 100);
+          _contentProvider!.loadMovies(firstMovies);
+          _contentProvider!.loadSeries(firstSeries);
         }
 
         _lastM3UContent = debugBuilder.length > 0
@@ -596,6 +706,10 @@ class ChannelProvider with ChangeNotifier {
             : null;
 
         // Use the temp file as cache (rename it to cache file)
+        _loadingStatus = 'Finalizing...';
+        _loadingProgress = 0.95;
+        notifyListeners();
+        
         final prefs = await SharedPreferences.getInstance();
         final now = DateTime.now().millisecondsSinceEpoch;
         final cacheFile = File('${dir.path}/$_playlistCacheFileName');
@@ -622,15 +736,23 @@ class ChannelProvider with ChangeNotifier {
 
         await _loadXtreamVOD(url);
 
+        _loadingProgress = 1.0;
+        _loadingStatus = 'Complete!';
         _isLoading = false;
         _hasLoadedPlaylist = true;
         notifyListeners();
+        
+        // Start background TMDB enrichment (non-blocking)
+        _startBackgroundEnrichment();
       } finally {
         client.close();
       }
     } catch (e, stackTrace) {
       debugPrint('ChannelProvider: Error loading playlist: $e');
       debugPrint('ChannelProvider: Stack trace: $stackTrace');
+
+      _loadingProgress = 0.0;
+      _loadingStatus = '';
 
       // Provide more helpful error messages
       if (e.toString().contains('HandshakeException') ||
@@ -738,12 +860,17 @@ class ChannelProvider with ChangeNotifier {
           .toList();
       _channelCache.clear();
       
-      _movies = (parsed['movies'] as List<dynamic>)
-          .map((m) => Content.fromMap(Map<String, dynamic>.from(m)))
-          .toList();
-      _series = (parsed['series'] as List<dynamic>)
-          .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
-          .toList();
+      final List<dynamic> movies = parsed['movies'] as List<dynamic>;
+      final List<dynamic> series = parsed['series'] as List<dynamic>;
+      
+      _moviesCount = movies.length;
+      _seriesCount = series.length;
+      
+      // Save VOD to separate cache files for lazy loading
+      _moviesCachePath = '${dir.path}/movies_cache.json';
+      _seriesCachePath = '${dir.path}/series_cache.json';
+      await File(_moviesCachePath!).writeAsString(json.encode(movies));
+      await File(_seriesCachePath!).writeAsString(json.encode(series));
 
       _cachedCategories = null; // Clear cache when channels change
       // Trigger async category extraction in background (non-blocking)
@@ -752,8 +879,10 @@ class ChannelProvider with ChangeNotifier {
       debugPrint('ChannelProvider: Parsed ${_channelMaps.length} channels (direct client)');
 
       if (_contentProvider != null) {
-        _contentProvider!.loadMovies(_movies);
-        _contentProvider!.loadSeries(_series);
+        final firstMovies = await getMovies(limit: 100);
+        final firstSeries = await getSeries(limit: 100);
+        _contentProvider!.loadMovies(firstMovies);
+        _contentProvider!.loadSeries(firstSeries);
       }
 
       // Use the temp file as cache
@@ -783,6 +912,9 @@ class ChannelProvider with ChangeNotifier {
       _isLoading = false;
       _hasLoadedPlaylist = true;
       notifyListeners();
+      
+      // Start background TMDB enrichment (non-blocking)
+      _startBackgroundEnrichment();
     } catch (e, stackTrace) {
       debugPrint('ChannelProvider: Error with direct client: $e');
       debugPrint('ChannelProvider: Stack trace: $stackTrace');
@@ -810,21 +942,27 @@ class ChannelProvider with ChangeNotifier {
           .toList();
       _channelCache.clear();
       
-      final movieMaps = (parsed['movies'] as List<dynamic>? ?? [])
-          .map((movie) => Content.fromMap(Map<String, dynamic>.from(movie as Map)))
-          .toList();
-      final seriesMaps = (parsed['series'] as List<dynamic>? ?? [])
-          .map((show) => Content.fromMap(Map<String, dynamic>.from(show as Map)))
-          .toList();
+      final List<dynamic> movies = parsed['movies'] as List<dynamic>? ?? [];
+      final List<dynamic> series = parsed['series'] as List<dynamic>? ?? [];
+      
+      _moviesCount = movies.length;
+      _seriesCount = series.length;
+      
+      // Save VOD to separate cache files for lazy loading
+      final dir = await getApplicationDocumentsDirectory();
+      _moviesCachePath = '${dir.path}/movies_cache.json';
+      _seriesCachePath = '${dir.path}/series_cache.json';
+      await File(_moviesCachePath!).writeAsString(json.encode(movies));
+      await File(_seriesCachePath!).writeAsString(json.encode(series));
 
       _cachedCategories = null; // Clear cache when channels change
-      _movies = movieMaps;
-      _series = seriesMaps;
 
-      // Sync VOD content to ContentProvider
+      // Sync VOD content to ContentProvider (first batch only)
       if (_contentProvider != null) {
-        _contentProvider!.loadMovies(_movies);
-        _contentProvider!.loadSeries(_series);
+        final firstMovies = await getMovies(limit: 100);
+        final firstSeries = await getSeries(limit: 100);
+        _contentProvider!.loadMovies(firstMovies);
+        _contentProvider!.loadSeries(firstSeries);
       }
 
       // Auto-save EPG URL from M3U x-tvg-url attribute
@@ -837,6 +975,9 @@ class ChannelProvider with ChangeNotifier {
 
       _isLoading = false;
       notifyListeners();
+      
+      // Start background TMDB enrichment (non-blocking)
+      _startBackgroundEnrichment();
     } catch (e, stackTrace) {
       debugPrint('ChannelProvider: Error parsing playlist string: $e');
       debugPrint('ChannelProvider: Stack trace: $stackTrace');
@@ -873,35 +1014,33 @@ class ChannelProvider with ChangeNotifier {
   }
   
   /// Save parsed playlist data to JSON cache for fast loading
+  /// Save parsed playlist data to JSON cache for fast loading (chunked to avoid OOM)
   Future<void> _saveJsonCache(Map<String, dynamic> parsed) async {
     try {
       final dir = await getApplicationDocumentsDirectory();
       final jsonCacheFile = File('${dir.path}/parsed_playlist_cache.json');
       
-      // Keep genres in cache - they're essential for categorization
-      final channelMaps = (parsed['channels'] as List<dynamic>).map((c) {
+      // For very large playlists, don't save movies/series to main cache
+      // They're already in separate files from lazy loading
+      final channelsData = (parsed['channels'] as List<dynamic>).map((c) {
         return Map<String, dynamic>.from(c as Map);
       }).toList();
       
-      final movieMaps = (parsed['movies'] as List<dynamic>).map((m) {
-        return Map<String, dynamic>.from(m as Map);
-      }).toList();
-      
-      final seriesMaps = (parsed['series'] as List<dynamic>).map((s) {
-        return Map<String, dynamic>.from(s as Map);
-      }).toList();
-      
-      final jsonData = json.encode({
-        'channels': channelMaps,
-        'movies': movieMaps,
-        'series': seriesMaps,
+      // Only save channel data + metadata to main cache
+      // Movies/series are in separate lazy-load files
+      final cacheData = {
+        'channels': channelsData,
+        'movies': [], // Empty - loaded from separate file
+        'series': [], // Empty - loaded from separate file
         'epgUrl': parsed['epgUrl'],
-      });
+      };
       
+      final jsonData = json.encode(cacheData);
       await jsonCacheFile.writeAsString(jsonData);
-      debugPrint('ChannelProvider: Saved JSON cache (${jsonData.length} bytes)');
+      debugPrint('ChannelProvider: Saved JSON cache (channels only, ${jsonData.length} bytes)');
     } catch (e) {
       debugPrint('ChannelProvider: Failed to save JSON cache: $e');
+      // Non-fatal - cache is optional
     }
   }
   
@@ -986,17 +1125,38 @@ class ChannelProvider with ChangeNotifier {
         xtreamService.getAllSeries(),
       ]);
 
-      _movies = results[0];
-      _series = results[1];
+      final List<Content> xtreamMovies = results[0];
+      final List<Content> xtreamSeries = results[1];
 
       debugPrint(
-        'ChannelProvider: Loaded ${_movies.length} movies, ${_series.length} series from Xtream API',
+        'ChannelProvider: Loaded ${xtreamMovies.length} movies, ${xtreamSeries.length} series from Xtream API',
       );
 
-      // Sync VOD content to ContentProvider
+      // Merge with existing VOD counts (avoid duplicates in count)
+      _moviesCount += xtreamMovies.length;
+      _seriesCount += xtreamSeries.length;
+      
+      // Append to lazy-load cache files
+      final dir = await getApplicationDocumentsDirectory();
+      if (_moviesCachePath == null) {
+        _moviesCachePath = '${dir.path}/movies_cache.json';
+        _seriesCachePath = '${dir.path}/series_cache.json';
+      }
+      
+      // Load existing, append new, save back
+      final existingMovies = await getMovies(limit: 999999); // Get all
+      final existingSeries = await getSeries(limit: 999999);
+      final allMovies = [...existingMovies, ...xtreamMovies];
+      final allSeries = [...existingSeries, ...xtreamSeries];
+      await File(_moviesCachePath!).writeAsString(json.encode(allMovies.map((m) => m.toMap()).toList()));
+      await File(_seriesCachePath!).writeAsString(json.encode(allSeries.map((s) => s.toMap()).toList()));
+
+      // Sync only first batch to ContentProvider
       if (_contentProvider != null) {
-        _contentProvider!.loadMovies(_movies);
-        _contentProvider!.loadSeries(_series);
+        final firstMovies = await getMovies(limit: 100);
+        final firstSeries = await getSeries(limit: 100);
+        _contentProvider!.loadMovies(firstMovies);
+        _contentProvider!.loadSeries(firstSeries);
       }
     } catch (e) {
       debugPrint('ChannelProvider: Error loading Xtream VOD: $e');
@@ -1072,6 +1232,74 @@ class ChannelProvider with ChangeNotifier {
       }
     }
     return null;
+  }
+  
+  /// Start background TMDB enrichment for movies and series
+  /// Runs asynchronously without blocking UI
+  Future<void> _startBackgroundEnrichment() async {
+    if (_isEnriching || _contentProvider == null) return;
+    
+    _isEnriching = true;
+    debugPrint('ChannelProvider: Starting background TMDB enrichment for $_moviesCount movies and $_seriesCount series');
+    
+    // Run in background without awaiting
+    Future.microtask(() async {
+      try {
+        // Load all movies and series for enrichment
+        final allMovies = await getMovies(limit: 999999);
+        final allSeries = await getSeries(limit: 999999);
+        
+        debugPrint('ChannelProvider: Enriching ${allMovies.length} movies...');
+        final enrichedMovies = await _enrichmentService.enrichContent(
+          allMovies,
+          onProgress: (current, total) {
+            debugPrint('ChannelProvider: Movie enrichment progress: $current/$total');
+          },
+        );
+        
+        debugPrint('ChannelProvider: Enriching ${allSeries.length} series...');
+        final enrichedSeries = await _enrichmentService.enrichContent(
+          allSeries,
+          onProgress: (current, total) {
+            debugPrint('ChannelProvider: Series enrichment progress: $current/$total');
+          },
+        );
+        
+        // Save enriched content back to cache files
+        await _saveEnrichedContent(enrichedMovies, enrichedSeries);
+        
+        // Update ContentProvider with enriched data (first 100 for UI)
+        if (_contentProvider != null) {
+          _contentProvider!.loadMovies(enrichedMovies.take(100).toList());
+          _contentProvider!.loadSeries(enrichedSeries.take(100).toList());
+        }
+        
+        debugPrint('ChannelProvider: Background TMDB enrichment completed');
+      } catch (e) {
+        debugPrint('ChannelProvider: Error during background enrichment: $e');
+      } finally {
+        _isEnriching = false;
+      }
+    });
+  }
+  
+  /// Save enriched VOD content back to cache files
+  Future<void> _saveEnrichedContent(List<Content> movies, List<Content> series) async {
+    try {
+      if (_moviesCachePath != null) {
+        final moviesJson = json.encode(movies.map((m) => m.toMap()).toList());
+        await File(_moviesCachePath!).writeAsString(moviesJson);
+        debugPrint('ChannelProvider: Saved ${movies.length} enriched movies to cache');
+      }
+      
+      if (_seriesCachePath != null) {
+        final seriesJson = json.encode(series.map((s) => s.toMap()).toList());
+        await File(_seriesCachePath!).writeAsString(seriesJson);
+        debugPrint('ChannelProvider: Saved ${series.length} enriched series to cache');
+      }
+    } catch (e) {
+      debugPrint('ChannelProvider: Error saving enriched content: $e');
+    }
   }
 }
 

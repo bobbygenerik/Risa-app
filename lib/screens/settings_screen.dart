@@ -2593,8 +2593,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     return Consumer<ChannelProvider>(
       builder: (context, provider, _) {
         final hasChannels = provider.hasChannels;
-        final movieCount = provider.movies.length;
-        final seriesCount = provider.series.length;
+        final movieCount = provider.moviesCount;
+        final seriesCount = provider.seriesCount;
         
         final previewLine =
             provider.lastM3UContent?.split('\n').first ?? 'Unavailable';
