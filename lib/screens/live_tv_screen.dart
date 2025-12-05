@@ -380,14 +380,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     final heroImage = _resolveHeroImage(program);
     
-    // Use responsive height like Netflix (50% of screen height)
+    // Full screen height for hero background
     final screenHeight = MediaQuery.of(context).size.height;
-    final heroHeight = screenHeight * 0.5;
 
     return GestureDetector(
       onTap: () => context.push('/player', extra: channel),
       child: Container(
-        height: heroHeight,
+        height: screenHeight,
         width: double.infinity,
         decoration: const BoxDecoration(
           color: AppTheme.cardBackground,
@@ -424,11 +423,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.transparent,
-                      Colors.black.withAlpha((0.5 * 255).round()),
-                      Colors.black.withAlpha((0.9 * 255).round()),
+                      Colors.black.withAlpha((0.3 * 255).round()),
+                      Colors.black.withAlpha((0.7 * 255).round()),
+                      const Color(0xFF050710),
                     ],
-                    stops: const [0.0, 0.6, 1.0],
+                    stops: const [0.0, 0.4, 0.8],
                   ),
                 ),
               ),
@@ -790,6 +789,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     List<Channel> channels,
   ) {
     if (channels.isEmpty) return const SizedBox.shrink();
+    
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isLandscape = screenWidth > screenHeight;
+    final cardWidth = isLandscape ? (screenWidth / 5.5) : (screenWidth / 3.5);
+    final cardHeight = cardWidth * 0.57; // Maintain 16:9 aspect ratio
+    final rowHeight = cardHeight + 60; // Extra space for padding
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -806,7 +812,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           ),
         ),
         SizedBox(
-          height: 220,
+          height: rowHeight,
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -840,8 +846,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                               child: AnimatedContainer(
                                 duration: TVFocusStyle.animationDuration,
                                 curve: TVFocusStyle.animationCurve,
-                                width: 280,
-                                height: 160,
+                                width: cardWidth,
+                                height: cardHeight,
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(12),
                                   color: AppTheme.cardBackground,

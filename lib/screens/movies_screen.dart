@@ -303,9 +303,15 @@ class _MoviesScreenState extends State<MoviesScreen>
 
   Widget _buildMoviesRow(BuildContext context, List<Content> movies) {
     if (movies.isEmpty) return const SizedBox.shrink();
+    
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isLandscape = screenWidth > screenHeight;
+    final cardWidth = isLandscape ? (screenWidth / 5.5) : (screenWidth / 3.5);
+    final rowHeight = cardWidth * 1.7; // Extra space for title
 
     return SizedBox(
-      height: 240,
+      height: rowHeight,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: FocusTraversalGroup(
@@ -320,6 +326,13 @@ class _MoviesScreenState extends State<MoviesScreen>
   }
 
   Widget _buildMovieCard(BuildContext context, Content movie) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isLandscape = screenWidth > screenHeight;
+    // 4-5 cards in landscape, more in portrait
+    final cardWidth = isLandscape ? (screenWidth / 5.5) : (screenWidth / 3.5);
+    final cardHeight = cardWidth * 1.5; // Maintain aspect ratio
+    
     return Padding(
       padding: const EdgeInsets.only(right: AppSizes.md),
       child: Focus(
@@ -350,8 +363,8 @@ class _MoviesScreenState extends State<MoviesScreen>
                 child: AnimatedContainer(
                   duration: TVFocusStyle.animationDuration,
                   curve: TVFocusStyle.animationCurve,
-                  width: 160,
-                  height: 240,
+                  width: cardWidth,
+                  height: cardHeight,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(AppSizes.radiusMd),
                     boxShadow: isFocused

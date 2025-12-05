@@ -417,9 +417,15 @@ class _SeriesScreenState extends State<SeriesScreen>
     }
 
     if (seriesMap.isEmpty) return const SizedBox.shrink();
+    
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isLandscape = screenWidth > screenHeight;
+    final cardWidth = isLandscape ? (screenWidth / 5.5) : (screenWidth / 3.5);
+    final rowHeight = cardWidth * 1.7; // Extra space for title
 
     return SizedBox(
-      height: 240,
+      height: rowHeight,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: FocusTraversalGroup(
@@ -444,6 +450,11 @@ class _SeriesScreenState extends State<SeriesScreen>
     List<Content> episodes,
   ) {
     final firstEpisode = episodes.first;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isLandscape = screenWidth > screenHeight;
+    final cardWidth = isLandscape ? (screenWidth / 5.5) : (screenWidth / 3.5);
+    final cardHeight = cardWidth * 1.5;
 
     return Padding(
       padding: const EdgeInsets.only(right: AppSizes.md),
@@ -475,8 +486,8 @@ class _SeriesScreenState extends State<SeriesScreen>
                 child: AnimatedContainer(
                   duration: TVFocusStyle.animationDuration,
                   curve: TVFocusStyle.animationCurve,
-                  width: 160,
-                  height: 240,
+                  width: cardWidth,
+                  height: cardHeight,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(AppSizes.radiusMd),
                     boxShadow: isFocused
