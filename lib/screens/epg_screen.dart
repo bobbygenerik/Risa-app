@@ -1446,13 +1446,9 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                     : isSelected 
                         ? AppTheme.primaryBlue.withAlpha((0.2 * 255).round())
                         : Colors.white.withAlpha((0.05 * 255).round()),
-                border: Border(
-                  right: const BorderSide(color: AppTheme.divider, width: 1),
-                  bottom: const BorderSide(color: AppTheme.divider, width: 0.5),
-                  left: BorderSide(
-                    color: isPlaying ? AppTheme.accentGreen : (isFocused ? AppTheme.primaryBlue : Colors.transparent),
-                    width: 3,
-                  ),
+                border: const Border(
+                  right: BorderSide(color: AppTheme.divider, width: 1),
+                  bottom: BorderSide(color: AppTheme.divider, width: 0.5),
                 ),
               ),
               child: Row(
@@ -1776,12 +1772,8 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
       clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
         color: isSelected ? AppTheme.primaryBlue.withAlpha((0.2 * 255).round()) : null,
-        border: Border(
-          bottom: const BorderSide(color: AppTheme.divider, width: 0.5),
-          left: BorderSide(
-            color: isPlaying ? AppTheme.accentGreen : Colors.transparent,
-            width: 3,
-          ),
+        border: const Border(
+          bottom: BorderSide(color: AppTheme.divider, width: 0.5),
         ),
       ),
       child: Row(
