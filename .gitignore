@@ -44,3 +44,15 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 repo-backup-before-cleanup.bundle
+
+# Platform-specific builds
+platforms/android-auto/.gradle/
+platforms/android-auto/build/
+platforms/android-auto/app/build/
+platforms/android-auto/local.properties
+
+platforms/companion-app/build/
+platforms/companion-app/.dart_tool/
+
+# Shared resources (keep source, ignore generated)
+shared-resources/generated/

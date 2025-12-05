@@ -1,6 +1,13 @@
-# IPTV Player
+# Risa IPTV Player
 
-A modern IPTV streaming player application built with Flutter/Dart.
+A comprehensive multi-platform IPTV streaming player built with Flutter and native Android.
+
+## Platforms
+
+- **Android TV / Fire TV**: Full-featured 10-foot UI for smart TVs
+- **Mobile / Tablet**: Touch-optimized interface for phones and tablets  
+- **Android Auto**: In-car entertainment with driver-safe interface (coming soon)
+- **Companion App**: Enhanced mobile app for settings and management (coming soon)
 
 ## ⚠️ LEGAL DISCLAIMER & TERMS OF USE
 
@@ -144,6 +151,26 @@ flutter build linux --release
 flutter pub run build_runner build --delete-conflicting-outputs
 ```
 
+## Project Structure
+
+```
+Risa-app/
+├── lib/                      # Main Flutter app (Android TV/Mobile)
+├── platforms/
+│   ├── android-auto/         # Native Android Auto app
+│   └── companion-app/        # Flutter companion mobile app
+├── shared-resources/         # Shared assets and resources
+├── docs/                     # Documentation
+│   ├── PRD.md               # Product requirements
+│   ├── CONTRIBUTING.md      # Contribution guidelines
+│   └── DEVELOPMENT.md       # Development notes
+└── [platform-specific files]
+```
+
+**Main App (this directory)**: Android TV, Fire TV, and standard mobile
+**Android Auto**: In-car interface (see `platforms/android-auto/`)
+**Companion App**: Enhanced mobile experience (see `platforms/companion-app/`)
+
 ## Configuration
 
 Add your M3U playlist URL in the app settings or directly in the code.
@@ -157,7 +184,13 @@ http://example.com/stream1.m3u8
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please see [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
+
+## Documentation
+
+- **[PRD](docs/PRD.md)**: Product Requirements Document
+- **[Contributing](docs/CONTRIBUTING.md)**: How to contribute
+- **[Development](docs/DEVELOPMENT.md)**: Technical notes
 
 ## License
 
