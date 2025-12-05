@@ -69,7 +69,7 @@ class _SeriesScreenState extends State<SeriesScreen>
   @override
   void initState() {
     super.initState();
-    _playFocus.addListener(_onPlayFocusChange);
+    _watchFocus.addListener(_onWatchFocusChange);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       
