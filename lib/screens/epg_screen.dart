@@ -1305,83 +1305,72 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
               ),
             // Main EPG grid with fixed channel sidebar
             Expanded(
-              child: Row(
-                children: [
-                  // FIXED channel sidebar (does NOT scroll horizontally)
-                  SizedBox(
-                    width: channelSidebarWidth,
-                    child: Column(
-                      children: [
-                        // Header cell for channel column
-                        Container(
-                          height: 60,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF121629),
-                            border: const Border(
-                              right: BorderSide(color: AppTheme.divider, width: 1),
-                              bottom: BorderSide(color: AppTheme.divider, width: 1),
+              child: SingleChildScrollView(
+                controller: _verticalScrollController,
+                physics: const ClampingScrollPhysics(),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // FIXED channel sidebar (does NOT scroll horizontally or independently)
+                    SizedBox(
+                      width: channelSidebarWidth,
+                      child: Column(
+                        children: [
+                          // Header cell for channel column
+                          Container(
+                            height: 60,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF121629),
+                              border: const Border(
+                                right: BorderSide(color: AppTheme.divider, width: 1),
+                                bottom: BorderSide(color: AppTheme.divider, width: 1),
+                              ),
                             ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              _selectedDate.day == DateTime.now().day &&
-                                  _selectedDate.month == DateTime.now().month &&
-                                  _selectedDate.year == DateTime.now().year
-                                  ? 'Today'
-                                  : '${_selectedDate.month}/${_selectedDate.day}',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                fontWeight: FontWeight.bold,
+                            child: Center(
+                              child: Text(
+                                _selectedDate.day == DateTime.now().day &&
+                                    _selectedDate.month == DateTime.now().month &&
+                                    _selectedDate.year == DateTime.now().year
+                                    ? 'Today'
+                                    : '${_selectedDate.month}/${_selectedDate.day}',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        // Channel list (scrolls vertically with the programs)
-                        Expanded(
-                          child: ListView.builder(
-                            controller: _verticalScrollController,
-                            physics: const ClampingScrollPhysics(),
-                            itemCount: channels.length,
-                            itemExtent: 56.0, // Force exact height for sync
-                            itemBuilder: (context, index) {
-                              final channel = channels[index];
-                              return _buildChannelSidebarItem(channel);
-                            },
-                          ),
-                        ),
-                      ],
+                          // Channel list (built as static Column - scrolls with parent)
+                          ...List.generate(channels.length, (index) {
+                            final channel = channels[index];
+                            return _buildChannelSidebarItem(channel);
+                          }),
+                        ],
+                      ),
                     ),
-                  ),
-                  // SCROLLABLE time header + programs section
-                  Expanded(
-                    child: SingleChildScrollView(
-                      controller: _horizontalScrollController,
-                      scrollDirection: Axis.horizontal,
-                      child: SizedBox(
-                        width: _calculateProgramsGridWidth(),
-                        child: Column(
-                          children: [
-                            // Time header (scrolls horizontally)
-                            _buildTimeHeaderOnly(),
-                            const Divider(height: 1, color: AppTheme.divider),
-                            // Programs grid (scrolls both ways)
-                            Expanded(
-                              child: ListView.builder(
-                                controller: _verticalScrollController,
-                                physics: const ClampingScrollPhysics(),
-                                itemCount: channels.length,
-                                itemExtent: 56.0, // Force exact height for sync
-                                itemBuilder: (context, index) {
-                                  final channel = channels[index];
-                                  return _buildProgramRowOnly(channel, epgService);
-                                },
-                              ),
-                            ),
-                          ],
+                    // SCROLLABLE time header + programs section
+                    Expanded(
+                      child: SingleChildScrollView(
+                        controller: _horizontalScrollController,
+                        scrollDirection: Axis.horizontal,
+                        child: SizedBox(
+                          width: _calculateProgramsGridWidth(),
+                          child: Column(
+                            children: [
+                              // Time header (scrolls horizontally)
+                              _buildTimeHeaderOnly(),
+                              const Divider(height: 1, color: AppTheme.divider),
+                              // Programs grid (built as static Column - scrolls with parent)
+                              ...List.generate(channels.length, (index) {
+                                final channel = channels[index];
+                                return _buildProgramRowOnly(channel, epgService);
+                              }),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
