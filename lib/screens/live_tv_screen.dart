@@ -334,12 +334,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.black.withAlpha((0.8 * 255).round()),
-                      Colors.black.withAlpha((0.3 * 255).round()),
+                      Colors.black.withAlpha((0.95 * 255).round()),
+                      Colors.black.withAlpha((0.2 * 255).round()),
                       Colors.black.withAlpha((0.5 * 255).round()),
                       Colors.black.withAlpha((0.75 * 255).round()),
                     ],
-                    stops: const [0.0, 0.12, 0.5, 1.0],
+                    stops: const [0.0, 0.08, 0.5, 1.0],
                   ),
                 ),
               ),
@@ -389,10 +389,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       constraints: const BoxConstraints(maxWidth: 350),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.black.withAlpha((0.4 * 255).round()),
+        color: Colors.black.withAlpha((0.1 * 255).round()),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
+          color: AppTheme.primaryBlue.withAlpha((0.2 * 255).round()),
           width: 1,
         ),
       ),
@@ -700,30 +700,67 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     borderRadius: BorderRadius.circular(12),
                     child: Stack(
                       children: [
-                        // Background gradient
-                        Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                const Color(0xFF1a1a2e),
-                                AppTheme.cardBackground,
-                              ],
+                        // Program image background or gradient fallback
+                        if (currentProgram?.imageUrl != null && currentProgram!.imageUrl!.isNotEmpty)
+                          Positioned.fill(
+                            child: CachedNetworkImage(
+                              imageUrl: currentProgram.imageUrl!,
+                              fit: BoxFit.cover,
+                              httpHeaders: const {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                              },
+                              placeholder: (_, __) => Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      const Color(0xFF1a1a2e),
+                                      AppTheme.cardBackground,
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              errorWidget: (_, __, ___) => Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      const Color(0xFF1a1a2e),
+                                      AppTheme.cardBackground,
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          // Background gradient fallback
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  const Color(0xFF1a1a2e),
+                                  AppTheme.cardBackground,
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                        // Channel logo
+                        // Channel logo (smaller)
                         Positioned(
-                          top: 10,
-                          left: 10,
+                          top: 8,
+                          left: 8,
                           child: Container(
-                            width: 60,
-                            height: 34,
+                            width: 40,
+                            height: 24,
                             decoration: BoxDecoration(
-                              color: Colors.transparent,
-                              borderRadius: BorderRadius.circular(8),
+                              color: Colors.black.withAlpha((0.6 * 255).round()),
+                              borderRadius: BorderRadius.circular(4),
                             ),
+                            padding: const EdgeInsets.all(2),
                             child: channel.logoUrl != null && channel.logoUrl!.isNotEmpty
                                 ? CachedNetworkImage(
                                     imageUrl: channel.logoUrl!,
@@ -734,13 +771,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                     errorWidget: (_, __, ___) => const Icon(
                                       Icons.tv,
                                       color: AppTheme.primaryBlue,
-                                      size: 24,
+                                      size: 16,
                                     ),
                                   )
                                 : const Icon(
                                     Icons.tv,
                                     color: AppTheme.primaryBlue,
-                                    size: 24,
+                                    size: 16,
                                   ),
                           ),
                         ),
