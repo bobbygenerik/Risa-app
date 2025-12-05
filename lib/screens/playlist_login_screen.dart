@@ -795,8 +795,13 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                   if (event is! KeyDownEvent) return KeyEventResult.ignored;
                   final key = event.logicalKey;
                   
+                  // When editing, only allow regular text input
+                  if (_xtreamUsernameEditable) {
+                    return KeyEventResult.ignored;
+                  }
+                  
                   // Right arrow: go to password field
-                  if (!_xtreamUsernameEditable && key == LogicalKeyboardKey.arrowRight) {
+                  if (key == LogicalKeyboardKey.arrowRight) {
                     _xtreamPasswordFocusNode.requestFocus();
                     return KeyEventResult.handled;
                   }
@@ -869,8 +874,13 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                   if (event is! KeyDownEvent) return KeyEventResult.ignored;
                   final key = event.logicalKey;
                   
+                  // When editing, only allow regular text input
+                  if (_xtreamPasswordEditable) {
+                    return KeyEventResult.ignored;
+                  }
+                  
                   // Left arrow: go back to username field
-                  if (!_xtreamPasswordEditable && key == LogicalKeyboardKey.arrowLeft) {
+                  if (key == LogicalKeyboardKey.arrowLeft) {
                     _xtreamUsernameFocusNode.requestFocus();
                     return KeyEventResult.handled;
                   }
