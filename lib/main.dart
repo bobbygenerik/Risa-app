@@ -33,6 +33,7 @@ import 'package:iptv_player/screens/ai_models_screen.dart';
 import 'package:iptv_player/screens/live_tv_screen.dart';
 import 'package:iptv_player/screens/movies_screen.dart';
 import 'package:iptv_player/screens/series_screen.dart';
+import 'package:iptv_player/screens/exoplayer_screen.dart';
 import 'package:iptv_player/screens/enhanced_video_player_screen.dart';
 import 'package:iptv_player/screens/playlist_login_screen.dart';
 import 'package:iptv_player/screens/help_about_screen.dart';
@@ -992,7 +993,7 @@ final _router = GoRouter(
 
         return _fadeSlidePage(
           key: state.pageKey,
-          child: EnhancedVideoPlayerScreen(
+          child: ExoPlayerScreen(
             videoUrl: videoUrl,
             title: title,
             isLive: isLive,
