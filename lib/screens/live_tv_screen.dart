@@ -47,7 +47,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _tmdbEnabled = ServiceValidator.isTmdbAvailable;
     // Start carousel once the widget is built — will be updated when channels load
     WidgetsBinding.instance.addPostFrameCallback(
-      (_) {
+      (_) async {
+        // Wait for EPG/TMDB data to load before selecting initial hero
+        await Future.delayed(const Duration(milliseconds: 800));
+        if (!mounted) return;
+        
         _findInitialChannelWithArtwork();
         _startCarouselIfNeeded();
         // Load EPG data to populate program info and progress bars

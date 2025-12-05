@@ -69,14 +69,20 @@ class _SeriesScreenState extends State<SeriesScreen>
   @override
   void initState() {
     super.initState();
-    _watchFocus.addListener(_onWatchFocusChange);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    _playFocus.addListener(_onPlayFocusChange);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      
+      // Wait a moment for TMDB enrichment to populate artwork
+      await Future.delayed(const Duration(milliseconds: 500));
       if (!mounted) return;
       
       // Prioritize newly added content with artwork for hero banner
       final provider = Provider.of<ContentProvider>(context, listen: false);
       if (provider.series.isNotEmpty) {
-        _featuredIndex = _findNewestContentWithArtwork(provider.series);
+        setState(() {
+          _featuredIndex = _findNewestContentWithArtwork(provider.series);
+        });
       }
       
       _startCarousel();

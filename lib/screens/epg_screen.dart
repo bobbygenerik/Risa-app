@@ -77,11 +77,13 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
       debugPrint('EPG Screen: epgData.length = ${epgService.epgData.length}');
       debugPrint('EPG Screen: isLoading = ${epgService.isLoading}');
       
-      // Always refresh EPG when screen opens (like playlist does)
-      final epgUrl = prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
-      if (epgUrl != null && epgUrl.isNotEmpty && !epgService.isLoading) {
-        debugPrint('EPG Screen: Refreshing EPG data from URL: $epgUrl');
-        await epgService.refresh(epgUrl);
+      // Only load EPG if we don't have data yet
+      if (!epgService.hasData && !epgService.isLoading) {
+        final epgUrl = prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
+        if (epgUrl != null && epgUrl.isNotEmpty) {
+          debugPrint('EPG Screen: Loading EPG data from URL: $epgUrl');
+          await epgService.loadEpgFromUrl(epgUrl);
+        }
       }
       
       // Scroll to current time position (no animation for initial load)
@@ -1158,6 +1160,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                             controller: _verticalScrollController,
                             physics: const ClampingScrollPhysics(),
                             itemCount: channels.length,
+                            itemExtent: 56.0, // Force exact height for sync
                             itemBuilder: (context, index) {
                               final channel = channels[index];
                               return _buildChannelSidebarItem(channel);
@@ -1183,7 +1186,9 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                             Expanded(
                               child: ListView.builder(
                                 controller: _verticalScrollController,
+                                physics: const ClampingScrollPhysics(),
                                 itemCount: channels.length,
+                                itemExtent: 56.0, // Force exact height for sync
                                 itemBuilder: (context, index) {
                                   final channel = channels[index];
                                   return _buildProgramRowOnly(channel, epgService);
