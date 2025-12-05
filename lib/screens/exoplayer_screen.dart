@@ -122,8 +122,6 @@ class _ExoPlayerScreenState extends State<ExoPlayerScreen> {
   KeyEventResult _handleKeyPress(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
 
-    _showControls();
-
     final key = event.logicalKey;
 
     // Back/Escape - Exit player
@@ -131,6 +129,15 @@ class _ExoPlayerScreenState extends State<ExoPlayerScreen> {
       Navigator.of(context).pop();
       return KeyEventResult.handled;
     }
+
+    // Show controls on any key press if hidden
+    if (!_controlsVisible) {
+      _showControls();
+      return KeyEventResult.handled; // Consume the key so first press just shows overlay
+    }
+
+    // Controls are visible - refresh timer and process command
+    _startControlsTimer();
 
     // Play/Pause
     if (key == LogicalKeyboardKey.select ||
