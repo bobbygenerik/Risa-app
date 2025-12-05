@@ -1459,6 +1459,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
             icon: isPlaying ? Icons.pause : Icons.play_arrow,
             label: isPlaying ? 'Pause' : 'Play',
             onTap: _togglePlayPause,
+            autofocus: true, // Auto-focus play/pause when overlay appears
           ),
           const SizedBox(width: 8),
           _buildControlButton(
@@ -1507,6 +1508,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     bool isActive = false,
     bool isDisabled = false,
     double? minWidth,
+    bool autofocus = false,
   }) {
     final borderRadius = BorderRadius.circular(18);
     final gradient = isActive
@@ -1518,6 +1520,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     final backgroundColor = Colors.white.withValues(alpha: isActive ? 0.18 : 0.08);
 
     return Focus(
+      autofocus: autofocus,
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent && !isDisabled && onTap != null &&
             (event.logicalKey == LogicalKeyboardKey.select || 
