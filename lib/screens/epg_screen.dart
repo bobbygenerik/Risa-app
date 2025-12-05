@@ -629,24 +629,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                             _refreshAnimationController.stop();
                             _refreshAnimationController.reset();
                             
-                            if (mounted && context.mounted) {
-                              final programCount = epgService.epgData.values
-                                  .fold<int>(0, (sum, programs) => sum + programs.length);
-                              
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    epgService.error != null
-                                        ? 'EPG refresh failed: ${epgService.error}'
-                                        : 'EPG loaded! $programCount programs.',
-                                  ),
-                                  backgroundColor: epgService.error != null
-                                      ? AppTheme.accentRed
-                                      : AppTheme.accentGreen,
-                                  duration: const Duration(seconds: 2),
-                                ),
-                              );
-                            }
+                            // Don't show snackbar on EPG screen - user can see the data loading in the grid
                           },
                     tooltip: 'Refresh EPG Data',
                   ),

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -385,89 +386,94 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         ? '${_formatTime(program.startTime)} — ${_formatTime(program.endTime)}'
         : '';
 
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 350),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.black.withAlpha((0.1 * 255).round()),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: AppTheme.primaryBlue.withAlpha((0.2 * 255).round()),
-          width: 1,
-        ),
-      ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 250),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.black.withAlpha((0.1 * 255).round()),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: AppTheme.primaryBlue.withAlpha((0.2 * 255).round()),
+              width: 1,
+            ),
+          ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Channel logo
+          // Channel logo (smaller)
           Container(
-            width: 48,
-            height: 48,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(4),
             ),
             child: channel.logoUrl != null && channel.logoUrl!.isNotEmpty
                 ? ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(4),
                     child: Image.network(
                       channel.logoUrl!,
                       fit: BoxFit.contain,
                       errorBuilder: (_, __, ___) => const Icon(
                         Icons.tv,
                         color: AppTheme.primaryBlue,
-                        size: 24,
+                        size: 16,
                       ),
                     ),
                   )
                 : const Icon(
                     Icons.tv,
                     color: AppTheme.primaryBlue,
-                    size: 24,
+                    size: 16,
                   ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           // Program info
-          Expanded(
+          Flexible(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (program != null)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                     decoration: BoxDecoration(
                       color: Colors.redAccent,
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(3),
                     ),
                     child: const Text(
                       'LIVE',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 9,
+                        fontSize: 8,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.5,
                       ),
                     ),
                   ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
                   title,
                   style: const TextStyle(
                     color: AppTheme.textPrimary,
-                    fontSize: 16,
+                    fontSize: 13,
                     fontWeight: FontWeight.w700,
                   ),
-                  maxLines: 2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 if (timeRange.isNotEmpty) ...[
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 1),
                   Text(
                     timeRange,
                     style: const TextStyle(
                       color: AppTheme.textSecondary,
-                      fontSize: 11,
+                      fontSize: 9,
                     ),
                   ),
                 ],
@@ -475,6 +481,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             ),
           ),
         ],
+      ),
+        ),
       ),
     );
   }

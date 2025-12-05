@@ -530,7 +530,8 @@ class _MyAppState extends State<MyApp> {
           ChangeNotifierProvider(
             create: (_) {
               final service = EpgService();
-              _runDeferred(service.initialize);
+              // Initialize immediately, not deferred - cache load is fast
+              service.initialize();
               return service;
             },
           ),

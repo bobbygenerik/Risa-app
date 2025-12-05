@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:xml/xml.dart';
@@ -138,42 +139,61 @@ class EpgService with ChangeNotifier {
       // Load manual mappings first
       await loadManualMappings();
       
-      // Try to load from cache first (fast, no network)
+      // ALWAYS try to load from cache first (instant startup)
       final cacheLoaded = await _loadFromCache();
       if (cacheLoaded) {
-        debugPrint('EpgService: Loaded ${_epgData.length} channels from primary cache');
-        notifyListeners(); // Notify immediately when cache is loaded
-      } else {
-        // If no cache, try to load from URL if configured
-        final prefs = await SharedPreferences.getInstance();
-        final epgUrl = prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
-        if (epgUrl != null && epgUrl.isNotEmpty) {
-          debugPrint('EpgService: No cache, loading primary EPG from URL: $epgUrl');
-          await loadEpgFromUrl(epgUrl);
-        } else {
-          debugPrint('EpgService: No EPG URL configured');
-        }
+        debugPrint('EpgService: Loaded ${_epgData.length} channels from cache');
+        notifyListeners();
       }
       
-      // Also try to load secondary EPG (supplementary)
+      // Also load secondary cache
       final secondaryCacheLoaded = await _loadSecondaryFromCache();
       if (secondaryCacheLoaded) {
-        debugPrint('EpgService: Loaded ${_secondaryEpgData.length} channels from secondary cache');
-        notifyListeners(); // Notify when secondary cache is loaded
-      } else {
-        final prefs = await SharedPreferences.getInstance();
-        final secondaryUrl = prefs.getString('secondary_epg_url');
-        if (secondaryUrl != null && secondaryUrl.isNotEmpty) {
-          debugPrint('EpgService: Loading secondary EPG from URL: $secondaryUrl');
-          await loadSecondaryEpgFromUrl(secondaryUrl);
-        }
+        debugPrint('EpgService: Loaded ${_secondaryEpgData.length} secondary channels from cache');
+        notifyListeners();
       }
       
-      debugPrint('EpgService: Initialization complete. Total channels: $totalChannelCount');
+      debugPrint('EpgService: Cache loaded, total channels: $totalChannelCount');
+      
+      // Now refresh in background if needed (don't await)
+      _refreshInBackground();
+      
     } catch (e) {
       debugPrint('EpgService: Initialization error: $e');
       _error = 'Failed to initialize EPG service: $e';
       notifyListeners();
+    }
+  }
+  
+  /// Refresh EPG data in background without blocking initialization
+  void _refreshInBackground() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Check if cache is stale or missing
+      bool needsRefresh = _epgData.isEmpty;
+      if (!needsRefresh && _lastFetchTime != null) {
+        final age = DateTime.now().difference(_lastFetchTime!);
+        needsRefresh = age > _cacheValidity;
+        if (needsRefresh) {
+          debugPrint('EpgService: Cache is ${age.inHours}h old, refreshing in background');
+        }
+      }
+      
+      if (needsRefresh || _epgData.isEmpty) {
+        final epgUrl = prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
+        if (epgUrl != null && epgUrl.isNotEmpty) {
+          debugPrint('EpgService: Starting background EPG refresh...');
+          await loadEpgFromUrl(epgUrl, forceRefresh: true);
+        }
+        
+        final secondaryUrl = prefs.getString('secondary_epg_url');
+        if (secondaryUrl != null && secondaryUrl.isNotEmpty) {
+          await loadSecondaryEpgFromUrl(secondaryUrl, forceRefresh: true);
+        }
+      }
+    } catch (e) {
+      debugPrint('EpgService: Background refresh error: $e');
     }
   }
 
@@ -965,32 +985,33 @@ class EpgService with ChangeNotifier {
     }
   }
 
-  /// Load EPG data from file cache
+  /// Load EPG data from file cache (loads regardless of age)
   Future<bool> _loadFromCache() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final cacheTimeStr = prefs.getString(_cacheTimeKey);
-
-      if (cacheTimeStr == null) {
-        return false;
-      }
-
-      final cacheTime = DateTime.parse(cacheTimeStr);
-      final age = DateTime.now().difference(cacheTime);
-
-      if (age > _cacheValidity) {
-        debugPrint('EPG cache expired (${age.inHours} hours old)');
-        return false;
-      }
-
       final directory = await getApplicationDocumentsDirectory();
       final file = File('${directory.path}/$_cacheFileName');
       
       if (!await file.exists()) {
+        debugPrint('EPG: No cache file found');
         return false;
       }
 
-      debugPrint('EPG: Loading from cache (${age.inMinutes} minutes old)...');
+      final prefs = await SharedPreferences.getInstance();
+      final cacheTimeStr = prefs.getString(_cacheTimeKey);
+      
+      DateTime? cacheTime;
+      if (cacheTimeStr != null) {
+        try {
+          cacheTime = DateTime.parse(cacheTimeStr);
+          final age = DateTime.now().difference(cacheTime);
+          debugPrint('EPG: Loading from cache (${age.inMinutes} minutes old)...');
+        } catch (e) {
+          debugPrint('EPG: Could not parse cache time, loading anyway');
+        }
+      } else {
+        debugPrint('EPG: No cache timestamp, loading anyway');
+      }
+
       final cachedData = await file.readAsString();
       
       // Parse cached data in background isolate
@@ -1023,7 +1044,9 @@ class EpgService with ChangeNotifier {
         _epgData[channelId] = programs;
       }
       
-      _lastFetchTime = cacheTime;
+      if (cacheTime != null) {
+        _lastFetchTime = cacheTime;
+      }
       debugPrint('EPG loaded from cache: ${_epgData.length} channels');
       return true;
     } catch (e) {
