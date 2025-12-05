@@ -85,9 +85,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Future<void> _loadEpgData() async {
     final epgService = Provider.of<EpgService>(context, listen: false);
     
+    debugPrint('LiveTV: EPG hasData=${epgService.hasData}, isLoading=${epgService.isLoading}, error=${epgService.error}');
+    
     // If EPG has no data, try to load from cache or URL
     if (!epgService.hasData && !epgService.isLoading) {
+      debugPrint('LiveTV: Initializing EPG service...');
       await epgService.initialize();
+      debugPrint('LiveTV: EPG initialized - hasData=${epgService.hasData}, error=${epgService.error}');
     }
   }
   
@@ -375,11 +379,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final progress = program?.progressPercentage ?? 0.0;
 
     final heroImage = _resolveHeroImage(program);
+    
+    // Use responsive height like Netflix (50% of screen height)
+    final screenHeight = MediaQuery.of(context).size.height;
+    final heroHeight = screenHeight * 0.5;
 
     return GestureDetector(
       onTap: () => context.push('/player', extra: channel),
       child: Container(
-        height: 420,
+        height: heroHeight,
         width: double.infinity,
         decoration: const BoxDecoration(
           color: AppTheme.cardBackground,
@@ -408,7 +416,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               )
             else
               Positioned.fill(child: _buildDefaultHeroBackground()),
-            // Dark gradient overlay
+            // Dark gradient overlay - stronger at bottom for card integration
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
@@ -417,8 +425,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     end: Alignment.bottomCenter,
                     colors: [
                       Colors.transparent,
-                      Colors.black.withAlpha((0.7 * 255).round()),
+                      Colors.black.withAlpha((0.5 * 255).round()),
+                      Colors.black.withAlpha((0.9 * 255).round()),
                     ],
+                    stops: const [0.0, 0.6, 1.0],
                   ),
                 ),
               ),
@@ -426,7 +436,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             // Hero content
             Positioned(
               left: 24,
-              bottom: 24,
+              bottom: 16,
               right: 24,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -785,7 +795,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
           child: Text(
             title,
             style: const TextStyle(
@@ -796,7 +806,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           ),
         ),
         SizedBox(
-          height: 140,
+          height: 220,
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -815,17 +825,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                             context.push('/player', extra: channel);
                             return KeyEventResult.handled;
                           }
-                          // Navigate up to hero Watch button
-                          if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-                            _watchFocus.requestFocus();
-                            // Scroll to top to show the hero banner
-                            _scrollController.animateTo(
-                              0,
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeInOut,
-                            );
-                            return KeyEventResult.handled;
-                          }
                         }
                         return KeyEventResult.ignored;
                       },
@@ -841,8 +840,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                               child: AnimatedContainer(
                                 duration: TVFocusStyle.animationDuration,
                                 curve: TVFocusStyle.animationCurve,
-                                width: 200,
-                                height: 120,
+                                width: 280,
+                                height: 160,
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(12),
                                   color: AppTheme.cardBackground,

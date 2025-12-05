@@ -24,6 +24,7 @@ class MainActivity : FlutterActivity() {
     private val AUDIO_CHANNEL = "com.streamhub.iptv/audio"
     private val TRANSCRIPTION_CHANNEL = "com.streamhub.iptv/transcription"
     private val TRANSCRIPTION_AUDIO_STREAM = "com.streamhub.iptv/transcription_audio"
+    private val NATIVE_CAPABILITIES_CHANNEL = "com.streamhub.iptv/native_capabilities"
     private val AUDIO_CAPTURE_REQUEST = 9001
 
     private var isInPipMode = false
@@ -38,6 +39,18 @@ class MainActivity : FlutterActivity() {
             .platformViewsController
             .registry
             .registerViewFactory("com.streamhub.iptv/exoplayer", ExoPlayerViewFactory(flutterEngine.dartExecutor.binaryMessenger))
+
+        // Native capabilities channel for checking ExoPlayer availability
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, NATIVE_CAPABILITIES_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "supportsNativeExoPlayer" -> {
+                        // ExoPlayer is always available since we registered it above
+                        result.success(true)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
 
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, TRANSCRIPTION_AUDIO_STREAM)
             .setStreamHandler(object : EventChannel.StreamHandler {

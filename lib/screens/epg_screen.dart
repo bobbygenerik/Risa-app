@@ -66,7 +66,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     // Hide system UI for immersive experience
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     
-    // Load EPG data on init
+    // Load EPG data on init with retry logic
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final epgService = Provider.of<EpgService>(context, listen: false);
       
@@ -77,18 +77,55 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
         _epgFavoriteChannelIds = Set.from(favoritesList);
       });
       
+      // Wait for EPG service to initialize (max 5 seconds)
+      int initWaitCount = 0;
+      while (!epgService.hasData && epgService.isLoading && initWaitCount < 50) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        initWaitCount++;
+      }
+      
       debugPrint('EPG Screen: hasData = ${epgService.hasData}');
       debugPrint('EPG Screen: epgData.length = ${epgService.epgData.length}');
       debugPrint('EPG Screen: isLoading = ${epgService.isLoading}');
+      debugPrint('EPG Screen: error = ${epgService.error}');
       
-      // Only load EPG if we don't have data yet
-      if (!epgService.hasData && !epgService.isLoading) {
+      // Load EPG if we don't have data yet (with retry)
+      if (!epgService.hasData) {
         final epgUrl = prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
         if (epgUrl != null && epgUrl.isNotEmpty) {
           debugPrint('EPG Screen: Loading EPG data from URL: $epgUrl');
-          await epgService.loadEpgFromUrl(epgUrl);
+          
+          // Try loading with exponential backoff retry
+          int retryCount = 0;
+          const maxRetries = 3;
+          bool success = false;
+          
+          while (!success && retryCount < maxRetries && mounted) {
+            try {
+              await epgService.loadEpgFromUrl(epgUrl, forceRefresh: retryCount > 0);
+              if (epgService.hasData) {
+                success = true;
+                debugPrint('EPG Screen: Successfully loaded EPG data');
+              } else if (epgService.error != null) {
+                throw Exception(epgService.error);
+              }
+            } catch (e) {
+              retryCount++;
+              if (retryCount < maxRetries) {
+                final delaySeconds = retryCount * 2; // 2s, 4s, 6s
+                debugPrint('EPG Screen: Load failed, retrying in ${delaySeconds}s... (attempt $retryCount/$maxRetries)');
+                await Future.delayed(Duration(seconds: delaySeconds));
+              } else {
+                debugPrint('EPG Screen: Failed to load EPG after $maxRetries attempts: $e');
+              }
+            }
+          }
+        } else {
+          debugPrint('EPG Screen: No EPG URL configured');
         }
       }
+      
+      if (!mounted) return;
       
       // Scroll to current time position (no animation for initial load)
       _scrollToCurrentTime(animate: false);
@@ -234,6 +271,58 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     setState(() {
       _playingChannel = null;
     });
+  }
+
+  Future<void> _triggerEpgRefresh() async {
+    if (!mounted) return;
+    
+    final prefs = await SharedPreferences.getInstance();
+    final epgUrl = prefs.getString('epg_url') ?? 
+                   prefs.getString('custom_epg_url');
+
+    if (epgUrl == null || epgUrl.isEmpty) {
+      if (mounted && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No EPG URL configured'),
+            backgroundColor: AppTheme.accentRed,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Start spinning animation
+    _refreshAnimationController.repeat();
+
+    if (!mounted) return;
+    final epgService = Provider.of<EpgService>(context, listen: false);
+    
+    // Refresh EPG in background
+    await epgService.refresh(epgUrl);
+    
+    // Stop spinning
+    _refreshAnimationController.stop();
+    _refreshAnimationController.reset();
+    
+    if (mounted && context.mounted) {
+      final programCount = epgService.epgData.values
+          .fold<int>(0, (sum, programs) => sum + programs.length);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            epgService.error != null
+                ? 'EPG refresh failed: ${epgService.error}'
+                : 'EPG loaded! $programCount programs.',
+          ),
+          backgroundColor: epgService.error != null
+              ? AppTheme.accentRed
+              : AppTheme.accentGreen,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   Future<void> _toggleEpgFavorite(Channel channel) async {
@@ -484,78 +573,102 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
           Focus(
             focusNode: _refreshButtonFocus,
             onKeyEvent: (node, event) {
-              if (event is KeyDownEvent &&
-                  event.logicalKey == LogicalKeyboardKey.arrowDown &&
-                  _playingChannel != null) {
-                _miniPlayerCloseFocus.requestFocus();
-                return KeyEventResult.handled;
+              if (event is KeyDownEvent) {
+                // Handle select/enter to trigger refresh
+                if (event.logicalKey == LogicalKeyboardKey.select ||
+                    event.logicalKey == LogicalKeyboardKey.enter) {
+                  // Trigger the refresh action
+                  if (!epgService.isLoading) {
+                    _triggerEpgRefresh();
+                  }
+                  return KeyEventResult.handled;
+                }
+                // Navigate down to mini player close button
+                if (event.logicalKey == LogicalKeyboardKey.arrowDown &&
+                    _playingChannel != null) {
+                  _miniPlayerCloseFocus.requestFocus();
+                  return KeyEventResult.handled;
+                }
               }
               return KeyEventResult.ignored;
             },
-            child: IconButton(
-              icon: AnimatedBuilder(
-              animation: _refreshAnimationController,
-              builder: (context, child) {
-                return Transform.rotate(
-                  angle: epgService.isLoading 
-                      ? _refreshAnimationController.value * 2 * 3.14159
-                      : 0,
-                  child: Icon(
-                    Icons.refresh,
-                    color: epgService.isLoading ? AppTheme.primaryBlue : null,
+            child: Builder(
+              builder: (context) {
+                final isFocused = Focus.of(context).hasFocus;
+                return Container(
+                  decoration: isFocused
+                      ? BoxDecoration(
+                          border: Border.all(color: AppTheme.primaryBlue, width: 2),
+                          borderRadius: BorderRadius.circular(24),
+                        )
+                      : null,
+                  child: IconButton(
+                    icon: AnimatedBuilder(
+                      animation: _refreshAnimationController,
+                      builder: (context, child) {
+                        return Transform.rotate(
+                          angle: epgService.isLoading 
+                              ? _refreshAnimationController.value * 2 * 3.14159
+                              : 0,
+                          child: Icon(
+                            Icons.refresh,
+                            color: epgService.isLoading ? AppTheme.primaryBlue : null,
+                          ),
+                        );
+                      },
+                    ),
+                    onPressed: epgService.isLoading
+                        ? null
+                        : () async {
+                            final prefs = await SharedPreferences.getInstance();
+                            final epgUrl = prefs.getString('epg_url') ?? 
+                                           prefs.getString('custom_epg_url');
+
+                            if (epgUrl == null || epgUrl.isEmpty) {
+                              if (mounted && context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('No EPG URL configured'),
+                                    backgroundColor: AppTheme.accentRed,
+                                  ),
+                                );
+                              }
+                              return;
+                            }
+
+                            // Start spinning animation
+                            _refreshAnimationController.repeat();
+
+                            // Refresh EPG in background
+                            await epgService.refresh(epgUrl);
+                            
+                            // Stop spinning
+                            _refreshAnimationController.stop();
+                            _refreshAnimationController.reset();
+                            
+                            if (mounted && context.mounted) {
+                              final programCount = epgService.epgData.values
+                                  .fold<int>(0, (sum, programs) => sum + programs.length);
+                              
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    epgService.error != null
+                                        ? 'EPG refresh failed: ${epgService.error}'
+                                        : 'EPG loaded! $programCount programs.',
+                                  ),
+                                  backgroundColor: epgService.error != null
+                                      ? AppTheme.accentRed
+                                      : AppTheme.accentGreen,
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          },
+                    tooltip: 'Refresh EPG Data',
                   ),
                 );
               },
-            ),
-            onPressed: epgService.isLoading
-                ? null
-                : () async {
-                    final prefs = await SharedPreferences.getInstance();
-                    final epgUrl = prefs.getString('epg_url') ?? 
-                                   prefs.getString('custom_epg_url');
-
-                    if (epgUrl == null || epgUrl.isEmpty) {
-                      if (mounted && context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('No EPG URL configured'),
-                            backgroundColor: AppTheme.accentRed,
-                          ),
-                        );
-                      }
-                      return;
-                    }
-
-                    // Start spinning animation
-                    _refreshAnimationController.repeat();
-
-                    // Refresh EPG in background
-                    await epgService.refresh(epgUrl);
-                    
-                    // Stop spinning
-                    _refreshAnimationController.stop();
-                    _refreshAnimationController.reset();
-                    
-                    if (mounted && context.mounted) {
-                      final programCount = epgService.epgData.values
-                          .fold<int>(0, (sum, programs) => sum + programs.length);
-                      
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            epgService.error != null
-                                ? 'EPG refresh failed: ${epgService.error}'
-                                : 'EPG loaded! $programCount programs.',
-                          ),
-                          backgroundColor: epgService.error != null
-                              ? AppTheme.accentRed
-                              : AppTheme.accentGreen,
-                          duration: const Duration(seconds: 2),
-                        ),
-                      );
-                    }
-                  },
-              tooltip: 'Refresh EPG Data',
             ),
           ),
           const SizedBox(width: AppSizes.sm),
@@ -1073,12 +1186,8 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
             height: 56,
             decoration: BoxDecoration(
               color: isSelected ? AppTheme.primaryBlue.withAlpha((0.2 * 255).round()) : null,
-              border: Border(
-                bottom: const BorderSide(color: AppTheme.divider, width: 0.5),
-                left: BorderSide(
-                  color: isPlaying ? AppTheme.primaryBlue : Colors.transparent,
-                  width: 3,
-                ),
+              border: const Border(
+                bottom: BorderSide(color: AppTheme.divider, width: 0.5),
               ),
             ),
             child: Material(

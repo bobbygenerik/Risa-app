@@ -126,46 +126,65 @@ class EpgService with ChangeNotifier {
 
   /// Initialize EPG service - called automatically and manually
   Future<void> initialize() async {
-    if (_initialized) return;
+    if (_initialized) {
+      debugPrint('EpgService: Already initialized, skipping...');
+      return;
+    }
     _initialized = true;
     
     debugPrint('EpgService: Initializing...');
     
-    // Load manual mappings first
-    await loadManualMappings();
-    
-    // Try to load from cache first (fast, no network)
-    final cacheLoaded = await _loadFromCache();
-    if (cacheLoaded) {
-      debugPrint('EpgService: Loaded ${_epgData.length} channels from primary cache');
-    } else {
-      // If no cache, try to load from URL if configured
-      final prefs = await SharedPreferences.getInstance();
-      final epgUrl = prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
-      if (epgUrl != null && epgUrl.isNotEmpty) {
-        debugPrint('EpgService: No cache, loading primary EPG from URL: $epgUrl');
-        await loadEpgFromUrl(epgUrl);
+    try {
+      // Load manual mappings first
+      await loadManualMappings();
+      
+      // Try to load from cache first (fast, no network)
+      final cacheLoaded = await _loadFromCache();
+      if (cacheLoaded) {
+        debugPrint('EpgService: Loaded ${_epgData.length} channels from primary cache');
+        notifyListeners(); // Notify immediately when cache is loaded
       } else {
-        debugPrint('EpgService: No EPG URL configured');
+        // If no cache, try to load from URL if configured
+        final prefs = await SharedPreferences.getInstance();
+        final epgUrl = prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
+        if (epgUrl != null && epgUrl.isNotEmpty) {
+          debugPrint('EpgService: No cache, loading primary EPG from URL: $epgUrl');
+          await loadEpgFromUrl(epgUrl);
+        } else {
+          debugPrint('EpgService: No EPG URL configured');
+        }
       }
-    }
-    
-    // Also try to load secondary EPG (supplementary)
-    final secondaryCacheLoaded = await _loadSecondaryFromCache();
-    if (secondaryCacheLoaded) {
-      debugPrint('EpgService: Loaded ${_secondaryEpgData.length} channels from secondary cache');
-    } else {
-      final prefs = await SharedPreferences.getInstance();
-      final secondaryUrl = prefs.getString('secondary_epg_url');
-      if (secondaryUrl != null && secondaryUrl.isNotEmpty) {
-        debugPrint('EpgService: Loading secondary EPG from URL: $secondaryUrl');
-        await loadSecondaryEpgFromUrl(secondaryUrl);
+      
+      // Also try to load secondary EPG (supplementary)
+      final secondaryCacheLoaded = await _loadSecondaryFromCache();
+      if (secondaryCacheLoaded) {
+        debugPrint('EpgService: Loaded ${_secondaryEpgData.length} channels from secondary cache');
+        notifyListeners(); // Notify when secondary cache is loaded
+      } else {
+        final prefs = await SharedPreferences.getInstance();
+        final secondaryUrl = prefs.getString('secondary_epg_url');
+        if (secondaryUrl != null && secondaryUrl.isNotEmpty) {
+          debugPrint('EpgService: Loading secondary EPG from URL: $secondaryUrl');
+          await loadSecondaryEpgFromUrl(secondaryUrl);
+        }
       }
+      
+      debugPrint('EpgService: Initialization complete. Total channels: $totalChannelCount');
+    } catch (e) {
+      debugPrint('EpgService: Initialization error: $e');
+      _error = 'Failed to initialize EPG service: $e';
+      notifyListeners();
     }
   }
 
   /// Load EPG from URL with robust error handling and caching
   Future<void> loadEpgFromUrl(String url, {bool forceRefresh = false}) async {
+    if (url.isEmpty) {
+      _error = 'EPG URL is empty';
+      notifyListeners();
+      return;
+    }
+    
     // Check cache first if not forcing refresh
     if (!forceRefresh && await _loadFromCache()) {
       debugPrint('EPG loaded from cache');
@@ -181,14 +200,20 @@ class EpgService with ChangeNotifier {
 
     while (retryCount < _maxRetries && !success) {
       try {
-        debugPrint('Fetching EPG from URL (attempt ${retryCount + 1}/$_maxRetries)...');
+        debugPrint('Fetching EPG from URL (attempt ${retryCount + 1}/$_maxRetries): $url');
         
         // Use streaming to handle large EPG files efficiently
         final client = HttpClient()
+          ..connectionTimeout = const Duration(seconds: 30)
           ..badCertificateCallback = (cert, host, port) => true;
-        final request = await client.getUrl(Uri.parse(url));
-        final response = await request.close();
+        
+        final request = await client.getUrl(Uri.parse(url))
+            .timeout(const Duration(seconds: 30));
+        final response = await request.close()
+            .timeout(const Duration(seconds: 60));
 
+        debugPrint('EPG HTTP response: ${response.statusCode}');
+        
         if (response.statusCode != 200) {
           throw Exception('HTTP ${response.statusCode}');
         }
@@ -258,15 +283,20 @@ class EpgService with ChangeNotifier {
         retryCount++;
         _error = e.toString();
         debugPrint('EPG fetch error (attempt $retryCount): $_error');
+        debugPrint('EPG error stack trace: ${StackTrace.current}');
 
         if (retryCount < _maxRetries) {
           debugPrint('Retrying in ${_retryDelay.inSeconds} seconds...');
           await Future.delayed(_retryDelay);
         } else {
+          debugPrint('EPG fetch failed after $_maxRetries attempts, trying cache...');
           // Try loading from cache as fallback
           if (await _loadFromCache()) {
+            debugPrint('EPG loaded from cache as fallback');
             _error = 'Using cached EPG data (network unavailable)';
             success = true;
+          } else {
+            debugPrint('EPG cache also unavailable');
           }
         }
       }
