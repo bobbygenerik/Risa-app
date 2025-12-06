@@ -361,7 +361,7 @@ class _MyAppState extends State<MyApp> {
             name: name,
             url: url,
             tvgId: id,
-            tvgLogoUrl: null,
+            logoUrl: null,
             groupTitle: 'Android Auto',
           );
           
