@@ -144,6 +144,8 @@ class EpgService with ChangeNotifier {
       if (cacheLoaded) {
         debugPrint('EpgService: Loaded ${_epgData.length} channels from cache');
         notifyListeners();
+      } else {
+        debugPrint('EpgService: No cache found, will try to fetch from URL');
       }
       
       // Also load secondary cache
@@ -1046,8 +1048,13 @@ class EpgService with ChangeNotifier {
       
       if (cacheTime != null) {
         _lastFetchTime = cacheTime;
+      } else {
+        // If no timestamp, set it to now so we know cache exists
+        _lastFetchTime = DateTime.now();
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_cacheTimeKey, _lastFetchTime!.toIso8601String());
       }
-      debugPrint('EPG loaded from cache: ${_epgData.length} channels');
+      debugPrint('EPG loaded from cache: ${_epgData.length} channels (age: ${cacheTime != null ? DateTime.now().difference(cacheTime).inHours : "unknown"}h)');
       return true;
     } catch (e) {
       debugPrint('Failed to load EPG from cache: $e');
