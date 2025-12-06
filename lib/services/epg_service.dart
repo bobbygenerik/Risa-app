@@ -1004,7 +1004,7 @@ class EpgService with ChangeNotifier {
         try {
           cacheTime = DateTime.parse(cacheTimeStr);
           final age = DateTime.now().difference(cacheTime);
-          debugPrint('EPG: Loading from cache (${age.inMinutes} minutes old)...');
+          debugPrint('EPG: Loading from cache (${age.inHours} hours old)...');
         } catch (e) {
           debugPrint('EPG: Could not parse cache time, loading anyway');
         }

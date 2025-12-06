@@ -6,6 +6,7 @@ import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
+import 'package:iptv_player/services/epg_service.dart';
 
 class CategoryScreen extends StatelessWidget {
   final String category;
@@ -112,6 +113,9 @@ class CategoryScreen extends StatelessWidget {
     ChannelProvider channelProvider,
   ) {
     final isFavorite = channelProvider.isFavorite(channel);
+    final epgService = Provider.of<EpgService>(context, listen: false);
+    final currentProgram = epgService.getCurrentProgram(channel.tvgId ?? channel.id, channelName: channel.name);
+    final programImage = currentProgram?.imageUrl;
 
     return Builder(
       builder: (context) {
@@ -123,43 +127,38 @@ class CategoryScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Channel Logo/Thumbnail
+                // Channel Logo/Thumbnail with EPG artwork
                 Expanded(
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
                       color: AppTheme.cardBackground,
                       borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(context.tvSpacing(12)), // AppSizes.radiusMd assumed 12
+                        top: Radius.circular(context.tvSpacing(12)),
                       ),
                     ),
                     child: Stack(
                       children: [
-                        // Logo
-                        if (channel.logoUrl != null && channel.logoUrl!.isNotEmpty)
+                        // Show program artwork if available, otherwise logo
+                        if (programImage != null && programImage.isNotEmpty)
                           ClipRRect(
                             borderRadius: BorderRadius.vertical(
                               top: Radius.circular(context.tvSpacing(12)),
                             ),
-                            child: Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(context.tvSpacing(8)), // AppSizes.sm assumed 8
-                                child: CachedNetworkImage(
-                                  imageUrl: channel.logoUrl!,
-                                  fit: BoxFit.contain,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  httpHeaders: const {
-                                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                                  },
-                                  placeholder: (context, url) => _buildChannelPlaceholder(channel.name),
-                                  errorWidget: (context, url, error) => _buildChannelPlaceholder(channel.name),
-                                ),
-                              ),
+                            child: CachedNetworkImage(
+                              imageUrl: programImage,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                              httpHeaders: const {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                              },
+                              placeholder: (context, url) => _buildLogoFallback(channel),
+                              errorWidget: (context, url, error) => _buildLogoFallback(channel),
                             ),
                           )
                         else
-                          _buildChannelPlaceholder(channel.name),
+                          _buildLogoFallback(channel),
 
                         // Live badge
                         Positioned(
@@ -233,6 +232,37 @@ class CategoryScreen extends StatelessWidget {
             ),
           ),
         );
+      },
+    );
+  }
+
+  Widget _buildLogoFallback(Channel channel) {
+    return Builder(
+      builder: (context) {
+        if (channel.logoUrl != null && channel.logoUrl!.isNotEmpty) {
+          return ClipRRect(
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(context.tvSpacing(12)),
+            ),
+            child: Center(
+              child: Padding(
+                padding: EdgeInsets.all(context.tvSpacing(8)),
+                child: CachedNetworkImage(
+                  imageUrl: channel.logoUrl!,
+                  fit: BoxFit.contain,
+                  width: double.infinity,
+                  height: double.infinity,
+                  httpHeaders: const {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                  },
+                  placeholder: (context, url) => _buildChannelPlaceholder(channel.name),
+                  errorWidget: (context, url, error) => _buildChannelPlaceholder(channel.name),
+                ),
+              ),
+            ),
+          );
+        }
+        return _buildChannelPlaceholder(channel.name);
       },
     );
   }
