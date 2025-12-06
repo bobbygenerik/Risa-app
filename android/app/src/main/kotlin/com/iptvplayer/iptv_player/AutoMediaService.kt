@@ -19,8 +19,8 @@ class AutoMediaService : MediaBrowserServiceCompat() {
         private const val LIVE_TV_ID = "live_tv"
         private const val MOVIES_ID = "movies"
         private const val SERIES_ID = "series"
+        private const val MORE_ID = "more"
         private const val FAVORITES_ID = "favorites"
-        private const val RECENT_ID = "recent"
     }
 
     override fun onCreate() {
@@ -129,17 +129,16 @@ class AutoMediaService : MediaBrowserServiceCompat() {
         
         when (parentId) {
             ROOT_ID -> {
-                mediaItems.add(createBrowsableItem(FAVORITES_ID, "Favorites", "Your favorite channels"))
-                mediaItems.add(createBrowsableItem(RECENT_ID, "Recently Watched", "Continue watching"))
                 mediaItems.add(createBrowsableItem(LIVE_TV_ID, "Live TV", "Watch live channels"))
                 mediaItems.add(createBrowsableItem(MOVIES_ID, "Movies", "Browse movies"))
                 mediaItems.add(createBrowsableItem(SERIES_ID, "Series", "Browse TV series"))
+                mediaItems.add(createBrowsableItem(MORE_ID, "More", "Favorites and settings"))
+            }
+            MORE_ID -> {
+                mediaItems.add(createBrowsableItem(FAVORITES_ID, "Favorites", "Your favorite channels"))
             }
             FAVORITES_ID -> {
                 loadFavorites(mediaItems)
-            }
-            RECENT_ID -> {
-                loadRecentChannels(mediaItems)
             }
             LIVE_TV_ID -> {
                 loadChannelsFromCache(mediaItems, "Live")
@@ -177,6 +176,15 @@ class AutoMediaService : MediaBrowserServiceCompat() {
         try {
             val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
             val cachedPlaylist = prefs.getString("flutter.cached_playlist", null)
+            
+            if (cachedPlaylist == null || cachedPlaylist.isEmpty()) {
+                mediaItems.add(createPlayableItem(
+                    "no_playlist",
+                    "No playlist loaded",
+                    "Open the app and add a playlist in Settings"
+                ))
+                return
+            }
             
             if (cachedPlaylist != null) {
                 val channels = JSONArray(cachedPlaylist)
@@ -268,50 +276,6 @@ class AutoMediaService : MediaBrowserServiceCompat() {
         }
     }
     
-    private fun loadRecentChannels(mediaItems: MutableList<MediaBrowserCompat.MediaItem>) {
-        try {
-            val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
-            val recentJson = prefs.getString("flutter.watch_history", null)
-            
-            if (recentJson != null) {
-                val recent = JSONArray(recentJson)
-                val cachedPlaylist = prefs.getString("flutter.cached_playlist", null)
-                
-                if (cachedPlaylist != null) {
-                    val channels = JSONArray(cachedPlaylist)
-                    
-                    for (i in 0 until minOf(recent.length(), 20)) {
-                        val historyItem = recent.getJSONObject(i)
-                        val channelId = historyItem.optString("channelId")
-                        
-                        for (j in 0 until channels.length()) {
-                            val channel = channels.getJSONObject(j)
-                            if (channel.optString("id") == channelId) {
-                                val name = channel.optString("name", "Unknown")
-                                val group = channel.optString("groupTitle", "Recent")
-                                mediaItems.add(createPlayableItem(channelId, name, group))
-                                break
-                            }
-                        }
-                    }
-                }
-            }
-            
-            if (mediaItems.isEmpty()) {
-                mediaItems.add(createPlayableItem(
-                    "no_recent",
-                    "No recent channels",
-                    "Start watching to see history"
-                ))
-            }
-        } catch (e: Exception) {
-            mediaItems.add(createPlayableItem(
-                "error",
-                "Error loading recent",
-                e.message ?: "Unknown error"
-            ))
-        }
-    }
     
     private fun playNextChannel(currentId: String) {
         try {
