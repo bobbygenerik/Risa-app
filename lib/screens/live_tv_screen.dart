@@ -718,11 +718,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     borderRadius: BorderRadius.circular(12),
                     child: Stack(
                       children: [
-                        // Program image background or gradient fallback
-                        if (currentProgram?.imageUrl != null && currentProgram!.imageUrl!.isNotEmpty)
+                        // Program image background - TMDB preferred, EPG fallback
+                        if (_getProgramImage(currentProgram) != null)
                           Positioned.fill(
                             child: CachedNetworkImage(
-                              imageUrl: currentProgram.imageUrl!,
+                              imageUrl: _getProgramImage(currentProgram)!,
                               fit: BoxFit.cover,
                               httpHeaders: const {
                                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -1020,6 +1020,26 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         ),
       ),
     );
+  }
+
+  String? _getProgramImage(Program? program) {
+    if (program == null) return null;
+    
+    // Try TMDB first (better quality)
+    if (_tmdbEnabled) {
+      final cacheKey = 'program_${program.id}';
+      if (_programArtwork.containsKey(cacheKey)) {
+        final tmdbImage = _programArtwork[cacheKey];
+        if (tmdbImage != null && tmdbImage.isNotEmpty) {
+          return tmdbImage;
+        }
+      } else if (!_artworkRequests.contains(cacheKey)) {
+        _fetchProgramArtwork(program);
+      }
+    }
+    
+    // Fallback to EPG image
+    return program.imageUrl;
   }
 
   String _formatTime(DateTime dt) {

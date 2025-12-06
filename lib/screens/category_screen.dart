@@ -133,15 +133,19 @@ class _CategoryScreenState extends State<CategoryScreen> {
     final epgService = Provider.of<EpgService>(context, listen: false);
     final currentProgram = epgService.getCurrentProgram(channel.tvgId ?? channel.id, channelName: channel.name);
     
-    // Try EPG image first, then TMDB fallback
-    String? programImage = currentProgram?.imageUrl;
-    if ((programImage == null || programImage.isEmpty) && currentProgram != null && _tmdbEnabled) {
+    // Try TMDB first (better quality), then EPG as fallback
+    String? programImage;
+    if (currentProgram != null && _tmdbEnabled) {
       final cacheKey = 'program_${currentProgram.id}';
       if (_programArtwork.containsKey(cacheKey)) {
         programImage = _programArtwork[cacheKey];
       } else if (!_artworkRequests.contains(cacheKey)) {
         _fetchProgramArtwork(currentProgram);
       }
+    }
+    // Fallback to EPG image if TMDB not available or no result yet
+    if ((programImage == null || programImage.isEmpty) && currentProgram != null) {
+      programImage = currentProgram.imageUrl;
     }
 
     return Builder(
