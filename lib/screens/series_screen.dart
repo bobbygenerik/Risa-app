@@ -326,12 +326,12 @@ class _SeriesScreenState extends State<SeriesScreen>
                         ],
                       ),
                     ),
-                  ),
                 ],
               ),
             ),
           ],
-        );
+        ),
+      );
 
         return _wrapWithDirectionalFocus(stack);
       },
