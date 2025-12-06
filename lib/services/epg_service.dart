@@ -127,13 +127,13 @@ class EpgService with ChangeNotifier {
 
   /// Initialize EPG service - called automatically and manually
   Future<void> initialize() async {
-    if (_initialized) {
-      debugPrint('EpgService: Already initialized, skipping...');
+    debugPrint('EpgService: Initializing (initialized flag: $_initialized)...');
+    
+    if (_initialized && _epgData.isNotEmpty) {
+      debugPrint('EpgService: Already initialized with ${_epgData.length} channels, skipping...');
       return;
     }
     _initialized = true;
-    
-    debugPrint('EpgService: Initializing...');
     
     try {
       // Load manual mappings first
@@ -993,10 +993,15 @@ class EpgService with ChangeNotifier {
       final directory = await getApplicationDocumentsDirectory();
       final file = File('${directory.path}/$_cacheFileName');
       
+      debugPrint('EPG: Checking cache at: ${file.path}');
+      
       if (!await file.exists()) {
-        debugPrint('EPG: No cache file found');
+        debugPrint('EPG: ❌ Cache file does not exist');
         return false;
       }
+      
+      final fileSize = await file.length();
+      debugPrint('EPG: ✓ Cache file exists (${(fileSize / 1024 / 1024).toStringAsFixed(2)} MB)');
 
       final prefs = await SharedPreferences.getInstance();
       final cacheTimeStr = prefs.getString(_cacheTimeKey);
@@ -1054,7 +1059,8 @@ class EpgService with ChangeNotifier {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(_cacheTimeKey, _lastFetchTime!.toIso8601String());
       }
-      debugPrint('EPG loaded from cache: ${_epgData.length} channels (age: ${cacheTime != null ? DateTime.now().difference(cacheTime).inHours : "unknown"}h)');
+      debugPrint('EPG: ✓ Successfully loaded ${_epgData.length} channels from cache (age: ${cacheTime != null ? DateTime.now().difference(cacheTime).inHours : "unknown"}h)');
+      debugPrint('EPG: Sample channel IDs: ${_epgData.keys.take(5).join(", ")}');
       return true;
     } catch (e) {
       debugPrint('Failed to load EPG from cache: $e');
