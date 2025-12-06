@@ -127,12 +127,16 @@ class EpgService with ChangeNotifier {
 
   /// Initialize EPG service - called automatically and manually
   Future<void> initialize() async {
-    debugPrint('EpgService: Initializing (initialized flag: $_initialized)...');
+    debugPrint('EpgService: Initializing (initialized flag: $_initialized, data: ${_epgData.length} channels)...');
     
-    if (_initialized && _epgData.isNotEmpty) {
+    // Always load from cache if we have no data, even if already initialized
+    if (_epgData.isEmpty) {
+      debugPrint('EpgService: No data in memory, loading from cache...');
+    } else if (_initialized) {
       debugPrint('EpgService: Already initialized with ${_epgData.length} channels, skipping...');
       return;
     }
+    
     _initialized = true;
     
     try {

@@ -275,12 +275,49 @@ class ChannelProvider with ChangeNotifier {
   /// Track when a channel is watched
   Future<void> incrementWatchCount(String channelId) async {
     _watchCounts[channelId] = (_watchCounts[channelId] ?? 0) + 1;
+    
+    // Add to watch history
+    await _addToWatchHistory(channelId);
+    
     notifyListeners();
     
     // Persist watch counts
     final prefs = await SharedPreferences.getInstance();
     final watchCountsJson = _watchCounts.map((k, v) => MapEntry(k, v.toString()));
     await prefs.setString('channel_watch_counts', json.encode(watchCountsJson));
+  }
+  
+  /// Add channel to watch history
+  Future<void> _addToWatchHistory(String channelId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final historyJson = prefs.getString('watch_history');
+      List<Map<String, dynamic>> history = [];
+      
+      if (historyJson != null) {
+        history = (json.decode(historyJson) as List<dynamic>)
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+      }
+      
+      // Remove if already exists
+      history.removeWhere((item) => item['channelId'] == channelId);
+      
+      // Add to front
+      history.insert(0, {
+        'channelId': channelId,
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+      });
+      
+      // Keep only last 50
+      if (history.length > 50) {
+        history = history.sublist(0, 50);
+      }
+      
+      await prefs.setString('watch_history', json.encode(history));
+    } catch (e) {
+      debugPrint('Error saving watch history: $e');
+    }
   }
   
   /// Load watch counts from storage
@@ -303,6 +340,7 @@ class ChannelProvider with ChangeNotifier {
 
     StartupProbe.mark('ChannelProvider.autoLoadPlaylist invoked');
     await _loadWatchCounts();
+    await _loadFavorites();
     debugPrint('ChannelProvider: Auto-loading playlist...');
     final prefs = await SharedPreferences.getInstance();
     final playlistType = prefs.getString('playlist_type');
@@ -1092,10 +1130,42 @@ class ChannelProvider with ChangeNotifier {
   }
 
   /// Add channel to favorites
-  void addToFavorites(Channel channel) {
+  Future<void> addToFavorites(Channel channel) async {
     if (!_favoriteChannels.contains(channel)) {
       _favoriteChannels.add(channel);
+      await _saveFavorites();
       notifyListeners();
+    }
+  }
+  
+  /// Save favorites to SharedPreferences
+  Future<void> _saveFavorites() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final favoriteIds = _favoriteChannels.map((c) => c.id).toList();
+      await prefs.setString('favorite_channels', json.encode(favoriteIds));
+    } catch (e) {
+      debugPrint('Error saving favorites: $e');
+    }
+  }
+  
+  /// Load favorites from SharedPreferences
+  Future<void> _loadFavorites() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final favoritesJson = prefs.getString('favorite_channels');
+      if (favoritesJson != null) {
+        final List<dynamic> favoriteIds = json.decode(favoritesJson);
+        _favoriteChannels.clear();
+        for (final id in favoriteIds) {
+          final channel = getChannelById(id as String);
+          if (channel != null) {
+            _favoriteChannels.add(channel);
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading favorites: $e');
     }
   }
 
@@ -1170,8 +1240,9 @@ class ChannelProvider with ChangeNotifier {
   }
 
   /// Remove channel from favorites
-  void removeFromFavorites(Channel channel) {
+  Future<void> removeFromFavorites(Channel channel) async {
     _favoriteChannels.remove(channel);
+    await _saveFavorites();
     notifyListeners();
   }
 

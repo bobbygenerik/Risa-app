@@ -339,8 +339,41 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     _profileProvider = ProfileProvider();
+    _setupAndroidAutoListener();
     StartupProbe.mark('MyAppState initState');
     _initialize();
+  }
+  
+  void _setupAndroidAutoListener() {
+    if (!Platform.isAndroid) return;
+    
+    const channel = MethodChannel('com.streamhub.iptv/auto_play');
+    channel.setMethodCallHandler((call) async {
+      if (call.method == 'playChannel') {
+        final url = call.arguments['url'] as String?;
+        final name = call.arguments['name'] as String?;
+        final id = call.arguments['id'] as String?;
+        
+        if (url != null && name != null) {
+          // Create a Channel object and navigate to player
+          final channel = Channel(
+            id: id ?? 'auto_$url',
+            name: name,
+            url: url,
+            tvgId: id,
+            tvgLogoUrl: null,
+            groupTitle: 'Android Auto',
+          );
+          
+          // Wait for router to be ready
+          await Future.delayed(const Duration(milliseconds: 500));
+          
+          if (_rootNavigatorKey.currentContext != null) {
+            _rootNavigatorKey.currentContext!.go('/player', extra: channel);
+          }
+        }
+      }
+    });
   }
 
   Future<void> _initialize() async {

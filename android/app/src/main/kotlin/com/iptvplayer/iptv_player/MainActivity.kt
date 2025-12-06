@@ -33,6 +33,9 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        
+        // Handle Android Auto intent
+        handleAndroidAutoIntent()
 
         // Register ExoPlayer platform view for native video rendering on Android TV
         flutterEngine
@@ -183,6 +186,35 @@ class MainActivity : FlutterActivity() {
     }
 
 
+
+    private fun handleAndroidAutoIntent() {
+        val autoplay = intent.getBooleanExtra("autoplay", false)
+        if (autoplay) {
+            val channelUrl = intent.getStringExtra("channel_url")
+            val channelName = intent.getStringExtra("channel_name")
+            val channelId = intent.getStringExtra("channel_id")
+            
+            if (channelUrl != null && channelName != null) {
+                // Send to Flutter via method channel after a short delay to ensure Flutter is ready
+                Handler(Looper.getMainLooper()).postDelayed({
+                    flutterEngine?.dartExecutor?.binaryMessenger?.let { messenger ->
+                        MethodChannel(messenger, "com.streamhub.iptv/auto_play")
+                            .invokeMethod("playChannel", mapOf(
+                                "url" to channelUrl,
+                                "name" to channelName,
+                                "id" to channelId
+                            ))
+                    }
+                }, 1000)
+            }
+        }
+    }
+    
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleAndroidAutoIntent()
+    }
 
     override fun onDestroy() {
         stopPlaybackCapture()

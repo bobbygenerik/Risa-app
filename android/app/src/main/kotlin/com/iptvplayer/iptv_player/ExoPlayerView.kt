@@ -26,20 +26,19 @@ class ExoPlayerView(
     private val methodChannel: MethodChannel
 
     init {
+        // Configure PlayerView first
+        playerView.useController = false // We use Flutter overlay controls
+        playerView.setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+        
         // Create ExoPlayer instance
         exoPlayer = ExoPlayer.Builder(context)
             .build()
             .apply {
                 playWhenReady = creationParams?.get("autoPlay") as? Boolean ?: true
-                // Use SurfaceView instead of TextureView for better TV compatibility
-                playerView.useController = false // We use Flutter overlay controls
             }
 
         // Attach player to view
         playerView.player = exoPlayer
-        
-        // Use SurfaceView (better for Android TV)
-        playerView.setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
 
         // Setup method channel for communication with Flutter
         methodChannel = MethodChannel(messenger, "com.streamhub.iptv/exoplayer_$viewId")
