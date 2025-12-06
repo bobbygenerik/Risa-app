@@ -33,7 +33,6 @@ class EPGScreen extends StatefulWidget {
 
 class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMixin {
   final DateTime _selectedDate = DateTime.now();
-  final bool _isHourlyView = true;
   String? _selectedChannelId;
   String? _selectedCategory;
   Channel? _playingChannel;
@@ -1162,7 +1161,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                         controller: _horizontalScrollController,
                         scrollDirection: Axis.horizontal,
                         child: SizedBox(
-                          width: _calculateProgramsGridWidth(),
+                          width: _calculateGridWidth(),
                           child: Column(
                             children: [
                               // Time header (scrolls horizontally)
@@ -1666,10 +1665,9 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
   }
 
   double _calculateGridWidth() {
-    final hours = _isHourlyView ? 24 : 48;
-    final cellWidth = _isHourlyView ? 120.0 : 60.0;
-    const channelSidebarWidth = 200.0; // Must match the channel info section width
-    return channelSidebarWidth + (hours * cellWidth);
+    const hours = 12; // 12 hours of programming
+    const cellWidth = 120.0;
+    return hours * cellWidth;
   }
 
   void _showChannelOptions(Channel channel) {

@@ -176,9 +176,9 @@ class _ExoPlayerScreenState extends State<ExoPlayerScreen> {
     final hours = minutes ~/ 60;
     
     if (hours > 0) {
-      return '${hours}:${(minutes % 60).toString().padLeft(2, '0')}:${(seconds % 60).toString().padLeft(2, '0')}';
+      return '$hours:${(minutes % 60).toString().padLeft(2, '0')}:${(seconds % 60).toString().padLeft(2, '0')}';
     }
-    return '${minutes}:${(seconds % 60).toString().padLeft(2, '0')}';
+    return '$minutes:${(seconds % 60).toString().padLeft(2, '0')}';
   }
 
   @override
@@ -261,10 +261,10 @@ class _ExoPlayerScreenState extends State<ExoPlayerScreen> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.black.withOpacity(0.7),
+                        Colors.black.withValues(alpha: 0.7),
                         Colors.transparent,
                         Colors.transparent,
-                        Colors.black.withOpacity(0.7),
+                        Colors.black.withValues(alpha: 0.7),
                       ],
                     ),
                   ),

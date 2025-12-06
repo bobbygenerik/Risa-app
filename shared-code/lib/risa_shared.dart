@@ -1,4 +1,4 @@
-library risa_shared;
+library;
 
 // Models
 export 'models/channel.dart';

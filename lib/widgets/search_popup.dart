@@ -1,4 +1,7 @@
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
@@ -75,12 +78,6 @@ class _SearchPopupState extends State<SearchPopup> {
     );
 
     final liveTv = channelProvider.searchChannels(query);
-
-    // ContentProvider search returns mixed movies and series, we need to separate them
-    // But ContentProvider.searchContent returns a mixed list.
-    // Let's use the raw lists from ContentProvider to filter manually for better control
-    // or just filter the results.
-
     final allContent = contentProvider.searchContent(query);
     final movies = allContent
         .where((c) => c.type == ContentType.movie)
@@ -100,14 +97,9 @@ class _SearchPopupState extends State<SearchPopup> {
       _seriesDisplayCount = _resultsPerSection;
     });
   }
-
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: AppTheme.cardBackground,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(context.tvSpacing(16)),
-      ),
       child: Container(
         padding: EdgeInsets.all(context.tvSpacing(24)),
         child: Column(
@@ -125,6 +117,7 @@ class _SearchPopupState extends State<SearchPopup> {
                   vertical: context.tvSpacing(12),
                 ),
               ),
+              onSubmitted: _performSearch,
             ),
             SizedBox(height: context.tvSpacing(16)),
             Expanded(

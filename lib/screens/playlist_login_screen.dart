@@ -10,6 +10,7 @@ import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
 // import 'dart:convert';
 
 /// Playlist login screen - allows users to choose between M3U URL or Xtream Codes
@@ -472,63 +473,63 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                   Center(
                     child: SingleChildScrollView(
                       padding: EdgeInsets.symmetric(
-                        horizontal: isTV ? scale(32) : scale(40),
-                        vertical: scale(32),
+                        horizontal: isTV ? context.tvSpacing(32) : context.tvSpacing(40),
+                        vertical: context.tvSpacing(32),
                       ),
                       child: Container(
                         constraints: BoxConstraints(
-                          maxWidth: isTV ? scale(580) : scale(500),
+                          maxWidth: isTV ? context.tvSpacing(580) : context.tvSpacing(500),
                         ),
                         decoration: BoxDecoration(
                           color: AppTheme.cardBackground,
-                          borderRadius: BorderRadius.circular(scale(32)),
+                          borderRadius: BorderRadius.circular(context.tvSpacing(32)),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withAlpha((0.25 * 255).round()),
-                              blurRadius: scale(16),
-                              offset: Offset(0, vScale(8)),
+                              blurRadius: context.tvSpacing(16),
+                              offset: Offset(0, context.tvSpacing(8)),
                             ),
                           ],
                         ),
                         child: Padding(
-                          padding: EdgeInsets.all(scale(8)),
+                          padding: EdgeInsets.all(context.tvSpacing(8)),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               // Logo - Use new app logo
-                              SizedBox(height: vScale(4)),
+                              SizedBox(height: context.tvSpacing(4)),
                               Image.asset(
                                 'assets/images/croppedlogo2.png',
-                                height: isTV ? vScale(48) : vScale(56),
+                                height: isTV ? context.tvSpacing(48) : context.tvSpacing(56),
                                 fit: BoxFit.contain,
                                 errorBuilder: (context, error, stackTrace) {
                                   return Icon(
                                     Icons.live_tv,
-                                    size: isTV ? scale(40) : scale(44),
+                                    size: isTV ? context.tvIconSize(40) : context.tvIconSize(44),
                                     color: AppTheme.primaryBlue,
                                   );
                                 },
                               ),
-                              SizedBox(height: vScale(4)),
+                              SizedBox(height: context.tvSpacing(4)),
                               Text(
                                 'Load your playlist to get started',
                                 style: Theme.of(context).textTheme.bodyMedium
                                     ?.copyWith(color: AppTheme.textSecondary),
                                 textAlign: TextAlign.center,
                               ),
-                              SizedBox(height: vScale(8)),
+                              SizedBox(height: context.tvSpacing(8)),
 
                               // Tab selector
                               Container(
                                 decoration: BoxDecoration(
                                   color: AppTheme.highlight,
-                                  borderRadius: BorderRadius.circular(scale(24)),
+                                  borderRadius: BorderRadius.circular(context.tvSpacing(24)),
                                 ),
                                 child: TabBar(
                                   controller: _tabController,
                                   indicator: BoxDecoration(
                                     color: AppTheme.primaryBlue,
-                                    borderRadius: BorderRadius.circular(scale(24)),
+                                    borderRadius: BorderRadius.circular(context.tvSpacing(24)),
                                   ),
                                   labelColor: AppTheme.textPrimary,
                                   unselectedLabelColor: AppTheme.textSecondary,
@@ -539,13 +540,13 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                                 ),
                               ),
 
-                              SizedBox(height: vScale(8)),
+                              SizedBox(height: context.tvSpacing(8)),
 
                               // Tab content - Reduced constraints for better visibility
                               ConstrainedBox(
                                 constraints: BoxConstraints(
-                                  minHeight: vScale(220),
-                                  maxHeight: vScale(280),
+                                  minHeight: context.tvSpacing(220),
+                                  maxHeight: context.tvSpacing(280),
                                 ),
                                 child: TabBarView(
                                   controller: _tabController,
@@ -557,9 +558,9 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                               ),
 
                               if (_isLoading) ...[
-                                SizedBox(height: vScale(8)),
+                                SizedBox(height: context.tvSpacing(8)),
                                 CircularProgressIndicator(),
-                                SizedBox(height: vScale(4)),
+                                SizedBox(height: context.tvSpacing(4)),
                                 const Text(
                                   'Loading playlist...',
                                   style: TextStyle(

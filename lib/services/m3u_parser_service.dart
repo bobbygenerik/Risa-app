@@ -432,14 +432,18 @@ class M3UParserService {
       final key = info.substring(keyStart, i);
       
       // Skip whitespace
-      while (i < len && info.codeUnitAt(i) == 32) i++;
+      while (i < len && info.codeUnitAt(i) == 32) {
+        i++;
+      }
       
       // Check for =
       if (i >= len || info.codeUnitAt(i) != 61) continue; // 61 is '='
       i++;
       
       // Skip whitespace
-      while (i < len && info.codeUnitAt(i) == 32) i++;
+      while (i < len && info.codeUnitAt(i) == 32) {
+        i++;
+      }
       
       // Check for quote
       if (i >= len) break;

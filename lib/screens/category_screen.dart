@@ -5,6 +5,7 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:go_router/go_router.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 class CategoryScreen extends StatelessWidget {
   final String category;
@@ -18,13 +19,8 @@ class CategoryScreen extends StatelessWidget {
         // Get total count without converting all channels
         final totalCount = channelProvider.getChannelCountForCategory(category);
 
-        final screenWidth = MediaQuery.of(context).size.width;
-        final screenHeight = MediaQuery.of(context).size.height;
-        double scale(double value) => value * (screenWidth / 1920);
-        double vScale(double value) => value * (screenHeight / 1080);
-
         return Padding(
-          padding: EdgeInsets.all(scale(32)), // AppSizes.lg assumed 32
+          padding: EdgeInsets.all(context.tvSpacing(32)), // AppSizes.lg assumed 32
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -89,23 +85,19 @@ class CategoryScreen extends StatelessWidget {
   Widget _buildEmptyState() {
     return Builder(
       builder: (context) {
-        final screenWidth = MediaQuery.of(context).size.width;
-        final screenHeight = MediaQuery.of(context).size.height;
-        double scale(double value) => value * (screenWidth / 1920);
-        double vScale(double value) => value * (screenHeight / 1080);
         return Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 Icons.tv_off,
-                size: scale(80),
+                size: context.tvIconSize(80),
                 color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
               ),
-              SizedBox(height: vScale(32)),
+              SizedBox(height: context.tvSpacing(32)),
               Text(
                 'No channels in this category',
-                style: TextStyle(fontSize: scale(18)),
+                style: TextStyle(fontSize: context.tvTextSize(18)),
               ),
             ],
           ),
@@ -123,10 +115,6 @@ class CategoryScreen extends StatelessWidget {
 
     return Builder(
       builder: (context) {
-        final screenWidth = MediaQuery.of(context).size.width;
-        final screenHeight = MediaQuery.of(context).size.height;
-        double scale(double value) => value * (screenWidth / 1920);
-        double vScale(double value) => value * (screenHeight / 1080);
         return InkWell(
           onTap: () {
             context.push('/player', extra: channel);
@@ -142,7 +130,7 @@ class CategoryScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: AppTheme.cardBackground,
                       borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(scale(12)), // AppSizes.radiusMd assumed 12
+                        top: Radius.circular(context.tvSpacing(12)), // AppSizes.radiusMd assumed 12
                       ),
                     ),
                     child: Stack(
@@ -151,11 +139,11 @@ class CategoryScreen extends StatelessWidget {
                         if (channel.logoUrl != null && channel.logoUrl!.isNotEmpty)
                           ClipRRect(
                             borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(scale(12)),
+                              top: Radius.circular(context.tvSpacing(12)),
                             ),
                             child: Center(
                               child: Padding(
-                                padding: EdgeInsets.all(scale(8)), // AppSizes.sm assumed 8
+                                padding: EdgeInsets.all(context.tvSpacing(8)), // AppSizes.sm assumed 8
                                 child: CachedNetworkImage(
                                   imageUrl: channel.logoUrl!,
                                   fit: BoxFit.contain,
@@ -175,22 +163,22 @@ class CategoryScreen extends StatelessWidget {
 
                         // Live badge
                         Positioned(
-                          top: vScale(4),
-                          left: scale(4),
+                          top: context.tvSpacing(4),
+                            left: context.tvSpacing(4),
                           child: Container(
                             padding: EdgeInsets.symmetric(
-                              horizontal: scale(6),
-                              vertical: vScale(2),
+                              horizontal: context.tvSpacing(6),
+                              vertical: context.tvSpacing(2),
                             ),
                             decoration: BoxDecoration(
                               color: AppTheme.accentRed,
-                              borderRadius: BorderRadius.circular(scale(3)),
+                              borderRadius: BorderRadius.circular(context.tvSpacing(3)),
                             ),
                             child: Text(
                               'LIVE',
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: scale(8),
+                                fontSize: context.tvTextSize(8),
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -199,12 +187,12 @@ class CategoryScreen extends StatelessWidget {
 
                         // Favorite button
                         Positioned(
-                          top: vScale(4),
-                          right: scale(4),
+                          top: context.tvSpacing(4),
+                          right: context.tvSpacing(4),
                           child: IconButton(
                             icon: Icon(
                               isFavorite ? Icons.favorite : Icons.favorite_border,
-                              size: scale(16),
+                              size: context.tvIconSize(16),
                               color: isFavorite ? AppTheme.accentRed : Colors.white,
                             ),
                             onPressed: () {
@@ -225,7 +213,7 @@ class CategoryScreen extends StatelessWidget {
 
                 // Channel Info
                 Padding(
-                  padding: EdgeInsets.all(scale(4)), // AppSizes.xs assumed 4
+                  padding: EdgeInsets.all(context.tvSpacing(4)), // AppSizes.xs assumed 4
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -233,7 +221,7 @@ class CategoryScreen extends StatelessWidget {
                         channel.name,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.w600,
-                          fontSize: scale(11),
+                          fontSize: context.tvTextSize(11),
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -252,23 +240,19 @@ class CategoryScreen extends StatelessWidget {
   Widget _buildChannelPlaceholder(String name) {
     return Builder(
       builder: (context) {
-        final screenWidth = MediaQuery.of(context).size.width;
-        final screenHeight = MediaQuery.of(context).size.height;
-        double scale(double value) => value * (screenWidth / 1920);
-        double vScale(double value) => value * (screenHeight / 1080);
         return Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 Icons.live_tv,
-                size: scale(40),
+                size: context.tvIconSize(40),
                 color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
               ),
-              SizedBox(height: vScale(8)),
+              SizedBox(height: context.tvSpacing(8)),
               Text(
                 name.substring(0, name.length > 15 ? 15 : name.length),
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: scale(11)),
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: context.tvTextSize(11)),
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,

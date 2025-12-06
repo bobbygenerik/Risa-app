@@ -15,6 +15,7 @@ import 'package:iptv_player/widgets/go_to_settings_button.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/service_validator.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 /// A focused Live TV screen. Shows a hero for the currently airing program
 /// on a featured channel, plus channel rows below.
@@ -176,9 +177,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     // Focus is managed by navigation bar - don't auto-focus content
   }
   late Size _screenSize;
-  double scale(double value) => value * (_screenSize.width / 1920.0).clamp(0.7, 1.5);
-  double vScale(double value) => value * (_screenSize.height / 1080.0).clamp(0.7, 1.5);
 
+  @override
   Widget build(BuildContext context) {
     _screenSize = MediaQuery.of(context).size;
     final body = Container(
@@ -219,12 +219,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     size: 80,
                     color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
                   ),
-                  SizedBox(height: vScale(24)),
+                  SizedBox(height: context.tvSpacing(24)),
                   Text(
                     'No Live TV Available',
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
-                  SizedBox(height: vScale(8)),
+                  SizedBox(height: context.tvSpacing(8)),
                   Text(
                     'Load a playlist with Live TV channels from Settings',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -232,7 +232,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  SizedBox(height: vScale(32)),
+                  SizedBox(height: context.tvSpacing(32)),
                   GoToSettingsButton(
                     onPressed: _goToSettings,
                     focusNode: _settingsButtonFocus,
@@ -304,7 +304,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       canRequestFocus: false,
       skipTraversal: true,
       onKeyEvent: _handleDirectionalKeyEvent,
-      child: Container(
+      child: SizedBox(
         height: _screenSize.height,
         width: double.infinity,
         child: Stack(
@@ -358,21 +358,21 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 controller: _scrollController,
                 child: Padding(
                   padding: EdgeInsets.symmetric(
-                    horizontal: scale(48),
-                    vertical: vScale(80),
-                  ),
+                      horizontal: context.tvSpacing(48),
+                      vertical: context.tvSpacing(80),
+                    ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Spacer for hero area
-                      SizedBox(height: heroHeight - vScale(180)),
-                      SizedBox(height: vScale(48)),
+                      SizedBox(height: heroHeight - context.tvSpacing(180)),
+                      SizedBox(height: context.tvSpacing(48)),
                       // Channel grid sections
                       if (isGrouping && groupedChannels.isEmpty)
                         _buildCategoryLoadingIndicator()
                       else
                         ..._buildCategoryRows(context, groupedChannels),
-                      SizedBox(height: vScale(40)),
+                      SizedBox(height: context.tvSpacing(40)),
                     ],
                   ),
                 ),
@@ -395,10 +395,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
-          constraints: BoxConstraints(maxWidth: scale(250)),
+          constraints: BoxConstraints(maxWidth: context.tvSpacing(250)),
           padding: EdgeInsets.symmetric(
-            horizontal: scale(8),
-            vertical: vScale(6),
+            horizontal: context.tvSpacing(8),
+            vertical: context.tvSpacing(6),
           ),
           decoration: BoxDecoration(
             color: Colors.black.withAlpha((0.1 * 255).round()),
@@ -414,10 +414,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         children: [
           // Channel logo (smaller)
           Container(
-            width: scale(32),
-            height: vScale(32),
+            width: context.tvSpacing(32),
+            height: context.tvSpacing(32),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.5),
+              color: Colors.black.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(4),
             ),
             child: channel.logoUrl != null && channel.logoUrl!.isNotEmpty
@@ -439,7 +439,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     size: 16,
                   ),
           ),
-          SizedBox(width: scale(8)),
+          SizedBox(width: context.tvSpacing(8)),
           // Program info
           Flexible(
             child: Column(
@@ -449,8 +449,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 if (program != null)
                   Container(
                     padding: EdgeInsets.symmetric(
-                      horizontal: scale(4),
-                      vertical: vScale(1),
+                      horizontal: context.tvSpacing(4),
+                      vertical: context.tvSpacing(1),
                     ),
                     decoration: BoxDecoration(
                       color: Colors.redAccent,
@@ -460,30 +460,30 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       'LIVE',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: scale(8),
+                        fontSize: context.tvTextSize(8),
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.5,
                       ),
                     ),
                   ),
-                SizedBox(height: vScale(3)),
+                SizedBox(height: context.tvSpacing(3)),
                 Text(
                   title,
                   style: TextStyle(
                     color: AppTheme.textPrimary,
-                    fontSize: scale(13),
+                    fontSize: context.tvTextSize(13),
                     fontWeight: FontWeight.w700,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 if (timeRange.isNotEmpty) ...[
-                  SizedBox(height: vScale(1)),
+                  SizedBox(height: context.tvSpacing(1)),
                   Text(
                     timeRange,
                     style: TextStyle(
                       color: AppTheme.textSecondary,
-                      fontSize: scale(9),
+                      fontSize: context.tvTextSize(9),
                     ),
                   ),
                 ],
@@ -845,9 +845,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    _formatTime(currentProgram.startTime) +
-                                        ' — ' +
-                                        _formatTime(currentProgram.endTime),
+                                    '${_formatTime(currentProgram.startTime)} — ${_formatTime(currentProgram.endTime)}',
                                     style: const TextStyle(
                                       color: AppTheme.textSecondary,
                                       fontSize: 11,

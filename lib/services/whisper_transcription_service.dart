@@ -1,9 +1,6 @@
 import 'dart:async';
-import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 import 'package:iptv_player/services/whisper_speech_service.dart';
 
@@ -12,17 +9,17 @@ class WhisperTranscriptionService extends ChangeNotifier {
   bool _isTranscribing = false;
   bool _isTranslating = false;
   bool _isTTSEnabled = false;
-  bool _isDownloadingModels = false;
-  double _downloadProgress = 0.0;
-  bool _isLocalModelDownloading = false;
-  bool _isLocalModelDownloaded = false;
-  double _whisperDownloadProgress = 0.0;
-  String _lastError = '';
+  final bool _isDownloadingModels = false;
+  final double _downloadProgress = 0.0;
+  final bool _isLocalModelDownloading = false;
+  final bool _isLocalModelDownloaded = false;
+  final double _whisperDownloadProgress = 0.0;
+  final String _lastError = '';
   TranslateLanguage _sourceLanguage = TranslateLanguage.english;
   TranslateLanguage _targetLanguage = TranslateLanguage.spanish;
   final List<SubtitleEntry> _subtitles = [];
-  String _currentText = '';
-  String _currentTranslatedText = '';
+  final String _currentText = '';
+  final String _currentTranslatedText = '';
 
   bool get isInitialized => _isInitialized;
   bool get isTranscribing => _isTranscribing;

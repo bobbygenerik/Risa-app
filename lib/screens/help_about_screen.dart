@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 class HelpAboutScreen extends StatefulWidget {
   const HelpAboutScreen({super.key});
@@ -68,10 +69,7 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-    double scale(double value) => value * (screenWidth / 1920);
-    double vScale(double value) => value * (screenHeight / 1080);
+    // Use tv helper extensions instead of local scale functions
 
     return CompatPopScope(
       onWillPop: () async {
@@ -93,30 +91,30 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
           ),
           child: Column(
           children: [
-            _buildGlassAppBar(scale, vScale),
-            Divider(height: scale(1), color: AppTheme.darkBackgroundOpacity(0.12), thickness: scale(2)),
+            _buildGlassAppBar(),
+            Divider(height: context.tvSpacing(1), color: AppTheme.darkBackgroundOpacity(0.12), thickness: context.tvSpacing(2)),
             Expanded(
               child: Column(
                 children: [
                   // Tabs
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: scale(32), vertical: vScale(20)), // AppSizes.lg=32, md=20
+                    padding: EdgeInsets.symmetric(horizontal: context.tvSpacing(32), vertical: context.tvSpacing(20)), // AppSizes.lg=32, md=20
                     child: Row(
                       children: [
-                        _buildTab('Help', 0, scale, vScale),
-                        SizedBox(width: scale(20)),
-                        _buildTab('About', 1, scale, vScale),
-                        SizedBox(width: scale(20)),
-                        _buildTab('Shortcuts', 2, scale, vScale),
+                        _buildTab('Help', 0),
+                        SizedBox(width: context.tvSpacing(20)),
+                        _buildTab('About', 1),
+                        SizedBox(width: context.tvSpacing(20)),
+                        _buildTab('Shortcuts', 2),
                       ],
                     ),
                   ),
-                  Divider(height: scale(1), color: AppTheme.divider),
+                  Divider(height: context.tvSpacing(1), color: AppTheme.divider),
                   // Content
                   Expanded(
                     child: SingleChildScrollView(
-                      padding: EdgeInsets.all(scale(40)), // AppSizes.xl assumed 40
-                      child: _buildTabContent(scale, vScale),
+                      padding: EdgeInsets.all(context.tvSpacing(40)), // AppSizes.xl assumed 40
+                      child: _buildTabContent(),
                     ),
                   ),
                 ],
@@ -131,8 +129,8 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
 
   Widget _buildGlassAppBar() {
     return Container(
-      height: scale(64), // AppSizes.appBarHeight assumed 64
-      padding: EdgeInsets.symmetric(horizontal: scale(32), vertical: vScale(20)),
+      height: context.tvSpacing(64), // AppSizes.appBarHeight assumed 64
+      padding: EdgeInsets.symmetric(horizontal: context.tvSpacing(32), vertical: context.tvSpacing(20)),
       decoration: BoxDecoration(
         color: AppTheme.darkBackground.withAlpha((0.8 * 255).round()),
         border: Border(
@@ -141,8 +139,8 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
       ),
       child: Row(
         children: [
-          Icon(Icons.help_outline, color: AppTheme.primaryBlue, size: scale(24)),
-          SizedBox(width: scale(20)),
+          Icon(Icons.help_outline, color: AppTheme.primaryBlue, size: context.tvIconSize(24)),
+          SizedBox(width: context.tvSpacing(20)),
           Text(
             'Help & About',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -210,19 +208,19 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
             curve: TVFocusStyle.animationCurve,
             child: AnimatedContainer(
               duration: AppDurations.fast,
-              padding: EdgeInsets.symmetric(horizontal: scale(24), vertical: vScale(12)),
+                      padding: EdgeInsets.symmetric(horizontal: context.tvSpacing(24), vertical: context.tvSpacing(12)),
               decoration: BoxDecoration(
                 gradient: isSelected ? AppTheme.brandGradient : null,
                 color: isSelected ? null : Colors.transparent,
-                borderRadius: BorderRadius.circular(scale(8)),
+                borderRadius: BorderRadius.circular(context.tvSpacing(8)),
                 boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
               ),
-              child: Text(
+                child: Text(
                 label,
                 style: TextStyle(
                   color: AppTheme.textPrimary,
                   fontWeight: (isSelected || isFocused) ? FontWeight.bold : FontWeight.normal,
-                  fontSize: scale(16),
+                    fontSize: context.tvTextSize(16),
                 ),
               ),
             ),

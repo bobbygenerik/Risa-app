@@ -8,6 +8,7 @@ import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/screens/enhanced_video_player_screen.dart';
 import 'package:iptv_player/widgets/channel_selection_dialog.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 /// Multi-view screen for watching up to 4 streams simultaneously
 /// Supports 1, 2, or 4 player grid layouts with audio switching
@@ -298,10 +299,8 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-    double scale(double value) => value * (screenWidth / 1920);
-    double vScale(double value) => value * (screenHeight / 1080);
+    // Screen dimensions (unused when using tv helper methods)
+    // Legacy `scale` and `vScale` helpers removed; use tv helper extensions instead
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -312,10 +311,10 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
         child: Stack(
           children: [
             // Video grid
-            _buildVideoGrid(scale, vScale),
+            _buildVideoGrid(),
 
             // Controls overlay
-            if (_showControls) _buildControlsOverlay(scale, vScale),
+            if (_showControls) _buildControlsOverlay(),
           ],
         ),
       ),
@@ -384,7 +383,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                 child: AnimatedContainer(
                   duration: TVFocusStyle.animationDuration,
                   curve: TVFocusStyle.animationCurve,
-                  margin: EdgeInsets.all(scale(1)),
+                  margin: EdgeInsets.all(context.tvSpacing(1)),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       begin: Alignment.topLeft,
@@ -402,16 +401,16 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                       children: [
                         Icon(
                           Icons.add_circle_outline,
-                          size: scale(48),
+                          size: context.tvIconSize(48),
                           color: isFocused ? Colors.white : Colors.white54,
                         ),
-                        SizedBox(height: vScale(8)),
+                        SizedBox(height: context.tvSpacing(8)),
                         Text(
                           'Add Stream ${index + 1}',
                           style: TextStyle(
                             color: isFocused ? Colors.white : Colors.white54,
                             fontWeight: isFocused ? FontWeight.bold : FontWeight.normal,
-                            fontSize: scale(16),
+                            fontSize: context.tvTextSize(16),
                           ),
                         ),
                       ],
@@ -867,7 +866,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
     bool isDisabled = false,
     double? minWidth,
   }) {
-    final borderRadius = BorderRadius.circular(scale(18));
+    final borderRadius = BorderRadius.circular(context.tvSpacing(18));
     final gradient = isActive
         ? const LinearGradient(
             colors: [Color(0xFF0057FF), Color(0xFF00C9FF)],
@@ -899,10 +898,10 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   padding: EdgeInsets.symmetric(
-                    horizontal: scale(16),
-                    vertical: vScale(12),
+                    horizontal: context.tvSpacing(16),
+                    vertical: context.tvSpacing(12),
                   ),
-                  constraints: minWidth != null ? BoxConstraints(minWidth: scale(minWidth)) : null,
+                  constraints: minWidth != null ? BoxConstraints(minWidth: context.tvSpacing(minWidth)) : null,
                   decoration: BoxDecoration(
                     borderRadius: borderRadius,
                     gradient: gradient,
@@ -911,14 +910,14 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                       color: isFocused 
                           ? AppTheme.primaryBlue
                           : Colors.white.withValues(alpha: 0.15),
-                      width: isFocused ? scale(3) : scale(1),
+                      width: isFocused ? context.tvSpacing(3) : context.tvSpacing(1),
                     ),
                     boxShadow: isActive || isFocused
                         ? [
                             BoxShadow(
                               color: isFocused ? AppTheme.primaryBlue.withAlpha((0.6 * 255).round()) : const Color(0x550057FF),
-                              blurRadius: scale(18),
-                              offset: Offset(0, vScale(6)),
+                              blurRadius: context.tvSpacing(18),
+                              offset: Offset(0, context.tvSpacing(6)),
                             ),
                           ]
                         : null,
@@ -929,15 +928,15 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                       Icon(
                         icon,
                         color: Colors.white,
-                        size: scale(22),
+                        size: context.tvIconSize(22),
                       ),
                       if (label.isNotEmpty) ...[
-                        SizedBox(width: scale(8)),
+                        SizedBox(width: context.tvSpacing(8)),
                         Text(
                           label,
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: scale(14),
+                            fontSize: context.tvTextSize(14),
                             fontWeight: FontWeight.w500,
                           ),
                         ),

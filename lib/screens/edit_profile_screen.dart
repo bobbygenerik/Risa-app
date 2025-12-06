@@ -4,6 +4,7 @@ import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
@@ -16,9 +17,7 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-    late Size _screenSize;
-    double scale(double value) => value * (_screenSize.width / 1920.0).clamp(0.7, 1.5);
-    double vScale(double value) => value * (_screenSize.height / 1080.0).clamp(0.7, 1.5);
+    // Size _screenSize; // not needed for TV spacing helpers
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   String? _profileImagePath;
@@ -127,7 +126,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-      _screenSize = MediaQuery.of(context).size;
+      // _screenSize = MediaQuery.of(context).size; // not used because we use tv helper via context
     // Simplified layout to avoid syntax/paren mismatches during build.
     // Keeps essential fields and save functionality.
     return CompatPopScope(
@@ -155,17 +154,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           body: SafeArea(
             child: Center(
               child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: scale(640)),
+                constraints: BoxConstraints(maxWidth: context.tvSpacing(640)),
                 child: SingleChildScrollView(
                   padding: EdgeInsets.symmetric(
-                    horizontal: scale(32),
-                    vertical: vScale(48),
+                    horizontal: context.tvSpacing(32),
+                    vertical: context.tvSpacing(48),
                   ),
                   child: Container(
-                    padding: EdgeInsets.all(vScale(48)),
+                    padding: EdgeInsets.all(context.tvSpacing(48)),
                     decoration: BoxDecoration(
                       color: AppTheme.cardBackground,
-                      borderRadius: BorderRadius.circular(scale(32)),
+                      borderRadius: BorderRadius.circular(context.tvSpacing(32)),
                       border: Border.all(color: AppTheme.divider),
                     ),
                     child: Column(
@@ -176,13 +175,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           child: GestureDetector(
                             onTap: _pickProfileImage,
                             child: CircleAvatar(
-                              radius: scale(72),
+                              radius: context.tvSpacing(72),
                               backgroundColor: AppTheme.highlight,
                               backgroundImage: _profileImagePath != null
                                   ? FileImage(File(_profileImagePath!))
                                   : null,
-                              child: _profileImagePath == null
-                                  ? const Icon(Icons.person, size: 72, color: AppTheme.primaryBlue)
+                                child: _profileImagePath == null
+                                  ? Icon(Icons.person, size: context.tvIconSize(72), color: AppTheme.primaryBlue)
                                   : null,
                             ),
                           ),

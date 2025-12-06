@@ -263,7 +263,7 @@ class XtreamCodesService {
         : null;
 
     if (cover != null || backdropUrl != null) {
-      debugPrint('Series \"${data['name']}\": cover=$cover, backdropUrl=$backdropUrl');
+      debugPrint('Series "${data['name']}": cover=$cover, backdropUrl=$backdropUrl');
     }
 
     return Content(

@@ -6,6 +6,7 @@ import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 class ContentDetailScreen extends StatefulWidget {
   final Content content;
@@ -21,10 +22,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-    double scale(double value) => value * (screenWidth / 1920);
-    double vScale(double value) => value * (screenHeight / 1080);
+    // Use TV spacing helpers
 
     return Scaffold(
       backgroundColor: const Color(0xFF050710),
@@ -32,9 +30,9 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeroBanner(scale, vScale),
-            _buildContentInfo(scale, vScale),
-            _buildSeasonSelector(scale, vScale),
+            _buildHeroBanner(),
+            _buildContentInfo(),
+            _buildSeasonSelector(),
             _buildMoreLikeThis(),
           ],
         ),
@@ -48,7 +46,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
       children: [
         // Background image
         Container(
-          height: vScale(600),
+          height: context.tvSpacing(600),
           width: double.infinity,
           decoration: const BoxDecoration(color: AppTheme.cardBackground),
           child: heroImage != null
@@ -58,7 +56,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                     Image.network(
                       heroImage,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _buildHeroPlaceholder(scale, vScale),
+                      errorBuilder: (_, __, ___) => _buildHeroPlaceholder(),
                     ),
                     Container(
                       decoration: const BoxDecoration(
@@ -71,7 +69,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                     ),
                   ],
                 )
-              : _buildHeroPlaceholder(scale, vScale),
+              : _buildHeroPlaceholder(),
         ),
 
         // Top navigation - transparent with safe area
@@ -81,7 +79,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
           right: 0,
           child: SafeArea(
             child: Padding(
-              padding: EdgeInsets.all(scale(20)), // AppSizes.md assumed 20
+              padding: EdgeInsets.all(context.tvSpacing(20)), // AppSizes.md assumed 20
               child: Row(
                 children: [
                   Container(
@@ -93,7 +91,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                       icon: Icon(
                         Icons.arrow_back,
                         color: AppTheme.textPrimary,
-                        size: scale(24),
+                        size: context.tvIconSize(24),
                       ),
                       onPressed: () => Navigator.pop(context),
                     ),
@@ -111,7 +109,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
           left: 0,
           right: 0,
           child: Padding(
-            padding: EdgeInsets.all(scale(40)), // AppSizes.xxl assumed 40
+            padding: EdgeInsets.all(context.tvSpacing(40)), // AppSizes.xxl assumed 40
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -120,23 +118,23 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                   widget.content.title,
                   style: Theme.of(context).textTheme.displayLarge?.copyWith(
                     fontWeight: FontWeight.bold,
-                    fontSize: scale(56),
+                    fontSize: context.tvTextSize(56),
                     shadows: [
                       Shadow(
                         color: Colors.black.withAlpha((0.8 * 255).round()),
-                        offset: Offset(scale(2), vScale(2)),
-                        blurRadius: scale(8),
+                        offset: Offset(context.tvSpacing(2), context.tvSpacing(2)),
+                        blurRadius: context.tvSpacing(8),
                       ),
                     ],
                   ),
                 ),
 
-                SizedBox(height: vScale(20)),
+                SizedBox(height: context.tvSpacing(20)),
 
                 // Metadata
-                _buildMetadataRow(scale, vScale),
+                _buildMetadataRow(),
 
-                SizedBox(height: vScale(40)),
+                SizedBox(height: context.tvSpacing(40)),
 
                 // Action buttons
                 Row(
@@ -167,7 +165,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                       },
                     ),
 
-                    SizedBox(width: scale(20)),
+                    SizedBox(width: context.tvSpacing(20)),
 
                     // My List button
                     Consumer<ContentProvider>(
@@ -177,8 +175,8 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                           onPressed: () async {
                             await contentProvider.toggleFavorite(widget.content.id);
                           },
-                          icon: Icon(isInMyList ? Icons.check : Icons.add, size: scale(24)),
-                          label: Text('My List', style: TextStyle(fontSize: scale(16))),
+                          icon: Icon(isInMyList ? Icons.check : Icons.add, size: context.tvIconSize(24)),
+                          label: Text('My List', style: TextStyle(fontSize: context.tvTextSize(16))),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppTheme.textPrimary,
                             side: BorderSide(
@@ -187,15 +185,15 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                               ),
                             ),
                             padding: EdgeInsets.symmetric(
-                              horizontal: scale(32),
-                              vertical: vScale(20),
+                              horizontal: context.tvSpacing(32),
+                              vertical: context.tvSpacing(20),
                             ),
                           ),
                         );
                       },
                     ),
 
-                    SizedBox(width: scale(20)),
+                    SizedBox(width: context.tvSpacing(20)),
 
                     // Download button
                     OutlinedButton.icon(
@@ -206,9 +204,9 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                       },
                       icon: Icon(
                         _isDownloaded ? Icons.download_done : Icons.download,
-                        size: scale(24),
+                        size: context.tvIconSize(24),
                       ),
-                      label: Text(_isDownloaded ? 'Downloaded' : 'Download', style: TextStyle(fontSize: scale(16))),
+                      label: Text(_isDownloaded ? 'Downloaded' : 'Download', style: TextStyle(fontSize: context.tvTextSize(16))),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppTheme.textPrimary,
                         side: BorderSide(
@@ -217,8 +215,8 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                           ),
                         ),
                         padding: EdgeInsets.symmetric(
-                          horizontal: scale(32),
-                          vertical: vScale(20),
+                          horizontal: context.tvSpacing(32),
+                          vertical: context.tvSpacing(20),
                         ),
                       ),
                     ),

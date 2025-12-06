@@ -18,6 +18,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -27,9 +28,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProviderStateMixin {
-  late Size _screenSize;
-  double scale(double value) => value * (_screenSize.width / 1920.0).clamp(0.7, 1.5);
-  double vScale(double value) => value * (_screenSize.height / 1080.0).clamp(0.7, 1.5);
   TabController? _tabController;
 
   // Playlist Settings - Late initialization to avoid memory issues
@@ -349,7 +347,6 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
 
   @override
   Widget build(BuildContext context) {
-      _screenSize = MediaQuery.of(context).size;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: PopScope(
@@ -435,7 +432,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     ];
 
     return Container(
-      width: scale(220),
+      width: context.tvSpacing(220),
       decoration: BoxDecoration(
         color: Colors.white.withAlpha((0.05 * 255).round()),
         border: Border(
@@ -449,8 +446,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
         children: [
           // Settings header
           Container(
-            height: vScale(64),
-            padding: EdgeInsets.symmetric(horizontal: scale(16)),
+            height: context.tvSpacing(64),
+            padding: EdgeInsets.symmetric(horizontal: context.tvSpacing(16)),
             alignment: Alignment.centerLeft,
             decoration: const BoxDecoration(
               border: Border(
@@ -512,7 +509,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
                         return Container(
-                          margin: EdgeInsets.symmetric(horizontal: scale(8), vertical: vScale(4)),
+                          margin: EdgeInsets.symmetric(horizontal: context.tvSpacing(8), vertical: context.tvSpacing(4)),
                           decoration: BoxDecoration(
                             color: isSelected
                                 ? AppTheme.primaryBlue.withAlpha((0.3 * 255).round())
@@ -523,14 +520,14 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                                   : (isSelected
                                       ? AppTheme.primaryBlue.withAlpha((0.5 * 255).round())
                                       : Colors.transparent),
-                              width: isFocused ? scale(2.0) : scale(1.5),
+                              width: isFocused ? context.tvSpacing(2.0) : context.tvSpacing(1.5),
                             ),
-                            borderRadius: BorderRadius.circular(scale(12)),
+                            borderRadius: BorderRadius.circular(context.tvSpacing(12)),
                           ),
                           child: Padding(
                             padding: EdgeInsets.symmetric(
-                              horizontal: scale(12),
-                              vertical: vScale(12),
+                              horizontal: context.tvSpacing(12),
+                              vertical: context.tvSpacing(12),
                             ),
                             child: Row(
                               children: [
@@ -539,9 +536,9 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                                   color: (isFocused || isSelected)
                                       ? AppTheme.primaryBlue
                                       : AppTheme.textSecondary,
-                                  size: scale(20),
+                                  size: context.tvIconSize(20),
                                 ),
-                                SizedBox(width: scale(12)),
+                                SizedBox(width: context.tvSpacing(12)),
                                 Expanded(
                                   child: Text(
                                     item['title'] as String,
@@ -549,7 +546,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                                       color: (isFocused || isSelected)
                                         ? AppTheme.textPrimary
                                         : AppTheme.textSecondary,
-                                      fontSize: scale(16),
+                                      fontSize: context.tvTextSize(16),
                                       fontWeight: (isFocused || isSelected)
                                         ? FontWeight.w600
                                         : FontWeight.w500,

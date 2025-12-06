@@ -1,5 +1,6 @@
 // ignore_for_file: todo
 import 'package:flutter/material.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -183,10 +184,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-    double scale(double value) => value * (screenWidth / 1920);
-    double vScale(double value) => value * (screenHeight / 1080);
+    // final screenWidth = MediaQuery.of(context).size.width;
 
     return CompatPopScope(
       onWillPop: () async {
@@ -208,9 +206,9 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
           ),
           child: Column(
           children: [
-            _buildGlassAppBar(scale, vScale),
-            Divider(height: scale(1), color: AppTheme.darkBackgroundOpacity(0.12), thickness: scale(2)),
-            Expanded(child: _buildContent(scale, vScale)),
+            _buildGlassAppBar(),
+            Divider(height: context.tvSpacing(1), color: AppTheme.darkBackgroundOpacity(0.12), thickness: context.tvSpacing(2)),
+            Expanded(child: _buildContent()),
           ],
         ),
       ),
@@ -220,8 +218,8 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
 
   Widget _buildGlassAppBar() {
     return Container(
-      height: scale(64), // AppSizes.appBarHeight assumed 64
-      padding: EdgeInsets.symmetric(horizontal: scale(32), vertical: vScale(20)), // AppSizes.lg=32, md=20
+      height: context.tvSpacing(64), // AppSizes.appBarHeight assumed 64
+      padding: EdgeInsets.symmetric(horizontal: context.tvSpacing(32), vertical: context.tvSpacing(20)), // AppSizes.lg=32, md=20
       decoration: BoxDecoration(
         color: Colors.white.withAlpha((0.08 * 255).round()),
         border: Border(
@@ -230,8 +228,8 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
       ),
       child: Row(
         children: [
-          Icon(Icons.fiber_manual_record, color: AppTheme.accentRed, size: scale(24)),
-          SizedBox(width: scale(20)), // AppSizes.md assumed 20
+          Icon(Icons.fiber_manual_record, color: AppTheme.accentRed, size: context.tvIconSize(24)),
+          SizedBox(width: context.tvSpacing(20)), // AppSizes.md assumed 20
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
@@ -246,7 +244,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
                 Text(
                   path.basename(_storagePath!),
                   style: TextStyle(
-                    fontSize: scale(11),
+                    fontSize: context.tvTextSize(11),
                     color: AppTheme.textSecondary,
                   ),
                 ),
@@ -254,10 +252,10 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
           ),
           const Spacer(),
           IconButton(
-            icon: Icon(Icons.refresh, color: AppTheme.primaryBlue, size: scale(24)),
+            icon: Icon(Icons.refresh, color: AppTheme.primaryBlue, size: context.tvIconSize(24)),
             onPressed: _loadRecordings,
           ),
-          SizedBox(width: scale(8)), // AppSizes.sm assumed 8
+          SizedBox(width: context.tvSpacing(8)), // AppSizes.sm assumed 8
           Text(
             _formatTime(_currentTime),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -276,7 +274,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircularProgressIndicator(),
-            SizedBox(height: vScale(16)),
+            SizedBox(height: context.tvSpacing(16)),
             Text('Loading recordings...'),
           ],
         ),
@@ -292,34 +290,34 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
               _storagePath == null
                   ? Icons.settings_outlined
                   : Icons.folder_off_outlined,
-              size: scale(80),
+              size: context.tvIconSize(80),
               color: AppTheme.textSecondary,
             ),
-            SizedBox(height: vScale(16)),
+            SizedBox(height: context.tvSpacing(16)),
             Text(
               _errorMessage!,
               style: TextStyle(
-                fontSize: scale(16),
+                fontSize: context.tvTextSize(16),
                 color: AppTheme.textSecondary,
               ),
             ),
-            SizedBox(height: vScale(24)),
+            SizedBox(height: context.tvSpacing(24)),
             Focus(
               child: Builder(
                 builder: (context) {
                   final hasFocus = Focus.of(context).hasFocus;
                   return Container(
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(scale(8)),
+                      borderRadius: BorderRadius.circular(context.tvSpacing(8)),
                       border: hasFocus
-                          ? Border.all(color: AppTheme.primaryBlue, width: scale(3))
+                          ? Border.all(color: AppTheme.primaryBlue, width: context.tvSpacing(3))
                           : null,
                       boxShadow: hasFocus
                           ? [
                               BoxShadow(
                                 color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
-                                blurRadius: scale(12),
-                                spreadRadius: scale(2),
+                                blurRadius: context.tvSpacing(12),
+                                spreadRadius: context.tvSpacing(2),
                               ),
                             ]
                           : null,
@@ -328,8 +326,8 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
                       onPressed: () {
                         context.go('/settings');
                       },
-                      icon: Icon(Icons.settings, size: scale(24)),
-                      label: Text('Go to Settings', style: TextStyle(fontSize: scale(16))),
+                      icon: Icon(Icons.settings, size: context.tvIconSize(24)),
+                      label: Text('Go to Settings', style: TextStyle(fontSize: context.tvTextSize(16))),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryBlue,
                       ),
@@ -338,13 +336,13 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
                 },
               ),
             ),
-            SizedBox(height: vScale(16)),
+            SizedBox(height: context.tvSpacing(16)),
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: scale(48)),
+              padding: EdgeInsets.symmetric(horizontal: context.tvSpacing(48)),
               child: Text(
                 'Configure your recording storage location in Settings > EPG & Recordings',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: scale(12), color: AppTheme.textTertiary),
+                style: TextStyle(fontSize: context.tvTextSize(12), color: AppTheme.textTertiary),
               ),
             ),
           ],
@@ -359,18 +357,18 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
           children: [
             Icon(
               Icons.movie_outlined,
-              size: scale(80),
+              size: context.tvIconSize(80),
               color: AppTheme.textSecondary,
             ),
-            SizedBox(height: vScale(16)),
+            SizedBox(height: context.tvSpacing(16)),
             Text(
               'No recordings found',
-              style: TextStyle(fontSize: scale(16), color: AppTheme.textSecondary),
+              style: TextStyle(fontSize: context.tvTextSize(16), color: AppTheme.textSecondary),
             ),
-            SizedBox(height: vScale(8)),
+            SizedBox(height: context.tvSpacing(8)),
             Text(
               'Recordings will appear here once you record from the EPG',
-              style: TextStyle(fontSize: scale(12), color: AppTheme.textTertiary),
+              style: TextStyle(fontSize: context.tvTextSize(12), color: AppTheme.textTertiary),
               textAlign: TextAlign.center,
             ),
           ],
@@ -379,7 +377,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
     }
 
     return ListView.builder(
-      padding: EdgeInsets.all(scale(16)),
+      padding: EdgeInsets.all(context.tvSpacing(16)),
       itemCount: _recordings.length,
       itemBuilder: (context, index) {
         final file = _recordings[index];
@@ -389,58 +387,58 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
         final modifiedDate = stat.modified;
 
         return Card(
-          margin: EdgeInsets.only(bottom: scale(12)),
+          margin: EdgeInsets.only(bottom: context.tvSpacing(12)),
           child: ListTile(
-            contentPadding: EdgeInsets.all(scale(16)),
+            contentPadding: EdgeInsets.all(context.tvSpacing(16)),
             leading: Container(
-              width: scale(80),
-              height: vScale(60),
+              width: context.tvSpacing(80),
+              height: context.tvSpacing(60),
               decoration: BoxDecoration(
                 color: AppTheme.sidebarBackground,
-                borderRadius: BorderRadius.circular(scale(8)),
+                borderRadius: BorderRadius.circular(context.tvSpacing(8)),
               ),
               child: Icon(
                 Icons.movie,
                 color: AppTheme.primaryBlue,
-                size: scale(32),
+                size: context.tvIconSize(32),
               ),
             ),
             title: Text(
               fileName,
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: scale(16)),
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: context.tvTextSize(16)),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(height: vScale(8)),
+                SizedBox(height: context.tvSpacing(8)),
                 Row(
                   children: [
                     Icon(
                       Icons.storage,
-                      size: scale(14),
+                      size: context.tvIconSize(14),
                       color: AppTheme.textTertiary,
                     ),
-                    SizedBox(width: scale(4)),
+                    SizedBox(width: context.tvSpacing(4)),
                     Text(
                       fileSize,
                       style: TextStyle(
-                        fontSize: scale(12),
+                        fontSize: context.tvTextSize(12),
                         color: AppTheme.textSecondary,
                       ),
                     ),
-                    SizedBox(width: scale(16)),
+                    SizedBox(width: context.tvSpacing(16)),
                     Icon(
                       Icons.access_time,
-                      size: scale(14),
+                      size: context.tvIconSize(14),
                       color: AppTheme.textTertiary,
                     ),
-                    SizedBox(width: scale(4)),
+                    SizedBox(width: context.tvSpacing(4)),
                     Text(
                       '${modifiedDate.day}/${modifiedDate.month}/${modifiedDate.year} ${modifiedDate.hour}:${modifiedDate.minute.toString().padLeft(2, '0')}',
                       style: TextStyle(
-                        fontSize: scale(12),
+                        fontSize: context.tvTextSize(12),
                         color: AppTheme.textSecondary,
                       ),
                     ),
@@ -455,7 +453,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
                   icon: Icon(
                     Icons.play_arrow,
                     color: AppTheme.primaryBlue,
-                    size: scale(24),
+                    size: context.tvIconSize(24),
                   ),
                   onPressed: () {
                     // TODO: Play recording
@@ -470,7 +468,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
                   icon: Icon(
                     Icons.delete_outline,
                     color: AppTheme.accentRed,
-                    size: scale(24),
+                    size: context.tvIconSize(24),
                   ),
                   onPressed: () => _deleteRecording(file),
                   tooltip: 'Delete',

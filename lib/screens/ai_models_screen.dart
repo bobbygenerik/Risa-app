@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iptv_player/services/ai_model_manager.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
 

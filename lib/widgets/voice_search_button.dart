@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/services/voice_search_service.dart';
@@ -69,11 +70,11 @@ class _VoiceSearchButtonState extends State<VoiceSearchButton>
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+        builder: (context) => AlertDialog(
         backgroundColor: AppTheme.dialogBackground,
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.search, color: AppTheme.primaryBlue, size:  context.tvIconSize(24)),
+            Icon(Icons.search, color: AppTheme.primaryBlue, size: context.tvIconSize(24)),
             SizedBox(width: context.tvSpacing(AppSizes.sm)),
             Text('Search Results', style: TextStyle(fontSize: context.tvTextSize(16))),
           ],
