@@ -301,11 +301,6 @@ class ChannelProvider with ChangeNotifier {
   Future<void> autoLoadPlaylist() async {
     if (_hasLoadedPlaylist) return; // Already loaded
 
-    // Set loading immediately so UI shows loading state
-    // Use Future.microtask to avoid calling notifyListeners during build
-    _isLoading = true;
-    Future.microtask(() => notifyListeners());
-
     StartupProbe.mark('ChannelProvider.autoLoadPlaylist invoked');
     await _loadWatchCounts();
     debugPrint('ChannelProvider: Auto-loading playlist...');
@@ -313,8 +308,6 @@ class ChannelProvider with ChangeNotifier {
     final playlistType = prefs.getString('playlist_type');
 
     if (playlistType == null) {
-      _isLoading = false;
-      Future.microtask(() => notifyListeners());
       StartupProbe.mark('ChannelProvider.autoLoadPlaylist: no saved playlist');
       debugPrint('ChannelProvider: No saved playlist found');
       if (_channelMaps.isNotEmpty || _moviesCount > 0 || _seriesCount > 0) {
@@ -325,7 +318,7 @@ class ChannelProvider with ChangeNotifier {
         _moviesCachePath = null;
         _seriesCachePath = null;
         _cachedCategories = null;
-        Future.microtask(() => notifyListeners());
+        notifyListeners();
       }
       // Ensure stale cache does not resurrect old playlists when none are saved
       await prefs.remove('cached_playlist');
@@ -350,6 +343,12 @@ class ChannelProvider with ChangeNotifier {
           debugPrint('ChannelProvider: Loading from pre-parsed JSON cache...');
           final cacheLoadStart = DateTime.now();
           
+          // Notify UI immediately that we're loading
+          _isLoading = true;
+          _hasLoadedPlaylist = true;
+          notifyListeners();
+          
+          // Load in background without blocking
           final jsonString = await jsonCacheFile.readAsString();
           final parsed = json.decode(jsonString) as Map<String, dynamic>;
           
@@ -359,7 +358,6 @@ class ChannelProvider with ChangeNotifier {
           _channelCache.clear();
           
           // Store VOD counts only - save full data to separate files for lazy loading
-          final dir = await getApplicationDocumentsDirectory();
           final List<dynamic> movies = parsed['movies'] as List<dynamic>;
           final List<dynamic> series = parsed['series'] as List<dynamic>;
           
@@ -375,17 +373,18 @@ class ChannelProvider with ChangeNotifier {
           _cachedCategories = null;
           _computeCategoriesAsync();
           
-          // Load only first batch of VOD for ContentProvider (pagination)
-          if (_contentProvider != null) {
-            final firstMovies = await getMovies(limit: 100);
-            final firstSeries = await getSeries(limit: 100);
-            _contentProvider!.loadMovies(firstMovies);
-            _contentProvider!.loadSeries(firstSeries);
-          }
-          
           _isLoading = false;
-          _hasLoadedPlaylist = true;
           notifyListeners();
+          
+          // Load VOD in background after channels are ready
+          if (_contentProvider != null) {
+            Future.microtask(() async {
+              final firstMovies = await getMovies(limit: 100);
+              final firstSeries = await getSeries(limit: 100);
+              _contentProvider!.loadMovies(firstMovies);
+              _contentProvider!.loadSeries(firstSeries);
+            });
+          }
           
           final totalCacheLoad = DateTime.now().difference(cacheLoadStart);
           debugPrint('ChannelProvider: JSON cache loaded in ${totalCacheLoad.inMilliseconds}ms with ${_channelMaps.length} channels, $_moviesCount movies, $_seriesCount series');
@@ -404,6 +403,11 @@ class ChannelProvider with ChangeNotifier {
         if (await file.exists()) {
           debugPrint('ChannelProvider: Loading from M3U file cache (streaming parser)...');
           final cacheLoadStart = DateTime.now();
+          
+          // Notify UI immediately
+          _isLoading = true;
+          _hasLoadedPlaylist = true;
+          notifyListeners();
           
           // Parse from file in isolate to avoid blocking main thread and OOM
           final parseStart = DateTime.now();
@@ -438,19 +442,22 @@ class ChannelProvider with ChangeNotifier {
           // Trigger async category extraction in background (non-blocking)
           _computeCategoriesAsync();
           
+          _isLoading = false;
+          notifyListeners();
+          
+          // Load VOD in background
           if (_contentProvider != null) {
-            final firstMovies = await getMovies(limit: 100);
-            final firstSeries = await getSeries(limit: 100);
-            _contentProvider!.loadMovies(firstMovies);
-            _contentProvider!.loadSeries(firstSeries);
+            Future.microtask(() async {
+              final firstMovies = await getMovies(limit: 100);
+              final firstSeries = await getSeries(limit: 100);
+              _contentProvider!.loadMovies(firstMovies);
+              _contentProvider!.loadSeries(firstSeries);
+            });
           }
           
-          // Save to JSON cache for faster loading next time
-          _saveJsonCache(parsed);
+          // Save to JSON cache for faster loading next time (in background)
+          Future.microtask(() => _saveJsonCache(parsed));
           
-          _isLoading = false;
-          _hasLoadedPlaylist = true;
-          notifyListeners();
           final totalCacheLoad = DateTime.now().difference(cacheLoadStart);
           debugPrint('ChannelProvider: File cache loaded in ${totalCacheLoad.inMilliseconds}ms with ${_channelMaps.length} channels');
           StartupProbe.mark('ChannelProvider.autoLoadPlaylist: file cache load finished');

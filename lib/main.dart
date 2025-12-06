@@ -502,11 +502,11 @@ class _MyAppState extends State<MyApp> {
           ChangeNotifierProxyProvider<ContentProvider, ChannelProvider>(
             create: (context) {
               final provider = ChannelProvider();
-              // Auto-load playlist after a short delay to ensure initialization
+              // Defer playlist loading until after first frame is rendered
               if (_hasPlaylist) {
                 _runDeferred(
                   provider.autoLoadPlaylist,
-                  delay: const Duration(milliseconds: 500),
+                  delay: const Duration(milliseconds: 1500),
                 );
               } else {
                 StartupProbe.mark(

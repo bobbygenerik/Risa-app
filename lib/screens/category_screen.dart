@@ -7,18 +7,35 @@ import 'package:iptv_player/utils/app_theme.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/services/epg_service.dart';
+import 'package:iptv_player/services/tmdb_service.dart';
+import 'package:iptv_player/services/service_validator.dart';
 
-class CategoryScreen extends StatelessWidget {
+class CategoryScreen extends StatefulWidget {
   final String category;
 
   const CategoryScreen({super.key, required this.category});
+
+  @override
+  State<CategoryScreen> createState() => _CategoryScreenState();
+}
+
+class _CategoryScreenState extends State<CategoryScreen> {
+  final Map<String, String?> _programArtwork = {};
+  final Set<String> _artworkRequests = {};
+  late final bool _tmdbEnabled;
+
+  @override
+  void initState() {
+    super.initState();
+    _tmdbEnabled = ServiceValidator.isTmdbAvailable;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<ChannelProvider>(
       builder: (context, channelProvider, child) {
         // Get total count without converting all channels
-        final totalCount = channelProvider.getChannelCountForCategory(category);
+        final totalCount = channelProvider.getChannelCountForCategory(widget.category);
 
         return Padding(
           padding: EdgeInsets.all(context.tvSpacing(32)), // AppSizes.lg assumed 32
@@ -34,7 +51,7 @@ class CategoryScreen extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    category,
+                    widget.category,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -64,7 +81,7 @@ class CategoryScreen extends StatelessWidget {
                         itemCount: totalCount,
                         itemBuilder: (context, index) {
                           // Lazy load channel at this index
-                          final channel = channelProvider.getChannelInCategoryAtIndex(category, index);
+                          final channel = channelProvider.getChannelInCategoryAtIndex(widget.category, index);
                           if (channel == null) {
                             return const SizedBox.shrink();
                           }
@@ -115,7 +132,17 @@ class CategoryScreen extends StatelessWidget {
     final isFavorite = channelProvider.isFavorite(channel);
     final epgService = Provider.of<EpgService>(context, listen: false);
     final currentProgram = epgService.getCurrentProgram(channel.tvgId ?? channel.id, channelName: channel.name);
-    final programImage = currentProgram?.imageUrl;
+    
+    // Try EPG image first, then TMDB fallback
+    String? programImage = currentProgram?.imageUrl;
+    if ((programImage == null || programImage.isEmpty) && currentProgram != null && _tmdbEnabled) {
+      final cacheKey = 'program_${currentProgram.id}';
+      if (_programArtwork.containsKey(cacheKey)) {
+        programImage = _programArtwork[cacheKey];
+      } else if (!_artworkRequests.contains(cacheKey)) {
+        _fetchProgramArtwork(currentProgram);
+      }
+    }
 
     return Builder(
       builder: (context) {
@@ -290,7 +317,34 @@ class CategoryScreen extends StatelessWidget {
             ],
           ),
         );
+
       },
     );
+  }
+
+  Future<void> _fetchProgramArtwork(Program program) async {
+    final cacheKey = 'program_${program.id}';
+    if (_artworkRequests.contains(cacheKey)) return;
+    _artworkRequests.add(cacheKey);
+    
+    try {
+      debugPrint('CategoryScreen: Fetching TMDB art for: "${program.title}"');
+      final image = await TMDBService.getBestBackdrop(program.title);
+      if (mounted) {
+        if (image != null) {
+          debugPrint('CategoryScreen: Found TMDB art for "${program.title}"');
+        }
+        setState(() {
+          _programArtwork[cacheKey] = image ?? '';
+        });
+      }
+    } catch (e) {
+      debugPrint('CategoryScreen: Error fetching TMDB art: $e');
+      if (mounted) {
+        setState(() {
+          _programArtwork[cacheKey] = '';
+        });
+      }
+    }
   }
 }
