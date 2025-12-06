@@ -15,6 +15,9 @@
     <uses-feature android:name="android.software.leanback" android:required="false"/>
     <uses-feature android:name="android.hardware.microphone" android:required="false"/>
     
+    <!-- Android Auto Features -->
+    <uses-feature android:name="android.hardware.type.automotive" android:required="false"/>
+    
     <application
         android:label="Risa"
         android:name="${applicationName}"
@@ -63,6 +66,20 @@
         <meta-data
             android:name="com.google.android.gms.version"
             android:value="@integer/google_play_services_version" />
+            
+        <!-- Android Auto Media Browser Service -->
+        <service
+            android:name=".AutoMediaService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.media.browse.MediaBrowserService" />
+            </intent-filter>
+        </service>
+        
+        <!-- Android Auto metadata -->
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
     </application>
     
     <!-- Query intents for text processing -->
