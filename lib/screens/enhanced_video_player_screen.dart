@@ -909,19 +909,16 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         return const Center(child: CircularProgressIndicator());
       }
       if (_nativeExoAvailable) {
-        return AspectRatio(
-          aspectRatio: 16 / 9,
-          child: NativeExoPlayer(
-            videoUrl: widget.videoUrl,
-            autoPlay: true,
-            onCreated: (controller) {
-              // Keep selected audio track in sync if needed and retain controller
-              _nativeController = controller;
-              if (_selectedAudioTrack != 0) {
-                controller.switchAudioTrack(_selectedAudioTrack);
-              }
-            },
-          ),
+        return NativeExoPlayer(
+          videoUrl: widget.videoUrl,
+          autoPlay: true,
+          onCreated: (controller) {
+            // Keep selected audio track in sync if needed and retain controller
+            _nativeController = controller;
+            if (_selectedAudioTrack != 0) {
+              controller.switchAudioTrack(_selectedAudioTrack);
+            }
+          },
         );
       }
     }

@@ -610,16 +610,8 @@ class _MyAppState extends State<MyApp> {
                 final media = MediaQuery.of(context);
                 final resolvedChild = child ?? const SizedBox.shrink();
                 _maybePromptForProfile(profileProvider);
-                // Scale entire UI to 125% (make screen appear larger) to fit more content
-                // This makes widgets think the screen is 25% bigger, so they render smaller
-                final scaledSize = media.size * 1.25;
-                final mediaData = media.copyWith(
-                  size: scaledSize,
-                  // Also scale text to 85%
-                  // ignore: deprecated_member_use
-                  textScaleFactor: 0.85,
-                );
-                return MediaQuery(data: mediaData, child: resolvedChild);
+                // No scaling - use native screen size
+                return MediaQuery(data: media, child: resolvedChild);
               },
             );
           },
