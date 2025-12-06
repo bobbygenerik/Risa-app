@@ -176,13 +176,10 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
         body: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF050710),
-                  Color(0xFF0d1140),
-                ],
-              )
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF050710), Color(0xFF0d1140)],
+            ),
           ),
           child: Column(
           children: [

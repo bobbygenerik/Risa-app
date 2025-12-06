@@ -1,4 +1,3 @@
-
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -243,7 +242,6 @@ class ChannelProvider with ChangeNotifier {
       final jsonStr = await file.readAsString();
       final List<dynamic> allSeries = json.decode(jsonStr);
       
-      final end = (offset + limit).clamp(0, allSeries.length);
       return allSeries
           .skip(offset)
           .take(limit)
@@ -1300,19 +1298,6 @@ class ChannelProvider with ChangeNotifier {
     } catch (e) {
       debugPrint('ChannelProvider: Error saving enriched content: $e');
     }
-  }
-}
-
-// SSL bypass for IPTV providers with certificate issues
-class _MyHttpOverrides extends HttpOverrides {
-  @override
-  HttpClient createHttpClient(SecurityContext? context) {
-    return super.createHttpClient(context)
-      ..badCertificateCallback = (X509Certificate cert, String host, int port) {
-        // Allow all certificates - WARNING: Only use for IPTV providers you trust!
-        debugPrint('SSL: Accepting certificate for $host:$port');
-        return true;
-      };
   }
 }
 

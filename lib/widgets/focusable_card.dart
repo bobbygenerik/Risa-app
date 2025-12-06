@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 /// Wrapper widget that provides consistent focus animations for TV cards.
 class FocusableCard extends StatefulWidget {
@@ -73,43 +74,31 @@ class _FocusableCardState extends State<FocusableCard> {
         return KeyEventResult.ignored;
       },
       child: AnimatedScale(
-        scale: _isFocused ? 1.08 : 1.0,
+        scale: _isFocused ? context.tvSpacing(1.08) : 1.0,
         duration: widget.animationDuration,
         curve: Curves.easeOut,
         child: AnimatedContainer(
           duration: widget.animationDuration,
-          width: widget.width,
-          height: widget.height,
           margin: widget.margin,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(widget.borderRadius),
+            borderRadius: BorderRadius.circular(context.tvSpacing(widget.borderRadius)),
             border: Border.all(
-              color: _isFocused
-                  ? widget.focusBorderColor
-                  : widget.idleBorderColor,
-              width: _isFocused
-                  ? widget.focusBorderWidth
-                  : widget.idleBorderWidth,
+              color: _isFocused ? widget.focusBorderColor : widget.idleBorderColor,
+              width: _isFocused ? context.tvSpacing(widget.focusBorderWidth) : context.tvSpacing(widget.idleBorderWidth),
             ),
             boxShadow: _isFocused
-                ? widget.focusedBoxShadow ?? _defaultShadow
-                : const [],
+                ? (widget.focusedBoxShadow ?? [
+                    BoxShadow(
+                      color: widget.focusBorderColor.withAlpha(80),
+                      blurRadius: context.tvSpacing(24),
+                      spreadRadius: context.tvSpacing(2),
+                    ),
+                  ])
+                : null,
           ),
-          child: InkWell(
-            onTap: widget.onTap,
-            borderRadius: BorderRadius.circular(widget.borderRadius),
-            child: widget.child,
-          ),
+          child: widget.child,
         ),
       ),
     );
   }
-
-  List<BoxShadow> get _defaultShadow => [
-    BoxShadow(
-      color: AppTheme.primaryBlueOpacity(0.6),
-      blurRadius: 24,
-      spreadRadius: 4,
-    ),
-  ];
 }

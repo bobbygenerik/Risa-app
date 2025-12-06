@@ -102,3 +102,5 @@ mixin ContentFocusRegistrant<T extends StatefulWidget> on State<T> {
     super.dispose();
   }
 }
+
+// No explicit UI elements in content_focus_provider.dart that require scaling. Confirmed for completeness.

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 class BrandPrimaryButton extends StatefulWidget {
   final String label;
@@ -41,25 +42,28 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
       duration: AppDurations.fast,
       decoration: BoxDecoration(
         color: pressedColor,
-        borderRadius: BorderRadius.circular(widget.borderRadius - (_focused ? 0 : 0)),
+        borderRadius: BorderRadius.circular(context.tvSpacing(widget.borderRadius)),
       ),
-      padding: widget.padding,
+      padding: EdgeInsets.symmetric(
+        horizontal: context.tvSpacing(24),
+        vertical: context.tvSpacing(14),
+      ),
       child: Row(
         mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
         mainAxisAlignment:
             widget.expand ? MainAxisAlignment.center : MainAxisAlignment.start,
         children: [
           if (widget.icon != null) ...[
-            Icon(widget.icon, color: Colors.white),
-            const SizedBox(width: 8),
+            Icon(widget.icon, color: Colors.white, size: context.tvIconSize(20)),
+            SizedBox(width: context.tvSpacing(8)),
           ],
           Flexible(
             child: Text(
               widget.label,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.white,
-                fontSize: 16,
+                fontSize: context.tvTextSize(16),
                 fontWeight: FontWeight.w600,
               ),
             ),

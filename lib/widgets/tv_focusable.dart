@@ -6,11 +6,7 @@ class TVFocusStyle {
   static const double focusScale = 1.05;
   static const Duration animationDuration = Duration(milliseconds: 150);
   static const Curve animationCurve = Curves.easeOutCubic;
-  
-  /// Subtle glow color (soft white/blue tint)
   static const Color glowColor = Color(0x40FFFFFF);
-  
-  /// Elevated shadow when focused (creates "lift" effect)
   static List<BoxShadow> get focusedShadow => [
     BoxShadow(
       color: Colors.black.withAlpha((0.4 * 255).round()),
@@ -24,8 +20,6 @@ class TVFocusStyle {
       spreadRadius: 0,
     ),
   ];
-  
-  /// Default shadow when not focused
   static List<BoxShadow> get defaultShadow => [
     BoxShadow(
       color: Colors.black.withAlpha((0.2 * 255).round()),
@@ -72,7 +66,6 @@ class _TVFocusableState extends State<TVFocusable> {
   @override
   Widget build(BuildContext context) {
     Widget child = widget.child;
-
     if (widget.onPressed != null) {
       child = GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -80,42 +73,22 @@ class _TVFocusableState extends State<TVFocusable> {
         child: child,
       );
     }
-
-    return Padding(
-      padding: widget.focusMargin,
-      child: Focus(
-        focusNode: widget.focusNode,
-        autofocus: widget.autofocus,
-        onFocusChange: (value) => setState(() => _hasFocus = value),
-        onKeyEvent: (node, event) {
-          if (widget.onPressed != null && event is KeyDownEvent) {
-            if (event.logicalKey == LogicalKeyboardKey.enter ||
-                event.logicalKey == LogicalKeyboardKey.select ||
-                event.logicalKey == LogicalKeyboardKey.space) {
-              widget.onPressed!();
-              return KeyEventResult.handled;
-            }
-          }
-          return KeyEventResult.ignored;
-        },
-        child: AnimatedScale(
-          scale: _hasFocus && widget.enableScale ? widget.focusScale : 1.0,
+    return Focus(
+      focusNode: widget.focusNode,
+      autofocus: widget.autofocus,
+      child: AnimatedScale(
+        scale: _hasFocus && widget.enableScale ? context.tvSpacing(widget.focusScale) : 1.0,
+        duration: TVFocusStyle.animationDuration,
+        curve: TVFocusStyle.animationCurve,
+        child: AnimatedContainer(
           duration: TVFocusStyle.animationDuration,
           curve: TVFocusStyle.animationCurve,
-          child: AnimatedContainer(
-            duration: TVFocusStyle.animationDuration,
-            curve: TVFocusStyle.animationCurve,
-            decoration: BoxDecoration(
-              borderRadius: widget.borderRadius,
-              boxShadow: _hasFocus
-                  ? TVFocusStyle.focusedShadow
-                  : TVFocusStyle.defaultShadow,
-            ),
-            child: ClipRRect(
-              borderRadius: widget.borderRadius,
-              child: child,
-            ),
+          margin: widget.focusMargin,
+          decoration: BoxDecoration(
+            borderRadius: widget.borderRadius,
+            boxShadow: _hasFocus ? TVFocusStyle.focusedShadow : TVFocusStyle.defaultShadow,
           ),
+          child: child,
         ),
       ),
     );

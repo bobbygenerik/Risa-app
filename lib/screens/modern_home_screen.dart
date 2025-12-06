@@ -11,7 +11,6 @@ import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/epg_service.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/widgets/channel_logo_widget.dart';
-import 'package:iptv_player/widgets/program_artwork_widget.dart';
 
 import 'package:iptv_player/widgets/go_to_settings_button.dart';
 
@@ -27,6 +26,9 @@ class ModernHomeScreen extends StatefulWidget {
 }
 
 class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerProviderStateMixin {
+    late Size _screenSize;
+    double scale(double value) => value * (_screenSize.width / 1920.0).clamp(0.7, 1.5);
+    double vScale(double value) => value * (_screenSize.height / 1080.0).clamp(0.7, 1.5);
   final PageController _pageController = PageController();
   final FocusNode _heroFocusNode = FocusNode(debugLabel: 'HeroBanner');
   int _currentPage = 0;
@@ -156,6 +158,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
+      _screenSize = MediaQuery.of(context).size;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -187,12 +190,12 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
                   const CircularProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(AppTheme.accentOrange),
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: vScale(24)),
                   Text(
                     'Loading Playlist...',
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: vScale(8)),
                   Text(
                     'Please wait while we load your channels',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
@@ -225,7 +228,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 32),
+                  SizedBox(height: vScale(32)),
                     GoToSettingsButton(
                       onPressed: () {
                         if (context.mounted) context.go('/settings');
@@ -544,7 +547,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
   }
 
   Future<String?> _getBestArt(String title) async {
-    // Check local cache first
+                            // End of itemBuilder
     if (_tmdbArtCache.containsKey(title)) {
       return _tmdbArtCache[title];
     }
@@ -744,8 +747,8 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
                                     ),
                                   ),
                                 ),
-                              ),
-                            );
+                              );
+                            },
                           },
                         ),
                       ),

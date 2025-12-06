@@ -175,9 +175,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     });
     // Focus is managed by navigation bar - don't auto-focus content
   }
+  late Size _screenSize;
+  double scale(double value) => value * (_screenSize.width / 1920.0).clamp(0.7, 1.5);
+  double vScale(double value) => value * (_screenSize.height / 1080.0).clamp(0.7, 1.5);
 
-  @override
   Widget build(BuildContext context) {
+    _screenSize = MediaQuery.of(context).size;
     final body = Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -216,12 +219,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     size: 80,
                     color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: vScale(24)),
                   Text(
                     'No Live TV Available',
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: vScale(8)),
                   Text(
                     'Load a playlist with Live TV channels from Settings',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -229,7 +232,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 32),
+                  SizedBox(height: vScale(32)),
                   GoToSettingsButton(
                     onPressed: _goToSettings,
                     focusNode: _settingsButtonFocus,
@@ -295,16 +298,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     bool isGrouping,
   ) {
     final heroImage = _resolveHeroImage(currentProgram);
-    final screenSize = MediaQuery.of(context).size;
-    // Desktop-like ratio: hero takes 65% of screen height for better content visibility
-    final heroHeight = screenSize.height * 0.65;
+    final heroHeight = _screenSize.height * 0.65;
 
     return Focus(
       canRequestFocus: false,
       skipTraversal: true,
       onKeyEvent: _handleDirectionalKeyEvent,
       child: Container(
-        height: screenSize.height,
+        height: _screenSize.height,
         width: double.infinity,
         child: Stack(
           children: [
@@ -356,19 +357,22 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               child: SingleChildScrollView(
                 controller: _scrollController,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 80),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: scale(48),
+                    vertical: vScale(80),
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Spacer for hero area
-                      SizedBox(height: heroHeight - 180),
-                      const SizedBox(height: 48),
+                      SizedBox(height: heroHeight - vScale(180)),
+                      SizedBox(height: vScale(48)),
                       // Channel grid sections
                       if (isGrouping && groupedChannels.isEmpty)
                         _buildCategoryLoadingIndicator()
                       else
                         ..._buildCategoryRows(context, groupedChannels),
-                      const SizedBox(height: 40),
+                      SizedBox(height: vScale(40)),
                     ],
                   ),
                 ),
@@ -391,8 +395,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
-          constraints: const BoxConstraints(maxWidth: 250),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          constraints: BoxConstraints(maxWidth: scale(250)),
+          padding: EdgeInsets.symmetric(
+            horizontal: scale(8),
+            vertical: vScale(6),
+          ),
           decoration: BoxDecoration(
             color: Colors.black.withAlpha((0.1 * 255).round()),
             borderRadius: BorderRadius.circular(6),
@@ -407,8 +414,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         children: [
           // Channel logo (smaller)
           Container(
-            width: 32,
-            height: 32,
+            width: scale(32),
+            height: vScale(32),
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(0.5),
               borderRadius: BorderRadius.circular(4),
@@ -432,7 +439,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     size: 16,
                   ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: scale(8)),
           // Program info
           Flexible(
             child: Column(
@@ -441,39 +448,42 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               children: [
                 if (program != null)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: scale(4),
+                      vertical: vScale(1),
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.redAccent,
                       borderRadius: BorderRadius.circular(3),
                     ),
-                    child: const Text(
+                    child: Text(
                       'LIVE',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 8,
+                        fontSize: scale(8),
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.5,
                       ),
                     ),
                   ),
-                const SizedBox(height: 3),
+                SizedBox(height: vScale(3)),
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppTheme.textPrimary,
-                    fontSize: 13,
+                    fontSize: scale(13),
                     fontWeight: FontWeight.w700,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 if (timeRange.isNotEmpty) ...[
-                  const SizedBox(height: 1),
+                  SizedBox(height: vScale(1)),
                   Text(
                     timeRange,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppTheme.textSecondary,
-                      fontSize: 9,
+                      fontSize: scale(9),
                     ),
                   ),
                 ],

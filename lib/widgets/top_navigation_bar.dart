@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 /// Reusable top navigation bar optimized for Android TV
 /// Features:
@@ -343,12 +344,10 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                   width: 140 * scale,
                   child: Text(
                     widget.currentTime,
-                    textAlign: TextAlign.right,
                     style: TextStyle(
-                      color: AppTheme.textPrimary,
-                      fontSize: 18 * scale,
+                      color: AppTheme.textSecondary,
+                      fontSize: context.tvTextSize(16),
                       fontWeight: FontWeight.w600,
-                      letterSpacing: 1.0,
                     ),
                   ),
                 ),
@@ -536,10 +535,9 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
                 child: Text(
                   tab.label,
                   style: TextStyle(
-                    color: showHighlight ? Colors.white : AppTheme.textSecondary,
-                    fontSize: showHighlight ? 17 * scale : 16 * scale,
-                    fontWeight: showHighlight ? FontWeight.w800 : FontWeight.w600,
-                    letterSpacing: 0.8,
+                    color: isActive ? AppTheme.primaryBlue : AppTheme.textSecondary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: context.tvTextSize(16),
                   ),
                 ),
               ),

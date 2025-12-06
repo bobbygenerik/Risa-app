@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/services/channel_logo_service.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 /// A widget that displays a channel logo with fallback support
 /// It will try to enrich the logo from known databases if the original is missing
@@ -102,31 +103,22 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
 
   @override
   Widget build(BuildContext context) {
-    if (_effectiveLogoUrl == null || _effectiveLogoUrl!.isEmpty) {
-      return _buildPlaceholder();
-    }
-
-    // Calculate cache dimensions safely (avoid Infinity)
-    final cacheWidth = widget.width.isFinite ? (widget.width * 2).toInt() : null;
-    final cacheHeight = widget.height.isFinite ? (widget.height * 2).toInt() : null;
-
+    final tvWidth = context.tvSpacing(widget.width);
+    final tvHeight = context.tvSpacing(widget.height);
     return ClipRRect(
-      borderRadius: widget.borderRadius ?? BorderRadius.zero,
-      child: CachedNetworkImage(
-        imageUrl: _effectiveLogoUrl!,
-        width: widget.width,
-        height: widget.height,
-        fit: widget.fit,
-        memCacheWidth: cacheWidth,
-        memCacheHeight: cacheHeight,
-        placeholder: (context, url) => _buildPlaceholder(),
-        errorWidget: (context, url, error) {
-          // If the provided URL failed, try enrichment
-          if (!_triedEnrichment && _effectiveLogoUrl == widget.logoUrl) {
-            _enrichLogo();
-          }
-          return widget.errorWidget ?? _buildPlaceholder();
-        },
+      borderRadius: widget.borderRadius ?? BorderRadius.circular(context.tvSpacing(12)),
+      child: Container(
+        width: tvWidth,
+        height: tvHeight,
+        color: widget.backgroundColor ?? Colors.transparent,
+        child: _effectiveLogoUrl != null && _effectiveLogoUrl!.isNotEmpty
+            ? CachedNetworkImage(
+                imageUrl: _effectiveLogoUrl!,
+                fit: widget.fit,
+                placeholder: (context, url) => widget.placeholder ?? Icon(Icons.tv, size: context.tvIconSize(32)),
+                errorWidget: (context, url, error) => widget.errorWidget ?? Icon(Icons.tv, size: context.tvIconSize(32)),
+              )
+            : (widget.placeholder ?? Icon(Icons.tv, size: context.tvIconSize(32))),
       ),
     );
   }

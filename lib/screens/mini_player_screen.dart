@@ -90,13 +90,13 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
         }
 
         return Container(
-          width: 300,
+          width: context.tvSpacing(300),
           color: AppTheme.sidebarBackground,
           child: Column(
             children: [
               // Header with favorites toggle
               Container(
-                padding: const EdgeInsets.all(AppSizes.md),
+                padding: EdgeInsets.all(context.tvSpacing(AppSizes.md)),
                 child: Column(
                   children: [
                     Row(
@@ -130,11 +130,12 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
                     if (!_showFavorites)
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: AppSizes.md),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: context.tvSpacing(AppSizes.md)),
                         decoration: BoxDecoration(
                           color: AppTheme.cardBackground,
                           borderRadius: BorderRadius.circular(
-                            AppSizes.radiusMd,
+                            context.tvSpacing(AppSizes.radiusMd),
                           ),
                         ),
                         child: DropdownButton<String>(
@@ -183,8 +184,11 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: isCurrentChannel ? AppTheme.primaryBlue.withAlpha((0.2 * 255).round()) : null,
-        border: const Border(bottom: BorderSide(color: AppTheme.divider, width: 0.5)),
+        color: isCurrentChannel
+            ? AppTheme.primaryBlue.withAlpha((0.2 * 255).round())
+            : null,
+        border: const Border(
+            bottom: BorderSide(color: AppTheme.divider, width: 0.5)),
       ),
       child: Material(
         color: Colors.transparent,
@@ -196,25 +200,25 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
             });
           },
           child: Padding(
-            padding: const EdgeInsets.all(AppSizes.md),
+            padding: EdgeInsets.all(context.tvSpacing(AppSizes.md)),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Channel logo
                 Container(
-                  width: 60,
-                  height: 60,
+                  width: context.tvSpacing(60),
+                  height: context.tvSpacing(60),
                   decoration: BoxDecoration(
                     color: AppTheme.cardBackground,
-                    borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                    borderRadius: BorderRadius.circular(context.tvSpacing(AppSizes.radiusSm)),
                   ),
                   child: Stack(
                     children: [
-                      const Center(
+                      Center(
                         child: Icon(
                           Icons.tv,
                           color: AppTheme.primaryBlue,
-                          size: 32,
+                          size: context.tvIconSize(32),
                         ),
                       ),
                       if (isCurrentChannel)
@@ -222,29 +226,29 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
                           top: 4,
                           right: 4,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 4,
-                              vertical: 2,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: context.tvSpacing(4),
+                              vertical: context.tvSpacing(2),
                             ),
                             decoration: BoxDecoration(
                               color: AppTheme.accentRed,
                               borderRadius: BorderRadius.circular(
-                                AppSizes.radiusSm,
+                                context.tvSpacing(AppSizes.radiusSm),
                               ),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
                                   Icons.fiber_manual_record,
-                                  size: 6,
+                                  size: context.tvIconSize(6),
                                   color: Colors.white,
                                 ),
-                                SizedBox(width: 2),
+                                SizedBox(width: context.tvSpacing(2)),
                                 Text(
                                   'LIVE',
                                   style: TextStyle(
-                                    fontSize: 8,
+                                    fontSize: context.tvTextSize(8),
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
                                   ),
@@ -257,7 +261,7 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
                   ),
                 ),
 
-                const SizedBox(width: AppSizes.md),
+                SizedBox(width: context.tvSpacing(AppSizes.md)),
 
                 // Channel info
                 Expanded(
@@ -268,20 +272,20 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
                         children: [
                           if (channel.channelNumber != null)
                             Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: context.tvSpacing(6),
+                                vertical: context.tvSpacing(2),
                               ),
                               decoration: BoxDecoration(
                                 color: AppTheme.primaryBlue,
                                 borderRadius: BorderRadius.circular(
-                                  AppSizes.radiusSm,
+                                  context.tvSpacing(AppSizes.radiusSm),
                                 ),
                               ),
                               child: Text(
                                 '${channel.channelNumber}',
-                                style: const TextStyle(
-                                  fontSize: 10,
+                                style: TextStyle(
+                                  fontSize: context.tvTextSize(10),
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -290,30 +294,32 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
                           Expanded(
                             child: Text(
                               channel.name,
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(fontWeight: FontWeight.w600),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(fontWeight: FontWeight.w600, fontSize: context.tvTextSize(13)),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: context.tvSpacing(4)),
                       if (program != null)
                         Text(
                           program.title,
-                          style: Theme.of(context).textTheme.bodySmall,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: context.tvTextSize(11)),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: context.tvSpacing(4)),
                       // Progress bar
                       if (program != null)
                         LinearProgressIndicator(
                           value: program.progressPercentage,
                           backgroundColor: AppTheme.highlight,
                           color: AppTheme.primaryBlue,
-                          minHeight: 3,
+                          minHeight: context.tvSpacing(3),
                         ),
                     ],
                   ),
@@ -340,24 +346,25 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.play_circle_filled,
-                      size: 80,
+                      size: context.tvIconSize(80),
                       color: AppTheme.primaryBlue,
                     ),
-                    const SizedBox(height: AppSizes.md),
+                    SizedBox(height: context.tvSpacing(AppSizes.md)),
                     Text(
                       _currentChannel?.name ?? 'Select a channel',
                       style: Theme.of(
                         context,
-                      ).textTheme.titleLarge?.copyWith(color: Colors.white),
+                      ).textTheme.titleLarge?.copyWith(color: Colors.white, fontSize: context.tvTextSize(16)),
                     ),
-                    const SizedBox(height: AppSizes.sm),
+                    SizedBox(height: context.tvSpacing(AppSizes.sm)),
                     Text(
                       'Click to play in fullscreen',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.textSecondary,
-                      ),
+                            color: AppTheme.textSecondary,
+                            fontSize: context.tvTextSize(11),
+                          ),
                     ),
                   ],
                 ),
@@ -369,15 +376,14 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
           Positioned.fill(
             child: Container(
               decoration: const BoxDecoration(
-                gradient: LinearGradient(
+                  gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
                   Color(0xFF050710),
                   Color(0xFF0d1140),
                 ],
-              )
-              ),
+              )),
             ),
           ),
 
@@ -387,11 +393,12 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
             left: 0,
             right: 0,
             child: Padding(
-              padding: const EdgeInsets.all(AppSizes.md),
+              padding: EdgeInsets.all(context.tvSpacing(AppSizes.md)),
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: AppTheme.textPrimary),
+                    icon: const Icon(Icons.arrow_back,
+                        color: AppTheme.textPrimary),
                     onPressed: () {},
                   ),
                   const Spacer(),
@@ -400,7 +407,8 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
                     onPressed: () {},
                   ),
                   IconButton(
-                    icon: const Icon(Icons.settings, color: AppTheme.textPrimary),
+                    icon:
+                        const Icon(Icons.settings, color: AppTheme.textPrimary),
                     onPressed: () {},
                   ),
                 ],
@@ -414,28 +422,30 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
             left: 0,
             right: 0,
             child: Padding(
-              padding: const EdgeInsets.all(AppSizes.md),
+              padding: EdgeInsets.all(context.tvSpacing(AppSizes.md)),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   IconButton(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.skip_previous,
                       color: AppTheme.textPrimary,
-                      size: 32,
+                      size: context.tvIconSize(32),
                     ),
                     onPressed: () {
                       // Previous channel
                     },
                   ),
-                  const SizedBox(width: AppSizes.xl),
+                  SizedBox(width: context.tvSpacing(AppSizes.xl)),
                   IconButton(
-                    icon: const Icon(Icons.play_arrow, color: AppTheme.textPrimary, size: 48),
+                    icon: Icon(Icons.play_arrow,
+                        color: AppTheme.textPrimary, size: context.tvIconSize(48)),
                     onPressed: () {},
                   ),
-                  const SizedBox(width: AppSizes.xl),
+                  SizedBox(width: context.tvSpacing(AppSizes.xl)),
                   IconButton(
-                    icon: const Icon(Icons.skip_next, color: AppTheme.textPrimary, size: 32),
+                    icon: Icon(Icons.skip_next,
+                        color: AppTheme.textPrimary, size: context.tvIconSize(32)),
                     onPressed: () {
                       // Next channel
                     },
@@ -455,7 +465,7 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(AppSizes.lg),
+      padding: EdgeInsets.all(context.tvSpacing(AppSizes.lg)),
       decoration: const BoxDecoration(
         color: AppTheme.cardBackground,
         border: Border(top: BorderSide(color: AppTheme.divider)),
@@ -467,16 +477,15 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
             'Now Playing',
             style: Theme.of(
               context,
-            ).textTheme.titleMedium?.copyWith(color: AppTheme.textSecondary),
+            ).textTheme.titleMedium?.copyWith(color: AppTheme.textSecondary, fontSize: context.tvTextSize(15)),
           ),
-          const SizedBox(height: AppSizes.md),
-
+          SizedBox(height: context.tvSpacing(AppSizes.md)),
           Row(
             children: [
               // Channel logo
               Container(
-                width: 60,
-                height: 60,
+                width: context.tvSpacing(60),
+                height: context.tvSpacing(60),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     begin: Alignment.topLeft,
@@ -486,13 +495,12 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
                       Color(0xFF0d1140),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                  borderRadius: BorderRadius.circular(context.tvSpacing(AppSizes.radiusSm)),
                 ),
-                child: const Icon(Icons.tv, color: AppTheme.primaryBlue, size: 32),
+                child:
+                    Icon(Icons.tv, color: AppTheme.primaryBlue, size: context.tvIconSize(32)),
               ),
-
-              const SizedBox(width: AppSizes.md),
-
+              SizedBox(width: context.tvSpacing(AppSizes.md)),
               // Program info
               Expanded(
                 child: Column(
@@ -500,14 +508,14 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
                   children: [
                     Text(
                       _currentProgram!.title,
-                      style: Theme.of(context).textTheme.titleMedium,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: context.tvTextSize(15)),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: context.tvSpacing(4)),
                     Text(
                       '${_currentChannel!.channelNumber ?? ''} • ${_currentChannel!.name}',
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: context.tvTextSize(11)),
                     ),
                   ],
                 ),
@@ -595,7 +603,8 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
       debugPrint('Error initializing mini player: $e');
       final localContext = context;
       if (localContext.mounted) {
-        showAppSnackBar(localContext, SnackBar(content: Text('Error opening player: $e')));
+        showAppSnackBar(
+            localContext, SnackBar(content: Text('Error opening player: $e')));
       }
     }
   }

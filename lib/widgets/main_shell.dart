@@ -100,20 +100,19 @@ class _MainShellState extends State<MainShell> {
     final isTV = size.width >= 1920 || size.height >= 1080;
     final scale = isTV ? 1.8 : 1.0;
     final navBarHeight = 64.0 * scale; // AppSizes.appBarHeight * scale
-    
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF050710),
-                  Color(0xFF0d1140),
-                ],
-              )
-        ),
+            gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF050710),
+            Color(0xFF0d1140),
+          ],
+        )),
         child: Stack(
           children: [
             // Content area - fills entire screen, content can show behind nav bar
@@ -148,9 +147,21 @@ class _MainShellState extends State<MainShell> {
                 child: TopNavigationBar(
                   activeTab: widget.activeTab ?? 'home',
                   tabs: [
-                    NavTab(id: 'home', label: 'Live TV', icon: Icons.live_tv, route: '/home'),
-                    NavTab(id: 'movies', label: 'Movies', icon: Icons.movie, route: '/movies'),
-                    NavTab(id: 'series', label: 'Series', icon: Icons.tv, route: '/series'),
+                    NavTab(
+                        id: 'home',
+                        label: 'Live TV',
+                        icon: Icons.live_tv,
+                        route: '/home'),
+                    NavTab(
+                        id: 'movies',
+                        label: 'Movies',
+                        icon: Icons.movie,
+                        route: '/movies'),
+                    NavTab(
+                        id: 'series',
+                        label: 'Series',
+                        icon: Icons.tv,
+                        route: '/series'),
                   ],
                   currentTime: _currentTime,
                   showLogoAndTime: true,
@@ -191,7 +202,8 @@ class _MainShellState extends State<MainShell> {
     if (_activeFocusToken == token) {
       _activeFocusToken = null;
       _contentFocusCallback = null;
-      debugPrint('content_focus: Shell unregistered focus callback token=$token');
+      debugPrint(
+          'content_focus: Shell unregistered focus callback token=$token');
     }
   }
 
@@ -248,7 +260,8 @@ class _MainShellState extends State<MainShell> {
       return false;
     }
     final handled = requester();
-    debugPrint('content_focus: Nav focus request ${handled ? 'succeeded' : 'failed'}');
+    debugPrint(
+        'content_focus: Nav focus request ${handled ? 'succeeded' : 'failed'}');
     return handled;
   }
 }

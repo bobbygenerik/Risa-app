@@ -1,6 +1,4 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
@@ -8,7 +6,6 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/content.dart';
-import 'package:iptv_player/widgets/voice_search_button.dart';
 
 class SearchPopup extends StatefulWidget {
   const SearchPopup({super.key});
@@ -51,14 +48,6 @@ class _SearchPopupState extends State<SearchPopup> {
     super.dispose();
   }
 
-  void _handleVoiceResult(String query) {
-    if (!mounted) return;
-    setState(() {
-      _searchController.text = query;
-    });
-    _performSearch(query);
-  }
-
   void _performSearch(String query) {
     if (query.trim().isEmpty) {
       setState(() {
@@ -75,11 +64,6 @@ class _SearchPopupState extends State<SearchPopup> {
       _isSearching = true;
       _hasSearched = true;
     });
-
-    // Debounce could be added here if needed, but for now we'll search immediately
-    // or maybe just on submit? The user asked for "popup", usually instant search is nice.
-    // Let's do instant search but maybe we should debounce it slightly in a real app.
-    // For now, direct search.
 
     final channelProvider = Provider.of<ChannelProvider>(
       context,
@@ -119,147 +103,38 @@ class _SearchPopupState extends State<SearchPopup> {
 
   @override
   Widget build(BuildContext context) {
-    final media = MediaQuery.of(context);
-    final keyboard = media.viewInsets.bottom;
-    const maxPreferredHeight = 600.0;
-    const minComfortHeight = 360.0;
-    const topPadding = AppSizes.xl;
-    final bottomPadding = AppSizes.xl + keyboard;
-    final availableHeight = media.size.height - topPadding - bottomPadding;
-    final hasComfortableSpace = availableHeight >= minComfortHeight;
-
-    double dialogHeight;
-    if (hasComfortableSpace) {
-      dialogHeight = math.min(availableHeight, maxPreferredHeight);
-    } else {
-      dialogHeight = math.max(availableHeight, 0);
-    }
-
-    const headerEstimate = 140.0; // approximate header + divider height
-    final scrollResultsHeight = math.max(dialogHeight - headerEstimate, 220.0);
-
     return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: EdgeInsets.zero,
-      child: AnimatedPadding(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-        padding: EdgeInsets.fromLTRB(
-          topPadding,
-          topPadding,
-          topPadding,
-          bottomPadding,
-        ),
-        child: SafeArea(
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 800),
-              child: Container(
-                height: dialogHeight,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: AppTheme.cardBackground.withAlpha(
-                    (0.95 * 255).round(),
-                  ),
-                  borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-                  border: Border.all(
-                    color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
-                    width: 1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withAlpha((0.5 * 255).round()),
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                    ),
-                  ],
+      backgroundColor: AppTheme.cardBackground,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(context.tvSpacing(16)),
+      ),
+      child: Container(
+        padding: EdgeInsets.all(context.tvSpacing(24)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _searchController,
+              focusNode: _textFieldFocusNode,
+              style: TextStyle(fontSize: context.tvTextSize(16)),
+              decoration: InputDecoration(
+                hintText: 'Search...',
+                hintStyle: TextStyle(fontSize: context.tvTextSize(14)),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: context.tvSpacing(16),
+                  vertical: context.tvSpacing(12),
                 ),
-                child: hasComfortableSpace
-                    ? _buildDialogContent(useExpandedResults: true)
-                    : SingleChildScrollView(
-                        padding: const EdgeInsets.only(bottom: AppSizes.lg),
-                        child: _buildDialogContent(
-                          useExpandedResults: false,
-                          resultsHeight: scrollResultsHeight,
-                        ),
-                      ),
               ),
             ),
-          ),
+            SizedBox(height: context.tvSpacing(16)),
+            Expanded(
+              child: _isSearching
+                  ? const Center(child: CircularProgressIndicator())
+                  : _buildResultsList(),
+            ),
+          ],
         ),
       ),
-    );
-  }
-
-  Widget _buildDialogContent({
-    required bool useExpandedResults,
-    double? resultsHeight,
-  }) {
-    final Widget resultsWidget = _isSearching
-        ? const Center(child: CircularProgressIndicator())
-        : _buildResultsList();
-
-    final Widget expandedArea = useExpandedResults
-        ? Expanded(child: resultsWidget)
-        : SizedBox(height: resultsHeight ?? 320, child: resultsWidget);
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(AppSizes.lg),
-          child: Row(
-            children: [
-              const Icon(Icons.search, color: AppTheme.primaryBlue, size: 28),
-              const SizedBox(width: AppSizes.md),
-              VoiceSearchButton(
-                usePillStyle: true,
-                label: 'Voice',
-                onSearchResult: _handleVoiceResult,
-                focusNode: _voiceButtonFocusNode,
-              ),
-              const SizedBox(width: AppSizes.md),
-              Expanded(
-                child: Focus(
-                  onKeyEvent: (node, event) {
-                    if (event is KeyDownEvent) {
-                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                        _voiceButtonFocusNode.requestFocus();
-                        return KeyEventResult.handled;
-                      }
-                    }
-                    return KeyEventResult.ignored;
-                  },
-                  child: TextField(
-                    controller: _searchController,
-                    focusNode: _textFieldFocusNode,
-                    autofocus: false,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      color: AppTheme.textPrimary,
-                    ),
-                    decoration: const InputDecoration(
-                      hintText: 'Search channels, movies, series...',
-                      hintStyle: TextStyle(color: AppTheme.textSecondary),
-                      border: InputBorder.none,
-                    ),
-                    onChanged: _performSearch,
-                    onSubmitted: _performSearch,
-                    textInputAction: TextInputAction.search,
-                  ),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close, color: AppTheme.textSecondary),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
-          ),
-        ),
-        const Divider(height: 1, color: AppTheme.textSecondary),
-        expandedArea,
-      ],
     );
   }
 

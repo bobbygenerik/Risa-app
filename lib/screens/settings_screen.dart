@@ -26,8 +26,10 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen>
-    with SingleTickerProviderStateMixin {
+class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProviderStateMixin {
+  late Size _screenSize;
+  double scale(double value) => value * (_screenSize.width / 1920.0).clamp(0.7, 1.5);
+  double vScale(double value) => value * (_screenSize.height / 1080.0).clamp(0.7, 1.5);
   TabController? _tabController;
 
   // Playlist Settings - Late initialization to avoid memory issues
@@ -347,6 +349,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   @override
   Widget build(BuildContext context) {
+      _screenSize = MediaQuery.of(context).size;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: PopScope(
@@ -432,7 +435,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     ];
 
     return Container(
-      width: 220,
+      width: scale(220),
       decoration: BoxDecoration(
         color: Colors.white.withAlpha((0.05 * 255).round()),
         border: Border(
@@ -446,8 +449,8 @@ class _SettingsScreenState extends State<SettingsScreen>
         children: [
           // Settings header
           Container(
-            height: AppSizes.appBarHeight,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            height: vScale(64),
+            padding: EdgeInsets.symmetric(horizontal: scale(16)),
             alignment: Alignment.centerLeft,
             decoration: const BoxDecoration(
               border: Border(
@@ -509,29 +512,25 @@ class _SettingsScreenState extends State<SettingsScreen>
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
                         return Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          margin: EdgeInsets.symmetric(horizontal: scale(8), vertical: vScale(4)),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? AppTheme.primaryBlue.withAlpha(
-                                    (0.3 * 255).round(),
-                                  )
+                                ? AppTheme.primaryBlue.withAlpha((0.3 * 255).round())
                                 : Colors.transparent,
                             border: Border.all(
                               color: isFocused
                                   ? AppTheme.primaryBlue
                                   : (isSelected
-                                      ? AppTheme.primaryBlue.withAlpha(
-                                          (0.5 * 255).round(),
-                                        )
+                                      ? AppTheme.primaryBlue.withAlpha((0.5 * 255).round())
                                       : Colors.transparent),
-                              width: isFocused ? 2.0 : 1.5,
+                              width: isFocused ? scale(2.0) : scale(1.5),
                             ),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(scale(12)),
                           ),
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 12,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: scale(12),
+                              vertical: vScale(12),
                             ),
                             child: Row(
                               children: [
@@ -540,20 +539,20 @@ class _SettingsScreenState extends State<SettingsScreen>
                                   color: (isFocused || isSelected)
                                       ? AppTheme.primaryBlue
                                       : AppTheme.textSecondary,
-                                  size: 20,
+                                  size: scale(20),
                                 ),
-                                const SizedBox(width: 12),
+                                SizedBox(width: scale(12)),
                                 Expanded(
                                   child: Text(
                                     item['title'] as String,
                                     style: TextStyle(
                                       color: (isFocused || isSelected)
-                                          ? AppTheme.textPrimary
-                                          : AppTheme.textSecondary,
-                                      fontSize: 14,
+                                        ? AppTheme.textPrimary
+                                        : AppTheme.textSecondary,
+                                      fontSize: scale(16),
                                       fontWeight: (isFocused || isSelected)
-                                          ? FontWeight.w600
-                                          : FontWeight.w500,
+                                        ? FontWeight.w600
+                                        : FontWeight.w500,
                                     ),
                                   ),
                                 ),

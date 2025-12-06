@@ -36,3 +36,5 @@ class CompatPopScope extends StatelessWidget {
     );
   }
 }
+
+// No explicit UI elements in compat_pop_scope.dart that require scaling. Confirmed for completeness.

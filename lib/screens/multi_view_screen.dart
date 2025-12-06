@@ -298,6 +298,11 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    double scale(double value) => value * (screenWidth / 1920);
+    double vScale(double value) => value * (screenHeight / 1080);
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: KeyboardListener(
@@ -307,10 +312,10 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
         child: Stack(
           children: [
             // Video grid
-            _buildVideoGrid(),
+            _buildVideoGrid(scale, vScale),
 
             // Controls overlay
-            if (_showControls) _buildControlsOverlay(),
+            if (_showControls) _buildControlsOverlay(scale, vScale),
           ],
         ),
       ),
@@ -379,7 +384,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                 child: AnimatedContainer(
                   duration: TVFocusStyle.animationDuration,
                   curve: TVFocusStyle.animationCurve,
-                  margin: const EdgeInsets.all(1),
+                  margin: EdgeInsets.all(scale(1)),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       begin: Alignment.topLeft,
@@ -397,15 +402,16 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                       children: [
                         Icon(
                           Icons.add_circle_outline,
-                          size: 48,
+                          size: scale(48),
                           color: isFocused ? Colors.white : Colors.white54,
                         ),
-                        const SizedBox(height: 8),
+                        SizedBox(height: vScale(8)),
                         Text(
                           'Add Stream ${index + 1}',
                           style: TextStyle(
                             color: isFocused ? Colors.white : Colors.white54,
                             fontWeight: isFocused ? FontWeight.bold : FontWeight.normal,
+                            fontSize: scale(16),
                           ),
                         ),
                       ],
@@ -861,7 +867,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
     bool isDisabled = false,
     double? minWidth,
   }) {
-    final borderRadius = BorderRadius.circular(18);
+    final borderRadius = BorderRadius.circular(scale(18));
     final gradient = isActive
         ? const LinearGradient(
             colors: [Color(0xFF0057FF), Color(0xFF00C9FF)],
@@ -892,11 +898,11 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                 onTap: isDisabled ? null : onTap,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: scale(16),
+                    vertical: vScale(12),
                   ),
-                  constraints: minWidth != null ? BoxConstraints(minWidth: minWidth) : null,
+                  constraints: minWidth != null ? BoxConstraints(minWidth: scale(minWidth)) : null,
                   decoration: BoxDecoration(
                     borderRadius: borderRadius,
                     gradient: gradient,
@@ -905,14 +911,14 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                       color: isFocused 
                           ? AppTheme.primaryBlue
                           : Colors.white.withValues(alpha: 0.15),
-                      width: isFocused ? 3 : 1,
+                      width: isFocused ? scale(3) : scale(1),
                     ),
                     boxShadow: isActive || isFocused
                         ? [
                             BoxShadow(
                               color: isFocused ? AppTheme.primaryBlue.withAlpha((0.6 * 255).round()) : const Color(0x550057FF),
-                              blurRadius: 18,
-                              offset: const Offset(0, 6),
+                              blurRadius: scale(18),
+                              offset: Offset(0, vScale(6)),
                             ),
                           ]
                         : null,
@@ -923,15 +929,15 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                       Icon(
                         icon,
                         color: Colors.white,
-                        size: 22,
+                        size: scale(22),
                       ),
                       if (label.isNotEmpty) ...[
-                        const SizedBox(width: 8),
+                        SizedBox(width: scale(8)),
                         Text(
                           label,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: Colors.white,
-                            fontSize: 14,
+                            fontSize: scale(14),
                             fontWeight: FontWeight.w500,
                           ),
                         ),

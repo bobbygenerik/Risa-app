@@ -68,6 +68,11 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    double scale(double value) => value * (screenWidth / 1920);
+    double vScale(double value) => value * (screenHeight / 1080);
+
     return CompatPopScope(
       onWillPop: () async {
         context.go('/home');
@@ -88,31 +93,30 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
           ),
           child: Column(
           children: [
-            _buildGlassAppBar(),
-            Divider(height: 1, color: AppTheme.darkBackgroundOpacity(0.12), thickness: 2),
+            _buildGlassAppBar(scale, vScale),
+            Divider(height: scale(1), color: AppTheme.darkBackgroundOpacity(0.12), thickness: scale(2)),
             Expanded(
               child: Column(
                 children: [
                   // Tabs
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
+                    padding: EdgeInsets.symmetric(horizontal: scale(32), vertical: vScale(20)), // AppSizes.lg=32, md=20
                     child: Row(
                       children: [
-                        _buildTab('Help', 0),
-                        const SizedBox(width: AppSizes.md),
-                        _buildTab('About', 1),
-                        const SizedBox(width: AppSizes.md),
-                        _buildTab('Shortcuts', 2),
+                        _buildTab('Help', 0, scale, vScale),
+                        SizedBox(width: scale(20)),
+                        _buildTab('About', 1, scale, vScale),
+                        SizedBox(width: scale(20)),
+                        _buildTab('Shortcuts', 2, scale, vScale),
                       ],
                     ),
                   ),
-                  const Divider(height: 1, color: AppTheme.divider),
-                  
+                  Divider(height: scale(1), color: AppTheme.divider),
                   // Content
                   Expanded(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(AppSizes.xl),
-                      child: _buildTabContent(),
+                      padding: EdgeInsets.all(scale(40)), // AppSizes.xl assumed 40
+                      child: _buildTabContent(scale, vScale),
                     ),
                   ),
                 ],
@@ -127,8 +131,8 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
 
   Widget _buildGlassAppBar() {
     return Container(
-      height: AppSizes.appBarHeight,
-      padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
+      height: scale(64), // AppSizes.appBarHeight assumed 64
+      padding: EdgeInsets.symmetric(horizontal: scale(32), vertical: vScale(20)),
       decoration: BoxDecoration(
         color: AppTheme.darkBackground.withAlpha((0.8 * 255).round()),
         border: Border(
@@ -137,8 +141,8 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.help_outline, color: AppTheme.primaryBlue, size: 24),
-          const SizedBox(width: AppSizes.md),
+          Icon(Icons.help_outline, color: AppTheme.primaryBlue, size: scale(24)),
+          SizedBox(width: scale(20)),
           Text(
             'Help & About',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -172,11 +176,9 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
         if (event is! KeyDownEvent) return KeyEventResult.ignored;
         final key = event.logicalKey;
         if (key == LogicalKeyboardKey.arrowUp) {
-          // Pressing UP from any tab should go to top bar
           FocusScope.of(context).previousFocus();
           return KeyEventResult.handled;
         } else if (key == LogicalKeyboardKey.arrowDown) {
-          // Navigate down to content area
           FocusScope.of(context).nextFocus();
           return KeyEventResult.handled;
         } else if (key == LogicalKeyboardKey.arrowRight && index < 2) {
@@ -208,11 +210,11 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
             curve: TVFocusStyle.animationCurve,
             child: AnimatedContainer(
               duration: AppDurations.fast,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding: EdgeInsets.symmetric(horizontal: scale(24), vertical: vScale(12)),
               decoration: BoxDecoration(
                 gradient: isSelected ? AppTheme.brandGradient : null,
                 color: isSelected ? null : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(scale(8)),
                 boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
               ),
               child: Text(
@@ -220,15 +222,15 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
                 style: TextStyle(
                   color: AppTheme.textPrimary,
                   fontWeight: (isSelected || isFocused) ? FontWeight.bold : FontWeight.normal,
-                  fontSize: 16,
+                  fontSize: scale(16),
                 ),
               ),
             ),
-          ); // AnimatedScale closes
-        }, // builder function closes
-      ), // Builder widget closes
-    ), // Focus widget closes
-  ); // GestureDetector closes and return statement ends
+          );
+        },
+      ),
+    ),
+  );
   }
 
   Widget _buildTabContent() {

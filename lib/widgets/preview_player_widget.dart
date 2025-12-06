@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 /// Widget that plays video preview on hover without audio
 class PreviewPlayerWidget extends StatefulWidget {
@@ -81,30 +82,22 @@ class _PreviewPlayerWidgetState extends State<PreviewPlayerWidget> {
     return MouseRegion(
       onEnter: (_) => _onHoverEnter(),
       onExit: (_) => _onHoverExit(),
-      child: Stack(
-        children: [
-          // Original content (thumbnail)
-          if (!_isInitialized) widget.child,
-
-          // Preview video player
-          if (_isInitialized && _controller != null)
-            Positioned.fill(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: FittedBox(
-                  fit: BoxFit.cover,
-                  child: SizedBox(
-                    width: _controller!.value.size.width,
-                    height: _controller!.value.size.height,
-                    child: VideoPlayer(_controller!),
-                  ),
-                ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(context.tvSpacing(12)),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            if (_isHovering && _isInitialized && _controller != null)
+              SizedBox(
+                width: context.tvSpacing(120),
+                height: context.tvSpacing(80),
+                child: VideoPlayer(_controller!),
               ),
-            ),
-
-          // Keep child's overlay content on top
-          if (_isInitialized) IgnorePointer(child: widget.child),
-        ],
+            widget.child,
+          ],
+        ),
       ),
     );
   }

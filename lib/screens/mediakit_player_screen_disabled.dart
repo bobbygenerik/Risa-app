@@ -34,6 +34,11 @@ class _MediaKitPlayerScreenState extends State<MediaKitPlayerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    double scale(double value) => value * (screenWidth / 1920);
+    double vScale(double value) => value * (screenHeight / 1080);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
@@ -42,30 +47,30 @@ class _MediaKitPlayerScreenState extends State<MediaKitPlayerScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
-            const Text(
+            Icon(Icons.error_outline, size: scale(64), color: Colors.red),
+            SizedBox(height: vScale(16)),
+            Text(
               'MediaKit Player Disabled',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: scale(18), fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8),
-            const Text(
+            SizedBox(height: vScale(8)),
+            Text(
               'Missing dependencies: media_kit',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
+              style: TextStyle(fontSize: scale(14), color: Colors.grey),
             ),
-            const SizedBox(height: 16),
-            const Text(
+            SizedBox(height: vScale(16)),
+            Text(
               'To enable this player, add the following to pubspec.yaml:',
-              style: TextStyle(fontSize: 12),
+              style: TextStyle(fontSize: scale(12)),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: vScale(8)),
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(scale(12)),
               color: Colors.grey[900],
-              child: const Text(
+              child: Text(
                 'media_kit: ^x.x.x\nmedia_kit_video: ^x.x.x',
-                style: TextStyle(fontFamily: 'monospace', fontSize: 12),
+                style: TextStyle(fontFamily: 'monospace', fontSize: scale(12)),
               ),
             ),
           ],

@@ -73,9 +73,9 @@ class _VoiceSearchButtonState extends State<VoiceSearchButton>
         backgroundColor: AppTheme.dialogBackground,
         title: const Row(
           children: [
-            Icon(Icons.search, color: AppTheme.primaryBlue),
-            SizedBox(width: AppSizes.sm),
-            Text('Search Results'),
+            Icon(Icons.search, color: AppTheme.primaryBlue, size:  context.tvIconSize(24)),
+            SizedBox(width: context.tvSpacing(AppSizes.sm)),
+            Text('Search Results', style: TextStyle(fontSize: context.tvTextSize(16))),
           ],
         ),
         content: Column(

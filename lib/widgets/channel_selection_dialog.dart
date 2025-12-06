@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/channel.dart';
 import '../providers/channel_provider.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 class ChannelSelectionDialog extends StatefulWidget {
   const ChannelSelectionDialog({super.key});
@@ -22,7 +23,7 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
       child: Container(
         width: MediaQuery.of(context).size.width * 0.9,
         height: MediaQuery.of(context).size.height * 0.8,
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(context.tvSpacing(16)),
         child: Consumer<ChannelProvider>(
           builder: (context, channelProvider, child) {
             final categories = channelProvider.getAllCategoryNames();
@@ -49,15 +50,15 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
                 // Header
                 Row(
                   children: [
-                    const Text(
+                    Text(
                       'Select Channel',
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: context.tvTextSize(20),
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
                     ),
-                    const Spacer(),
+                    Spacer(),
                     Focus(
                       child: Builder(
                         builder: (context) {
@@ -73,10 +74,10 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
                                 curve: TVFocusStyle.animationCurve,
                                 decoration: BoxDecoration(
                                   boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
-                                  borderRadius: BorderRadius.circular(4),
+                                  borderRadius: BorderRadius.circular(context.tvSpacing(4)),
                                 ),
                                 child: IconButton(
-                                  icon: const Icon(Icons.close, color: Colors.white),
+                                  icon: Icon(Icons.close, color: Colors.white, size: context.tvIconSize(24)),
                                   onPressed: () => Navigator.pop(context),
                                 ),
                               ),

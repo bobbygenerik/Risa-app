@@ -1082,163 +1082,6 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     );
   }
 
-  Widget _buildChannelList(List<Channel> channels) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final channelListWidth = (screenWidth * 0.18).clamp(250.0, 400.0);
-    
-    return Container(
-      width: channelListWidth,
-      color: Colors.white.withAlpha((0.05 * 255).round()),
-      child: Column(
-        children: [
-          // Header
-          Container(
-            height: 60,
-            padding: const EdgeInsets.all(AppSizes.md),
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'CHANNELS',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-          ),
-          const Divider(height: 1, color: AppTheme.divider),
-
-          // Channel list
-          Expanded(
-            child: ListView.builder(
-              controller: _verticalScrollController,
-              itemCount: channels.length,
-              itemBuilder: (context, index) {
-                final channel = channels[index];
-                if (index == 0) {
-                  return Focus(
-                    focusNode: _firstContentFocusNode,
-                    child: _buildChannelItem(channel),
-                  );
-                }
-                return _buildChannelItem(channel);
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildChannelItem(Channel channel) {
-    final isSelected = _selectedChannelId == channel.id;
-    final isPlaying = _playingChannel?.id == channel.id;
-
-    return Focus(
-      onKeyEvent: (node, event) {
-        if (event is KeyDownEvent &&
-            (event.logicalKey == LogicalKeyboardKey.select ||
-             event.logicalKey == LogicalKeyboardKey.enter)) {
-          setState(() {
-            _selectedChannelId = channel.id;
-          });
-          _playChannelInMiniPlayer(channel);
-          return KeyEventResult.handled;
-        }
-        return KeyEventResult.ignored;
-      },
-      child: Builder(
-        builder: (context) {
-          final isFocused = Focus.of(context).hasFocus;
-          
-          return Container(
-            height: 56,
-            decoration: BoxDecoration(
-              color: isSelected ? AppTheme.primaryBlue.withAlpha((0.2 * 255).round()) : null,
-              border: const Border(
-                bottom: BorderSide(color: AppTheme.divider, width: 0.5),
-              ),
-            ),
-            child: Material(
-              color: isFocused ? AppTheme.primaryBlue.withAlpha((0.1 * 255).round()) : Colors.transparent,
-              child: InkWell(
-                onTap: () {
-                  setState(() {
-                    _selectedChannelId = channel.id;
-                  });
-                  _playChannelInMiniPlayer(channel);
-                },
-                onLongPress: () {
-                  _showChannelOptions(channel);
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSizes.sm),
-                  child: Row(
-                    children: [
-                      // Channel logo
-                      Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          color: AppTheme.cardBackground,
-                          borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                        ),
-                        child: channel.logoUrl != null
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                                child: Image.network(
-                                  channel.logoUrl!,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return const Center(
-                                      child: Icon(
-                                        Icons.dvr,
-                                        color: AppTheme.primaryBlue,
-                                        size: 24,
-                                      ),
-                                    );
-                                  },
-                                ),
-                              )
-                            : const Center(
-                                child: Icon(
-                                  Icons.dvr,
-                                  color: AppTheme.primaryBlue,
-                                  size: 24,
-                                ),
-                              ),
-                      ),
-                      const SizedBox(width: AppSizes.sm),
-                      // Channel info
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              channel.name,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            if (channel.channelNumber != null)
-                              Text(
-                                '${channel.channelNumber}',
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   Widget _buildProgramGrid(List<Channel> channels, EpgService epgService) {
     debugPrint('EPG Grid: isLoading=${epgService.isLoading}, hasData=${epgService.hasData}, epgData keys=${epgService.epgData.keys.length}');
     
@@ -1366,7 +1209,6 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
   /// Channel sidebar item (fixed on left)
   Widget _buildChannelSidebarItem(Channel channel) {
     final isSelected = _selectedChannelId == channel.id;
-    final isPlaying = _playingChannel?.id == channel.id;
     
     return Focus(
       onKeyEvent: (node, event) {
@@ -1410,8 +1252,8 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                 children: [
                   // Channel logo
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 50,
+                    height: 50,
                     decoration: BoxDecoration(
                       color: AppTheme.cardBackground,
                       borderRadius: BorderRadius.circular(AppSizes.radiusSm),
@@ -1421,20 +1263,28 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                             borderRadius: BorderRadius.circular(AppSizes.radiusSm),
                             child: Image.network(
                               channel.logoUrl!,
-                              fit: BoxFit.contain,
+                              fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) {
                                 return const Center(
-                                  child: Icon(Icons.dvr, color: AppTheme.primaryBlue, size: 24),
+                                  child: Icon(
+                                    Icons.dvr,
+                                    color: AppTheme.primaryBlue,
+                                    size: 24,
+                                  ),
                                 );
                               },
                             ),
                           )
                         : const Center(
-                            child: Icon(Icons.dvr, color: AppTheme.primaryBlue, size: 24),
+                            child: Icon(
+                              Icons.dvr,
+                              color: AppTheme.primaryBlue,
+                              size: 24,
+                            ),
                           ),
                   ),
                   const SizedBox(width: AppSizes.sm),
-                  // Channel name
+                  // Channel info
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1445,15 +1295,13 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
-                          maxLines: 2,
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         if (channel.channelNumber != null)
                           Text(
-                            'Ch ${channel.channelNumber}',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppTheme.textSecondary,
-                            ),
+                            '${channel.channelNumber}',
+                            style: Theme.of(context).textTheme.bodySmall,
                           ),
                       ],
                     ),
@@ -1615,383 +1463,6 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                       ),
                     ),
                   ],
-                ),
-                Text(
-                  '${DateFormat.jm().format(program.startTime)} - ${DateFormat.jm().format(program.endTime)}',
-                  style: Theme.of(context).textTheme.labelSmall,
-                  maxLines: 1,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Calculate width for just the programs grid (no channel sidebar)
-  double _calculateProgramsGridWidth() {
-    return 12 * 120.0; // 12 hours at 120px per hour
-  }
-
-  Widget _buildTimeHeader() {
-    final hours = _isHourlyView ? 24 : 48;
-    final totalWidth = hours * (_isHourlyView ? 120.0 : 60.0);
-    const channelSidebarWidth = 200.0; // Must match the channel info section width in _buildProgramRow
-
-    return Container(
-      height: 60,
-      width: totalWidth + channelSidebarWidth,
-      child: Row(
-        children: [
-          // Spacer to align with channel sidebar
-          Container(
-            width: channelSidebarWidth,
-            decoration: BoxDecoration(
-              color: const Color(0xFF121629),
-              border: const Border(
-                right: BorderSide(color: AppTheme.divider, width: 1),
-              ),
-            ),
-            child: Center(
-              child: Text(
-                _selectedDate.day == DateTime.now().day &&
-                    _selectedDate.month == DateTime.now().month &&
-                    _selectedDate.year == DateTime.now().year
-                    ? 'Today'
-                    : '${_selectedDate.month}/${_selectedDate.day}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-          // Time slots
-          ...List.generate(hours, (index) {
-            final hour = _isHourlyView ? index : index ~/ 2;
-            final minute = _isHourlyView ? 0 : (index % 2) * 30;
-            final time = TimeOfDay(hour: hour, minute: minute);
-
-            return Container(
-              width: _isHourlyView ? 120 : 60,
-              padding: const EdgeInsets.all(AppSizes.sm),
-              decoration: BoxDecoration(
-                color: const Color(0xFF121629), // Matches sidebar (gradient + white overlay)
-                border: const Border(
-                  right: BorderSide(color: AppTheme.divider, width: 0.5),
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  time.format(context),
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ),
-            );
-          }),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProgramRow(Channel channel, EpgService epgService) {
-    // Get programs for this channel using fuzzy matching
-    final channelKey = channel.tvgId ?? channel.id;
-    final programs = epgService.getProgramsForChannel(channelKey, channelName: channel.name);
-    
-    if (programs.isEmpty && epgService.hasData) {
-      // Only log when EPG data exists but no match found for this channel
-      debugPrint('EPG Row: No match for "${channel.name}" (tvgId: ${channel.tvgId}, id: ${channel.id})');
-    } else if (programs.isNotEmpty) {
-      debugPrint('EPG Row: Found ${programs.length} programs for "${channel.name}"');
-    }
-
-    // Filter programs for selected date
-    final startOfDay = DateTime(
-      _selectedDate.year,
-      _selectedDate.month,
-      _selectedDate.day,
-    );
-    final endOfDay = startOfDay.add(const Duration(days: 1));
-
-    final dayPrograms = programs.where((program) {
-      return program.startTime.isBefore(endOfDay) &&
-          program.endTime.isAfter(startOfDay);
-    }).toList();
-
-    final isSelected = _selectedChannelId == channel.id;
-    final isPlaying = _playingChannel?.id == channel.id;
-
-    return Container(
-      height: 56,
-      clipBehavior: Clip.hardEdge,
-      decoration: BoxDecoration(
-        color: isSelected ? AppTheme.primaryBlue.withAlpha((0.2 * 255).round()) : null,
-        border: const Border(
-          bottom: BorderSide(color: AppTheme.divider, width: 0.5),
-        ),
-      ),
-      child: Row(
-        children: [
-          // Channel info section (fixed width on left)
-          Focus(
-            onKeyEvent: (node, event) {
-              if (event is KeyDownEvent && 
-                  (event.logicalKey == LogicalKeyboardKey.select || 
-                   event.logicalKey == LogicalKeyboardKey.enter)) {
-                setState(() {
-                  _selectedChannelId = channel.id;
-                });
-                _playChannelInMiniPlayer(channel);
-                return KeyEventResult.handled;
-              }
-              return KeyEventResult.ignored;
-            },
-            child: Builder(
-              builder: (context) {
-                final isFocused = Focus.of(context).hasFocus;
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedChannelId = channel.id;
-                    });
-                    _playChannelInMiniPlayer(channel);
-                  },
-                  onLongPress: () => _showChannelContextMenu(context, channel),
-                  child: Container(
-                    width: 200,
-                    height: 56, // Fixed height to match parent
-                    padding: const EdgeInsets.symmetric(horizontal: AppSizes.sm, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: isFocused 
-                          ? AppTheme.primaryBlue.withAlpha((0.3 * 255).round())
-                          : Colors.white.withAlpha((0.05 * 255).round()),
-                      border: Border(
-                        right: BorderSide(color: AppTheme.divider, width: 1),
-                        top: isFocused ? const BorderSide(color: AppTheme.primaryBlue, width: 2) : BorderSide.none,
-                        bottom: isFocused ? const BorderSide(color: AppTheme.primaryBlue, width: 2) : BorderSide.none,
-                        left: isFocused ? const BorderSide(color: AppTheme.primaryBlue, width: 2) : BorderSide.none,
-                      ),
-                    ),
-              child: Row(
-                children: [
-                  // Channel logo
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: AppTheme.cardBackground,
-                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                    ),
-                    child: channel.logoUrl != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                            child: Image.network(
-                              channel.logoUrl!,
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) {
-                                return const Center(
-                                  child: Icon(
-                                    Icons.dvr,
-                                    color: AppTheme.primaryBlue,
-                                    size: 24,
-                                  ),
-                                );
-                              },
-                            ),
-                          )
-                        : const Center(
-                            child: Icon(
-                              Icons.dvr,
-                              color: AppTheme.primaryBlue,
-                              size: 24,
-                            ),
-                          ),
-                  ),
-                  const SizedBox(width: AppSizes.sm),
-                  // Channel name
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          channel.name,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (channel.channelNumber != null)
-                          Text(
-                            '${channel.channelNumber}',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                      ],
-                    ),
-                  ),
-                  // Favorite button
-                  IconButton(
-                    icon: Icon(
-                      _epgFavoriteChannelIds.contains(channel.id)
-                          ? Icons.favorite
-                          : Icons.favorite_border,
-                      color: _epgFavoriteChannelIds.contains(channel.id)
-                          ? AppTheme.accentPink
-                          : Colors.white.withAlpha((0.5 * 255).round()),
-                      size: 20,
-                    ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    onPressed: () => _toggleEpgFavorite(channel),
-                  ),
-                ],
-                  ),
-                ),
-              );
-          },
-        ),
-      ),
-          // Programs section - positioned based on actual time
-          Expanded(
-            child: ClipRect(
-              child: SizedBox(
-                height: 80,
-                child: dayPrograms.isEmpty
-                    ? Container(
-                        alignment: Alignment.centerLeft,
-                        padding: const EdgeInsets.only(left: AppSizes.md),
-                        child: Text(
-                          'No EPG data',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(color: AppTheme.textSecondary),
-                        ),
-                      )
-                    : Stack(
-                        clipBehavior: Clip.hardEdge,
-                        children: dayPrograms.map((program) {
-                          // Calculate position based on start time
-                          final cellWidth = _isHourlyView ? 120.0 : 60.0;
-                          final startOfDay = DateTime(
-                            _selectedDate.year,
-                            _selectedDate.month,
-                            _selectedDate.day,
-                          );
-                          
-                          // Clamp program to selected day
-                          final displayStart = program.startTime.isBefore(startOfDay) 
-                              ? startOfDay 
-                              : program.startTime;
-                          
-                          // Calculate left offset based on hours since midnight
-                          final hoursSinceStart = displayStart.difference(startOfDay).inMinutes / 60;
-                          final leftOffset = hoursSinceStart * cellWidth;
-                          
-                          return Positioned(
-                            left: leftOffset,
-                            top: 0,
-                            bottom: 0,
-                            child: _buildProgramCell(program, startOfDay),
-                          );
-                        }).toList(),
-                      ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProgramCell(Program program, DateTime startOfDay) {
-    final cellWidth = _isHourlyView ? 120.0 : 60.0;
-    final endOfDay = startOfDay.add(const Duration(days: 1));
-    
-    // Clamp program times to the selected day
-    final displayStart = program.startTime.isBefore(startOfDay) 
-        ? startOfDay 
-        : program.startTime;
-    final displayEnd = program.endTime.isAfter(endOfDay) 
-        ? endOfDay 
-        : program.endTime;
-    
-    // Calculate width based on visible duration within the day
-    final visibleDuration = displayEnd.difference(displayStart).inMinutes;
-    final calculatedWidth = visibleDuration > 0 ? (visibleDuration / 60) * cellWidth : cellWidth / 2;
-    final maxWidth = 24 * cellWidth;
-    final minWidth = maxWidth < 30.0 ? maxWidth : 30.0;
-    final double width = calculatedWidth.clamp(minWidth, maxWidth);
-    
-    final isLive = program.isCurrentlyPlaying;
-    final hasCatchup = program.hasCatchup;
-    
-    // Subtle dark theme colors
-    const epgCellBackground = Color(0xFF1E1E28); // Dark with blue tint
-    const epgLiveColor = Color(0xFF4a4fc9); // Brighter blue for live
-    const epgCatchupColor = Color(0xFFcc5a2d); // Muted orange for catchup
-
-    return Container(
-      width: width,
-      height: 76, // Fixed height to fit within 80px row (minus margins)
-      margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 2),
-      decoration: BoxDecoration(
-        color: isLive
-            ? epgLiveColor
-            : hasCatchup
-            ? epgCatchupColor.withAlpha((0.4 * 255).round())
-            : epgCellBackground,
-        borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-        border: Border.all(
-          color: isLive
-              ? epgLiveColor
-              : hasCatchup
-              ? epgCatchupColor
-              : const Color(0xFF2a2a35), // Subtle border
-          width: isLive || hasCatchup ? 2 : 1,
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _showProgramDetails(program),
-          onLongPress: () => _showProgramContextMenu(program),
-          borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSizes.sm, vertical: 2),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(
-                  child: Row(
-                  children: [
-                    if (hasCatchup) ...[
-                          const Icon(
-                            Icons.replay,
-                            size: 12,
-                            color: Color(0xFFcc5a2d), // Muted orange for catchup
-                          ),
-                          const SizedBox(width: 4),
-                        ],
-                    Expanded(
-                      child: Text(
-                        program.title,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: isLive
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
                 ),
                 Text(
                   '${DateFormat.jm().format(program.startTime)} - ${DateFormat.jm().format(program.endTime)}',
@@ -2978,28 +2449,5 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
 
     // Navigate to player with catch-up stream
     context.push('/player', extra: catchupChannel);
-  }
-
-  void _playLive(Program program) {
-    // Find the channel and navigate to live player
-    final channelProvider = Provider.of<ChannelProvider>(
-      context,
-      listen: false,
-    );
-    final channel = channelProvider.getChannelById(program.channelId) ?? Channel(
-      id: program.channelId,
-      name: 'Unknown Channel',
-      url: '',
-      groupTitle: '',
-    );
-
-    if (channel.url.isNotEmpty) {
-      context.push('/player', extra: channel);
-    } else {
-      final localContext = context;
-      if (localContext.mounted) {
-        showAppSnackBar(localContext, const SnackBar(content: Text('Channel not available')));
-      }
-    }
   }
 }

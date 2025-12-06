@@ -7,6 +7,7 @@ import '../providers/channel_provider.dart';
 import '../utils/app_theme.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 class PlaylistEditorScreen extends StatefulWidget {
   const PlaylistEditorScreen({super.key});
@@ -302,18 +303,18 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
         ? AppTheme.primaryBlue.withAlpha((0.1 * 255).round())
         : AppTheme.cardBackground,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(context.tvSpacing(8)),
               borderSide: BorderSide.none,
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(context.tvSpacing(8)),
               borderSide: BorderSide.none,
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 3),
+              borderRadius: BorderRadius.circular(context.tvSpacing(8)),
+              borderSide: BorderSide(color: AppTheme.primaryBlue, width: context.tvSpacing(3)),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            contentPadding: EdgeInsets.symmetric(horizontal: context.tvSpacing(16), vertical: context.tvSpacing(16)),
           ),
         ),
       ),
@@ -388,7 +389,7 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
               )
         ),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppSizes.lg),
+          padding: EdgeInsets.all(context.tvSpacing(32)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -616,30 +617,30 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
     required List<Widget> children,
   }) {
     return Card(
-      margin: const EdgeInsets.only(bottom: AppSizes.md),
+      margin: EdgeInsets.only(bottom: context.tvSpacing(20)),
       child: Padding(
-        padding: const EdgeInsets.all(AppSizes.lg),
+        padding: EdgeInsets.all(context.tvSpacing(32)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 18,
+              style: TextStyle(
+                fontSize: context.tvTextSize(18),
                 fontWeight: FontWeight.bold,
               ),
             ),
             if (subtitle != null) ...[
-              const SizedBox(height: 4),
+              SizedBox(height: context.tvSpacing(4)),
               Text(
                 subtitle,
-                style: const TextStyle(
-                  fontSize: 13,
+                style: TextStyle(
+                  fontSize: context.tvTextSize(13),
                   color: AppTheme.textSecondary,
                 ),
               ),
             ],
-            const SizedBox(height: AppSizes.md),
+            SizedBox(height: context.tvSpacing(20)),
             ...children,
           ],
         ),

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:iptv_player/services/epg_service.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/models/channel.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 /// A widget that displays program artwork for a channel based on what's currently airing.
 /// Uses EPG data to get the current program, then fetches artwork from TMDB.
@@ -33,8 +34,6 @@ class ProgramArtworkWidget extends StatefulWidget {
 
 class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
   String? _artworkUrl;
-  bool _isLoading = true;
-  String? _programTitle;
   
   // Static cache shared across all instances
   static final Map<String, String?> _artworkCache = {};
@@ -70,8 +69,6 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
         ? currentProgram!.title 
         : widget.channel.name;
     
-    _programTitle = currentProgram?.title;
-    
     debugPrint('ProgramArtwork: Channel "${widget.channel.name}" - searching for "$searchTitle"');
     
     // Check cache
@@ -79,7 +76,6 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
       if (mounted) {
         setState(() {
           _artworkUrl = _artworkCache[searchTitle];
-          _isLoading = false;
         });
       }
       return;
@@ -92,7 +88,6 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
       if (_artworkCache.containsKey(searchTitle) && mounted) {
         setState(() {
           _artworkUrl = _artworkCache[searchTitle];
-          _isLoading = false;
         });
       }
       return;
@@ -108,7 +103,6 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
         if (mounted) {
           setState(() {
             _artworkUrl = url;
-            _isLoading = false;
           });
         }
         return;
@@ -128,7 +122,6 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
         }
         setState(() {
           _artworkUrl = url;
-          _isLoading = false;
         });
       }
     } catch (e) {
@@ -137,7 +130,6 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
       if (mounted) {
         setState(() {
           _artworkUrl = null;
-          _isLoading = false;
         });
       }
     } finally {
@@ -145,128 +137,23 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
     }
   }
 
-  Widget _buildPlaceholder() {
-    if (widget.placeholder != null) {
-      return widget.placeholder!;
-    }
-    
-    // Default placeholder with channel name
-    return Container(
-      width: widget.width,
-      height: widget.height,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.grey[900]!,
-            Colors.grey[800]!,
-          ],
-        ),
-        borderRadius: widget.borderRadius,
-      ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.live_tv,
-              color: Colors.white54,
-              size: (widget.height ?? 100) * 0.3,
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Text(
-                widget.channel.name,
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildShimmer() {
-    return Container(
-      width: widget.width,
-      height: widget.height,
-      decoration: BoxDecoration(
-        color: Colors.grey[850],
-        borderRadius: widget.borderRadius,
-      ),
-      child: const Center(
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          valueColor: AlwaysStoppedAnimation<Color>(Colors.white30),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return _buildShimmer();
-    }
-    
-    if (_artworkUrl == null || _artworkUrl!.isEmpty) {
-      return widget.errorWidget ?? _buildPlaceholder();
-    }
-
+    final tvWidth = widget.width != null ? context.tvSpacing(widget.width!) : null;
+    final tvHeight = widget.height != null ? context.tvSpacing(widget.height!) : null;
     return ClipRRect(
-      borderRadius: widget.borderRadius ?? BorderRadius.zero,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          CachedNetworkImage(
-            imageUrl: _artworkUrl!,
-            width: widget.width,
-            height: widget.height,
-            fit: widget.fit,
-            placeholder: (context, url) => _buildShimmer(),
-            errorWidget: (context, url, error) => 
-                widget.errorWidget ?? _buildPlaceholder(),
-          ),
-          // Program title overlay at bottom if we have EPG data
-          if (_programTitle != null && _programTitle!.isNotEmpty)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withOpacity(0.8),
-                    ],
-                  ),
-                ),
-                child: Text(
-                  _programTitle!,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ),
-        ],
+      borderRadius: widget.borderRadius ?? BorderRadius.circular(context.tvSpacing(12)),
+      child: Container(
+        width: tvWidth,
+        height: tvHeight,
+        child: _artworkUrl != null && _artworkUrl!.isNotEmpty
+            ? CachedNetworkImage(
+                imageUrl: _artworkUrl!,
+                fit: widget.fit,
+                placeholder: (context, url) => widget.placeholder ?? Icon(Icons.tv, size: context.tvIconSize(32)),
+                errorWidget: (context, url, error) => widget.errorWidget ?? Icon(Icons.tv, size: context.tvIconSize(32)),
+              )
+            : (widget.placeholder ?? Icon(Icons.tv, size: context.tvIconSize(32))),
       ),
     );
   }

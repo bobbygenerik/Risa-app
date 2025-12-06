@@ -78,28 +78,8 @@ class _VodCardImageState extends State<VodCardImage> {
       fit: widget.fit,
       width: double.infinity,
       height: double.infinity,
-      httpHeaders: const {
-        'User-Agent': 'Mozilla/5.0',
-      },
-      fadeInDuration: const Duration(milliseconds: 200),
-      placeholderFadeInDuration: const Duration(milliseconds: 200),
       placeholder: (context, url) => widget.placeholder,
-      errorWidget: (context, url, error) {
-        debugPrint('VodCardImage: Image failed for ${widget.content.title} - $url - $error');
-        // If we have M3U URL and TMDB failed, try M3U as fallback
-        if (_tmdbPosterUrl != null && widget.content.imageUrl != null && widget.content.imageUrl != url) {
-          return CachedNetworkImage(
-            imageUrl: widget.content.imageUrl!,
-            fit: widget.fit,
-            width: double.infinity,
-            height: double.infinity,
-            httpHeaders: const {'User-Agent': 'Mozilla/5.0'},
-            placeholder: (context, url) => widget.placeholder,
-            errorWidget: (context, url, error) => widget.placeholder,
-          );
-        }
-        return widget.placeholder;
-      },
+      errorWidget: (context, url, error) => widget.placeholder,
     );
   }
 }

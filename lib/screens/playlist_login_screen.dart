@@ -472,72 +472,63 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                   Center(
                     child: SingleChildScrollView(
                       padding: EdgeInsets.symmetric(
-                        horizontal: isTV ? AppSizes.lg : AppSizes.xl,
-                        vertical: AppSizes.lg,
+                        horizontal: isTV ? scale(32) : scale(40),
+                        vertical: scale(32),
                       ),
                       child: Container(
                         constraints: BoxConstraints(
-                          maxWidth: isTV ? 580 : 500, // Reduced width
+                          maxWidth: isTV ? scale(580) : scale(500),
                         ),
                         decoration: BoxDecoration(
                           color: AppTheme.cardBackground,
-                          borderRadius: BorderRadius.circular(
-                            AppSizes.radiusXl,
-                          ),
+                          borderRadius: BorderRadius.circular(scale(32)),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withAlpha((0.25 * 255).round()),
-                              blurRadius: 16,
-                              offset: const Offset(0, 8),
+                              blurRadius: scale(16),
+                              offset: Offset(0, vScale(8)),
                             ),
                           ],
                         ),
                         child: Padding(
-                          padding: const EdgeInsets.all(
-                            AppSizes.sm,
-                          ), // Reduced padding
+                          padding: EdgeInsets.all(scale(8)),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               // Logo - Use new app logo
-                              const SizedBox(height: AppSizes.xs),
+                              SizedBox(height: vScale(4)),
                               Image.asset(
                                 'assets/images/croppedlogo2.png',
-                                height: isTV ? 48.0 : 56.0, // Reduced height
+                                height: isTV ? vScale(48) : vScale(56),
                                 fit: BoxFit.contain,
                                 errorBuilder: (context, error, stackTrace) {
-                                  // Fallback to icon if logo not found
                                   return Icon(
                                     Icons.live_tv,
-                                    size: isTV ? 40.0 : 44.0,
+                                    size: isTV ? scale(40) : scale(44),
                                     color: AppTheme.primaryBlue,
                                   );
                                 },
                               ),
-                              const SizedBox(height: AppSizes.xs),
+                              SizedBox(height: vScale(4)),
                               Text(
                                 'Load your playlist to get started',
                                 style: Theme.of(context).textTheme.bodyMedium
                                     ?.copyWith(color: AppTheme.textSecondary),
                                 textAlign: TextAlign.center,
                               ),
-                              const SizedBox(height: AppSizes.sm),
+                              SizedBox(height: vScale(8)),
 
                               // Tab selector
                               Container(
                                 decoration: BoxDecoration(
                                   color: AppTheme.highlight,
-                                  borderRadius: BorderRadius.circular(
-                                    AppSizes.radiusLg,
-                                  ),
+                                  borderRadius: BorderRadius.circular(scale(24)),
                                 ),
                                 child: TabBar(
                                   controller: _tabController,
                                   indicator: BoxDecoration(
                                     color: AppTheme.primaryBlue,
-                                    borderRadius: BorderRadius.circular(
-                                      AppSizes.radiusLg,
-                                    ),
+                                    borderRadius: BorderRadius.circular(scale(24)),
                                   ),
                                   labelColor: AppTheme.textPrimary,
                                   unselectedLabelColor: AppTheme.textSecondary,
@@ -548,13 +539,13 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                                 ),
                               ),
 
-                              const SizedBox(height: AppSizes.sm),
+                              SizedBox(height: vScale(8)),
 
                               // Tab content - Reduced constraints for better visibility
                               ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  minHeight: 220, // Reduced height
-                                  maxHeight: 280, // Reduced height
+                                constraints: BoxConstraints(
+                                  minHeight: vScale(220),
+                                  maxHeight: vScale(280),
                                 ),
                                 child: TabBarView(
                                   controller: _tabController,
@@ -566,9 +557,9 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                               ),
 
                               if (_isLoading) ...[
-                                const SizedBox(height: AppSizes.sm),
-                                const CircularProgressIndicator(),
-                                const SizedBox(height: AppSizes.xs),
+                                SizedBox(height: vScale(8)),
+                                CircularProgressIndicator(),
+                                SizedBox(height: vScale(4)),
                                 const Text(
                                   'Loading playlist...',
                                   style: TextStyle(

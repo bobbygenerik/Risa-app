@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:iptv_player/services/integrated_transcription_service.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 /// Live subtitle overlay widget
 /// Displays real-time transcription and translation on video
@@ -34,24 +35,24 @@ class LiveSubtitleOverlay extends StatelessWidget {
         }
 
         return Positioned(
-          bottom: 80,
-          left: 20,
-          right: 20,
+          bottom: context.tvSpacing(80),
+          left: context.tvSpacing(20),
+          right: context.tvSpacing(20),
           child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSizes.md,
-              vertical: AppSizes.sm,
+            padding: EdgeInsets.symmetric(
+              horizontal: context.tvSpacing(AppSizes.md),
+              vertical: context.tvSpacing(AppSizes.sm),
             ),
             decoration: BoxDecoration(
               color: backgroundColor,
-              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+              borderRadius: BorderRadius.circular(context.tvSpacing(AppSizes.radiusMd)),
             ),
             child: Text(
               subtitles,
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: textColor,
-                fontSize: fontSize,
+                fontSize: context.tvTextSize(fontSize),
                 fontWeight: FontWeight.w600,
                 height: 1.4,
                 shadows: const [

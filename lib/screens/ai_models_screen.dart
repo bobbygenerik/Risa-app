@@ -61,7 +61,12 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
         child: Consumer<AIModelManager>(
           builder: (context, modelManager, _) {
             return ListView(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 48),
+              padding: EdgeInsets.fromLTRB(
+                context.tvSpacing(24),
+                context.tvSpacing(24),
+                context.tvSpacing(24),
+                context.tvSpacing(48),
+              ),
               children: [
                 _buildPageHeader(context, modelManager),
 

@@ -11,28 +11,33 @@ class NativeExoPlayerController {
   // side can register per-instance handlers. String interpolation is used
   // here to embed the id.
   NativeExoPlayerController._(this.viewId)
-    : _channel = MethodChannel('com.streamhub.iptv/exoplayer_$viewId');
+      : _channel = MethodChannel('com.streamhub.iptv/exoplayer_$viewId');
 
   Future<void> play() => _channel.invokeMethod('play');
   Future<void> pause() => _channel.invokeMethod('pause');
-  Future<void> seekTo(int positionMs) => _channel.invokeMethod('seekTo', {'position': positionMs});
-  Future<void> switchAudioTrack(int index, {int? groupIndex}) => _channel.invokeMethod('switchAudioTrack', {
+  Future<void> seekTo(int positionMs) =>
+      _channel.invokeMethod('seekTo', {'position': positionMs});
+  Future<void> switchAudioTrack(int index, {int? groupIndex}) =>
+      _channel.invokeMethod('switchAudioTrack', {
         'trackIndex': index,
         if (groupIndex != null) 'groupIndex': groupIndex,
       });
 
   /// Apply a precise native override by rendererIndex, groupIndex and trackIndex.
   /// Returns a map with keys like 'success' and optional 'message'.
-  Future<Map<String, dynamic>> switchAudioByIndices({required int rendererIndex, required int groupIndex, required int trackIndex}) async {
+  Future<Map<String, dynamic>> switchAudioByIndices(
+      {required int rendererIndex,
+      required int groupIndex,
+      required int trackIndex}) async {
     final res = await _channel.invokeMethod('switchAudioByIndices', {
       'rendererIndex': rendererIndex,
       'groupIndex': groupIndex,
       'trackIndex': trackIndex,
     });
-  if (res is Map) return Map<String, dynamic>.from(res);
+    if (res is Map) return Map<String, dynamic>.from(res);
     return {'success': false};
   }
-  
+
   /// Return a list of native audio tracks exposed by the platform view.
   /// Each entry is a map with keys: label, language, groupIndex, trackIndex.
   Future<List<Map<String, dynamic>>> listAudioTracks() async {
@@ -50,9 +55,12 @@ class NativeExoPlayerController {
     }
     return out;
   }
-  Future<int> getPosition() async => (await _channel.invokeMethod('getPosition')) as int;
-  Future<int> getDuration() async => (await _channel.invokeMethod('getDuration')) as int;
-  
+
+  Future<int> getPosition() async =>
+      (await _channel.invokeMethod('getPosition')) as int;
+  Future<int> getDuration() async =>
+      (await _channel.invokeMethod('getDuration')) as int;
+
   /// Enable AI upscaling on the native player (if supported).
   /// Returns true on success, false otherwise (or if not implemented).
   Future<bool> enableAIUpscaling() async {
@@ -79,7 +87,8 @@ class NativeExoPlayerController {
   /// Set the AI upscaling quality on the native player (if supported).
   Future<bool> setAIQuality(String quality) async {
     try {
-      final res = await _channel.invokeMethod('setAIQuality', {'quality': quality});
+      final res =
+          await _channel.invokeMethod('setAIQuality', {'quality': quality});
       if (res is bool) return res;
     } catch (e) {
       debugPrint('Error setting AI quality: $e');
@@ -90,7 +99,8 @@ class NativeExoPlayerController {
   /// Enable or disable the GPU delegate for the native upscaler. Returns true if the operation succeeded.
   Future<bool> setGPUDelegateEnabled(bool enabled) async {
     try {
-      final res = await _channel.invokeMethod('setGPUDelegateEnabled', {'enabled': enabled});
+      final res = await _channel
+          .invokeMethod('setGPUDelegateEnabled', {'enabled': enabled});
       if (res is bool) return res;
     } catch (e) {
       debugPrint('Error setting GPU delegate: $e');
@@ -112,7 +122,8 @@ class NativeExoPlayerController {
   /// Set overlap percent for tiled inference (0.0 - 0.9). Default 0.5.
   Future<bool> setOverlapPercent(double percent) async {
     try {
-      final res = await _channel.invokeMethod('setOverlapPercent', {'percent': percent});
+      final res = await _channel
+          .invokeMethod('setOverlapPercent', {'percent': percent});
       if (res is bool) return res;
     } catch (e) {
       debugPrint('Error setting overlap percent: $e');
@@ -123,7 +134,8 @@ class NativeExoPlayerController {
   /// Enable or disable adaptive overlap tuning (default: enabled).
   Future<bool> setAdaptiveEnabled(bool enabled) async {
     try {
-      final res = await _channel.invokeMethod('setAdaptiveEnabled', {'enabled': enabled});
+      final res = await _channel
+          .invokeMethod('setAdaptiveEnabled', {'enabled': enabled});
       if (res is bool) return res;
     } catch (e) {
       debugPrint('Error setting adaptive enabled: $e');
@@ -135,7 +147,8 @@ class NativeExoPlayerController {
   /// adjust overlap so the total processing time approaches this target.
   Future<bool> setAdaptiveTargetMs(int ms) async {
     try {
-      final res = await _channel.invokeMethod('setAdaptiveTargetMs', {'ms': ms});
+      final res =
+          await _channel.invokeMethod('setAdaptiveTargetMs', {'ms': ms});
       if (res is bool) return res;
     } catch (e) {
       debugPrint('Error setting adaptive target ms: $e');
@@ -185,7 +198,11 @@ class NativeExoPlayer extends StatefulWidget {
   final bool autoPlay;
   final void Function(NativeExoPlayerController)? onCreated;
 
-  const NativeExoPlayer({super.key, required this.videoUrl, this.autoPlay = true, this.onCreated});
+  const NativeExoPlayer(
+      {super.key,
+      required this.videoUrl,
+      this.autoPlay = true,
+      this.onCreated});
 
   @override
   State<NativeExoPlayer> createState() => _NativeExoPlayerState();
@@ -195,7 +212,8 @@ class _NativeExoPlayerState extends State<NativeExoPlayer> {
   @override
   Widget build(BuildContext context) {
     if (!Platform.isAndroid) {
-      return const Center(child: Text('Native ExoPlayer is available on Android only'));
+      return const Center(
+          child: Text('Native ExoPlayer is available on Android only'));
     }
 
     return AndroidView(

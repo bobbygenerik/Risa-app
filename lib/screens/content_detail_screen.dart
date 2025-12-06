@@ -21,15 +21,20 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    double scale(double value) => value * (screenWidth / 1920);
+    double vScale(double value) => value * (screenHeight / 1080);
+
     return Scaffold(
       backgroundColor: const Color(0xFF050710),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeroBanner(),
-            _buildContentInfo(),
-            _buildSeasonSelector(),
+            _buildHeroBanner(scale, vScale),
+            _buildContentInfo(scale, vScale),
+            _buildSeasonSelector(scale, vScale),
             _buildMoreLikeThis(),
           ],
         ),
@@ -43,7 +48,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
       children: [
         // Background image
         Container(
-          height: 600,
+          height: vScale(600),
           width: double.infinity,
           decoration: const BoxDecoration(color: AppTheme.cardBackground),
           child: heroImage != null
@@ -53,7 +58,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                     Image.network(
                       heroImage,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _buildHeroPlaceholder(),
+                      errorBuilder: (_, __, ___) => _buildHeroPlaceholder(scale, vScale),
                     ),
                     Container(
                       decoration: const BoxDecoration(
@@ -66,7 +71,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                     ),
                   ],
                 )
-              : _buildHeroPlaceholder(),
+              : _buildHeroPlaceholder(scale, vScale),
         ),
 
         // Top navigation - transparent with safe area
@@ -76,7 +81,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
           right: 0,
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(AppSizes.md),
+              padding: EdgeInsets.all(scale(20)), // AppSizes.md assumed 20
               child: Row(
                 children: [
                   Container(
@@ -85,9 +90,10 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.arrow_back,
                         color: AppTheme.textPrimary,
+                        size: scale(24),
                       ),
                       onPressed: () => Navigator.pop(context),
                     ),
@@ -105,7 +111,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
           left: 0,
           right: 0,
           child: Padding(
-            padding: const EdgeInsets.all(AppSizes.xxl),
+            padding: EdgeInsets.all(scale(40)), // AppSizes.xxl assumed 40
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -114,23 +120,23 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                   widget.content.title,
                   style: Theme.of(context).textTheme.displayLarge?.copyWith(
                     fontWeight: FontWeight.bold,
-                    fontSize: 56,
+                    fontSize: scale(56),
                     shadows: [
                       Shadow(
                         color: Colors.black.withAlpha((0.8 * 255).round()),
-                        offset: const Offset(2, 2),
-                        blurRadius: 8,
+                        offset: Offset(scale(2), vScale(2)),
+                        blurRadius: scale(8),
                       ),
                     ],
                   ),
                 ),
 
-                const SizedBox(height: AppSizes.md),
+                SizedBox(height: vScale(20)),
 
                 // Metadata
-                _buildMetadataRow(),
+                _buildMetadataRow(scale, vScale),
 
-                const SizedBox(height: AppSizes.xl),
+                SizedBox(height: vScale(40)),
 
                 // Action buttons
                 Row(
@@ -140,9 +146,6 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                       icon: Icons.play_arrow,
                       label: 'Play',
                       onPressed: () {
-                        // Navigate to VLC player with content details
-                        // Capture messenger (safe even without awaits) to avoid
-                        // using BuildContext across potential async gaps.
                         if (widget.content.videoUrl != null) {
                           context.push(
                             '/vlc-player',
@@ -164,7 +167,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                       },
                     ),
 
-                    const SizedBox(width: AppSizes.md),
+                    SizedBox(width: scale(20)),
 
                     // My List button
                     Consumer<ContentProvider>(
@@ -172,11 +175,10 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                         final isInMyList = contentProvider.isInFavorites(widget.content.id);
                         return OutlinedButton.icon(
                           onPressed: () async {
-                            // Toggle favorite in the content provider
                             await contentProvider.toggleFavorite(widget.content.id);
                           },
-                          icon: Icon(isInMyList ? Icons.check : Icons.add),
-                          label: const Text('My List'),
+                          icon: Icon(isInMyList ? Icons.check : Icons.add, size: scale(24)),
+                          label: Text('My List', style: TextStyle(fontSize: scale(16))),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppTheme.textPrimary,
                             side: BorderSide(
@@ -184,16 +186,16 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                                 (0.5 * 255).round(),
                               ),
                             ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSizes.lg,
-                              vertical: AppSizes.md,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: scale(32),
+                              vertical: vScale(20),
                             ),
                           ),
                         );
                       },
                     ),
 
-                    const SizedBox(width: AppSizes.md),
+                    SizedBox(width: scale(20)),
 
                     // Download button
                     OutlinedButton.icon(
@@ -204,8 +206,9 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                       },
                       icon: Icon(
                         _isDownloaded ? Icons.download_done : Icons.download,
+                        size: scale(24),
                       ),
-                      label: Text(_isDownloaded ? 'Downloaded' : 'Download'),
+                      label: Text(_isDownloaded ? 'Downloaded' : 'Download', style: TextStyle(fontSize: scale(16))),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppTheme.textPrimary,
                         side: BorderSide(
@@ -213,9 +216,9 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                             (0.5 * 255).round(),
                           ),
                         ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSizes.lg,
-                          vertical: AppSizes.md,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: scale(32),
+                          vertical: vScale(20),
                         ),
                       ),
                     ),

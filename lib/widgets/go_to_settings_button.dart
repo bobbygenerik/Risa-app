@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 
 /// A unified button for 'Go to Settings' on all main screens.
@@ -37,22 +38,22 @@ class GoToSettingsButton extends StatelessWidget {
                 duration: TVFocusStyle.animationDuration,
                 decoration: BoxDecoration(
                   color: AppTheme.primaryBlue,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(context.tvSpacing(12)),
                   boxShadow: hasFocus ? TVFocusStyle.focusedShadow : TVFocusStyle.defaultShadow,
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                padding: EdgeInsets.symmetric(horizontal: context.tvSpacing(24), vertical: context.tvSpacing(14)),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.settings, color: Colors.white, size: 20),
-                    const SizedBox(width: 8),
-                    const Text(
+                    Icon(Icons.settings, color: Colors.white, size: context.tvIconSize(20)),
+                    SizedBox(width: context.tvSpacing(8)),
+                    Text(
                       'Go to Settings',
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
-                        fontSize: 16,
+                        fontSize: context.tvTextSize(16),
                       ),
                     ),
                   ],

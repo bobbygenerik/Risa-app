@@ -16,6 +16,9 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
+    late Size _screenSize;
+    double scale(double value) => value * (_screenSize.width / 1920.0).clamp(0.7, 1.5);
+    double vScale(double value) => value * (_screenSize.height / 1080.0).clamp(0.7, 1.5);
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   String? _profileImagePath;
@@ -124,6 +127,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+      _screenSize = MediaQuery.of(context).size;
     // Simplified layout to avoid syntax/paren mismatches during build.
     // Keeps essential fields and save functionality.
     return CompatPopScope(
@@ -151,17 +155,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           body: SafeArea(
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 640),
+                constraints: BoxConstraints(maxWidth: scale(640)),
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSizes.lg,
-                    vertical: AppSizes.xl,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: scale(32),
+                    vertical: vScale(48),
                   ),
                   child: Container(
-                    padding: const EdgeInsets.all(AppSizes.xl),
+                    padding: EdgeInsets.all(vScale(48)),
                     decoration: BoxDecoration(
                       color: AppTheme.cardBackground,
-                      borderRadius: BorderRadius.circular(AppSizes.radiusXl),
+                      borderRadius: BorderRadius.circular(scale(32)),
                       border: Border.all(color: AppTheme.divider),
                     ),
                     child: Column(
@@ -172,7 +176,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           child: GestureDetector(
                             onTap: _pickProfileImage,
                             child: CircleAvatar(
-                              radius: 72,
+                              radius: scale(72),
                               backgroundColor: AppTheme.highlight,
                               backgroundImage: _profileImagePath != null
                                   ? FileImage(File(_profileImagePath!))

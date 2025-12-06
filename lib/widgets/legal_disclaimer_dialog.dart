@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 class LegalDisclaimerDialog extends StatefulWidget {
   const LegalDisclaimerDialog({super.key});
@@ -16,28 +17,29 @@ class _LegalDisclaimerDialogState extends State<LegalDisclaimerDialog> {
     return Dialog(
       backgroundColor: AppTheme.dialogBackground,
       child: Container(
-        width: 600,
-        padding: const EdgeInsets.all(AppSizes.xxl),
+        width: context.tvSpacing(600),
+        padding: EdgeInsets.all(context.tvSpacing(AppSizes.xxl)),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.gavel,
-              size: 64,
+              size: context.tvIconSize(64),
               color: AppTheme.accentRed,
             ),
-            const SizedBox(height: AppSizes.lg),
+            SizedBox(height: context.tvSpacing(AppSizes.lg)),
             Text(
               'Legal Disclaimer',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: AppTheme.accentRed,
+                fontSize: context.tvTextSize(22),
               ),
             ),
-            const SizedBox(height: AppSizes.lg),
+            SizedBox(height: context.tvSpacing(AppSizes.lg)),
             Container(
-              height: 300,
-              padding: const EdgeInsets.all(AppSizes.md),
+              height: context.tvSpacing(300),
+              padding: EdgeInsets.all(context.tvSpacing(AppSizes.md)),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                 begin: Alignment.topLeft,
@@ -48,7 +50,7 @@ class _LegalDisclaimerDialogState extends State<LegalDisclaimerDialog> {
                 ],
               )
                 ,
-                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                borderRadius: BorderRadius.circular(context.tvSpacing(AppSizes.radiusMd)),
                 border: Border.all(color: AppTheme.divider),
               ),
               child: SingleChildScrollView(
@@ -100,7 +102,7 @@ By accepting this disclaimer, you confirm that you understand and will comply wi
                 ),
               ),
             ),
-            const SizedBox(height: AppSizes.lg),
+            SizedBox(height: context.tvSpacing(AppSizes.lg)),
             CheckboxListTile(
               value: _accepted,
               onChanged: (value) {
@@ -117,7 +119,7 @@ By accepting this disclaimer, you confirm that you understand and will comply wi
               controlAffinity: ListTileControlAffinity.leading,
               activeColor: AppTheme.primaryBlue,
             ),
-            const SizedBox(height: AppSizes.lg),
+            SizedBox(height: context.tvSpacing(AppSizes.lg)),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
