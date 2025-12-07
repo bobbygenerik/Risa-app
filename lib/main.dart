@@ -550,6 +550,9 @@ class _MyAppState extends State<MyApp> {
             },
             update: (context, contentProvider, channelProvider) {
               channelProvider?.setContentProvider(contentProvider);
+              // Inject EpgService here
+              final epgService = Provider.of<EpgService>(context, listen: false);
+              channelProvider?.setEpgService(epgService);
               return channelProvider ?? ChannelProvider();
             },
           ),

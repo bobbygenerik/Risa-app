@@ -170,6 +170,30 @@ class EpgService with ChangeNotifier {
       notifyListeners();
     }
   }
+
+  /// Public method to trigger EPG loading from saved URL.
+  /// Called by ChannelProvider when a new EPG URL is found, or by settings screen.
+  Future<void> loadEpg() async {
+    final prefs = await SharedPreferences.getInstance();
+    final epgUrl = prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
+    final secondaryEpgUrl = prefs.getString('secondary_epg_url');
+
+    if (epgUrl != null && epgUrl.isNotEmpty) {
+      debugPrint('EpgService: Triggering loadEpgFromUrl from public loadEpg() method.');
+      await loadEpgFromUrl(epgUrl, forceRefresh: true);
+    } else {
+      debugPrint('EpgService: No EPG URL found in SharedPreferences.');
+      _error = 'No EPG URL configured.';
+      notifyListeners();
+    }
+
+    if (secondaryEpgUrl != null && secondaryEpgUrl.isNotEmpty) {
+      debugPrint('EpgService: Triggering loadSecondaryEpgFromUrl from public loadEpg() method.');
+      await loadSecondaryEpgFromUrl(secondaryEpgUrl, forceRefresh: true);
+    } else {
+      debugPrint('EpgService: No secondary EPG URL found in SharedPreferences.');
+    }
+  }
   
   /// Refresh EPG data in background without blocking initialization
   void _refreshInBackground() async {
@@ -211,6 +235,7 @@ class EpgService with ChangeNotifier {
       return;
     }
     
+    debugPrint('EPG: loadEpgFromUrl called. forceRefresh: $forceRefresh');
     // Check cache first if not forcing refresh
     if (!forceRefresh && await _loadFromCache()) {
       debugPrint('EPG loaded from cache');
@@ -263,9 +288,7 @@ class EpgService with ChangeNotifier {
 
         // Parse in background isolate to avoid blocking UI
         final xmlData = utf8.decode(epgBytes, allowMalformed: true);
-        debugPrint('EPG: Starting background parsing...');
-        
-        final parsed = await compute(parseEpgInIsolate, xmlData);
+        final parsed = await compute(parseEpgInIsolate, xmlData).timeout(const Duration(seconds: 60));
         
         // Convert parsed data back to Program objects
         _epgData.clear();
@@ -604,6 +627,8 @@ class EpgService with ChangeNotifier {
       final cached = _channelIdCache[cacheKey];
       if (cached != null) {
         debugPrint('EPG Match (cached): "$channelId" -> "$cached"');
+      } else {
+        debugPrint('EPG Miss (cached): "$channelId"');
       }
       return cached;
     }
@@ -637,6 +662,7 @@ class EpgService with ChangeNotifier {
     for (final key in allEpgKeys) {
       if (key.toLowerCase() == lowerChannelId) {
         _channelIdCache[cacheKey] = key;
+        debugPrint('EPG Match (lowercase): "$channelId" -> "$key"');
         return key;
       }
     }
@@ -647,6 +673,7 @@ class EpgService with ChangeNotifier {
       final keyWithoutDomain = key.split('.').first;
       if (keyWithoutDomain.toLowerCase() == withoutDomain.toLowerCase()) {
         _channelIdCache[cacheKey] = key;
+        debugPrint('EPG Match (no domain): "$channelId" -> "$key"');
         return key;
       }
     }
@@ -656,6 +683,7 @@ class EpgService with ChangeNotifier {
     final normalizedKeys = _getNormalizedEpgKeys();
     if (normalizedKeys.containsKey(normalizedId)) {
       _channelIdCache[cacheKey] = normalizedKeys[normalizedId];
+      debugPrint('EPG Match (normalized): "$channelId" -> "${normalizedKeys[normalizedId]}"');
       return normalizedKeys[normalizedId];
     }
     
@@ -663,6 +691,7 @@ class EpgService with ChangeNotifier {
     final normalizedWithNumbers = _convertNumberWords(normalizedId);
     if (normalizedWithNumbers != normalizedId && normalizedKeys.containsKey(normalizedWithNumbers)) {
       _channelIdCache[cacheKey] = normalizedKeys[normalizedWithNumbers];
+      debugPrint('EPG Match (normalized with numbers): "$channelId" -> "${normalizedKeys[normalizedWithNumbers]}"');
       return normalizedKeys[normalizedWithNumbers];
     }
     
@@ -766,6 +795,7 @@ class EpgService with ChangeNotifier {
       if (normalizedIdWithoutCountry.contains(epgWithoutCountry) && 
           epgWithoutCountry.length >= 4) {
         _channelIdCache[cacheKey] = entry.value;
+        debugPrint('EPG Match (contains): "$channelId" -> "${entry.value}"');
         return entry.value;
       }
     }
@@ -777,6 +807,7 @@ class EpgService with ChangeNotifier {
       // Direct name match against normalized keys
       if (normalizedKeys.containsKey(normalizedName)) {
         _channelIdCache[cacheKey] = normalizedKeys[normalizedName];
+        debugPrint('EPG Match (name): "$channelName" -> "${normalizedKeys[normalizedName]}"');
         return normalizedKeys[normalizedName];
       }
       
@@ -792,10 +823,12 @@ class EpgService with ChangeNotifier {
         // Check if EPG key is contained in channel name or vice versa
         if (cleanedName.contains(epgWithoutCountry) && epgWithoutCountry.length >= 3) {
           _channelIdCache[cacheKey] = entry.value;
+          debugPrint('EPG Match (name contains): "$channelName" -> "${entry.value}"');
           return entry.value;
         }
         if (epgWithoutCountry.contains(cleanedName) && cleanedName.length >= 3) {
           _channelIdCache[cacheKey] = entry.value;
+          debugPrint('EPG Match (name contains): "$channelName" -> "${entry.value}"');
           return entry.value;
         }
       }
@@ -806,11 +839,13 @@ class EpgService with ChangeNotifier {
       if (key.toLowerCase().contains(lowerChannelId) || 
           lowerChannelId.contains(key.toLowerCase())) {
         _channelIdCache[cacheKey] = key;
+        debugPrint('EPG Match (partial): "$channelId" -> "$key"');
         return key;
       }
     }
     
     // No match found - cache the miss
+    debugPrint('EPG Miss: "$channelId"');
     _channelIdCache[cacheKey] = null;
     return null;
   }
@@ -993,6 +1028,7 @@ class EpgService with ChangeNotifier {
 
   /// Load EPG data from file cache (loads regardless of age)
   Future<bool> _loadFromCache() async {
+    debugPrint('EPG: Attempting to load from cache...');
     try {
       final directory = await getApplicationDocumentsDirectory();
       final file = File('${directory.path}/$_cacheFileName');
@@ -1016,6 +1052,9 @@ class EpgService with ChangeNotifier {
           cacheTime = DateTime.parse(cacheTimeStr);
           final age = DateTime.now().difference(cacheTime);
           debugPrint('EPG: Loading from cache (${age.inHours} hours old)...');
+          if (age > _cacheValidity) {
+            debugPrint('EPG: Cache is expired, but loading anyway.');
+          }
         } catch (e) {
           debugPrint('EPG: Could not parse cache time, loading anyway');
         }
@@ -1026,7 +1065,7 @@ class EpgService with ChangeNotifier {
       final cachedData = await file.readAsString();
       
       // Parse cached data in background isolate
-      final parsed = await compute(parseEpgInIsolate, cachedData);
+      final parsed = await compute(parseEpgInIsolate, cachedData).timeout(const Duration(seconds: 60));
       
       // Convert parsed data back to Program objects
       _epgData.clear();

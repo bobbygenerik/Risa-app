@@ -111,7 +111,7 @@ class _TopNavigationBarState extends State<TopNavigationBar> {
     // Android TV screen size detection (use >= for 1080p TVs)
     final size = MediaQuery.of(context).size;
     final isTV = size.width >= 1920 || size.height >= 1080;
-    final scale = isTV ? 1.8 : 1.0;
+    final scale = isTV ? 1.2 : 1.0;
     final router = GoRouter.of(context);
     
 
