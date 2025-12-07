@@ -275,49 +275,12 @@ class ChannelProvider with ChangeNotifier {
   /// Track when a channel is watched
   Future<void> incrementWatchCount(String channelId) async {
     _watchCounts[channelId] = (_watchCounts[channelId] ?? 0) + 1;
-    
-    // Add to watch history
-    await _addToWatchHistory(channelId);
-    
     notifyListeners();
     
     // Persist watch counts
     final prefs = await SharedPreferences.getInstance();
     final watchCountsJson = _watchCounts.map((k, v) => MapEntry(k, v.toString()));
     await prefs.setString('channel_watch_counts', json.encode(watchCountsJson));
-  }
-  
-  /// Add channel to watch history
-  Future<void> _addToWatchHistory(String channelId) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final historyJson = prefs.getString('watch_history');
-      List<Map<String, dynamic>> history = [];
-      
-      if (historyJson != null) {
-        history = (json.decode(historyJson) as List<dynamic>)
-            .map((e) => Map<String, dynamic>.from(e as Map))
-            .toList();
-      }
-      
-      // Remove if already exists
-      history.removeWhere((item) => item['channelId'] == channelId);
-      
-      // Add to front
-      history.insert(0, {
-        'channelId': channelId,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      });
-      
-      // Keep only last 50
-      if (history.length > 50) {
-        history = history.sublist(0, 50);
-      }
-      
-      await prefs.setString('watch_history', json.encode(history));
-    } catch (e) {
-      debugPrint('Error saving watch history: $e');
-    }
   }
   
   /// Load watch counts from storage
@@ -338,14 +301,20 @@ class ChannelProvider with ChangeNotifier {
   Future<void> autoLoadPlaylist() async {
     if (_hasLoadedPlaylist) return; // Already loaded
 
+    // Set loading immediately so UI shows loading state
+    // Use Future.microtask to avoid calling notifyListeners during build
+    _isLoading = true;
+    Future.microtask(() => notifyListeners());
+
     StartupProbe.mark('ChannelProvider.autoLoadPlaylist invoked');
     await _loadWatchCounts();
-    await _loadFavorites();
     debugPrint('ChannelProvider: Auto-loading playlist...');
     final prefs = await SharedPreferences.getInstance();
     final playlistType = prefs.getString('playlist_type');
 
     if (playlistType == null) {
+      _isLoading = false;
+      Future.microtask(() => notifyListeners());
       StartupProbe.mark('ChannelProvider.autoLoadPlaylist: no saved playlist');
       debugPrint('ChannelProvider: No saved playlist found');
       if (_channelMaps.isNotEmpty || _moviesCount > 0 || _seriesCount > 0) {
@@ -356,7 +325,7 @@ class ChannelProvider with ChangeNotifier {
         _moviesCachePath = null;
         _seriesCachePath = null;
         _cachedCategories = null;
-        notifyListeners();
+        Future.microtask(() => notifyListeners());
       }
       // Ensure stale cache does not resurrect old playlists when none are saved
       await prefs.remove('cached_playlist');
@@ -381,12 +350,6 @@ class ChannelProvider with ChangeNotifier {
           debugPrint('ChannelProvider: Loading from pre-parsed JSON cache...');
           final cacheLoadStart = DateTime.now();
           
-          // Notify UI immediately that we're loading
-          _isLoading = true;
-          _hasLoadedPlaylist = true;
-          notifyListeners();
-          
-          // Load in background without blocking
           final jsonString = await jsonCacheFile.readAsString();
           final parsed = json.decode(jsonString) as Map<String, dynamic>;
           
@@ -396,6 +359,7 @@ class ChannelProvider with ChangeNotifier {
           _channelCache.clear();
           
           // Store VOD counts only - save full data to separate files for lazy loading
+          final dir = await getApplicationDocumentsDirectory();
           final List<dynamic> movies = parsed['movies'] as List<dynamic>;
           final List<dynamic> series = parsed['series'] as List<dynamic>;
           
@@ -411,18 +375,17 @@ class ChannelProvider with ChangeNotifier {
           _cachedCategories = null;
           _computeCategoriesAsync();
           
-          _isLoading = false;
-          notifyListeners();
-          
-          // Load VOD in background after channels are ready
+          // Load only first batch of VOD for ContentProvider (pagination)
           if (_contentProvider != null) {
-            Future.microtask(() async {
-              final firstMovies = await getMovies(limit: 100);
-              final firstSeries = await getSeries(limit: 100);
-              _contentProvider!.loadMovies(firstMovies);
-              _contentProvider!.loadSeries(firstSeries);
-            });
+            final firstMovies = await getMovies(limit: 100);
+            final firstSeries = await getSeries(limit: 100);
+            _contentProvider!.loadMovies(firstMovies);
+            _contentProvider!.loadSeries(firstSeries);
           }
+          
+          _isLoading = false;
+          _hasLoadedPlaylist = true;
+          notifyListeners();
           
           final totalCacheLoad = DateTime.now().difference(cacheLoadStart);
           debugPrint('ChannelProvider: JSON cache loaded in ${totalCacheLoad.inMilliseconds}ms with ${_channelMaps.length} channels, $_moviesCount movies, $_seriesCount series');
@@ -441,11 +404,6 @@ class ChannelProvider with ChangeNotifier {
         if (await file.exists()) {
           debugPrint('ChannelProvider: Loading from M3U file cache (streaming parser)...');
           final cacheLoadStart = DateTime.now();
-          
-          // Notify UI immediately
-          _isLoading = true;
-          _hasLoadedPlaylist = true;
-          notifyListeners();
           
           // Parse from file in isolate to avoid blocking main thread and OOM
           final parseStart = DateTime.now();
@@ -480,22 +438,19 @@ class ChannelProvider with ChangeNotifier {
           // Trigger async category extraction in background (non-blocking)
           _computeCategoriesAsync();
           
-          _isLoading = false;
-          notifyListeners();
-          
-          // Load VOD in background
           if (_contentProvider != null) {
-            Future.microtask(() async {
-              final firstMovies = await getMovies(limit: 100);
-              final firstSeries = await getSeries(limit: 100);
-              _contentProvider!.loadMovies(firstMovies);
-              _contentProvider!.loadSeries(firstSeries);
-            });
+            final firstMovies = await getMovies(limit: 100);
+            final firstSeries = await getSeries(limit: 100);
+            _contentProvider!.loadMovies(firstMovies);
+            _contentProvider!.loadSeries(firstSeries);
           }
           
-          // Save to JSON cache for faster loading next time (in background)
-          Future.microtask(() => _saveJsonCache(parsed));
+          // Save to JSON cache for faster loading next time
+          _saveJsonCache(parsed);
           
+          _isLoading = false;
+          _hasLoadedPlaylist = true;
+          notifyListeners();
           final totalCacheLoad = DateTime.now().difference(cacheLoadStart);
           debugPrint('ChannelProvider: File cache loaded in ${totalCacheLoad.inMilliseconds}ms with ${_channelMaps.length} channels');
           StartupProbe.mark('ChannelProvider.autoLoadPlaylist: file cache load finished');
@@ -575,6 +530,7 @@ class ChannelProvider with ChangeNotifier {
     _errorMessage = null;
     _lastM3UContent = null; // Clear old content
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
 
     try {
       debugPrint('ChannelProvider: Loading playlist from URL: $url');
@@ -706,29 +662,39 @@ class ChannelProvider with ChangeNotifier {
             .map((c) => Map<String, dynamic>.from(c))
             .toList();
         _channelCache.clear();
-        
+
+        // --- Write playlist to SharedPreferences for Android Auto ---
+        try {
+          final playlistJson = json.encode(_channelMaps);
+          await prefs.setString('flutter.cached_playlist', playlistJson);
+          debugPrint('ChannelProvider: Saved playlist to flutter.cached_playlist for Android Auto');
+          debugPrint('ChannelProvider: flutter.cached_playlist contents: ' + playlistJson.substring(0, playlistJson.length > 500 ? 500 : playlistJson.length));
+        } catch (e) {
+          debugPrint('ChannelProvider: Failed to save playlist for Android Auto: $e');
+        }
+
         final List<dynamic> movies = parsed['movies'] as List<dynamic>;
         final List<dynamic> series = parsed['series'] as List<dynamic>;
-        
+
         _moviesCount = movies.length;
         _seriesCount = series.length;
-        
+
         // Save VOD to separate cache files for lazy loading (avoid OOM)
         _loadingStatus = 'Saving VOD content...';
         _loadingProgress = 0.8;
         notifyListeners();
-        
+
         _moviesCachePath = '${dir.path}/movies_cache.json';
         _seriesCachePath = '${dir.path}/series_cache.json';
         await File(_moviesCachePath!).writeAsString(json.encode(movies));
         await File(_seriesCachePath!).writeAsString(json.encode(series));
         final mapDuration = DateTime.now().difference(mapStart);
         debugPrint('ChannelProvider: Map conversion took ${mapDuration.inMilliseconds}ms');
-        
+
         _cachedCategories = null; // Clear cache when channels change
         // Trigger async category extraction in background (non-blocking)
         _computeCategoriesAsync();
-        
+
         debugPrint('ChannelProvider: Parsed ${_channelMaps.length} channels (isolate)');
         debugPrint('ChannelProvider: Parsed $_moviesCount movies, $_seriesCount series (isolate)');
 
@@ -753,7 +719,6 @@ class ChannelProvider with ChangeNotifier {
         _loadingProgress = 0.95;
         notifyListeners();
         
-        final prefs = await SharedPreferences.getInstance();
         final now = DateTime.now().millisecondsSinceEpoch;
         final cacheFile = File('${dir.path}/$_playlistCacheFileName');
         if (await tempFile.exists()) {
@@ -1130,42 +1095,10 @@ class ChannelProvider with ChangeNotifier {
   }
 
   /// Add channel to favorites
-  Future<void> addToFavorites(Channel channel) async {
+  void addToFavorites(Channel channel) {
     if (!_favoriteChannels.contains(channel)) {
       _favoriteChannels.add(channel);
-      await _saveFavorites();
       notifyListeners();
-    }
-  }
-  
-  /// Save favorites to SharedPreferences
-  Future<void> _saveFavorites() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final favoriteIds = _favoriteChannels.map((c) => c.id).toList();
-      await prefs.setString('favorite_channels', json.encode(favoriteIds));
-    } catch (e) {
-      debugPrint('Error saving favorites: $e');
-    }
-  }
-  
-  /// Load favorites from SharedPreferences
-  Future<void> _loadFavorites() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final favoritesJson = prefs.getString('favorite_channels');
-      if (favoritesJson != null) {
-        final List<dynamic> favoriteIds = json.decode(favoritesJson);
-        _favoriteChannels.clear();
-        for (final id in favoriteIds) {
-          final channel = getChannelById(id as String);
-          if (channel != null) {
-            _favoriteChannels.add(channel);
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint('Error loading favorites: $e');
     }
   }
 
@@ -1240,9 +1173,8 @@ class ChannelProvider with ChangeNotifier {
   }
 
   /// Remove channel from favorites
-  Future<void> removeFromFavorites(Channel channel) async {
+  void removeFromFavorites(Channel channel) {
     _favoriteChannels.remove(channel);
-    await _saveFavorites();
     notifyListeners();
   }
 

@@ -10,7 +10,7 @@ import 'package:iptv_player/widgets/tv_focusable.dart';
 class GoToSettingsButton extends StatelessWidget {
   final VoidCallback onPressed;
   final FocusNode? focusNode;
-  const GoToSettingsButton({super.key, required this.onPressed, this.focusNode});
+  const GoToSettingsButton({Key? key, required this.onPressed, this.focusNode}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

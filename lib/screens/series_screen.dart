@@ -263,49 +263,43 @@ class _SeriesScreenState extends State<SeriesScreen>
           return _wrapWithDirectionalFocus(_buildEmptyState(context));
         }
 
-        final stack = Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF050710), Color(0xFF0d1140)],
-            ),
-          ),
-          child: Stack(
-            children: [
-              // Full-height hero banner background
-              Positioned.fill(
-                child: _buildHeroBannerBackground(
-                  (_curatedSeries.isNotEmpty
-                      ? _curatedSeries
-                      : series)[_featuredIndex >=
-                          (_curatedSeries.isNotEmpty
-                              ? _curatedSeries.length
-                              : series.length)
-                      ? 0
-                      : _featuredIndex],
-                ),
+        final stack = Stack(
+          children: [
+            // Full-height hero banner background
+            Positioned.fill(
+              child: _buildHeroBannerBackground(
+                (_curatedSeries.isNotEmpty
+                    ? _curatedSeries
+                    : series)[_featuredIndex >=
+                        (_curatedSeries.isNotEmpty
+                            ? _curatedSeries.length
+                            : series.length)
+                    ? 0
+                    : _featuredIndex],
               ),
-              // Content on top
-              SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Hero banner with content overlay
-                    _buildHeroBannerOverlay(
-                      context,
-                      (_curatedSeries.isNotEmpty
-                          ? _curatedSeries
-                          : series)[_featuredIndex >=
-                              (_curatedSeries.isNotEmpty
-                                  ? _curatedSeries.length
-                                  : series.length)
-                          ? 0
-                          : _featuredIndex],
-                    ),
-                    SizedBox(height: context.tvSpacing(AppSizes.lg)),
+            ),
+            // Content on top
+            SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Hero banner with content overlay
+                  _buildHeroBannerOverlay(
+                    context,
+                    (_curatedSeries.isNotEmpty
+                        ? _curatedSeries
+                        : series)[_featuredIndex >=
+                            (_curatedSeries.isNotEmpty
+                                ? _curatedSeries.length
+                                : series.length)
+                        ? 0
+                        : _featuredIndex],
+                  ),
+                  SizedBox(height: context.tvSpacing(AppSizes.lg)),
 
-                    Padding(
+                  Container(
+                    color: const Color(0xFF050710),
+                    child: Padding(
                       padding: EdgeInsets.all(context.tvSpacing(AppSizes.lg)),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -326,12 +320,12 @@ class _SeriesScreenState extends State<SeriesScreen>
                         ],
                       ),
                     ),
+                  ),
                 ],
               ),
             ),
           ],
-        ),
-      );
+        );
 
         return _wrapWithDirectionalFocus(stack);
       },
@@ -705,60 +699,14 @@ class _SeriesScreenState extends State<SeriesScreen>
   }
 
   Widget _buildHeroBannerBackground(Content featuredSeries) {
-    final heroImage = featuredSeries.backdropUrl ?? featuredSeries.imageUrl;
-    if (heroImage == null) {
-      return Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF1a1a2e), Color(0xFF16213e)],
-          ),
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF050710), Color(0xFF0d1140)],
         ),
-      );
-    }
-    
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        CachedNetworkImage(
-          imageUrl: heroImage,
-          fit: BoxFit.cover,
-          placeholder: (_, __) => Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF1a1a2e), Color(0xFF16213e)],
-              ),
-            ),
-          ),
-          errorWidget: (_, __, ___) => Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF1a1a2e), Color(0xFF16213e)],
-              ),
-            ),
-          ),
-        ),
-        Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.black.withAlpha((0.95 * 255).round()),
-                Colors.black.withAlpha((0.2 * 255).round()),
-                Colors.black.withAlpha((0.5 * 255).round()),
-                Colors.black.withAlpha((0.75 * 255).round()),
-              ],
-              stops: const [0.0, 0.08, 0.5, 1.0],
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 

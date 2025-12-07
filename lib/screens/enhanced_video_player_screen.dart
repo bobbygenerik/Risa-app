@@ -900,34 +900,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    // VLC backend disabled - use standard video player
-
-    // On Android, prefer the native ExoPlayer platform view for better native
-    // audio-track support and performance. This will be a no-op on other platforms.
-    if (Platform.isAndroid) {
-      if (!_nativeExoCapabilityResolved) {
-        return const Center(child: CircularProgressIndicator());
-      }
-      if (_nativeExoAvailable) {
-        return NativeExoPlayer(
-          videoUrl: widget.videoUrl,
-          autoPlay: true,
-          onCreated: (controller) {
-            // Keep selected audio track in sync if needed and retain controller
-            _nativeController = controller;
-            if (_selectedAudioTrack != 0) {
-              controller.switchAudioTrack(_selectedAudioTrack);
-            }
-          },
-        );
-      }
-    }
-    
-    // Default: Chewie/video_player
+    // Always use Chewie/video_player for all platforms (bypass NativeExoPlayer for debugging)
     if (_chewieController == null) {
       return const Center(child: CircularProgressIndicator());
     }
-
     return Chewie(controller: _chewieController!);
   }
 

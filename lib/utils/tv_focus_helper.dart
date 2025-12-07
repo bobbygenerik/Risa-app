@@ -169,4 +169,14 @@ extension TVBuildContextExtension on BuildContext {
 
   /// Get TV-scaled spacing
   double tvSpacing(double baseSpacing) => TVFocusHelper.getTVSpacing(baseSpacing);
+
+  /// Get horizontally scaled size based on a 1920px reference width
+  double scale(double value) {
+    return value * (MediaQuery.of(this).size.width / 1920);
+  }
+
+  /// Get vertically scaled size based on a 1080px reference height
+  double vScale(double value) {
+    return value * (MediaQuery.of(this).size.height / 1080);
+  }
 }

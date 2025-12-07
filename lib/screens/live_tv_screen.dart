@@ -178,7 +178,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
   late Size _screenSize;
 
-  @override
   Widget build(BuildContext context) {
     _screenSize = MediaQuery.of(context).size;
     final body = Container(
@@ -304,7 +303,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       canRequestFocus: false,
       skipTraversal: true,
       onKeyEvent: _handleDirectionalKeyEvent,
-      child: SizedBox(
+      child: Container(
         height: _screenSize.height,
         width: double.infinity,
         child: Stack(
@@ -417,7 +416,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             width: context.tvSpacing(32),
             height: context.tvSpacing(32),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.5),
+              color: Colors.black.withOpacity(0.5),
               borderRadius: BorderRadius.circular(4),
             ),
             child: channel.logoUrl != null && channel.logoUrl!.isNotEmpty
@@ -718,11 +717,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     borderRadius: BorderRadius.circular(12),
                     child: Stack(
                       children: [
-                        // Program image background - TMDB preferred, EPG fallback
-                        if (_getProgramImage(currentProgram) != null)
+                        // Program image background or gradient fallback
+                        if (currentProgram?.imageUrl != null && currentProgram!.imageUrl!.isNotEmpty)
                           Positioned.fill(
                             child: CachedNetworkImage(
-                              imageUrl: _getProgramImage(currentProgram)!,
+                              imageUrl: currentProgram.imageUrl!,
                               fit: BoxFit.cover,
                               httpHeaders: const {
                                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -845,7 +844,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '${_formatTime(currentProgram.startTime)} — ${_formatTime(currentProgram.endTime)}',
+                                    _formatTime(currentProgram.startTime) +
+                                        ' — ' +
+                                        _formatTime(currentProgram.endTime),
                                     style: const TextStyle(
                                       color: AppTheme.textSecondary,
                                       fontSize: 11,
@@ -1020,26 +1021,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         ),
       ),
     );
-  }
-
-  String? _getProgramImage(Program? program) {
-    if (program == null) return null;
-    
-    // Try TMDB first (better quality)
-    if (_tmdbEnabled) {
-      final cacheKey = 'program_${program.id}';
-      if (_programArtwork.containsKey(cacheKey)) {
-        final tmdbImage = _programArtwork[cacheKey];
-        if (tmdbImage != null && tmdbImage.isNotEmpty) {
-          return tmdbImage;
-        }
-      } else if (!_artworkRequests.contains(cacheKey)) {
-        _fetchProgramArtwork(program);
-      }
-    }
-    
-    // Fallback to EPG image
-    return program.imageUrl;
   }
 
   String _formatTime(DateTime dt) {

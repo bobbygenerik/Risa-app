@@ -19,7 +19,6 @@ class AutoMediaService : MediaBrowserServiceCompat() {
         private const val LIVE_TV_ID = "live_tv"
         private const val MOVIES_ID = "movies"
         private const val SERIES_ID = "series"
-        private const val MORE_ID = "more"
         private const val FAVORITES_ID = "favorites"
     }
 
@@ -54,21 +53,10 @@ class AutoMediaService : MediaBrowserServiceCompat() {
                 }
                 
                 override fun onSkipToNext() {
-                    // Switch to next channel
-                    val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
-                    val currentId = prefs.getString("flutter.last_played_channel", null)
-                    if (currentId != null) {
-                        playNextChannel(currentId)
-                    }
+                    // No-op: Favorites and next/prev removed
                 }
-                
                 override fun onSkipToPrevious() {
-                    // Switch to previous channel
-                    val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
-                    val currentId = prefs.getString("flutter.last_played_channel", null)
-                    if (currentId != null) {
-                        playPreviousChannel(currentId)
-                    }
+                    // No-op: Favorites and next/prev removed
                 }
                 
                 override fun onPlayFromMediaId(mediaId: String?, extras: Bundle?) {
@@ -132,13 +120,7 @@ class AutoMediaService : MediaBrowserServiceCompat() {
                 mediaItems.add(createBrowsableItem(LIVE_TV_ID, "Live TV", "Watch live channels"))
                 mediaItems.add(createBrowsableItem(MOVIES_ID, "Movies", "Browse movies"))
                 mediaItems.add(createBrowsableItem(SERIES_ID, "Series", "Browse TV series"))
-                mediaItems.add(createBrowsableItem(MORE_ID, "More", "Favorites and settings"))
-            }
-            MORE_ID -> {
                 mediaItems.add(createBrowsableItem(FAVORITES_ID, "Favorites", "Your favorite channels"))
-            }
-            FAVORITES_ID -> {
-                loadFavorites(mediaItems)
             }
             LIVE_TV_ID -> {
                 loadChannelsFromCache(mediaItems, "Live")
@@ -148,6 +130,14 @@ class AutoMediaService : MediaBrowserServiceCompat() {
             }
             SERIES_ID -> {
                 loadChannelsFromCache(mediaItems, "Series")
+            }
+            FAVORITES_ID -> {
+                loadFavorites(mediaItems)
+            }
+            else -> {
+                // Unknown parentId: return an empty list.
+                result.sendResult(null)
+                return
             }
         }
         
@@ -176,8 +166,9 @@ class AutoMediaService : MediaBrowserServiceCompat() {
         try {
             val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
             val cachedPlaylist = prefs.getString("flutter.cached_playlist", null)
-            
-            if (cachedPlaylist == null || cachedPlaylist.isEmpty()) {
+            android.util.Log.d("AutoMediaService", "cachedPlaylist: ${cachedPlaylist?.take(500)}")
+            if (cachedPlaylist.isNullOrEmpty()) {
+                android.util.Log.w("AutoMediaService", "No playlist found in shared preferences!")
                 mediaItems.add(createPlayableItem(
                     "no_playlist",
                     "No playlist loaded",
@@ -185,172 +176,51 @@ class AutoMediaService : MediaBrowserServiceCompat() {
                 ))
                 return
             }
-            
-            if (cachedPlaylist != null) {
-                val channels = JSONArray(cachedPlaylist)
-                var count = 0
-                
-                for (i in 0 until channels.length()) {
-                    if (count >= 20) break // Limit to 20 items for performance
-                    
-                    val channel = channels.getJSONObject(i)
-                    val groupTitle = channel.optString("groupTitle", "")
-                    
-                    // Filter by category
-                    val matchesCategory = when (category) {
-                        "Live" -> !groupTitle.contains("Movies", ignoreCase = true) && 
-                                  !groupTitle.contains("Series", ignoreCase = true)
-                        "Movies" -> groupTitle.contains("Movies", ignoreCase = true) ||
-                                    groupTitle.contains("VOD", ignoreCase = true)
-                        "Series" -> groupTitle.contains("Series", ignoreCase = true) ||
-                                    groupTitle.contains("TV Shows", ignoreCase = true)
-                        else -> false
-                    }
-                    
-                    if (matchesCategory) {
-                        val name = channel.optString("name", "Unknown")
-                        val id = channel.optString("id", "channel_$i")
-                        mediaItems.add(createPlayableItem(id, name, groupTitle))
-                        count++
-                    }
+            val channels = JSONArray(cachedPlaylist)
+            var count = 0
+            for (i in 0 until channels.length()) {
+                if (count >= 20) break // Limit to 20 items for performance
+                val channel = channels.getJSONObject(i)
+                val groupTitle = channel.optString("groupTitle", "")
+                val matchesCategory = when (category) {
+                    "Live" -> !groupTitle.contains("Movies", ignoreCase = true) && !groupTitle.contains("Series", ignoreCase = true)
+                    "Movies" -> groupTitle.contains("Movies", ignoreCase = true) || groupTitle.contains("VOD", ignoreCase = true)
+                    "Series" -> groupTitle.contains("Series", ignoreCase = true) || groupTitle.contains("TV Shows", ignoreCase = true)
+                    else -> false
+                }
+                if (matchesCategory) {
+                    val id = channel.optString("id", "")
+                    val name = channel.optString("name", "Unknown")
+                    val group = channel.optString("groupTitle", "")
+                    mediaItems.add(createPlayableItem(id, name, group))
+                    count++
                 }
             }
-            
-            // If no items loaded, show a message
             if (mediaItems.isEmpty()) {
+                android.util.Log.w("AutoMediaService", "Playlist loaded but no channels matched category: $category")
                 mediaItems.add(createPlayableItem(
-                    "no_content",
-                    "No $category content available",
-                    "Add a playlist in the app"
+                    "no_channels",
+                    "No channels found",
+                    "No channels match this category"
                 ))
             }
         } catch (e: Exception) {
+            android.util.Log.e("AutoMediaService", "Error loading channels: ${e.message}")
             mediaItems.add(createPlayableItem(
                 "error",
-                "Error loading content",
+                "Error loading channels",
                 e.message ?: "Unknown error"
             ))
         }
     }
     
     private fun loadFavorites(mediaItems: MutableList<MediaBrowserCompat.MediaItem>) {
-        try {
-            val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
-            val favoritesJson = prefs.getString("flutter.favorite_channels", null)
-            
-            if (favoritesJson != null) {
-                val favorites = JSONArray(favoritesJson)
-                for (i in 0 until minOf(favorites.length(), 50)) {
-                    val channelId = favorites.getString(i)
-                    
-                    // Find channel in cached playlist
-                    val cachedPlaylist = prefs.getString("flutter.cached_playlist", null)
-                    if (cachedPlaylist != null) {
-                        val channels = JSONArray(cachedPlaylist)
-                        for (j in 0 until channels.length()) {
-                            val channel = channels.getJSONObject(j)
-                            if (channel.optString("id") == channelId) {
-                                val name = channel.optString("name", "Unknown")
-                                val group = channel.optString("groupTitle", "Favorites")
-                                mediaItems.add(createPlayableItem(channelId, name, group))
-                                break
-                            }
-                        }
-                    }
-                }
-            }
-            
-            if (mediaItems.isEmpty()) {
-                mediaItems.add(createPlayableItem(
-                    "no_favorites",
-                    "No favorites yet",
-                    "Add favorites in the app"
-                ))
-            }
-        } catch (e: Exception) {
-            mediaItems.add(createPlayableItem(
-                "error",
-                "Error loading favorites",
-                e.message ?: "Unknown error"
-            ))
-        }
-    }
-    
-    
-    private fun playNextChannel(currentId: String) {
-        try {
-            val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
-            val cachedPlaylist = prefs.getString("flutter.cached_playlist", null)
-            
-            if (cachedPlaylist != null) {
-                val channels = JSONArray(cachedPlaylist)
-                var currentIndex = -1
-                
-                for (i in 0 until channels.length()) {
-                    if (channels.getJSONObject(i).optString("id") == currentId) {
-                        currentIndex = i
-                        break
-                    }
-                }
-                
-                if (currentIndex >= 0 && currentIndex < channels.length() - 1) {
-                    val nextChannel = channels.getJSONObject(currentIndex + 1)
-                    val url = nextChannel.optString("url", "")
-                    val name = nextChannel.optString("name", "")
-                    val id = nextChannel.optString("id", "")
-                    
-                    val intent = Intent(this, MainActivity::class.java)
-                    intent.apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        putExtra("autoplay", true)
-                        putExtra("channel_url", url)
-                        putExtra("channel_name", name)
-                        putExtra("channel_id", id)
-                    }
-                    startActivity(intent)
-                }
-            }
-        } catch (e: Exception) {
-            // Ignore
-        }
-    }
-    
-    private fun playPreviousChannel(currentId: String) {
-        try {
-            val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
-            val cachedPlaylist = prefs.getString("flutter.cached_playlist", null)
-            
-            if (cachedPlaylist != null) {
-                val channels = JSONArray(cachedPlaylist)
-                var currentIndex = -1
-                
-                for (i in 0 until channels.length()) {
-                    if (channels.getJSONObject(i).optString("id") == currentId) {
-                        currentIndex = i
-                        break
-                    }
-                }
-                
-                if (currentIndex > 0) {
-                    val prevChannel = channels.getJSONObject(currentIndex - 1)
-                    val url = prevChannel.optString("url", "")
-                    val name = prevChannel.optString("name", "")
-                    val id = prevChannel.optString("id", "")
-                    
-                    val intent = Intent(this, MainActivity::class.java)
-                    intent.apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        putExtra("autoplay", true)
-                        putExtra("channel_url", url)
-                        putExtra("channel_name", name)
-                        putExtra("channel_id", id)
-                    }
-                    startActivity(intent)
-                }
-            }
-        } catch (e: Exception) {
-            // Ignore
-        }
+        // TODO: Implement logic to load favorite channels from SharedPreferences or another source.
+        mediaItems.add(createPlayableItem(
+            "favorites_unimplemented",
+            "Favorites not implemented",
+            "This feature is coming soon."
+        ))
     }
 
     override fun onDestroy() {

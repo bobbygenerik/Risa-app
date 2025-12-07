@@ -28,6 +28,7 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProviderStateMixin {
+  late Size _screenSize;
   TabController? _tabController;
 
   // Playlist Settings - Late initialization to avoid memory issues
@@ -347,6 +348,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
 
   @override
   Widget build(BuildContext context) {
+      _screenSize = MediaQuery.of(context).size;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: PopScope(

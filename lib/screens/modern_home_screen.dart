@@ -27,6 +27,7 @@ class ModernHomeScreen extends StatefulWidget {
 }
 
 class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerProviderStateMixin {
+    late Size _screenSize;
   final PageController _pageController = PageController();
   final FocusNode _heroFocusNode = FocusNode(debugLabel: 'HeroBanner');
   int _currentPage = 0;
@@ -156,6 +157,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
+      _screenSize = MediaQuery.of(context).size;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {

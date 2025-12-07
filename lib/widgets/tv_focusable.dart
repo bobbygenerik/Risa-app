@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
+import 'package:flutter/services.dart';
 
 /// Modern Netflix-style focus effect constants
 class TVFocusStyle {
@@ -61,7 +62,7 @@ class TVFocusable extends StatefulWidget {
 }
 
 class _TVFocusableState extends State<TVFocusable> {
-  final bool _hasFocus = false;
+  bool _hasFocus = false;
 
   @override
   Widget build(BuildContext context) {

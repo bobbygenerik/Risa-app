@@ -3,40 +3,21 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/models/channel.dart';
-import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
-import 'package:iptv_player/services/epg_service.dart';
-import 'package:iptv_player/services/tmdb_service.dart';
-import 'package:iptv_player/services/service_validator.dart';
 
-class CategoryScreen extends StatefulWidget {
+class CategoryScreen extends StatelessWidget {
   final String category;
 
   const CategoryScreen({super.key, required this.category});
-
-  @override
-  State<CategoryScreen> createState() => _CategoryScreenState();
-}
-
-class _CategoryScreenState extends State<CategoryScreen> {
-  final Map<String, String?> _programArtwork = {};
-  final Set<String> _artworkRequests = {};
-  late final bool _tmdbEnabled;
-
-  @override
-  void initState() {
-    super.initState();
-    _tmdbEnabled = ServiceValidator.isTmdbAvailable;
-  }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<ChannelProvider>(
       builder: (context, channelProvider, child) {
         // Get total count without converting all channels
-        final totalCount = channelProvider.getChannelCountForCategory(widget.category);
+        final totalCount = channelProvider.getChannelCountForCategory(category);
 
         return Padding(
           padding: EdgeInsets.all(context.tvSpacing(32)), // AppSizes.lg assumed 32
@@ -52,7 +33,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    widget.category,
+                    category,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -82,7 +63,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                         itemCount: totalCount,
                         itemBuilder: (context, index) {
                           // Lazy load channel at this index
-                          final channel = channelProvider.getChannelInCategoryAtIndex(widget.category, index);
+                          final channel = channelProvider.getChannelInCategoryAtIndex(category, index);
                           if (channel == null) {
                             return const SizedBox.shrink();
                           }
@@ -131,23 +112,6 @@ class _CategoryScreenState extends State<CategoryScreen> {
     ChannelProvider channelProvider,
   ) {
     final isFavorite = channelProvider.isFavorite(channel);
-    final epgService = Provider.of<EpgService>(context, listen: false);
-    final currentProgram = epgService.getCurrentProgram(channel.tvgId ?? channel.id, channelName: channel.name);
-    
-    // Try TMDB first (better quality), then EPG as fallback
-    String? programImage;
-    if (currentProgram != null && _tmdbEnabled) {
-      final cacheKey = 'program_${currentProgram.id}';
-      if (_programArtwork.containsKey(cacheKey)) {
-        programImage = _programArtwork[cacheKey];
-      } else if (!_artworkRequests.contains(cacheKey)) {
-        _fetchProgramArtwork(currentProgram);
-      }
-    }
-    // Fallback to EPG image if TMDB not available or no result yet
-    if ((programImage == null || programImage.isEmpty) && currentProgram != null) {
-      programImage = currentProgram.imageUrl;
-    }
 
     return Builder(
       builder: (context) {
@@ -159,38 +123,43 @@ class _CategoryScreenState extends State<CategoryScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Channel Logo/Thumbnail with EPG artwork
+                // Channel Logo/Thumbnail
                 Expanded(
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
                       color: AppTheme.cardBackground,
                       borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(context.tvSpacing(12)),
+                        top: Radius.circular(context.tvSpacing(12)), // AppSizes.radiusMd assumed 12
                       ),
                     ),
                     child: Stack(
                       children: [
-                        // Show program artwork if available, otherwise logo
-                        if (programImage != null && programImage.isNotEmpty)
+                        // Logo
+                        if (channel.logoUrl != null && channel.logoUrl!.isNotEmpty)
                           ClipRRect(
                             borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(context.tvSpacing(12)),
+                              top: Radius.circular(context.scale(12)),
                             ),
-                            child: CachedNetworkImage(
-                              imageUrl: programImage,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: double.infinity,
-                              httpHeaders: const {
-                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                              },
-                              placeholder: (context, url) => _buildLogoFallback(channel),
-                              errorWidget: (context, url, error) => _buildLogoFallback(channel),
+                            child: Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(context.tvSpacing(8)), // AppSizes.sm assumed 8
+                                child: CachedNetworkImage(
+                                  imageUrl: channel.logoUrl!,
+                                  fit: BoxFit.contain,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  httpHeaders: const {
+                                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                                  },
+                                  placeholder: (context, url) => _buildChannelPlaceholder(channel.name),
+                                  errorWidget: (context, url, error) => _buildChannelPlaceholder(channel.name),
+                                ),
+                              ),
                             ),
                           )
                         else
-                          _buildLogoFallback(channel),
+                          _buildChannelPlaceholder(channel.name),
 
                         // Live badge
                         Positioned(
@@ -218,8 +187,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
 
                         // Favorite button
                         Positioned(
-                          top: context.tvSpacing(4),
-                          right: context.tvSpacing(4),
+                          top: context.vScale(4),
+                          right: context.scale(4),
                           child: IconButton(
                             icon: Icon(
                               isFavorite ? Icons.favorite : Icons.favorite_border,
@@ -268,37 +237,6 @@ class _CategoryScreenState extends State<CategoryScreen> {
     );
   }
 
-  Widget _buildLogoFallback(Channel channel) {
-    return Builder(
-      builder: (context) {
-        if (channel.logoUrl != null && channel.logoUrl!.isNotEmpty) {
-          return ClipRRect(
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(context.tvSpacing(12)),
-            ),
-            child: Center(
-              child: Padding(
-                padding: EdgeInsets.all(context.tvSpacing(8)),
-                child: CachedNetworkImage(
-                  imageUrl: channel.logoUrl!,
-                  fit: BoxFit.contain,
-                  width: double.infinity,
-                  height: double.infinity,
-                  httpHeaders: const {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                  },
-                  placeholder: (context, url) => _buildChannelPlaceholder(channel.name),
-                  errorWidget: (context, url, error) => _buildChannelPlaceholder(channel.name),
-                ),
-              ),
-            ),
-          );
-        }
-        return _buildChannelPlaceholder(channel.name);
-      },
-    );
-  }
-
   Widget _buildChannelPlaceholder(String name) {
     return Builder(
       builder: (context) {
@@ -322,34 +260,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
             ],
           ),
         );
-
       },
     );
-  }
-
-  Future<void> _fetchProgramArtwork(Program program) async {
-    final cacheKey = 'program_${program.id}';
-    if (_artworkRequests.contains(cacheKey)) return;
-    _artworkRequests.add(cacheKey);
-    
-    try {
-      debugPrint('CategoryScreen: Fetching TMDB art for: "${program.title}"');
-      final image = await TMDBService.getBestBackdrop(program.title);
-      if (mounted) {
-        if (image != null) {
-          debugPrint('CategoryScreen: Found TMDB art for "${program.title}"');
-        }
-        setState(() {
-          _programArtwork[cacheKey] = image ?? '';
-        });
-      }
-    } catch (e) {
-      debugPrint('CategoryScreen: Error fetching TMDB art: $e');
-      if (mounted) {
-        setState(() {
-          _programArtwork[cacheKey] = '';
-        });
-      }
-    }
   }
 }
