@@ -197,19 +197,19 @@ class _MoviesScreenState extends State<MoviesScreen>
                   children: [
                     // Hero banner with content overlay
                     _buildHeroBannerOverlay(context, featured),
-                    const SizedBox(height: AppSizes.lg),
+                    const SizedBox(height: 16),
 
                     Padding(
-                      padding: const EdgeInsets.all(AppSizes.lg),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Recently Added Movies
                           if (recentMovies.isNotEmpty) ...[
                             _buildSectionHeader(context, 'Recently Added'),
-                            const SizedBox(height: AppSizes.md),
+                            const SizedBox(height: 12),
                             _buildMoviesRow(context, recentMovies),
-                            const SizedBox(height: AppSizes.xl),
+                            const SizedBox(height: 20),
                           ],
 
                           // All Movies by Genre
@@ -279,9 +279,12 @@ class _MoviesScreenState extends State<MoviesScreen>
   Widget _buildSectionHeader(BuildContext context, String title) {
     return Text(
       title,
-      style: Theme.of(
-        context,
-      ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+      style: const TextStyle(
+        color: AppTheme.textPrimary,
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.3,
+      ),
     );
   }
 
@@ -340,7 +343,7 @@ class _MoviesScreenState extends State<MoviesScreen>
     final cardHeight = cardWidth * 1.5; // Maintain aspect ratio
     
     return Padding(
-      padding: const EdgeInsets.only(right: AppSizes.md),
+      padding: const EdgeInsets.only(right: 12),
       child: Focus(
         onKeyEvent: (node, event) {
           if (event is KeyDownEvent) {
@@ -521,7 +524,7 @@ class _MoviesScreenState extends State<MoviesScreen>
       
       sections.addAll([
         _buildSectionHeader(context, genre),
-        const SizedBox(height: AppSizes.md),
+        const SizedBox(height: 12),
         _buildMoviesRow(context, displayMovies),
         if (allMovies.length > displayCount)
           Center(
@@ -571,7 +574,7 @@ class _MoviesScreenState extends State<MoviesScreen>
               ),
             ),
           ),
-        const SizedBox(height: AppSizes.xl),
+        const SizedBox(height: 20),
       ]);
     }
 

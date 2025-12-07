@@ -1,8 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Import for LogicalKeyboardKey
-import 'package:go_router/go_router.dart'; // Import for navigation
-import 'package:iptv_player/utils/app_theme.dart'; // Import for theme colors
-import 'package:iptv_player/utils/tv_focus_helper.dart'; // Import for tvTextSize
+import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 
 /// Represents a navigation tab in the sidebar
 class NavTab {
@@ -42,12 +41,14 @@ class SidebarNavigation extends StatefulWidget {
 class _SidebarNavigationState extends State<SidebarNavigation> {
   late List<FocusNode> _tabFocusNodes;
   late int _activeTabIndex;
-  int _focusedTabIndex = 0; // Track which tab has visual focus
-  bool _isNavigating = false; // Block focus stealing during navigation
+  int _focusedTabIndex = 0;
+  bool _isNavigating = false;
   late FocusNode _searchButtonFocusNode;
   late FocusNode _overflowButtonFocusNode;
+  bool _isExpanded = false;
 
   final List<NavTab> _tabs = [
+    NavTab(id: 'epg', label: 'Guide', icon: Icons.dvr, route: '/epg'),
     NavTab(id: 'home', label: 'Live TV', icon: Icons.live_tv, route: '/home'),
     NavTab(id: 'movies', label: 'Movies', icon: Icons.movie, route: '/movies'),
     NavTab(id: 'series', label: 'Series', icon: Icons.tv, route: '/series'),
@@ -61,6 +62,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
     _overflowButtonFocusNode = FocusNode(debugLabel: 'SideOverflowButton');
     _activeTabIndex = _resolveActiveTabIndex(widget.activeTab);
     _focusedTabIndex = _activeTabIndex;
+    _isExpanded = false;
     WidgetsBinding.instance.addPostFrameCallback((_) => _focusActiveTab());
     widget.onNavFocusRegistration?.call(_requestActiveTabFocus);
   }
@@ -74,6 +76,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
       if (!_isNavigating) {
         _focusedTabIndex = newIndex;
       }
+      _isExpanded = false;
       WidgetsBinding.instance.addPostFrameCallback((_) => _focusActiveTab());
     }
     if (oldWidget.onNavFocusRegistration != widget.onNavFocusRegistration &&
@@ -130,8 +133,6 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
     final tab = _tabs[targetIndex];
     final isAlreadyActive = widget.activeTab == tab.id;
     
-    debugPrint('nav_focus: _navigateToTab to $targetIndex (${tab.id}), isAlreadyActive=$isAlreadyActive');
-    
     _isNavigating = true;
     _focusedTabIndex = targetIndex;
     
@@ -150,7 +151,6 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
         Future.delayed(const Duration(milliseconds: 150), () {
           if (mounted) {
             _isNavigating = false;
-            debugPrint('nav_focus: Navigation complete, focus protection disabled');
           }
         });
       });
@@ -160,14 +160,11 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
   Widget _buildTabButton(int index) {
     final tab = _tabs[index];
     final isActive = widget.activeTab == tab.id;
-    final isTV = MediaQuery.of(context).size.width >= 1920 || MediaQuery.of(context).size.height >= 1080;
-    final scale = isTV ? 1.2 : 1.0;
 
     return Focus(
       focusNode: _tabFocusNodes[index],
       onFocusChange: (hasFocus) {
         if (_isNavigating && !hasFocus) {
-          debugPrint('nav_focus: Tab $index blocked focus loss during navigation');
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted || !_isNavigating) return;
             _tabFocusNodes[_focusedTabIndex].requestFocus();
@@ -179,7 +176,6 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
           _focusedTabIndex = index;
         }
         setState(() {});
-        debugPrint('nav_focus: Tab $index (${tab.id}) focus changed to $hasFocus, isActive=$isActive');
       },
       onKeyEvent: (node, event) {
         if (event is! KeyDownEvent) return KeyEventResult.ignored;
@@ -194,7 +190,15 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
           return KeyEventResult.handled;
         }
         if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+          if (!_isExpanded) {
+            setState(() => _isExpanded = true);
+            return KeyEventResult.handled;
+          }
           _handleContentFocusFromNav(node);
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.arrowLeft && _isExpanded) {
+          setState(() => _isExpanded = false);
           return KeyEventResult.handled;
         }
         if (event.logicalKey == LogicalKeyboardKey.enter ||
@@ -210,41 +214,48 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
           final isFocused = Focus.of(context).hasFocus;
           return GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: () => context.go(tab.route),
+            onTap: () {
+              if (!_isExpanded) {
+                setState(() => _isExpanded = true);
+              } else {
+                context.go(tab.route);
+              }
+            },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 140),
               curve: Curves.easeOut,
-              padding: EdgeInsets.symmetric(
-                horizontal: 16 * scale,
-                vertical: 12 * scale,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(8),
                 color: isFocused
-                  ? AppTheme.primaryBlue.withAlpha((0.2 * 255).round())
+                  ? const Color(0xFF4a9eff).withOpacity(0.15)
                   : Colors.transparent,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
+              child: _isExpanded
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        tab.icon,
+                        color: isActive ? const Color(0xFF4a9eff) : Colors.white70,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        tab.label,
+                        style: TextStyle(
+                          color: isActive ? const Color(0xFF4a9eff) : Colors.white70,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  )
+                : Icon(
                     tab.icon,
-                    color: isActive ? AppTheme.primaryBlue : AppTheme.textSecondary,
-                    size: context.tvIconSize(24),
+                    color: isActive ? const Color(0xFF4a9eff) : Colors.white70,
+                    size: 18,
                   ),
-                  SizedBox(height: context.tvSpacing(4)),
-                  Text(
-                    tab.label,
-                    style: TextStyle(
-                      color: isActive ? AppTheme.primaryBlue : AppTheme.textSecondary,
-                      fontSize: context.tvTextSize(10),
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
             ),
           );
         },
@@ -254,119 +265,201 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
 
   @override
   Widget build(BuildContext context) {
-    final isTV = MediaQuery.of(context).size.width >= 1920 || MediaQuery.of(context).size.height >= 1080;
-    final scale = isTV ? 1.2 : 1.0;
-
-    return Container(
-      color: Colors.black.withOpacity(0.8), // Semi-transparent background
-      width: 80 * scale,
-      child: Column(
+    return GestureDetector(
+      onTap: () {
+        if (_isExpanded) {
+          setState(() => _isExpanded = false);
+        }
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        color: const Color(0xFF050710).withOpacity(0.95),
+        width: _isExpanded ? 160 : 48,
+        child: Column(
         children: [
-          // Logo or App Name
-          Padding(
-            padding: EdgeInsets.only(top: 24 * scale, bottom: 24 * scale),
-            child: Image.asset(
-              'assets/images/croppedlogo2.png', // Assuming you have a logo asset
-              height: context.tvIconSize(32),
+          const Padding(
+            padding: EdgeInsets.only(top: 6, bottom: 6),
+            child: Image(
+              image: AssetImage('assets/images/croppedlogo2.png'),
+              height: 16,
             ),
           ),
-          // Navigation Tabs
           Expanded(
             child: FocusTraversalGroup(
               policy: WidgetOrderTraversalPolicy(),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: _tabs.map((tab) {
-                  final index = _tabs.indexOf(tab);
-                  return Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8 * scale),
-                    child: _buildTabButton(index),
-                  );
-                }).toList(),
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Focus(
+                      focusNode: _searchButtonFocusNode,
+                      onFocusChange: (_) => setState(() {}),
+                      onKeyEvent: (node, event) {
+                        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                        if (event.logicalKey == LogicalKeyboardKey.enter ||
+                            event.logicalKey == LogicalKeyboardKey.select ||
+                            event.logicalKey == LogicalKeyboardKey.space) {
+                          widget.onSearch?.call();
+                          return KeyEventResult.handled;
+                        }
+                        if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                          if (!_isExpanded) {
+                            setState(() => _isExpanded = true);
+                            return KeyEventResult.handled;
+                          }
+                          _handleContentFocusFromNav(node);
+                          return KeyEventResult.handled;
+                        }
+                        if (event.logicalKey == LogicalKeyboardKey.arrowLeft && _isExpanded) {
+                          setState(() => _isExpanded = false);
+                          return KeyEventResult.handled;
+                        }
+                        return KeyEventResult.ignored;
+                      },
+                      child: Builder(
+                        builder: (context) {
+                          final isFocused = Focus.of(context).hasFocus;
+                          return GestureDetector(
+                            onTap: () {
+                              if (!_isExpanded) {
+                                setState(() => _isExpanded = true);
+                              } else {
+                                widget.onSearch?.call();
+                              }
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              curve: Curves.easeOut,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                color: isFocused
+                                  ? const Color(0xFF4a9eff).withOpacity(0.15)
+                                  : Colors.transparent,
+                              ),
+                              child: _isExpanded
+                                ? const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.search, color: Colors.white70, size: 18),
+                                      SizedBox(width: 10),
+                                      Text(
+                                        'Search',
+                                        style: TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                : const Icon(Icons.search, color: Colors.white70, size: 18),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  ..._tabs.map((tab) {
+                    final index = _tabs.indexOf(tab);
+                    return Container(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: _buildTabButton(index),
+                    );
+                  }).toList(),
+                ],
               ),
             ),
           ),
-          // Search, Overflow, and Time (at the bottom)
           Padding(
-            padding: EdgeInsets.only(bottom: 24 * scale),
+            padding: const EdgeInsets.only(bottom: 12),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Search button
-                Focus(
-                  focusNode: _searchButtonFocusNode,
-                  onFocusChange: (_) => setState(() {}),
-                  onKeyEvent: (node, event) {
-                    if (event is! KeyDownEvent) return KeyEventResult.ignored;
-                    if (event.logicalKey == LogicalKeyboardKey.enter ||
-                        event.logicalKey == LogicalKeyboardKey.select ||
-                        event.logicalKey == LogicalKeyboardKey.space) {
-                      widget.onSearch?.call();
-                      return KeyEventResult.handled;
-                    }
-                    if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-                      _handleContentFocusFromNav(node);
-                      return KeyEventResult.handled;
-                    }
-                    return KeyEventResult.ignored;
-                  },
-                  child: Builder(
-                    builder: (context) {
-                      final isFocused = Focus.of(context).hasFocus;
-                      return GestureDetector(
-                        onTap: () => widget.onSearch?.call(),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          curve: Curves.easeOut,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 16 * scale,
-                            vertical: 12 * scale,
-                          ),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            color: isFocused
-                              ? AppTheme.primaryBlue.withAlpha((0.2 * 255).round())
-                              : Colors.transparent,
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.search,
-                                color: AppTheme.textSecondary,
-                                size: context.tvIconSize(24),
-                              ),
-                              SizedBox(height: context.tvSpacing(4)),
-                              Text(
-                                'Search',
-                                style: TextStyle(
-                                  color: AppTheme.textSecondary,
-                                  fontSize: context.tvTextSize(10),
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: _buildBottomButton(Icons.favorite, 'Favorites', '/favorites'),
                 ),
-                SizedBox(height: context.tvSpacing(16)),
-                // Time display
-                Text(
-                  widget.currentTime,
-                  style: TextStyle(
-                    color: AppTheme.textSecondary,
-                    fontSize: context.tvTextSize(10),
-                    fontWeight: FontWeight.w600,
-                  ),
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: _buildBottomButton(Icons.download, 'Downloads', '/downloads'),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: _buildBottomButton(Icons.settings, 'Settings', '/settings'),
                 ),
               ],
             ),
           ),
         ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomButton(IconData icon, String label, String route) {
+    return Focus(
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+          if (!_isExpanded) {
+            setState(() => _isExpanded = true);
+            return KeyEventResult.handled;
+          }
+          _handleContentFocusFromNav(node);
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.arrowLeft && _isExpanded) {
+          setState(() => _isExpanded = false);
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.enter ||
+            event.logicalKey == LogicalKeyboardKey.select ||
+            event.logicalKey == LogicalKeyboardKey.space) {
+          context.go(route);
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Builder(
+        builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
+          return GestureDetector(
+            onTap: () {
+              if (!_isExpanded) {
+                setState(() => _isExpanded = true);
+              } else {
+                context.go(route);
+              }
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 140),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: isFocused ? const Color(0xFF4a9eff).withOpacity(0.15) : Colors.transparent,
+              ),
+              child: _isExpanded
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(icon, color: Colors.white70, size: 18),
+                      const SizedBox(width: 10),
+                      Text(
+                        label,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  )
+                : Icon(icon, color: Colors.white70, size: 18),
+            ),
+          );
+        },
       ),
     );
   }

@@ -298,7 +298,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   ) {
     final heroImage = _resolveHeroImage(currentProgram);
     final isTV = MediaQuery.of(context).size.width >= 1920 || MediaQuery.of(context).size.height >= 1080;
-    final heroHeight = isTV ? _screenSize.height * 0.65 : _screenSize.height * 0.3;
+    final heroHeight = isTV ? _screenSize.height * 0.5 : _screenSize.height * 0.35;
 
     return Focus(
       canRequestFocus: false,
@@ -309,39 +309,50 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         width: double.infinity,
         child: Stack(
           children: [
-            // Static hero background with featured content rotation
-            Positioned.fill(
-              child: heroImage != null && heroImage.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: heroImage,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => _buildShimmerHeroBackground(),
-                      errorWidget: (_, __, ___) => _buildDefaultHeroBackground(),
-                      imageBuilder: (context, imageProvider) {
-                        if (!_heroImageReady) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (mounted) setState(() => _heroImageReady = true);
-                          });
-                        }
-                        return Image(image: imageProvider, fit: BoxFit.cover);
-                      },
-                    )
-                  : _buildDefaultHeroBackground(),
+            // Hero background - only top portion
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: heroHeight,
+              child: ClipRect(
+                child: heroImage != null && heroImage.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: heroImage,
+                        fit: BoxFit.cover,
+                        alignment: Alignment.center,
+                        placeholder: (_, __) => _buildShimmerHeroBackground(),
+                        errorWidget: (_, __, ___) => _buildDefaultHeroBackground(),
+                        imageBuilder: (context, imageProvider) {
+                          if (!_heroImageReady) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted) setState(() => _heroImageReady = true);
+                            });
+                          }
+                          return Image(image: imageProvider, fit: BoxFit.cover, alignment: Alignment.center);
+                        },
+                      )
+                    : _buildDefaultHeroBackground(),
+              ),
             ),
-            // Dark gradient overlay for readability with strong top fade for nav bar
-            Positioned.fill(
+            // Gradient overlay on hero - fade to black at bottom
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: heroHeight + 100,
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.black.withAlpha((0.95 * 255).round()),
-                      Colors.black.withAlpha((0.2 * 255).round()),
-                      Colors.black.withAlpha((0.5 * 255).round()),
-                      Colors.black.withAlpha((0.75 * 255).round()),
+                      Colors.black.withAlpha((0.3 * 255).round()),
+                      Colors.black.withAlpha((0.6 * 255).round()),
+                      Colors.black,
+                      const Color(0xFF050710),
                     ],
-                    stops: const [0.0, 0.08, 0.5, 1.0],
+                    stops: const [0.0, 0.6, 0.85, 1.0],
                   ),
                 ),
               ),
@@ -365,8 +376,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Spacer for hero area
-                      SizedBox(height: heroHeight - context.tvSpacing(180)),
-                      SizedBox(height: context.tvSpacing(48)),
+                      SizedBox(height: heroHeight - context.tvSpacing(80)),
                       // Channel grid sections
                       if (isGrouping && groupedChannels.isEmpty)
                         _buildCategoryLoadingIndicator()
@@ -672,6 +682,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       channel.tvgId ?? channel.id,
       channelName: channel.name,
     );
+    if (currentProgram != null) {
+      debugPrint('LiveTV Card: Channel "${channel.name}" has program: "${currentProgram.title}"');
+    } else {
+      debugPrint('LiveTV Card: Channel "${channel.name}" (tvgId: ${channel.tvgId ?? channel.id}) has NO EPG data');
+    }
     final progress = currentProgram?.progressPercentage ?? 0.0;
     
     return Padding(

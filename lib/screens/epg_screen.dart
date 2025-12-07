@@ -40,7 +40,6 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
   String? _selectedCategory;
   Channel? _playingChannel;
   VideoPlayerController? _miniPlayerController;
-  late DateTime _currentTime;
   Set<String> _epgFavoriteChannelIds = {}; // EPG-specific favorites
   late AnimationController _refreshAnimationController;
 
@@ -59,8 +58,6 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     );
-    _currentTime = DateTime.now();
-    Future.delayed(const Duration(seconds: 1), _updateTime);
     
     // Start EPG auto-refresh timer (check every 30 minutes)
     _startEpgAutoRefresh();
@@ -165,14 +162,6 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     });
   }
 
-  void _updateTime() {
-    if (!mounted) return;
-    setState(() {
-      _currentTime = DateTime.now();
-    });
-    Future.delayed(const Duration(seconds: 1), _updateTime);
-  }
-
   void _startEpgAutoRefresh() {
     _epgRefreshTimer?.cancel();
     _epgRefreshTimer = Timer.periodic(const Duration(minutes: 30), (timer) async {
@@ -190,14 +179,6 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
         await epgService.refresh(epgUrl);
       }
     });
-  }
-
-  String _formatTime(DateTime time) {
-    // 12-hour format with AM/PM
-    final hour = time.hour % 12 == 0 ? 12 : time.hour % 12;
-    final minute = time.minute.toString().padLeft(2, '0');
-    final period = time.hour < 12 ? 'AM' : 'PM';
-    return '$hour:$minute $period';
   }
 
   void requestFirstContentFocus() {
@@ -385,14 +366,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
           
           return Container(
             decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF050710),
-                  Color(0xFF0d1140),
-                ],
-              )
+              color: Color(0xFF050710),
             ),
             child: Stack(
               children: [
@@ -402,16 +376,34 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                     // Spacer for header area
                     const SizedBox(height: headerHeight),
                     Expanded(
-                      child: Row(
-                        children: [
-                          // Category sidebar
-                          _buildCategorySidebar(categoryNames),
-                          const VerticalDivider(width: 1, color: AppTheme.divider),
-                          // Program grid with channel names
-                          Expanded(
-                            child: _buildProgramGrid(filteredChannels, epgService),
-                          ),
-                        ],
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.05),
+                        ),
+                        child: Stack(
+                          children: [
+                            // Program grid with channel names - full width
+                            Positioned.fill(
+                              child: _buildProgramGrid(filteredChannels, epgService),
+                            ),
+                            // Category sidebar - overlaid on left with offset for main sidebar
+                            Positioned(
+                              left: 48,
+                              top: 0,
+                              bottom: 0,
+                              width: 100,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF050710).withOpacity(0.95),
+                                  border: Border(
+                                    right: BorderSide(color: Colors.white.withOpacity(0.1), width: 1),
+                                  ),
+                                ),
+                                child: _buildCategorySidebar(categoryNames),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -525,29 +517,31 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
 
   Widget _buildHeader(EpgService epgService) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.md),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: const BoxDecoration(
         color: Colors.transparent,
       ),
       child: Row(
         children: [
-          const Icon(Icons.dvr, color: AppTheme.primaryBlue, size: 24),
-          const SizedBox(width: AppSizes.md),
+          const Icon(Icons.dvr, color: Color(0xFF4a9eff), size: 20),
+          const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 'Electronic Program Guide',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
                   decoration: TextDecoration.none,
                 ),
               ),
               Text(
                 DateFormat('EEEE, MMM dd').format(_selectedDate),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.textSecondary,
+                  color: Colors.white.withOpacity(0.7),
+                  fontSize: 12,
                   decoration: TextDecoration.none,
                 ),
               ),
@@ -559,16 +553,13 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
             focusNode: _refreshButtonFocus,
             onKeyEvent: (node, event) {
               if (event is KeyDownEvent) {
-                // Handle select/enter to trigger refresh
                 if (event.logicalKey == LogicalKeyboardKey.select ||
                     event.logicalKey == LogicalKeyboardKey.enter) {
-                  // Trigger the refresh action
                   if (!epgService.isLoading) {
                     _triggerEpgRefresh();
                   }
                   return KeyEventResult.handled;
                 }
-                // Navigate down to mini player close button
                 if (event.logicalKey == LogicalKeyboardKey.arrowDown &&
                     _playingChannel != null) {
                   _miniPlayerCloseFocus.requestFocus();
@@ -583,8 +574,8 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                 return Container(
                   decoration: isFocused
                       ? BoxDecoration(
-                          border: Border.all(color: AppTheme.primaryBlue, width: 2),
-                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: Color(0xFF4a9eff), width: 2),
+                          borderRadius: BorderRadius.circular(20),
                         )
                       : null,
                   child: IconButton(
@@ -597,7 +588,8 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                               : 0,
                           child: Icon(
                             Icons.refresh,
-                            color: epgService.isLoading ? AppTheme.primaryBlue : null,
+                            size: 20,
+                            color: epgService.isLoading ? Color(0xFF4a9eff) : Colors.white.withOpacity(0.7),
                           ),
                         );
                       },
@@ -621,17 +613,10 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                               return;
                             }
 
-                            // Start spinning animation
                             _refreshAnimationController.repeat();
-
-                            // Refresh EPG in background
                             await epgService.refresh(epgUrl);
-                            
-                            // Stop spinning
                             _refreshAnimationController.stop();
                             _refreshAnimationController.reset();
-                            
-                            // Don't show snackbar on EPG screen - user can see the data loading in the grid
                           },
                     tooltip: 'Refresh EPG Data',
                   ),
@@ -639,22 +624,14 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
               },
             ),
           ),
-          const SizedBox(width: AppSizes.sm),
-          // "Now" button to jump to current time
+          const SizedBox(width: 8),
           TextButton.icon(
             onPressed: _scrollToCurrentTime,
-            icon: const Icon(Icons.access_time, size: 16),
-            label: const Text('Now'),
+            icon: const Icon(Icons.access_time, size: 14),
+            label: const Text('Now', style: TextStyle(fontSize: 13)),
             style: TextButton.styleFrom(
-              foregroundColor: AppTheme.primaryBlue,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            ),
-          ),
-          const SizedBox(width: AppSizes.sm),
-          Text(
-            _formatTime(_currentTime),
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppTheme.textSecondary,
+              foregroundColor: Color(0xFF4a9eff),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             ),
           ),
         ],
@@ -663,34 +640,22 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
   }
 
   Widget _buildCategorySidebar(List<String> categories) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final sidebarWidth = (screenWidth * 0.15).clamp(200.0, 350.0);
-    
-    return Container(
-      width: sidebarWidth,
-      decoration: BoxDecoration(
-        color: Colors.white.withAlpha((0.05 * 255).round()),
-        border: Border(
-          right: BorderSide(color: Colors.white.withAlpha((0.1 * 255).round()), width: 1),
-        ),
-      ),
-      child: ListView.builder(
-        itemCount: categories.length,
-        itemBuilder: (context, index) {
-          final category = categories[index];
-          return _buildCategoryItem(
-            name: category,
-            isSelected: _selectedCategory == category,
-            onTap: () {
-              setState(() {
-                _selectedCategory = category;
-              });
-              // Scroll channel list to top
-              _scrollChannelListToTop();
-            },
-          );
-        },
-      ),
+    return ListView.builder(
+      itemCount: categories.length,
+      itemBuilder: (context, index) {
+        final category = categories[index];
+        return _buildCategoryItem(
+          name: category,
+          isSelected: _selectedCategory == category,
+          onTap: () {
+            setState(() {
+              _selectedCategory = category;
+            });
+            // Scroll channel list to top
+            _scrollChannelListToTop();
+          },
+        );
+      },
     );
   }
 
@@ -714,50 +679,42 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
         final bool isFocused = Focus.of(context).hasFocus;
         final Color textColor = isFocused
             ? Colors.white
-            : AppTheme.textSecondary; // Remove purple color when selected
+            : Colors.white.withOpacity(0.7);
         return GestureDetector(
           onTap: onTap,
           behavior: HitTestBehavior.opaque,
           child: AnimatedScale(
             scale: isFocused ? 1.02 : 1.0,
-            duration: AppDurations.fast,
+            duration: const Duration(milliseconds: 150),
             curve: Curves.easeOut,
             child: Padding(
               padding: const EdgeInsets.symmetric(
-                horizontal: AppSizes.md,
-                vertical: AppSizes.sm,
+                horizontal: 12,
+                vertical: 6,
               ),
               child: Row(
                 children: [
-                  // Left selected indicator bar with fade-in
                   AnimatedOpacity(
                     opacity: isSelected ? 1.0 : 0.0,
-                    duration: AppDurations.fast,
+                    duration: const Duration(milliseconds: 150),
                     child: AnimatedContainer(
-                      duration: AppDurations.fast,
+                      duration: const Duration(milliseconds: 150),
                       width: isSelected ? (isFocused ? 3 : 2) : 0,
-                      height: 18,
+                      height: 16,
                       decoration: isSelected
                           ? const BoxDecoration(
-                              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF050710),
-                  Color(0xFF0d1140),
-                ],
-              )
+                              color: Color(0xFF4a9eff),
                             )
                           : null,
                     ),
                   ),
-                  if (isSelected) const SizedBox(width: AppSizes.sm),
+                  if (isSelected) const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       name,
                       style: TextStyle(
                         color: textColor,
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight:
                             (isFocused || isSelected) ? FontWeight.w600 : FontWeight.w500,
                         decoration: TextDecoration.none,
@@ -1089,26 +1046,25 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     
     // Show loading overlay but still display the grid structure
     final bool isLoading = epgService.isLoading;
-    const channelSidebarWidth = 200.0;
+    const channelSidebarWidth = 80.0;
     
     // Show loading indicator when EPG is loading
     return Stack(
       children: [
         Column(
           children: [
-            // Info banner when no EPG data
             if (!epgService.hasData && !isLoading)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: AppSizes.md, vertical: AppSizes.sm),
-                color: AppTheme.primaryBlue.withAlpha((0.2 * 255).round()),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                color: Color(0xFF4a9eff).withOpacity(0.2),
                 child: Row(
                   children: [
-                    const Icon(Icons.info_outline, size: 18, color: AppTheme.primaryBlue),
-                    const SizedBox(width: AppSizes.sm),
+                    const Icon(Icons.info_outline, size: 16, color: Color(0xFF4a9eff)),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'No EPG data. Configure EPG URL in Settings.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
+                        style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12),
                       ),
                     ),
                   ],
@@ -1123,38 +1079,49 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // FIXED channel sidebar (does NOT scroll horizontally or independently)
+                    // Offset by main sidebar (48px) + category sidebar (100px) = 148px
                     SizedBox(
-                      width: channelSidebarWidth,
-                      child: Column(
+                      width: 148 + channelSidebarWidth,
+                      child: Row(
                         children: [
-                          // Header cell for channel column
-                          Container(
-                            height: 60,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF121629),
-                              border: const Border(
-                                right: BorderSide(color: AppTheme.divider, width: 1),
-                                bottom: BorderSide(color: AppTheme.divider, width: 1),
-                              ),
-                            ),
-                            child: Center(
-                              child: Text(
-                                _selectedDate.day == DateTime.now().day &&
-                                    _selectedDate.month == DateTime.now().month &&
-                                    _selectedDate.year == DateTime.now().year
-                                    ? 'Today'
-                                    : '${_selectedDate.month}/${_selectedDate.day}',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
+                          // Spacer for main sidebar + category sidebar
+                          const SizedBox(width: 148),
+                          // Channel column
+                          SizedBox(
+                            width: channelSidebarWidth,
+                            child: Column(
+                              children: [
+                                Container(
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    border: Border(
+                                      right: BorderSide(color: Colors.white.withOpacity(0.1), width: 1),
+                                      bottom: BorderSide(color: Colors.white.withOpacity(0.1), width: 1),
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      _selectedDate.day == DateTime.now().day &&
+                                          _selectedDate.month == DateTime.now().month &&
+                                          _selectedDate.year == DateTime.now().year
+                                          ? 'Today'
+                                          : '${_selectedDate.month}/${_selectedDate.day}',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13,
+                                        color: Colors.white.withOpacity(0.9),
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                              ),
+                                // Channel list (built as static Column - scrolls with parent)
+                                ...List.generate(channels.length, (index) {
+                                  final channel = channels[index];
+                                  return _buildChannelSidebarItem(channel);
+                                }),
+                              ],
                             ),
                           ),
-                          // Channel list (built as static Column - scrolls with parent)
-                          ...List.generate(channels.length, (index) {
-                            final channel = channels[index];
-                            return _buildChannelSidebarItem(channel);
-                          }),
                         ],
                       ),
                     ),
@@ -1237,41 +1204,39 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
             },
             onLongPress: () => _showChannelContextMenu(context, channel),
             child: Container(
-              height: 56,
-              padding: const EdgeInsets.symmetric(horizontal: AppSizes.sm, vertical: 4),
+              height: 48,
+              padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
                 color: isFocused 
-                    ? AppTheme.primaryBlue.withAlpha((0.3 * 255).round())
+                    ? const Color(0xFF4a9eff).withOpacity(0.15)
                     : isSelected 
-                        ? AppTheme.primaryBlue.withAlpha((0.2 * 255).round())
-                        : Colors.white.withAlpha((0.05 * 255).round()),
-                border: const Border(
-                  right: BorderSide(color: AppTheme.divider, width: 1),
-                  bottom: BorderSide(color: AppTheme.divider, width: 0.5),
+                        ? const Color(0xFF4a9eff).withOpacity(0.1)
+                        : Colors.transparent,
+                border: Border(
+                  right: BorderSide(color: Colors.white.withOpacity(0.05), width: 1),
+                  bottom: BorderSide(color: Colors.white.withOpacity(0.03), width: 0.5),
                 ),
               ),
-              child: Row(
-                children: [
-                  // Channel logo
-                  Container(
-                    width: 50,
-                    height: 50,
+              child: Center(
+                child: Container(
+                    width: 60,
+                    height: 36,
                     decoration: BoxDecoration(
-                      color: AppTheme.cardBackground,
-                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(4),
                     ),
                     child: channel.logoUrl != null
                         ? ClipRRect(
-                            borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                            borderRadius: BorderRadius.circular(4),
                             child: Image.network(
                               channel.logoUrl!,
-                              fit: BoxFit.cover,
+                              fit: BoxFit.contain,
                               errorBuilder: (context, error, stackTrace) {
                                 return const Center(
                                   child: Icon(
                                     Icons.dvr,
                                     color: AppTheme.primaryBlue,
-                                    size: 24,
+                                    size: 18,
                                   ),
                                 );
                               },
@@ -1281,34 +1246,10 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                             child: Icon(
                               Icons.dvr,
                               color: AppTheme.primaryBlue,
-                              size: 24,
+                              size: 18,
                             ),
                           ),
                   ),
-                  const SizedBox(width: AppSizes.sm),
-                  // Channel info
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          channel.name,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (channel.channelNumber != null)
-                          Text(
-                            '${channel.channelNumber}',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
               ),
             ),
           );
@@ -1319,14 +1260,13 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
 
   /// Time header only (no channel sidebar part)
   Widget _buildTimeHeaderOnly() {
-    // Show 12 hours starting from current hour (or a bit before)
     final now = DateTime.now();
-    final startHour = (now.hour - 1).clamp(0, 23); // Start 1 hour before current time
-    final hoursToShow = 12; // Show 12 hours of programming
+    final startHour = (now.hour - 1).clamp(0, 23);
+    final hoursToShow = 12;
     final cellWidth = 120.0;
 
     return Container(
-      height: 60,
+      height: 48,
       child: Row(
         children: List.generate(hoursToShow, (index) {
           final hour = (startHour + index) % 24;
@@ -1334,17 +1274,19 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
 
           return Container(
             width: cellWidth,
-            padding: const EdgeInsets.all(AppSizes.sm),
+            padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: const Color(0xFF121629),
-              border: const Border(
-                right: BorderSide(color: AppTheme.divider, width: 0.5),
+              border: Border(
+                right: BorderSide(color: Colors.white.withOpacity(0.1), width: 0.5),
               ),
             ),
             child: Center(
               child: Text(
                 time.format(context),
-                style: Theme.of(context).textTheme.bodySmall,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.white.withOpacity(0.7),
+                ),
               ),
             ),
           );
@@ -1358,41 +1300,38 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     final channelKey = channel.tvgId ?? channel.id;
     final programs = epgService.getProgramsForChannel(channelKey, channelName: channel.name);
     
-    // Get time range to display (12 hours starting from 1 hour ago)
     final now = DateTime.now();
     final startHour = (now.hour - 1).clamp(0, 23);
     final displayStart = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, startHour);
     final displayEnd = displayStart.add(const Duration(hours: 12));
     
-    // Filter programs that overlap with our display window
     final dayPrograms = programs.where((program) {
       return program.startTime.isBefore(displayEnd) && program.endTime.isAfter(displayStart);
     }).toList();
 
     final cellWidth = 120.0;
-    final totalWidth = 12 * cellWidth; // 12 hours
+    final totalWidth = 12 * cellWidth;
 
     return Container(
-      height: 56,
+      height: 48,
       width: totalWidth,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: AppTheme.divider, width: 0.5),
+          bottom: BorderSide(color: Colors.white.withOpacity(0.03), width: 0.5),
         ),
       ),
       child: dayPrograms.isEmpty
           ? Container(
               alignment: Alignment.centerLeft,
-              padding: const EdgeInsets.only(left: AppSizes.md),
+              padding: const EdgeInsets.only(left: 12),
               child: Text(
                 'No EPG data',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
+                style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.5)),
               ),
             )
           : Stack(
               clipBehavior: Clip.hardEdge,
               children: dayPrograms.map((program) {
-                // Calculate position based on start time relative to display window
                 final programStart = program.startTime.isBefore(displayStart) ? displayStart : program.startTime;
                 final programEnd = program.endTime.isAfter(displayEnd) ? displayEnd : program.endTime;
                 
@@ -1430,7 +1369,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
       margin: const EdgeInsets.symmetric(horizontal: 1),
       decoration: BoxDecoration(
         color: isLive ? epgLiveColor : hasCatchup ? epgCatchupColor.withAlpha((0.4 * 255).round()) : epgCellBackground,
-        borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+        borderRadius: BorderRadius.circular(4),
         border: Border.all(
           color: isLive ? epgLiveColor : hasCatchup ? epgCatchupColor : const Color(0xFF2a2a35),
           width: isLive || hasCatchup ? 2 : 1,
@@ -1441,9 +1380,9 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
         child: InkWell(
           onTap: () => _showProgramDetails(program),
           onLongPress: () => _showProgramContextMenu(program),
-          borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+          borderRadius: BorderRadius.circular(4),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSizes.sm, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1451,14 +1390,16 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                 Row(
                   children: [
                     if (hasCatchup) ...[
-                      const Icon(Icons.replay, size: 12, color: epgCatchupColor),
-                      const SizedBox(width: 4),
+                      const Icon(Icons.replay, size: 10, color: epgCatchupColor),
+                      const SizedBox(width: 3),
                     ],
                     Expanded(
                       child: Text(
                         program.title,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: isLive ? FontWeight.bold : FontWeight.normal,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: isLive ? FontWeight.w600 : FontWeight.normal,
+                          color: Colors.white.withOpacity(0.9),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -1468,7 +1409,10 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                 ),
                 Text(
                   '${DateFormat.jm().format(program.startTime)} - ${DateFormat.jm().format(program.endTime)}',
-                  style: Theme.of(context).textTheme.labelSmall,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.white.withOpacity(0.6),
+                  ),
                   maxLines: 1,
                 ),
               ],
@@ -1668,10 +1612,9 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
   }
 
   double _calculateGridWidth() {
-    final hours = _isHourlyView ? 24 : 48;
-    final cellWidth = _isHourlyView ? 120.0 : 60.0;
-    const channelSidebarWidth = 200.0; // Must match the channel info section width
-    return channelSidebarWidth + (hours * cellWidth);
+    const hoursToShow = 12;
+    const cellWidth = 120.0;
+    return hoursToShow * cellWidth;
   }
 
   void _showChannelOptions(Channel channel) {

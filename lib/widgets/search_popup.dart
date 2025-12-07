@@ -99,33 +99,50 @@ class _SearchPopupState extends State<SearchPopup> {
   }
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      child: Container(
-        padding: EdgeInsets.all(context.tvSpacing(24)),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _searchController,
-              focusNode: _textFieldFocusNode,
-              style: TextStyle(fontSize: context.tvTextSize(16)),
-              decoration: InputDecoration(
-                hintText: 'Search...',
-                hintStyle: TextStyle(fontSize: context.tvTextSize(14)),
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: context.tvSpacing(16),
-                  vertical: context.tvSpacing(12),
+    return Align(
+      alignment: Alignment.topLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 72, top: 80),
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            width: 600,
+            constraints: const BoxConstraints(maxHeight: 700),
+            decoration: BoxDecoration(
+              color: const Color(0xFF050710).withOpacity(0.95),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withOpacity(0.1)),
+            ),
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: _searchController,
+                  focusNode: _textFieldFocusNode,
+                  style: const TextStyle(fontSize: 15, color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: 'Search...',
+                    hintStyle: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.5)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.05),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  onSubmitted: _performSearch,
                 ),
-              ),
-              onSubmitted: _performSearch,
+                const SizedBox(height: 12),
+                Expanded(
+                  child: _isSearching
+                      ? const Center(child: CircularProgressIndicator())
+                      : _buildResultsList(),
+                ),
+              ],
             ),
-            SizedBox(height: context.tvSpacing(16)),
-            Expanded(
-              child: _isSearching
-                  ? const Center(child: CircularProgressIndicator())
-                  : _buildResultsList(),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -175,15 +192,10 @@ class _SearchPopupState extends State<SearchPopup> {
     }
 
     return ListView(
-      padding: const EdgeInsets.all(AppSizes.lg),
+      padding: const EdgeInsets.all(12),
       children: [
         if (_liveTvResults.isNotEmpty) ...[
-          _buildSectionHeader(
-            'Live TV',
-            Icons.live_tv,
-            _liveTvResults.length,
-            iconColor: AppTheme.accentPink,
-          ),
+          _buildSectionHeader('Live TV', Icons.live_tv, _liveTvResults.length),
           _buildLiveTvGrid(_liveTvResults.take(_liveTvDisplayCount).toList()),
           if (_liveTvResults.length > _liveTvDisplayCount)
             _buildLoadMoreButton(() {
@@ -191,15 +203,10 @@ class _SearchPopupState extends State<SearchPopup> {
                 _liveTvDisplayCount += _resultsPerSection;
               });
             }),
-          const SizedBox(height: AppSizes.xl),
+          const SizedBox(height: 20),
         ],
         if (_movieResults.isNotEmpty) ...[
-          _buildSectionHeader(
-            'Movies',
-            Icons.movie,
-            _movieResults.length,
-            iconColor: AppTheme.accentPink,
-          ),
+          _buildSectionHeader('Movies', Icons.movie, _movieResults.length),
           _buildContentGrid(_movieResults.take(_moviesDisplayCount).toList()),
           if (_movieResults.length > _moviesDisplayCount)
             _buildLoadMoreButton(() {
@@ -207,15 +214,10 @@ class _SearchPopupState extends State<SearchPopup> {
                 _moviesDisplayCount += _resultsPerSection;
               });
             }),
-          const SizedBox(height: AppSizes.xl),
+          const SizedBox(height: 20),
         ],
         if (_seriesResults.isNotEmpty) ...[
-          _buildSectionHeader(
-            'Series',
-            Icons.tv,
-            _seriesResults.length,
-            iconColor: AppTheme.accentPink,
-          ),
+          _buildSectionHeader('Series', Icons.tv, _seriesResults.length),
           _buildContentGrid(_seriesResults.take(_seriesDisplayCount).toList()),
           if (_seriesResults.length > _seriesDisplayCount)
             _buildLoadMoreButton(() {
@@ -223,7 +225,7 @@ class _SearchPopupState extends State<SearchPopup> {
                 _seriesDisplayCount += _resultsPerSection;
               });
             }),
-          const SizedBox(height: AppSizes.xl),
+          const SizedBox(height: 20),
         ],
       ],
     );
@@ -252,39 +254,34 @@ class _SearchPopupState extends State<SearchPopup> {
     );
   }
 
-  Widget _buildSectionHeader(
-    String title,
-    IconData icon,
-    int count, {
-    Color iconColor = AppTheme.accentOrange,
-  }) {
+  Widget _buildSectionHeader(String title, IconData icon, int count) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSizes.md),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          Icon(icon, color: iconColor, size: 20),
-          const SizedBox(width: AppSizes.sm),
+          Icon(icon, color: const Color(0xFF4a9eff), size: 16),
+          const SizedBox(width: 8),
           Text(
             title,
             style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimary,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
             ),
           ),
-          const SizedBox(width: AppSizes.sm),
+          const SizedBox(width: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: AppTheme.primaryBlue.withAlpha((0.2 * 255).round()),
-              borderRadius: BorderRadius.circular(12),
+              color: const Color(0xFF4a9eff).withOpacity(0.15),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               count.toString(),
               style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.primaryBlue,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF4a9eff),
               ),
             ),
           ),
@@ -298,10 +295,10 @@ class _SearchPopupState extends State<SearchPopup> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4, // Adjust based on width?
+        crossAxisCount: 4,
         childAspectRatio: 1.0,
-        crossAxisSpacing: AppSizes.md,
-        mainAxisSpacing: AppSizes.md,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
       ),
       itemCount: channels.length,
       itemBuilder: (context, index) {
@@ -394,8 +391,8 @@ class _SearchPopupState extends State<SearchPopup> {
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 5,
         childAspectRatio: 0.7,
-        crossAxisSpacing: AppSizes.md,
-        mainAxisSpacing: AppSizes.md,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
       ),
       itemCount: items.length > 10 ? 10 : items.length, // Limit to 10
       itemBuilder: (context, index) {

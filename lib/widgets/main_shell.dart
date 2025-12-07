@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 // import 'package:iptv_player/widgets/top_navigation_bar.dart'; // Removed
 import 'package:iptv_player/widgets/search_popup.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
+import 'package:iptv_player/widgets/sidebar_navigation.dart'; // New import
 
 const bool kForceSearchPopup = bool.fromEnvironment(
   'FORCE_SEARCH_POPUP',
@@ -172,18 +173,34 @@ class _MainShellState extends State<MainShell> {
             //     ),
             //   ),
             // ),
-            // Placeholder for transparent sidebar
+            // Time top-right
+            Positioned(
+              top: 16,
+              right: 16,
+              child: Text(
+                _currentTime,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            // Sidebar - positioned with higher z-index than content
             Positioned(
               top: 0,
               bottom: 0,
               left: 0,
-              width: 80, // Fixed width for the sidebar
-              child: SidebarNavigation(
-                activeTab: widget.activeTab,
-                currentTime: _currentTime,
-                onSearch: _showSearchDialog,
-                onFocusContent: _requestContentFocus,
-                onNavFocusRegistration: _setNavFocusRequester,
+              child: Material(
+                color: Colors.transparent,
+                elevation: 10,
+                child: SidebarNavigation(
+                  activeTab: widget.activeTab,
+                  currentTime: _currentTime,
+                  onSearch: _showSearchDialog,
+                  onFocusContent: _requestContentFocus,
+                  onNavFocusRegistration: _setNavFocusRequester,
+                ),
               ),
             ),
           ],
@@ -229,11 +246,18 @@ class _MainShellState extends State<MainShell> {
       debugPrint(
         'content_focus: Shell focus request ${handled ? 'succeeded' : 'failed'}',
       );
-      if (handled) return true;
+      if (handled) {
+        // Trigger sidebar collapse by rebuilding
+        setState(() {});
+        return true;
+      }
     }
     final fallbackHandled = _focusFirstContentChild();
     if (!fallbackHandled) {
       debugPrint('content_focus: No focusable child found for fallback');
+    } else {
+      // Trigger sidebar collapse
+      setState(() {});
     }
     return fallbackHandled;
   }

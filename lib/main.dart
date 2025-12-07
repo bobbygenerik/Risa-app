@@ -533,10 +533,13 @@ class _MyAppState extends State<MyApp> {
             create: (_) => ContentProvider()..initialize(),
           ),
           ChangeNotifierProvider(
-            create: (_) {
+            create: (context) {
               final service = EpgService();
-              // Initialize immediately, not deferred - cache load is fast
-              service.initialize();
+              // Initialize EPG in background immediately
+              Future.microtask(() async {
+                await service.initialize();
+                debugPrint('Main: EPG initialized with ${service.totalChannelCount} channels');
+              });
               return service;
             },
           ),
@@ -858,6 +861,8 @@ final _router = GoRouter(
             ? 'movies'
             : state.matchedLocation.contains('/series')
             ? 'series'
+            : state.matchedLocation.contains('/epg')
+            ? 'guide'
             : 'home';
 
         return MainShell(activeTab: activeTab, child: child);
@@ -868,7 +873,6 @@ final _router = GoRouter(
           pageBuilder: (context, state) =>
               _fadeSlidePage(key: state.pageKey, child: const LiveTVScreen()),
         ),
-        // (No /discover route — the three main tabs are Live TV, Movies, Series)
         GoRoute(
           path: '/movies',
           pageBuilder: (context, state) =>
@@ -879,15 +883,13 @@ final _router = GoRouter(
           pageBuilder: (context, state) =>
               _fadeSlidePage(key: state.pageKey, child: const SeriesScreen()),
         ),
-      ],
-    ),
-    GoRoute(
-      path: '/epg',
-      pageBuilder: (context, state) {
-        final extra = state.extra as Map<String, dynamic>?;
-        final channel = extra?['channel'] as Channel?;
-        final continuePlayback = extra?['continuePlayback'] as bool? ?? false;
-        return _fadeSlidePage(
+        GoRoute(
+              path: '/epg',
+          pageBuilder: (context, state) {
+            final extra = state.extra as Map<String, dynamic>?;
+            final channel = extra?['channel'] as Channel?;
+            final continuePlayback = extra?['continuePlayback'] as bool? ?? false;
+            return _fadeSlidePage(
           key: state.pageKey,
           child: EPGScreen(
             initialChannel: channel,
@@ -895,6 +897,23 @@ final _router = GoRouter(
           ),
         );
       },
+        ),
+        GoRoute(
+          path: '/favorites',
+          pageBuilder: (context, state) =>
+              _fadeSlidePage(key: state.pageKey, child: const FavoritesScreen()),
+        ),
+        GoRoute(
+          path: '/downloads',
+          pageBuilder: (context, state) =>
+              _fadeSlidePage(key: state.pageKey, child: const DownloadsScreen()),
+        ),
+        GoRoute(
+          path: '/settings',
+          pageBuilder: (context, state) =>
+              _fadeSlidePage(key: state.pageKey, child: const SettingsScreen()),
+        ),
+      ],
     ),
     GoRoute(
       path: '/recordings',
@@ -906,21 +925,7 @@ final _router = GoRouter(
       pageBuilder: (context, state) =>
           _fadeSlidePage(key: state.pageKey, child: const HelpAboutScreen()),
     ),
-    GoRoute(
-      path: '/settings',
-      pageBuilder: (context, state) =>
-          _fadeSlidePage(key: state.pageKey, child: const SettingsScreen()),
-    ),
-    GoRoute(
-      path: '/favorites',
-      pageBuilder: (context, state) =>
-          _fadeSlidePage(key: state.pageKey, child: const FavoritesScreen()),
-    ),
-    GoRoute(
-      path: '/downloads',
-      pageBuilder: (context, state) =>
-          _fadeSlidePage(key: state.pageKey, child: const DownloadsScreen()),
-    ),
+
     GoRoute(
       path: '/playlist-editor',
       pageBuilder: (context, state) => _fadeSlidePage(

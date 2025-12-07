@@ -144,10 +144,8 @@ class EpgService with ChangeNotifier {
   Future<void> initialize() async {
     debugPrint('EpgService: Initializing (initialized flag: $_initialized, data: ${_epgData.length} channels)...');
     
-    // Always load from cache if we have no data, even if already initialized
-    if (_epgData.isEmpty) {
-      debugPrint('EpgService: No data in memory, loading from cache...');
-    } else if (_initialized) {
+    // Skip if already initialized AND has data
+    if (_initialized && _epgData.isNotEmpty) {
       debugPrint('EpgService: Already initialized with ${_epgData.length} channels, skipping...');
       return;
     }
@@ -155,28 +153,29 @@ class EpgService with ChangeNotifier {
     _initialized = true;
     
     try {
-      // Load manual mappings first
+      // Load manual mappings first (synchronous from SharedPreferences)
       await loadManualMappings();
       
-      // ALWAYS try to load from cache first (instant startup)
+      // Load from cache immediately
+      debugPrint('EpgService: Loading from cache...');
       final cacheLoaded = await _loadFromCache();
       if (cacheLoaded) {
-        debugPrint('EpgService: Loaded ${_epgData.length} channels from cache');
+        debugPrint('EpgService: ✓ Loaded ${_epgData.length} channels from cache');
         notifyListeners();
       } else {
-        debugPrint('EpgService: No cache found, will try to fetch from URL');
+        debugPrint('EpgService: ✗ No cache found');
       }
       
       // Also load secondary cache
       final secondaryCacheLoaded = await _loadSecondaryFromCache();
       if (secondaryCacheLoaded) {
-        debugPrint('EpgService: Loaded ${_secondaryEpgData.length} secondary channels from cache');
+        debugPrint('EpgService: ✓ Loaded ${_secondaryEpgData.length} secondary channels from cache');
         notifyListeners();
       }
       
-      debugPrint('EpgService: Cache loaded, total channels: $totalChannelCount');
+      debugPrint('EpgService: Total channels loaded: $totalChannelCount');
       
-      // Now refresh in background if needed (don't await)
+      // Refresh in background if needed
       _refreshInBackground();
       
     } catch (e) {
