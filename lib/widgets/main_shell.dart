@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:iptv_player/widgets/top_navigation_bar.dart';
+// import 'package:iptv_player/widgets/top_navigation_bar.dart'; // Removed
 import 'package:iptv_player/widgets/search_popup.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
 
@@ -96,10 +96,10 @@ class _MainShellState extends State<MainShell> {
   @override
   Widget build(BuildContext context) {
     // Calculate nav bar height for TV scaling
-    final size = MediaQuery.of(context).size;
-    final isTV = size.width >= 1920 || size.height >= 1080;
-    final scale = isTV ? 1.2 : 1.0;
-    final navBarHeight = 64.0 * scale; // AppSizes.appBarHeight * scale
+    // final size = MediaQuery.of(context).size; // Removed
+    // final isTV = size.width >= 1920 || size.height >= 1080; // Removed
+    // final scale = isTV ? 1.2 : 1.0; // Removed
+    // final navBarHeight = 64.0 * scale; // AppSizes.appBarHeight * scale // Removed
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -137,38 +137,53 @@ class _MainShellState extends State<MainShell> {
               ),
             ),
             // Navigation bar overlayed on top - completely transparent
+            // Removed TopNavigationBar
+            // Positioned(
+            //   top: 0,
+            //   left: 0,
+            //   right: 0,
+            //   height: navBarHeight,
+            //   child: FocusTraversalGroup(
+            //     policy: WidgetOrderTraversalPolicy(),
+            //     child: TopNavigationBar(
+            //       activeTab: widget.activeTab ?? 'home',
+            //       tabs: [
+            //         NavTab(
+            //             id: 'home',
+            //             label: 'Live TV',
+            //             icon: Icons.live_tv,
+            //             route: '/home'),
+            //         NavTab(
+            //             id: 'movies',
+            //             label: 'Movies',
+            //             icon: Icons.movie,
+            //             route: '/movies'),
+            //         NavTab(
+            //             id: 'series',
+            //             label: 'Series',
+            //             icon: Icons.tv,
+            //             route: '/series'),
+            //       ],
+            //       currentTime: _currentTime,
+            //       showLogoAndTime: true,
+            //       onSearch: _showSearchDialog,
+            //       onFocusContent: _requestContentFocus,
+            //       onNavFocusRegistration: _setNavFocusRequester,
+            //     ),
+            //   ),
+            // ),
+            // Placeholder for transparent sidebar
             Positioned(
               top: 0,
+              bottom: 0,
               left: 0,
-              right: 0,
-              height: navBarHeight,
-              child: FocusTraversalGroup(
-                policy: WidgetOrderTraversalPolicy(),
-                child: TopNavigationBar(
-                  activeTab: widget.activeTab ?? 'home',
-                  tabs: [
-                    NavTab(
-                        id: 'home',
-                        label: 'Live TV',
-                        icon: Icons.live_tv,
-                        route: '/home'),
-                    NavTab(
-                        id: 'movies',
-                        label: 'Movies',
-                        icon: Icons.movie,
-                        route: '/movies'),
-                    NavTab(
-                        id: 'series',
-                        label: 'Series',
-                        icon: Icons.tv,
-                        route: '/series'),
-                  ],
-                  currentTime: _currentTime,
-                  showLogoAndTime: true,
-                  onSearch: _showSearchDialog,
-                  onFocusContent: _requestContentFocus,
-                  onNavFocusRegistration: _setNavFocusRequester,
-                ),
+              width: 80, // Fixed width for the sidebar
+              child: SidebarNavigation(
+                activeTab: widget.activeTab,
+                currentTime: _currentTime,
+                onSearch: _showSearchDialog,
+                onFocusContent: _requestContentFocus,
+                onNavFocusRegistration: _setNavFocusRequester,
               ),
             ),
           ],
@@ -227,6 +242,10 @@ class _MainShellState extends State<MainShell> {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
     if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
       final handled = _requestNavFocus();
+      return handled ? KeyEventResult.handled : KeyEventResult.ignored;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+      final handled = _requestNavFocus(); // Move focus to sidebar
       return handled ? KeyEventResult.handled : KeyEventResult.ignored;
     }
     return KeyEventResult.ignored;
