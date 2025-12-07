@@ -405,8 +405,34 @@ class TMDBService {
 
     try {
       Map<String, dynamic>? details;
-      details = await getTVDetails(title, year: year);
-      details ??= await getMovieDetails(title, year: year);
+      String? logoUrl;
+
+      // First, try to find a company with the same name
+      final companySearchUrl =
+          '$_baseUrl/search/company?api_key=$_apiKey&query=${Uri.encodeComponent(title)}';
+      final companyResponse = await http.get(Uri.parse(companySearchUrl));
+      if (companyResponse.statusCode == 200) {
+        final companyData = json.decode(companyResponse.body);
+        final companyResults = companyData['results'] as List;
+        if (companyResults.isNotEmpty) {
+          final company = companyResults.first;
+          if (company['logo_path'] != null) {
+            logoUrl =
+                'https://image.tmdb.org/t/p/w500${company['logo_path']}';
+          }
+        }
+      }
+
+      if (logoUrl != null) {
+        details = {'backdrop': logoUrl};
+      } else {
+        if (title.length <= 4) {
+          details = await getTVDetails(title + " channel", year: year);
+        } else {
+          details = await getTVDetails(title, year: year);
+        }
+        details ??= await getMovieDetails(title, year: year);
+      }
       
       // If TMDB didn't find anything, try OMDb as fallback
       if (details == null || (details['backdrop'] == null && details['poster'] == null)) {

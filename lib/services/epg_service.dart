@@ -1323,10 +1323,4 @@ class EpgService with ChangeNotifier {
       'secondaryChannels': _secondaryEpgData.length,
     };
   }
-
-  @override
-  void dispose() {
-    _dio.close();
-    super.dispose();
-  }
 }
