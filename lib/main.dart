@@ -631,8 +631,10 @@ class _MyAppState extends State<MyApp> {
         ],
         child: Builder(
           builder: (context) {
-            // Start background tasks for EPG and playlist sync
-            BackgroundTaskManager.start(context);
+            // Start background tasks for EPG and playlist sync after the first frame is rendered
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              BackgroundTaskManager.start(context);
+            });
             final profileProvider = Provider.of<ProfileProvider>(context);
             return MaterialApp.router(
               title: 'RISA IPTV Player',
