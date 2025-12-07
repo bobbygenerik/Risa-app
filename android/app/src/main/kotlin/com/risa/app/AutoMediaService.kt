@@ -10,6 +10,7 @@ import androidx.media.MediaBrowserServiceCompat
 import android.net.Uri
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 
 class AutoMediaService : MediaBrowserServiceCompat() {
     private lateinit var mediaSession: MediaSessionCompat
@@ -62,20 +63,19 @@ class AutoMediaService : MediaBrowserServiceCompat() {
                 override fun onPlayFromMediaId(mediaId: String?, extras: Bundle?) {
                     if (mediaId == null) return
                     
-                    // Get channel URL from cache
-                    val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
-                    val cachedPlaylist = prefs.getString("flutter.cached_playlist", null)
-                    
-                    if (cachedPlaylist != null) {
-                        try {
-                            val channels = JSONArray(cachedPlaylist)
+                    try {
+                        val cacheFile = File(applicationContext.filesDir, "parsed_playlist_cache.json")
+                        if (cacheFile.exists()) {
+                            val jsonString = cacheFile.readText()
+                            val jsonObject = JSONObject(jsonString)
+                            val channels = jsonObject.getJSONArray("channels")
                             for (i in 0 until channels.length()) {
                                 val channel = channels.getJSONObject(i)
                                 if (channel.optString("id") == mediaId) {
                                     val url = channel.optString("url", "")
                                     val name = channel.optString("name", "")
                                     
-                                    // Save last played channel for next/prev
+                                    val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
                                     prefs.edit().putString("flutter.last_played_channel", mediaId).apply()
                                     
                                     val intent = Intent(this@AutoMediaService, MainActivity::class.java)
@@ -90,9 +90,9 @@ class AutoMediaService : MediaBrowserServiceCompat() {
                                     return
                                 }
                             }
-                        } catch (e: Exception) {
-                            // Fallback to just launching app
                         }
+                    } catch (e: Exception) {
+                        android.util.Log.e("AutoMediaService", "Error playing from mediaId: ${e.message}")
                     }
                     
                     // Fallback: just launch app
@@ -164,11 +164,11 @@ class AutoMediaService : MediaBrowserServiceCompat() {
     
     private fun loadChannelsFromCache(mediaItems: MutableList<MediaBrowserCompat.MediaItem>, category: String) {
         try {
-            val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
-            val cachedPlaylist = prefs.getString("flutter.cached_playlist", null)
-            android.util.Log.d("AutoMediaService", "cachedPlaylist: ${cachedPlaylist?.take(500)}")
-            if (cachedPlaylist.isNullOrEmpty()) {
-                android.util.Log.w("AutoMediaService", "No playlist found in shared preferences!")
+            val cacheFile = File(applicationContext.filesDir, "parsed_playlist_cache.json")
+            android.util.Log.d("AutoMediaService", "Attempting to load playlist from: ${cacheFile.path}")
+
+            if (!cacheFile.exists()) {
+                android.util.Log.w("AutoMediaService", "Playlist cache file does not exist!")
                 mediaItems.add(createPlayableItem(
                     "no_playlist",
                     "No playlist loaded",
@@ -176,7 +176,20 @@ class AutoMediaService : MediaBrowserServiceCompat() {
                 ))
                 return
             }
-            val channels = JSONArray(cachedPlaylist)
+
+            val jsonString = cacheFile.readText()
+            if (jsonString.isEmpty()) {
+                android.util.Log.w("AutoMediaService", "Playlist cache file is empty!")
+                mediaItems.add(createPlayableItem(
+                    "no_playlist",
+                    "No playlist loaded",
+                    "Playlist file is empty. Please reload in app."
+                ))
+                return
+            }
+            
+            val jsonObject = JSONObject(jsonString)
+            val channels = jsonObject.getJSONArray("channels")
             var count = 0
             for (i in 0 until channels.length()) {
                 if (count >= 20) break // Limit to 20 items for performance

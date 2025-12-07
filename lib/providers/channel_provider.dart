@@ -663,15 +663,7 @@ class ChannelProvider with ChangeNotifier {
             .toList();
         _channelCache.clear();
 
-        // --- Write playlist to SharedPreferences for Android Auto ---
-        try {
-          final playlistJson = json.encode(_channelMaps);
-          await prefs.setString('flutter.cached_playlist', playlistJson);
-          debugPrint('ChannelProvider: Saved playlist to flutter.cached_playlist for Android Auto');
-          debugPrint('ChannelProvider: flutter.cached_playlist contents: ' + playlistJson.substring(0, playlistJson.length > 500 ? 500 : playlistJson.length));
-        } catch (e) {
-          debugPrint('ChannelProvider: Failed to save playlist for Android Auto: $e');
-        }
+
 
         final List<dynamic> movies = parsed['movies'] as List<dynamic>;
         final List<dynamic> series = parsed['series'] as List<dynamic>;
