@@ -532,7 +532,7 @@ class _MyAppState extends State<MyApp> {
           ChangeNotifierProvider(
             create: (_) => ContentProvider()..initialize(),
           ),
-          ChangeNotifierProxyProvider<ContentProvider, ChannelProvider>(
+          ChangeNotifierProxyProvider2<ContentProvider, EpgService, ChannelProvider>(
             create: (context) {
               final provider = ChannelProvider();
               // Defer playlist loading until after first frame is rendered
@@ -548,10 +548,8 @@ class _MyAppState extends State<MyApp> {
               }
               return provider;
             },
-            update: (context, contentProvider, channelProvider) {
+            update: (context, contentProvider, epgService, channelProvider) {
               channelProvider?.setContentProvider(contentProvider);
-              // Inject EpgService here
-              final epgService = Provider.of<EpgService>(context, listen: false);
               channelProvider?.setEpgService(epgService);
               return channelProvider ?? ChannelProvider();
             },

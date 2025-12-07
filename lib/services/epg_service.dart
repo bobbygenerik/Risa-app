@@ -102,6 +102,7 @@ class EpgService with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   bool _initialized = false;
+  bool _disposed = false; // Add this line
   
   // Cache settings
   static const String _cacheFileName = 'epg_cache.xml';
@@ -124,6 +125,20 @@ class EpgService with ChangeNotifier {
   
   /// Get combined count of channels from both primary and secondary EPG
   int get totalChannelCount => _epgData.length + _secondaryEpgData.length;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _dio.close();
+    super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) {
+      super.notifyListeners();
+    }
+  }
 
   /// Initialize EPG service - called automatically and manually
   Future<void> initialize() async {
