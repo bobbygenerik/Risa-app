@@ -371,7 +371,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       if (isGrouping && groupedChannels.isEmpty)
                         _buildCategoryLoadingIndicator()
                       else
-                        ..._buildCategoryRows(context, groupedChannels),
+                        ..._buildCategoryRows(context, groupedChannels, isTV),
                       SizedBox(height: context.tvSpacing(40)),
                     ],
                   ),
@@ -651,11 +651,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   List<Widget> _buildCategoryRows(
     BuildContext context,
     Map<String, List<Channel>> groupedChannels,
+    bool isTV,
   ) {
     if (groupedChannels.isEmpty) return [];
 
+    final Iterable<MapEntry<String, List<Channel>>> categoriesToShow =
+        isTV ? groupedChannels.entries : groupedChannels.entries.take(3); // Limit to 3 for phones
+
     // Provider already returns sorted categories with limited channels
-    return groupedChannels.entries.map((entry) {
+    return categoriesToShow.map((entry) {
       final channels = entry.value;
       if (channels.isEmpty) return const SizedBox.shrink();
       return _buildChannelSection(context, entry.key, channels);
