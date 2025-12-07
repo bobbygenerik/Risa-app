@@ -532,7 +532,15 @@ class _MyAppState extends State<MyApp> {
           ChangeNotifierProvider(
             create: (_) => ContentProvider()..initialize(),
           ),
-          ChangeNotifierProxyProvider2<ContentProvider, EpgService, ChannelProvider>(
+          ChangeNotifierProvider(
+            create: (_) {
+              final service = EpgService();
+              // Initialize immediately, not deferred - cache load is fast
+              service.initialize();
+              return service;
+            },
+          ),
+          ChangeNotifierProxyProvider<ContentProvider, ChannelProvider>(
             create: (context) {
               final provider = ChannelProvider();
               // Defer playlist loading until after first frame is rendered
@@ -548,9 +556,8 @@ class _MyAppState extends State<MyApp> {
               }
               return provider;
             },
-            update: (context, contentProvider, epgService, channelProvider) {
+            update: (context, contentProvider, channelProvider) {
               channelProvider?.setContentProvider(contentProvider);
-              channelProvider?.setEpgService(epgService);
               return channelProvider ?? ChannelProvider();
             },
           ),
@@ -558,14 +565,6 @@ class _MyAppState extends State<MyApp> {
             create: (_) {
               final service = VoiceSearchService();
               _runDeferred(service.initialize);
-              return service;
-            },
-          ),
-          ChangeNotifierProvider(
-            create: (_) {
-              final service = EpgService();
-              // Initialize immediately, not deferred - cache load is fast
-              service.initialize();
               return service;
             },
           ),
