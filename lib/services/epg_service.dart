@@ -1077,13 +1077,17 @@ class EpgService with ChangeNotifier {
       }
 
       final cachedData = await file.readAsString();
+      debugPrint('EPG: Cache file read, size: ${cachedData.length} chars');
       
       // Parse cached data in background isolate
+      debugPrint('EPG: Starting background parse...');
       final parsed = await compute(parseEpgInIsolate, cachedData).timeout(const Duration(seconds: 60));
+      debugPrint('EPG: Background parse complete');
       
       // Convert parsed data back to Program objects
       _epgData.clear();
       final rawEpgData = parsed['epgData'] as Map<String, dynamic>;
+      debugPrint('EPG: Parsed ${rawEpgData.length} channel IDs from cache');
       
       for (final channelId in rawEpgData.keys) {
         final programs = (rawEpgData[channelId] as List<dynamic>)

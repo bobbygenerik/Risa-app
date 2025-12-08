@@ -24,6 +24,7 @@ class SidebarNavigation extends StatefulWidget {
   final VoidCallback? onSearch;
   final bool Function()? onFocusContent;
   final void Function(bool Function()? requester)? onNavFocusRegistration;
+  final void Function(VoidCallback? expander)? onExpandRegistration;
 
   const SidebarNavigation({
     super.key,
@@ -32,6 +33,7 @@ class SidebarNavigation extends StatefulWidget {
     this.onSearch,
     this.onFocusContent,
     this.onNavFocusRegistration,
+    this.onExpandRegistration,
   });
 
   @override
@@ -52,6 +54,8 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
     NavTab(id: 'home', label: 'Live TV', icon: Icons.live_tv, route: '/home'),
     NavTab(id: 'movies', label: 'Movies', icon: Icons.movie, route: '/movies'),
     NavTab(id: 'series', label: 'Series', icon: Icons.tv, route: '/series'),
+    NavTab(id: 'favorites', label: 'Favorites', icon: Icons.favorite, route: '/favorites'),
+    NavTab(id: 'downloads', label: 'Downloads', icon: Icons.download, route: '/downloads'),
   ];
 
   @override
@@ -65,6 +69,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
     _isExpanded = false;
     WidgetsBinding.instance.addPostFrameCallback((_) => _focusActiveTab());
     widget.onNavFocusRegistration?.call(_requestActiveTabFocus);
+    widget.onExpandRegistration?.call(_expandSidebar);
   }
 
   @override
@@ -85,9 +90,16 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
     }
   }
 
+  void _expandSidebar() {
+    if (!_isExpanded) {
+      setState(() => _isExpanded = true);
+    }
+  }
+
   @override
   void dispose() {
     widget.onNavFocusRegistration?.call(null);
+    widget.onExpandRegistration?.call(null);
     _searchButtonFocusNode.dispose();
     _overflowButtonFocusNode.dispose();
     for (var node in _tabFocusNodes) {
@@ -190,10 +202,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
           return KeyEventResult.handled;
         }
         if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-          if (!_isExpanded) {
-            setState(() => _isExpanded = true);
-            return KeyEventResult.handled;
-          }
+          if (_isExpanded) setState(() => _isExpanded = false);
           _handleContentFocusFromNav(node);
           return KeyEventResult.handled;
         }
@@ -224,6 +233,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 140),
               curve: Curves.easeOut,
+              height: 34,
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
@@ -231,6 +241,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                   ? const Color(0xFF4a9eff).withOpacity(0.15)
                   : Colors.transparent,
               ),
+              alignment: Alignment.center,
               child: _isExpanded
                 ? Row(
                     mainAxisSize: MainAxisSize.min,
@@ -277,18 +288,17 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
         width: _isExpanded ? 160 : 48,
         child: Column(
         children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 6, bottom: 6),
+          Padding(
+            padding: const EdgeInsets.only(top: 6, bottom: 6),
             child: Image(
-              image: AssetImage('assets/images/croppedlogo2.png'),
-              height: 16,
+              image: const AssetImage('assets/images/croppedlogo2.png'),
+              height: _isExpanded ? 32 : 16,
             ),
           ),
           Expanded(
             child: FocusTraversalGroup(
               policy: WidgetOrderTraversalPolicy(),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(vertical: 6),
@@ -304,10 +314,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                           return KeyEventResult.handled;
                         }
                         if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-                          if (!_isExpanded) {
-                            setState(() => _isExpanded = true);
-                            return KeyEventResult.handled;
-                          }
+                          if (_isExpanded) setState(() => _isExpanded = false);
                           _handleContentFocusFromNav(node);
                           return KeyEventResult.handled;
                         }
@@ -331,6 +338,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 150),
                               curve: Curves.easeOut,
+                              height: 34,
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(8),
@@ -338,6 +346,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                                   ? const Color(0xFF4a9eff).withOpacity(0.15)
                                   : Colors.transparent,
                               ),
+                              alignment: Alignment.center,
                               child: _isExpanded
                                 ? const Row(
                                     mainAxisSize: MainAxisSize.min,
@@ -368,28 +377,13 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                       child: _buildTabButton(index),
                     );
                   }).toList(),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.only(bottom: 12, top: 6),
+                    child: _buildBottomButton(Icons.settings, 'Settings', '/settings'),
+                  ),
                 ],
               ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: _buildBottomButton(Icons.favorite, 'Favorites', '/favorites'),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: _buildBottomButton(Icons.download, 'Downloads', '/downloads'),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: _buildBottomButton(Icons.settings, 'Settings', '/settings'),
-                ),
-              ],
             ),
           ),
         ],
@@ -403,10 +397,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
       onKeyEvent: (node, event) {
         if (event is! KeyDownEvent) return KeyEventResult.ignored;
         if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-          if (!_isExpanded) {
-            setState(() => _isExpanded = true);
-            return KeyEventResult.handled;
-          }
+          if (_isExpanded) setState(() => _isExpanded = false);
           _handleContentFocusFromNav(node);
           return KeyEventResult.handled;
         }
@@ -435,11 +426,13 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
             },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 140),
+              height: 34,
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
                 color: isFocused ? const Color(0xFF4a9eff).withOpacity(0.15) : Colors.transparent,
               ),
+              alignment: Alignment.center,
               child: _isExpanded
                 ? Row(
                     mainAxisSize: MainAxisSize.min,

@@ -1,21 +1,23 @@
 // ignore_for_file: sized_box_for_whitespace
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:video_player/video_player.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
+import 'package:iptv_player/widgets/native_exoplayer.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/services/epg_service.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
+import 'package:iptv_player/widgets/content_focus_provider.dart';
 
 class EPGScreen extends StatefulWidget {
   final Channel? initialChannel;
@@ -31,7 +33,7 @@ class EPGScreen extends StatefulWidget {
   State<EPGScreen> createState() => _EPGScreenState();
 }
 
-class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMixin {
+class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMixin, ContentFocusRegistrant {
     // Temporary stub to fix build error
     double _calculateProgramsGridWidth() => _calculateGridWidth();
   final DateTime _selectedDate = DateTime.now();
@@ -39,7 +41,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
   String? _selectedChannelId;
   String? _selectedCategory;
   Channel? _playingChannel;
-  VideoPlayerController? _miniPlayerController;
+  NativeExoPlayerController? _miniPlayerController;
   Set<String> _epgFavoriteChannelIds = {}; // EPG-specific favorites
   late AnimationController _refreshAnimationController;
 
@@ -139,16 +141,12 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
 
   /// Scroll the EPG grid to show the current time
   void _scrollToCurrentTime({bool animate = true}) {
-    // With the new layout, time starts 1 hour before current time
-    // So we want to scroll to show current time about 1 cell (120px) from the left
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_horizontalScrollController.hasClients) return;
       
-      // The grid now starts 1 hour before current time, so scroll position 0 
-      // is already showing current time area. Scroll just a tiny bit to center current time.
-      final now = DateTime.now();
-      final minutesPastHour = now.minute;
-      final scrollPosition = (minutesPastHour / 60) * 120.0; // Scroll based on minutes past the hour
+      // Scroll to show current hour at the start (aligned with Today box)
+      // The grid starts 1 hour before current time, so we need to scroll 1 cell width (244px including margin)
+      final scrollPosition = 244.0;
       
       if (animate) {
         _horizontalScrollController.animateTo(
@@ -181,10 +179,28 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     });
   }
 
+  @override
+  bool handleContentFocusRequest() {
+    requestFirstContentFocus();
+    return true;
+  }
+
   void requestFirstContentFocus() {
-    if (_firstContentFocusNode.canRequestFocus) {
-      _firstContentFocusNode.requestFocus();
-    }
+    // Find first focusable channel in the list
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // Try to find a channel sidebar item to focus
+      FocusNode? firstChannel;
+      for (final node in FocusScope.of(context).children) {
+        if (node.canRequestFocus && node.context != null) {
+          firstChannel = node;
+          break;
+        }
+      }
+      if (firstChannel != null) {
+        firstChannel.requestFocus();
+      }
+    });
   }
 
   @override
@@ -194,7 +210,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     _refreshAnimationController.dispose();
     _horizontalScrollController.dispose();
     _verticalScrollController.dispose();
-    _miniPlayerController?.dispose();
+    _miniPlayerController = null;
     _miniPlayerCloseFocus.dispose();
     _miniPlayerMaximizeFocus.dispose();
     _refreshButtonFocus.dispose();
@@ -213,46 +229,27 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     }
   }
 
-  void _playChannelInMiniPlayer(Channel channel) async {
-    // Dispose previous controller
-    _miniPlayerController?.dispose();
-
+  void _playChannelInMiniPlayer(Channel channel) {
     setState(() {
       _playingChannel = channel;
+      _miniPlayerController = null;
     });
-
-    try {
-      _miniPlayerController = VideoPlayerController.networkUrl(
-        Uri.parse(channel.url),
-      );
-
-      // Initialize and play immediately
-      await _miniPlayerController!.initialize();
-      _miniPlayerController!.play(); // Start playing immediately without await
-
-      if (mounted) {
-        setState(() {});
-      }
-    } catch (e) {
-      debugPrint('Error initializing mini player: $e');
-    }
   }
 
   void _expandMiniPlayer() {
     if (_playingChannel != null) {
-      // Pause mini player
-      _miniPlayerController?.pause();
-
+      final channel = _playingChannel;
+      // Close mini player first to stop playback
+      _closeMiniPlayer();
       // Navigate to full player
-      context.push('/player', extra: _playingChannel);
+      context.push('/player', extra: channel);
     }
   }
 
   void _closeMiniPlayer() {
-    _miniPlayerController?.dispose();
-    _miniPlayerController = null;
     setState(() {
       _playingChannel = null;
+      _miniPlayerController = null;
     });
   }
 
@@ -376,34 +373,24 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                     // Spacer for header area
                     const SizedBox(height: headerHeight),
                     Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.05),
-                        ),
-                        child: Stack(
-                          children: [
-                            // Program grid with channel names - full width
-                            Positioned.fill(
+                      child: Row(
+                        children: [
+                          // Spacer for main navigation sidebar (48px collapsed)
+                          const SizedBox(width: 48),
+                          // Category sidebar
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: _buildCategorySidebar(categoryNames),
+                          ),
+                          const VerticalDivider(width: 1, color: AppTheme.divider),
+                          // Program grid with channel names
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 8),
                               child: _buildProgramGrid(filteredChannels, epgService),
                             ),
-                            // Category sidebar - overlaid on left with offset for main sidebar
-                            Positioned(
-                              left: 48,
-                              top: 0,
-                              bottom: 0,
-                              width: 100,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF050710).withOpacity(0.95),
-                                  border: Border(
-                                    right: BorderSide(color: Colors.white.withOpacity(0.1), width: 1),
-                                  ),
-                                ),
-                                child: _buildCategorySidebar(categoryNames),
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -517,7 +504,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
 
   Widget _buildHeader(EpgService epgService) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.fromLTRB(56, 12, 16, 12),
       decoration: const BoxDecoration(
         color: Colors.transparent,
       ),
@@ -530,7 +517,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                'Electronic Program Guide',
+                'Guide',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   fontSize: 16,
@@ -548,6 +535,17 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
             ],
           ),
           const Spacer(),
+          // Now button
+          TextButton.icon(
+            onPressed: _scrollToCurrentTime,
+            icon: const Icon(Icons.access_time, size: 16),
+            label: const Text('Now', style: TextStyle(fontSize: 14)),
+            style: TextButton.styleFrom(
+              foregroundColor: Color(0xFF4a9eff),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
+          ),
+          const SizedBox(width: 12),
           // Refresh button with spinning animation when loading
           Focus(
             focusNode: _refreshButtonFocus,
@@ -588,7 +586,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                               : 0,
                           child: Icon(
                             Icons.refresh,
-                            size: 20,
+                            size: 22,
                             color: epgService.isLoading ? Color(0xFF4a9eff) : Colors.white.withOpacity(0.7),
                           ),
                         );
@@ -624,38 +622,31 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
               },
             ),
           ),
-          const SizedBox(width: 8),
-          TextButton.icon(
-            onPressed: _scrollToCurrentTime,
-            icon: const Icon(Icons.access_time, size: 14),
-            label: const Text('Now', style: TextStyle(fontSize: 13)),
-            style: TextButton.styleFrom(
-              foregroundColor: Color(0xFF4a9eff),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            ),
-          ),
         ],
       ),
     );
   }
 
   Widget _buildCategorySidebar(List<String> categories) {
-    return ListView.builder(
-      itemCount: categories.length,
-      itemBuilder: (context, index) {
-        final category = categories[index];
-        return _buildCategoryItem(
-          name: category,
-          isSelected: _selectedCategory == category,
-          onTap: () {
-            setState(() {
-              _selectedCategory = category;
-            });
-            // Scroll channel list to top
-            _scrollChannelListToTop();
-          },
-        );
-      },
+    return Container(
+      width: 180,
+      child: ListView.builder(
+        itemCount: categories.length,
+        itemBuilder: (context, index) {
+          final category = categories[index];
+          return _buildCategoryItem(
+            name: category,
+            isSelected: _selectedCategory == category,
+            onTap: () {
+              setState(() {
+                _selectedCategory = category;
+              });
+              // Scroll channel list to top
+              _scrollChannelListToTop();
+            },
+          );
+        },
+      ),
     );
   }
 
@@ -665,66 +656,53 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     required VoidCallback onTap,
   }) {
     return Focus(
+      canRequestFocus: true,
       onKeyEvent: (node, event) {
-        if (event is KeyDownEvent && 
-            (event.logicalKey == LogicalKeyboardKey.select || 
-             event.logicalKey == LogicalKeyboardKey.enter)) {
-          onTap();
-          return KeyEventResult.handled;
+        if (event is KeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.select || 
+              event.logicalKey == LogicalKeyboardKey.enter) {
+            onTap();
+            return KeyEventResult.handled;
+          }
+          if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+            requestFirstContentFocus();
+            return KeyEventResult.handled;
+          }
         }
         return KeyEventResult.ignored;
       },
       onFocusChange: (_) => setState(() {}),
       child: Builder(builder: (context) {
         final bool isFocused = Focus.of(context).hasFocus;
-        final Color textColor = isFocused
-            ? Colors.white
-            : Colors.white.withOpacity(0.7);
         return GestureDetector(
           onTap: onTap,
           behavior: HitTestBehavior.opaque,
-          child: AnimatedScale(
-            scale: isFocused ? 1.02 : 1.0,
-            duration: const Duration(milliseconds: 150),
-            curve: Curves.easeOut,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 6,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.03),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isFocused
+                    ? AppTheme.primaryBlue
+                    : isSelected
+                        ? AppTheme.primaryBlue.withOpacity(0.5)
+                        : Colors.white.withOpacity(0.1),
+                width: isFocused ? 2 : 1,
               ),
-              child: Row(
-                children: [
-                  AnimatedOpacity(
-                    opacity: isSelected ? 1.0 : 0.0,
-                    duration: const Duration(milliseconds: 150),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      width: isSelected ? (isFocused ? 3 : 2) : 0,
-                      height: 16,
-                      decoration: isSelected
-                          ? const BoxDecoration(
-                              color: Color(0xFF4a9eff),
-                            )
-                          : null,
-                    ),
-                  ),
-                  if (isSelected) const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      name,
-                      style: TextStyle(
-                        color: textColor,
-                        fontSize: 13,
-                        fontWeight:
-                            (isFocused || isSelected) ? FontWeight.w600 : FontWeight.w500,
-                        decoration: TextDecoration.none,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
+            ),
+            child: Text(
+              name,
+              style: TextStyle(
+                color: isFocused || isSelected
+                    ? Colors.white
+                    : Colors.white.withOpacity(0.7),
+                fontSize: 13,
+                fontWeight: (isFocused || isSelected) ? FontWeight.w600 : FontWeight.w500,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         );
@@ -766,151 +744,70 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
               child: Stack(
                 children: [
                   // Video player
-                  if (_miniPlayerController != null &&
-                      _miniPlayerController!.value.isInitialized)
+                  if (Platform.isAndroid)
                     ClipRRect(
                       borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-                      child: SizedBox.expand(
-                        child: FittedBox(
-                          fit: BoxFit.cover,
-                          child: SizedBox(
-                            width: _miniPlayerController!.value.size.width,
-                            height: _miniPlayerController!.value.size.height,
-                            child: VideoPlayer(_miniPlayerController!),
-                          ),
-                        ),
+                      child: NativeExoPlayer(
+                        videoUrl: _playingChannel!.url,
+                        autoPlay: true,
+                        onCreated: (controller) {
+                          _miniPlayerController = controller;
+                        },
                       ),
                     )
                   else
                     const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(),
-                          SizedBox(height: 8),
-                          Text(
-                            'Loading stream...',
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                        ],
+                      child: Text(
+                        'Mini player only available on Android',
+                        style: TextStyle(color: Colors.white70),
                       ),
                     ),
 
-                  // Controls overlay
+                  // Close button
                   Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(AppSizes.sm),
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF050710),
-                  Color(0xFF0d1140),
-                ],
-              )
-                      ),
-                      child: Row(
-                        children: [
-                          // Channel logo
-                          if (_playingChannel!.logoUrl != null)
-                            Container(
-                              width: 40,
-                              height: 40,
-                              margin: const EdgeInsets.only(right: 8),
-                              decoration: BoxDecoration(
+                    top: 8,
+                    right: 8,
+                    child: Focus(
+                      focusNode: _miniPlayerCloseFocus,
+                      onKeyEvent: (node, event) {
+                        if (event is KeyDownEvent) {
+                          if (event.logicalKey == LogicalKeyboardKey.select ||
+                              event.logicalKey == LogicalKeyboardKey.enter) {
+                            _closeMiniPlayer();
+                            return KeyEventResult.handled;
+                          }
+                          if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                            _refreshButtonFocus.requestFocus();
+                            return KeyEventResult.handled;
+                          }
+                          if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                            _miniPlayerMaximizeFocus.requestFocus();
+                            return KeyEventResult.handled;
+                          }
+                        }
+                        return KeyEventResult.ignored;
+                      },
+                      child: Builder(
+                        builder: (context) {
+                          final isFocused = Focus.of(context).hasFocus;
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.5),
+                              border: isFocused
+                                  ? Border.all(color: AppTheme.primaryBlue, width: 2)
+                                  : null,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(
+                                Icons.close,
                                 color: Colors.white,
-                                borderRadius: BorderRadius.circular(4),
+                                size: 20,
                               ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: Image.network(
-                                  _playingChannel!.logoUrl!,
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return const Icon(
-                                      Icons.dvr,
-                                      color: AppTheme.primaryBlue,
-                                    );
-                                  },
-                                ),
-                              ),
+                              onPressed: _closeMiniPlayer,
                             ),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _playingChannel!.name,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                if (currentProgram != null)
-                                  Text(
-                                    currentProgram.title,
-                                    style: const TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 12,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                              ],
-                            ),
-                          ),
-                          Focus(
-                            focusNode: _miniPlayerCloseFocus,
-                            onKeyEvent: (node, event) {
-                              if (event is KeyDownEvent) {
-                                if (event.logicalKey == LogicalKeyboardKey.select ||
-                                    event.logicalKey == LogicalKeyboardKey.enter) {
-                                  _closeMiniPlayer();
-                                  return KeyEventResult.handled;
-                                }
-                                if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-                                  _refreshButtonFocus.requestFocus();
-                                  return KeyEventResult.handled;
-                                }
-                                if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                                  _miniPlayerMaximizeFocus.requestFocus();
-                                  return KeyEventResult.handled;
-                                }
-                              }
-                              return KeyEventResult.ignored;
-                            },
-                            child: Builder(
-                              builder: (context) {
-                                final isFocused = Focus.of(context).hasFocus;
-                                return Container(
-                                  decoration: isFocused
-                                      ? BoxDecoration(
-                                          border: Border.all(color: AppTheme.primaryBlue, width: 2),
-                                          borderRadius: BorderRadius.circular(4),
-                                        )
-                                      : null,
-                                  child: IconButton(
-                                    icon: const Icon(
-                                      Icons.close,
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                    onPressed: _closeMiniPlayer,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ],
+                          );
+                        },
                       ),
                     ),
                   ),
@@ -938,13 +835,16 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                       child: Builder(
                         builder: (context) {
                           final isFocused = Focus.of(context).hasFocus;
-                          return IconButton(
-                            icon: const Icon(Icons.fullscreen, color: Colors.white),
-                            onPressed: _expandMiniPlayer,
-                            style: IconButton.styleFrom(
-                              backgroundColor: isFocused
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: isFocused
                                   ? AppTheme.primaryBlue.withAlpha((0.7 * 255).round())
                                   : Colors.black.withAlpha((0.5 * 255).round()),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.fullscreen, color: Colors.white),
+                              onPressed: _expandMiniPlayer,
                             ),
                           );
                         },
@@ -1046,7 +946,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     
     // Show loading overlay but still display the grid structure
     final bool isLoading = epgService.isLoading;
-    const channelSidebarWidth = 80.0;
+    const channelSidebarWidth = 160.0;
     
     // Show loading indicator when EPG is loading
     return Stack(
@@ -1072,83 +972,88 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
               ),
             // Main EPG grid with fixed channel sidebar
             Expanded(
-              child: SingleChildScrollView(
-                controller: _verticalScrollController,
-                physics: const ClampingScrollPhysics(),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // FIXED channel sidebar (does NOT scroll horizontally or independently)
-                    // Offset by main sidebar (48px) + category sidebar (100px) = 148px
-                    SizedBox(
-                      width: 148 + channelSidebarWidth,
-                      child: Row(
-                        children: [
-                          // Spacer for main sidebar + category sidebar
-                          const SizedBox(width: 148),
-                          // Channel column
-                          SizedBox(
-                            width: channelSidebarWidth,
-                            child: Column(
-                              children: [
-                                Container(
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    border: Border(
-                                      right: BorderSide(color: Colors.white.withOpacity(0.1), width: 1),
-                                      bottom: BorderSide(color: Colors.white.withOpacity(0.1), width: 1),
-                                    ),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      _selectedDate.day == DateTime.now().day &&
-                                          _selectedDate.month == DateTime.now().month &&
-                                          _selectedDate.year == DateTime.now().year
-                                          ? 'Today'
-                                          : '${_selectedDate.month}/${_selectedDate.day}',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13,
-                                        color: Colors.white.withOpacity(0.9),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                // Channel list (built as static Column - scrolls with parent)
-                                ...List.generate(channels.length, (index) {
-                                  final channel = channels[index];
-                                  return _buildChannelSidebarItem(channel);
-                                }),
-                              ],
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // FIXED channel sidebar (scrolls vertically with list)
+                  SizedBox(
+                    width: channelSidebarWidth,
+                    child: Column(
+                      children: [
+                        // Today header
+                        Container(
+                          height: 108,
+                          margin: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.03),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.1),
+                              width: 1,
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                    // SCROLLABLE time header + programs section
-                    Expanded(
-                      child: SingleChildScrollView(
-                        controller: _horizontalScrollController,
-                        scrollDirection: Axis.horizontal,
-                        child: SizedBox(
-                          width: _calculateProgramsGridWidth(),
-                          child: Column(
-                            children: [
-                              // Time header (scrolls horizontally)
-                              _buildTimeHeaderOnly(),
-                              const Divider(height: 1, color: AppTheme.divider),
-                              // Programs grid (built as static Column - scrolls with parent)
-                              ...List.generate(channels.length, (index) {
-                                final channel = channels[index];
-                                return _buildProgramRowOnly(channel, epgService);
-                              }),
-                            ],
+                          child: Center(
+                            child: Text(
+                              _selectedDate.day == DateTime.now().day &&
+                                  _selectedDate.month == DateTime.now().month &&
+                                  _selectedDate.year == DateTime.now().year
+                                  ? 'Today'
+                                  : '${_selectedDate.month}/${_selectedDate.day}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                                color: Colors.white.withOpacity(0.9),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                        // Channel list (lazy loaded)
+                        Expanded(
+                          child: ListView.builder(
+                            controller: _verticalScrollController,
+                            itemCount: channels.length,
+                            itemBuilder: (context, index) {
+                              return _buildChannelSidebarItem(channels[index]);
+                            },
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  // SCROLLABLE time header + programs section
+                  Expanded(
+                    child: Column(
+                      children: [
+                        // Time header (scrolls horizontally)
+                        SingleChildScrollView(
+                          controller: _horizontalScrollController,
+                          scrollDirection: Axis.horizontal,
+                          child: SizedBox(
+                            width: _calculateProgramsGridWidth(),
+                            child: _buildTimeHeaderOnly(),
+                          ),
+                        ),
+                        // Programs grid (lazy loaded with synchronized horizontal scroll)
+                        Expanded(
+                          child: SingleChildScrollView(
+                            controller: _horizontalScrollController,
+                            scrollDirection: Axis.horizontal,
+                            child: SizedBox(
+                              width: _calculateProgramsGridWidth(),
+                              child: ListView.builder(
+                                controller: _verticalScrollController,
+                                itemCount: channels.length,
+                                itemBuilder: (context, index) {
+                                  return _buildProgramRowOnly(channels[index], epgService);
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -1180,15 +1085,20 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     final isSelected = _selectedChannelId == channel.id;
     
     return Focus(
+      canRequestFocus: true,
       onKeyEvent: (node, event) {
-        if (event is KeyDownEvent && 
-            (event.logicalKey == LogicalKeyboardKey.select || 
-             event.logicalKey == LogicalKeyboardKey.enter)) {
-          setState(() {
-            _selectedChannelId = channel.id;
-          });
-          _playChannelInMiniPlayer(channel);
-          return KeyEventResult.handled;
+        if (event is KeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.select || 
+              event.logicalKey == LogicalKeyboardKey.enter) {
+            setState(() {
+              _selectedChannelId = channel.id;
+            });
+            _playChannelInMiniPlayer(channel);
+            return KeyEventResult.handled;
+          }
+          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+            return KeyEventResult.ignored; // Allow left to go to sidebar
+          }
         }
         return KeyEventResult.ignored;
       },
@@ -1204,39 +1114,36 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
             },
             onLongPress: () => _showChannelContextMenu(context, channel),
             child: Container(
-              height: 48,
-              padding: const EdgeInsets.all(4),
+              height: 108,
+              margin: const EdgeInsets.all(2),
               decoration: BoxDecoration(
-                color: isFocused 
-                    ? const Color(0xFF4a9eff).withOpacity(0.15)
-                    : isSelected 
-                        ? const Color(0xFF4a9eff).withOpacity(0.1)
-                        : Colors.transparent,
-                border: Border(
-                  right: BorderSide(color: Colors.white.withOpacity(0.05), width: 1),
-                  bottom: BorderSide(color: Colors.white.withOpacity(0.03), width: 0.5),
+                color: Colors.white.withOpacity(0.03),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: isFocused 
+                      ? AppTheme.primaryBlue
+                      : isSelected
+                          ? AppTheme.primaryBlue.withOpacity(0.5)
+                          : Colors.white.withOpacity(0.1),
+                  width: isFocused ? 2 : 1,
                 ),
               ),
               child: Center(
                 child: Container(
-                    width: 60,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: channel.logoUrl != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: Image.network(
-                              channel.logoUrl!,
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) {
-                                return const Center(
-                                  child: Icon(
+                  width: 96,
+                  height: 96,
+                  child: channel.logoUrl != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(7),
+                          child: Image.network(
+                            channel.logoUrl!,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Center(
+                                child: Icon(
                                     Icons.dvr,
                                     color: AppTheme.primaryBlue,
-                                    size: 18,
+                                    size: 24,
                                   ),
                                 );
                               },
@@ -1246,10 +1153,10 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                             child: Icon(
                               Icons.dvr,
                               color: AppTheme.primaryBlue,
-                              size: 18,
+                              size: 24,
                             ),
                           ),
-                  ),
+                ),
               ),
             ),
           );
@@ -1263,10 +1170,10 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     final now = DateTime.now();
     final startHour = (now.hour - 1).clamp(0, 23);
     final hoursToShow = 12;
-    final cellWidth = 120.0;
+    final cellWidth = 240.0;
 
-    return Container(
-      height: 48,
+    return SizedBox(
+      height: 108,
       child: Row(
         children: List.generate(hoursToShow, (index) {
           final hour = (startHour + index) % 24;
@@ -1274,10 +1181,13 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
 
           return Container(
             width: cellWidth,
-            padding: const EdgeInsets.all(6),
+            margin: const EdgeInsets.all(2),
             decoration: BoxDecoration(
-              border: Border(
-                right: BorderSide(color: Colors.white.withOpacity(0.1), width: 0.5),
+              color: Colors.white.withOpacity(0.03),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.1),
+                width: 1,
               ),
             ),
             child: Center(
@@ -1309,17 +1219,12 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
       return program.startTime.isBefore(displayEnd) && program.endTime.isAfter(displayStart);
     }).toList();
 
-    final cellWidth = 120.0;
+    final cellWidth = 240.0;
     final totalWidth = 12 * cellWidth;
 
-    return Container(
-      height: 48,
+    return SizedBox(
+      height: 108,
       width: totalWidth,
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Colors.white.withOpacity(0.03), width: 0.5),
-        ),
-      ),
       child: dayPrograms.isEmpty
           ? Container(
               alignment: Alignment.centerLeft,
@@ -1366,13 +1271,21 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     const epgCatchupColor = Color(0xFFcc5a2d);
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 1),
+      margin: const EdgeInsets.all(2),
       decoration: BoxDecoration(
-        color: isLive ? epgLiveColor : hasCatchup ? epgCatchupColor.withAlpha((0.4 * 255).round()) : epgCellBackground,
-        borderRadius: BorderRadius.circular(4),
+        color: isLive 
+            ? epgLiveColor.withOpacity(0.15)
+            : hasCatchup 
+                ? epgCatchupColor.withOpacity(0.1)
+                : Colors.white.withOpacity(0.03),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: isLive ? epgLiveColor : hasCatchup ? epgCatchupColor : const Color(0xFF2a2a35),
-          width: isLive || hasCatchup ? 2 : 1,
+          color: isLive 
+              ? epgLiveColor 
+              : hasCatchup 
+                  ? epgCatchupColor 
+                  : Colors.white.withOpacity(0.1),
+          width: 1,
         ),
       ),
       child: Material(
@@ -1612,9 +1525,10 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
   }
 
   double _calculateGridWidth() {
-    const hoursToShow = 12;
-    const cellWidth = 120.0;
-    return hoursToShow * cellWidth;
+    final hours = _isHourlyView ? 24 : 48;
+    final cellWidth = _isHourlyView ? 120.0 : 60.0;
+    const channelSidebarWidth = 160.0; // Must match the channel info section width
+    return channelSidebarWidth + (hours * cellWidth);
   }
 
   void _showChannelOptions(Channel channel) {

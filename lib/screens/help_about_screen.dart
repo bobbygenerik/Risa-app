@@ -148,12 +148,6 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
             ),
           ),
           const Spacer(),
-          Text(
-            _formatTime(_currentTime),
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppTheme.textSecondary,
-            ),
-          ),
         ],
       ),
     );

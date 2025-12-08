@@ -14,7 +14,7 @@ import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/services/voice_search_service.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/epg_service.dart';
-import 'package:iptv_player/services/ai_upscaling_service.dart';
+
 import 'package:iptv_player/services/whisper_transcription_service.dart';
 import 'package:iptv_player/services/whisper_speech_service.dart';
 import 'package:iptv_player/services/ai_model_manager.dart';
@@ -39,6 +39,7 @@ import 'package:iptv_player/screens/help_about_screen.dart';
 import 'package:iptv_player/screens/favorites_screen.dart';
 import 'package:iptv_player/screens/downloads_screen.dart';
 import 'package:iptv_player/screens/content_detail_screen.dart';
+import 'package:iptv_player/screens/search_screen.dart';
 
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/models/channel.dart';
@@ -59,6 +60,11 @@ void main() {
       // different zone" error when the framework is used later.
       WidgetsFlutterBinding.ensureInitialized();
       StartupProbe.mark('Flutter bindings initialized');
+      
+      // Limit image cache to prevent OOM errors
+      PaintingBinding.instance.imageCache.maximumSize = 100;
+      PaintingBinding.instance.imageCache.maximumSizeBytes = 50 << 20; // 50MB
+      StartupProbe.mark('Image cache limits configured');
       
       // Initialize SSL handler for IPTV providers with certificate issues
       await SSLHandler.init();
@@ -535,10 +541,13 @@ class _MyAppState extends State<MyApp> {
           ChangeNotifierProvider(
             create: (context) {
               final service = EpgService();
-              // Initialize EPG in background immediately
+              // Initialize EPG and force refresh on app start
               Future.microtask(() async {
                 await service.initialize();
                 debugPrint('Main: EPG initialized with ${service.totalChannelCount} channels');
+                // Force a background refresh to ensure fresh data
+                await service.loadEpg();
+                debugPrint('Main: EPG refresh complete, total channels: ${service.totalChannelCount}');
               });
               return service;
             },
@@ -579,13 +588,7 @@ class _MyAppState extends State<MyApp> {
               return manager;
             },
           ),
-          ChangeNotifierProvider(
-            create: (_) {
-              final service = AIUpscalingService();
-              _runDeferred(service.initialize);
-              return service;
-            },
-          ),
+
           ChangeNotifierProxyProvider<AIModelManager, WhisperSpeechService>(
             create: (_) {
               final service = WhisperSpeechService();
@@ -857,7 +860,9 @@ final _router = GoRouter(
     ShellRoute(
       builder: (context, state, child) {
         // Determine active tab from current location
-        final activeTab = state.matchedLocation.contains('/movies')
+        final activeTab = state.matchedLocation.contains('/search')
+            ? 'search'
+            : state.matchedLocation.contains('/movies')
             ? 'movies'
             : state.matchedLocation.contains('/series')
             ? 'series'
@@ -897,6 +902,11 @@ final _router = GoRouter(
           ),
         );
       },
+        ),
+        GoRoute(
+          path: '/search',
+          pageBuilder: (context, state) =>
+              _fadeSlidePage(key: state.pageKey, child: const SearchScreen()),
         ),
         GoRoute(
           path: '/favorites',

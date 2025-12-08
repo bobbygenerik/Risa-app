@@ -178,18 +178,12 @@ class _MoviesScreenState extends State<MoviesScreen>
         if (_featuredIndex >= displayMovies.length) _featuredIndex = 0;
         final featured = displayMovies[_featuredIndex];
 
-        final stack = Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF050710), Color(0xFF0d1140)],
-            ),
-          ),
+        final stack = Padding(
+          padding: const EdgeInsets.only(left: 48),
           child: Stack(
             children: [
-              // Full-height hero banner background
-              Positioned.fill(child: _buildHeroBannerBackground(featured)),
+                // Full-height hero banner background
+                Positioned.fill(child: _buildHeroBannerBackground(featured)),
               // Content on top
               SingleChildScrollView(
                 child: Column(
@@ -199,7 +193,15 @@ class _MoviesScreenState extends State<MoviesScreen>
                     _buildHeroBannerOverlay(context, featured),
                     const SizedBox(height: 16),
 
-                    Padding(
+                    Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF050710), Color(0xFF0d1140)],
+                      ),
+                    ),
+                    child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -217,14 +219,24 @@ class _MoviesScreenState extends State<MoviesScreen>
                         ],
                       ),
                     ),
+                  ),
                   ],
                 ),
               ),
-            ],
+              ],
           ),
         );
 
-        return _wrapWithDirectionalFocus(stack);
+        return Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF050710), Color(0xFF0d1140)],
+            ),
+          ),
+          child: _wrapWithDirectionalFocus(stack),
+        );
       },
     );
   }
@@ -345,6 +357,7 @@ class _MoviesScreenState extends State<MoviesScreen>
     return Padding(
       padding: const EdgeInsets.only(right: 12),
       child: Focus(
+        canRequestFocus: true,
         onKeyEvent: (node, event) {
           if (event is KeyDownEvent) {
             if (event.logicalKey == LogicalKeyboardKey.select ||
@@ -397,25 +410,24 @@ class _MoviesScreenState extends State<MoviesScreen>
                                 ),
                               ),
                               if (movie.watchProgress != null &&
-                                  movie.watchProgress! > 0) ...[
-                              Positioned(
-                                bottom: 0,
-                                left: 0,
-                                right: 0,
-                                child: LinearProgressIndicator(
-                                  value: movie.watchProgress!,
-                                  backgroundColor: Colors.grey[800],
-                                  color: AppTheme.primaryBlue,
-                                  minHeight: 4,
+                                  movie.watchProgress! > 0)
+                                Positioned(
+                                  bottom: 0,
+                                  left: 0,
+                                  right: 0,
+                                  child: LinearProgressIndicator(
+                                    value: movie.watchProgress!,
+                                    backgroundColor: Colors.grey[800],
+                                    color: AppTheme.primaryBlue,
+                                    minHeight: 4,
+                                  ),
                                 ),
-                              ),
                             ],
-                          ],
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: AppSizes.xs),
-                    Text(
+                      const SizedBox(height: AppSizes.xs),
+                      Text(
                       movie.title,
                       style: Theme.of(context)
                           .textTheme
@@ -435,8 +447,8 @@ class _MoviesScreenState extends State<MoviesScreen>
                   ],
                 ),
               ),
-            ),
-          );
+              ),
+            );
           },
         ),
       ),

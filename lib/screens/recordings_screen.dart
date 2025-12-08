@@ -255,13 +255,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
             icon: Icon(Icons.refresh, color: AppTheme.primaryBlue, size: context.tvIconSize(24)),
             onPressed: _loadRecordings,
           ),
-          SizedBox(width: context.tvSpacing(8)), // AppSizes.sm assumed 8
-          Text(
-            _formatTime(_currentTime),
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppTheme.textSecondary,
-            ),
-          ),
+
         ],
       ),
     );

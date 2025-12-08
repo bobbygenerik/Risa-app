@@ -10,6 +10,7 @@ class VoiceSearchButton extends StatefulWidget {
   final bool usePillStyle;
   final String? label;
   final FocusNode? focusNode;
+  final VoidCallback? onLeftArrow;
 
   const VoiceSearchButton({
     super.key,
@@ -17,6 +18,7 @@ class VoiceSearchButton extends StatefulWidget {
     this.usePillStyle = false,
     this.label,
     this.focusNode,
+    this.onLeftArrow,
   });
 
   @override
@@ -218,6 +220,10 @@ class _VoiceSearchButtonState extends State<VoiceSearchButton>
             if (event.logicalKey == LogicalKeyboardKey.select ||
                 event.logicalKey == LogicalKeyboardKey.enter) {
               _toggleListening(voiceService);
+              return KeyEventResult.handled;
+            }
+            if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+              widget.onLeftArrow?.call();
               return KeyEventResult.handled;
             }
           }

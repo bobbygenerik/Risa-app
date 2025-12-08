@@ -12,7 +12,7 @@ import 'package:iptv_player/services/epg_service.dart';
 import 'package:iptv_player/services/ai_model_manager.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:provider/provider.dart';
-import 'package:iptv_player/services/ai_upscaling_service.dart';
+// import 'package:iptv_player/services/ai_upscaling_service.dart'; // Commented out - service not implemented
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
@@ -1496,14 +1496,6 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                     child: Builder(
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
-                        if (isFocused) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            final ctx = _epgIntervalMinusFocusNode.context;
-                            if (ctx != null) {
-                              Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 150), curve: Curves.easeOut, alignment: 0.5);
-                            }
-                          });
-                        }
                         return AnimatedScale(
                           scale: isFocused ? TVFocusStyle.focusScale : 1.0,
                           duration: TVFocusStyle.animationDuration,
@@ -1571,14 +1563,6 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                     child: Builder(
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
-                        if (isFocused) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            final ctx = _epgIntervalPlusFocusNode.context;
-                            if (ctx != null) {
-                              Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 150), curve: Curves.easeOut, alignment: 0.5);
-                            }
-                          });
-                        }
                         return AnimatedScale(
                           scale: isFocused ? TVFocusStyle.focusScale : 1.0,
                           duration: TVFocusStyle.animationDuration,
@@ -1660,14 +1644,6 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                     child: Builder(
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
-                        if (isFocused) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            final ctx = _epgPastDaysMinusFocusNode.context;
-                            if (ctx != null) {
-                              Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 150), curve: Curves.easeOut, alignment: 0.5);
-                            }
-                          });
-                        }
                         return AnimatedScale(
                           scale: isFocused ? TVFocusStyle.focusScale : 1.0,
                           duration: TVFocusStyle.animationDuration,
@@ -1738,14 +1714,6 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                     child: Builder(
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
-                        if (isFocused) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            final ctx = _epgPastDaysPlusFocusNode.context;
-                            if (ctx != null) {
-                              Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 150), curve: Curves.easeOut, alignment: 0.5);
-                            }
-                          });
-                        }
                         return AnimatedScale(
                           scale: isFocused ? TVFocusStyle.focusScale : 1.0,
                           duration: TVFocusStyle.animationDuration,
@@ -2007,19 +1975,6 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                     child: Builder(
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
-                        if (isFocused) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            final ctx = _updateEpgButtonFocusNode.context;
-                            if (ctx != null) {
-                              Scrollable.ensureVisible(
-                                ctx,
-                                duration: const Duration(milliseconds: 150),
-                                curve: Curves.easeOut,
-                                alignment: 0.6,
-                              );
-                            }
-                          });
-                        }
                         return AnimatedScale(
                           scale: isFocused ? TVFocusStyle.focusScale : 1.0,
                           duration: TVFocusStyle.animationDuration,
@@ -2073,19 +2028,6 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                     child: Builder(
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
-                        if (isFocused) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            final ctx = _clearEpgButtonFocusNode.context;
-                            if (ctx != null) {
-                              Scrollable.ensureVisible(
-                                ctx,
-                                duration: const Duration(milliseconds: 150),
-                                curve: Curves.easeOut,
-                                alignment: 0.6,
-                              );
-                            }
-                          });
-                        }
                         return AnimatedScale(
                           scale: isFocused ? TVFocusStyle.focusScale : 1.0,
                           duration: TVFocusStyle.animationDuration,
@@ -2292,19 +2234,6 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                     child: Builder(
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
-                        if (isFocused) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            final ctx = _loadM3uButtonFocusNode.context;
-                            if (ctx != null) {
-                              Scrollable.ensureVisible(
-                                ctx,
-                                duration: const Duration(milliseconds: 150),
-                                curve: Curves.easeOut,
-                                alignment: 0.5,
-                              );
-                            }
-                          });
-                        }
                         return AnimatedScale(
                           scale: isFocused ? TVFocusStyle.focusScale : 1.0,
                           duration: TVFocusStyle.animationDuration,
@@ -2461,19 +2390,6 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                     child: Builder(
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
-                        if (isFocused) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            final ctx = _loadXtreamButtonFocusNode.context;
-                            if (ctx != null) {
-                              Scrollable.ensureVisible(
-                                ctx,
-                                duration: const Duration(milliseconds: 150),
-                                curve: Curves.easeOut,
-                                alignment: 0.5,
-                              );
-                            }
-                          });
-                        }
                         return AnimatedScale(
                           scale: isFocused ? TVFocusStyle.focusScale : 1.0,
                           duration: TVFocusStyle.animationDuration,
@@ -2538,19 +2454,6 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                 child: Builder(
                   builder: (context) {
                     final isFocused = Focus.of(context).hasFocus;
-                    if (isFocused) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        final ctx = _clearPlaylistCacheButtonFocusNode.context;
-                        if (ctx != null) {
-                          Scrollable.ensureVisible(
-                            ctx,
-                            duration: const Duration(milliseconds: 150),
-                            curve: Curves.easeOut,
-                            alignment: 0.6,
-                          );
-                        }
-                      });
-                    }
                     return AnimatedScale(
                       scale: isFocused ? TVFocusStyle.focusScale : 1.0,
                       duration: TVFocusStyle.animationDuration,
@@ -2823,6 +2726,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
   }
 
   // ignore: unused_element
+  /* COMMENTED OUT - AIUpscalingService removed
   Widget _buildAISettingsSection() {
     return _buildSettingsSection(
       title: 'AI Settings',
@@ -3267,6 +3171,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
       ],
     );
   }
+  */ // END COMMENTED OUT _buildAISettingsSection
 
   Widget _buildAISettings() {
     return _buildSettingsSection(
@@ -3632,8 +3537,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
           },
         ),
 
-        // AI Upscaling
-        Consumer<AIUpscalingService>(
+        // AI Upscaling - COMMENTED OUT (AIUpscalingService removed)
+        /* Consumer<AIUpscalingService>(
           builder: (context, aiService, child) {
             try {
               return _buildSectionCard(
@@ -3737,7 +3642,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               );
             }
           },
-        ),
+        ), */
 
         // Whisper Speech Models
         Consumer2<WhisperSpeechService, AIModelManager>(
@@ -4220,19 +4125,6 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                     child: Builder(
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
-                        if (isFocused) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            final ctx = _savedPlaylistFocusNode.context;
-                            if (ctx != null) {
-                              Scrollable.ensureVisible(
-                                ctx,
-                                duration: const Duration(milliseconds: 150),
-                                curve: Curves.easeOut,
-                                alignment: 0.5,
-                              );
-                            }
-                          });
-                        }
                         return GestureDetector(
                           onTap: () => context.go('/playlist-editor'),
                           child: AnimatedContainer(
@@ -4442,14 +4334,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
           builder: (context) {
             final isFocused = Focus.of(context).hasFocus;
             if (isFocused) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                Scrollable.ensureVisible(
-                  context,
-                  duration: const Duration(milliseconds: 150),
-                  curve: Curves.easeOut,
-                  alignment: 0.6,
-                );
-              });
+              WidgetsBinding.instance.addPostFrameCallback((_) {              });
             }
             return AnimatedScale(
               scale: isFocused ? TVFocusStyle.focusScale : 1.0,
@@ -4593,14 +4478,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
           builder: (context) {
             final isFocused = Focus.of(context).hasFocus;
             if (isFocused) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                Scrollable.ensureVisible(
-                  context,
-                  duration: const Duration(milliseconds: 150),
-                  curve: Curves.easeOut,
-                  alignment: 0.6,
-                );
-              });
+              WidgetsBinding.instance.addPostFrameCallback((_) {              });
             }
             return Container(
               decoration: BoxDecoration(
@@ -4685,14 +4563,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               builder: (context) {
                 final isFocused = Focus.of(context).hasFocus;
                 if (isFocused) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    Scrollable.ensureVisible(
-                      context,
-                      duration: const Duration(milliseconds: 150),
-                      curve: Curves.easeOut,
-                      alignment: 0.6,
-                    );
-                  });
+                  WidgetsBinding.instance.addPostFrameCallback((_) {                  });
                 }
                 return Container(
                   decoration: BoxDecoration(
@@ -4821,14 +4692,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     focusNode.addListener(() {
       if (focusNode.hasFocus) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (focusNode.context != null) {
-            Scrollable.ensureVisible(
-              focusNode.context!,
-              duration: const Duration(milliseconds: 150),
-              curve: Curves.easeOut,
-              alignment: 0.5,
-            );
-          }
+          if (focusNode.context != null) {          }
         });
       }
     });
@@ -5564,7 +5428,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     );
   }
 
-  Widget _buildAIModelDownloadCard(AIUpscalingService aiService) {
+  Widget _buildAIModelDownloadCard(dynamic aiService) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -6081,7 +5945,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     setState(() {
       _aiUpscalingEnabled = value;
     });
-    Provider.of<AIUpscalingService>(context, listen: false).setEnabled(value);
+    // Provider.of<AIUpscalingService>(context, listen: false).setEnabled(value); // Commented out - service not implemented
   }
 }
 

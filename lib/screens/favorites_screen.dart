@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
@@ -7,6 +8,7 @@ import 'package:iptv_player/utils/app_theme.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
+import 'package:iptv_player/widgets/content_focus_provider.dart';
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -15,7 +17,7 @@ class FavoritesScreen extends StatefulWidget {
   State<FavoritesScreen> createState() => _FavoritesScreenState();
 }
 
-class _FavoritesScreenState extends State<FavoritesScreen> {
+class _FavoritesScreenState extends State<FavoritesScreen> with ContentFocusRegistrant<FavoritesScreen> {
   late DateTime _currentTime;
 
   @override
@@ -117,12 +119,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 ),
               ),
             ),
-          Text(
-            _formatTime(_currentTime),
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppTheme.textSecondary,
-            ),
-          ),
+
         ],
       ),
     );
@@ -172,18 +169,45 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     );
   }
 
+  @override
+  bool handleContentFocusRequest() {
+    return true;
+  }
+
   Widget _buildChannelCard(BuildContext context, Channel channel) {
     final channelProvider = Provider.of<ChannelProvider>(
       context,
       listen: false,
     );
 
-    return InkWell(
-      onTap: () {
-        context.push('/player', extra: channel);
+    return Focus(
+      canRequestFocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.select ||
+              event.logicalKey == LogicalKeyboardKey.enter ||
+              event.logicalKey == LogicalKeyboardKey.space) {
+            context.push('/player', extra: channel);
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
       },
-      child: Card(
-        child: Column(
+      child: Builder(
+        builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
+          return InkWell(
+            onTap: () {
+              context.push('/player', extra: channel);
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                border: isFocused ? Border.all(color: AppTheme.primaryBlue, width: 3) : null,
+              ),
+              child: Card(
+                child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Channel Logo/Thumbnail
@@ -322,7 +346,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               ),
             ),
           ],
-        ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

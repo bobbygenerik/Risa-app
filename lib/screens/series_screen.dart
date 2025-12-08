@@ -263,8 +263,18 @@ class _SeriesScreenState extends State<SeriesScreen>
           return _wrapWithDirectionalFocus(_buildEmptyState(context));
         }
 
-        final stack = Stack(
-          children: [
+        final stack = Padding(
+          padding: const EdgeInsets.only(left: 48),
+          child: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF050710), Color(0xFF0d1140)],
+              ),
+            ),
+            child: Stack(
+              children: [
             // Full-height hero banner background
             Positioned.fill(
               child: _buildHeroBannerBackground(
@@ -297,10 +307,8 @@ class _SeriesScreenState extends State<SeriesScreen>
                   ),
                   const SizedBox(height: 16),
 
-                  Container(
-                    color: const Color(0xFF050710),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -320,11 +328,12 @@ class _SeriesScreenState extends State<SeriesScreen>
                         ],
                       ),
                     ),
-                  ),
-                ],
+                  ],
               ),
             ),
-          ],
+              ],
+            ),
+          ),
         );
 
         return _wrapWithDirectionalFocus(stack);
@@ -349,15 +358,15 @@ class _SeriesScreenState extends State<SeriesScreen>
             children: [
               Icon(
                 Icons.tv,
-                size: 48,
+                size: context.tvIconSize(48),
                 color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
               ),
-              const SizedBox(height: AppSizes.lg),
+              SizedBox(height: context.tvSpacing(AppSizes.lg)),
               Text(
                 'No Series Available',
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
-              const SizedBox(height: AppSizes.sm),
+              SizedBox(height: context.tvSpacing(AppSizes.sm)),
               Text(
                 'Load a playlist with series content from Settings',
                 style: Theme.of(
@@ -365,7 +374,7 @@ class _SeriesScreenState extends State<SeriesScreen>
                 ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: AppSizes.xl),
+              SizedBox(height: context.tvSpacing(AppSizes.xl)),
               GoToSettingsButton(
                 focusNode: _settingsFocus,
                 onPressed: () {
@@ -427,7 +436,7 @@ class _SeriesScreenState extends State<SeriesScreen>
     final isLandscape = screenWidth > screenHeight;
     final cardWidth = isLandscape ? (screenWidth / 5.5) : (screenWidth / 3.5);
     final rowHeight = cardWidth * 1.7;
-    final tvRowHeight = rowHeight;
+    final tvRowHeight = context.tvSpacing(rowHeight);
 
     return SizedBox(
       height: tvRowHeight,
@@ -460,12 +469,13 @@ class _SeriesScreenState extends State<SeriesScreen>
     final isLandscape = screenWidth > screenHeight;
     final cardWidth = isLandscape ? (screenWidth / 5.5) : (screenWidth / 3.5);
     final cardHeight = cardWidth * 1.5;
-    final tvCardWidth = cardWidth;
-    final tvCardHeight = cardHeight;
+    final tvCardWidth = context.tvSpacing(cardWidth);
+    final tvCardHeight = context.tvSpacing(cardHeight);
 
     return Padding(
       padding: const EdgeInsets.only(right: 12),
       child: Focus(
+        canRequestFocus: true,
         onKeyEvent: (node, event) {
           if (event is KeyDownEvent) {
             if (event.logicalKey == LogicalKeyboardKey.select ||
@@ -496,7 +506,7 @@ class _SeriesScreenState extends State<SeriesScreen>
                   width: tvCardWidth,
                   height: tvCardHeight,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    borderRadius: BorderRadius.circular(context.tvSpacing(AppSizes.radiusMd)),
                     boxShadow: isFocused
                         ? TVFocusStyle.focusedShadow
                         : TVFocusStyle.defaultShadow,
@@ -506,7 +516,7 @@ class _SeriesScreenState extends State<SeriesScreen>
                     children: [
                       Expanded(
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                          borderRadius: BorderRadius.circular(context.tvSpacing(AppSizes.radiusMd)),
                           child: Stack(
                             children: [
                               Container(
@@ -521,9 +531,9 @@ class _SeriesScreenState extends State<SeriesScreen>
                                 top: 8,
                                 right: 8,
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: context.tvSpacing(8),
+                                    vertical: context.tvSpacing(4),
                                   ),
                                   decoration: BoxDecoration(
                                     color: AppTheme.primaryBlue,
@@ -531,9 +541,9 @@ class _SeriesScreenState extends State<SeriesScreen>
                                   ),
                                   child: Text(
                                     '${episodes.length} EP',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       color: Colors.white,
-                                      fontSize: 10,
+                                      fontSize: context.tvTextSize(10),
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -543,12 +553,12 @@ class _SeriesScreenState extends State<SeriesScreen>
                           ),
                         ),
                       ),
-                      const SizedBox(height: AppSizes.xs),
+                      SizedBox(height: context.tvSpacing(AppSizes.xs)),
                       Text(
                         title,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
-                          fontSize: 13,
+                          fontSize: context.tvTextSize(13),
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -558,7 +568,7 @@ class _SeriesScreenState extends State<SeriesScreen>
                           '${firstEpisode.year ?? ''} ${firstEpisode.rating != null ? '★${firstEpisode.ratingDisplay}' : ''}',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppTheme.textSecondary,
-                            fontSize: 11,
+                            fontSize: context.tvTextSize(11),
                           ),
                         ),
                     ],
@@ -591,17 +601,17 @@ class _SeriesScreenState extends State<SeriesScreen>
           children: [
             Icon(
               Icons.tv,
-              size: 32,
+              size: context.tvIconSize(32),
               color: Colors.white.withAlpha((0.2 * 255).round()),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: context.tvSpacing(8)),
             Padding(
-              padding: const EdgeInsets.all(8),
+              padding: EdgeInsets.all(context.tvSpacing(8)),
               child: Text(
                 title,
                 style: TextStyle(
                   color: Colors.white.withAlpha((0.5 * 255).round()),
-                  fontSize: 11,
+                  fontSize: context.tvTextSize(11),
                   fontWeight: FontWeight.w500,
                 ),
                 textAlign: TextAlign.center,
@@ -645,7 +655,7 @@ class _SeriesScreenState extends State<SeriesScreen>
         if (allSeries.length > displayCount)
           Center(
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: EdgeInsets.symmetric(vertical: context.tvSpacing(8)),
               child: Focus(
                 autofocus: false,
                 child: Builder(
@@ -674,9 +684,9 @@ class _SeriesScreenState extends State<SeriesScreen>
                           backgroundColor: isFocused
                               ? AppTheme.primaryBlue
                               : AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: context.tvSpacing(24),
+                            vertical: context.tvSpacing(12),
                           ),
                         ),
                         child: Text(
@@ -747,7 +757,7 @@ class _SeriesScreenState extends State<SeriesScreen>
         context.push('/content/$encodedId', extra: featuredSeries);
       },
       child: SizedBox(
-        height: 420,
+        height: context.tvSpacing(420),
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -780,22 +790,22 @@ class _SeriesScreenState extends State<SeriesScreen>
             Align(
               alignment: Alignment.bottomLeft,
               child: Padding(
-                padding: const EdgeInsets.all(AppSizes.lg),
+                padding: EdgeInsets.all(context.tvSpacing(AppSizes.lg)),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       featuredSeries.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppTheme.textPrimary,
-                        fontSize: 24,
+                        fontSize: context.tvTextSize(24),
                         fontWeight: FontWeight.w700,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: context.tvSpacing(8)),
                     Row(
                       children: [
                         Focus(
@@ -830,20 +840,20 @@ class _SeriesScreenState extends State<SeriesScreen>
                                           ]
                                         : null,
                                   ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 24,
-                                    vertical: 14,
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: context.tvSpacing(24),
+                                    vertical: context.tvSpacing(14),
                                   ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        const Icon(Icons.info_outline, color: Colors.white),
-                                        const SizedBox(width: 8),
+                                        Icon(Icons.info_outline, color: Colors.white),
+                                        SizedBox(width: context.tvSpacing(8)),
                                         Text(
                                           'More Info',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           color: Colors.white,
-                                          fontSize: 16,
+                                          fontSize: context.tvTextSize(16),
                                           fontWeight: FontWeight.w700,
                                         ),
                                       ),
@@ -855,14 +865,14 @@ class _SeriesScreenState extends State<SeriesScreen>
                           ),
                         ),
                         if (featuredSeries.rating != null) ...[
-                          const SizedBox(width: 16),
-                          const Icon(Icons.star, color: Colors.amber, size: 16),
-                          const SizedBox(width: 4),
+                          SizedBox(width: context.tvSpacing(16)),
+                          Icon(Icons.star, color: Colors.amber, size: context.tvIconSize(16)),
+                          SizedBox(width: context.tvSpacing(4)),
                           Text(
                             featuredSeries.ratingDisplay,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppTheme.textSecondary,
-                              fontSize: 14,
+                              fontSize: context.tvTextSize(14),
                             ),
                           ),
                         ],

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 // import 'package:iptv_player/widgets/top_navigation_bar.dart'; // Removed
 import 'package:iptv_player/widgets/search_popup.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
@@ -34,6 +35,7 @@ class _MainShellState extends State<MainShell> {
   int? _activeFocusToken;
   bool _autoSearchTriggered = false;
   bool Function()? _navFocusRequester;
+  VoidCallback? _sidebarExpander;
   final FocusScopeNode _contentFocusScope =
       FocusScopeNode(debugLabel: 'ContentScope');
 
@@ -200,6 +202,7 @@ class _MainShellState extends State<MainShell> {
                   onSearch: _showSearchDialog,
                   onFocusContent: _requestContentFocus,
                   onNavFocusRegistration: _setNavFocusRequester,
+                  onExpandRegistration: _setSidebarExpander,
                 ),
               ),
             ),
@@ -210,14 +213,15 @@ class _MainShellState extends State<MainShell> {
   }
 
   void _showSearchDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => const SearchPopup(),
-    );
+    context.go('/search');
   }
 
   void _setNavFocusRequester(bool Function()? requester) {
     _navFocusRequester = requester;
+  }
+
+  void _setSidebarExpander(VoidCallback? expander) {
+    _sidebarExpander = expander;
   }
 
   int _registerContentFocusCallback(ContentFocusCallback callback) {
@@ -240,26 +244,28 @@ class _MainShellState extends State<MainShell> {
   }
 
   bool _requestContentFocus() {
+    debugPrint('content_focus: Shell requesting content focus');
+    
+    // Try callback first
     final callback = _contentFocusCallback;
     if (callback != null) {
-      final handled = callback();
-      debugPrint(
-        'content_focus: Shell focus request ${handled ? 'succeeded' : 'failed'}',
-      );
-      if (handled) {
-        // Trigger sidebar collapse by rebuilding
-        setState(() {});
-        return true;
-      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final handled = callback();
+        debugPrint('content_focus: Callback ${handled ? 'succeeded' : 'failed'}');
+      });
+      setState(() {}); // Collapse sidebar
+      return true;
     }
-    final fallbackHandled = _focusFirstContentChild();
-    if (!fallbackHandled) {
-      debugPrint('content_focus: No focusable child found for fallback');
-    } else {
-      // Trigger sidebar collapse
-      setState(() {});
-    }
-    return fallbackHandled;
+    
+    // Fallback to finding first focusable
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final handled = _focusFirstContentChild();
+      debugPrint('content_focus: Fallback ${handled ? 'succeeded' : 'failed'}');
+    });
+    setState(() {}); // Collapse sidebar
+    return true;
   }
 
   KeyEventResult _handleContentKeyEvent(FocusNode node, KeyEvent event) {
@@ -269,6 +275,7 @@ class _MainShellState extends State<MainShell> {
       return handled ? KeyEventResult.handled : KeyEventResult.ignored;
     }
     if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+      _sidebarExpander?.call(); // Expand sidebar
       final handled = _requestNavFocus(); // Move focus to sidebar
       return handled ? KeyEventResult.handled : KeyEventResult.ignored;
     }

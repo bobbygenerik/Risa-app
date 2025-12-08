@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
-import 'package:chewie/chewie.dart';
+
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 // import 'package:flutter_vlc_player/flutter_vlc_player.dart'; // DISABLED - causes build errors on Linux
@@ -56,7 +56,6 @@ class EnhancedVideoPlayerScreen extends StatefulWidget {
 
 class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   late VideoPlayerController _videoPlayerController;
-  ChewieController? _chewieController;
   // Optional VLC controller - DISABLED: flutter_vlc_player causes build errors
   bool _useVlcBackend = false;
 
@@ -214,54 +213,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       // Only initialize if subtitles are explicitly provided and needed
       // _subtitleController = null;
 
-      debugPrint('VideoPlayer: Creating Chewie controller...');
-      // If a previous Chewie controller exists, dispose it to avoid leaks
-      if (_chewieController != null) {
-        try {
-          _chewieController?.dispose();
-        } catch (_) {}
-        _chewieController = null;
-      }
-
-      // Initialize Chewie with TV-optimized controls
-      _chewieController = ChewieController(
-        videoPlayerController: _videoPlayerController,
-        autoPlay: true,
-        looping: widget.isLive,
-        allowFullScreen: true,
-        allowMuting: true,
-        showControls: false,
-        showControlsOnInitialize: false,
-        placeholder: null,
-        errorBuilder: (context, errorMessage) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error, color: AppTheme.accentRed, size: 48),
-                const SizedBox(height: 16),
-                Text(
-                  'Playback Error',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  errorMessage,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: _retryPlayback,
-                  child: const Text('Retry'),
-                ),
-              ],
-            ),
-          );
-        },
-      );
-
-      debugPrint('VideoPlayer: Chewie controller created');
+      debugPrint('VideoPlayer: Starting playback...');
+      await _videoPlayerController.play();
       debugPrint(
         'VideoPlayer: Duration: ${_videoPlayerController.value.duration}',
       );
@@ -278,6 +231,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           widget.subtitleOptions!.length > _selectedSubtitleIndex) {
         _loadSubtitle(widget.subtitleOptions![_selectedSubtitleIndex]);
       }
+
+      // Native ExoPlayer will be initialized via onCreated callback in _buildVideoPlayer
 
       debugPrint('VideoPlayer: Player initialized and ready');
     } catch (e, stackTrace) {
@@ -666,7 +621,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           context,
           const SnackBar(
             content: Text(
-              'Live transcription enabled — Whisper is listening...',
+              'Live transcription enabled - Whisper is listening...',
             ),
             duration: Duration(seconds: 3),
           ),
@@ -685,7 +640,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           context,
           SnackBar(
             content: const Text(
-              'Live transcription disabled — press Y to toggle',
+              'Live transcription disabled - press Y to toggle',
             ),
             duration: const Duration(seconds: 4),
             action: SnackBarAction(
@@ -900,11 +855,25 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    // Always use Chewie/video_player for all platforms (bypass NativeExoPlayer for debugging)
-    if (_chewieController == null) {
-      return const Center(child: CircularProgressIndicator());
+    // Use native ExoPlayer on Android to avoid YUV color space issues
+    if (Platform.isAndroid && _nativeExoAvailable) {
+      return NativeExoPlayer(
+        videoUrl: widget.videoUrl,
+        autoPlay: true,
+        onCreated: (controller) {
+          setState(() {
+            _nativeController = controller;
+          });
+        },
+      );
     }
-    return Chewie(controller: _chewieController!);
+    
+    return Center(
+      child: AspectRatio(
+        aspectRatio: _videoPlayerController.value.aspectRatio,
+        child: VideoPlayer(_videoPlayerController),
+      ),
+    );
   }
 
   // Subtitle overlay removed (subtitle support disabled to avoid platform plugin issues)
@@ -2032,14 +2001,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   void dispose() {
     _controlsTimer?.cancel();
     _subtitleTimer?.cancel();
+    // Native ExoPlayer controller doesn't need manual disposal
     try {
-      // Video controller may not have been initialized if initialization failed.
       _videoPlayerController.dispose();
     } catch (_) {}
-    try {
-      _chewieController?.dispose();
-    } catch (_) {}
-    // VLC controller disposed (disabled)
     _playerFocusNode.dispose();
     super.dispose();
   }

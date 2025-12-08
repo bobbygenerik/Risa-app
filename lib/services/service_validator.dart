@@ -14,13 +14,6 @@ class ServiceValidator {
     return OAuthConfig.isTmdbConfigured;
   }
 
-  /// Check AI upscaling availability
-  static bool get isAIUpscalingAvailable {
-    if (kIsWeb) return false;
-    // Would check for model files in real implementation
-    return true; // UI available, models need to be downloaded
-  }
-
   /// Check Whisper availability
   static bool get isWhisperAvailable {
     if (kIsWeb) return false;
@@ -32,7 +25,7 @@ class ServiceValidator {
     return {
       'opensubtitles': isOpenSubtitlesAvailable,
       'tmdb': isTmdbAvailable,
-      'ai_upscaling': isAIUpscalingAvailable,
+
       'whisper': isWhisperAvailable,
     };
   }

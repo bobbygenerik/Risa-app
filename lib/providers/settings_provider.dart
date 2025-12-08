@@ -32,8 +32,7 @@ class SettingsProvider extends ChangeNotifier {
   bool _realDebridEnabled = false;
   bool _realDebridForCatchup = true;
   bool _realDebridForVod = true;
-  bool _aiUpscalingEnabled = false;
-  String _aiQualityPreset = 'Balanced';
+
   Map<String, String?>? _profileCache;
   Map<String, String?>? _savedPlaylistsCache;
   Map<String, dynamic>? _epgCache;
@@ -62,8 +61,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get realDebridEnabled => _realDebridEnabled;
   bool get realDebridForCatchup => _realDebridForCatchup;
   bool get realDebridForVod => _realDebridForVod;
-  bool get aiUpscalingEnabled => _aiUpscalingEnabled;
-  String get aiQualityPreset => _aiQualityPreset;
+
 
   Future<void> initialize() async {
     if (_isInitialized) return;
@@ -111,8 +109,7 @@ class SettingsProvider extends ChangeNotifier {
     _realDebridEnabled = prefs.getBool('realdebrid_enabled') ?? false;
     _realDebridForCatchup = prefs.getBool('realdebrid_catchup') ?? true;
     _realDebridForVod = prefs.getBool('realdebrid_vod') ?? true;
-    _aiUpscalingEnabled = prefs.getBool('ai_upscaling') ?? false;
-    _aiQualityPreset = prefs.getString('ai_quality') ?? 'Balanced';
+
   }
 
   Future<void> setHardwareAcceleration(bool value) async {
@@ -274,20 +271,6 @@ class SettingsProvider extends ChangeNotifier {
     if (_realDebridForVod == value) return;
     _realDebridForVod = value;
     await _prefs?.setBool('realdebrid_vod', value);
-    notifyListeners();
-  }
-
-  Future<void> setAiUpscalingEnabled(bool value) async {
-    if (_aiUpscalingEnabled == value) return;
-    _aiUpscalingEnabled = value;
-    await _prefs?.setBool('ai_upscaling', value);
-    notifyListeners();
-  }
-
-  Future<void> setAiQualityPreset(String value) async {
-    if (_aiQualityPreset == value) return;
-    _aiQualityPreset = value;
-    await _prefs?.setString('ai_quality', value);
     notifyListeners();
   }
 

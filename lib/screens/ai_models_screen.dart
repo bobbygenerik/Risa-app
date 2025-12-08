@@ -529,14 +529,6 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    _formatTime(_currentTime),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
                   const Text(
                     'Local time',
                     style: TextStyle(

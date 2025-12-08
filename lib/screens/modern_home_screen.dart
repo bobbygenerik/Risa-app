@@ -241,8 +241,9 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
           return SingleChildScrollView(
             child: Column(
               children: [
-                // Hero Banner (edge-to-edge)
+                // Hero Banner
                 _buildHeroBanner(),
+                const SizedBox(height: 20),
                 // Continue Watching
                 _buildSectionWithCards(
                   title: 'Continue Watching',
@@ -284,7 +285,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
         }
 
         return SizedBox(
-          height: 420,
+          height: 460,
           child: Focus(
             focusNode: _heroFocusNode,
             onKeyEvent: (node, event) {
@@ -400,36 +401,74 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
                                                 )
                                               : _buildPlaceholderGradient(),
                                         ),
+                                        // Left fade for sidebar
+                                        Positioned.fill(
+                                          child: Container(
+                                            decoration: const BoxDecoration(
+                                              gradient: LinearGradient(
+                                                begin: Alignment.centerLeft,
+                                                end: Alignment.centerRight,
+                                                colors: [
+                                                  Color(0xFF050710),
+                                                  Color(0xCC050710),
+                                                  Color(0x00050710),
+                                                ],
+                                                stops: [0.0, 0.08, 0.25],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        // Bottom fade to background
+                                        Positioned(
+                                          bottom: 0,
+                                          left: 0,
+                                          right: 0,
+                                          height: 250,
+                                          child: Container(
+                                            decoration: const BoxDecoration(
+                                              gradient: LinearGradient(
+                                                begin: Alignment.topCenter,
+                                                end: Alignment.bottomCenter,
+                                                colors: [
+                                                  Color(0x00050710),
+                                                  Color(0x99050710),
+                                                  Color(0xFF050710),
+                                                ],
+                                                stops: [0.0, 0.5, 1.0],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
                                         // Channel logo overlay (top left) - with enrichment
                                         Positioned(
-                                          top: 20,
-                                          left: 20,
+                                          top: 24,
+                                          left: 24,
                                           child: Container(
                                             decoration: BoxDecoration(
                                               color: Colors.black.withOpacity(0.7),
                                               borderRadius: BorderRadius.circular(8),
                                             ),
-                                            padding: const EdgeInsets.all(6),
+                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                             child: ChannelLogoWidget(
                                               channelName: channel.name,
                                               logoUrl: channel.logoUrl,
                                               tvgId: channel.tvgId,
-                                              width: 48,
-                                              height: 48,
+                                              width: 80,
+                                              height: 32,
                                               fit: BoxFit.contain,
                                               borderRadius: BorderRadius.circular(4),
-                                              errorWidget: const Icon(Icons.live_tv, color: Colors.white, size: 32),
+                                              errorWidget: const Icon(Icons.live_tv, color: Colors.white, size: 24),
                                             ),
                                           ),
                                         ),
                                       // Now Playing badge (top right)
                                       Positioned(
-                                        top: 20,
-                                        right: 20,
+                                        top: 24,
+                                        right: 24,
                                         child: Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                           decoration: BoxDecoration(
-                                            color: AppTheme.accentOrange,
+                                            color: AppTheme.accentRed,
                                             borderRadius: BorderRadius.circular(8),
                                           ),
                                           child: const Text(
@@ -445,21 +484,11 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
                                       ),
                                       // Content overlay
                                       Positioned(
+                                        top: 0,
                                         bottom: 0,
-                                        left: 0,
-                                        right: 0,
+                                        left: 100,
                                         child: Container(
-                                          padding: const EdgeInsets.all(24),
-                                          decoration: const BoxDecoration(
-                                            gradient: LinearGradient(
-                                              begin: Alignment.topLeft,
-                                              end: Alignment.bottomRight,
-                                              colors: [
-                                                Color(0xFF050710),
-                                                Color(0xFF0d1140),
-                                              ],
-                                            ),
-                                          ),
+                                          constraints: const BoxConstraints(maxWidth: 350),
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             mainAxisSize: MainAxisSize.min,
@@ -643,26 +672,28 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Text(
                 title,
                 style: const TextStyle(
                   color: AppTheme.textPrimary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.3,
                 ),
               ),
             ),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: FocusTraversalGroup(
-                policy: WidgetOrderTraversalPolicy(),
-                child: Row(
-                  children: movies.take(6).map((content) {
+            SizedBox(
+              height: 300,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: FocusTraversalGroup(
+                  policy: WidgetOrderTraversalPolicy(),
+                  child: Row(
+                    children: movies.take(6).map((content) {
                     return Padding(
-                      padding: const EdgeInsets.only(right: 16),
+                      padding: const EdgeInsets.only(right: 12),
                       child: Focus(
                         onKeyEvent: (node, event) {
                           if (event is KeyDownEvent && 
@@ -752,11 +783,12 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
                         ),
                       ),
                     );
-                  }).toList(),
+                    }).toList(),
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
           ],
         );
       },
@@ -796,26 +828,28 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Text(
                 title,
                 style: const TextStyle(
                   color: AppTheme.textPrimary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.3,
                 ),
               ),
             ),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: FocusTraversalGroup(
-                policy: WidgetOrderTraversalPolicy(),
-                child: Row(
-                  children: channels.map((channel) {
+            SizedBox(
+              height: 140,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: FocusTraversalGroup(
+                  policy: WidgetOrderTraversalPolicy(),
+                  child: Row(
+                    children: channels.map((channel) {
                     return Padding(
-                      padding: const EdgeInsets.only(right: 16),
+                      padding: const EdgeInsets.only(right: 12),
                       child: Focus(
                         onKeyEvent: (node, event) {
                           if (event is KeyDownEvent && 
@@ -870,7 +904,8 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
                         ),
                       ),
                     );
-                  }).toList(),
+                    }).toList(),
+                  ),
                 ),
               ),
             ),

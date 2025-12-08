@@ -215,13 +215,6 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                     ],
                   ),
                   const Spacer(),
-                  Text(
-                    _formatTime(_currentTime),
-                    style: const TextStyle(
-                      color: AppTheme.textSecondary,
-                      fontSize: 14,
-                    ),
-                  ),
                 ],
               ),
             ),
