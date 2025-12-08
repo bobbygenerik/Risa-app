@@ -187,11 +187,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _screenSize = MediaQuery.of(context).size;
     final body = Container(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF050710), Color(0xFF0d1140)],
-        ),
+        color: Color(0xFF050710),
       ),
       child: Consumer2<ChannelProvider, EpgService>(
         builder: (context, channelProvider, epgService, _) {
@@ -313,11 +309,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       child: Stack(
           clipBehavior: Clip.none,
           children: [
-            // Static hero background - full width
+            // Hero image on the right side
             Positioned(
               top: 0,
-              left: 0,
               right: 0,
+              width: screenSize.width * 0.5,
               height: heroHeight,
               child: heroImage != null && heroImage.isNotEmpty
                   ? CachedNetworkImage(
@@ -337,11 +333,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     )
                   : _buildDefaultHeroBackground(),
             ),
-            // Left side fade - spotlight effect
+            // Left side gradient spotlight effect
             Positioned(
               top: 0,
               left: 0,
-              width: screenSize.width * 0.5,
+              width: screenSize.width * 0.65,
               height: heroHeight,
               child: Container(
                 decoration: BoxDecoration(
@@ -352,16 +348,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       const Color(0xFF050710),
                       Colors.black.withAlpha(0),
                     ],
+                    stops: const [0.0, 1.0],
                   ),
                 ),
               ),
             ),
-            // Bottom fade - spotlight effect (extends beyond hero)
+            // Bottom gradient spotlight effect
             Positioned(
               left: 0,
               right: 0,
-              top: heroHeight * 0.6,
-              height: heroHeight * 0.5,
+              bottom: 0,
+              height: heroHeight * 0.4,
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -369,10 +366,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     end: Alignment.topCenter,
                     colors: [
                       const Color(0xFF050710),
-                      const Color(0xFF050710),
                       Colors.black.withAlpha(0),
                     ],
-                    stops: const [0.0, 0.3, 1.0],
+                    stops: const [0.0, 1.0],
                   ),
                 ),
               ),
@@ -399,21 +395,21 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             // Featured info in left area
             Positioned(
               top: 70,
-              left: 48,
-              right: screenSize.width * 0.4,
+              left: 24, // Align with card carousel title
+              width: screenSize.width * 0.33,
               child: _buildFeaturedInfo(context, featuredChannel, currentProgram),
             ),
-            // Channel logo in top-right (under time display)
+            // Channel logo aligned with info bar (top left of info bar area)
             Positioned(
-              top: 48,
-              right: 16,
+              top: 70,
+              left: 24,
               child: _buildChannelLogo(context, featuredChannel),
             ),
-            // LIVE badge in bottom-right of hero
+            // LIVE badge aligned with info bar (bottom left of info bar area)
             if (currentProgram != null)
               Positioned(
-                top: heroHeight - 60,
-                right: 16,
+                top: 70 + (screenSize.height * 0.33) - 40,
+                left: 24,
                 child: _buildLiveBadge(context),
               ),
             // Scrollable content on top of hero
@@ -421,9 +417,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               child: SingleChildScrollView(
                 controller: _scrollController,
                 child: Padding(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: context.tvSpacing(48),
-                      vertical: context.tvSpacing(80),
+                  padding: EdgeInsets.only(
+                      left: context.tvSpacing(48),
+                      right: context.tvSpacing(80),
+                      top: context.tvSpacing(80),
+                      bottom: context.tvSpacing(80),
                     ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -465,43 +463,44 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             title,
             style: TextStyle(
               color: AppTheme.textPrimary,
-              fontSize: context.tvTextSize(32),
+              fontSize: context.tvTextSize(24),
               fontWeight: FontWeight.w700,
             ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
           if (description.isNotEmpty) ...[
-            SizedBox(height: context.tvSpacing(8)),
+            SizedBox(height: context.tvSpacing(6)),
             Text(
               description,
               style: TextStyle(
                 color: AppTheme.textSecondary,
-                fontSize: context.tvTextSize(18),
+                fontSize: context.tvTextSize(14),
               ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
+              maxLines: 8,
+              overflow: TextOverflow.fade,
+              softWrap: true,
             ),
           ],
           if (program != null) ...[
-            SizedBox(height: context.tvSpacing(12)),
+            SizedBox(height: context.tvSpacing(8)),
             ClipRRect(
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
                 value: progress,
                 backgroundColor: Colors.white.withAlpha((0.2 * 255).round()),
                 color: AppTheme.primaryBlue,
-                minHeight: 6,
+                minHeight: 4,
               ),
             ),
           ],
           if (timeRange.isNotEmpty) ...[
-            SizedBox(height: context.tvSpacing(6)),
+            SizedBox(height: context.tvSpacing(4)),
             Text(
               timeRange,
               style: TextStyle(
                 color: AppTheme.textSecondary,
-                fontSize: context.tvTextSize(16),
+                fontSize: context.tvTextSize(13),
               ),
             ),
           ],
@@ -511,47 +510,64 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   Widget _buildChannelLogo(BuildContext context, Channel channel) {
+    // Match the live badge: 40px height, pill shape, centered
     return Container(
-      width: context.tvSpacing(64),
-      height: context.tvSpacing(64),
-      child: channel.logoUrl != null && channel.logoUrl!.isNotEmpty
-          ? ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                channel.logoUrl!,
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const Icon(
-                  Icons.tv,
-                  color: AppTheme.primaryBlue,
-                  size: 32,
+      height: 40,
+      width: null,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.cardBackground,
+        borderRadius: BorderRadius.circular(20), // pill shape
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Center(
+        child: channel.logoUrl != null && channel.logoUrl!.isNotEmpty
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  channel.logoUrl!,
+                  fit: BoxFit.contain,
+                  height: 24,
+                  width: 24,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.tv,
+                    color: AppTheme.primaryBlue,
+                    size: 24,
+                  ),
                 ),
+              )
+            : const Icon(
+                Icons.tv,
+                color: AppTheme.primaryBlue,
+                size: 24,
               ),
-            )
-          : const Icon(
-              Icons.tv,
-              color: AppTheme.primaryBlue,
-              size: 32,
-            ),
+      ),
     );
   }
 
   Widget _buildLiveBadge(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: context.tvSpacing(12),
-        vertical: context.tvSpacing(8),
-      ),
+      height: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: AppTheme.primaryBlue,
+        color: AppTheme.accentRed,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(
-        'LIVE',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: context.tvTextSize(16),
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.5,
+      child: Center(
+        child: Text(
+          'LIVE',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: context.tvTextSize(14),
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+          ),
         ),
       ),
     );
@@ -691,7 +707,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           height: rowHeight,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.only(left: 24), // Remove right padding
             itemCount: channels.length,
             itemExtent: cardWidth + 16,
             itemBuilder: (context, index) {

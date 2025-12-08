@@ -51,6 +51,8 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
   final FocusNode _miniPlayerCloseFocus = FocusNode();
   final FocusNode _miniPlayerMaximizeFocus = FocusNode();
   final FocusNode _refreshButtonFocus = FocusNode();
+  final FocusNode _firstCategoryFocus = FocusNode();
+  final FocusNode _firstChannelFocus = FocusNode();
   Timer? _epgRefreshTimer;
 
   @override
@@ -214,6 +216,8 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     _miniPlayerCloseFocus.dispose();
     _miniPlayerMaximizeFocus.dispose();
     _refreshButtonFocus.dispose();
+    _firstCategoryFocus.dispose();
+    _firstChannelFocus.dispose();
     _epgRefreshTimer?.cancel();
     super.dispose();
   }
@@ -378,17 +382,13 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                           // Spacer for main navigation sidebar (48px collapsed)
                           const SizedBox(width: 48),
                           // Category sidebar
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: _buildCategorySidebar(categoryNames),
-                          ),
+                          _buildCategorySidebar(categoryNames),
+                          const SizedBox(width: 8),
                           const VerticalDivider(width: 1, color: AppTheme.divider),
+                          const SizedBox(width: 8),
                           // Program grid with channel names
                           Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(left: 8),
-                              child: _buildProgramGrid(filteredChannels, epgService),
-                            ),
+                            child: _buildProgramGrid(filteredChannels, epgService),
                           ),
                         ],
                       ),
@@ -504,7 +504,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
 
   Widget _buildHeader(EpgService epgService) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(56, 12, 16, 12),
+      padding: const EdgeInsets.fromLTRB(56, 12, 80, 12),
       decoration: const BoxDecoration(
         color: Colors.transparent,
       ),
@@ -534,7 +534,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
               ),
             ],
           ),
-          const Spacer(),
+          const SizedBox(width: 24),
           // Now button
           TextButton.icon(
             onPressed: _scrollToCurrentTime,
@@ -558,9 +558,12 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                   }
                   return KeyEventResult.handled;
                 }
-                if (event.logicalKey == LogicalKeyboardKey.arrowDown &&
-                    _playingChannel != null) {
-                  _miniPlayerCloseFocus.requestFocus();
+                if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                  if (_playingChannel != null) {
+                    _miniPlayerCloseFocus.requestFocus();
+                  } else {
+                    _firstCategoryFocus.requestFocus();
+                  }
                   return KeyEventResult.handled;
                 }
               }
@@ -637,6 +640,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
           return _buildCategoryItem(
             name: category,
             isSelected: _selectedCategory == category,
+            isFirst: index == 0,
             onTap: () {
               setState(() {
                 _selectedCategory = category;
@@ -654,8 +658,10 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     required String name,
     required bool isSelected,
     required VoidCallback onTap,
+    bool isFirst = false,
   }) {
     return Focus(
+      focusNode: isFirst ? _firstCategoryFocus : null,
       canRequestFocus: true,
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent) {
@@ -665,7 +671,11 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
             return KeyEventResult.handled;
           }
           if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-            requestFirstContentFocus();
+            _firstChannelFocus.requestFocus();
+            return KeyEventResult.handled;
+          }
+          if (event.logicalKey == LogicalKeyboardKey.arrowUp && isFirst) {
+            _refreshButtonFocus.requestFocus();
             return KeyEventResult.handled;
           }
         }
@@ -982,8 +992,8 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                       children: [
                         // Today header
                         Container(
-                          height: 108,
-                          margin: const EdgeInsets.all(2),
+                          height: 60,
+                          margin: const EdgeInsets.only(bottom: 4),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.03),
                             borderRadius: BorderRadius.circular(8),
@@ -1012,6 +1022,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                           child: ListView.builder(
                             controller: _verticalScrollController,
                             itemCount: channels.length,
+                            itemExtent: 64,
                             itemBuilder: (context, index) {
                               return _buildChannelSidebarItem(channels[index]);
                             },
@@ -1025,12 +1036,16 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                     child: Column(
                       children: [
                         // Time header (scrolls horizontally)
-                        SingleChildScrollView(
-                          controller: _horizontalScrollController,
-                          scrollDirection: Axis.horizontal,
-                          child: SizedBox(
-                            width: _calculateProgramsGridWidth(),
-                            child: _buildTimeHeaderOnly(),
+                        Container(
+                          height: 60,
+                          margin: const EdgeInsets.only(bottom: 4),
+                          child: SingleChildScrollView(
+                            controller: _horizontalScrollController,
+                            scrollDirection: Axis.horizontal,
+                            child: SizedBox(
+                              width: _calculateProgramsGridWidth(),
+                              child: _buildTimeHeaderOnly(),
+                            ),
                           ),
                         ),
                         // Programs grid (lazy loaded with synchronized horizontal scroll)
@@ -1043,6 +1058,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                               child: ListView.builder(
                                 controller: _verticalScrollController,
                                 itemCount: channels.length,
+                                itemExtent: 64,
                                 itemBuilder: (context, index) {
                                   return _buildProgramRowOnly(channels[index], epgService);
                                 },
@@ -1083,8 +1099,12 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
   /// Channel sidebar item (fixed on left)
   Widget _buildChannelSidebarItem(Channel channel) {
     final isSelected = _selectedChannelId == channel.id;
+    final isFirst = _selectedChannelId == null && channel.id == (_selectedCategory == '⭐ Favorites' 
+        ? Provider.of<ChannelProvider>(context, listen: false).getFilteredChannels(favoriteIds: _epgFavoriteChannelIds, excludeHidden: true, limit: 1).firstOrNull?.id
+        : Provider.of<ChannelProvider>(context, listen: false).getFilteredChannels(category: _selectedCategory, excludeHidden: true, limit: 1).firstOrNull?.id);
     
     return Focus(
+      focusNode: isFirst ? _firstChannelFocus : null,
       canRequestFocus: true,
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent) {
@@ -1097,7 +1117,8 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
             return KeyEventResult.handled;
           }
           if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-            return KeyEventResult.ignored; // Allow left to go to sidebar
+            _firstCategoryFocus.requestFocus();
+            return KeyEventResult.handled;
           }
         }
         return KeyEventResult.ignored;
@@ -1114,8 +1135,8 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
             },
             onLongPress: () => _showChannelContextMenu(context, channel),
             child: Container(
-              height: 108,
-              margin: const EdgeInsets.all(2),
+              height: 60,
+              margin: const EdgeInsets.only(bottom: 4),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.03),
                 borderRadius: BorderRadius.circular(8),
@@ -1130,8 +1151,8 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
               ),
               child: Center(
                 child: Container(
-                  width: 96,
-                  height: 96,
+                  width: 48,
+                  height: 48,
                   child: channel.logoUrl != null
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(7),
@@ -1173,7 +1194,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     final cellWidth = 240.0;
 
     return SizedBox(
-      height: 108,
+      height: 60,
       child: Row(
         children: List.generate(hoursToShow, (index) {
           final hour = (startHour + index) % 24;
@@ -1181,7 +1202,8 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
 
           return Container(
             width: cellWidth,
-            margin: const EdgeInsets.all(2),
+            height: 60,
+            margin: const EdgeInsets.only(right: 4),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.03),
               borderRadius: BorderRadius.circular(8),
@@ -1222,9 +1244,10 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     final cellWidth = 240.0;
     final totalWidth = 12 * cellWidth;
 
-    return SizedBox(
-      height: 108,
+    return Container(
+      height: 60,
       width: totalWidth,
+      margin: const EdgeInsets.only(bottom: 4),
       child: dayPrograms.isEmpty
           ? Container(
               alignment: Alignment.centerLeft,
@@ -1244,15 +1267,15 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
                 final leftOffset = (minutesFromStart / 60) * cellWidth;
                 
                 final visibleDuration = programEnd.difference(programStart).inMinutes;
-                final calculatedWidth = (visibleDuration / 60) * cellWidth;
+                final calculatedWidth = (visibleDuration / 60) * cellWidth - 4;
                 final maxWidth = (totalWidth - leftOffset).clamp(0.0, double.infinity);
                 final minWidth = maxWidth < 30.0 ? maxWidth : 30.0;
                 final width = calculatedWidth.clamp(minWidth, maxWidth);
                 
                 return Positioned(
                   left: leftOffset,
-                  top: 2,
-                  bottom: 2,
+                  top: 0,
+                  height: 60,
                   width: width,
                   child: _buildProgramCellSimple(program),
                 );
@@ -1271,7 +1294,7 @@ class _EPGScreenState extends State<EPGScreen> with SingleTickerProviderStateMix
     const epgCatchupColor = Color(0xFFcc5a2d);
 
     return Container(
-      margin: const EdgeInsets.all(2),
+      margin: const EdgeInsets.only(right: 4),
       decoration: BoxDecoration(
         color: isLive 
             ? epgLiveColor.withOpacity(0.15)

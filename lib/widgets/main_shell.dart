@@ -193,10 +193,7 @@ class _MainShellState extends State<MainShell> {
               top: 0,
               bottom: 0,
               left: 0,
-              child: Material(
-                color: Colors.transparent,
-                elevation: 10,
-                child: SidebarNavigation(
+              child: SidebarNavigation(
                   activeTab: widget.activeTab,
                   currentTime: _currentTime,
                   onSearch: _showSearchDialog,
@@ -204,7 +201,6 @@ class _MainShellState extends State<MainShell> {
                   onNavFocusRegistration: _setNavFocusRequester,
                   onExpandRegistration: _setSidebarExpander,
                 ),
-              ),
             ),
           ],
         ),

@@ -300,6 +300,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
               policy: WidgetOrderTraversalPolicy(),
               child: Column(
                 children: [
+                  const Spacer(),
                   Container(
                     padding: const EdgeInsets.symmetric(vertical: 6),
                     child: Focus(
@@ -377,6 +378,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                       child: _buildTabButton(index),
                     );
                   }).toList(),
+                  const Spacer(),
                   const Spacer(),
                   Container(
                     padding: const EdgeInsets.only(bottom: 12, top: 6),
