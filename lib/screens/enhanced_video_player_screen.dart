@@ -72,7 +72,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   // TV Remote control
   final FocusNode _playerFocusNode = FocusNode();
   final FocusScopeNode _controlsFocusScope = FocusScopeNode();
-  bool _controlsVisible = true;
+  bool _controlsVisible = false;
   Timer? _controlsTimer;
 
   // Subtitle & Audio
@@ -162,12 +162,20 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       
       // Validate URL before attempting to initialize
       if (widget.videoUrl.isEmpty) {
-        throw Exception('Video URL is empty');
+        setState(() {
+          _hasError = true;
+          _errorMessage = 'Video URL is empty';
+        });
+        return;
       }
       
       final uri = Uri.tryParse(widget.videoUrl);
       if (uri == null || !uri.hasScheme || (!uri.isScheme('http') && !uri.isScheme('https'))) {
-        throw Exception('Invalid video URL: ${widget.videoUrl}');
+        setState(() {
+          _hasError = true;
+          _errorMessage = 'Invalid video URL: ${widget.videoUrl}';
+        });
+        return;
       }
       
       // If audioTracks are provided and non-empty, prefer the VLC backend
@@ -258,6 +266,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   void _showControls() {
+    if (!mounted) return;
     setState(() => _controlsVisible = true);
     _startControlsTimer();
     // Move focus to controls overlay
@@ -610,6 +619,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     }
 
     if (shouldEnable) {
+      // Auto-enable translation to English
+      transcriptionService.setTranslationEnabled(true);
       await transcriptionService.startTranscription(streamUrl: widget.videoUrl);
       if (mounted) {
         setState(() {
@@ -617,15 +628,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           _selectedSubtitleIndex = _subtitleIndexTranscription;
           _clearSubtitleCues();
         });
-        showAppSnackBar(
-          context,
-          const SnackBar(
-            content: Text(
-              'Live transcription enabled - Whisper is listening...',
-            ),
-            duration: Duration(seconds: 3),
-          ),
-        );
       }
     } else {
       await transcriptionService.stopTranscription();
@@ -636,39 +638,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
             _selectedSubtitleIndex = _subtitleIndexNone;
           }
         });
-        showAppSnackBar(
-          context,
-          SnackBar(
-            content: const Text(
-              'Live transcription disabled - press Y to toggle',
-            ),
-            duration: const Duration(seconds: 4),
-            action: SnackBarAction(
-              label: 'Save',
-              onPressed: () async {
-                try {
-                  final srt = transcriptionService.exportAsSRT();
-                  await Clipboard.setData(ClipboardData(text: srt));
-                  if (!mounted) return;
-                  showAppSnackBar(
-                    context,
-                    const SnackBar(
-                      content: Text('Transcript copied to clipboard'),
-                    ),
-                  );
-                } catch (e) {
-                  if (!mounted) return;
-                  showAppSnackBar(
-                    context,
-                    const SnackBar(
-                      content: Text('Failed to export transcript'),
-                    ),
-                  );
-                }
-              },
-            ),
-          ),
-        );
       }
     }
   }
@@ -795,8 +764,11 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         autofocus: true,
         onKeyEvent: _handleKeyPress,
         child: GestureDetector(
-          onTap: _showControls,
-          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            debugPrint('Screen tapped - showing controls');
+            _showControls();
+          },
+          behavior: HitTestBehavior.translucent,
           child: Stack(
             children: [
               // Video Player
@@ -880,9 +852,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
   Widget _buildLiveTranscriptionOverlay() {
     return Positioned(
-      bottom: 80,
-      left: 16,
-      right: 16,
+      bottom: 100,
+      left: 80,
+      right: 80,
       child: Consumer<WhisperTranscriptionService>(
         builder: (context, transcriptionService, _) {
           if (!transcriptionService.isWhisperLoaded) {
@@ -894,7 +866,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           final text = transcriptionService.latestSubtitles;
 
           if (!transcriptionService.isTranscribing) {
-            // Don't show any message when transcription is off
             return const SizedBox.shrink();
           }
 
@@ -905,14 +876,23 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           }
 
           return Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            constraints: const BoxConstraints(maxHeight: 200),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.black.withAlpha((0.8 * 255).round()),
-              borderRadius: BorderRadius.circular(8),
+              color: const Color(0xE6121629),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: AppTheme.primaryBlue, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
                   children: [
@@ -1080,14 +1060,18 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  text,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w500,
-                    height: 1.4,
+                const SizedBox(height: 12),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Text(
+                      text,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                        height: 1.5,
+                      ),
+                    ),
                   ),
                 ),
               ],

@@ -37,21 +37,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   final Set<String> _artworkRequests = {};
   late final bool _tmdbEnabled;
   
-  // Track if initial load is complete to show splash screen
-  bool _showSplash = true;
   bool _heroImageReady = false;
 
   @override
   void initState() {
     super.initState();
     _tmdbEnabled = ServiceValidator.isTmdbAvailable;
-    // Start carousel once the widget is built - will be updated when channels load
     WidgetsBinding.instance.addPostFrameCallback(
-      (_) {
+      (_) async {
+        await _loadEpgData();
         _findInitialChannelWithArtwork();
         _startCarouselIfNeeded();
-        // Load EPG data to populate program info and progress bars
-        _loadEpgData();
       },
     );
   }
@@ -63,13 +59,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     
     final epgService = Provider.of<EpgService>(context, listen: false);
     
-    // Try to find a channel with artwork for initial display
-    for (int i = 0; i < channels.length && i < 20; i++) {
+    // Try to find a channel with program info AND artwork for initial display
+    for (int i = 0; i < channels.length && i < 50; i++) {
       final channel = channels[i];
       final program = epgService.getCurrentProgram(
         channel.tvgId ?? channel.id,
         channelName: channel.name,
       );
+      if (program == null) continue; // Skip channels without EPG data
+      
       final heroImage = _resolveHeroImage(program);
       if (heroImage != null && heroImage.isNotEmpty) {
         setState(() {
@@ -93,15 +91,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
   }
   
-  void _onChannelsReady() {
-    // Called when channels are loaded - wait a brief moment for hero to prepare
-    if (!_showSplash) return;
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted && _showSplash) {
-        setState(() => _showSplash = false);
-      }
-    });
-  }
+
 
   @override
   void dispose() {
@@ -155,7 +145,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       final channels = channelProvider.channels;
       if (channels.isEmpty) return;
       setState(() {
-        // Find next channel with artwork for hero
+        // Find next channel with EPG data AND artwork for hero
         int attempts = 0;
         int nextIndex = (_featuredIndex + 1) % channels.length;
         while (attempts < channels.length) {
@@ -165,18 +155,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             channel.tvgId ?? channel.id,
             channelName: channel.name,
           );
-          final heroImage = _resolveHeroImage(program);
-          if (heroImage != null && heroImage.isNotEmpty) {
-            _featuredIndex = nextIndex;
-            break;
+          if (program != null) {
+            final heroImage = _resolveHeroImage(program);
+            if (heroImage != null && heroImage.isNotEmpty) {
+              _featuredIndex = nextIndex;
+              break;
+            }
           }
           nextIndex = (nextIndex + 1) % channels.length;
           attempts++;
         }
-        // If no channels with artwork found, just use next index
-        if (attempts >= channels.length) {
-          _featuredIndex = (_featuredIndex + 1) % channels.length;
-        }
+        // Keep current index if no channels with EPG data and artwork found
       });
     });
     // Focus is managed by navigation bar - don't auto-focus content
@@ -193,20 +182,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         builder: (context, channelProvider, epgService, _) {
           final channels = channelProvider.channels;
           
-          // Show splash only while actively loading channels
-          if (_showSplash && channelProvider.isLoading) {
-            // Trigger transition once channels are available
-            if (channels.isNotEmpty) {
-              _onChannelsReady();
-            }
+          // Show skeleton while channels loading OR EPG loading
+          if (channelProvider.isLoading || epgService.isLoading) {
             return _buildSplashLoading();
-          } else if (_showSplash && !channelProvider.isLoading) {
-            // Not loading, dismiss splash immediately
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted && _showSplash) {
-                setState(() => _showSplash = false);
-              }
-            });
           }
 
           if (channels.isEmpty) {
@@ -242,6 +220,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             );
           }
 
+          // Show skeleton until EPG has data
+          if (!epgService.hasData) {
+            return _buildSplashLoading();
+          }
+          
           // Ensure index is valid for current channel list
           if (_featuredIndex >= channels.length) _featuredIndex = 0;
 
@@ -300,148 +283,146 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final heroImage = _resolveHeroImage(currentProgram);
     final screenSize = MediaQuery.of(context).size;
     final isTV = screenSize.width >= 1920 || screenSize.height >= 1080;
-    final heroHeight = screenSize.height * 0.65;
+    final heroHeight = screenSize.height * 0.7;
 
     return Focus(
       canRequestFocus: false,
       skipTraversal: true,
       onKeyEvent: _handleDirectionalKeyEvent,
-      child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            // Hero image on the right side
-            Positioned(
-              top: 0,
-              right: 0,
-              width: screenSize.width * 0.5,
-              height: heroHeight,
-              child: heroImage != null && heroImage.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: heroImage,
-                      fit: BoxFit.cover,
-                      alignment: Alignment.topCenter,
-                      placeholder: (_, __) => _buildShimmerHeroBackground(),
-                      errorWidget: (_, __, ___) => _buildDefaultHeroBackground(),
-                      imageBuilder: (context, imageProvider) {
-                        if (!_heroImageReady) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (mounted) setState(() => _heroImageReady = true);
-                          });
-                        }
-                        return Image(image: imageProvider, fit: BoxFit.cover, alignment: Alignment.topCenter);
-                      },
-                    )
-                  : _buildDefaultHeroBackground(),
-            ),
-            // Left side gradient spotlight effect
-            Positioned(
-              top: 0,
-              left: 0,
-              width: screenSize.width * 0.65,
-              height: heroHeight,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: [
-                      const Color(0xFF050710),
-                      Colors.black.withAlpha(0),
-                    ],
-                    stops: const [0.0, 1.0],
+      child: Container(
+        color: const Color(0xFF050710),
+        child: SingleChildScrollView(
+          controller: _scrollController,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Hero banner
+              SizedBox(
+                height: heroHeight,
+                child: Stack(
+                children: [
+                  // Solid background
+                  Positioned.fill(
+                    child: Container(color: const Color(0xFF050710)),
                   ),
-                ),
-              ),
-            ),
-            // Bottom gradient spotlight effect
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: heroHeight * 0.4,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    colors: [
-                      const Color(0xFF050710),
-                      Colors.black.withAlpha(0),
-                    ],
-                    stops: const [0.0, 1.0],
-                  ),
-                ),
-              ),
-            ),
-            // Top fade for nav bar area
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              height: 100,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withAlpha((0.9 * 255).round()),
-                      Colors.black.withAlpha(0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            // Featured info in left area
-            Positioned(
-              top: 70,
-              left: 24, // Align with card carousel title
-              width: screenSize.width * 0.33,
-              child: _buildFeaturedInfo(context, featuredChannel, currentProgram),
-            ),
-            // Channel logo aligned with info bar (top left of info bar area)
-            Positioned(
-              top: 70,
-              left: 24,
-              child: _buildChannelLogo(context, featuredChannel),
-            ),
-            // LIVE badge aligned with info bar (bottom left of info bar area)
-            if (currentProgram != null)
-              Positioned(
-                top: 70 + (screenSize.height * 0.33) - 40,
-                left: 24,
-                child: _buildLiveBadge(context),
-              ),
-            // Scrollable content on top of hero
-            Positioned.fill(
-              child: SingleChildScrollView(
-                controller: _scrollController,
-                child: Padding(
-                  padding: EdgeInsets.only(
-                      left: context.tvSpacing(48),
-                      right: context.tvSpacing(80),
-                      top: context.tvSpacing(80),
-                      bottom: context.tvSpacing(80),
+                  // Hero image on right 60%
+                  if (heroImage != null && heroImage.isNotEmpty)
+                    Positioned(
+                      top: 0,
+                      left: screenSize.width * 0.4,
+                      right: 0,
+                      height: heroHeight,
+                      child: CachedNetworkImage(
+                        imageUrl: heroImage,
+                        fit: BoxFit.contain,
+                        alignment: Alignment.topCenter,
+                        placeholder: (_, __) => const SizedBox.shrink(),
+                        errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                        imageBuilder: (context, imageProvider) {
+                          if (!_heroImageReady) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted) setState(() => _heroImageReady = true);
+                            });
+                          }
+                          return Image(image: imageProvider, fit: BoxFit.contain, alignment: Alignment.topCenter);
+                        },
+                      ),
                     ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Spacer for hero area
-                      SizedBox(height: heroHeight * 0.65),
-                      SizedBox(height: context.tvSpacing(48)),
-                      // Channel grid sections
-                      if (isGrouping && groupedChannels.isEmpty)
-                        _buildCategoryLoadingIndicator()
-                      else
-                        ..._buildCategoryRows(context, groupedChannels, isTV),
-                      SizedBox(height: context.tvSpacing(40)),
-                    ],
+                  // Left gradient overlay - 75% from left (always visible)
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    width: screenSize.width * 0.75,
+                    height: heroHeight,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                          colors: [
+                            const Color(0xFF050710),
+                            const Color(0xFF050710),
+                            const Color(0xFF050710),
+                            const Color(0xFF050710).withOpacity(0.98),
+                            const Color(0xFF050710).withOpacity(0.85),
+                            const Color(0xFF050710).withOpacity(0.5),
+                            Colors.transparent,
+                          ],
+                          stops: const [0.0, 0.4, 0.6, 0.75, 0.85, 0.95, 1.0],
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  // Bottom gradient - very minimal
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    height: heroHeight * 0.05,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [
+                            const Color(0xFF050710),
+                            const Color(0xFF050710).withOpacity(0.8),
+                            const Color(0xFF050710).withOpacity(0.5),
+                            const Color(0xFF050710).withOpacity(0.2),
+                            Colors.transparent,
+                          ],
+                          stops: const [0.0, 0.4, 0.7, 0.9, 1.0],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Featured info in left area - constrained to fit
+                  Positioned(
+                    top: heroHeight * 0.2,
+                    left: 80,
+                    width: screenSize.width * 0.25,
+                    height: heroHeight * 0.6,
+                    child: _buildFeaturedInfo(context, featuredChannel, currentProgram),
+                  ),
+                  // Channel logo in top right corner (below clock, adjusted for padding)
+                  Positioned(
+                    top: heroHeight * 0.08 + 8,
+                    right: 24,
+                    child: _buildChannelLogo(context, featuredChannel),
+                  ),
+                  // LIVE badge in bottom right corner
+                  if (currentProgram != null)
+                    Positioned(
+                      bottom: heroHeight * 0.08,
+                      right: 24,
+                      child: _buildLiveBadge(context),
+                    ),
+                ],
               ),
             ),
-          ],
+            // Channel grid sections
+            Padding(
+              padding: EdgeInsets.only(
+                left: context.tvSpacing(48),
+                right: context.tvSpacing(80),
+                top: context.tvSpacing(24),
+                bottom: context.tvSpacing(48),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (isGrouping && groupedChannels.isEmpty)
+                    _buildCategoryLoadingIndicator()
+                  else
+                    ..._buildCategoryRows(context, groupedChannels, isTV),
+                ],
+              ),
+            ),
+            ],
+          ),
         ),
+      ),
     );
   }
 
@@ -453,71 +434,68 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         : '';
     final progress = program?.progressPercentage ?? 0.0;
 
-    return Container(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Title
-          Text(
-            title,
-            style: TextStyle(
-              color: AppTheme.textPrimary,
-              fontSize: context.tvTextSize(24),
-              fontWeight: FontWeight.w700,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Title
+        Text(
+          title,
+          style: TextStyle(
+            color: AppTheme.textPrimary,
+            fontSize: context.tvTextSize(20),
+            fontWeight: FontWeight.w700,
           ),
-          if (description.isNotEmpty) ...[
-            SizedBox(height: context.tvSpacing(6)),
-            Text(
-              description,
-              style: TextStyle(
-                color: AppTheme.textSecondary,
-                fontSize: context.tvTextSize(14),
-              ),
-              maxLines: 8,
-              overflow: TextOverflow.fade,
-              softWrap: true,
-            ),
-          ],
-          if (program != null) ...[
-            SizedBox(height: context.tvSpacing(8)),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: progress,
-                backgroundColor: Colors.white.withAlpha((0.2 * 255).round()),
-                color: AppTheme.primaryBlue,
-                minHeight: 4,
+          maxLines: 2,
+        ),
+        if (description.isNotEmpty) ...[
+          SizedBox(height: context.tvSpacing(6)),
+          Flexible(
+            child: SingleChildScrollView(
+              child: Text(
+                description,
+                style: TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: context.tvTextSize(13),
+                ),
+                softWrap: true,
               ),
             ),
-          ],
-          if (timeRange.isNotEmpty) ...[
-            SizedBox(height: context.tvSpacing(4)),
-            Text(
-              timeRange,
-              style: TextStyle(
-                color: AppTheme.textSecondary,
-                fontSize: context.tvTextSize(13),
-              ),
-            ),
-          ],
+          ),
         ],
-      ),
+        if (program != null) ...[
+          SizedBox(height: context.tvSpacing(8)),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress,
+              backgroundColor: Colors.white.withAlpha((0.2 * 255).round()),
+              color: AppTheme.primaryBlue,
+              minHeight: 4,
+            ),
+          ),
+        ],
+        if (timeRange.isNotEmpty) ...[
+          SizedBox(height: context.tvSpacing(4)),
+          Text(
+            timeRange,
+            style: TextStyle(
+              color: AppTheme.textSecondary,
+              fontSize: context.tvTextSize(12),
+            ),
+          ),
+        ],
+      ],
     );
   }
 
   Widget _buildChannelLogo(BuildContext context, Channel channel) {
-    // Match the live badge: 40px height, pill shape, centered
     return Container(
       height: 40,
-      width: null,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: AppTheme.cardBackground,
-        borderRadius: BorderRadius.circular(20), // pill shape
+        borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.08),
@@ -526,28 +504,21 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           ),
         ],
       ),
-      child: Center(
-        child: channel.logoUrl != null && channel.logoUrl!.isNotEmpty
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  channel.logoUrl!,
-                  fit: BoxFit.contain,
-                  height: 24,
-                  width: 24,
-                  errorBuilder: (_, __, ___) => const Icon(
-                    Icons.tv,
-                    color: AppTheme.primaryBlue,
-                    size: 24,
-                  ),
-                ),
-              )
-            : const Icon(
+      child: channel.logoUrl != null && channel.logoUrl!.isNotEmpty
+          ? Image.network(
+              channel.logoUrl!,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const Icon(
                 Icons.tv,
                 color: AppTheme.primaryBlue,
-                size: 24,
+                size: 20,
               ),
-      ),
+            )
+          : const Icon(
+              Icons.tv,
+              color: AppTheme.primaryBlue,
+              size: 20,
+            ),
     );
   }
 
@@ -687,7 +658,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final isLandscape = screenWidth > screenHeight;
     final cardWidth = isLandscape ? (screenWidth / 5.5) : (screenWidth / 3.5);
     final cardHeight = cardWidth * 0.57;
-    final rowHeight = cardHeight + 100;
+    final rowHeight = cardHeight + 80;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -768,6 +739,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             );
             final progress = currentProgram?.progressPercentage ?? 0.0;
             
+            // Get image from EPG or TMDB cache
+            String? cardImage = currentProgram?.imageUrl;
+            if ((cardImage == null || cardImage.isEmpty) && currentProgram != null) {
+              cardImage = _programArtwork[currentProgram.id];
+            }
+            
             return GestureDetector(
               onTap: () => context.push('/player', extra: channel),
               child: AnimatedScale(
@@ -802,10 +779,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         borderRadius: BorderRadius.circular(12),
                         child: Stack(
                           children: [
-                            if (currentProgram?.imageUrl != null && currentProgram!.imageUrl!.isNotEmpty)
+                            if (cardImage != null && cardImage.isNotEmpty)
                               Positioned.fill(
                                 child: CachedNetworkImage(
-                                  imageUrl: currentProgram.imageUrl!,
+                                  imageUrl: cardImage,
                                   fit: BoxFit.cover,
                                   memCacheWidth: 400,
                                   placeholder: (_, __) => Container(
@@ -863,38 +840,46 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                       ),
                               ),
                             ),
+                            if (currentProgram != null)
+                              Positioned(
+                                left: 8,
+                                right: 8,
+                                bottom: 8,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(2),
+                                  child: LinearProgressIndicator(
+                                    value: progress,
+                                    backgroundColor: Colors.black.withAlpha((0.5 * 255).round()),
+                                    color: AppTheme.primaryBlue,
+                                    minHeight: 4,
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ),
                     ),
                     if (currentProgram != null) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        currentProgram.title,
-                        style: const TextStyle(
-                          color: AppTheme.textPrimary,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(2),
-                        child: LinearProgressIndicator(
-                          value: progress,
-                          backgroundColor: Colors.white.withAlpha((0.2 * 255).round()),
-                          color: AppTheme.primaryBlue,
-                          minHeight: 3,
+                      const SizedBox(height: 6),
+                      SizedBox(
+                        width: cardWidth,
+                        child: Text(
+                          currentProgram.title,
+                          style: const TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
                         '${_formatTime(currentProgram.startTime)} - ${_formatTime(currentProgram.endTime)}',
                         style: const TextStyle(
                           color: AppTheme.textSecondary,
-                          fontSize: 11,
+                          fontSize: 10,
                         ),
                       ),
                     ],
@@ -940,59 +925,151 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   Widget _buildSplashLoading() {
-    return Center(
+    final screenSize = MediaQuery.of(context).size;
+    final heroHeight = screenSize.height * 0.7;
+    final cardWidth = screenSize.width / 5.5;
+    final cardHeight = cardWidth * 0.57;
+    final rowHeight = cardHeight + 80;
+
+    return SingleChildScrollView(
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Animated logo/icon
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.8, end: 1.0),
-            duration: const Duration(milliseconds: 800),
-            curve: Curves.easeInOut,
-            builder: (context, scale, child) {
-              return Transform.scale(
-                scale: scale,
-                child: child,
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
-                    AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
-                  ],
+          // Hero skeleton
+          Container(
+            height: heroHeight,
+            color: const Color(0xFF0a0e1a),
+            child: Stack(
+              children: [
+                // Shimmer effect
+                Positioned.fill(
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.3, end: 0.5),
+                    duration: const Duration(milliseconds: 1500),
+                    curve: Curves.easeInOut,
+                    builder: (context, opacity, child) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                            colors: [
+                              const Color(0xFF050710),
+                              Color.lerp(const Color(0xFF050710), const Color(0xFF1a1a2e), opacity)!,
+                              const Color(0xFF050710),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
-              ),
-              child: const Icon(
-                Icons.live_tv,
-                size: 64,
-                color: Colors.white,
-              ),
+                // Info box skeleton
+                Positioned(
+                  top: heroHeight * 0.2,
+                  left: 80,
+                  width: screenSize.width * 0.25,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity * 0.8,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity * 0.9,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 32),
-          // Loading indicator
-          SizedBox(
-            width: 32,
-            height: 32,
-            child: CircularProgressIndicator(
-              strokeWidth: 3,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                AppTheme.primaryBlue.withAlpha((0.8 * 255).round()),
-              ),
+          // Channel rows skeleton
+          Padding(
+            padding: EdgeInsets.only(
+              left: context.tvSpacing(48),
+              right: context.tvSpacing(80),
+              top: context.tvSpacing(24),
+              bottom: context.tvSpacing(48),
             ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Loading channels...',
-            style: TextStyle(
-              color: Colors.white.withAlpha((0.6 * 255).round()),
-              fontSize: 14,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: List.generate(3, (rowIndex) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Category title skeleton
+                    Container(
+                      width: 150,
+                      height: 18,
+                      margin: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    // Card row skeleton
+                    SizedBox(
+                      height: rowHeight,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.only(left: 24),
+                        itemCount: 6,
+                        itemExtent: cardWidth + 16,
+                        itemBuilder: (context, index) {
+                          return Container(
+                            width: cardWidth,
+                            margin: const EdgeInsets.only(right: 16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Container(
+                                  width: cardWidth,
+                                  height: cardHeight,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.05),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  width: cardWidth * 0.7,
+                                  height: 14,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.08),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                );
+              }),
             ),
           ),
         ],

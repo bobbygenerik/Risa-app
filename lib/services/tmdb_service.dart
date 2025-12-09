@@ -164,7 +164,7 @@ class TMDBService {
       }
       // Search for movie by title
       var searchUrl =
-          '$_baseUrl/search/movie?api_key=$_apiKey&query=${Uri.encodeComponent(title)}';
+          '$_baseUrl/search/movie?api_key=$_apiKey&language=en-US&query=${Uri.encodeComponent(title)}';
       if (year != null) {
         searchUrl += '&year=$year';
       }
@@ -200,7 +200,7 @@ class TMDBService {
       }
       // Search for TV show by title
       var searchUrl =
-          '$_baseUrl/search/tv?api_key=$_apiKey&query=${Uri.encodeComponent(title)}';
+          '$_baseUrl/search/tv?api_key=$_apiKey&language=en-US&query=${Uri.encodeComponent(title)}';
       if (year != null) {
         searchUrl += '&first_air_date_year=$year';
       }
@@ -236,7 +236,7 @@ class TMDBService {
       if (cached != null) return cached;
 
       final searchUrl =
-          '$_baseUrl/search/movie?api_key=$_apiKey&query=${Uri.encodeComponent(title)}';
+          '$_baseUrl/search/movie?api_key=$_apiKey&language=en-US&query=${Uri.encodeComponent(title)}';
 
       final response = await http.get(Uri.parse(searchUrl));
 
@@ -332,7 +332,7 @@ class TMDBService {
       if (cached != null) return cached;
 
       var searchUrl =
-          '$_baseUrl/search/tv?api_key=$_apiKey&query=${Uri.encodeComponent(title)}';
+          '$_baseUrl/search/tv?api_key=$_apiKey&language=en-US&query=${Uri.encodeComponent(title)}';
       if (year != null) {
         searchUrl += '&first_air_date_year=$year';
       }

@@ -39,8 +39,17 @@ String _stripSuffixes(String text) {
     .replaceAll(RegExp(r'(london|scotland|wales|ireland|ni|channelislands)$', caseSensitive: false), '');
 }
 
+// Top-level function for isolate parsing with optional channel filter
+Map<String, dynamic> _parseEpgWithFilter(Map<String, dynamic> data) {
+  final xmlData = data['xml'] as String;
+  final filter = data['filter'] as List<dynamic>?;
+  final channelFilter = filter?.map((e) => e.toString().toLowerCase()).toSet();
+  
+  return parseEpgInIsolate(xmlData, channelFilter: channelFilter);
+}
+
 // Top-level function for isolate parsing
-Map<String, dynamic> parseEpgInIsolate(String xmlData) {
+Map<String, dynamic> parseEpgInIsolate(String xmlData, {Set<String>? channelFilter}) {
   try {
     final document = XmlDocument.parse(xmlData);
     final programmes = document.findAllElements('programme');
@@ -50,6 +59,11 @@ Map<String, dynamic> parseEpgInIsolate(String xmlData) {
       try {
         final channelId = programme.getAttribute('channel');
         if (channelId == null || channelId.isEmpty) continue;
+        
+        // Skip if not in filter
+        if (channelFilter != null && !channelFilter.contains(channelId.toLowerCase())) {
+          continue;
+        }
 
         final startStr = programme.getAttribute('start');
         final stopStr = programme.getAttribute('stop');
@@ -109,7 +123,7 @@ class EpgService with ChangeNotifier {
   static const String _secondaryCacheFileName = 'epg_cache_secondary.xml';
   static const String _cacheTimeKey = 'epg_cache_time';
   static const String _secondaryCacheTimeKey = 'epg_secondary_cache_time';
-  static const Duration _cacheValidity = Duration(hours: 6);
+  static const Duration _cacheValidity = Duration(hours: 24);
   static const int _maxRetries = 3;
   static const Duration _retryDelay = Duration(seconds: 5);
   
@@ -187,14 +201,14 @@ class EpgService with ChangeNotifier {
 
   /// Public method to trigger EPG loading from saved URL.
   /// Called by ChannelProvider when a new EPG URL is found, or by settings screen.
-  Future<void> loadEpg() async {
+  Future<void> loadEpg({Set<String>? channelFilter}) async {
     final prefs = await SharedPreferences.getInstance();
     final epgUrl = prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
     final secondaryEpgUrl = prefs.getString('secondary_epg_url');
 
     if (epgUrl != null && epgUrl.isNotEmpty) {
       debugPrint('EpgService: Triggering loadEpgFromUrl from public loadEpg() method.');
-      await loadEpgFromUrl(epgUrl, forceRefresh: true);
+      await loadEpgFromUrl(epgUrl, forceRefresh: true, channelFilter: channelFilter);
     } else {
       debugPrint('EpgService: No EPG URL found in SharedPreferences.');
       _error = 'No EPG URL configured.';
@@ -228,7 +242,7 @@ class EpgService with ChangeNotifier {
         final epgUrl = prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
         if (epgUrl != null && epgUrl.isNotEmpty) {
           debugPrint('EpgService: Starting background EPG refresh...');
-          await loadEpgFromUrl(epgUrl, forceRefresh: true);
+          await loadEpgFromUrl(epgUrl, forceRefresh: true, channelFilter: null);
         }
         
         final secondaryUrl = prefs.getString('secondary_epg_url');
@@ -242,14 +256,14 @@ class EpgService with ChangeNotifier {
   }
 
   /// Load EPG from URL with robust error handling and caching
-  Future<void> loadEpgFromUrl(String url, {bool forceRefresh = false}) async {
+  Future<void> loadEpgFromUrl(String url, {bool forceRefresh = false, Set<String>? channelFilter}) async {
     if (url.isEmpty) {
       _error = 'EPG URL is empty';
       notifyListeners();
       return;
     }
     
-    debugPrint('EPG: loadEpgFromUrl called. forceRefresh: $forceRefresh');
+    debugPrint('EPG: loadEpgFromUrl called. forceRefresh: $forceRefresh, filtering: ${channelFilter?.length ?? "all"} channels');
     // Check cache first if not forcing refresh
     if (!forceRefresh && await _loadFromCache()) {
       debugPrint('EPG loaded from cache');
@@ -302,11 +316,17 @@ class EpgService with ChangeNotifier {
 
         // Parse in background isolate to avoid blocking UI
         final xmlData = utf8.decode(epgBytes, allowMalformed: true);
-        final parsed = await compute(parseEpgInIsolate, xmlData).timeout(const Duration(seconds: 60));
+        final parseData = {'xml': xmlData, 'filter': channelFilter?.toList()};
+        final parsed = await compute(_parseEpgWithFilter, parseData).timeout(const Duration(seconds: 60));
         
         // Convert parsed data back to Program objects
         _epgData.clear();
         final rawEpgData = parsed['epgData'] as Map<String, dynamic>;
+        
+        // Only keep programs from today and tomorrow to reduce memory usage
+        final now = DateTime.now();
+        final startOfToday = DateTime(now.year, now.month, now.day);
+        final endOfTomorrow = startOfToday.add(const Duration(days: 2));
         
         for (final channelId in rawEpgData.keys) {
           final programs = (rawEpgData[channelId] as List<dynamic>)
@@ -325,11 +345,14 @@ class EpgService with ChangeNotifier {
                   canRecord: map['canRecord'] ?? true,
                 );
               })
+              .where((p) => p.endTime.isAfter(startOfToday) && p.startTime.isBefore(endOfTomorrow))
               .toList();
           
           // Sort by start time
           programs.sort((a, b) => a.startTime.compareTo(b.startTime));
-          _epgData[channelId] = programs;
+          if (programs.isNotEmpty) {
+            _epgData[channelId] = programs;
+          }
         }
 
         await _saveToCache(xmlData);
@@ -614,9 +637,7 @@ class EpgService with ChangeNotifier {
   }
 
   /// Check if a channel exists in either primary or secondary EPG data
-  bool _hasEpgDataForKey(String key) {
-    return _epgData.containsKey(key) || _secondaryEpgData.containsKey(key);
-  }
+
   
   /// Get programs from either primary or secondary EPG data
   List<Program> _getProgramsForKey(String key) {
@@ -626,7 +647,6 @@ class EpgService with ChangeNotifier {
   /// Find the best matching EPG key for a channel by ID and optionally name
   String? _findEpgKey(String channelId, {String? channelName}) {
     final cacheKey = '$channelId|${channelName ?? ''}';
-    
     // Check manual mapping first (highest priority)
     if (_manualMappings.containsKey(channelId)) {
       final manualKey = _manualMappings[channelId]!;
@@ -639,177 +659,153 @@ class EpgService with ChangeNotifier {
       final cached = _channelIdCache[cacheKey];
       return cached;
     }
-    
     // Log EPG data size on first lookup
     if (_channelIdCache.isEmpty) {
       debugPrint('EPG _findEpgKey: Primary EPG has ${_epgData.length} channels, Secondary has ${_secondaryEpgData.length}');
       if (_epgData.isNotEmpty) {
         debugPrint('EPG sample keys: ${_epgData.keys.take(5).join(", ")}');
-        // Debug: Show all UK channel keys
-        final ukKeys = _epgData.keys.where((k) => k.toLowerCase().endsWith('.uk')).toList();
-        /// Optimized: restrict fuzzy matching to only playlist channels
-        String? _findEpgKey(String channelId, {String? channelName, List<String>? playlistChannelIds}) {
-          final cacheKey = '$channelId|${channelName ?? ''}';
-          // Check manual mapping first (highest priority)
-          if (_manualMappings.containsKey(channelId)) {
-            final manualKey = _manualMappings[channelId]!;
-            if (_epgData.containsKey(manualKey)) {
-              return manualKey;
-            }
-          }
-          // Check cache 
-          if (_channelIdCache.containsKey(cacheKey)) {
-            final cached = _channelIdCache[cacheKey];
-            return cached;
-          }
-          // Restrict matching to playlist channels if provided
-          final allEpgKeys = playlistChannelIds != null && playlistChannelIds.isNotEmpty
-              ? playlistChannelIds.where((id) => _epgData.containsKey(id) || _secondaryEpgData.containsKey(id)).toSet()
-              : {..._epgData.keys, ..._secondaryEpgData.keys};
-          // Try exact match first
-          if (_hasEpgDataForKey(channelId)) {
-            _channelIdCache[cacheKey] = channelId;
-            return channelId;
-          }
-          // Try lowercase match
-          final lowerChannelId = channelId.toLowerCase();
-          for (final key in allEpgKeys) {
-            if (key.toLowerCase() == lowerChannelId) {
-              _channelIdCache[cacheKey] = key;
-              return key;
-            }
-          }
-          // Try matching without domain suffix
-          final withoutDomain = channelId.split('.').first;
-          for (final key in allEpgKeys) {
-            final keyWithoutDomain = key.split('.').first;
-            if (keyWithoutDomain.toLowerCase() == withoutDomain.toLowerCase()) {
-              _channelIdCache[cacheKey] = key;
-              return key;
-            }
-          }
-          // Try normalized matching
-          final normalizedId = channelId.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-          final normalizedKeys = _getNormalizedEpgKeys();
-          if (normalizedKeys.containsKey(normalizedId)) {
-            _channelIdCache[cacheKey] = normalizedKeys[normalizedId];
-            return normalizedKeys[normalizedId];
-          }
-          // Try with number word conversion
-          final normalizedWithNumbers = _convertNumberWords(normalizedId);
-          if (normalizedWithNumbers != normalizedId && normalizedKeys.containsKey(normalizedWithNumbers)) {
-            _channelIdCache[cacheKey] = normalizedKeys[normalizedWithNumbers];
-            return normalizedKeys[normalizedWithNumbers];
-          }
-          // Try prefix/contains matching with normalized ID
-          final normalizedIdWithoutCountry = normalizedId.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
-          final normalizedIdWithNumbersNoCountry = normalizedWithNumbers.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
-          final List<MapEntry<String, String>> prefixMatches = [];
-          for (final entry in normalizedKeys.entries) {
-            final epgNormalized = entry.key;
-            final epgWithoutCountry = epgNormalized.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
-            final epgWithNumbers = _convertNumberWords(epgWithoutCountry);
-            final epgStripped = _stripSuffixes(epgWithNumbers);
-            if (epgWithoutCountry.startsWith(normalizedIdWithoutCountry) && normalizedIdWithoutCountry.length >= 4) {
-              prefixMatches.add(entry);
-              continue;
-            }
-            if (epgWithNumbers.startsWith(normalizedIdWithNumbersNoCountry) && normalizedIdWithNumbersNoCountry.length >= 4) {
-              prefixMatches.add(entry);
-              continue;
-            }
-            final channelStripped = _stripSuffixes(normalizedIdWithNumbersNoCountry);
-            if (epgStripped == channelStripped && channelStripped.length >= 4) {
-              prefixMatches.add(entry);
-              continue;
-            }
-          }
-          if (prefixMatches.isNotEmpty) {
-            prefixMatches.sort((a, b) {
-              final aHasLondon = a.value.toLowerCase().contains('london');
-              final bHasLondon = b.value.toLowerCase().contains('london');
-              if (aHasLondon && !bHasLondon) return -1;
-              if (!aHasLondon && bHasLondon) return 1;
-              return a.key.length.compareTo(b.key.length);
-            });
-            final bestMatch = prefixMatches.first;
-            _channelIdCache[cacheKey] = bestMatch.value;
-            return bestMatch.value;
-          }
-          // Try number-stripped matching
-          final channelStrippedNumbers = _stripNumbers(normalizedIdWithoutCountry);
-          if (channelStrippedNumbers.length >= 3) {
-            for (final entry in normalizedKeys.entries) {
-              final epgNormalized = entry.key;
-              final epgWithoutCountry = epgNormalized.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
-              final epgStrippedNumbers = _stripNumbers(epgWithoutCountry);
-              if (epgStrippedNumbers == channelStrippedNumbers) {
-                _channelIdCache[cacheKey] = entry.value;
-                return entry.value;
-              }
-              if (epgStrippedNumbers.startsWith(channelStrippedNumbers) && channelStrippedNumbers.length >= 3) {
-                prefixMatches.add(entry);
-              }
-            }
-            if (prefixMatches.isNotEmpty) {
-              prefixMatches.sort((a, b) {
-                final aHasLondon = a.value.toLowerCase().contains('london');
-                final bHasLondon = b.value.toLowerCase().contains('london');
-                if (aHasLondon && !bHasLondon) return -1;
-                if (!aHasLondon && bHasLondon) return 1;
-                return a.key.length.compareTo(b.key.length);
-              });
-              final bestMatch = prefixMatches.first;
-              _channelIdCache[cacheKey] = bestMatch.value;
-              return bestMatch.value;
-            }
-          }
-          // Try contains matching
-          for (final entry in normalizedKeys.entries) {
-            final epgNormalized = entry.key;
-            final epgWithoutCountry = epgNormalized.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
-            if (normalizedIdWithoutCountry.contains(epgWithoutCountry) && epgWithoutCountry.length >= 4) {
-              _channelIdCache[cacheKey] = entry.value;
-              return entry.value;
-            }
-          }
-          // Try matching by channel NAME if provided
-          if (channelName != null && channelName.isNotEmpty) {
-            final normalizedName = channelName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-            if (normalizedKeys.containsKey(normalizedName)) {
-              _channelIdCache[cacheKey] = normalizedKeys[normalizedName];
-              return normalizedKeys[normalizedName];
-            }
-            final cleanedName = normalizedName.replaceAll(RegExp(r'(hd|fhd|uhd|4k|sd|1080p|720p)$'), '');
-            for (final entry in normalizedKeys.entries) {
-              final epgNormalized = entry.key;
-              final epgWithoutCountry = epgNormalized.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
-              if (cleanedName.contains(epgWithoutCountry) && epgWithoutCountry.length >= 3) {
-                _channelIdCache[cacheKey] = entry.value;
-                return entry.value;
-              }
-              if (epgWithoutCountry.contains(cleanedName) && cleanedName.length >= 3) {
-                _channelIdCache[cacheKey] = entry.value;
-                return entry.value;
-              }
-            }
-          }
-          // Try partial match
-          for (final key in allEpgKeys) {
-            if (key.toLowerCase().contains(lowerChannelId) || lowerChannelId.contains(key.toLowerCase())) {
-              _channelIdCache[cacheKey] = key;
-              return key;
-            }
-          }
-          // No match found - cache the miss
-          _channelIdCache[cacheKey] = null;
-          return null;
-        }
+      }
+    }
+    final allEpgKeys = {..._epgData.keys, ..._secondaryEpgData.keys};
+    // Try exact lowercase match
+    final lowerChannelId = channelId.toLowerCase();
+    for (final key in allEpgKeys) {
+      if (key.toLowerCase() == lowerChannelId) {
+        _channelIdCache[cacheKey] = key;
+        return key;
+      }
+    }
+    // Try matching without domain suffix (exact match only)
+    final withoutDomain = channelId.split('.').first;
+    for (final key in allEpgKeys) {
+      final keyWithoutDomain = key.split('.').first;
+      if (keyWithoutDomain.toLowerCase() == withoutDomain.toLowerCase()) {
+        _channelIdCache[cacheKey] = key;
+        return key;
+      }
+    }
+    // Only do fuzzy matching if channelName was provided
+    // This prevents multiple channels from matching the same EPG data
+    if (channelName == null || channelName.isEmpty) {
+      _channelIdCache[cacheKey] = null;
+      return null;
     }
     
+    final normalizedId = channelId.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    final normalizedKeys = _getNormalizedEpgKeys();
+    if (normalizedKeys.containsKey(normalizedId)) {
+      _channelIdCache[cacheKey] = normalizedKeys[normalizedId];
+      return normalizedKeys[normalizedId];
+    }
+    // Try with number word conversion
+    final normalizedWithNumbers = _convertNumberWords(normalizedId);
+    if (normalizedWithNumbers != normalizedId && normalizedKeys.containsKey(normalizedWithNumbers)) {
+      _channelIdCache[cacheKey] = normalizedKeys[normalizedWithNumbers];
+      return normalizedKeys[normalizedWithNumbers];
+    }
+    // Try prefix/contains matching with normalized ID
+    final normalizedIdWithoutCountry = normalizedId.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
+    final normalizedIdWithNumbersNoCountry = normalizedWithNumbers.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
+    final List<MapEntry<String, String>> prefixMatches = [];
+    for (final entry in normalizedKeys.entries) {
+      final epgNormalized = entry.key;
+      final epgWithoutCountry = epgNormalized.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
+      final epgWithNumbers = _convertNumberWords(epgWithoutCountry);
+      final epgStripped = _stripSuffixes(epgWithNumbers);
+      if (epgWithoutCountry.startsWith(normalizedIdWithoutCountry) && normalizedIdWithoutCountry.length >= 4) {
+        prefixMatches.add(entry);
+        continue;
+      }
+      if (epgWithNumbers.startsWith(normalizedIdWithNumbersNoCountry) && normalizedIdWithNumbersNoCountry.length >= 4) {
+        prefixMatches.add(entry);
+        continue;
+      }
+      final channelStripped = _stripSuffixes(normalizedIdWithNumbersNoCountry);
+      if (epgStripped == channelStripped && channelStripped.length >= 4) {
+        prefixMatches.add(entry);
+        continue;
+      }
+    }
+    if (prefixMatches.isNotEmpty) {
+      prefixMatches.sort((a, b) {
+        final aHasLondon = a.value.toLowerCase().contains('london');
+        final bHasLondon = b.value.toLowerCase().contains('london');
+        if (aHasLondon && !bHasLondon) return -1;
+        if (!aHasLondon && bHasLondon) return 1;
+        return a.key.length.compareTo(b.key.length);
+      });
+      final bestMatch = prefixMatches.first;
+      _channelIdCache[cacheKey] = bestMatch.value;
+      return bestMatch.value;
+    }
+    // Try number-stripped matching
+    final channelStrippedNumbers = _stripNumbers(normalizedIdWithoutCountry);
+    if (channelStrippedNumbers.length >= 3) {
+      for (final entry in normalizedKeys.entries) {
+        final epgNormalized = entry.key;
+        final epgWithoutCountry = epgNormalized.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
+        final epgStrippedNumbers = _stripNumbers(epgWithoutCountry);
+        if (epgStrippedNumbers == channelStrippedNumbers) {
+          _channelIdCache[cacheKey] = entry.value;
+          return entry.value;
+        }
+        if (epgStrippedNumbers.startsWith(channelStrippedNumbers) && channelStrippedNumbers.length >= 3) {
+          prefixMatches.add(entry);
+        }
+      }
+      if (prefixMatches.isNotEmpty) {
+        prefixMatches.sort((a, b) {
+          final aHasLondon = a.value.toLowerCase().contains('london');
+          final bHasLondon = b.value.toLowerCase().contains('london');
+          if (aHasLondon && !bHasLondon) return -1;
+          if (!aHasLondon && bHasLondon) return 1;
+          return a.key.length.compareTo(b.key.length);
+        });
+        final bestMatch = prefixMatches.first;
+        _channelIdCache[cacheKey] = bestMatch.value;
+        return bestMatch.value;
+      }
+    }
+    // Try contains matching
+    for (final entry in normalizedKeys.entries) {
+      final epgNormalized = entry.key;
+      final epgWithoutCountry = epgNormalized.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
+      if (normalizedIdWithoutCountry.contains(epgWithoutCountry) && epgWithoutCountry.length >= 4) {
+        _channelIdCache[cacheKey] = entry.value;
+        return entry.value;
+      }
+    }
+    // Try matching by channel NAME if provided
+    if (channelName != null && channelName.isNotEmpty) {
+      final normalizedName = channelName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+      if (normalizedKeys.containsKey(normalizedName)) {
+        _channelIdCache[cacheKey] = normalizedKeys[normalizedName];
+        return normalizedKeys[normalizedName];
+      }
+      final cleanedName = normalizedName.replaceAll(RegExp(r'(hd|fhd|uhd|4k|sd|1080p|720p)$'), '');
+      for (final entry in normalizedKeys.entries) {
+        final epgNormalized = entry.key;
+        final epgWithoutCountry = epgNormalized.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
+        if (cleanedName.contains(epgWithoutCountry) && epgWithoutCountry.length >= 3) {
+          _channelIdCache[cacheKey] = entry.value;
+          return entry.value;
+        }
+        if (epgWithoutCountry.contains(cleanedName) && cleanedName.length >= 3) {
+          _channelIdCache[cacheKey] = entry.value;
+          return entry.value;
+        }
+      }
+    }
+    // Try partial match
+    for (final key in allEpgKeys) {
+      if (key.toLowerCase().contains(lowerChannelId) || lowerChannelId.contains(key.toLowerCase())) {
+        _channelIdCache[cacheKey] = key;
+        return key;
+      }
+    }
     // No match found - cache the miss
-    debugPrint('EPG Miss: "$channelId"');
     _channelIdCache[cacheKey] = null;
+    debugPrint('EPG Miss: "$channelId"');
     return null;
   }
 
@@ -1038,6 +1034,11 @@ class EpgService with ChangeNotifier {
       final rawEpgData = parsed['epgData'] as Map<String, dynamic>;
       debugPrint('EPG: Parsed ${rawEpgData.length} channel IDs from cache');
       
+      // Only keep programs from today and tomorrow to reduce memory usage
+      final now = DateTime.now();
+      final startOfToday = DateTime(now.year, now.month, now.day);
+      final endOfTomorrow = startOfToday.add(const Duration(days: 2));
+      
       for (final channelId in rawEpgData.keys) {
         final programs = (rawEpgData[channelId] as List<dynamic>)
             .map((p) {
@@ -1055,10 +1056,13 @@ class EpgService with ChangeNotifier {
                 canRecord: map['canRecord'] ?? true,
               );
             })
+            .where((p) => p.endTime.isAfter(startOfToday) && p.startTime.isBefore(endOfTomorrow))
             .toList();
         
         programs.sort((a, b) => a.startTime.compareTo(b.startTime));
-        _epgData[channelId] = programs;
+        if (programs.isNotEmpty) {
+          _epgData[channelId] = programs;
+        }
       }
       
       if (cacheTime != null) {

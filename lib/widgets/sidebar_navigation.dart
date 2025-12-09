@@ -81,7 +81,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
       if (!_isNavigating) {
         _focusedTabIndex = newIndex;
       }
-      _isExpanded = false;
+      setState(() => _isExpanded = false);
       WidgetsBinding.instance.addPostFrameCallback((_) => _focusActiveTab());
     }
     if (oldWidget.onNavFocusRegistration != widget.onNavFocusRegistration &&
@@ -130,13 +130,6 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
       return true;
     }
     return false;
-  }
-
-  void _handleContentFocusFromNav(FocusNode origin) {
-    final moved = widget.onFocusContent?.call() ?? false;
-    if (!moved && origin.canRequestFocus) {
-      origin.requestFocus();
-    }
   }
 
   void _navigateToTab(int targetIndex) {
@@ -202,9 +195,11 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
           return KeyEventResult.handled;
         }
         if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-          if (_isExpanded) setState(() => _isExpanded = false);
-          _handleContentFocusFromNav(node);
-          return KeyEventResult.handled;
+          if (_isExpanded) {
+            setState(() => _isExpanded = false);
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
         }
         if (event.logicalKey == LogicalKeyboardKey.arrowLeft && _isExpanded) {
           setState(() => _isExpanded = false);
@@ -315,9 +310,11 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                           return KeyEventResult.handled;
                         }
                         if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-                          if (_isExpanded) setState(() => _isExpanded = false);
-                          _handleContentFocusFromNav(node);
-                          return KeyEventResult.handled;
+                          if (_isExpanded) {
+                            setState(() => _isExpanded = false);
+                            return KeyEventResult.handled;
+                          }
+                          return KeyEventResult.ignored;
                         }
                         if (event.logicalKey == LogicalKeyboardKey.arrowLeft && _isExpanded) {
                           setState(() => _isExpanded = false);
@@ -379,9 +376,8 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                     );
                   }).toList(),
                   const Spacer(),
-                  const Spacer(),
                   Container(
-                    padding: const EdgeInsets.only(bottom: 12, top: 6),
+                    padding: const EdgeInsets.only(bottom: 12),
                     child: _buildBottomButton(Icons.settings, 'Settings', '/settings'),
                   ),
                 ],
@@ -399,9 +395,11 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
       onKeyEvent: (node, event) {
         if (event is! KeyDownEvent) return KeyEventResult.ignored;
         if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-          if (_isExpanded) setState(() => _isExpanded = false);
-          _handleContentFocusFromNav(node);
-          return KeyEventResult.handled;
+          if (_isExpanded) {
+            setState(() => _isExpanded = false);
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
         }
         if (event.logicalKey == LogicalKeyboardKey.arrowLeft && _isExpanded) {
           setState(() => _isExpanded = false);

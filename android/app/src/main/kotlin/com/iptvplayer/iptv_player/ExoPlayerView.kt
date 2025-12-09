@@ -29,12 +29,42 @@ class ExoPlayerView(
         // Configure PlayerView first
         playerView.useController = false // We use Flutter overlay controls
         playerView.setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+        playerView.setKeepScreenOn(true)
+        playerView.setShutterBackgroundColor(android.graphics.Color.BLACK)
+        playerView.resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
         
-        // Create ExoPlayer instance
+        // Create ExoPlayer instance with custom data source factory for redirects
+        val dataSourceFactory = androidx.media3.datasource.DefaultHttpDataSource.Factory()
+            .setAllowCrossProtocolRedirects(true)
+        
         exoPlayer = ExoPlayer.Builder(context)
+            .setMediaSourceFactory(
+                androidx.media3.exoplayer.source.DefaultMediaSourceFactory(context)
+                    .setDataSourceFactory(dataSourceFactory)
+            )
+            .setTrackSelector(
+                androidx.media3.exoplayer.trackselection.DefaultTrackSelector(context).apply {
+                    parameters = buildUponParameters()
+                        .setMaxAudioChannelCount(2)
+                        .build()
+                }
+            )
             .build()
             .apply {
                 playWhenReady = creationParams?.get("autoPlay") as? Boolean ?: true
+                addListener(object : Player.Listener {
+                    override fun onPlaybackStateChanged(state: Int) {
+                        when (state) {
+                            Player.STATE_READY -> android.util.Log.d("ExoPlayer", "Ready to play")
+                            Player.STATE_BUFFERING -> android.util.Log.d("ExoPlayer", "Buffering...")
+                            Player.STATE_ENDED -> android.util.Log.d("ExoPlayer", "Playback ended")
+                            Player.STATE_IDLE -> android.util.Log.d("ExoPlayer", "Idle")
+                        }
+                    }
+                    override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                        android.util.Log.e("ExoPlayer", "Playback error: ${error.message}")
+                    }
+                })
             }
 
         // Attach player to view
@@ -47,7 +77,10 @@ class ExoPlayerView(
         // Load video URL if provided
         val videoUrl = creationParams?.get("videoUrl") as? String
         if (videoUrl != null) {
+            android.util.Log.d("ExoPlayer", "Loading video: $videoUrl")
             loadVideo(videoUrl)
+        } else {
+            android.util.Log.w("ExoPlayer", "No video URL provided")
         }
     }
 

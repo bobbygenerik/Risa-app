@@ -588,6 +588,18 @@ class _MiniPlayerScreenState extends State<MiniPlayerScreen> {
       return;
     }
 
+    // Validate channel URL before launching player
+    if (_currentChannel!.url.isEmpty) {
+      final localContext = context;
+      if (localContext.mounted) {
+        showAppSnackBar(
+          localContext,
+          const SnackBar(content: Text('Channel URL is empty')),
+        );
+      }
+      return;
+    }
+
     try {
       Navigator.of(context).push(
         MaterialPageRoute(

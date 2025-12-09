@@ -197,7 +197,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
     try {
       // Build Xtream API URL for getting live streams
       // Format: http://server:port/get.php?username=xxx&password=xxx&type=m3u_plus&output=ts
-        final url =
+      final url =
           '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
 
       await channelProvider.loadPlaylistFromUrl(url);
@@ -212,11 +212,11 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
       await prefs.setString('xtream_username', username);
       await prefs.setString('xtream_password', password);
       await prefs.setString('playlist_type', 'xtream');
-      
+
       // Build and save EPG URL for Xtream codes
       final epgUrl = '$server/xmltv.php?username=$username&password=$password';
       await prefs.setString('epg_url', epgUrl);
-      
+
       // Auto-load EPG data
       if (mounted) {
         try {
@@ -230,8 +230,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
       if (mounted) {
         if (channelCount == 0 && movieCount == 0 && seriesCount == 0) {
           // No content found - show detailed error with option to view content
-          final hasContent =
-              channelProvider.lastM3UContent != null &&
+          final hasContent = channelProvider.lastM3UContent != null &&
               channelProvider.lastM3UContent!.isNotEmpty;
 
           showAppSnackBar(
@@ -307,7 +306,8 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
             children: [
               Icon(Icons.error_outline, color: AppTheme.accentRed, size: 28),
               const SizedBox(width: 12),
-              const Text('Error', style: TextStyle(color: AppTheme.textPrimary)),
+              const Text('Error',
+                  style: TextStyle(color: AppTheme.textPrimary)),
             ],
           ),
           content: SingleChildScrollView(
@@ -323,7 +323,8 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK', style: TextStyle(color: AppTheme.primaryBlue)),
+              child: const Text('OK',
+                  style: TextStyle(color: AppTheme.primaryBlue)),
             ),
           ],
         ),
@@ -336,9 +337,8 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
     final lines = content.split('\n');
     final firstLine = lines.isNotEmpty ? lines[0].trim() : '';
     final hasM3UHeader = firstLine.toUpperCase().contains('#EXTM3U');
-    final extinfCount = lines
-        .where((l) => l.trim().startsWith('#EXTINF:'))
-        .length;
+    final extinfCount =
+        lines.where((l) => l.trim().startsWith('#EXTINF:')).length;
     final urlCount = lines
         .where(
           (l) =>
@@ -453,15 +453,14 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF050710),
-                  Color(0xFF0d1140),
-                ],
-              )
-        ),
+            gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF050710),
+            Color(0xFF0d1140),
+          ],
+        )),
         child: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -473,19 +472,25 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                   Center(
                     child: SingleChildScrollView(
                       padding: EdgeInsets.symmetric(
-                        horizontal: isTV ? context.tvSpacing(32) : context.tvSpacing(40),
+                        horizontal: isTV
+                            ? context.tvSpacing(32)
+                            : context.tvSpacing(40),
                         vertical: context.tvSpacing(32),
                       ),
                       child: Container(
                         constraints: BoxConstraints(
-                          maxWidth: isTV ? context.tvSpacing(580) : context.tvSpacing(500),
+                          maxWidth: isTV
+                              ? context.tvSpacing(580)
+                              : context.tvSpacing(500),
                         ),
                         decoration: BoxDecoration(
                           color: AppTheme.cardBackground,
-                          borderRadius: BorderRadius.circular(context.tvSpacing(32)),
+                          borderRadius:
+                              BorderRadius.circular(context.tvSpacing(32)),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withAlpha((0.25 * 255).round()),
+                              color:
+                                  Colors.black.withAlpha((0.25 * 255).round()),
                               blurRadius: context.tvSpacing(16),
                               offset: Offset(0, context.tvSpacing(8)),
                             ),
@@ -500,12 +505,16 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                               SizedBox(height: context.tvSpacing(4)),
                               Image.asset(
                                 'assets/images/croppedlogo2.png',
-                                height: isTV ? context.tvSpacing(48) : context.tvSpacing(56),
+                                height: isTV
+                                    ? context.tvSpacing(48)
+                                    : context.tvSpacing(56),
                                 fit: BoxFit.contain,
                                 errorBuilder: (context, error, stackTrace) {
                                   return Icon(
                                     Icons.live_tv,
-                                    size: isTV ? context.tvIconSize(40) : context.tvIconSize(44),
+                                    size: isTV
+                                        ? context.tvIconSize(40)
+                                        : context.tvIconSize(44),
                                     color: AppTheme.primaryBlue,
                                   );
                                 },
@@ -513,7 +522,9 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                               SizedBox(height: context.tvSpacing(4)),
                               Text(
                                 'Load your playlist to get started',
-                                style: Theme.of(context).textTheme.bodyMedium
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
                                     ?.copyWith(color: AppTheme.textSecondary),
                                 textAlign: TextAlign.center,
                               ),
@@ -523,13 +534,15 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                               Container(
                                 decoration: BoxDecoration(
                                   color: AppTheme.highlight,
-                                  borderRadius: BorderRadius.circular(context.tvSpacing(24)),
+                                  borderRadius: BorderRadius.circular(
+                                      context.tvSpacing(24)),
                                 ),
                                 child: TabBar(
                                   controller: _tabController,
                                   indicator: BoxDecoration(
                                     color: AppTheme.primaryBlue,
-                                    borderRadius: BorderRadius.circular(context.tvSpacing(24)),
+                                    borderRadius: BorderRadius.circular(
+                                        context.tvSpacing(24)),
                                   ),
                                   labelColor: AppTheme.textPrimary,
                                   unselectedLabelColor: AppTheme.textSecondary,
@@ -635,10 +648,11 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                   border: isFocused
                       ? Border.all(color: AppTheme.primaryBlue, width: 3)
                       : null,
-                      boxShadow: isFocused
+                  boxShadow: isFocused
                       ? [
                           BoxShadow(
-                            color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
+                            color: AppTheme.primaryBlue
+                                .withAlpha((0.4 * 255).round()),
                             blurRadius: 12,
                             spreadRadius: 2,
                           ),
@@ -671,7 +685,8 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
           decoration: BoxDecoration(
             color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
             borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-            border: Border.all(color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round())),
+            border: Border.all(
+                color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round())),
           ),
           child: const Row(
             children: [
@@ -737,15 +752,16 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                   border: isFocused
                       ? Border.all(color: AppTheme.primaryBlue, width: 3)
                       : null,
-                            boxShadow: isFocused
-                            ? [
-                                BoxShadow(
-                                  color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
-                                  blurRadius: 12,
-                                  spreadRadius: 2,
-                                ),
-                              ]
-                            : null,
+                  boxShadow: isFocused
+                      ? [
+                          BoxShadow(
+                            color: AppTheme.primaryBlue
+                                .withAlpha((0.4 * 255).round()),
+                            blurRadius: 12,
+                            spreadRadius: 2,
+                          ),
+                        ]
+                      : null,
                 ),
                 child: TextField(
                   controller: _xtreamServerController,
@@ -786,18 +802,18 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                 onKeyEvent: (node, event) {
                   if (event is! KeyDownEvent) return KeyEventResult.ignored;
                   final key = event.logicalKey;
-                  
+
                   // When editing, only allow regular text input
                   if (_xtreamUsernameEditable) {
                     return KeyEventResult.ignored;
                   }
-                  
+
                   // Right arrow: go to password field
                   if (key == LogicalKeyboardKey.arrowRight) {
                     _xtreamPasswordFocusNode.requestFocus();
                     return KeyEventResult.handled;
                   }
-                  
+
                   // Enter/Select: start editing
                   if (key == LogicalKeyboardKey.select ||
                       key == LogicalKeyboardKey.enter) {
@@ -819,10 +835,11 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                         border: isFocused
                             ? Border.all(color: AppTheme.primaryBlue, width: 3)
                             : null,
-                            boxShadow: isFocused
+                        boxShadow: isFocused
                             ? [
                                 BoxShadow(
-                                  color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
+                                  color: AppTheme.primaryBlue
+                                      .withAlpha((0.4 * 255).round()),
                                   blurRadius: 12,
                                   spreadRadius: 2,
                                 ),
@@ -865,18 +882,18 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                 onKeyEvent: (node, event) {
                   if (event is! KeyDownEvent) return KeyEventResult.ignored;
                   final key = event.logicalKey;
-                  
+
                   // When editing, only allow regular text input
                   if (_xtreamPasswordEditable) {
                     return KeyEventResult.ignored;
                   }
-                  
+
                   // Left arrow: go back to username field
                   if (key == LogicalKeyboardKey.arrowLeft) {
                     _xtreamUsernameFocusNode.requestFocus();
                     return KeyEventResult.handled;
                   }
-                  
+
                   // Enter/Select: start editing
                   if (key == LogicalKeyboardKey.select ||
                       key == LogicalKeyboardKey.enter) {
@@ -901,7 +918,8 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                         boxShadow: isFocused
                             ? [
                                 BoxShadow(
-                                  color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
+                                  color: AppTheme.primaryBlue
+                                      .withAlpha((0.4 * 255).round()),
                                   blurRadius: 12,
                                   spreadRadius: 2,
                                 ),

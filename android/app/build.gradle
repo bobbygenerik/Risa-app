@@ -42,10 +42,10 @@ android {
         versionName "1.7.0"
         
         // Reduce APK size by only including necessary architectures
-        ndk {
-            // Include x86 for emulator compatibility while keeping release ABIs slim
-            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
-        }
+        // ndk {
+        //     // Include x86 for emulator compatibility while keeping release ABIs slim
+        //     abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+        // }
     }
 
     packagingOptions {

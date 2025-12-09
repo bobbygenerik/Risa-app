@@ -27,7 +27,8 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProviderStateMixin {
+class _SettingsScreenState extends State<SettingsScreen>
+    with SingleTickerProviderStateMixin {
   late Size _screenSize;
   TabController? _tabController;
 
@@ -68,32 +69,54 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
   final FocusNode _realDebridApiKeyFocusNode = FocusNode();
   final FocusNode _openSubtitlesUsernameFocusNode = FocusNode();
   final FocusNode _openSubtitlesPasswordFocusNode = FocusNode();
-  final FocusNode _loadM3uButtonFocusNode = FocusNode(debugLabel: 'LoadM3UButton');
-  final FocusNode _loadXtreamButtonFocusNode = FocusNode(debugLabel: 'LoadXtreamButton');
-  final FocusNode _clearPlaylistCacheButtonFocusNode = FocusNode(debugLabel: 'ClearPlaylistCacheButton');
-  final FocusNode _savedPlaylistFocusNode = FocusNode(debugLabel: 'SavedPlaylistButton');
-  final FocusNode _updateEpgButtonFocusNode = FocusNode(debugLabel: 'UpdateEPGButton');
-  final FocusNode _clearEpgButtonFocusNode = FocusNode(debugLabel: 'ClearEPGButton');
+  final FocusNode _loadM3uButtonFocusNode =
+      FocusNode(debugLabel: 'LoadM3UButton');
+  final FocusNode _loadXtreamButtonFocusNode =
+      FocusNode(debugLabel: 'LoadXtreamButton');
+  final FocusNode _clearPlaylistCacheButtonFocusNode =
+      FocusNode(debugLabel: 'ClearPlaylistCacheButton');
+  final FocusNode _savedPlaylistFocusNode =
+      FocusNode(debugLabel: 'SavedPlaylistButton');
+  final FocusNode _updateEpgButtonFocusNode =
+      FocusNode(debugLabel: 'UpdateEPGButton');
+  final FocusNode _clearEpgButtonFocusNode =
+      FocusNode(debugLabel: 'ClearEPGButton');
   final FocusNode _m3uTabFocusNode = FocusNode(debugLabel: 'M3UTabButton');
-  final FocusNode _xtreamTabFocusNode = FocusNode(debugLabel: 'XtreamTabButton');
-  final FocusNode _clearM3uButtonFocusNode = FocusNode(debugLabel: 'ClearM3UButton');
-  final FocusNode _clearXtreamButtonFocusNode = FocusNode(debugLabel: 'ClearXtreamButton');
-  final FocusNode _customEpgUrlFocusNode = FocusNode(debugLabel: 'CustomEpgUrlField');
-  final FocusNode _secondaryEpgUrlFocusNode = FocusNode(debugLabel: 'SecondaryEpgUrlField');
-  final FocusNode _viewUnmatchedChannelsFocusNode = FocusNode(debugLabel: 'ViewUnmatchedChannels');
+  final FocusNode _xtreamTabFocusNode =
+      FocusNode(debugLabel: 'XtreamTabButton');
+  final FocusNode _clearM3uButtonFocusNode =
+      FocusNode(debugLabel: 'ClearM3UButton');
+  final FocusNode _clearXtreamButtonFocusNode =
+      FocusNode(debugLabel: 'ClearXtreamButton');
+  final FocusNode _customEpgUrlFocusNode =
+      FocusNode(debugLabel: 'CustomEpgUrlField');
+  final FocusNode _secondaryEpgUrlFocusNode =
+      FocusNode(debugLabel: 'SecondaryEpgUrlField');
+  final FocusNode _viewUnmatchedChannelsFocusNode =
+      FocusNode(debugLabel: 'ViewUnmatchedChannels');
   // EPG interval stepper buttons
-  final FocusNode _epgIntervalMinusFocusNode = FocusNode(debugLabel: 'EpgIntervalMinus');
-  final FocusNode _epgIntervalPlusFocusNode = FocusNode(debugLabel: 'EpgIntervalPlus');
-  final FocusNode _epgPastDaysMinusFocusNode = FocusNode(debugLabel: 'EpgPastDaysMinus');
-  final FocusNode _epgPastDaysPlusFocusNode = FocusNode(debugLabel: 'EpgPastDaysPlus');
+  final FocusNode _epgIntervalMinusFocusNode =
+      FocusNode(debugLabel: 'EpgIntervalMinus');
+  final FocusNode _epgIntervalPlusFocusNode =
+      FocusNode(debugLabel: 'EpgIntervalPlus');
+  final FocusNode _epgPastDaysMinusFocusNode =
+      FocusNode(debugLabel: 'EpgPastDaysMinus');
+  final FocusNode _epgPastDaysPlusFocusNode =
+      FocusNode(debugLabel: 'EpgPastDaysPlus');
   // EPG section switches
-  final FocusNode _storeDescriptionsSwitchFocusNode = FocusNode(debugLabel: 'StoreDescriptionsSwitch');
-  final FocusNode _showLogosSwitchFocusNode = FocusNode(debugLabel: 'ShowLogosSwitch');
-  final FocusNode _showImagesSwitchFocusNode = FocusNode(debugLabel: 'ShowImagesSwitch');
-  final FocusNode _editProfileButtonFocusNode = FocusNode(debugLabel: 'EditProfileButton');
-  final FocusNode _browseStorageButtonFocusNode = FocusNode(debugLabel: 'BrowseStorageButton');
+  final FocusNode _storeDescriptionsSwitchFocusNode =
+      FocusNode(debugLabel: 'StoreDescriptionsSwitch');
+  final FocusNode _showLogosSwitchFocusNode =
+      FocusNode(debugLabel: 'ShowLogosSwitch');
+  final FocusNode _showImagesSwitchFocusNode =
+      FocusNode(debugLabel: 'ShowImagesSwitch');
+  final FocusNode _editProfileButtonFocusNode =
+      FocusNode(debugLabel: 'EditProfileButton');
+  final FocusNode _browseStorageButtonFocusNode =
+      FocusNode(debugLabel: 'BrowseStorageButton');
   // First focusable elements for Playback and AI tabs
-  final FocusNode _playbackFirstFocusNode = FocusNode(debugLabel: 'PlaybackFirstSwitch');
+  final FocusNode _playbackFirstFocusNode =
+      FocusNode(debugLabel: 'PlaybackFirstSwitch');
   final FocusNode _aiFirstFocusNode = FocusNode(debugLabel: 'AIFirstSwitch');
   final Map<FocusNode, VoidCallback> _focusNodeListeners = {};
 
@@ -174,7 +197,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     });
     // Load settings - no setState during init
     _loadSettingsSync();
-    
+
     // Auto-focus the first sidebar tab (General) when settings screen opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _menuFocusNodes.isNotEmpty) {
@@ -194,7 +217,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     _xtreamUsernameController.text = prefs.getString('xtream_username') ?? '';
     _xtreamPasswordController.text = prefs.getString('xtream_password') ?? '';
     _customEpgUrlController.text = prefs.getString('custom_epg_url') ?? '';
-    _secondaryEpgUrlController.text = prefs.getString('secondary_epg_url') ?? '';
+    _secondaryEpgUrlController.text =
+        prefs.getString('secondary_epg_url') ?? '';
     _realDebridApiKeyController.text =
         prefs.getString('realdebrid_api_key') ?? '';
     _openSubtitlesUsernameController.text =
@@ -348,7 +372,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
 
   @override
   Widget build(BuildContext context) {
-      _screenSize = MediaQuery.of(context).size;
+    _screenSize = MediaQuery.of(context).size;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: PopScope(
@@ -511,20 +535,27 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
                         return Container(
-                          margin: EdgeInsets.symmetric(horizontal: context.tvSpacing(8), vertical: context.tvSpacing(4)),
+                          margin: EdgeInsets.symmetric(
+                              horizontal: context.tvSpacing(8),
+                              vertical: context.tvSpacing(4)),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? AppTheme.primaryBlue.withAlpha((0.3 * 255).round())
+                                ? AppTheme.primaryBlue
+                                    .withAlpha((0.3 * 255).round())
                                 : Colors.transparent,
                             border: Border.all(
                               color: isFocused
                                   ? AppTheme.primaryBlue
                                   : (isSelected
-                                      ? AppTheme.primaryBlue.withAlpha((0.5 * 255).round())
+                                      ? AppTheme.primaryBlue
+                                          .withAlpha((0.5 * 255).round())
                                       : Colors.transparent),
-                              width: isFocused ? context.tvSpacing(2.0) : context.tvSpacing(1.5),
+                              width: isFocused
+                                  ? context.tvSpacing(2.0)
+                                  : context.tvSpacing(1.5),
                             ),
-                            borderRadius: BorderRadius.circular(context.tvSpacing(12)),
+                            borderRadius:
+                                BorderRadius.circular(context.tvSpacing(12)),
                           ),
                           child: Padding(
                             padding: EdgeInsets.symmetric(
@@ -546,12 +577,12 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                                     item['title'] as String,
                                     style: TextStyle(
                                       color: (isFocused || isSelected)
-                                        ? AppTheme.textPrimary
-                                        : AppTheme.textSecondary,
+                                          ? AppTheme.textPrimary
+                                          : AppTheme.textSecondary,
                                       fontSize: context.tvTextSize(16),
                                       fontWeight: (isFocused || isSelected)
-                                        ? FontWeight.w600
-                                        : FontWeight.w500,
+                                          ? FontWeight.w600
+                                          : FontWeight.w500,
                                     ),
                                   ),
                                 ),
@@ -578,19 +609,22 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
       _menuFocusNodes[idx].requestFocus();
     }
   }
-  
+
   Future<void> _handleUpdateEpg() async {
     // Get EPG URL from preferences
     final prefs = await SharedPreferences.getInstance();
-    final epgUrl = prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
+    final epgUrl =
+        prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
     final secondaryEpgUrl = prefs.getString('secondary_epg_url');
-    
-    if ((epgUrl == null || epgUrl.isEmpty) && (secondaryEpgUrl == null || secondaryEpgUrl.isEmpty)) {
+
+    if ((epgUrl == null || epgUrl.isEmpty) &&
+        (secondaryEpgUrl == null || secondaryEpgUrl.isEmpty)) {
       if (mounted) {
         showAppSnackBar(
           context,
           const SnackBar(
-            content: Text('No EPG URL configured. Set a custom EPG URL or load a playlist with EPG.'),
+            content: Text(
+                'No EPG URL configured. Set a custom EPG URL or load a playlist with EPG.'),
             backgroundColor: Colors.orange,
             duration: Duration(seconds: 4),
           ),
@@ -598,7 +632,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
       }
       return;
     }
-    
+
     if (mounted) {
       showAppSnackBar(
         context,
@@ -607,20 +641,21 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
         ),
       );
     }
-    
+
     try {
       final epgService = Provider.of<EpgService>(context, listen: false);
-      
+
       // Load primary EPG
       if (epgUrl != null && epgUrl.isNotEmpty) {
         await epgService.loadEpgFromUrl(epgUrl, forceRefresh: true);
       }
-      
+
       // Load secondary EPG if configured
       if (secondaryEpgUrl != null && secondaryEpgUrl.isNotEmpty) {
-        await epgService.loadSecondaryEpgFromUrl(secondaryEpgUrl, forceRefresh: true);
+        await epgService.loadSecondaryEpgFromUrl(secondaryEpgUrl,
+            forceRefresh: true);
       }
-      
+
       if (mounted) {
         if (epgService.hasData) {
           final primaryCount = epgService.epgData.length;
@@ -659,12 +694,13 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
       }
     }
   }
-  
+
   void _showUnmatchedChannelsDialog() {
     final epgService = Provider.of<EpgService>(context, listen: false);
-    final channelProvider = Provider.of<ChannelProvider>(context, listen: false);
+    final channelProvider =
+        Provider.of<ChannelProvider>(context, listen: false);
     final channels = channelProvider.channels;
-    
+
     if (channels.isEmpty) {
       showAppSnackBar(
         context,
@@ -675,11 +711,11 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
       );
       return;
     }
-    
+
     final stats = epgService.getMatchingStats(channels);
     final analysis = epgService.analyzeChannelMatches(channels);
     final unmatched = analysis['unmatched'] ?? [];
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -731,19 +767,23 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                     const SizedBox(height: 8),
                     Text(
                       'EPG Sources: ${stats['primaryChannels']} primary + ${stats['secondaryChannels']} secondary channels',
-                      style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                      style: const TextStyle(
+                          fontSize: 12, color: AppTheme.textSecondary),
                     ),
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 16),
               Text(
                 'Channels Without EPG (${unmatched.length}):',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleSmall
+                    ?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              
+
               // Unmatched channels list
               Expanded(
                 child: unmatched.isEmpty
@@ -751,9 +791,11 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.celebration, size: 48, color: Colors.green),
+                            Icon(Icons.celebration,
+                                size: 48, color: Colors.green),
                             SizedBox(height: 8),
-                            Text('All channels have EPG data!', style: TextStyle(color: Colors.green)),
+                            Text('All channels have EPG data!',
+                                style: TextStyle(color: Colors.green)),
                           ],
                         ),
                       )
@@ -763,22 +805,28 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                           final channel = unmatched[index];
                           return ListTile(
                             dense: true,
-                            leading: const Icon(Icons.tv_off, size: 20, color: Colors.orange),
-                            title: Text(channel['name'] ?? 'Unknown', style: const TextStyle(fontSize: 13)),
+                            leading: const Icon(Icons.tv_off,
+                                size: 20, color: Colors.orange),
+                            title: Text(channel['name'] ?? 'Unknown',
+                                style: const TextStyle(fontSize: 13)),
                             subtitle: Text(
                               'ID: ${channel['tvgId']} • ${channel['group']}',
-                              style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                              style: const TextStyle(
+                                  fontSize: 11, color: AppTheme.textSecondary),
                             ),
                           );
                         },
                       ),
               ),
-              
+
               if (unmatched.isNotEmpty) ...[
                 const Divider(),
                 const Text(
                   'Tip: Try adding a secondary EPG source that includes these channels.',
-                  style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: AppTheme.textSecondary),
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontStyle: FontStyle.italic,
+                      color: AppTheme.textSecondary),
                 ),
               ],
             ],
@@ -793,8 +841,9 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
       ),
     );
   }
-  
-  Widget _buildStatCard(String label, String value, Color color, IconData icon) {
+
+  Widget _buildStatCard(
+      String label, String value, Color color, IconData icon) {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
@@ -809,15 +858,19 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
-              Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+              Text(value,
+                  style: TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+              Text(label,
+                  style: const TextStyle(
+                      fontSize: 11, color: AppTheme.textSecondary)),
             ],
           ),
         ],
       ),
     );
   }
-  
+
   Future<void> _handleClearEpg() async {
     // Show confirmation dialog
     final confirm = await showDialog<bool>(
@@ -902,8 +955,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                       CircleAvatar(
                         radius: 50,
                         backgroundColor: AppTheme.dialogBackground,
-                        backgroundImage:
-                            profileImagePath != null &&
+                        backgroundImage: profileImagePath != null &&
                                 profileImagePath.isNotEmpty
                             ? ResizeImage(
                                 FileImage(File(profileImagePath)),
@@ -913,12 +965,12 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                             : null,
                         child:
                             profileImagePath == null || profileImagePath.isEmpty
-                            ? const Icon(
-                                Icons.person,
-                                size: 50,
-                                color: AppTheme.primaryBlue,
-                              )
-                            : null,
+                                ? const Icon(
+                                    Icons.person,
+                                    size: 50,
+                                    color: AppTheme.primaryBlue,
+                                  )
+                                : null,
                       ),
                       const SizedBox(height: AppSizes.md),
                       Text(
@@ -928,15 +980,17 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                       Text(
                         userEmail,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
+                              color: AppTheme.textSecondary,
+                            ),
                       ),
                       const SizedBox(height: AppSizes.md),
                       Focus(
                         focusNode: _editProfileButtonFocusNode,
                         onKeyEvent: (node, event) {
-                          if (event is! KeyDownEvent) return KeyEventResult.ignored;
-                          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                          if (event is! KeyDownEvent)
+                            return KeyEventResult.ignored;
+                          if (event.logicalKey ==
+                              LogicalKeyboardKey.arrowLeft) {
                             requestFirstSidebarFocus();
                             return KeyEventResult.handled;
                           }
@@ -954,11 +1008,14 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                                 curve: TVFocusStyle.animationCurve,
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(8),
-                                  boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                                  boxShadow: isFocused
+                                      ? TVFocusStyle.focusedShadow
+                                      : null,
                                 ),
                                 child: ElevatedButton(
                                   onPressed: () async {
-                                    final result = await context.push('/edit-profile');
+                                    final result =
+                                        await context.push('/edit-profile');
                                     if (!mounted) return;
                                     if (result == true) {
                                       setState(() {});
@@ -998,7 +1055,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
         _buildSectionCard(
           title: 'Video Settings',
           children: [
-            _buildSwitchTile('Hardware Acceleration', _hardwareAcceleration, focusNode: _playbackFirstFocusNode),
+            _buildSwitchTile('Hardware Acceleration', _hardwareAcceleration,
+                focusNode: _playbackFirstFocusNode),
             _buildSwitchTile('Hardware Decoding', _hardwareDecoding),
             _buildSwitchTile(
               'Hardware Post-Processing',
@@ -1052,10 +1110,10 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               _audioChannels == 0
                   ? 'Auto'
                   : _audioChannels == 2
-                  ? 'Stereo'
-                  : _audioChannels == 6
-                  ? '5.1 Surround'
-                  : '7.1 Surround',
+                      ? 'Stereo'
+                      : _audioChannels == 6
+                          ? '5.1 Surround'
+                          : '7.1 Surround',
               ['Auto', 'Stereo', '5.1 Surround', '7.1 Surround'],
               (value) async {
                 if (value != null) {
@@ -1143,7 +1201,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                 if (event is! KeyDownEvent) return KeyEventResult.ignored;
                 if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
                   if (_videoBufferSize > 0) {
-                    setState(() => _videoBufferSize = (_videoBufferSize - 5).clamp(0, 100));
+                    setState(() => _videoBufferSize =
+                        (_videoBufferSize - 5).clamp(0, 100));
                     return KeyEventResult.handled;
                   }
                   requestFirstSidebarFocus();
@@ -1151,7 +1210,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                 }
                 if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
                   if (_videoBufferSize < 100) {
-                    setState(() => _videoBufferSize = (_videoBufferSize + 5).clamp(0, 100));
+                    setState(() => _videoBufferSize =
+                        (_videoBufferSize + 5).clamp(0, 100));
                     return KeyEventResult.handled;
                   }
                 }
@@ -1163,7 +1223,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                   return Container(
                     decoration: isFocused
                         ? BoxDecoration(
-                            border: Border.all(color: AppTheme.primaryBlue, width: 2),
+                            border: Border.all(
+                                color: AppTheme.primaryBlue, width: 2),
                             borderRadius: BorderRadius.circular(8),
                           )
                         : null,
@@ -1258,9 +1319,9 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
             Text(
               'EPG Sources',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppTheme.primaryBlue,
-              ),
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryBlue,
+                  ),
             ),
             const SizedBox(height: AppSizes.md),
 
@@ -1349,7 +1410,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               controller: _customEpgUrlController,
               focusNode: _customEpgUrlFocusNode,
               isEditable: _customEpgUrlEditable,
-              onEditableChanged: (val) => setState(() => _customEpgUrlEditable = val),
+              onEditableChanged: (val) =>
+                  setState(() => _customEpgUrlEditable = val),
               hintText: 'http://example.com/epg.xml.gz',
               prefixIcon: Icons.link,
               enableDirectionalNavigation: true,
@@ -1368,7 +1430,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
             ),
 
             const SizedBox(height: AppSizes.md),
-            
+
             // Secondary EPG URL Input
             Text(
               'Secondary EPG URL (Supplementary)',
@@ -1381,7 +1443,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               controller: _secondaryEpgUrlController,
               focusNode: _secondaryEpgUrlFocusNode,
               isEditable: _secondaryEpgUrlEditable,
-              onEditableChanged: (val) => setState(() => _secondaryEpgUrlEditable = val),
+              onEditableChanged: (val) =>
+                  setState(() => _secondaryEpgUrlEditable = val),
               hintText: 'http://example.com/secondary-epg.xml',
               prefixIcon: Icons.add_link,
               enableDirectionalNavigation: true,
@@ -1400,7 +1463,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
             ),
 
             const SizedBox(height: AppSizes.md),
-            
+
             // View Unmatched Channels Button
             Focus(
               focusNode: _viewUnmatchedChannelsFocusNode,
@@ -1428,7 +1491,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                       curve: TVFocusStyle.animationCurve,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(8),
-                        boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                        boxShadow:
+                            isFocused ? TVFocusStyle.focusedShadow : null,
                       ),
                       child: OutlinedButton.icon(
                         onPressed: _showUnmatchedChannelsDialog,
@@ -1437,7 +1501,9 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.orange,
                           side: BorderSide(
-                            color: isFocused ? AppTheme.primaryBlue : Colors.orange.withValues(alpha: 0.5),
+                            color: isFocused
+                                ? AppTheme.primaryBlue
+                                : Colors.orange.withValues(alpha: 0.5),
                             width: isFocused ? 2 : 1,
                           ),
                         ),
@@ -1456,9 +1522,9 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
             Text(
               'Update Settings',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppTheme.primaryBlue,
-              ),
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryBlue,
+                  ),
             ),
             const SizedBox(height: AppSizes.md),
 
@@ -1505,7 +1571,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                             curve: TVFocusStyle.animationCurve,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                              boxShadow:
+                                  isFocused ? TVFocusStyle.focusedShadow : null,
                             ),
                             child: IconButton(
                               icon: Icon(
@@ -1515,8 +1582,10 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                               onPressed: epgUpdateInterval > 1
                                   ? () async {
                                       final newValue = epgUpdateInterval - 1;
-                                      final prefs = await SharedPreferences.getInstance();
-                                      await prefs.setInt('epg_update_interval', newValue);
+                                      final prefs =
+                                          await SharedPreferences.getInstance();
+                                      await prefs.setInt(
+                                          'epg_update_interval', newValue);
                                       setState(() {});
                                     }
                                   : null,
@@ -1527,7 +1596,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: AppTheme.primaryBlue.withAlpha(
                         (0.1 * 255).round(),
@@ -1572,7 +1642,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                             curve: TVFocusStyle.animationCurve,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                              boxShadow:
+                                  isFocused ? TVFocusStyle.focusedShadow : null,
                             ),
                             child: IconButton(
                               icon: Icon(
@@ -1582,8 +1653,10 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                               onPressed: epgUpdateInterval < 48
                                   ? () async {
                                       final newValue = epgUpdateInterval + 1;
-                                      final prefs = await SharedPreferences.getInstance();
-                                      await prefs.setInt('epg_update_interval', newValue);
+                                      final prefs =
+                                          await SharedPreferences.getInstance();
+                                      await prefs.setInt(
+                                          'epg_update_interval', newValue);
                                       setState(() {});
                                     }
                                   : null,
@@ -1605,9 +1678,9 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
             Text(
               'Data Management',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppTheme.primaryBlue,
-              ),
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryBlue,
+                  ),
             ),
             const SizedBox(height: AppSizes.md),
 
@@ -1627,13 +1700,16 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
                           requestFirstSidebarFocus();
                           return KeyEventResult.handled;
-                        } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                        } else if (event.logicalKey ==
+                            LogicalKeyboardKey.arrowRight) {
                           _epgPastDaysPlusFocusNode.requestFocus();
                           return KeyEventResult.handled;
-                        } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                        } else if (event.logicalKey ==
+                            LogicalKeyboardKey.arrowUp) {
                           _epgIntervalMinusFocusNode.requestFocus();
                           return KeyEventResult.handled;
-                        } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                        } else if (event.logicalKey ==
+                            LogicalKeyboardKey.arrowDown) {
                           // Explicitly go to the next section
                           _storeDescriptionsSwitchFocusNode.requestFocus();
                           return KeyEventResult.handled;
@@ -1653,7 +1729,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                             curve: TVFocusStyle.animationCurve,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                              boxShadow:
+                                  isFocused ? TVFocusStyle.focusedShadow : null,
                             ),
                             child: IconButton(
                               icon: Icon(
@@ -1663,8 +1740,10 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                               onPressed: epgPastDays > 0
                                   ? () async {
                                       final newValue = epgPastDays - 1;
-                                      final prefs = await SharedPreferences.getInstance();
-                                      await prefs.setInt('epg_past_days', newValue);
+                                      final prefs =
+                                          await SharedPreferences.getInstance();
+                                      await prefs.setInt(
+                                          'epg_past_days', newValue);
                                       setState(() {});
                                     }
                                   : null,
@@ -1675,7 +1754,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: AppTheme.primaryBlue.withAlpha(
                         (0.1 * 255).round(),
@@ -1697,13 +1777,16 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
                           _epgPastDaysMinusFocusNode.requestFocus();
                           return KeyEventResult.handled;
-                        } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                        } else if (event.logicalKey ==
+                            LogicalKeyboardKey.arrowRight) {
                           requestFirstSidebarFocus();
                           return KeyEventResult.handled;
-                        } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                        } else if (event.logicalKey ==
+                            LogicalKeyboardKey.arrowUp) {
                           _epgIntervalPlusFocusNode.requestFocus();
                           return KeyEventResult.handled;
-                        } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                        } else if (event.logicalKey ==
+                            LogicalKeyboardKey.arrowDown) {
                           // Explicitly go to the next section
                           _storeDescriptionsSwitchFocusNode.requestFocus();
                           return KeyEventResult.handled;
@@ -1723,7 +1806,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                             curve: TVFocusStyle.animationCurve,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                              boxShadow:
+                                  isFocused ? TVFocusStyle.focusedShadow : null,
                             ),
                             child: IconButton(
                               icon: Icon(
@@ -1733,8 +1817,10 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                               onPressed: epgPastDays < 30
                                   ? () async {
                                       final newValue = epgPastDays + 1;
-                                      final prefs = await SharedPreferences.getInstance();
-                                      await prefs.setInt('epg_past_days', newValue);
+                                      final prefs =
+                                          await SharedPreferences.getInstance();
+                                      await prefs.setInt(
+                                          'epg_past_days', newValue);
                                       setState(() {});
                                     }
                                   : null,
@@ -1765,7 +1851,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                   _showLogosSwitchFocusNode.requestFocus();
                   return KeyEventResult.handled;
                 }
-                if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                if (event.logicalKey == LogicalKeyboardKey.select ||
+                    event.logicalKey == LogicalKeyboardKey.enter) {
                   // Toggle the switch
                   final newValue = !storeDescriptions;
                   (() async {
@@ -1789,7 +1876,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                       curve: TVFocusStyle.animationCurve,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(8),
-                        boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                        boxShadow:
+                            isFocused ? TVFocusStyle.focusedShadow : null,
                       ),
                       child: SwitchListTile(
                         contentPadding: EdgeInsets.zero,
@@ -1800,7 +1888,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         value: storeDescriptions,
                         onChanged: (value) async {
                           final prefs = await SharedPreferences.getInstance();
-                          await prefs.setBool('store_program_descriptions', value);
+                          await prefs.setBool(
+                              'store_program_descriptions', value);
                           setState(() {});
                         },
                       ),
@@ -1818,9 +1907,9 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
             Text(
               'Display Options',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppTheme.primaryBlue,
-              ),
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryBlue,
+                  ),
             ),
             const SizedBox(height: AppSizes.sm),
 
@@ -1840,7 +1929,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                   _showImagesSwitchFocusNode.requestFocus();
                   return KeyEventResult.handled;
                 }
-                if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                if (event.logicalKey == LogicalKeyboardKey.select ||
+                    event.logicalKey == LogicalKeyboardKey.enter) {
                   // Toggle the switch
                   final newValue = !showChannelLogos;
                   (() async {
@@ -1864,12 +1954,14 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                       curve: TVFocusStyle.animationCurve,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(8),
-                        boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                        boxShadow:
+                            isFocused ? TVFocusStyle.focusedShadow : null,
                       ),
                       child: SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         title: const Text('Show Channel Logos'),
-                        subtitle: const Text('Display channel logos in EPG grid'),
+                        subtitle:
+                            const Text('Display channel logos in EPG grid'),
                         value: showChannelLogos,
                         onChanged: (value) async {
                           final prefs = await SharedPreferences.getInstance();
@@ -1899,7 +1991,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                   _updateEpgButtonFocusNode.requestFocus();
                   return KeyEventResult.handled;
                 }
-                if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                if (event.logicalKey == LogicalKeyboardKey.select ||
+                    event.logicalKey == LogicalKeyboardKey.enter) {
                   // Toggle the switch
                   final newValue = !showProgramImages;
                   (() async {
@@ -1923,12 +2016,14 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                       curve: TVFocusStyle.animationCurve,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(8),
-                        boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                        boxShadow:
+                            isFocused ? TVFocusStyle.focusedShadow : null,
                       ),
                       child: SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         title: const Text('Show Program Images'),
-                        subtitle: const Text('Display program thumbnails and posters'),
+                        subtitle: const Text(
+                            'Display program thumbnails and posters'),
                         value: showProgramImages,
                         onChanged: (value) async {
                           final prefs = await SharedPreferences.getInstance();
@@ -1984,9 +2079,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                             curve: TVFocusStyle.animationCurve,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
-                              boxShadow: isFocused
-                                  ? TVFocusStyle.focusedShadow
-                                  : null,
+                              boxShadow:
+                                  isFocused ? TVFocusStyle.focusedShadow : null,
                             ),
                             child: ElevatedButton.icon(
                               onPressed: _handleUpdateEpg,
@@ -1994,7 +2088,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                               label: const Text('Update EPG'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppTheme.primaryBlue,
-                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
                               ),
                             ),
                           ),
@@ -2037,61 +2132,65 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                             curve: TVFocusStyle.animationCurve,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
-                              boxShadow: isFocused
-                                  ? TVFocusStyle.focusedShadow
-                                  : null,
+                              boxShadow:
+                                  isFocused ? TVFocusStyle.focusedShadow : null,
                             ),
                             child: ElevatedButton.icon(
-                    onPressed: () async {
-                      // Show confirmation dialog
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          backgroundColor: AppTheme.dialogBackground,
-                          title: const Text('Clear EPG Data'),
-                          content: const Text(
-                            'Are you sure you want to clear all EPG data? This cannot be undone.',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: const Text('Cancel'),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, true),
-                              child: const Text(
-                                'Clear',
-                                style: TextStyle(color: Colors.red),
+                              onPressed: () async {
+                                // Show confirmation dialog
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    backgroundColor: AppTheme.dialogBackground,
+                                    title: const Text('Clear EPG Data'),
+                                    content: const Text(
+                                      'Are you sure you want to clear all EPG data? This cannot be undone.',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, false),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, true),
+                                        child: const Text(
+                                          'Clear',
+                                          style: TextStyle(color: Colors.red),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                if (confirm == true) {
+                                  final epgService = Provider.of<EpgService>(
+                                      context,
+                                      listen: false);
+                                  await epgService.clearCache();
+
+                                  if (context.mounted) {
+                                    showAppSnackBar(
+                                      context,
+                                      const SnackBar(
+                                        content: Text('EPG data cleared'),
+                                        backgroundColor: AppTheme.accentGreen,
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                              icon: const Icon(Icons.delete_sweep),
+                              label: const Text('Clear EPG'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red.shade700,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
                               ),
                             ),
-                          ],
-                        ),
-                      );
-
-                      if (confirm == true) {
-                        final epgService = Provider.of<EpgService>(context, listen: false);
-                        await epgService.clearCache();
-
-                        if (context.mounted) {
-                          showAppSnackBar(
-                            context,
-                            const SnackBar(
-                              content: Text('EPG data cleared'),
-                              backgroundColor: AppTheme.accentGreen,
-                            ),
-                          );
-                        }
-                      }
-                    },
-                            icon: const Icon(Icons.delete_sweep),
-                            label: const Text('Clear EPG'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red.shade700,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
                           ),
-                        ),
-                      );
+                        );
                       },
                     ),
                   ),
@@ -2198,7 +2297,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                           },
                           style: TextButton.styleFrom(
                             side: isFocused
-                                ? const BorderSide(color: AppTheme.primaryBlue, width: 3)
+                                ? const BorderSide(
+                                    color: AppTheme.primaryBlue, width: 3)
                                 : null,
                           ),
                           child: const Text('Clear'),
@@ -2225,7 +2325,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         _clearPlaylistCacheButtonFocusNode.requestFocus();
                         return KeyEventResult.handled;
                       }
-                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                      if (event.logicalKey == LogicalKeyboardKey.select ||
+                          event.logicalKey == LogicalKeyboardKey.enter) {
                         _loadM3uPlaylist();
                         return KeyEventResult.handled;
                       }
@@ -2243,9 +2344,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                             curve: TVFocusStyle.animationCurve,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
-                              boxShadow: isFocused
-                                  ? TVFocusStyle.focusedShadow
-                                  : null,
+                              boxShadow:
+                                  isFocused ? TVFocusStyle.focusedShadow : null,
                             ),
                             child: ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
@@ -2294,8 +2394,10 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                       prefixIcon: Icons.person,
                       onLeftArrow: requestFirstSidebarFocus,
                       onUpArrow: () => _xtreamServerFocusNode.requestFocus(),
-                      onDownArrow: () => _loadXtreamButtonFocusNode.requestFocus(),
-                      onRightArrow: () => _xtreamPasswordFocusNode.requestFocus(),
+                      onDownArrow: () =>
+                          _loadXtreamButtonFocusNode.requestFocus(),
+                      onRightArrow: () =>
+                          _xtreamPasswordFocusNode.requestFocus(),
                       enableDirectionalNavigation: true,
                     ),
                   ),
@@ -2310,10 +2412,13 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                       labelText: 'Password',
                       prefixIcon: Icons.lock,
                       obscureText: true,
-                      onLeftArrow: () => _xtreamUsernameFocusNode.requestFocus(),
+                      onLeftArrow: () =>
+                          _xtreamUsernameFocusNode.requestFocus(),
                       onUpArrow: () => _xtreamServerFocusNode.requestFocus(),
-                      onDownArrow: () => _loadXtreamButtonFocusNode.requestFocus(),
-                      onRightArrow: () => _loadXtreamButtonFocusNode.requestFocus(),
+                      onDownArrow: () =>
+                          _loadXtreamButtonFocusNode.requestFocus(),
+                      onRightArrow: () =>
+                          _loadXtreamButtonFocusNode.requestFocus(),
                       enableDirectionalNavigation: true,
                     ),
                   ),
@@ -2340,10 +2445,11 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         return KeyEventResult.handled;
                       }
                       if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                         // Skip to next section if needed, or stay here
+                        // Skip to next section if needed, or stay here
                         return KeyEventResult.ignored;
                       }
-                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                      if (event.logicalKey == LogicalKeyboardKey.select ||
+                          event.logicalKey == LogicalKeyboardKey.enter) {
                         _clearXtreamFields();
                         return KeyEventResult.handled;
                       }
@@ -2356,7 +2462,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                           onPressed: _clearXtreamFields,
                           style: TextButton.styleFrom(
                             side: isFocused
-                                ? const BorderSide(color: AppTheme.primaryBlue, width: 3)
+                                ? const BorderSide(
+                                    color: AppTheme.primaryBlue, width: 3)
                                 : null,
                           ),
                           child: const Text('Clear'),
@@ -2381,7 +2488,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         _clearPlaylistCacheButtonFocusNode.requestFocus();
                         return KeyEventResult.handled;
                       }
-                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                      if (event.logicalKey == LogicalKeyboardKey.select ||
+                          event.logicalKey == LogicalKeyboardKey.enter) {
                         _loadXtreamPlaylist();
                         return KeyEventResult.handled;
                       }
@@ -2399,9 +2507,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                             curve: TVFocusStyle.animationCurve,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
-                              boxShadow: isFocused
-                                  ? TVFocusStyle.focusedShadow
-                                  : null,
+                              boxShadow:
+                                  isFocused ? TVFocusStyle.focusedShadow : null,
                             ),
                             child: ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
@@ -2419,67 +2526,67 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                 ],
               ),
             ],
-            
+
             // Clear Playlist Cache Button (shown for both M3U and Xtream)
             const SizedBox(height: AppSizes.md),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 Focus(
-                focusNode: _clearPlaylistCacheButtonFocusNode,
-                onKeyEvent: (node, event) {
-                  if (event is! KeyDownEvent) return KeyEventResult.ignored;
-                  if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                    requestFirstSidebarFocus();
-                    return KeyEventResult.handled;
-                  }
-                  if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-                    if (_playlistInputMethod == 0) {
-                      _loadM3uButtonFocusNode.requestFocus();
-                    } else {
-                      _loadXtreamButtonFocusNode.requestFocus();
+                  focusNode: _clearPlaylistCacheButtonFocusNode,
+                  onKeyEvent: (node, event) {
+                    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                    if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                      requestFirstSidebarFocus();
+                      return KeyEventResult.handled;
                     }
-                    return KeyEventResult.handled;
-                  }
-                  if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                    _savedPlaylistFocusNode.requestFocus();
-                    return KeyEventResult.handled;
-                  }
-                  if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
-                    _clearPlaylistCache();
-                    return KeyEventResult.handled;
-                  }
-                  return KeyEventResult.ignored;
-                },
-                child: Builder(
-                  builder: (context) {
-                    final isFocused = Focus.of(context).hasFocus;
-                    return AnimatedScale(
-                      scale: isFocused ? TVFocusStyle.focusScale : 1.0,
-                      duration: TVFocusStyle.animationDuration,
-                      curve: TVFocusStyle.animationCurve,
-                      child: AnimatedContainer(
+                    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                      if (_playlistInputMethod == 0) {
+                        _loadM3uButtonFocusNode.requestFocus();
+                      } else {
+                        _loadXtreamButtonFocusNode.requestFocus();
+                      }
+                      return KeyEventResult.handled;
+                    }
+                    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                      _savedPlaylistFocusNode.requestFocus();
+                      return KeyEventResult.handled;
+                    }
+                    if (event.logicalKey == LogicalKeyboardKey.select ||
+                        event.logicalKey == LogicalKeyboardKey.enter) {
+                      _clearPlaylistCache();
+                      return KeyEventResult.handled;
+                    }
+                    return KeyEventResult.ignored;
+                  },
+                  child: Builder(
+                    builder: (context) {
+                      final isFocused = Focus.of(context).hasFocus;
+                      return AnimatedScale(
+                        scale: isFocused ? TVFocusStyle.focusScale : 1.0,
                         duration: TVFocusStyle.animationDuration,
                         curve: TVFocusStyle.animationCurve,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          boxShadow: isFocused
-                              ? TVFocusStyle.focusedShadow
-                              : null,
-                        ),
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red.shade700,
+                        child: AnimatedContainer(
+                          duration: TVFocusStyle.animationDuration,
+                          curve: TVFocusStyle.animationCurve,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow:
+                                isFocused ? TVFocusStyle.focusedShadow : null,
                           ),
-                          onPressed: _clearPlaylistCache,
-                          icon: const Icon(Icons.delete_sweep),
-                          label: const Text('Clear Playlist Cache'),
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red.shade700,
+                            ),
+                            onPressed: _clearPlaylistCache,
+                            icon: const Icon(Icons.delete_sweep),
+                            label: const Text('Clear Playlist Cache'),
+                          ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
-              ),
               ],
             ),
           ],
@@ -2496,7 +2603,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
         final hasChannels = provider.hasChannels;
         final movieCount = provider.moviesCount;
         final seriesCount = provider.seriesCount;
-        
+
         final previewLine =
             provider.lastM3UContent?.split('\n').first ?? 'Unavailable';
         final subtitle = hasChannels
@@ -2582,7 +2689,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         requestFirstSidebarFocus();
                         return KeyEventResult.handled;
                       }
-                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                      if (event.logicalKey == LogicalKeyboardKey.select ||
+                          event.logicalKey == LogicalKeyboardKey.enter) {
                         _inspectPlaylist();
                         return KeyEventResult.handled;
                       }
@@ -2594,7 +2702,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         return TextButton(
                           style: TextButton.styleFrom(
                             side: isFocused
-                                ? const BorderSide(color: AppTheme.primaryBlue, width: 2)
+                                ? const BorderSide(
+                                    color: AppTheme.primaryBlue, width: 2)
                                 : null,
                           ),
                           onPressed: _inspectPlaylist,
@@ -2622,13 +2731,13 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     // Determine which tab this is based on the focusNode
     final bool isM3uTab = focusNode == _m3uTabFocusNode;
     final bool isXtreamTab = focusNode == _xtreamTabFocusNode;
-    
+
     return Focus(
       focusNode: focusNode,
       onKeyEvent: (node, event) {
         if (event is! KeyDownEvent) return KeyEventResult.ignored;
         final key = event.logicalKey;
-        
+
         // Left/right navigation between tabs
         if (key == LogicalKeyboardKey.arrowRight) {
           if (isM3uTab) {
@@ -2666,7 +2775,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
         } else if (key == LogicalKeyboardKey.arrowUp) {
           // Stay on tab (top of screen)
           return KeyEventResult.handled;
-        } else if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.select) {
+        } else if (key == LogicalKeyboardKey.enter ||
+            key == LogicalKeyboardKey.select) {
           onTap();
           return KeyEventResult.handled;
         }
@@ -2691,9 +2801,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                           ? AppTheme.primaryBlue.withAlpha((0.3 * 255).round())
                           : Colors.transparent),
                   borderRadius: BorderRadius.circular(AppSizes.radiusMd - 2),
-                  boxShadow: isFocused
-                      ? TVFocusStyle.focusedShadow
-                      : null,
+                  boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
                 ),
                 alignment: Alignment.center,
                 child: Row(
@@ -2701,14 +2809,18 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                   children: [
                     Icon(
                       icon,
-                      color: (isFocused || isSelected) ? Colors.white : AppTheme.textSecondary,
+                      color: (isFocused || isSelected)
+                          ? Colors.white
+                          : AppTheme.textSecondary,
                       size: 18,
                     ),
                     const SizedBox(width: 8),
                     Text(
                       title,
                       style: TextStyle(
-                        color: (isFocused || isSelected) ? Colors.white : AppTheme.textSecondary,
+                        color: (isFocused || isSelected)
+                            ? Colors.white
+                            : AppTheme.textSecondary,
                         fontWeight: (isFocused || isSelected)
                             ? FontWeight.bold
                             : FontWeight.normal,
@@ -3192,7 +3304,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                       requestFirstSidebarFocus();
                       return KeyEventResult.handled;
                     }
-                    if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                    if (event.logicalKey == LogicalKeyboardKey.select ||
+                        event.logicalKey == LogicalKeyboardKey.enter) {
                       _toggleOpenSubtitlesEnabled(!_openSubtitlesEnabled);
                       return KeyEventResult.handled;
                     }
@@ -3210,11 +3323,13 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                           curve: TVFocusStyle.animationCurve,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(8),
-                            boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                            boxShadow:
+                                isFocused ? TVFocusStyle.focusedShadow : null,
                           ),
                           child: SwitchListTile(
                             title: const Text('Enable OpenSubtitles'),
-                            subtitle: const Text('Automatically download subtitles'),
+                            subtitle:
+                                const Text('Automatically download subtitles'),
                             value: _openSubtitlesEnabled,
                             onChanged: _toggleOpenSubtitlesEnabled,
                           ),
@@ -3243,7 +3358,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                     prefixIcon: Icons.person,
                     onLeftArrow: requestFirstSidebarFocus,
                     onUpArrow: () => FocusScope.of(context).previousFocus(),
-                    onDownArrow: () => _openSubtitlesPasswordFocusNode.requestFocus(),
+                    onDownArrow: () =>
+                        _openSubtitlesPasswordFocusNode.requestFocus(),
                     enableDirectionalNavigation: true,
                   ),
                   const SizedBox(height: 16),
@@ -3264,7 +3380,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                     prefixIcon: Icons.lock,
                     obscureText: true,
                     onLeftArrow: requestFirstSidebarFocus,
-                    onUpArrow: () => _openSubtitlesUsernameFocusNode.requestFocus(),
+                    onUpArrow: () =>
+                        _openSubtitlesUsernameFocusNode.requestFocus(),
                     onDownArrow: () => FocusScope.of(context).nextFocus(),
                     enableDirectionalNavigation: true,
                   ),
@@ -3276,7 +3393,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         requestFirstSidebarFocus();
                         return KeyEventResult.handled;
                       }
-                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                      if (event.logicalKey == LogicalKeyboardKey.select ||
+                          event.logicalKey == LogicalKeyboardKey.enter) {
                         _toggleAutoDownloadSubtitles(!_autoDownloadSubtitles);
                         return KeyEventResult.handled;
                       }
@@ -3294,7 +3412,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                             curve: TVFocusStyle.animationCurve,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
-                              boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                              boxShadow:
+                                  isFocused ? TVFocusStyle.focusedShadow : null,
                             ),
                             child: SwitchListTile(
                               title: const Text('Auto-download subtitles'),
@@ -3317,7 +3436,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         requestFirstSidebarFocus();
                         return KeyEventResult.handled;
                       }
-                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                      if (event.logicalKey == LogicalKeyboardKey.select ||
+                          event.logicalKey == LogicalKeyboardKey.enter) {
                         _testOpenSubtitlesConnection();
                         return KeyEventResult.handled;
                       }
@@ -3329,7 +3449,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         return ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
                             side: isFocused
-                                ? const BorderSide(color: AppTheme.primaryBlue, width: 2)
+                                ? const BorderSide(
+                                    color: AppTheme.primaryBlue, width: 2)
                                 : null,
                           ),
                           onPressed: _testOpenSubtitlesConnection,
@@ -3359,7 +3480,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                       requestFirstSidebarFocus();
                       return KeyEventResult.handled;
                     }
-                    if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                    if (event.logicalKey == LogicalKeyboardKey.select ||
+                        event.logicalKey == LogicalKeyboardKey.enter) {
                       _toggleRealDebridEnabled(!_realDebridEnabled);
                       return KeyEventResult.handled;
                     }
@@ -3377,7 +3499,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                           curve: TVFocusStyle.animationCurve,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(8),
-                            boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                            boxShadow:
+                                isFocused ? TVFocusStyle.focusedShadow : null,
                           ),
                           child: SwitchListTile(
                             title: const Text('Enable Real-Debrid'),
@@ -3421,7 +3544,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         requestFirstSidebarFocus();
                         return KeyEventResult.handled;
                       }
-                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                      if (event.logicalKey == LogicalKeyboardKey.select ||
+                          event.logicalKey == LogicalKeyboardKey.enter) {
                         _toggleRealDebridForCatchup(!_realDebridForCatchup);
                         return KeyEventResult.handled;
                       }
@@ -3439,7 +3563,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                             curve: TVFocusStyle.animationCurve,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
-                              boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                              boxShadow:
+                                  isFocused ? TVFocusStyle.focusedShadow : null,
                             ),
                             child: CheckboxListTile(
                               title: const Text('Use for Catch-up TV'),
@@ -3458,7 +3583,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         requestFirstSidebarFocus();
                         return KeyEventResult.handled;
                       }
-                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                      if (event.logicalKey == LogicalKeyboardKey.select ||
+                          event.logicalKey == LogicalKeyboardKey.enter) {
                         _toggleRealDebridForVOD(!_realDebridForVOD);
                         return KeyEventResult.handled;
                       }
@@ -3476,7 +3602,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                             curve: TVFocusStyle.animationCurve,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
-                              boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                              boxShadow:
+                                  isFocused ? TVFocusStyle.focusedShadow : null,
                             ),
                             child: CheckboxListTile(
                               title: const Text('Use for VOD/Movies'),
@@ -3496,7 +3623,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         requestFirstSidebarFocus();
                         return KeyEventResult.handled;
                       }
-                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                      if (event.logicalKey == LogicalKeyboardKey.select ||
+                          event.logicalKey == LogicalKeyboardKey.enter) {
                         _testRealDebridConnection();
                         return KeyEventResult.handled;
                       }
@@ -3508,7 +3636,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         return ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
                             side: isFocused
-                                ? const BorderSide(color: AppTheme.primaryBlue, width: 2)
+                                ? const BorderSide(
+                                    color: AppTheme.primaryBlue, width: 2)
                                 : null,
                           ),
                           onPressed: _testRealDebridConnection,
@@ -3664,7 +3793,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               return _buildSectionCard(
                 title: '🎙️ Speech Recognition (Whisper GGML)',
                 subtitle:
-                  'Choose a Whisper GGML model (tiny, base, small) for voice search and live transcription. Everything runs 100% on-device.',
+                    'Choose a Whisper GGML model (tiny, base, small) for voice search and live transcription. Everything runs 100% on-device.',
                 children: [
                   _buildSpeechModelSummary(whisperService, modelManager),
                   const SizedBox(height: 16),
@@ -3735,8 +3864,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                                     ),
                                   ),
                                   FutureBuilder<int>(
-                                    future: modelManager
-                                        .getTotalDownloadedSize(),
+                                    future:
+                                        modelManager.getTotalDownloadedSize(),
                                     builder: (context, sizeSnapshot) {
                                       if (sizeSnapshot.hasData &&
                                           sizeSnapshot.data != null &&
@@ -3855,71 +3984,81 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                 const SizedBox(height: AppSizes.sm),
                 Row(
                   children: [
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                          decoration: BoxDecoration(
-                            color: AppTheme.cardBackground,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppTheme.divider),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.folder_outlined, color: AppTheme.textSecondary),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  recordingPath.isEmpty ? 'No storage location selected' : recordingPath,
-                                  style: TextStyle(
-                                    color: recordingPath.isEmpty ? AppTheme.textSecondary : AppTheme.textPrimary,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.cardBackground,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppTheme.divider),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.folder_outlined,
+                                color: AppTheme.textSecondary),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                recordingPath.isEmpty
+                                    ? 'No storage location selected'
+                                    : recordingPath,
+                                style: TextStyle(
+                                  color: recordingPath.isEmpty
+                                      ? AppTheme.textSecondary
+                                      : AppTheme.textPrimary,
                                 ),
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
+                    ),
                     const SizedBox(width: AppSizes.sm),
-                      Focus(
-                        focusNode: _browseStorageButtonFocusNode,
-                        onKeyEvent: (node, event) {
-                          if (event is! KeyDownEvent) return KeyEventResult.ignored;
-                          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                            requestFirstSidebarFocus();
-                            return KeyEventResult.handled;
-                          }
-                          if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
-                            _browseStorage();
-                            return KeyEventResult.handled;
-                          }
+                    Focus(
+                      focusNode: _browseStorageButtonFocusNode,
+                      onKeyEvent: (node, event) {
+                        if (event is! KeyDownEvent)
                           return KeyEventResult.ignored;
-                        },
-                        child: Builder(
-                          builder: (context) {
-                            final isFocused = Focus.of(context).hasFocus;
-                            return AnimatedScale(
-                              scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                        if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                          requestFirstSidebarFocus();
+                          return KeyEventResult.handled;
+                        }
+                        if (event.logicalKey == LogicalKeyboardKey.select ||
+                            event.logicalKey == LogicalKeyboardKey.enter) {
+                          _browseStorage();
+                          return KeyEventResult.handled;
+                        }
+                        return KeyEventResult.ignored;
+                      },
+                      child: Builder(
+                        builder: (context) {
+                          final isFocused = Focus.of(context).hasFocus;
+                          return AnimatedScale(
+                            scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                            duration: TVFocusStyle.animationDuration,
+                            child: AnimatedContainer(
                               duration: TVFocusStyle.animationDuration,
-                              child: AnimatedContainer(
-                                duration: TVFocusStyle.animationDuration,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  boxShadow: isFocused ? TVFocusStyle.focusedShadow : TVFocusStyle.defaultShadow,
-                                ),
-                                child: ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.primaryBlue,
-                                  ),
-                                  onPressed: _browseStorage,
-                                  icon: const Icon(Icons.folder_open),
-                                  label: const Text('Browse'),
-                                ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: isFocused
+                                    ? TVFocusStyle.focusedShadow
+                                    : TVFocusStyle.defaultShadow,
                               ),
-                            );
-                          },
-                        ),
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primaryBlue,
+                                ),
+                                onPressed: _browseStorage,
+                                icon: const Icon(Icons.folder_open),
+                                label: const Text('Browse'),
+                              ),
+                            ),
+                          );
+                        },
                       ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: AppSizes.sm),
@@ -3958,18 +4097,22 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
             _buildSectionCard(
               title: 'Display Options',
               children: [
-                _buildDropdown('Time Zone', 'UTC-5 (EST)', [
-                  'UTC-8 (PST)',
-                  'UTC-5 (EST)',
-                  'UTC+0 (GMT)',
-                  'UTC+1 (CET)',
-                ], (value) {}),
+                _buildDropdown(
+                    'Time Zone',
+                    'UTC-5 (EST)',
+                    [
+                      'UTC-8 (PST)',
+                      'UTC-5 (EST)',
+                      'UTC+0 (GMT)',
+                      'UTC+1 (CET)',
+                    ],
+                    (value) {}),
                 _buildSwitchTile('Show Channel Logos', _showChannelLogos),
                 _buildSwitchTile('Show Program Images', _showProgramImages),
               ],
             ),
-              ],
-            );
+          ],
+        );
       },
     );
   }
@@ -3986,8 +4129,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
           Text(
             title,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ), // Changed from headlineMedium
+                  fontWeight: FontWeight.bold,
+                ), // Changed from headlineMedium
           ),
           const SizedBox(height: AppSizes.md), // Reduced from lg
           ...children,
@@ -4032,7 +4175,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.playlist_play, color: AppTheme.primaryBlue),
+                    const Icon(Icons.playlist_play,
+                        color: AppTheme.primaryBlue),
                     const SizedBox(width: AppSizes.sm),
                     Text(
                       'Saved Playlists',
@@ -4044,11 +4188,10 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                 Text(
                   'Manage your saved playlist credentials',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.textSecondary,
-                  ),
+                        color: AppTheme.textSecondary,
+                      ),
                 ),
                 const SizedBox(height: AppSizes.lg),
-
                 if (!hasPlaylist)
                   Focus(
                     focusNode: _savedPlaylistFocusNode,
@@ -4076,20 +4219,25 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                           padding: const EdgeInsets.all(AppSizes.md),
                           decoration: BoxDecoration(
                             color: AppTheme.cardBackground,
-                            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                            borderRadius:
+                                BorderRadius.circular(AppSizes.radiusMd),
                             border: Border.all(
-                              color: isFocused ? AppTheme.primaryBlue : AppTheme.divider,
+                              color: isFocused
+                                  ? AppTheme.primaryBlue
+                                  : AppTheme.divider,
                               width: isFocused ? 2 : 1,
                             ),
                           ),
                           child: const Row(
                             children: [
-                              Icon(Icons.info_outline, color: AppTheme.textSecondary),
+                              Icon(Icons.info_outline,
+                                  color: AppTheme.textSecondary),
                               SizedBox(width: AppSizes.md),
                               Expanded(
                                 child: Text(
                                   'No saved playlist found. Use the fields above to add a playlist.',
-                                  style: TextStyle(color: AppTheme.textSecondary),
+                                  style:
+                                      TextStyle(color: AppTheme.textSecondary),
                                 ),
                               ),
                             ],
@@ -4139,12 +4287,14 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                                 AppSizes.radiusMd,
                               ),
                               border: Border.all(
-                                color: isFocused 
+                                color: isFocused
                                     ? AppTheme.primaryBlue
-                                    : AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
+                                    : AppTheme.primaryBlue
+                                        .withAlpha((0.3 * 255).round()),
                                 width: isFocused ? 2 : 1,
                               ),
-                              boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                              boxShadow:
+                                  isFocused ? TVFocusStyle.focusedShadow : null,
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -4152,95 +4302,98 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                                 Row(
                                   children: [
                                     const Icon(
-                                  Icons.playlist_play,
-                                  color: AppTheme.primaryBlue,
-                                  size: 24,
-                                ),
-                                const SizedBox(width: AppSizes.sm),
-                                Expanded(
-                                  child: Text(
-                                    playlistName,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
+                                      Icons.playlist_play,
+                                      color: AppTheme.primaryBlue,
+                                      size: 24,
                                     ),
-                                  ),
+                                    const SizedBox(width: AppSizes.sm),
+                                    Expanded(
+                                      child: Text(
+                                        playlistName,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.primaryBlue,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        data['type'] == 'm3u'
+                                            ? 'M3U'
+                                            : 'Xtream',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppSizes.sm),
+                                    const Icon(
+                                      Icons.chevron_right,
+                                      color: AppTheme.textSecondary,
+                                    ),
+                                  ],
                                 ),
+                                const SizedBox(height: AppSizes.md),
+                                if (data['type'] == 'm3u') ...[
+                                  _buildInfoRow(
+                                      'URL', data['m3u_url'] ?? 'N/A'),
+                                ] else if (data['type'] == 'xtream') ...[
+                                  _buildInfoRow(
+                                    'Server',
+                                    data['xtream_server'] ?? 'N/A',
+                                  ),
+                                  const SizedBox(height: AppSizes.xs),
+                                  _buildInfoRow(
+                                    'Username',
+                                    data['xtream_username'] ?? 'N/A',
+                                  ),
+                                ],
+                                const SizedBox(height: AppSizes.md),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
+                                  padding: const EdgeInsets.all(AppSizes.sm),
                                   decoration: BoxDecoration(
-                                    color: AppTheme.primaryBlue,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    data['type'] == 'm3u' ? 'M3U' : 'Xtream',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
+                                    color: AppTheme.cardBackground,
+                                    borderRadius: BorderRadius.circular(
+                                      AppSizes.radiusSm,
                                     ),
                                   ),
-                                ),
-                                const SizedBox(width: AppSizes.sm),
-                                const Icon(
-                                  Icons.chevron_right,
-                                  color: AppTheme.textSecondary,
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.edit,
+                                        size: 14,
+                                        color: AppTheme.textSecondary,
+                                      ),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        'Tap to edit playlist settings',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: AppTheme.textSecondary,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: AppSizes.md),
-                            if (data['type'] == 'm3u') ...[
-                              _buildInfoRow('URL', data['m3u_url'] ?? 'N/A'),
-                            ] else if (data['type'] == 'xtream') ...[
-                              _buildInfoRow(
-                                'Server',
-                                data['xtream_server'] ?? 'N/A',
-                              ),
-                              const SizedBox(height: AppSizes.xs),
-                              _buildInfoRow(
-                                'Username',
-                                data['xtream_username'] ?? 'N/A',
-                              ),
-                            ],
-                            const SizedBox(height: AppSizes.md),
-                            Container(
-                              padding: const EdgeInsets.all(AppSizes.sm),
-                              decoration: BoxDecoration(
-                                color: AppTheme.cardBackground,
-                                borderRadius: BorderRadius.circular(
-                                  AppSizes.radiusSm,
-                                ),
-                              ),
-                              child: const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.edit,
-                                    size: 14,
-                                    color: AppTheme.textSecondary,
-                                  ),
-                                  SizedBox(width: 6),
-                                  Text(
-                                    'Tap to edit playlist settings',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: AppTheme.textSecondary,
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
               ],
             ),
           ),
@@ -4291,18 +4444,18 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
             Text(
               title,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                // Changed from titleLarge
-                fontWeight: FontWeight.bold,
-              ),
+                    // Changed from titleLarge
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             if (subtitle != null) ...[
               const SizedBox(height: 3), // Reduced spacing
               Text(
                 subtitle,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.textSecondary,
-                  fontSize: 11, // Smaller subtitle
-                ),
+                      color: AppTheme.textSecondary,
+                      fontSize: 11, // Smaller subtitle
+                    ),
               ),
             ],
             const SizedBox(height: AppSizes.sm), // Reduced from md
@@ -4313,7 +4466,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     );
   }
 
-  Widget _buildSwitchTile(String title, bool value, {String? subtitle, FocusNode? focusNode}) {
+  Widget _buildSwitchTile(String title, bool value,
+      {String? subtitle, FocusNode? focusNode}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSizes.sm),
       child: Focus(
@@ -4324,7 +4478,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
             requestFirstSidebarFocus();
             return KeyEventResult.handled;
           }
-          if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+          if (event.logicalKey == LogicalKeyboardKey.select ||
+              event.logicalKey == LogicalKeyboardKey.enter) {
             _handleSwitchTileChange(title, !value);
             return KeyEventResult.handled;
           }
@@ -4334,7 +4489,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
           builder: (context) {
             final isFocused = Focus.of(context).hasFocus;
             if (isFocused) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {              });
+              WidgetsBinding.instance.addPostFrameCallback((_) {});
             }
             return AnimatedScale(
               scale: isFocused ? TVFocusStyle.focusScale : 1.0,
@@ -4468,7 +4623,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
             requestFirstSidebarFocus();
             return KeyEventResult.handled;
           }
-          if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+          if (event.logicalKey == LogicalKeyboardKey.select ||
+              event.logicalKey == LogicalKeyboardKey.enter) {
             _handleAudioSwitchTileChange(title, !value);
             return KeyEventResult.handled;
           }
@@ -4478,7 +4634,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
           builder: (context) {
             final isFocused = Focus.of(context).hasFocus;
             if (isFocused) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {              });
+              WidgetsBinding.instance.addPostFrameCallback((_) {});
             }
             return Container(
               decoration: BoxDecoration(
@@ -4563,7 +4719,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               builder: (context) {
                 final isFocused = Focus.of(context).hasFocus;
                 if (isFocused) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {                  });
+                  WidgetsBinding.instance.addPostFrameCallback((_) {});
                 }
                 return Container(
                   decoration: BoxDecoration(
@@ -4573,34 +4729,34 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         : null,
                   ),
                   child: DropdownButtonFormField<String>(
-                      initialValue: value,
-                      dropdownColor: AppTheme.darkBackgroundOpacity(0.95),
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: AppTheme.highlight,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                          borderSide: BorderSide.none,
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                          borderSide: const BorderSide(
-                            color: AppTheme.primaryBlue,
-                            width: 2,
-                          ),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
+                    initialValue: value,
+                    dropdownColor: AppTheme.darkBackgroundOpacity(0.95),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: AppTheme.highlight,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        borderSide: const BorderSide(
+                          color: AppTheme.primaryBlue,
+                          width: 2,
                         ),
                       ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                    ),
                     items: items.map((item) {
                       return DropdownMenuItem(value: item, child: Text(item));
                     }).toList(),
                     onChanged: onChanged,
                     // Ensure dropdown opens on focus + select
                     onTap: () {
-                       // Default behavior
+                      // Default behavior
                     },
                   ),
                 );
@@ -4670,7 +4826,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
             borderRadius: BorderRadius.circular(8),
             borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 3),
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         ),
       );
     }
@@ -4692,7 +4849,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     focusNode.addListener(() {
       if (focusNode.hasFocus) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (focusNode.context != null) {          }
+          if (focusNode.context != null) {}
         });
       }
     });
@@ -4792,7 +4949,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
           onKeyEvent: (node, event) {
             // Intercept up/down arrows even in edit mode
             if (event is! KeyDownEvent) return KeyEventResult.ignored;
-            if (event.logicalKey == LogicalKeyboardKey.arrowUp && onUpArrow != null) {
+            if (event.logicalKey == LogicalKeyboardKey.arrowUp &&
+                onUpArrow != null) {
               if (isEditable) {
                 onEditableChanged(false);
                 SystemChannels.textInput.invokeMethod('TextInput.hide');
@@ -4800,7 +4958,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               onUpArrow();
               return KeyEventResult.handled;
             }
-            if (event.logicalKey == LogicalKeyboardKey.arrowDown && onDownArrow != null) {
+            if (event.logicalKey == LogicalKeyboardKey.arrowDown &&
+                onDownArrow != null) {
               if (isEditable) {
                 onEditableChanged(false);
                 SystemChannels.textInput.invokeMethod('TextInput.hide');
@@ -4844,9 +5003,11 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 3),
+                borderSide:
+                    const BorderSide(color: AppTheme.primaryBlue, width: 3),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             ),
           ),
         ),
@@ -4888,14 +5049,15 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
   }) {
     final languages = TranslateLanguage.values.toList()
       ..sort(
-        (a, b) => _formatTranslateLanguage(a)
-            .compareTo(_formatTranslateLanguage(b)),
+        (a, b) =>
+            _formatTranslateLanguage(a).compareTo(_formatTranslateLanguage(b)),
       );
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.dialogBackground,
-        title: Text(isTarget ? 'Select Target Language' : 'Select Source Language'),
+        title: Text(
+            isTarget ? 'Select Target Language' : 'Select Source Language'),
         content: SizedBox(
           width: double.maxFinite,
           height: 420,
@@ -4987,12 +5149,11 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     final isReady = status == ModelDownloadStatus.downloaded ||
         status == ModelDownloadStatus.bundled;
     final color = isReady ? AppTheme.accentGreen : AppTheme.primaryBlue;
-    final icon = isReady
-        ? Icons.offline_bolt
-        : Icons.download_for_offline_outlined;
+    final icon =
+        isReady ? Icons.offline_bolt : Icons.download_for_offline_outlined;
     final subtitle = isReady
-      ? 'Ready for offline GGML speech features.'
-      : 'Download the ${activeModel.sizeFormatted} GGML binary to unlock voice features.';
+        ? 'Ready for offline GGML speech features.'
+        : 'Download the ${activeModel.sizeFormatted} GGML binary to unlock voice features.';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -5070,7 +5231,9 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                   duration: TVFocusStyle.animationDuration,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8),
-                    boxShadow: isFocused ? TVFocusStyle.focusedShadow : TVFocusStyle.defaultShadow,
+                    boxShadow: isFocused
+                        ? TVFocusStyle.focusedShadow
+                        : TVFocusStyle.defaultShadow,
                   ),
                   child: OutlinedButton.icon(
                     onPressed: () {
@@ -5126,7 +5289,9 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                     duration: TVFocusStyle.animationDuration,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8),
-                      boxShadow: isFocused ? TVFocusStyle.focusedShadow : TVFocusStyle.defaultShadow,
+                      boxShadow: isFocused
+                          ? TVFocusStyle.focusedShadow
+                          : TVFocusStyle.defaultShadow,
                     ),
                     child: OutlinedButton.icon(
                       onPressed: () {
@@ -5158,7 +5323,9 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                   duration: TVFocusStyle.animationDuration,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8),
-                    boxShadow: isFocused ? TVFocusStyle.focusedShadow : TVFocusStyle.defaultShadow,
+                    boxShadow: isFocused
+                        ? TVFocusStyle.focusedShadow
+                        : TVFocusStyle.defaultShadow,
                   ),
                   child: ElevatedButton.icon(
                     onPressed: () {
@@ -5193,8 +5360,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
           color: background,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color:
-                isSelected ? AppTheme.primaryBlue : Colors.transparent,
+            color: isSelected ? AppTheme.primaryBlue : Colors.transparent,
             width: 1.5,
           ),
         ),
@@ -5375,8 +5541,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               ? '${model.name} downloaded successfully'
               : 'Failed to download ${model.name}',
         ),
-        backgroundColor:
-            success ? AppTheme.accentGreen : AppTheme.accentRed,
+        backgroundColor: success ? AppTheme.accentGreen : AppTheme.accentRed,
       ),
     );
   }
@@ -5418,12 +5583,9 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
       context,
       SnackBar(
         content: Text(
-          success
-              ? '${model.name} deleted'
-              : 'Could not delete ${model.name}',
+          success ? '${model.name} deleted' : 'Could not delete ${model.name}',
         ),
-        backgroundColor:
-            success ? AppTheme.accentGreen : AppTheme.accentRed,
+        backgroundColor: success ? AppTheme.accentGreen : AppTheme.accentRed,
       ),
     );
   }
@@ -5511,9 +5673,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                               ? 'Model detected successfully.'
                               : 'Model still not found. Place esrgan_x2.tflite in assets/models/',
                         ),
-                        backgroundColor: success
-                            ? AppTheme.accentGreen
-                            : AppTheme.accentRed,
+                        backgroundColor:
+                            success ? AppTheme.accentGreen : AppTheme.accentRed,
                       ),
                     );
                   },
@@ -5741,11 +5902,11 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
       await prefs.setString('xtream_username', username);
       await prefs.setString('xtream_password', password);
       await prefs.setString('playlist_type', 'xtream');
-      
+
       // Auto-generate and save EPG URL for Xtream codes
       final epgUrl = '$server/xmltv.php?username=$username&password=$password';
       await prefs.setString('epg_url', epgUrl);
-      
+
       // Load EPG in background
       if (mounted) {
         final epgService = Provider.of<EpgService>(context, listen: false);
@@ -5798,16 +5959,16 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     );
     if (confirm == true) {
       if (!mounted) return;
-      
+
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('m3u_url');
       await prefs.remove('playlist_type');
       await prefs.remove('xtream_server');
       await prefs.remove('xtream_username');
       await prefs.remove('xtream_password');
-      
+
       try {
-         // Provider.of<ChannelProvider>(context, listen: false).clearChannels(); 
+        // Provider.of<ChannelProvider>(context, listen: false).clearChannels();
       } catch (_) {}
 
       if (mounted) {
@@ -5879,7 +6040,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     setState(() {
       _autoDownloadSubtitles = value;
     });
-    Provider.of<OpenSubtitlesService>(context, listen: false).setAutoDownload(value);
+    Provider.of<OpenSubtitlesService>(context, listen: false)
+        .setAutoDownload(value);
   }
 
   Future<void> _testOpenSubtitlesConnection() async {
@@ -5911,7 +6073,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     setState(() {
       _realDebridForCatchup = value;
     });
-    Provider.of<RealDebridService>(context, listen: false).setEnableForCatchup(value);
+    Provider.of<RealDebridService>(context, listen: false)
+        .setEnableForCatchup(value);
   }
 
   void _toggleRealDebridForVOD(bool? value) {
@@ -5919,7 +6082,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     setState(() {
       _realDebridForVOD = value;
     });
-    Provider.of<RealDebridService>(context, listen: false).setEnableForVOD(value);
+    Provider.of<RealDebridService>(context, listen: false)
+        .setEnableForVOD(value);
   }
 
   Future<void> _testRealDebridConnection() async {

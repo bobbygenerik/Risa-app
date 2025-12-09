@@ -13,7 +13,7 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/services/voice_search_service.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
-import 'package:iptv_player/services/epg_service.dart';
+import 'package:iptv_player/services/epg_service.dart' hide debugPrint;
 
 import 'package:iptv_player/services/whisper_transcription_service.dart';
 import 'package:iptv_player/services/whisper_speech_service.dart';
@@ -523,14 +523,6 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading || !_profileReady) {
-      return MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.darkTheme,
-        home: const Scaffold(body: Center(child: CircularProgressIndicator())),
-      );
-    }
-
     return _ErrorHandler.wrapWithErrorListener(
       MultiProvider(
         providers: [
@@ -541,13 +533,10 @@ class _MyAppState extends State<MyApp> {
           ChangeNotifierProvider(
             create: (context) {
               final service = EpgService();
-              // Initialize EPG and force refresh on app start
+              // Initialize EPG on app start
               Future.microtask(() async {
                 await service.initialize();
                 debugPrint('Main: EPG initialized with ${service.totalChannelCount} channels');
-                // Force a background refresh to ensure fresh data
-                await service.loadEpg();
-                debugPrint('Main: EPG refresh complete, total channels: ${service.totalChannelCount}');
               });
               return service;
             },
@@ -555,11 +544,18 @@ class _MyAppState extends State<MyApp> {
           ChangeNotifierProxyProvider<ContentProvider, ChannelProvider>(
             create: (context) {
               final provider = ChannelProvider();
-              // Defer playlist loading until after first frame is rendered
+              // Load playlist immediately after first frame
               if (_hasPlaylist) {
                 _runDeferred(
-                  provider.autoLoadPlaylist,
-                  delay: const Duration(milliseconds: 1500),
+                  () async {
+                    await provider.autoLoadPlaylist();
+                    // After channels load, filter EPG
+                    final epgService = context.read<EpgService>();
+                    final channelIds = provider.channels.map((c) => c.tvgId ?? c.id).toSet();
+                    debugPrint('Main: Filtering EPG to ${channelIds.length} playlist channels');
+                    await epgService.loadEpg(channelFilter: channelIds);
+                    debugPrint('Main: EPG refresh complete, total channels: ${epgService.totalChannelCount}');
+                  },
                 );
               } else {
                 StartupProbe.mark(
@@ -602,20 +598,10 @@ class _MyAppState extends State<MyApp> {
               return service;
             },
           ),
-          ChangeNotifierProxyProvider<
-            WhisperSpeechService,
-            WhisperTranscriptionService
-          >(
+          ChangeNotifierProvider(
             create: (_) {
               final service = WhisperTranscriptionService();
               _runDeferred(service.initialize);
-              return service;
-            },
-            update: (_, speechService, transcriptionService) {
-              final service =
-                  transcriptionService ??
-                  (WhisperTranscriptionService()..initialize());
-              service.attachSpeechService(speechService);
               return service;
             },
           ),
@@ -650,7 +636,7 @@ class _MyAppState extends State<MyApp> {
               builder: (context, child) {
                 final media = MediaQuery.of(context);
                 final resolvedChild = child ?? const SizedBox.shrink();
-                _maybePromptForProfile(profileProvider);
+                // _maybePromptForProfile(profileProvider);
                 // No scaling - use native screen size
                 return MediaQuery(data: media, child: resolvedChild);
               },
@@ -662,40 +648,9 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _maybePromptForProfile(ProfileProvider profileProvider) {
-    final shouldPrompt = profileProvider.activeProfile == null;
-    if (!shouldPrompt) {
-      _profileDialogScheduled = false;
-      return;
-    }
-
     if (profileProvider.profiles.isEmpty) {
       _ensureDefaultProfile(profileProvider);
-      return;
     }
-
-    if (_profileDialogScheduled) {
-      return;
-    }
-
-    _profileDialogScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // Avoid using the widget BuildContext across async gaps. Use the
-      // ProfileProvider instance passed into this method (already captured
-      // from the widget tree) instead of calling Provider.of(context).
-      final profileProviderRef = profileProvider;
-      try {
-        await _showProfileDialog();
-      } finally {
-        // Ensure the scheduled flag is cleared regardless of mounted state.
-        _profileDialogScheduled = false;
-        if (mounted && !profileProviderRef.isDisposed) {
-          final stillMissingProfile = profileProviderRef.activeProfile == null;
-          if (stillMissingProfile) {
-            setState(() {});
-          }
-        }
-      }
-    });
   }
 
   Future<void> _showProfileDialog() async {
