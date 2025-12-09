@@ -135,18 +135,10 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
   void _navigateToTab(int targetIndex) {
     if (targetIndex < 0 || targetIndex >= _tabs.length) return;
     
-    final tab = _tabs[targetIndex];
-    final isAlreadyActive = widget.activeTab == tab.id;
-    
     _isNavigating = true;
     _focusedTabIndex = targetIndex;
     
     _tabFocusNodes[targetIndex].requestFocus();
-    
-    if (!isAlreadyActive) {
-      final router = GoRouter.of(context);
-      router.go(tab.route);
-    }
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -286,8 +278,8 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
           Padding(
             padding: const EdgeInsets.only(top: 6, bottom: 6),
             child: Image(
-              image: const AssetImage('assets/images/croppedlogo2.png'),
-              height: _isExpanded ? 32 : 16,
+              image: const AssetImage('assets/images/lonelogo (1).png'),
+              height: _isExpanded ? 32 : 24,
             ),
           ),
           Expanded(

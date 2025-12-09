@@ -17,7 +17,7 @@ String _convertNumberWords(String text) {
     '1st': '1', '2nd': '2', '3rd': '3', '4th': '4', '5th': '5',
     // Don't include single-letter Roman numerals to avoid false positives
   };
-  
+
   String result = text.toLowerCase();
   for (final entry in conversions.entries) {
     // Use word boundary matching to avoid partial replacements
@@ -35,21 +35,16 @@ String _stripNumbers(String text) {
 /// Strip common suffixes like HD, UHD, FHD, regional variants
 String _stripSuffixes(String text) {
   return text
-    .replaceAll(RegExp(r'(uhd|fhd|hd|sd|4k|1080p|720p)$', caseSensitive: false), '')
-    .replaceAll(RegExp(r'(london|scotland|wales|ireland|ni|channelislands)$', caseSensitive: false), '');
-}
-
-// Top-level function for isolate parsing with optional channel filter
-Map<String, dynamic> _parseEpgWithFilter(Map<String, dynamic> data) {
-  final xmlData = data['xml'] as String;
-  final filter = data['filter'] as List<dynamic>?;
-  final channelFilter = filter?.map((e) => e.toString().toLowerCase()).toSet();
-  
-  return parseEpgInIsolate(xmlData, channelFilter: channelFilter);
+      .replaceAll(
+          RegExp(r'(uhd|fhd|hd|sd|4k|1080p|720p)$', caseSensitive: false), '')
+      .replaceAll(
+          RegExp(r'(london|scotland|wales|ireland|ni|channelislands)$',
+              caseSensitive: false),
+          '');
 }
 
 // Top-level function for isolate parsing
-Map<String, dynamic> parseEpgInIsolate(String xmlData, {Set<String>? channelFilter}) {
+Map<String, dynamic> parseEpgInIsolate(String xmlData) {
   try {
     final document = XmlDocument.parse(xmlData);
     final programmes = document.findAllElements('programme');
@@ -59,20 +54,19 @@ Map<String, dynamic> parseEpgInIsolate(String xmlData, {Set<String>? channelFilt
       try {
         final channelId = programme.getAttribute('channel');
         if (channelId == null || channelId.isEmpty) continue;
-        
-        // Skip if not in filter
-        if (channelFilter != null && !channelFilter.contains(channelId.toLowerCase())) {
-          continue;
-        }
 
         final startStr = programme.getAttribute('start');
         final stopStr = programme.getAttribute('stop');
         if (startStr == null || stopStr == null) continue;
 
-        final title = programme.findElements('title').firstOrNull?.innerText ?? 'Unknown Program';
-        final description = programme.findElements('desc').firstOrNull?.innerText;
-        final category = programme.findElements('category').firstOrNull?.innerText;
-        final icon = programme.findElements('icon').firstOrNull?.getAttribute('src');
+        final title = programme.findElements('title').firstOrNull?.innerText ??
+            'Unknown Program';
+        final description =
+            programme.findElements('desc').firstOrNull?.innerText;
+        final category =
+            programme.findElements('category').firstOrNull?.innerText;
+        final icon =
+            programme.findElements('icon').firstOrNull?.getAttribute('src');
 
         final programMap = {
           'id': '${channelId}_$startStr',
@@ -117,16 +111,16 @@ class EpgService with ChangeNotifier {
   String? _error;
   bool _initialized = false;
   bool _disposed = false; // Add this line
-  
+
   // Cache settings
   static const String _cacheFileName = 'epg_cache.xml';
   static const String _secondaryCacheFileName = 'epg_cache_secondary.xml';
   static const String _cacheTimeKey = 'epg_cache_time';
   static const String _secondaryCacheTimeKey = 'epg_secondary_cache_time';
-  static const Duration _cacheValidity = Duration(hours: 24);
+  static const Duration _cacheValidity = Duration(hours: 6);
   static const int _maxRetries = 3;
   static const Duration _retryDelay = Duration(seconds: 5);
-  
+
   // Secondary EPG data (supplementary)
   final Map<String, List<Program>> _secondaryEpgData = {};
 
@@ -136,7 +130,7 @@ class EpgService with ChangeNotifier {
   String? get error => _error;
   bool get hasData => _epgData.isNotEmpty || _secondaryEpgData.isNotEmpty;
   bool get hasSecondaryData => _secondaryEpgData.isNotEmpty;
-  
+
   /// Get combined count of channels from both primary and secondary EPG
   int get totalChannelCount => _epgData.length + _secondaryEpgData.length;
 
@@ -156,42 +150,45 @@ class EpgService with ChangeNotifier {
 
   /// Initialize EPG service - called automatically and manually
   Future<void> initialize() async {
-    debugPrint('EpgService: Initializing (initialized flag: $_initialized, data: ${_epgData.length} channels)...');
-    
+    debugPrint(
+        'EpgService: Initializing (initialized flag: $_initialized, data: ${_epgData.length} channels)...');
+
     // Skip if already initialized AND has data
     if (_initialized && _epgData.isNotEmpty) {
-      debugPrint('EpgService: Already initialized with ${_epgData.length} channels, skipping...');
+      debugPrint(
+          'EpgService: Already initialized with ${_epgData.length} channels, skipping...');
       return;
     }
-    
+
     _initialized = true;
-    
+
     try {
       // Load manual mappings first (synchronous from SharedPreferences)
       await loadManualMappings();
-      
+
       // Load from cache immediately
       debugPrint('EpgService: Loading from cache...');
       final cacheLoaded = await _loadFromCache();
       if (cacheLoaded) {
-        debugPrint('EpgService: ✓ Loaded ${_epgData.length} channels from cache');
+        debugPrint(
+            'EpgService: ✓ Loaded ${_epgData.length} channels from cache');
         notifyListeners();
       } else {
         debugPrint('EpgService: ✗ No cache found');
       }
-      
+
       // Also load secondary cache
       final secondaryCacheLoaded = await _loadSecondaryFromCache();
       if (secondaryCacheLoaded) {
-        debugPrint('EpgService: ✓ Loaded ${_secondaryEpgData.length} secondary channels from cache');
+        debugPrint(
+            'EpgService: ✓ Loaded ${_secondaryEpgData.length} secondary channels from cache');
         notifyListeners();
       }
-      
+
       debugPrint('EpgService: Total channels loaded: $totalChannelCount');
-      
+
       // Refresh in background if needed
       _refreshInBackground();
-      
     } catch (e) {
       debugPrint('EpgService: Initialization error: $e');
       _error = 'Failed to initialize EPG service: $e';
@@ -201,14 +198,16 @@ class EpgService with ChangeNotifier {
 
   /// Public method to trigger EPG loading from saved URL.
   /// Called by ChannelProvider when a new EPG URL is found, or by settings screen.
-  Future<void> loadEpg({Set<String>? channelFilter}) async {
+  Future<void> loadEpg() async {
     final prefs = await SharedPreferences.getInstance();
-    final epgUrl = prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
+    final epgUrl =
+        prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
     final secondaryEpgUrl = prefs.getString('secondary_epg_url');
 
     if (epgUrl != null && epgUrl.isNotEmpty) {
-      debugPrint('EpgService: Triggering loadEpgFromUrl from public loadEpg() method.');
-      await loadEpgFromUrl(epgUrl, forceRefresh: true, channelFilter: channelFilter);
+      debugPrint(
+          'EpgService: Triggering loadEpgFromUrl from public loadEpg() method.');
+      await loadEpgFromUrl(epgUrl, forceRefresh: true);
     } else {
       debugPrint('EpgService: No EPG URL found in SharedPreferences.');
       _error = 'No EPG URL configured.';
@@ -216,35 +215,39 @@ class EpgService with ChangeNotifier {
     }
 
     if (secondaryEpgUrl != null && secondaryEpgUrl.isNotEmpty) {
-      debugPrint('EpgService: Triggering loadSecondaryEpgFromUrl from public loadEpg() method.');
+      debugPrint(
+          'EpgService: Triggering loadSecondaryEpgFromUrl from public loadEpg() method.');
       await loadSecondaryEpgFromUrl(secondaryEpgUrl, forceRefresh: true);
     } else {
-      debugPrint('EpgService: No secondary EPG URL found in SharedPreferences.');
+      debugPrint(
+          'EpgService: No secondary EPG URL found in SharedPreferences.');
     }
   }
-  
+
   /// Refresh EPG data in background without blocking initialization
   void _refreshInBackground() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      
+
       // Check if cache is stale or missing
       bool needsRefresh = _epgData.isEmpty;
       if (!needsRefresh && _lastFetchTime != null) {
         final age = DateTime.now().difference(_lastFetchTime!);
         needsRefresh = age > _cacheValidity;
         if (needsRefresh) {
-          debugPrint('EpgService: Cache is ${age.inHours}h old, refreshing in background');
+          debugPrint(
+              'EpgService: Cache is ${age.inHours}h old, refreshing in background');
         }
       }
-      
+
       if (needsRefresh || _epgData.isEmpty) {
-        final epgUrl = prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
+        final epgUrl =
+            prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
         if (epgUrl != null && epgUrl.isNotEmpty) {
           debugPrint('EpgService: Starting background EPG refresh...');
-          await loadEpgFromUrl(epgUrl, forceRefresh: true, channelFilter: null);
+          await loadEpgFromUrl(epgUrl, forceRefresh: true);
         }
-        
+
         final secondaryUrl = prefs.getString('secondary_epg_url');
         if (secondaryUrl != null && secondaryUrl.isNotEmpty) {
           await loadSecondaryEpgFromUrl(secondaryUrl, forceRefresh: true);
@@ -256,14 +259,14 @@ class EpgService with ChangeNotifier {
   }
 
   /// Load EPG from URL with robust error handling and caching
-  Future<void> loadEpgFromUrl(String url, {bool forceRefresh = false, Set<String>? channelFilter}) async {
+  Future<void> loadEpgFromUrl(String url, {bool forceRefresh = false}) async {
     if (url.isEmpty) {
       _error = 'EPG URL is empty';
       notifyListeners();
       return;
     }
-    
-    debugPrint('EPG: loadEpgFromUrl called. forceRefresh: $forceRefresh, filtering: ${channelFilter?.length ?? "all"} channels');
+
+    debugPrint('EPG: loadEpgFromUrl called. forceRefresh: $forceRefresh');
     // Check cache first if not forcing refresh
     if (!forceRefresh && await _loadFromCache()) {
       debugPrint('EPG loaded from cache');
@@ -279,20 +282,22 @@ class EpgService with ChangeNotifier {
 
     while (retryCount < _maxRetries && !success) {
       try {
-        debugPrint('Fetching EPG from URL (attempt ${retryCount + 1}/$_maxRetries): $url');
-        
+        debugPrint(
+            'Fetching EPG from URL (attempt ${retryCount + 1}/$_maxRetries): $url');
+
         // Use streaming to handle large EPG files efficiently
         final client = HttpClient()
           ..connectionTimeout = const Duration(seconds: 30)
           ..badCertificateCallback = (cert, host, port) => true;
-        
-        final request = await client.getUrl(Uri.parse(url))
+
+        final request = await client
+            .getUrl(Uri.parse(url))
             .timeout(const Duration(seconds: 30));
-        final response = await request.close()
-            .timeout(const Duration(seconds: 60));
+        final response =
+            await request.close().timeout(const Duration(seconds: 60));
 
         debugPrint('EPG HTTP response: ${response.statusCode}');
-        
+
         if (response.statusCode != 200) {
           throw Exception('HTTP ${response.statusCode}');
         }
@@ -300,59 +305,51 @@ class EpgService with ChangeNotifier {
         // Download all bytes (streamed, then parsed in background)
         final epgBytes = <int>[];
         int totalBytes = 0;
-        
+
         await for (final chunk in response) {
           totalBytes += chunk.length;
           epgBytes.addAll(chunk);
-          
+
           // Show progress for large files
           if (totalBytes % (1024 * 1024) == 0) {
-            debugPrint('EPG download: ${(totalBytes / 1024 / 1024).toStringAsFixed(1)} MB');
+            debugPrint(
+                'EPG download: ${(totalBytes / 1024 / 1024).toStringAsFixed(1)} MB');
           }
         }
-        
+
         client.close();
-        debugPrint('EPG downloaded: ${(totalBytes / 1024 / 1024).toStringAsFixed(2)} MB');
+        debugPrint(
+            'EPG downloaded: ${(totalBytes / 1024 / 1024).toStringAsFixed(2)} MB');
 
         // Parse in background isolate to avoid blocking UI
         final xmlData = utf8.decode(epgBytes, allowMalformed: true);
-        final parseData = {'xml': xmlData, 'filter': channelFilter?.toList()};
-        final parsed = await compute(_parseEpgWithFilter, parseData).timeout(const Duration(seconds: 60));
-        
+        final parsed = await compute(parseEpgInIsolate, xmlData)
+            .timeout(const Duration(seconds: 60));
+
         // Convert parsed data back to Program objects
         _epgData.clear();
         final rawEpgData = parsed['epgData'] as Map<String, dynamic>;
-        
-        // Only keep programs from today and tomorrow to reduce memory usage
-        final now = DateTime.now();
-        final startOfToday = DateTime(now.year, now.month, now.day);
-        final endOfTomorrow = startOfToday.add(const Duration(days: 2));
-        
+
         for (final channelId in rawEpgData.keys) {
-          final programs = (rawEpgData[channelId] as List<dynamic>)
-              .map((p) {
-                final map = Map<String, dynamic>.from(p);
-                return Program(
-                  id: map['id'],
-                  channelId: map['channelId'],
-                  title: map['title'],
-                  description: map['description'],
-                  startTime: _parseEpgTime(map['startTime']),
-                  endTime: _parseEpgTime(map['endTime']),
-                  imageUrl: map['imageUrl'],
-                  category: map['category'],
-                  isLive: map['isLive'] ?? false,
-                  canRecord: map['canRecord'] ?? true,
-                );
-              })
-              .where((p) => p.endTime.isAfter(startOfToday) && p.startTime.isBefore(endOfTomorrow))
-              .toList();
-          
+          final programs = (rawEpgData[channelId] as List<dynamic>).map((p) {
+            final map = Map<String, dynamic>.from(p);
+            return Program(
+              id: map['id'],
+              channelId: map['channelId'],
+              title: map['title'],
+              description: map['description'],
+              startTime: _parseEpgTime(map['startTime']),
+              endTime: _parseEpgTime(map['endTime']),
+              imageUrl: map['imageUrl'],
+              category: map['category'],
+              isLive: map['isLive'] ?? false,
+              canRecord: map['canRecord'] ?? true,
+            );
+          }).toList();
+
           // Sort by start time
           programs.sort((a, b) => a.startTime.compareTo(b.startTime));
-          if (programs.isNotEmpty) {
-            _epgData[channelId] = programs;
-          }
+          _epgData[channelId] = programs;
         }
 
         await _saveToCache(xmlData);
@@ -375,7 +372,8 @@ class EpgService with ChangeNotifier {
           debugPrint('Retrying in ${_retryDelay.inSeconds} seconds...');
           await Future.delayed(_retryDelay);
         } else {
-          debugPrint('EPG fetch failed after $_maxRetries attempts, trying cache...');
+          debugPrint(
+              'EPG fetch failed after $_maxRetries attempts, trying cache...');
           // Try loading from cache as fallback
           if (await _loadFromCache()) {
             debugPrint('EPG loaded from cache as fallback');
@@ -393,7 +391,8 @@ class EpgService with ChangeNotifier {
   }
 
   /// Load secondary/supplemental EPG from URL (adds to existing data without replacing)
-  Future<void> loadSecondaryEpgFromUrl(String url, {bool forceRefresh = false}) async {
+  Future<void> loadSecondaryEpgFromUrl(String url,
+      {bool forceRefresh = false}) async {
     // Check cache first if not forcing refresh
     if (!forceRefresh && await _loadSecondaryFromCache()) {
       debugPrint('Secondary EPG loaded from cache');
@@ -409,8 +408,9 @@ class EpgService with ChangeNotifier {
 
     while (retryCount < _maxRetries && !success) {
       try {
-        debugPrint('Fetching secondary EPG from URL (attempt ${retryCount + 1}/$_maxRetries)...');
-        
+        debugPrint(
+            'Fetching secondary EPG from URL (attempt ${retryCount + 1}/$_maxRetries)...');
+
         final client = HttpClient()
           ..badCertificateCallback = (cert, host, port) => true;
         final request = await client.getUrl(Uri.parse(url));
@@ -422,46 +422,45 @@ class EpgService with ChangeNotifier {
 
         final epgBytes = <int>[];
         int totalBytes = 0;
-        
+
         await for (final chunk in response) {
           totalBytes += chunk.length;
           epgBytes.addAll(chunk);
         }
-        
+
         client.close();
-        debugPrint('Secondary EPG downloaded: ${(totalBytes / 1024 / 1024).toStringAsFixed(2)} MB');
+        debugPrint(
+            'Secondary EPG downloaded: ${(totalBytes / 1024 / 1024).toStringAsFixed(2)} MB');
 
         final xmlData = utf8.decode(epgBytes, allowMalformed: true);
         debugPrint('Secondary EPG: Starting background parsing...');
-        
+
         final parsed = await compute(parseEpgInIsolate, xmlData);
-        
+
         // Add to secondary EPG data (don't clear primary)
         _secondaryEpgData.clear();
         final rawEpgData = parsed['epgData'] as Map<String, dynamic>;
-        
+
         for (final channelId in rawEpgData.keys) {
           // Don't add if primary already has this channel
           if (_epgData.containsKey(channelId)) continue;
-          
-          final programs = (rawEpgData[channelId] as List<dynamic>)
-              .map((p) {
-                final map = Map<String, dynamic>.from(p);
-                return Program(
-                  id: map['id'],
-                  channelId: map['channelId'],
-                  title: map['title'],
-                  description: map['description'],
-                  startTime: _parseEpgTime(map['startTime']),
-                  endTime: _parseEpgTime(map['endTime']),
-                  imageUrl: map['imageUrl'],
-                  category: map['category'],
-                  isLive: map['isLive'] ?? false,
-                  canRecord: map['canRecord'] ?? true,
-                );
-              })
-              .toList();
-          
+
+          final programs = (rawEpgData[channelId] as List<dynamic>).map((p) {
+            final map = Map<String, dynamic>.from(p);
+            return Program(
+              id: map['id'],
+              channelId: map['channelId'],
+              title: map['title'],
+              description: map['description'],
+              startTime: _parseEpgTime(map['startTime']),
+              endTime: _parseEpgTime(map['endTime']),
+              imageUrl: map['imageUrl'],
+              category: map['category'],
+              isLive: map['isLive'] ?? false,
+              canRecord: map['canRecord'] ?? true,
+            );
+          }).toList();
+
           programs.sort((a, b) => a.startTime.compareTo(b.startTime));
           _secondaryEpgData[channelId] = programs;
         }
@@ -471,7 +470,8 @@ class EpgService with ChangeNotifier {
         _error = null;
         _channelIdCache.clear(); // Clear cache when EPG data changes
         _normalizedEpgKeys = null; // Clear normalized keys cache
-        debugPrint('Secondary EPG parsed: ${_secondaryEpgData.length} unique channels added');
+        debugPrint(
+            'Secondary EPG parsed: ${_secondaryEpgData.length} unique channels added');
       } catch (e) {
         retryCount++;
         _error = e.toString();
@@ -486,17 +486,18 @@ class EpgService with ChangeNotifier {
     _isLoading = false;
     notifyListeners();
   }
-  
+
   /// Save secondary EPG data to file cache
   Future<void> _saveSecondaryToCache(String xmlData) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
       final file = File('${directory.path}/$_secondaryCacheFileName');
       await file.writeAsString(xmlData);
-      
+
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_secondaryCacheTimeKey, DateTime.now().toIso8601String());
-      
+      await prefs.setString(
+          _secondaryCacheTimeKey, DateTime.now().toIso8601String());
+
       debugPrint('Secondary EPG saved to cache: ${file.path}');
     } catch (e) {
       debugPrint('Failed to save secondary EPG cache: $e');
@@ -521,43 +522,42 @@ class EpgService with ChangeNotifier {
 
       final directory = await getApplicationDocumentsDirectory();
       final file = File('${directory.path}/$_secondaryCacheFileName');
-      
+
       if (!await file.exists()) return false;
 
       debugPrint('Secondary EPG: Loading from cache...');
       final cachedData = await file.readAsString();
-      
+
       final parsed = await compute(parseEpgInIsolate, cachedData);
-      
+
       _secondaryEpgData.clear();
       final rawEpgData = parsed['epgData'] as Map<String, dynamic>;
-      
+
       for (final channelId in rawEpgData.keys) {
         if (_epgData.containsKey(channelId)) continue;
-        
-        final programs = (rawEpgData[channelId] as List<dynamic>)
-            .map((p) {
-              final map = Map<String, dynamic>.from(p);
-              return Program(
-                id: map['id'],
-                channelId: map['channelId'],
-                title: map['title'],
-                description: map['description'],
-                startTime: _parseEpgTime(map['startTime']),
-                endTime: _parseEpgTime(map['endTime']),
-                imageUrl: map['imageUrl'],
-                category: map['category'],
-                isLive: map['isLive'] ?? false,
-                canRecord: map['canRecord'] ?? true,
-              );
-            })
-            .toList();
-        
+
+        final programs = (rawEpgData[channelId] as List<dynamic>).map((p) {
+          final map = Map<String, dynamic>.from(p);
+          return Program(
+            id: map['id'],
+            channelId: map['channelId'],
+            title: map['title'],
+            description: map['description'],
+            startTime: _parseEpgTime(map['startTime']),
+            endTime: _parseEpgTime(map['endTime']),
+            imageUrl: map['imageUrl'],
+            category: map['category'],
+            isLive: map['isLive'] ?? false,
+            canRecord: map['canRecord'] ?? true,
+          );
+        }).toList();
+
         programs.sort((a, b) => a.startTime.compareTo(b.startTime));
         _secondaryEpgData[channelId] = programs;
       }
-      
-      debugPrint('Secondary EPG loaded from cache: ${_secondaryEpgData.length} channels');
+
+      debugPrint(
+          'Secondary EPG loaded from cache: ${_secondaryEpgData.length} channels');
       return true;
     } catch (e) {
       debugPrint('Failed to load secondary EPG from cache: $e');
@@ -570,7 +570,7 @@ class EpgService with ChangeNotifier {
     try {
       // Remove timezone offset for simplicity
       final cleanTime = timeStr.replaceAll(RegExp(r'\s+\+\d{4}'), '');
-      
+
       if (cleanTime.length >= 14) {
         final year = int.parse(cleanTime.substring(0, 4));
         final month = int.parse(cleanTime.substring(4, 6));
@@ -589,43 +589,50 @@ class EpgService with ChangeNotifier {
 
   // Cache for channel ID mapping (tvgId -> epgKey)
   final Map<String, String?> _channelIdCache = {};
-  
+
   // Normalized EPG keys for faster matching
   Map<String, String>? _normalizedEpgKeys;
-  
+
   // Reverse lookup: normalized name -> list of original EPG keys
   Map<String, List<String>>? _nameToEpgKeys;
-  
+
   /// Get normalized EPG keys (lazy initialization) - includes both primary and secondary EPG
   Map<String, String> _getNormalizedEpgKeys() {
     if (_normalizedEpgKeys == null) {
       _normalizedEpgKeys = {};
       _nameToEpgKeys = {};
-      
+
       // Process both primary and secondary EPG data
       final allKeys = {..._epgData.keys, ..._secondaryEpgData.keys};
-      
+
       for (final key in allKeys) {
         // Normalize: lowercase, remove spaces/dots/hyphens, keep alphanumeric
-        final normalized = key.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+        final normalized =
+            key.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
         _normalizedEpgKeys![normalized] = key;
-        
+
         // Also add without domain suffix
-        final withoutDomain = key.split('.').first.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+        final withoutDomain = key
+            .split('.')
+            .first
+            .toLowerCase()
+            .replaceAll(RegExp(r'[^a-z0-9]'), '');
         if (!_normalizedEpgKeys!.containsKey(withoutDomain)) {
           _normalizedEpgKeys![withoutDomain] = key;
         }
-        
+
         // Add number-converted version (e.g., "bbc1" for "bbcone")
         final withNumbers = _convertNumberWords(normalized);
-        if (withNumbers != normalized && !_normalizedEpgKeys!.containsKey(withNumbers)) {
+        if (withNumbers != normalized &&
+            !_normalizedEpgKeys!.containsKey(withNumbers)) {
           _normalizedEpgKeys![withNumbers] = key;
         }
         final withNumbersNoDomain = _convertNumberWords(withoutDomain);
-        if (withNumbersNoDomain != withoutDomain && !_normalizedEpgKeys!.containsKey(withNumbersNoDomain)) {
+        if (withNumbersNoDomain != withoutDomain &&
+            !_normalizedEpgKeys!.containsKey(withNumbersNoDomain)) {
           _normalizedEpgKeys![withNumbersNoDomain] = key;
         }
-        
+
         // Build reverse lookup by extracting channel name parts
         final parts = _extractNameParts(key);
         for (final part in parts) {
@@ -638,7 +645,6 @@ class EpgService with ChangeNotifier {
 
   /// Check if a channel exists in either primary or secondary EPG data
 
-  
   /// Get programs from either primary or secondary EPG data
   List<Program> _getProgramsForKey(String key) {
     return _epgData[key] ?? _secondaryEpgData[key] ?? [];
@@ -654,20 +660,21 @@ class EpgService with ChangeNotifier {
         return manualKey;
       }
     }
-    // Check cache 
+    // Check cache
     if (_channelIdCache.containsKey(cacheKey)) {
       final cached = _channelIdCache[cacheKey];
       return cached;
     }
     // Log EPG data size on first lookup
     if (_channelIdCache.isEmpty) {
-      debugPrint('EPG _findEpgKey: Primary EPG has ${_epgData.length} channels, Secondary has ${_secondaryEpgData.length}');
+      debugPrint(
+          'EPG _findEpgKey: Primary EPG has ${_epgData.length} channels, Secondary has ${_secondaryEpgData.length}');
       if (_epgData.isNotEmpty) {
         debugPrint('EPG sample keys: ${_epgData.keys.take(5).join(", ")}');
       }
     }
     final allEpgKeys = {..._epgData.keys, ..._secondaryEpgData.keys};
-    // Try exact lowercase match
+    // Try lowercase match
     final lowerChannelId = channelId.toLowerCase();
     for (final key in allEpgKeys) {
       if (key.toLowerCase() == lowerChannelId) {
@@ -675,7 +682,7 @@ class EpgService with ChangeNotifier {
         return key;
       }
     }
-    // Try matching without domain suffix (exact match only)
+    // Try matching without domain suffix
     final withoutDomain = channelId.split('.').first;
     for (final key in allEpgKeys) {
       final keyWithoutDomain = key.split('.').first;
@@ -684,14 +691,9 @@ class EpgService with ChangeNotifier {
         return key;
       }
     }
-    // Only do fuzzy matching if channelName was provided
-    // This prevents multiple channels from matching the same EPG data
-    if (channelName == null || channelName.isEmpty) {
-      _channelIdCache[cacheKey] = null;
-      return null;
-    }
-    
-    final normalizedId = channelId.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    // Try normalized matching
+    final normalizedId =
+        channelId.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
     final normalizedKeys = _getNormalizedEpgKeys();
     if (normalizedKeys.containsKey(normalizedId)) {
       _channelIdCache[cacheKey] = normalizedKeys[normalizedId];
@@ -699,24 +701,30 @@ class EpgService with ChangeNotifier {
     }
     // Try with number word conversion
     final normalizedWithNumbers = _convertNumberWords(normalizedId);
-    if (normalizedWithNumbers != normalizedId && normalizedKeys.containsKey(normalizedWithNumbers)) {
+    if (normalizedWithNumbers != normalizedId &&
+        normalizedKeys.containsKey(normalizedWithNumbers)) {
       _channelIdCache[cacheKey] = normalizedKeys[normalizedWithNumbers];
       return normalizedKeys[normalizedWithNumbers];
     }
     // Try prefix/contains matching with normalized ID
-    final normalizedIdWithoutCountry = normalizedId.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
-    final normalizedIdWithNumbersNoCountry = normalizedWithNumbers.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
+    final normalizedIdWithoutCountry =
+        normalizedId.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
+    final normalizedIdWithNumbersNoCountry = normalizedWithNumbers.replaceAll(
+        RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
     final List<MapEntry<String, String>> prefixMatches = [];
     for (final entry in normalizedKeys.entries) {
       final epgNormalized = entry.key;
-      final epgWithoutCountry = epgNormalized.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
+      final epgWithoutCountry =
+          epgNormalized.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
       final epgWithNumbers = _convertNumberWords(epgWithoutCountry);
       final epgStripped = _stripSuffixes(epgWithNumbers);
-      if (epgWithoutCountry.startsWith(normalizedIdWithoutCountry) && normalizedIdWithoutCountry.length >= 4) {
+      if (epgWithoutCountry.startsWith(normalizedIdWithoutCountry) &&
+          normalizedIdWithoutCountry.length >= 4) {
         prefixMatches.add(entry);
         continue;
       }
-      if (epgWithNumbers.startsWith(normalizedIdWithNumbersNoCountry) && normalizedIdWithNumbersNoCountry.length >= 4) {
+      if (epgWithNumbers.startsWith(normalizedIdWithNumbersNoCountry) &&
+          normalizedIdWithNumbersNoCountry.length >= 4) {
         prefixMatches.add(entry);
         continue;
       }
@@ -743,13 +751,15 @@ class EpgService with ChangeNotifier {
     if (channelStrippedNumbers.length >= 3) {
       for (final entry in normalizedKeys.entries) {
         final epgNormalized = entry.key;
-        final epgWithoutCountry = epgNormalized.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
+        final epgWithoutCountry =
+            epgNormalized.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
         final epgStrippedNumbers = _stripNumbers(epgWithoutCountry);
         if (epgStrippedNumbers == channelStrippedNumbers) {
           _channelIdCache[cacheKey] = entry.value;
           return entry.value;
         }
-        if (epgStrippedNumbers.startsWith(channelStrippedNumbers) && channelStrippedNumbers.length >= 3) {
+        if (epgStrippedNumbers.startsWith(channelStrippedNumbers) &&
+            channelStrippedNumbers.length >= 3) {
           prefixMatches.add(entry);
         }
       }
@@ -769,28 +779,35 @@ class EpgService with ChangeNotifier {
     // Try contains matching
     for (final entry in normalizedKeys.entries) {
       final epgNormalized = entry.key;
-      final epgWithoutCountry = epgNormalized.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
-      if (normalizedIdWithoutCountry.contains(epgWithoutCountry) && epgWithoutCountry.length >= 4) {
+      final epgWithoutCountry =
+          epgNormalized.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
+      if (normalizedIdWithoutCountry.contains(epgWithoutCountry) &&
+          epgWithoutCountry.length >= 4) {
         _channelIdCache[cacheKey] = entry.value;
         return entry.value;
       }
     }
     // Try matching by channel NAME if provided
     if (channelName != null && channelName.isNotEmpty) {
-      final normalizedName = channelName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+      final normalizedName =
+          channelName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
       if (normalizedKeys.containsKey(normalizedName)) {
         _channelIdCache[cacheKey] = normalizedKeys[normalizedName];
         return normalizedKeys[normalizedName];
       }
-      final cleanedName = normalizedName.replaceAll(RegExp(r'(hd|fhd|uhd|4k|sd|1080p|720p)$'), '');
+      final cleanedName = normalizedName.replaceAll(
+          RegExp(r'(hd|fhd|uhd|4k|sd|1080p|720p)$'), '');
       for (final entry in normalizedKeys.entries) {
         final epgNormalized = entry.key;
-        final epgWithoutCountry = epgNormalized.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
-        if (cleanedName.contains(epgWithoutCountry) && epgWithoutCountry.length >= 3) {
+        final epgWithoutCountry =
+            epgNormalized.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
+        if (cleanedName.contains(epgWithoutCountry) &&
+            epgWithoutCountry.length >= 3) {
           _channelIdCache[cacheKey] = entry.value;
           return entry.value;
         }
-        if (epgWithoutCountry.contains(cleanedName) && cleanedName.length >= 3) {
+        if (epgWithoutCountry.contains(cleanedName) &&
+            cleanedName.length >= 3) {
           _channelIdCache[cacheKey] = entry.value;
           return entry.value;
         }
@@ -798,7 +815,8 @@ class EpgService with ChangeNotifier {
     }
     // Try partial match
     for (final key in allEpgKeys) {
-      if (key.toLowerCase().contains(lowerChannelId) || lowerChannelId.contains(key.toLowerCase())) {
+      if (key.toLowerCase().contains(lowerChannelId) ||
+          lowerChannelId.contains(key.toLowerCase())) {
         _channelIdCache[cacheKey] = key;
         return key;
       }
@@ -812,20 +830,21 @@ class EpgService with ChangeNotifier {
   /// Extract meaningful name parts from an EPG key for matching
   List<String> _extractNameParts(String epgKey) {
     final parts = <String>[];
-    
+
     // Remove domain suffix and normalize
     final withoutDomain = epgKey.split('.').first.toLowerCase();
     final normalized = withoutDomain.replaceAll(RegExp(r'[^a-z0-9]'), '');
-    
+
     // Add the full normalized name
     if (normalized.length >= 3) parts.add(normalized);
-    
+
     // Remove common suffixes
-    final withoutSuffix = normalized.replaceAll(RegExp(r'(hd|fhd|uhd|4k|sd|uk|us|ca|au|east|west)$'), '');
+    final withoutSuffix = normalized.replaceAll(
+        RegExp(r'(hd|fhd|uhd|4k|sd|uk|us|ca|au|east|west)$'), '');
     if (withoutSuffix.length >= 3 && withoutSuffix != normalized) {
       parts.add(withoutSuffix);
     }
-    
+
     return parts;
   }
 
@@ -833,44 +852,52 @@ class EpgService with ChangeNotifier {
   double _calculateSimilarity(String a, String b) {
     if (a.isEmpty || b.isEmpty) return 0.0;
     if (a == b) return 1.0;
-    
+
     final aNorm = a.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
     final bNorm = b.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-    
+
     if (aNorm == bNorm) return 0.95;
     if (aNorm.contains(bNorm) || bNorm.contains(aNorm)) {
-      return 0.8 * (aNorm.length < bNorm.length ? aNorm.length / bNorm.length : bNorm.length / aNorm.length);
+      return 0.8 *
+          (aNorm.length < bNorm.length
+              ? aNorm.length / bNorm.length
+              : bNorm.length / aNorm.length);
     }
-    
+
     // Calculate Levenshtein-like similarity
     int matches = 0;
     final shorter = aNorm.length < bNorm.length ? aNorm : bNorm;
     final longer = aNorm.length >= bNorm.length ? aNorm : bNorm;
-    
+
     for (int i = 0; i < shorter.length; i++) {
       if (longer.contains(shorter[i])) matches++;
     }
-    
+
     return matches / longer.length * 0.6;
   }
 
   /// Get EPG match suggestions for a channel (sorted by relevance)
-  List<MapEntry<String, double>> getSuggestedMatches(String channelId, String? channelName, {int limit = 10}) {
+  List<MapEntry<String, double>> getSuggestedMatches(
+      String channelId, String? channelName,
+      {int limit = 10}) {
     final scores = <String, double>{};
-    
+
     final searchTerms = <String>[];
-    
+
     // Add channel ID variations
     final idNorm = channelId.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
     searchTerms.add(idNorm);
-    searchTerms.add(idNorm.replaceAll(RegExp(r'(hd|fhd|uhd|4k|sd|uk|us)$'), ''));
-    
+    searchTerms
+        .add(idNorm.replaceAll(RegExp(r'(hd|fhd|uhd|4k|sd|uk|us)$'), ''));
+
     // Add channel name variations
     if (channelName != null && channelName.isNotEmpty) {
-      final nameNorm = channelName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+      final nameNorm =
+          channelName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
       searchTerms.add(nameNorm);
-      searchTerms.add(nameNorm.replaceAll(RegExp(r'(hd|fhd|uhd|4k|sd|uk|us)$'), ''));
-      
+      searchTerms
+          .add(nameNorm.replaceAll(RegExp(r'(hd|fhd|uhd|4k|sd|uk|us)$'), ''));
+
       // Also add individual words from the name
       final words = channelName.toLowerCase().split(RegExp(r'[\s\-_\.]+'));
       for (final word in words) {
@@ -879,25 +906,25 @@ class EpgService with ChangeNotifier {
         }
       }
     }
-    
+
     // Score each EPG channel
     for (final epgKey in _epgData.keys) {
       double maxScore = 0.0;
-      
+
       for (final term in searchTerms) {
         final score = _calculateSimilarity(term, epgKey);
         if (score > maxScore) maxScore = score;
       }
-      
+
       if (maxScore > 0.2) {
         scores[epgKey] = maxScore;
       }
     }
-    
+
     // Sort by score descending
     final sorted = scores.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-    
+
     return sorted.take(limit).toList();
   }
 
@@ -975,10 +1002,10 @@ class EpgService with ChangeNotifier {
       final directory = await getApplicationDocumentsDirectory();
       final file = File('${directory.path}/$_cacheFileName');
       await file.writeAsString(xmlData);
-      
+
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_cacheTimeKey, DateTime.now().toIso8601String());
-      
+
       debugPrint('EPG saved to file cache: ${file.path}');
     } catch (e) {
       debugPrint('Failed to save EPG cache: $e');
@@ -991,20 +1018,21 @@ class EpgService with ChangeNotifier {
     try {
       final directory = await getApplicationDocumentsDirectory();
       final file = File('${directory.path}/$_cacheFileName');
-      
+
       debugPrint('EPG: Checking cache at: ${file.path}');
-      
+
       if (!await file.exists()) {
         debugPrint('EPG: ❌ Cache file does not exist');
         return false;
       }
-      
+
       final fileSize = await file.length();
-      debugPrint('EPG: ✓ Cache file exists (${(fileSize / 1024 / 1024).toStringAsFixed(2)} MB)');
+      debugPrint(
+          'EPG: ✓ Cache file exists (${(fileSize / 1024 / 1024).toStringAsFixed(2)} MB)');
 
       final prefs = await SharedPreferences.getInstance();
       final cacheTimeStr = prefs.getString(_cacheTimeKey);
-      
+
       DateTime? cacheTime;
       if (cacheTimeStr != null) {
         try {
@@ -1023,48 +1051,39 @@ class EpgService with ChangeNotifier {
 
       final cachedData = await file.readAsString();
       debugPrint('EPG: Cache file read, size: ${cachedData.length} chars');
-      
+
       // Parse cached data in background isolate
       debugPrint('EPG: Starting background parse...');
-      final parsed = await compute(parseEpgInIsolate, cachedData).timeout(const Duration(seconds: 60));
+      final parsed = await compute(parseEpgInIsolate, cachedData)
+          .timeout(const Duration(seconds: 60));
       debugPrint('EPG: Background parse complete');
-      
+
       // Convert parsed data back to Program objects
       _epgData.clear();
       final rawEpgData = parsed['epgData'] as Map<String, dynamic>;
       debugPrint('EPG: Parsed ${rawEpgData.length} channel IDs from cache');
-      
-      // Only keep programs from today and tomorrow to reduce memory usage
-      final now = DateTime.now();
-      final startOfToday = DateTime(now.year, now.month, now.day);
-      final endOfTomorrow = startOfToday.add(const Duration(days: 2));
-      
+
       for (final channelId in rawEpgData.keys) {
-        final programs = (rawEpgData[channelId] as List<dynamic>)
-            .map((p) {
-              final map = Map<String, dynamic>.from(p);
-              return Program(
-                id: map['id'],
-                channelId: map['channelId'],
-                title: map['title'],
-                description: map['description'],
-                startTime: _parseEpgTime(map['startTime']),
-                endTime: _parseEpgTime(map['endTime']),
-                imageUrl: map['imageUrl'],
-                category: map['category'],
-                isLive: map['isLive'] ?? false,
-                canRecord: map['canRecord'] ?? true,
-              );
-            })
-            .where((p) => p.endTime.isAfter(startOfToday) && p.startTime.isBefore(endOfTomorrow))
-            .toList();
-        
+        final programs = (rawEpgData[channelId] as List<dynamic>).map((p) {
+          final map = Map<String, dynamic>.from(p);
+          return Program(
+            id: map['id'],
+            channelId: map['channelId'],
+            title: map['title'],
+            description: map['description'],
+            startTime: _parseEpgTime(map['startTime']),
+            endTime: _parseEpgTime(map['endTime']),
+            imageUrl: map['imageUrl'],
+            category: map['category'],
+            isLive: map['isLive'] ?? false,
+            canRecord: map['canRecord'] ?? true,
+          );
+        }).toList();
+
         programs.sort((a, b) => a.startTime.compareTo(b.startTime));
-        if (programs.isNotEmpty) {
-          _epgData[channelId] = programs;
-        }
+        _epgData[channelId] = programs;
       }
-      
+
       if (cacheTime != null) {
         _lastFetchTime = cacheTime;
       } else {
@@ -1073,8 +1092,10 @@ class EpgService with ChangeNotifier {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(_cacheTimeKey, _lastFetchTime!.toIso8601String());
       }
-      debugPrint('EPG: ✓ Successfully loaded ${_epgData.length} channels from cache (age: ${cacheTime != null ? DateTime.now().difference(cacheTime).inHours : "unknown"}h)');
-      debugPrint('EPG: Sample channel IDs: ${_epgData.keys.take(5).join(", ")}');
+      debugPrint(
+          'EPG: ✓ Successfully loaded ${_epgData.length} channels from cache (age: ${cacheTime != null ? DateTime.now().difference(cacheTime).inHours : "unknown"}h)');
+      debugPrint(
+          'EPG: Sample channel IDs: ${_epgData.keys.take(5).join(", ")}');
       return true;
     } catch (e) {
       debugPrint('Failed to load EPG from cache: $e');
@@ -1090,17 +1111,17 @@ class EpgService with ChangeNotifier {
       if (await file.exists()) {
         await file.delete();
       }
-      
+
       // Also clear secondary cache
       final secondaryFile = File('${directory.path}/$_secondaryCacheFileName');
       if (await secondaryFile.exists()) {
         await secondaryFile.delete();
       }
-      
+
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_cacheTimeKey);
       await prefs.remove(_secondaryCacheTimeKey);
-      
+
       _epgData.clear();
       _secondaryEpgData.clear();
       _channelIdCache.clear();
@@ -1146,7 +1167,7 @@ class EpgService with ChangeNotifier {
   String? getChannelPreview(String epgChannelId) {
     final programs = _epgData[epgChannelId];
     if (programs == null || programs.isEmpty) return null;
-    
+
     // Find a currently airing or upcoming program
     final now = DateTime.now();
     for (final program in programs) {
@@ -1214,14 +1235,15 @@ class EpgService with ChangeNotifier {
 
   /// Get list of channels that have no EPG match
   /// Returns a map with 'matched' and 'unmatched' lists of channel info
-  Map<String, List<Map<String, String>>> analyzeChannelMatches(List<Channel> channels) {
+  Map<String, List<Map<String, String>>> analyzeChannelMatches(
+      List<Channel> channels) {
     final matched = <Map<String, String>>[];
     final unmatched = <Map<String, String>>[];
-    
+
     for (final channel in channels) {
       final tvgId = channel.tvgId ?? channel.id;
       final epgKey = _findEpgKey(tvgId, channelName: channel.name);
-      
+
       if (epgKey != null) {
         matched.add({
           'name': channel.name,
@@ -1237,31 +1259,31 @@ class EpgService with ChangeNotifier {
         });
       }
     }
-    
+
     // Sort by group then name
     matched.sort((a, b) {
       final groupCompare = a['group']!.compareTo(b['group']!);
       if (groupCompare != 0) return groupCompare;
       return a['name']!.compareTo(b['name']!);
     });
-    
+
     unmatched.sort((a, b) {
       final groupCompare = a['group']!.compareTo(b['group']!);
       if (groupCompare != 0) return groupCompare;
       return a['name']!.compareTo(b['name']!);
     });
-    
+
     return {
       'matched': matched,
       'unmatched': unmatched,
     };
   }
-  
+
   /// Get EPG matching statistics for a list of channels
   Map<String, int> getMatchingStats(List<Channel> channels) {
     int matched = 0;
     int unmatched = 0;
-    
+
     for (final channel in channels) {
       final tvgId = channel.tvgId ?? channel.id;
       if (hasEpgData(tvgId, channelName: channel.name)) {
@@ -1270,7 +1292,7 @@ class EpgService with ChangeNotifier {
         unmatched++;
       }
     }
-    
+
     return {
       'matched': matched,
       'unmatched': unmatched,

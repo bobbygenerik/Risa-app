@@ -175,19 +175,6 @@ class _MainShellState extends State<MainShell> {
             //     ),
             //   ),
             // ),
-            // Time top-right
-            Positioned(
-              top: 16,
-              right: 16,
-              child: Text(
-                _currentTime,
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
             // Sidebar - positioned with higher z-index than content
             Positioned(
               top: 0,

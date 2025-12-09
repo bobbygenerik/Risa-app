@@ -38,8 +38,8 @@ android {
         minSdkVersion 26
         // Match compileSdk with a modern target to satisfy updated dependencies.
         targetSdk 36
-        versionCode 17
-        versionName "1.7.0"
+        versionCode 20
+        versionName "1.9.1"
         
         // Reduce APK size by only including necessary architectures
         // ndk {
@@ -62,10 +62,10 @@ android {
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             
-            // Rename APK output to risa1.apk
+            // Rename APK output to Risa-{version}.apk
             applicationVariants.all { variant ->
                 variant.outputs.all {
-                    outputFileName = "risa1.apk"
+                    outputFileName = "Risa-${variant.versionName}.apk"
                 }
             }
             

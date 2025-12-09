@@ -191,7 +191,7 @@ class _MoviesScreenState extends State<MoviesScreen>
                   children: [
                     // Hero banner with content overlay
                     _buildHeroBannerOverlay(context, featured),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
 
                     Container(
                     decoration: const BoxDecoration(
@@ -209,9 +209,9 @@ class _MoviesScreenState extends State<MoviesScreen>
                           // Recently Added Movies
                           if (recentMovies.isNotEmpty) ...[
                             _buildSectionHeader(context, 'Recently Added'),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 8),
                             _buildMoviesRow(context, recentMovies),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 16),
                           ],
 
                           // All Movies by Genre
@@ -379,26 +379,35 @@ class _MoviesScreenState extends State<MoviesScreen>
                 context.push('/content/$encodedId', extra: movie);
               },
               child: AnimatedScale(
-                scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                scale: isFocused ? 1.05 : 1.0,
                 duration: TVFocusStyle.animationDuration,
                 curve: TVFocusStyle.animationCurve,
-                child: AnimatedContainer(
-                  duration: TVFocusStyle.animationDuration,
-                  curve: TVFocusStyle.animationCurve,
-                  width: cardWidth,
-                  height: cardHeight,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                    boxShadow: isFocused
-                        ? TVFocusStyle.focusedShadow
-                        : TVFocusStyle.defaultShadow,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AnimatedContainer(
+                      duration: TVFocusStyle.animationDuration,
+                      curve: TVFocusStyle.animationCurve,
+                      width: cardWidth,
+                      height: cardHeight,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: AppTheme.cardBackground,
+                        border: isFocused
+                            ? Border.all(color: AppTheme.primaryBlue, width: 3)
+                            : null,
+                        boxShadow: isFocused
+                            ? [
+                                BoxShadow(
+                                  color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
+                                  blurRadius: 16,
+                                  spreadRadius: 2,
+                                ),
+                              ]
+                            : TVFocusStyle.defaultShadow,
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
                           child: Stack(
                             children: [
                               Container(
@@ -424,29 +433,29 @@ class _MoviesScreenState extends State<MoviesScreen>
                                 ),
                             ],
                           ),
-                        ),
                       ),
-                      const SizedBox(height: AppSizes.xs),
-                      Text(
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
                       movie.title,
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.copyWith(fontWeight: FontWeight.w600),
-                      maxLines: 2,
+                      style: const TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     if (movie.year != null || movie.rating != null)
                       Text(
                         '${movie.year ?? ''} ${movie.rating != null ? '★${movie.ratingDisplay}' : ''}',
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(color: AppTheme.textSecondary),
+                        style: const TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 11,
+                        ),
                       ),
                   ],
                 ),
-              ),
               ),
             );
           },
@@ -536,7 +545,7 @@ class _MoviesScreenState extends State<MoviesScreen>
       
       sections.addAll([
         _buildSectionHeader(context, genre),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         _buildMoviesRow(context, displayMovies),
         if (allMovies.length > displayCount)
           Center(
@@ -586,7 +595,7 @@ class _MoviesScreenState extends State<MoviesScreen>
               ),
             ),
           ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
       ]);
     }
 
@@ -594,60 +603,14 @@ class _MoviesScreenState extends State<MoviesScreen>
   }
 
   Widget _buildHeroBannerBackground(Content featuredMovie) {
-    final heroImage = featuredMovie.backdropUrl ?? featuredMovie.imageUrl;
-    if (heroImage == null) {
-      return Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF1a1a2e), Color(0xFF16213e)],
-          ),
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF050710), Color(0xFF0d1140)],
         ),
-      );
-    }
-    
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        CachedNetworkImage(
-          imageUrl: heroImage,
-          fit: BoxFit.cover,
-          placeholder: (_, __) => Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF1a1a2e), Color(0xFF16213e)],
-              ),
-            ),
-          ),
-          errorWidget: (_, __, ___) => Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF1a1a2e), Color(0xFF16213e)],
-              ),
-            ),
-          ),
-        ),
-        Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.black.withAlpha((0.95 * 255).round()),
-                Colors.black.withAlpha((0.2 * 255).round()),
-                Colors.black.withAlpha((0.5 * 255).round()),
-                Colors.black.withAlpha((0.75 * 255).round()),
-              ],
-              stops: const [0.0, 0.08, 0.5, 1.0],
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -655,10 +618,19 @@ class _MoviesScreenState extends State<MoviesScreen>
     final heroImage = featuredMovie.backdropUrl ?? featuredMovie.imageUrl;
     final provider = Provider.of<ContentProvider>(context, listen: false);
     final displayMovies = _curatedMovies.isNotEmpty ? _curatedMovies : provider.movies;
+    final screenSize = MediaQuery.of(context).size;
+    final heroHeight = screenSize.height * 0.65;
     
     return Focus(
-      focusNode: _heroFocus,
+      focusNode: _playFocus,
       onKeyEvent: (node, event) {
+        if (event is KeyDownEvent &&
+            (event.logicalKey == LogicalKeyboardKey.select ||
+             event.logicalKey == LogicalKeyboardKey.enter)) {
+          final encodedId = Uri.encodeComponent(featuredMovie.id);
+          context.push('/content/$encodedId', extra: featuredMovie);
+          return KeyEventResult.handled;
+        }
         if (event is! KeyDownEvent) return KeyEventResult.ignored;
         if (displayMovies.isEmpty) return KeyEventResult.ignored;
         
@@ -681,140 +653,181 @@ class _MoviesScreenState extends State<MoviesScreen>
         return KeyEventResult.ignored;
       },
       child: GestureDetector(
-      onTap: () {
-        final encodedId = Uri.encodeComponent(featuredMovie.id);
-        context.push('/content/$encodedId', extra: featuredMovie);
-      },
-      child: SizedBox(
-        height: 420,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (heroImage != null)
-              Positioned.fill(
-                child: CachedNetworkImage(
-                  imageUrl: heroImage,
-                  fit: BoxFit.contain,
-                  alignment: Alignment.topCenter,
-                  placeholder: (context, url) => _buildBannerPlaceholder(),
-                  errorWidget: (context, url, error) {
-                    debugPrint('Movie hero banner failed: $url - $error');
-                    return _buildBannerPlaceholder();
-                  },
+        onTap: () {
+          final encodedId = Uri.encodeComponent(featuredMovie.id);
+          context.push('/content/$encodedId', extra: featuredMovie);
+        },
+        child: SizedBox(
+          height: heroHeight,
+          child: Stack(
+            children: [
+              // Solid background on left
+              Positioned(
+                top: 0,
+                left: 0,
+                width: screenSize.width * 0.45,
+                height: heroHeight,
+                child: Container(
+                  color: const Color(0xFF050710),
                 ),
-              )
-            else
-              Positioned.fill(child: _buildBannerPlaceholder()),
-            Positioned.fill(
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Color(0xFF050710)],
+              ),
+              // Hero image starting at 45% from left
+              if (heroImage != null)
+                Positioned(
+                  top: 0,
+                  left: screenSize.width * 0.45,
+                  right: 0,
+                  height: heroHeight,
+                  child: CachedNetworkImage(
+                    imageUrl: heroImage,
+                    fit: BoxFit.contain,
+                    alignment: Alignment.center,
+                    placeholder: (context, url) => _buildBannerPlaceholder(),
+                    errorWidget: (context, url, error) {
+                      debugPrint('Movie hero banner failed: $url - $error');
+                      return _buildBannerPlaceholder();
+                    },
+                  ),
+                ),
+              // Left gradient cloud overlay
+              Positioned(
+                top: 0,
+                left: screenSize.width * 0.40,
+                width: screenSize.width * 0.15,
+                height: heroHeight,
+                child: IgnorePointer(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: [
+                          const Color(0xFF050710),
+                          const Color(0xFF050710).withOpacity(0.8),
+                          const Color(0xFF050710).withOpacity(0.4),
+                          Colors.transparent,
+                        ],
+                        stops: const [0.0, 0.25, 0.6, 1.0],
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-            Align(
-              alignment: Alignment.bottomLeft,
-              child: Padding(
-                padding: const EdgeInsets.all(AppSizes.lg),
+              // Bottom gradient overlay - full width
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: heroHeight * 0.25,
+                child: IgnorePointer(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [
+                          const Color(0xFF050710),
+                          const Color(0xFF050710).withOpacity(0.7),
+                          const Color(0xFF050710).withOpacity(0.3),
+                          Colors.transparent,
+                        ],
+                        stops: const [0.0, 0.4, 0.7, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // Top fade for nav bar area
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 100,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withAlpha((0.9 * 255).round()),
+                        Colors.black.withAlpha(0),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              // Featured info in left area
+              Positioned(
+                bottom: heroHeight * 0.40,
+                left: 120,
+                width: screenSize.width * 0.33,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      featuredMovie.title,
-                      style: const TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
+                    SizedBox(
+                      height: 24 * 1.3 * 2,
+                      child: Text(
+                        featuredMovie.title,
+                        style: const TextStyle(
+                          color: AppTheme.textPrimary,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          height: 1.3,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Focus(
-                          focusNode: _playFocus,
-                          child: Builder(
-                            builder: (ctx) {
-                              final hasFocus = Focus.of(ctx).hasFocus;
-                              return GestureDetector(
-                                onTap: () {
-                                  final encodedId = Uri.encodeComponent(
-                                    featuredMovie.id,
-                                  );
-                                  context.push(
-                                    '/content/$encodedId',
-                                    extra: featuredMovie,
-                                  );
-                                },
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.primaryBlue,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: hasFocus
-                                        ? Border.all(color: Colors.white, width: 2)
-                                        : null,
-                                    boxShadow: hasFocus
-                                        ? [
-                                            BoxShadow(
-                                              color: Colors.black.withAlpha((0.3 * 255).round()),
-                                              offset: const Offset(0, 4),
-                                              blurRadius: 8,
-                                            ),
-                                          ]
-                                        : null,
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 24,
-                                    vertical: 14,
-                                  ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.info_outline, color: Colors.white),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          'More Info',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ],
+                    SizedBox(
+                      height: 14 * 1.3 * 3,
+                      child: Text(
+                        featuredMovie.description ?? '',
+                        style: const TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 14,
+                          height: 1.3,
+                        ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 14 * 1.4,
+                      child: featuredMovie.rating != null
+                          ? Row(
+                              children: [
+                                const Icon(Icons.star, color: Colors.amber, size: 16),
+                                const SizedBox(width: 4),
+                                Text(
+                                  featuredMovie.ratingDisplay,
+                                  style: const TextStyle(
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 14,
                                   ),
                                 ),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        if (featuredMovie.rating != null) ...[
-                          const SizedBox(width: 4),
-                          const Icon(Icons.star, color: Colors.amber, size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            featuredMovie.ratingDisplay,
-                            style: const TextStyle(
-                              color: AppTheme.textSecondary,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ],
+                                if (featuredMovie.year != null) ...[
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    featuredMovie.year.toString(),
+                                    style: const TextStyle(
+                                      color: AppTheme.textSecondary,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            )
+                          : Container(),
                     ),
                   ],
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
       ),
     );
   }

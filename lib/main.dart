@@ -60,17 +60,17 @@ void main() {
       // different zone" error when the framework is used later.
       WidgetsFlutterBinding.ensureInitialized();
       StartupProbe.mark('Flutter bindings initialized');
-      
+
       // Limit image cache to prevent OOM errors
       PaintingBinding.instance.imageCache.maximumSize = 100;
       PaintingBinding.instance.imageCache.maximumSizeBytes = 50 << 20; // 50MB
       StartupProbe.mark('Image cache limits configured');
-      
+
       // Initialize SSL handler for IPTV providers with certificate issues
       await SSLHandler.init();
       HttpOverrides.global = IPTVHttpOverrides();
       StartupProbe.mark('SSL handler configured');
-      
+
       // Only lock landscape on Android TV, allow portrait on mobile
       if (!kIsWeb && Platform.isAndroid) {
         SystemChrome.setPreferredOrientations([
@@ -126,15 +126,13 @@ class _StartupLoaderState extends State<StartupLoader> {
   Future<void> _initialize() async {
     StartupProbe.mark('StartupLoader: TMDB init start');
     const tmdbBudget = Duration(milliseconds: 600);
-    final tmdbFuture = TMDBService.init()
-        .then<bool>((_) {
-          StartupProbe.mark('StartupLoader: TMDB init finished');
-          return true;
-        })
-        .catchError((error, stack) {
-          debugPrint('TMDBService.init() failed during startup: $error');
-          return true;
-        });
+    final tmdbFuture = TMDBService.init().then<bool>((_) {
+      StartupProbe.mark('StartupLoader: TMDB init finished');
+      return true;
+    }).catchError((error, stack) {
+      debugPrint('TMDBService.init() failed during startup: $error');
+      return true;
+    });
 
     final completedWithinBudget = await Future.any<bool>([
       tmdbFuture,
@@ -190,15 +188,18 @@ class _ErrorHandler {
     // Filter out HTTP 429 (rate limit) errors from image loading
     // These are handled gracefully by error widgets, no need to show a global error
     final errorString = error.toString();
-    if (errorString.contains('429') || 
+    if (errorString.contains('429') ||
         errorString.contains('rate limit') ||
-        errorString.contains('HttpException') && errorString.contains('imgur') ||
-        errorString.contains('SocketException') && errorString.contains('image.tmdb.org') ||
-        errorString.contains('ClientException') && errorString.contains('SocketException')) {
+        errorString.contains('HttpException') &&
+            errorString.contains('imgur') ||
+        errorString.contains('SocketException') &&
+            errorString.contains('image.tmdb.org') ||
+        errorString.contains('ClientException') &&
+            errorString.contains('SocketException')) {
       debugPrint('Suppressed network/image error: $error');
       return;
     }
-    
+
     debugPrint('Unhandled app error: $error');
     debugPrint(stack.toString());
     _pendingError = _AppError(error, stack);
@@ -262,7 +263,8 @@ class _GlobalErrorScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline, color: Colors.redAccent, size: 80),
+                const Icon(Icons.error_outline,
+                    color: Colors.redAccent, size: 80),
                 const SizedBox(height: 24),
                 Text(
                   'Something went wrong',
@@ -289,7 +291,9 @@ class _GlobalErrorScreen extends StatelessWidget {
                           duration: TVFocusStyle.animationDuration,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(8),
-                            boxShadow: isFocused ? TVFocusStyle.focusedShadow : TVFocusStyle.defaultShadow,
+                            boxShadow: isFocused
+                                ? TVFocusStyle.focusedShadow
+                                : TVFocusStyle.defaultShadow,
                           ),
                           child: ElevatedButton(
                             onPressed: onDismiss,
@@ -349,17 +353,17 @@ class _MyAppState extends State<MyApp> {
     StartupProbe.mark('MyAppState initState');
     _initialize();
   }
-  
+
   void _setupAndroidAutoListener() {
     if (!Platform.isAndroid) return;
-    
+
     const channel = MethodChannel('com.streamhub.iptv/auto_play');
     channel.setMethodCallHandler((call) async {
       if (call.method == 'playChannel') {
         final url = call.arguments['url'] as String?;
         final name = call.arguments['name'] as String?;
         final id = call.arguments['id'] as String?;
-        
+
         if (url != null && name != null) {
           // Create a Channel object and navigate to player
           final channel = Channel(
@@ -370,10 +374,10 @@ class _MyAppState extends State<MyApp> {
             logoUrl: null,
             groupTitle: 'Android Auto',
           );
-          
+
           // Wait for router to be ready
           await Future.delayed(const Duration(milliseconds: 500));
-          
+
           if (_rootNavigatorKey.currentContext != null) {
             _rootNavigatorKey.currentContext!.go('/player', extra: channel);
           }
@@ -523,6 +527,14 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    if (_loading || !_profileReady) {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.darkTheme,
+        home: const Scaffold(body: Center(child: CircularProgressIndicator())),
+      );
+    }
+
     return _ErrorHandler.wrapWithErrorListener(
       MultiProvider(
         providers: [
@@ -533,29 +545,27 @@ class _MyAppState extends State<MyApp> {
           ChangeNotifierProvider(
             create: (context) {
               final service = EpgService();
-              // Initialize EPG on app start
+              // Initialize EPG and force refresh on app start
               Future.microtask(() async {
                 await service.initialize();
-                debugPrint('Main: EPG initialized with ${service.totalChannelCount} channels');
+                debugPrint(
+                    'Main: EPG initialized with ${service.totalChannelCount} channels');
+                // Force a background refresh to ensure fresh data
+                await service.loadEpg();
+                debugPrint(
+                    'Main: EPG refresh complete, total channels: ${service.totalChannelCount}');
               });
               return service;
             },
           ),
-          ChangeNotifierProxyProvider<ContentProvider, ChannelProvider>(
+          ChangeNotifierProxyProvider2<ContentProvider, EpgService, ChannelProvider>(
             create: (context) {
               final provider = ChannelProvider();
-              // Load playlist immediately after first frame
+              // Defer playlist loading until after first frame is rendered
               if (_hasPlaylist) {
                 _runDeferred(
-                  () async {
-                    await provider.autoLoadPlaylist();
-                    // After channels load, filter EPG
-                    final epgService = context.read<EpgService>();
-                    final channelIds = provider.channels.map((c) => c.tvgId ?? c.id).toSet();
-                    debugPrint('Main: Filtering EPG to ${channelIds.length} playlist channels');
-                    await epgService.loadEpg(channelFilter: channelIds);
-                    debugPrint('Main: EPG refresh complete, total channels: ${epgService.totalChannelCount}');
-                  },
+                  provider.autoLoadPlaylist,
+                  delay: const Duration(milliseconds: 1500),
                 );
               } else {
                 StartupProbe.mark(
@@ -564,8 +574,9 @@ class _MyAppState extends State<MyApp> {
               }
               return provider;
             },
-            update: (context, contentProvider, channelProvider) {
+            update: (context, contentProvider, epgService, channelProvider) {
               channelProvider?.setContentProvider(contentProvider);
+              channelProvider?.setEpgService(epgService);
               return channelProvider ?? ChannelProvider();
             },
           ),
@@ -598,10 +609,16 @@ class _MyAppState extends State<MyApp> {
               return service;
             },
           ),
-          ChangeNotifierProvider(
+          ChangeNotifierProxyProvider<WhisperSpeechService,
+              WhisperTranscriptionService>(
             create: (_) {
               final service = WhisperTranscriptionService();
               _runDeferred(service.initialize);
+              return service;
+            },
+            update: (_, speechService, transcriptionService) {
+              final service = transcriptionService ??
+                  (WhisperTranscriptionService()..initialize());
               return service;
             },
           ),
@@ -636,7 +653,7 @@ class _MyAppState extends State<MyApp> {
               builder: (context, child) {
                 final media = MediaQuery.of(context);
                 final resolvedChild = child ?? const SizedBox.shrink();
-                // _maybePromptForProfile(profileProvider);
+                _maybePromptForProfile(profileProvider);
                 // No scaling - use native screen size
                 return MediaQuery(data: media, child: resolvedChild);
               },
@@ -648,9 +665,40 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _maybePromptForProfile(ProfileProvider profileProvider) {
+    final shouldPrompt = profileProvider.activeProfile == null;
+    if (!shouldPrompt) {
+      _profileDialogScheduled = false;
+      return;
+    }
+
     if (profileProvider.profiles.isEmpty) {
       _ensureDefaultProfile(profileProvider);
+      return;
     }
+
+    if (_profileDialogScheduled) {
+      return;
+    }
+
+    _profileDialogScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Avoid using the widget BuildContext across async gaps. Use the
+      // ProfileProvider instance passed into this method (already captured
+      // from the widget tree) instead of calling Provider.of(context).
+      final profileProviderRef = profileProvider;
+      try {
+        await _showProfileDialog();
+      } finally {
+        // Ensure the scheduled flag is cleared regardless of mounted state.
+        _profileDialogScheduled = false;
+        if (mounted && !profileProviderRef.isDisposed) {
+          final stillMissingProfile = profileProviderRef.activeProfile == null;
+          if (stillMissingProfile) {
+            setState(() {});
+          }
+        }
+      }
+    });
   }
 
   Future<void> _showProfileDialog() async {
@@ -818,12 +866,12 @@ final _router = GoRouter(
         final activeTab = state.matchedLocation.contains('/search')
             ? 'search'
             : state.matchedLocation.contains('/movies')
-            ? 'movies'
-            : state.matchedLocation.contains('/series')
-            ? 'series'
-            : state.matchedLocation.contains('/epg')
-            ? 'guide'
-            : 'home';
+                ? 'movies'
+                : state.matchedLocation.contains('/series')
+                    ? 'series'
+                    : state.matchedLocation.contains('/epg')
+                        ? 'guide'
+                        : 'home';
 
         return MainShell(activeTab: activeTab, child: child);
       },
@@ -844,19 +892,20 @@ final _router = GoRouter(
               _fadeSlidePage(key: state.pageKey, child: const SeriesScreen()),
         ),
         GoRoute(
-              path: '/epg',
+          path: '/epg',
           pageBuilder: (context, state) {
             final extra = state.extra as Map<String, dynamic>?;
             final channel = extra?['channel'] as Channel?;
-            final continuePlayback = extra?['continuePlayback'] as bool? ?? false;
+            final continuePlayback =
+                extra?['continuePlayback'] as bool? ?? false;
             return _fadeSlidePage(
-          key: state.pageKey,
-          child: EPGScreen(
-            initialChannel: channel,
-            continuePlayback: continuePlayback,
-          ),
-        );
-      },
+              key: state.pageKey,
+              child: EPGScreen(
+                initialChannel: channel,
+                continuePlayback: continuePlayback,
+              ),
+            );
+          },
         ),
         GoRoute(
           path: '/search',
@@ -865,13 +914,13 @@ final _router = GoRouter(
         ),
         GoRoute(
           path: '/favorites',
-          pageBuilder: (context, state) =>
-              _fadeSlidePage(key: state.pageKey, child: const FavoritesScreen()),
+          pageBuilder: (context, state) => _fadeSlidePage(
+              key: state.pageKey, child: const FavoritesScreen()),
         ),
         GoRoute(
           path: '/downloads',
-          pageBuilder: (context, state) =>
-              _fadeSlidePage(key: state.pageKey, child: const DownloadsScreen()),
+          pageBuilder: (context, state) => _fadeSlidePage(
+              key: state.pageKey, child: const DownloadsScreen()),
         ),
         GoRoute(
           path: '/settings',
@@ -917,9 +966,8 @@ final _router = GoRouter(
           content = state.extra as Content;
         } else {
           final encodedId = state.pathParameters['id'];
-          final contentId = encodedId != null
-              ? Uri.decodeComponent(encodedId)
-              : null;
+          final contentId =
+              encodedId != null ? Uri.decodeComponent(encodedId) : null;
           if (contentId != null) {
             final contentProvider = Provider.of<ContentProvider>(
               context,
@@ -1079,5 +1127,3 @@ Widget _buildPlaceholder(BuildContext context, String title, IconData icon) {
     ),
   );
 }
-
-

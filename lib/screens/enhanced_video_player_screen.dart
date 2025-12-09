@@ -158,7 +158,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
   Future<void> _initializePlayer() async {
     try {
-      debugPrint('VideoPlayer: Initializing player for: ${widget.videoUrl}');
+      debugPrint('VideoPlayer: Initializing native ExoPlayer for: ${widget.videoUrl}');
       
       // Validate URL before attempting to initialize
       if (widget.videoUrl.isEmpty) {
@@ -178,71 +178,13 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         return;
       }
       
-      // If audioTracks are provided and non-empty, prefer the VLC backend
-      // which supports real audio-track switching via setAudioTrack().
-      // VLC DISABLED: flutter_vlc_player causes build errors
-      _useVlcBackend = false;
-
-      // Convert HTTPS to HTTP for streams to avoid SSL handshake errors
-      // Many IPTV providers have SSL certificate issues
-      // Initialize video player
-      _videoPlayerController = VideoPlayerController.networkUrl(
-        uri,
-        videoPlayerOptions: VideoPlayerOptions(
-          mixWithOthers: false,
-          allowBackgroundPlayback: false,
-        ),
-        httpHeaders: {
-          'User-Agent':
-              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Referer': widget.videoUrl,
-        },
-      );
-
-      debugPrint('VideoPlayer: Awaiting initialization...');
-      await _videoPlayerController.initialize();
-      debugPrint('VideoPlayer: Initialized successfully');
-
-      // Add error listener to catch runtime playback errors
-      _videoPlayerController.addListener(() {
-        if (_videoPlayerController.value.hasError && !_hasError) {
-          final error = _videoPlayerController.value.errorDescription ?? 'Unknown playback error';
-          debugPrint('VideoPlayer: Runtime error: $error');
-          if (mounted) {
-            setState(() {
-              _hasError = true;
-              _errorMessage = 'Playback failed: $error\n\nURL: ${widget.videoUrl}';
-            });
-          }
-        }
-      });
-
-      // Skip subtitle controller initialization - causes UnimplementedError
-      // Only initialize if subtitles are explicitly provided and needed
-      // _subtitleController = null;
-
-      debugPrint('VideoPlayer: Starting playback...');
-      await _videoPlayerController.play();
-      debugPrint(
-        'VideoPlayer: Duration: ${_videoPlayerController.value.duration}',
-      );
-      debugPrint('VideoPlayer: Size: ${_videoPlayerController.value.size}');
-
+      // Only use native ExoPlayer
+      debugPrint('VideoPlayer: Using native ExoPlayer');
       if (mounted) {
         setState(() {
           _isInitialized = true;
         });
       }
-      // If a subtitle was selected before initialization, attempt to load it
-      if (_selectedSubtitleIndex >= 0 &&
-          widget.subtitleOptions != null &&
-          widget.subtitleOptions!.length > _selectedSubtitleIndex) {
-        _loadSubtitle(widget.subtitleOptions![_selectedSubtitleIndex]);
-      }
-
-      // Native ExoPlayer will be initialized via onCreated callback in _buildVideoPlayer
-
-      debugPrint('VideoPlayer: Player initialized and ready');
     } catch (e, stackTrace) {
       debugPrint('VideoPlayer: Error initializing player: $e');
       debugPrint('VideoPlayer: Stack trace: $stackTrace');
@@ -827,24 +769,14 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    // Use native ExoPlayer on Android to avoid YUV color space issues
-    if (Platform.isAndroid && _nativeExoAvailable) {
-      return NativeExoPlayer(
-        videoUrl: widget.videoUrl,
-        autoPlay: true,
-        onCreated: (controller) {
-          setState(() {
-            _nativeController = controller;
-          });
-        },
-      );
-    }
-    
-    return Center(
-      child: AspectRatio(
-        aspectRatio: _videoPlayerController.value.aspectRatio,
-        child: VideoPlayer(_videoPlayerController),
-      ),
+    return NativeExoPlayer(
+      videoUrl: widget.videoUrl,
+      autoPlay: true,
+      onCreated: (controller) {
+        setState(() {
+          _nativeController = controller;
+        });
+      },
     );
   }
 
@@ -1985,10 +1917,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   void dispose() {
     _controlsTimer?.cancel();
     _subtitleTimer?.cancel();
-    // Native ExoPlayer controller doesn't need manual disposal
-    try {
-      _videoPlayerController.dispose();
-    } catch (_) {}
     _playerFocusNode.dispose();
     super.dispose();
   }

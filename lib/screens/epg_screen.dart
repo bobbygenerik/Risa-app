@@ -554,35 +554,22 @@ class _EPGScreenState extends State<EPGScreen>
             ],
           ),
           const Spacer(),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                DateFormat('h:mm a').format(DateTime.now()),
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  decoration: TextDecoration.none,
-                ),
+              // Now button (icon only)
+              IconButton(
+                onPressed: _scrollToCurrentTime,
+                icon: const Icon(Icons.access_time, size: 20),
+                color: Color(0xFF4a9eff),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                tooltip: 'Jump to Now',
               ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Now button (icon only)
-                  IconButton(
-                    onPressed: _scrollToCurrentTime,
-                    icon: const Icon(Icons.access_time, size: 20),
-                    color: Color(0xFF4a9eff),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    tooltip: 'Jump to Now',
-                  ),
-                  const SizedBox(width: 8),
-                  // Refresh button with spinning animation when loading
-                  Focus(
-                    focusNode: _refreshButtonFocus,
+              const SizedBox(width: 8),
+              // Refresh button with spinning animation when loading
+              Focus(
+                focusNode: _refreshButtonFocus,
                     onKeyEvent: (node, event) {
               if (event is KeyDownEvent) {
                 if (event.logicalKey == LogicalKeyboardKey.select ||
@@ -662,8 +649,6 @@ class _EPGScreenState extends State<EPGScreen>
               },
             ),
           ),
-                ],
-              ),
             ],
           ),
         ],
@@ -713,10 +698,6 @@ class _EPGScreenState extends State<EPGScreen>
           }
           if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
             _firstChannelFocus.requestFocus();
-            return KeyEventResult.handled;
-          }
-          if (event.logicalKey == LogicalKeyboardKey.arrowUp && isFirst) {
-            _refreshButtonFocus.requestFocus();
             return KeyEventResult.handled;
           }
         }
@@ -1047,7 +1028,7 @@ class _EPGScreenState extends State<EPGScreen>
                         // Today header
                         Container(
                           height: 60,
-                          margin: const EdgeInsets.only(bottom: 4, right: 8),
+                          margin: const EdgeInsets.only(bottom: 4, right: 4),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.03),
                             borderRadius: BorderRadius.circular(8),

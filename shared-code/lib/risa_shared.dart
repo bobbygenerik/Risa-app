@@ -1,4 +1,4 @@
-library;
+library risa_shared;
 
 // Models
 export 'models/channel.dart';
@@ -9,7 +9,7 @@ export 'models/profile_provider.dart';
 export 'models/saved_playlist.dart';
 
 // Services
-// export 'services/epg_service.dart';
+export 'services/epg_service.dart';
 export 'services/m3u_parser_service.dart';
 export 'services/xtream_codes_service.dart';
 export 'services/tmdb_service.dart';
