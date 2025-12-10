@@ -22,6 +22,7 @@ import 'package:iptv_player/services/opensubtitles_service.dart';
 import 'package:iptv_player/services/real_debrid_service.dart';
 import 'package:iptv_player/widgets/main_shell.dart';
 import 'package:iptv_player/widgets/legal_disclaimer_dialog.dart';
+import 'package:iptv_player/widgets/app_dialog.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/screens/epg_screen.dart';
 import 'package:iptv_player/screens/settings_screen.dart';
@@ -784,16 +785,18 @@ class _ProfileSelectionDialogState extends State<_ProfileSelectionDialog> {
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<ProfileProvider>(context);
-    return AlertDialog(
-      title: const Text('Select Profile'),
+    return AppDialog(
+      title: 'Select Profile',
       content: provider.profiles.isEmpty
           ? Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Text('No profiles found. Create a new profile:'),
+                const SizedBox(height: 16),
                 TextField(
                   controller: _nameController,
                   decoration: const InputDecoration(labelText: 'Profile Name'),
+                  style: const TextStyle(color: Colors.white),
                 ),
               ],
             )
@@ -803,39 +806,36 @@ class _ProfileSelectionDialogState extends State<_ProfileSelectionDialog> {
                 ...provider.profiles.map(
                   (p) => ListTile(
                     leading: CircleAvatar(child: Text(p.name[0])),
-                    title: Text(p.name),
+                    title: Text(p.name, style: const TextStyle(color: Colors.white)),
                     onTap: () {
                       provider.setActiveProfile(p.id);
                       Navigator.of(context).pop();
                     },
                   ),
                 ),
-                const Divider(),
+                const Divider(color: Colors.white12),
                 TextField(
                   controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'New Profile Name',
-                  ),
+                  decoration: const InputDecoration(labelText: 'New Profile Name'),
+                  style: const TextStyle(color: Colors.white),
                 ),
               ],
             ),
       actions: [
-        TextButton(
+        AppDialogButton(
+          text: 'Create',
+          isPrimary: true,
           onPressed: () async {
             final name = _nameController.text.trim();
             if (name.isNotEmpty) {
               final id = DateTime.now().millisecondsSinceEpoch.toString();
               final profile = UserProfile(id: id, name: name, avatarUrl: '');
-              // Capture a reference to the root navigator so we don't use the
-              // dialog's BuildContext after an await (avoids analyzer warnings).
               final rootNav = _rootNavigatorKey.currentState;
               await provider.addProfile(profile);
               provider.setActiveProfile(profile.id);
-              // Use the root navigator to pop the dialog safely.
               rootNav?.pop();
             }
           },
-          child: const Text('Create'),
         ),
       ],
     );

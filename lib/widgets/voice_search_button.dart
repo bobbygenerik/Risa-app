@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/services/voice_search_service.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/widgets/app_dialog.dart';
 
 class VoiceSearchButton extends StatefulWidget {
   final Function(String)? onSearchResult;
@@ -72,15 +73,8 @@ class _VoiceSearchButtonState extends State<VoiceSearchButton>
 
     showDialog(
       context: context,
-        builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.dialogBackground,
-        title: Row(
-          children: [
-            Icon(Icons.search, color: AppTheme.primaryBlue, size: context.tvIconSize(24)),
-            SizedBox(width: context.tvSpacing(AppSizes.sm)),
-            Text('Search Results', style: TextStyle(fontSize: context.tvTextSize(16))),
-          ],
-        ),
+      builder: (context) => AppDialog(
+        title: 'Search Results',
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -92,21 +86,14 @@ class _VoiceSearchButtonState extends State<VoiceSearchButton>
             const SizedBox(height: AppSizes.sm),
             Text(
               '"$query"',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(color: AppTheme.primaryBlue),
-            ),
-            const SizedBox(height: AppSizes.md),
-            Text(
-              'Implementation: Connect this to your search functionality',
-              style: Theme.of(context).textTheme.bodySmall,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.primaryBlue),
             ),
           ],
         ),
         actions: [
-          TextButton(
+          AppDialogButton(
+            text: 'Close',
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
           ),
         ],
       ),

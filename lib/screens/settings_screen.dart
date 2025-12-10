@@ -12,13 +12,12 @@ import 'package:iptv_player/services/epg_service.dart';
 import 'package:iptv_player/services/ai_model_manager.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:provider/provider.dart';
-// import 'package:iptv_player/services/ai_upscaling_service.dart'; // Commented out - service not implemented
+import 'package:iptv_player/services/ai_upscaling_service.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
-import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -29,7 +28,6 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen>
     with SingleTickerProviderStateMixin {
-  late Size _screenSize;
   TabController? _tabController;
 
   // Playlist Settings - Late initialization to avoid memory issues
@@ -40,10 +38,6 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   // Playlist Input Method (0 = M3U, 1 = Xtream)
   int _playlistInputMethod = 0;
-
-  // EPG Settings
-  late final TextEditingController _customEpgUrlController;
-  late final TextEditingController _secondaryEpgUrlController;
 
   // Integration Settings - Late initialization
   late final TextEditingController _realDebridApiKeyController;
@@ -59,7 +53,6 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool _openSubtitlesUsernameEditable = false;
   bool _openSubtitlesPasswordEditable = false;
   bool _customEpgUrlEditable = false;
-  bool _secondaryEpgUrlEditable = false;
 
   // Focus nodes for text fields and tab buttons
   final FocusNode _m3uUrlFocusNode = FocusNode();
@@ -69,55 +62,27 @@ class _SettingsScreenState extends State<SettingsScreen>
   final FocusNode _realDebridApiKeyFocusNode = FocusNode();
   final FocusNode _openSubtitlesUsernameFocusNode = FocusNode();
   final FocusNode _openSubtitlesPasswordFocusNode = FocusNode();
-  final FocusNode _loadM3uButtonFocusNode =
-      FocusNode(debugLabel: 'LoadM3UButton');
-  final FocusNode _loadXtreamButtonFocusNode =
-      FocusNode(debugLabel: 'LoadXtreamButton');
-  final FocusNode _clearPlaylistCacheButtonFocusNode =
-      FocusNode(debugLabel: 'ClearPlaylistCacheButton');
-  final FocusNode _savedPlaylistFocusNode =
-      FocusNode(debugLabel: 'SavedPlaylistButton');
-  final FocusNode _updateEpgButtonFocusNode =
-      FocusNode(debugLabel: 'UpdateEPGButton');
-  final FocusNode _clearEpgButtonFocusNode =
-      FocusNode(debugLabel: 'ClearEPGButton');
+  final FocusNode _loadM3uButtonFocusNode = FocusNode(debugLabel: 'LoadM3UButton');
+  final FocusNode _loadXtreamButtonFocusNode = FocusNode(debugLabel: 'LoadXtreamButton');
+  final FocusNode _clearPlaylistCacheButtonFocusNode = FocusNode(debugLabel: 'ClearPlaylistCacheButton');
+  final FocusNode _updateEpgButtonFocusNode = FocusNode(debugLabel: 'UpdateEPGButton');
+  final FocusNode _clearEpgButtonFocusNode = FocusNode(debugLabel: 'ClearEPGButton');
   final FocusNode _m3uTabFocusNode = FocusNode(debugLabel: 'M3UTabButton');
-  final FocusNode _xtreamTabFocusNode =
-      FocusNode(debugLabel: 'XtreamTabButton');
-  final FocusNode _clearM3uButtonFocusNode =
-      FocusNode(debugLabel: 'ClearM3UButton');
-  final FocusNode _clearXtreamButtonFocusNode =
-      FocusNode(debugLabel: 'ClearXtreamButton');
-  final FocusNode _customEpgUrlFocusNode =
-      FocusNode(debugLabel: 'CustomEpgUrlField');
-  final FocusNode _secondaryEpgUrlFocusNode =
-      FocusNode(debugLabel: 'SecondaryEpgUrlField');
-  final FocusNode _viewUnmatchedChannelsFocusNode =
-      FocusNode(debugLabel: 'ViewUnmatchedChannels');
+  final FocusNode _xtreamTabFocusNode = FocusNode(debugLabel: 'XtreamTabButton');
+  final FocusNode _clearM3uButtonFocusNode = FocusNode(debugLabel: 'ClearM3UButton');
+  final FocusNode _clearXtreamButtonFocusNode = FocusNode(debugLabel: 'ClearXtreamButton');
+  final FocusNode _customEpgUrlFocusNode = FocusNode(debugLabel: 'CustomEpgUrlField');
   // EPG interval stepper buttons
-  final FocusNode _epgIntervalMinusFocusNode =
-      FocusNode(debugLabel: 'EpgIntervalMinus');
-  final FocusNode _epgIntervalPlusFocusNode =
-      FocusNode(debugLabel: 'EpgIntervalPlus');
-  final FocusNode _epgPastDaysMinusFocusNode =
-      FocusNode(debugLabel: 'EpgPastDaysMinus');
-  final FocusNode _epgPastDaysPlusFocusNode =
-      FocusNode(debugLabel: 'EpgPastDaysPlus');
+  final FocusNode _epgIntervalMinusFocusNode = FocusNode(debugLabel: 'EpgIntervalMinus');
+  final FocusNode _epgIntervalPlusFocusNode = FocusNode(debugLabel: 'EpgIntervalPlus');
+  final FocusNode _epgPastDaysMinusFocusNode = FocusNode(debugLabel: 'EpgPastDaysMinus');
+  final FocusNode _epgPastDaysPlusFocusNode = FocusNode(debugLabel: 'EpgPastDaysPlus');
   // EPG section switches
-  final FocusNode _storeDescriptionsSwitchFocusNode =
-      FocusNode(debugLabel: 'StoreDescriptionsSwitch');
-  final FocusNode _showLogosSwitchFocusNode =
-      FocusNode(debugLabel: 'ShowLogosSwitch');
-  final FocusNode _showImagesSwitchFocusNode =
-      FocusNode(debugLabel: 'ShowImagesSwitch');
-  final FocusNode _editProfileButtonFocusNode =
-      FocusNode(debugLabel: 'EditProfileButton');
-  final FocusNode _browseStorageButtonFocusNode =
-      FocusNode(debugLabel: 'BrowseStorageButton');
-  // First focusable elements for Playback and AI tabs
-  final FocusNode _playbackFirstFocusNode =
-      FocusNode(debugLabel: 'PlaybackFirstSwitch');
-  final FocusNode _aiFirstFocusNode = FocusNode(debugLabel: 'AIFirstSwitch');
+  final FocusNode _storeDescriptionsSwitchFocusNode = FocusNode(debugLabel: 'StoreDescriptionsSwitch');
+  final FocusNode _showLogosSwitchFocusNode = FocusNode(debugLabel: 'ShowLogosSwitch');
+  final FocusNode _showImagesSwitchFocusNode = FocusNode(debugLabel: 'ShowImagesSwitch');
+  final FocusNode _editProfileButtonFocusNode = FocusNode(debugLabel: 'EditProfileButton');
+  final FocusNode _browseStorageButtonFocusNode = FocusNode(debugLabel: 'BrowseStorageButton');
   final Map<FocusNode, VoidCallback> _focusNodeListeners = {};
 
   // Playback Settings
@@ -173,15 +138,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     _xtreamServerController = TextEditingController();
     _xtreamUsernameController = TextEditingController();
     _xtreamPasswordController = TextEditingController();
-    _customEpgUrlController = TextEditingController();
-    _secondaryEpgUrlController = TextEditingController();
     _realDebridApiKeyController = TextEditingController();
     _openSubtitlesUsernameController = TextEditingController();
     _openSubtitlesPasswordController = TextEditingController();
-
-    // Add listener to save custom EPG URL when changed
-    _customEpgUrlController.addListener(_saveCustomEpgUrl);
-    _secondaryEpgUrlController.addListener(_saveSecondaryEpgUrl);
 
     _tabController = TabController(
       length: 5,
@@ -197,7 +156,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     });
     // Load settings - no setState during init
     _loadSettingsSync();
-
+    
     // Auto-focus the first sidebar tab (General) when settings screen opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _menuFocusNodes.isNotEmpty) {
@@ -216,9 +175,6 @@ class _SettingsScreenState extends State<SettingsScreen>
     _xtreamServerController.text = prefs.getString('xtream_server') ?? '';
     _xtreamUsernameController.text = prefs.getString('xtream_username') ?? '';
     _xtreamPasswordController.text = prefs.getString('xtream_password') ?? '';
-    _customEpgUrlController.text = prefs.getString('custom_epg_url') ?? '';
-    _secondaryEpgUrlController.text =
-        prefs.getString('secondary_epg_url') ?? '';
     _realDebridApiKeyController.text =
         prefs.getString('realdebrid_api_key') ?? '';
     _openSubtitlesUsernameController.text =
@@ -280,18 +236,6 @@ class _SettingsScreenState extends State<SettingsScreen>
     }
   }
 
-  // Save custom EPG URL when the text field changes
-  void _saveCustomEpgUrl() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('custom_epg_url', _customEpgUrlController.text);
-  }
-
-  // Save secondary EPG URL when the text field changes
-  void _saveSecondaryEpgUrl() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('secondary_epg_url', _secondaryEpgUrlController.text);
-  }
-
   @override
   void dispose() {
     _focusNodeListeners.forEach((node, listener) {
@@ -311,10 +255,6 @@ class _SettingsScreenState extends State<SettingsScreen>
     _xtreamUsernameFocusNode.dispose();
     _xtreamPasswordController.dispose();
     _xtreamPasswordFocusNode.dispose();
-    _customEpgUrlController.removeListener(_saveCustomEpgUrl);
-    _customEpgUrlController.dispose();
-    _secondaryEpgUrlController.removeListener(_saveSecondaryEpgUrl);
-    _secondaryEpgUrlController.dispose();
     _realDebridApiKeyController.dispose();
     _realDebridApiKeyFocusNode.dispose();
     _openSubtitlesUsernameController.dispose();
@@ -324,7 +264,6 @@ class _SettingsScreenState extends State<SettingsScreen>
     _loadM3uButtonFocusNode.dispose();
     _loadXtreamButtonFocusNode.dispose();
     _clearPlaylistCacheButtonFocusNode.dispose();
-    _savedPlaylistFocusNode.dispose();
     _updateEpgButtonFocusNode.dispose();
     _clearEpgButtonFocusNode.dispose();
     _m3uTabFocusNode.dispose();
@@ -332,8 +271,6 @@ class _SettingsScreenState extends State<SettingsScreen>
     _clearM3uButtonFocusNode.dispose();
     _clearXtreamButtonFocusNode.dispose();
     _customEpgUrlFocusNode.dispose();
-    _secondaryEpgUrlFocusNode.dispose();
-    _viewUnmatchedChannelsFocusNode.dispose();
     _epgIntervalMinusFocusNode.dispose();
     _epgIntervalPlusFocusNode.dispose();
     _epgPastDaysMinusFocusNode.dispose();
@@ -343,8 +280,6 @@ class _SettingsScreenState extends State<SettingsScreen>
     _showImagesSwitchFocusNode.dispose();
     _editProfileButtonFocusNode.dispose();
     _browseStorageButtonFocusNode.dispose();
-    _playbackFirstFocusNode.dispose();
-    _aiFirstFocusNode.dispose();
     super.dispose();
   }
 
@@ -357,22 +292,18 @@ class _SettingsScreenState extends State<SettingsScreen>
       } else if (_tabController!.index == 1) {
         // Account tab
         _editProfileButtonFocusNode.requestFocus();
-      } else if (_tabController!.index == 2) {
-        // Playback tab - focus first switch
-        _playbackFirstFocusNode.requestFocus();
-      } else if (_tabController!.index == 3) {
-        // AI Features tab - focus first switch
-        _aiFirstFocusNode.requestFocus();
       } else if (_tabController!.index == 4) {
         // Recordings tab
         _browseStorageButtonFocusNode.requestFocus();
+      } else {
+        // For other tabs, traverse to the first focusable element in the content scope
+        FocusScope.of(context).nextFocus();
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    _screenSize = MediaQuery.of(context).size;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: PopScope(
@@ -458,7 +389,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     ];
 
     return Container(
-      width: context.tvSpacing(220),
+      width: 220,
       decoration: BoxDecoration(
         color: Colors.white.withAlpha((0.05 * 255).round()),
         border: Border(
@@ -472,8 +403,8 @@ class _SettingsScreenState extends State<SettingsScreen>
         children: [
           // Settings header
           Container(
-            height: context.tvSpacing(64),
-            padding: EdgeInsets.symmetric(horizontal: context.tvSpacing(16)),
+            height: AppSizes.appBarHeight,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             alignment: Alignment.centerLeft,
             decoration: const BoxDecoration(
               border: Border(
@@ -535,32 +466,29 @@ class _SettingsScreenState extends State<SettingsScreen>
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
                         return Container(
-                          margin: EdgeInsets.symmetric(
-                              horizontal: context.tvSpacing(8),
-                              vertical: context.tvSpacing(4)),
+                          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? AppTheme.primaryBlue
-                                    .withAlpha((0.3 * 255).round())
+                                ? AppTheme.primaryBlue.withAlpha(
+                                    (0.3 * 255).round(),
+                                  )
                                 : Colors.transparent,
                             border: Border.all(
                               color: isFocused
                                   ? AppTheme.primaryBlue
                                   : (isSelected
-                                      ? AppTheme.primaryBlue
-                                          .withAlpha((0.5 * 255).round())
+                                      ? AppTheme.primaryBlue.withAlpha(
+                                          (0.5 * 255).round(),
+                                        )
                                       : Colors.transparent),
-                              width: isFocused
-                                  ? context.tvSpacing(2.0)
-                                  : context.tvSpacing(1.5),
+                              width: isFocused ? 2.0 : 1.5,
                             ),
-                            borderRadius:
-                                BorderRadius.circular(context.tvSpacing(12)),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           child: Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: context.tvSpacing(12),
-                              vertical: context.tvSpacing(12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 12,
                             ),
                             child: Row(
                               children: [
@@ -569,9 +497,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                                   color: (isFocused || isSelected)
                                       ? AppTheme.primaryBlue
                                       : AppTheme.textSecondary,
-                                  size: context.tvIconSize(20),
+                                  size: 20,
                                 ),
-                                SizedBox(width: context.tvSpacing(12)),
+                                const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
                                     item['title'] as String,
@@ -579,7 +507,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                                       color: (isFocused || isSelected)
                                           ? AppTheme.textPrimary
                                           : AppTheme.textSecondary,
-                                      fontSize: context.tvTextSize(16),
+                                      fontSize: 14,
                                       fontWeight: (isFocused || isSelected)
                                           ? FontWeight.w600
                                           : FontWeight.w500,
@@ -607,309 +535,6 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (_menuFocusNodes.isNotEmpty) {
       final idx = _tabController!.index.clamp(0, _menuFocusNodes.length - 1);
       _menuFocusNodes[idx].requestFocus();
-    }
-  }
-
-  Future<void> _handleUpdateEpg() async {
-    // Get EPG URL from preferences
-    final prefs = await SharedPreferences.getInstance();
-    final epgUrl =
-        prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
-    final secondaryEpgUrl = prefs.getString('secondary_epg_url');
-
-    if ((epgUrl == null || epgUrl.isEmpty) &&
-        (secondaryEpgUrl == null || secondaryEpgUrl.isEmpty)) {
-      if (mounted) {
-        showAppSnackBar(
-          context,
-          const SnackBar(
-            content: Text(
-                'No EPG URL configured. Set a custom EPG URL or load a playlist with EPG.'),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 4),
-          ),
-        );
-      }
-      return;
-    }
-
-    if (mounted) {
-      showAppSnackBar(
-        context,
-        const SnackBar(
-          content: Text('Updating EPG data...'),
-        ),
-      );
-    }
-
-    try {
-      final epgService = Provider.of<EpgService>(context, listen: false);
-
-      // Load primary EPG
-      if (epgUrl != null && epgUrl.isNotEmpty) {
-        await epgService.loadEpgFromUrl(epgUrl, forceRefresh: true);
-      }
-
-      // Load secondary EPG if configured
-      if (secondaryEpgUrl != null && secondaryEpgUrl.isNotEmpty) {
-        await epgService.loadSecondaryEpgFromUrl(secondaryEpgUrl,
-            forceRefresh: true);
-      }
-
-      if (mounted) {
-        if (epgService.hasData) {
-          final primaryCount = epgService.epgData.length;
-          final secondaryCount = epgService.secondaryEpgData.length;
-          final message = secondaryCount > 0
-              ? 'EPG updated: $primaryCount primary + $secondaryCount supplementary channels'
-              : 'EPG updated: $primaryCount channels loaded';
-          showAppSnackBar(
-            context,
-            SnackBar(
-              content: Text(message),
-              backgroundColor: AppTheme.accentGreen,
-            ),
-          );
-        } else if (epgService.error != null) {
-          showAppSnackBar(
-            context,
-            SnackBar(
-              content: Text('EPG update failed: ${epgService.error}'),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 4),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        showAppSnackBar(
-          context,
-          SnackBar(
-            content: Text('EPG update error: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
-    }
-  }
-
-  void _showUnmatchedChannelsDialog() {
-    final epgService = Provider.of<EpgService>(context, listen: false);
-    final channelProvider =
-        Provider.of<ChannelProvider>(context, listen: false);
-    final channels = channelProvider.channels;
-
-    if (channels.isEmpty) {
-      showAppSnackBar(
-        context,
-        const SnackBar(
-          content: Text('No channels loaded. Load a playlist first.'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    final stats = epgService.getMatchingStats(channels);
-    final analysis = epgService.analyzeChannelMatches(channels);
-    final unmatched = analysis['unmatched'] ?? [];
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.dialogBackground,
-        title: Row(
-          children: [
-            const Icon(Icons.analytics, color: AppTheme.primaryBlue),
-            const SizedBox(width: 8),
-            const Expanded(child: Text('EPG Matching Analysis')),
-          ],
-        ),
-        content: SizedBox(
-          width: MediaQuery.of(context).size.width * 0.8,
-          height: MediaQuery.of(context).size.height * 0.6,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Statistics summary
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppTheme.dialogBackground,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildStatCard(
-                            'Matched',
-                            '${stats['matched']}',
-                            Colors.green,
-                            Icons.check_circle,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildStatCard(
-                            'Unmatched',
-                            '${stats['unmatched']}',
-                            Colors.orange,
-                            Icons.warning,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'EPG Sources: ${stats['primaryChannels']} primary + ${stats['secondaryChannels']} secondary channels',
-                      style: const TextStyle(
-                          fontSize: 12, color: AppTheme.textSecondary),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-              Text(
-                'Channels Without EPG (${unmatched.length}):',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleSmall
-                    ?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-
-              // Unmatched channels list
-              Expanded(
-                child: unmatched.isEmpty
-                    ? const Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.celebration,
-                                size: 48, color: Colors.green),
-                            SizedBox(height: 8),
-                            Text('All channels have EPG data!',
-                                style: TextStyle(color: Colors.green)),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        itemCount: unmatched.length,
-                        itemBuilder: (context, index) {
-                          final channel = unmatched[index];
-                          return ListTile(
-                            dense: true,
-                            leading: const Icon(Icons.tv_off,
-                                size: 20, color: Colors.orange),
-                            title: Text(channel['name'] ?? 'Unknown',
-                                style: const TextStyle(fontSize: 13)),
-                            subtitle: Text(
-                              'ID: ${channel['tvgId']} • ${channel['group']}',
-                              style: const TextStyle(
-                                  fontSize: 11, color: AppTheme.textSecondary),
-                            ),
-                          );
-                        },
-                      ),
-              ),
-
-              if (unmatched.isNotEmpty) ...[
-                const Divider(),
-                const Text(
-                  'Tip: Try adding a secondary EPG source that includes these channels.',
-                  style: TextStyle(
-                      fontSize: 11,
-                      fontStyle: FontStyle.italic,
-                      color: AppTheme.textSecondary),
-                ),
-              ],
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatCard(
-      String label, String value, Color color, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(value,
-                  style: TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold, color: color)),
-              Text(label,
-                  style: const TextStyle(
-                      fontSize: 11, color: AppTheme.textSecondary)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _handleClearEpg() async {
-    // Show confirmation dialog
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.dialogBackground,
-        title: const Text('Clear EPG Data'),
-        content: const Text(
-          'Are you sure you want to clear all EPG data? This cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              'Clear',
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true && mounted) {
-      final epgService = Provider.of<EpgService>(context, listen: false);
-      await epgService.clearCache();
-
-      if (mounted) {
-        showAppSnackBar(
-          context,
-          const SnackBar(
-            content: Text('EPG data cleared'),
-            backgroundColor: AppTheme.accentGreen,
-          ),
-        );
-      }
     }
   }
 
@@ -954,8 +579,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                     children: [
                       CircleAvatar(
                         radius: 50,
-                        backgroundColor: AppTheme.dialogBackground,
-                        backgroundImage: profileImagePath != null &&
+                        backgroundColor: AppTheme.cardBackground,
+                        backgroundImage:
+                            profileImagePath != null &&
                                 profileImagePath.isNotEmpty
                             ? ResizeImage(
                                 FileImage(File(profileImagePath)),
@@ -965,12 +591,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                             : null,
                         child:
                             profileImagePath == null || profileImagePath.isEmpty
-                                ? const Icon(
-                                    Icons.person,
-                                    size: 50,
-                                    color: AppTheme.primaryBlue,
-                                  )
-                                : null,
+                            ? const Icon(
+                                Icons.person,
+                                size: 50,
+                                color: AppTheme.primaryBlue,
+                              )
+                            : null,
                       ),
                       const SizedBox(height: AppSizes.md),
                       Text(
@@ -980,17 +606,15 @@ class _SettingsScreenState extends State<SettingsScreen>
                       Text(
                         userEmail,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.textSecondary,
-                            ),
+                          color: AppTheme.textSecondary,
+                        ),
                       ),
                       const SizedBox(height: AppSizes.md),
                       Focus(
                         focusNode: _editProfileButtonFocusNode,
                         onKeyEvent: (node, event) {
-                          if (event is! KeyDownEvent)
-                            return KeyEventResult.ignored;
-                          if (event.logicalKey ==
-                              LogicalKeyboardKey.arrowLeft) {
+                          if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
                             requestFirstSidebarFocus();
                             return KeyEventResult.handled;
                           }
@@ -1008,14 +632,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                                 curve: TVFocusStyle.animationCurve,
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(8),
-                                  boxShadow: isFocused
-                                      ? TVFocusStyle.focusedShadow
-                                      : null,
+                                  boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
                                 ),
                                 child: ElevatedButton(
                                   onPressed: () async {
-                                    final result =
-                                        await context.push('/edit-profile');
+                                    final result = await context.push('/edit-profile');
                                     if (!mounted) return;
                                     if (result == true) {
                                       setState(() {});
@@ -1055,8 +676,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         _buildSectionCard(
           title: 'Video Settings',
           children: [
-            _buildSwitchTile('Hardware Acceleration', _hardwareAcceleration,
-                focusNode: _playbackFirstFocusNode),
+            _buildSwitchTile('Hardware Acceleration', _hardwareAcceleration),
             _buildSwitchTile('Hardware Decoding', _hardwareDecoding),
             _buildSwitchTile(
               'Hardware Post-Processing',
@@ -1110,10 +730,10 @@ class _SettingsScreenState extends State<SettingsScreen>
               _audioChannels == 0
                   ? 'Auto'
                   : _audioChannels == 2
-                      ? 'Stereo'
-                      : _audioChannels == 6
-                          ? '5.1 Surround'
-                          : '7.1 Surround',
+                  ? 'Stereo'
+                  : _audioChannels == 6
+                  ? '5.1 Surround'
+                  : '7.1 Surround',
               ['Auto', 'Stereo', '5.1 Surround', '7.1 Surround'],
               (value) async {
                 if (value != null) {
@@ -1201,8 +821,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 if (event is! KeyDownEvent) return KeyEventResult.ignored;
                 if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
                   if (_videoBufferSize > 0) {
-                    setState(() => _videoBufferSize =
-                        (_videoBufferSize - 5).clamp(0, 100));
+                    setState(() => _videoBufferSize = (_videoBufferSize - 5).clamp(0, 100));
                     return KeyEventResult.handled;
                   }
                   requestFirstSidebarFocus();
@@ -1210,8 +829,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 }
                 if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
                   if (_videoBufferSize < 100) {
-                    setState(() => _videoBufferSize =
-                        (_videoBufferSize + 5).clamp(0, 100));
+                    setState(() => _videoBufferSize = (_videoBufferSize + 5).clamp(0, 100));
                     return KeyEventResult.handled;
                   }
                 }
@@ -1223,8 +841,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   return Container(
                     decoration: isFocused
                         ? BoxDecoration(
-                            border: Border.all(
-                                color: AppTheme.primaryBlue, width: 2),
+                            border: Border.all(color: AppTheme.primaryBlue, width: 2),
                             borderRadius: BorderRadius.circular(8),
                           )
                         : null,
@@ -1284,6 +901,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
         final data = snapshot.data!;
         final epgUrl = data['epg_url'] as String?;
+        final customEpgUrl = data['custom_epg_url'] as String?;
         final playlistType = data['playlist_type'] as String?;
         final m3uUrl = data['m3u_url'] as String?;
         final xtreamServer = data['xtream_server'] as String?;
@@ -1311,6 +929,10 @@ class _SettingsScreenState extends State<SettingsScreen>
           }
         }
 
+        final TextEditingController customEpgController = TextEditingController(
+          text: customEpgUrl ?? '',
+        );
+
         return _buildSectionCard(
           title: 'EPG (Electronic Program Guide)',
           subtitle: 'Configure TV guide information and display settings',
@@ -1319,9 +941,9 @@ class _SettingsScreenState extends State<SettingsScreen>
             Text(
               'EPG Sources',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryBlue,
-                  ),
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primaryBlue,
+              ),
             ),
             const SizedBox(height: AppSizes.md),
 
@@ -1407,17 +1029,16 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             const SizedBox(height: AppSizes.sm),
             _buildTVTextField(
-              controller: _customEpgUrlController,
+              controller: customEpgController,
               focusNode: _customEpgUrlFocusNode,
               isEditable: _customEpgUrlEditable,
-              onEditableChanged: (val) =>
-                  setState(() => _customEpgUrlEditable = val),
+              onEditableChanged: (val) => setState(() => _customEpgUrlEditable = val),
               hintText: 'http://example.com/epg.xml.gz',
               prefixIcon: Icons.link,
               enableDirectionalNavigation: true,
               onLeftArrow: requestFirstSidebarFocus,
-              onUpArrow: () => _savedPlaylistFocusNode.requestFocus(),
-              onDownArrow: () => _secondaryEpgUrlFocusNode.requestFocus(),
+              onUpArrow: () => _clearPlaylistCacheButtonFocusNode.requestFocus(),
+              onDownArrow: () => FocusScope.of(context).nextFocus(),
             ),
             const SizedBox(height: AppSizes.xs),
             const Text(
@@ -1430,91 +1051,6 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
 
             const SizedBox(height: AppSizes.md),
-
-            // Secondary EPG URL Input
-            Text(
-              'Secondary EPG URL (Supplementary)',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: AppSizes.sm),
-            _buildTVTextField(
-              controller: _secondaryEpgUrlController,
-              focusNode: _secondaryEpgUrlFocusNode,
-              isEditable: _secondaryEpgUrlEditable,
-              onEditableChanged: (val) =>
-                  setState(() => _secondaryEpgUrlEditable = val),
-              hintText: 'http://example.com/secondary-epg.xml',
-              prefixIcon: Icons.add_link,
-              enableDirectionalNavigation: true,
-              onLeftArrow: requestFirstSidebarFocus,
-              onUpArrow: () => _customEpgUrlFocusNode.requestFocus(),
-              onDownArrow: () => _viewUnmatchedChannelsFocusNode.requestFocus(),
-            ),
-            const SizedBox(height: AppSizes.xs),
-            const Text(
-              'Additional EPG source for channels missing from primary EPG (e.g., ITV2, ITV3)',
-              style: TextStyle(
-                fontSize: 11,
-                color: AppTheme.textSecondary,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-
-            const SizedBox(height: AppSizes.md),
-
-            // View Unmatched Channels Button
-            Focus(
-              focusNode: _viewUnmatchedChannelsFocusNode,
-              onKeyEvent: (node, event) {
-                if (event is! KeyDownEvent) return KeyEventResult.ignored;
-                if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                  requestFirstSidebarFocus();
-                  return KeyEventResult.handled;
-                }
-                if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-                  _secondaryEpgUrlFocusNode.requestFocus();
-                  return KeyEventResult.handled;
-                }
-                return KeyEventResult.ignored;
-              },
-              child: Builder(
-                builder: (context) {
-                  final isFocused = Focus.of(context).hasFocus;
-                  return AnimatedScale(
-                    scale: isFocused ? TVFocusStyle.focusScale : 1.0,
-                    duration: TVFocusStyle.animationDuration,
-                    curve: TVFocusStyle.animationCurve,
-                    child: AnimatedContainer(
-                      duration: TVFocusStyle.animationDuration,
-                      curve: TVFocusStyle.animationCurve,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow:
-                            isFocused ? TVFocusStyle.focusedShadow : null,
-                      ),
-                      child: OutlinedButton.icon(
-                        onPressed: _showUnmatchedChannelsDialog,
-                        icon: const Icon(Icons.search_off),
-                        label: const Text('View Channels Without EPG'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.orange,
-                          side: BorderSide(
-                            color: isFocused
-                                ? AppTheme.primaryBlue
-                                : Colors.orange.withValues(alpha: 0.5),
-                            width: isFocused ? 2 : 1,
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-
-            const SizedBox(height: AppSizes.md),
             const Divider(),
             const SizedBox(height: AppSizes.lg),
 
@@ -1522,9 +1058,9 @@ class _SettingsScreenState extends State<SettingsScreen>
             Text(
               'Update Settings',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryBlue,
-                  ),
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primaryBlue,
+              ),
             ),
             const SizedBox(height: AppSizes.md),
 
@@ -1562,6 +1098,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                     child: Builder(
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
+                        if (isFocused) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            final ctx = _epgIntervalMinusFocusNode.context;
+                            if (ctx != null) {
+                              Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 150), curve: Curves.easeOut, alignment: 0.5);
+                            }
+                          });
+                        }
                         return AnimatedScale(
                           scale: isFocused ? TVFocusStyle.focusScale : 1.0,
                           duration: TVFocusStyle.animationDuration,
@@ -1571,8 +1115,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                             curve: TVFocusStyle.animationCurve,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              boxShadow:
-                                  isFocused ? TVFocusStyle.focusedShadow : null,
+                              boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
                             ),
                             child: IconButton(
                               icon: Icon(
@@ -1582,10 +1125,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                               onPressed: epgUpdateInterval > 1
                                   ? () async {
                                       final newValue = epgUpdateInterval - 1;
-                                      final prefs =
-                                          await SharedPreferences.getInstance();
-                                      await prefs.setInt(
-                                          'epg_update_interval', newValue);
+                                      final prefs = await SharedPreferences.getInstance();
+                                      await prefs.setInt('epg_update_interval', newValue);
                                       setState(() {});
                                     }
                                   : null,
@@ -1596,8 +1137,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     ),
                   ),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: AppTheme.primaryBlue.withAlpha(
                         (0.1 * 255).round(),
@@ -1633,6 +1173,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                     child: Builder(
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
+                        if (isFocused) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            final ctx = _epgIntervalPlusFocusNode.context;
+                            if (ctx != null) {
+                              Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 150), curve: Curves.easeOut, alignment: 0.5);
+                            }
+                          });
+                        }
                         return AnimatedScale(
                           scale: isFocused ? TVFocusStyle.focusScale : 1.0,
                           duration: TVFocusStyle.animationDuration,
@@ -1642,8 +1190,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                             curve: TVFocusStyle.animationCurve,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              boxShadow:
-                                  isFocused ? TVFocusStyle.focusedShadow : null,
+                              boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
                             ),
                             child: IconButton(
                               icon: Icon(
@@ -1653,10 +1200,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                               onPressed: epgUpdateInterval < 48
                                   ? () async {
                                       final newValue = epgUpdateInterval + 1;
-                                      final prefs =
-                                          await SharedPreferences.getInstance();
-                                      await prefs.setInt(
-                                          'epg_update_interval', newValue);
+                                      final prefs = await SharedPreferences.getInstance();
+                                      await prefs.setInt('epg_update_interval', newValue);
                                       setState(() {});
                                     }
                                   : null,
@@ -1678,9 +1223,9 @@ class _SettingsScreenState extends State<SettingsScreen>
             Text(
               'Data Management',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryBlue,
-                  ),
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primaryBlue,
+              ),
             ),
             const SizedBox(height: AppSizes.md),
 
@@ -1700,16 +1245,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                         if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
                           requestFirstSidebarFocus();
                           return KeyEventResult.handled;
-                        } else if (event.logicalKey ==
-                            LogicalKeyboardKey.arrowRight) {
+                        } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
                           _epgPastDaysPlusFocusNode.requestFocus();
                           return KeyEventResult.handled;
-                        } else if (event.logicalKey ==
-                            LogicalKeyboardKey.arrowUp) {
+                        } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
                           _epgIntervalMinusFocusNode.requestFocus();
                           return KeyEventResult.handled;
-                        } else if (event.logicalKey ==
-                            LogicalKeyboardKey.arrowDown) {
+                        } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
                           // Explicitly go to the next section
                           _storeDescriptionsSwitchFocusNode.requestFocus();
                           return KeyEventResult.handled;
@@ -1720,6 +1262,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                     child: Builder(
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
+                        if (isFocused) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            final ctx = _epgPastDaysMinusFocusNode.context;
+                            if (ctx != null) {
+                              Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 150), curve: Curves.easeOut, alignment: 0.5);
+                            }
+                          });
+                        }
                         return AnimatedScale(
                           scale: isFocused ? TVFocusStyle.focusScale : 1.0,
                           duration: TVFocusStyle.animationDuration,
@@ -1729,8 +1279,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                             curve: TVFocusStyle.animationCurve,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              boxShadow:
-                                  isFocused ? TVFocusStyle.focusedShadow : null,
+                              boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
                             ),
                             child: IconButton(
                               icon: Icon(
@@ -1740,10 +1289,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                               onPressed: epgPastDays > 0
                                   ? () async {
                                       final newValue = epgPastDays - 1;
-                                      final prefs =
-                                          await SharedPreferences.getInstance();
-                                      await prefs.setInt(
-                                          'epg_past_days', newValue);
+                                      final prefs = await SharedPreferences.getInstance();
+                                      await prefs.setInt('epg_past_days', newValue);
                                       setState(() {});
                                     }
                                   : null,
@@ -1754,8 +1301,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     ),
                   ),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: AppTheme.primaryBlue.withAlpha(
                         (0.1 * 255).round(),
@@ -1777,16 +1323,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                         if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
                           _epgPastDaysMinusFocusNode.requestFocus();
                           return KeyEventResult.handled;
-                        } else if (event.logicalKey ==
-                            LogicalKeyboardKey.arrowRight) {
+                        } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
                           requestFirstSidebarFocus();
                           return KeyEventResult.handled;
-                        } else if (event.logicalKey ==
-                            LogicalKeyboardKey.arrowUp) {
+                        } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
                           _epgIntervalPlusFocusNode.requestFocus();
                           return KeyEventResult.handled;
-                        } else if (event.logicalKey ==
-                            LogicalKeyboardKey.arrowDown) {
+                        } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
                           // Explicitly go to the next section
                           _storeDescriptionsSwitchFocusNode.requestFocus();
                           return KeyEventResult.handled;
@@ -1797,6 +1340,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                     child: Builder(
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
+                        if (isFocused) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            final ctx = _epgPastDaysPlusFocusNode.context;
+                            if (ctx != null) {
+                              Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 150), curve: Curves.easeOut, alignment: 0.5);
+                            }
+                          });
+                        }
                         return AnimatedScale(
                           scale: isFocused ? TVFocusStyle.focusScale : 1.0,
                           duration: TVFocusStyle.animationDuration,
@@ -1806,8 +1357,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                             curve: TVFocusStyle.animationCurve,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              boxShadow:
-                                  isFocused ? TVFocusStyle.focusedShadow : null,
+                              boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
                             ),
                             child: IconButton(
                               icon: Icon(
@@ -1817,10 +1367,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                               onPressed: epgPastDays < 30
                                   ? () async {
                                       final newValue = epgPastDays + 1;
-                                      final prefs =
-                                          await SharedPreferences.getInstance();
-                                      await prefs.setInt(
-                                          'epg_past_days', newValue);
+                                      final prefs = await SharedPreferences.getInstance();
+                                      await prefs.setInt('epg_past_days', newValue);
                                       setState(() {});
                                     }
                                   : null,
@@ -1851,8 +1399,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   _showLogosSwitchFocusNode.requestFocus();
                   return KeyEventResult.handled;
                 }
-                if (event.logicalKey == LogicalKeyboardKey.select ||
-                    event.logicalKey == LogicalKeyboardKey.enter) {
+                if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
                   // Toggle the switch
                   final newValue = !storeDescriptions;
                   (() async {
@@ -1876,8 +1423,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       curve: TVFocusStyle.animationCurve,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(8),
-                        boxShadow:
-                            isFocused ? TVFocusStyle.focusedShadow : null,
+                        boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
                       ),
                       child: SwitchListTile(
                         contentPadding: EdgeInsets.zero,
@@ -1888,8 +1434,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         value: storeDescriptions,
                         onChanged: (value) async {
                           final prefs = await SharedPreferences.getInstance();
-                          await prefs.setBool(
-                              'store_program_descriptions', value);
+                          await prefs.setBool('store_program_descriptions', value);
                           setState(() {});
                         },
                       ),
@@ -1907,9 +1452,9 @@ class _SettingsScreenState extends State<SettingsScreen>
             Text(
               'Display Options',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryBlue,
-                  ),
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primaryBlue,
+              ),
             ),
             const SizedBox(height: AppSizes.sm),
 
@@ -1929,8 +1474,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   _showImagesSwitchFocusNode.requestFocus();
                   return KeyEventResult.handled;
                 }
-                if (event.logicalKey == LogicalKeyboardKey.select ||
-                    event.logicalKey == LogicalKeyboardKey.enter) {
+                if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
                   // Toggle the switch
                   final newValue = !showChannelLogos;
                   (() async {
@@ -1954,14 +1498,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                       curve: TVFocusStyle.animationCurve,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(8),
-                        boxShadow:
-                            isFocused ? TVFocusStyle.focusedShadow : null,
+                        boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
                       ),
                       child: SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         title: const Text('Show Channel Logos'),
-                        subtitle:
-                            const Text('Display channel logos in EPG grid'),
+                        subtitle: const Text('Display channel logos in EPG grid'),
                         value: showChannelLogos,
                         onChanged: (value) async {
                           final prefs = await SharedPreferences.getInstance();
@@ -1991,8 +1533,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   _updateEpgButtonFocusNode.requestFocus();
                   return KeyEventResult.handled;
                 }
-                if (event.logicalKey == LogicalKeyboardKey.select ||
-                    event.logicalKey == LogicalKeyboardKey.enter) {
+                if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
                   // Toggle the switch
                   final newValue = !showProgramImages;
                   (() async {
@@ -2016,14 +1557,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                       curve: TVFocusStyle.animationCurve,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(8),
-                        boxShadow:
-                            isFocused ? TVFocusStyle.focusedShadow : null,
+                        boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
                       ),
                       child: SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         title: const Text('Show Program Images'),
-                        subtitle: const Text(
-                            'Display program thumbnails and posters'),
+                        subtitle: const Text('Display program thumbnails and posters'),
                         value: showProgramImages,
                         onChanged: (value) async {
                           final prefs = await SharedPreferences.getInstance();
@@ -2047,12 +1586,6 @@ class _SettingsScreenState extends State<SettingsScreen>
                     focusNode: _updateEpgButtonFocusNode,
                     onKeyEvent: (node, event) {
                       if (event is! KeyDownEvent) return KeyEventResult.ignored;
-                      if (event.logicalKey == LogicalKeyboardKey.select ||
-                          event.logicalKey == LogicalKeyboardKey.enter) {
-                        // Trigger the Update EPG action
-                        _handleUpdateEpg();
-                        return KeyEventResult.handled;
-                      }
                       if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
                         requestFirstSidebarFocus();
                         return KeyEventResult.handled;
@@ -2070,6 +1603,19 @@ class _SettingsScreenState extends State<SettingsScreen>
                     child: Builder(
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
+                        if (isFocused) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            final ctx = _updateEpgButtonFocusNode.context;
+                            if (ctx != null) {
+                              Scrollable.ensureVisible(
+                                ctx,
+                                duration: const Duration(milliseconds: 150),
+                                curve: Curves.easeOut,
+                                alignment: 0.6,
+                              );
+                            }
+                          });
+                        }
                         return AnimatedScale(
                           scale: isFocused ? TVFocusStyle.focusScale : 1.0,
                           duration: TVFocusStyle.animationDuration,
@@ -2079,17 +1625,24 @@ class _SettingsScreenState extends State<SettingsScreen>
                             curve: TVFocusStyle.animationCurve,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
-                              boxShadow:
-                                  isFocused ? TVFocusStyle.focusedShadow : null,
+                              boxShadow: isFocused
+                                  ? TVFocusStyle.focusedShadow
+                                  : null,
                             ),
                             child: ElevatedButton.icon(
-                              onPressed: _handleUpdateEpg,
+                              onPressed: () {
+                                showAppSnackBar(
+                                  context,
+                                  const SnackBar(
+                                    content: Text('Updating EPG data...'),
+                                  ),
+                                );
+                              },
                               icon: const Icon(Icons.refresh),
                               label: const Text('Update EPG'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppTheme.primaryBlue,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 12),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
                               ),
                             ),
                           ),
@@ -2104,12 +1657,6 @@ class _SettingsScreenState extends State<SettingsScreen>
                     focusNode: _clearEpgButtonFocusNode,
                     onKeyEvent: (node, event) {
                       if (event is! KeyDownEvent) return KeyEventResult.ignored;
-                      if (event.logicalKey == LogicalKeyboardKey.select ||
-                          event.logicalKey == LogicalKeyboardKey.enter) {
-                        // Trigger the Clear EPG action
-                        _handleClearEpg();
-                        return KeyEventResult.handled;
-                      }
                       if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
                         _updateEpgButtonFocusNode.requestFocus();
                         return KeyEventResult.handled;
@@ -2123,6 +1670,19 @@ class _SettingsScreenState extends State<SettingsScreen>
                     child: Builder(
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
+                        if (isFocused) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            final ctx = _clearEpgButtonFocusNode.context;
+                            if (ctx != null) {
+                              Scrollable.ensureVisible(
+                                ctx,
+                                duration: const Duration(milliseconds: 150),
+                                curve: Curves.easeOut,
+                                alignment: 0.6,
+                              );
+                            }
+                          });
+                        }
                         return AnimatedScale(
                           scale: isFocused ? TVFocusStyle.focusScale : 1.0,
                           duration: TVFocusStyle.animationDuration,
@@ -2132,65 +1692,60 @@ class _SettingsScreenState extends State<SettingsScreen>
                             curve: TVFocusStyle.animationCurve,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
-                              boxShadow:
-                                  isFocused ? TVFocusStyle.focusedShadow : null,
+                              boxShadow: isFocused
+                                  ? TVFocusStyle.focusedShadow
+                                  : null,
                             ),
                             child: ElevatedButton.icon(
-                              onPressed: () async {
-                                // Show confirmation dialog
-                                final confirm = await showDialog<bool>(
-                                  context: context,
-                                  builder: (context) => AlertDialog(
-                                    backgroundColor: AppTheme.dialogBackground,
-                                    title: const Text('Clear EPG Data'),
-                                    content: const Text(
-                                      'Are you sure you want to clear all EPG data? This cannot be undone.',
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () =>
-                                            Navigator.pop(context, false),
-                                        child: const Text('Cancel'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () =>
-                                            Navigator.pop(context, true),
-                                        child: const Text(
-                                          'Clear',
-                                          style: TextStyle(color: Colors.red),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-
-                                if (confirm == true) {
-                                  final epgService = Provider.of<EpgService>(
-                                      context,
-                                      listen: false);
-                                  await epgService.clearCache();
-
-                                  if (context.mounted) {
-                                    showAppSnackBar(
-                                      context,
-                                      const SnackBar(
-                                        content: Text('EPG data cleared'),
-                                        backgroundColor: AppTheme.accentGreen,
-                                      ),
-                                    );
-                                  }
-                                }
-                              },
-                              icon: const Icon(Icons.delete_sweep),
-                              label: const Text('Clear EPG'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red.shade700,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 12),
+                    onPressed: () async {
+                      // Show confirmation dialog
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Clear EPG Data'),
+                          content: const Text(
+                            'Are you sure you want to clear all EPG data? This cannot be undone.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text(
+                                'Clear',
+                                style: TextStyle(color: Colors.red),
                               ),
                             ),
+                          ],
+                        ),
+                      );
+
+                      if (confirm == true) {
+                        final epgService = Provider.of<EpgService>(context, listen: false);
+                        await epgService.clearCache();
+
+                        if (context.mounted) {
+                          showAppSnackBar(
+                            context,
+                            const SnackBar(
+                              content: Text('EPG data cleared'),
+                              backgroundColor: AppTheme.accentGreen,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                            icon: const Icon(Icons.delete_sweep),
+                            label: const Text('Clear EPG'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red.shade700,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
                           ),
-                        );
+                        ),
+                      );
                       },
                     ),
                   ),
@@ -2297,8 +1852,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                           },
                           style: TextButton.styleFrom(
                             side: isFocused
-                                ? const BorderSide(
-                                    color: AppTheme.primaryBlue, width: 3)
+                                ? const BorderSide(color: AppTheme.primaryBlue, width: 3)
                                 : null,
                           ),
                           child: const Text('Clear'),
@@ -2325,8 +1879,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         _clearPlaylistCacheButtonFocusNode.requestFocus();
                         return KeyEventResult.handled;
                       }
-                      if (event.logicalKey == LogicalKeyboardKey.select ||
-                          event.logicalKey == LogicalKeyboardKey.enter) {
+                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
                         _loadM3uPlaylist();
                         return KeyEventResult.handled;
                       }
@@ -2335,6 +1888,19 @@ class _SettingsScreenState extends State<SettingsScreen>
                     child: Builder(
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
+                        if (isFocused) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            final ctx = _loadM3uButtonFocusNode.context;
+                            if (ctx != null) {
+                              Scrollable.ensureVisible(
+                                ctx,
+                                duration: const Duration(milliseconds: 150),
+                                curve: Curves.easeOut,
+                                alignment: 0.5,
+                              );
+                            }
+                          });
+                        }
                         return AnimatedScale(
                           scale: isFocused ? TVFocusStyle.focusScale : 1.0,
                           duration: TVFocusStyle.animationDuration,
@@ -2344,8 +1910,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                             curve: TVFocusStyle.animationCurve,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
-                              boxShadow:
-                                  isFocused ? TVFocusStyle.focusedShadow : null,
+                              boxShadow: isFocused
+                                  ? TVFocusStyle.focusedShadow
+                                  : null,
                             ),
                             child: ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
@@ -2394,10 +1961,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                       prefixIcon: Icons.person,
                       onLeftArrow: requestFirstSidebarFocus,
                       onUpArrow: () => _xtreamServerFocusNode.requestFocus(),
-                      onDownArrow: () =>
-                          _loadXtreamButtonFocusNode.requestFocus(),
-                      onRightArrow: () =>
-                          _xtreamPasswordFocusNode.requestFocus(),
+                      onDownArrow: () => _loadXtreamButtonFocusNode.requestFocus(),
+                      onRightArrow: () => _xtreamPasswordFocusNode.requestFocus(),
                       enableDirectionalNavigation: true,
                     ),
                   ),
@@ -2412,13 +1977,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                       labelText: 'Password',
                       prefixIcon: Icons.lock,
                       obscureText: true,
-                      onLeftArrow: () =>
-                          _xtreamUsernameFocusNode.requestFocus(),
+                      onLeftArrow: () => _xtreamUsernameFocusNode.requestFocus(),
                       onUpArrow: () => _xtreamServerFocusNode.requestFocus(),
-                      onDownArrow: () =>
-                          _loadXtreamButtonFocusNode.requestFocus(),
-                      onRightArrow: () =>
-                          _loadXtreamButtonFocusNode.requestFocus(),
+                      onDownArrow: () => _loadXtreamButtonFocusNode.requestFocus(),
+                      onRightArrow: () => _loadXtreamButtonFocusNode.requestFocus(),
                       enableDirectionalNavigation: true,
                     ),
                   ),
@@ -2445,11 +2007,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                         return KeyEventResult.handled;
                       }
                       if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                        // Skip to next section if needed, or stay here
+                         // Skip to next section if needed, or stay here
                         return KeyEventResult.ignored;
                       }
-                      if (event.logicalKey == LogicalKeyboardKey.select ||
-                          event.logicalKey == LogicalKeyboardKey.enter) {
+                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
                         _clearXtreamFields();
                         return KeyEventResult.handled;
                       }
@@ -2462,8 +2023,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                           onPressed: _clearXtreamFields,
                           style: TextButton.styleFrom(
                             side: isFocused
-                                ? const BorderSide(
-                                    color: AppTheme.primaryBlue, width: 3)
+                                ? const BorderSide(color: AppTheme.primaryBlue, width: 3)
                                 : null,
                           ),
                           child: const Text('Clear'),
@@ -2488,8 +2048,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         _clearPlaylistCacheButtonFocusNode.requestFocus();
                         return KeyEventResult.handled;
                       }
-                      if (event.logicalKey == LogicalKeyboardKey.select ||
-                          event.logicalKey == LogicalKeyboardKey.enter) {
+                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
                         _loadXtreamPlaylist();
                         return KeyEventResult.handled;
                       }
@@ -2498,6 +2057,19 @@ class _SettingsScreenState extends State<SettingsScreen>
                     child: Builder(
                       builder: (context) {
                         final isFocused = Focus.of(context).hasFocus;
+                        if (isFocused) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            final ctx = _loadXtreamButtonFocusNode.context;
+                            if (ctx != null) {
+                              Scrollable.ensureVisible(
+                                ctx,
+                                duration: const Duration(milliseconds: 150),
+                                curve: Curves.easeOut,
+                                alignment: 0.5,
+                              );
+                            }
+                          });
+                        }
                         return AnimatedScale(
                           scale: isFocused ? TVFocusStyle.focusScale : 1.0,
                           duration: TVFocusStyle.animationDuration,
@@ -2507,8 +2079,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                             curve: TVFocusStyle.animationCurve,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
-                              boxShadow:
-                                  isFocused ? TVFocusStyle.focusedShadow : null,
+                              boxShadow: isFocused
+                                  ? TVFocusStyle.focusedShadow
+                                  : null,
                             ),
                             child: ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
@@ -2526,67 +2099,80 @@ class _SettingsScreenState extends State<SettingsScreen>
                 ],
               ),
             ],
-
+            
             // Clear Playlist Cache Button (shown for both M3U and Xtream)
             const SizedBox(height: AppSizes.md),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 Focus(
-                  focusNode: _clearPlaylistCacheButtonFocusNode,
-                  onKeyEvent: (node, event) {
-                    if (event is! KeyDownEvent) return KeyEventResult.ignored;
-                    if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                      requestFirstSidebarFocus();
-                      return KeyEventResult.handled;
+                focusNode: _clearPlaylistCacheButtonFocusNode,
+                onKeyEvent: (node, event) {
+                  if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                  if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                    requestFirstSidebarFocus();
+                    return KeyEventResult.handled;
+                  }
+                  if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                    if (_playlistInputMethod == 0) {
+                      _loadM3uButtonFocusNode.requestFocus();
+                    } else {
+                      _loadXtreamButtonFocusNode.requestFocus();
                     }
-                    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-                      if (_playlistInputMethod == 0) {
-                        _loadM3uButtonFocusNode.requestFocus();
-                      } else {
-                        _loadXtreamButtonFocusNode.requestFocus();
-                      }
-                      return KeyEventResult.handled;
+                    return KeyEventResult.handled;
+                  }
+                  if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                    _customEpgUrlFocusNode.requestFocus();
+                    return KeyEventResult.handled;
+                  }
+                  if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                    _clearPlaylistCache();
+                    return KeyEventResult.handled;
+                  }
+                  return KeyEventResult.ignored;
+                },
+                child: Builder(
+                  builder: (context) {
+                    final isFocused = Focus.of(context).hasFocus;
+                    if (isFocused) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        final ctx = _clearPlaylistCacheButtonFocusNode.context;
+                        if (ctx != null) {
+                          Scrollable.ensureVisible(
+                            ctx,
+                            duration: const Duration(milliseconds: 150),
+                            curve: Curves.easeOut,
+                            alignment: 0.6,
+                          );
+                        }
+                      });
                     }
-                    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                      _savedPlaylistFocusNode.requestFocus();
-                      return KeyEventResult.handled;
-                    }
-                    if (event.logicalKey == LogicalKeyboardKey.select ||
-                        event.logicalKey == LogicalKeyboardKey.enter) {
-                      _clearPlaylistCache();
-                      return KeyEventResult.handled;
-                    }
-                    return KeyEventResult.ignored;
-                  },
-                  child: Builder(
-                    builder: (context) {
-                      final isFocused = Focus.of(context).hasFocus;
-                      return AnimatedScale(
-                        scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                    return AnimatedScale(
+                      scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                      duration: TVFocusStyle.animationDuration,
+                      curve: TVFocusStyle.animationCurve,
+                      child: AnimatedContainer(
                         duration: TVFocusStyle.animationDuration,
                         curve: TVFocusStyle.animationCurve,
-                        child: AnimatedContainer(
-                          duration: TVFocusStyle.animationDuration,
-                          curve: TVFocusStyle.animationCurve,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            boxShadow:
-                                isFocused ? TVFocusStyle.focusedShadow : null,
-                          ),
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red.shade700,
-                            ),
-                            onPressed: _clearPlaylistCache,
-                            icon: const Icon(Icons.delete_sweep),
-                            label: const Text('Clear Playlist Cache'),
-                          ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: isFocused
+                              ? TVFocusStyle.focusedShadow
+                              : null,
                         ),
-                      );
-                    },
-                  ),
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red.shade700,
+                          ),
+                          onPressed: _clearPlaylistCache,
+                          icon: const Icon(Icons.delete_sweep),
+                          label: const Text('Clear Playlist Cache'),
+                        ),
+                      ),
+                    );
+                  },
                 ),
+              ),
               ],
             ),
           ],
@@ -2600,10 +2186,12 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget _buildPlaylistStatusCard() {
     return Consumer<ChannelProvider>(
       builder: (context, provider, _) {
-        final hasChannels = provider.hasChannels;
-        final movieCount = provider.moviesCount;
-        final seriesCount = provider.seriesCount;
-
+        final hasChannels = provider.channels.isNotEmpty;
+        final statusText = hasChannels
+            ? 'Loaded ${provider.channels.length} live channels'
+            : provider.isLoading
+            ? 'Loading playlist...'
+            : 'No playlist loaded';
         final previewLine =
             provider.lastM3UContent?.split('\n').first ?? 'Unavailable';
         final subtitle = hasChannels
@@ -2626,59 +2214,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                 ),
                 const SizedBox(width: AppSizes.sm),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (hasChannels) ...[
-                        Text(
-                          '${provider.channelCount} live channels',
-                          style: const TextStyle(
-                            color: AppTheme.textPrimary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        if (movieCount > 0) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            '$movieCount movies',
-                            style: const TextStyle(
-                              color: AppTheme.textPrimary,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                        if (seriesCount > 0) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            '$seriesCount series',
-                            style: const TextStyle(
-                              color: AppTheme.textPrimary,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ] else if (provider.isLoading)
-                        const Text(
-                          'Loading playlist...',
-                          style: TextStyle(
-                            color: AppTheme.textPrimary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        )
-                      else
-                        const Text(
-                          'No playlist loaded',
-                          style: TextStyle(
-                            color: AppTheme.textPrimary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                    ],
+                  child: Text(
+                    statusText,
+                    style: const TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
                 if (hasChannels)
@@ -2689,8 +2231,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         requestFirstSidebarFocus();
                         return KeyEventResult.handled;
                       }
-                      if (event.logicalKey == LogicalKeyboardKey.select ||
-                          event.logicalKey == LogicalKeyboardKey.enter) {
+                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
                         _inspectPlaylist();
                         return KeyEventResult.handled;
                       }
@@ -2702,8 +2243,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         return TextButton(
                           style: TextButton.styleFrom(
                             side: isFocused
-                                ? const BorderSide(
-                                    color: AppTheme.primaryBlue, width: 2)
+                                ? const BorderSide(color: AppTheme.primaryBlue, width: 2)
                                 : null,
                           ),
                           onPressed: _inspectPlaylist,
@@ -2720,6 +2260,20 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
+  void _focusLoadM3uButton() {
+    if (!_loadM3uButtonFocusNode.canRequestFocus) return;
+    FocusScope.of(context).requestFocus(_loadM3uButtonFocusNode);
+    final buttonContext = _loadM3uButtonFocusNode.context;
+    if (buttonContext != null) {
+      Scrollable.ensureVisible(
+        buttonContext,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
+        alignment: 0.6,
+      );
+    }
+  }
+
   Widget _buildTabButton({
     required String title,
     required IconData icon,
@@ -2731,13 +2285,13 @@ class _SettingsScreenState extends State<SettingsScreen>
     // Determine which tab this is based on the focusNode
     final bool isM3uTab = focusNode == _m3uTabFocusNode;
     final bool isXtreamTab = focusNode == _xtreamTabFocusNode;
-
+    
     return Focus(
       focusNode: focusNode,
       onKeyEvent: (node, event) {
         if (event is! KeyDownEvent) return KeyEventResult.ignored;
         final key = event.logicalKey;
-
+        
         // Left/right navigation between tabs
         if (key == LogicalKeyboardKey.arrowRight) {
           if (isM3uTab) {
@@ -2775,8 +2329,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         } else if (key == LogicalKeyboardKey.arrowUp) {
           // Stay on tab (top of screen)
           return KeyEventResult.handled;
-        } else if (key == LogicalKeyboardKey.enter ||
-            key == LogicalKeyboardKey.select) {
+        } else if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.select) {
           onTap();
           return KeyEventResult.handled;
         }
@@ -2801,7 +2354,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                           ? AppTheme.primaryBlue.withAlpha((0.3 * 255).round())
                           : Colors.transparent),
                   borderRadius: BorderRadius.circular(AppSizes.radiusMd - 2),
-                  boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
+                  boxShadow: isFocused
+                      ? TVFocusStyle.focusedShadow
+                      : null,
                 ),
                 alignment: Alignment.center,
                 child: Row(
@@ -2809,18 +2364,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                   children: [
                     Icon(
                       icon,
-                      color: (isFocused || isSelected)
-                          ? Colors.white
-                          : AppTheme.textSecondary,
+                      color: (isFocused || isSelected) ? Colors.white : AppTheme.textSecondary,
                       size: 18,
                     ),
                     const SizedBox(width: 8),
                     Text(
                       title,
                       style: TextStyle(
-                        color: (isFocused || isSelected)
-                            ? Colors.white
-                            : AppTheme.textSecondary,
+                        color: (isFocused || isSelected) ? Colors.white : AppTheme.textSecondary,
                         fontWeight: (isFocused || isSelected)
                             ? FontWeight.bold
                             : FontWeight.normal,
@@ -2838,7 +2389,6 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   // ignore: unused_element
-  /* COMMENTED OUT - AIUpscalingService removed
   Widget _buildAISettingsSection() {
     return _buildSettingsSection(
       title: 'AI Settings',
@@ -3283,7 +2833,6 @@ class _SettingsScreenState extends State<SettingsScreen>
       ],
     );
   }
-  */ // END COMMENTED OUT _buildAISettingsSection
 
   Widget _buildAISettings() {
     return _buildSettingsSection(
@@ -3297,15 +2846,13 @@ class _SettingsScreenState extends State<SettingsScreen>
               subtitle: 'FREE API - Automatic subtitle downloading',
               children: [
                 Focus(
-                  focusNode: _aiFirstFocusNode,
                   onKeyEvent: (node, event) {
                     if (event is! KeyDownEvent) return KeyEventResult.ignored;
                     if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
                       requestFirstSidebarFocus();
                       return KeyEventResult.handled;
                     }
-                    if (event.logicalKey == LogicalKeyboardKey.select ||
-                        event.logicalKey == LogicalKeyboardKey.enter) {
+                    if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
                       _toggleOpenSubtitlesEnabled(!_openSubtitlesEnabled);
                       return KeyEventResult.handled;
                     }
@@ -3323,13 +2870,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                           curve: TVFocusStyle.animationCurve,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(8),
-                            boxShadow:
-                                isFocused ? TVFocusStyle.focusedShadow : null,
+                            boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
                           ),
                           child: SwitchListTile(
                             title: const Text('Enable OpenSubtitles'),
-                            subtitle:
-                                const Text('Automatically download subtitles'),
+                            subtitle: const Text('Automatically download subtitles'),
                             value: _openSubtitlesEnabled,
                             onChanged: _toggleOpenSubtitlesEnabled,
                           ),
@@ -3358,8 +2903,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     prefixIcon: Icons.person,
                     onLeftArrow: requestFirstSidebarFocus,
                     onUpArrow: () => FocusScope.of(context).previousFocus(),
-                    onDownArrow: () =>
-                        _openSubtitlesPasswordFocusNode.requestFocus(),
+                    onDownArrow: () => _openSubtitlesPasswordFocusNode.requestFocus(),
                     enableDirectionalNavigation: true,
                   ),
                   const SizedBox(height: 16),
@@ -3380,8 +2924,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     prefixIcon: Icons.lock,
                     obscureText: true,
                     onLeftArrow: requestFirstSidebarFocus,
-                    onUpArrow: () =>
-                        _openSubtitlesUsernameFocusNode.requestFocus(),
+                    onUpArrow: () => _openSubtitlesUsernameFocusNode.requestFocus(),
                     onDownArrow: () => FocusScope.of(context).nextFocus(),
                     enableDirectionalNavigation: true,
                   ),
@@ -3393,8 +2936,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         requestFirstSidebarFocus();
                         return KeyEventResult.handled;
                       }
-                      if (event.logicalKey == LogicalKeyboardKey.select ||
-                          event.logicalKey == LogicalKeyboardKey.enter) {
+                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
                         _toggleAutoDownloadSubtitles(!_autoDownloadSubtitles);
                         return KeyEventResult.handled;
                       }
@@ -3412,8 +2954,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                             curve: TVFocusStyle.animationCurve,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
-                              boxShadow:
-                                  isFocused ? TVFocusStyle.focusedShadow : null,
+                              boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
                             ),
                             child: SwitchListTile(
                               title: const Text('Auto-download subtitles'),
@@ -3436,8 +2977,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         requestFirstSidebarFocus();
                         return KeyEventResult.handled;
                       }
-                      if (event.logicalKey == LogicalKeyboardKey.select ||
-                          event.logicalKey == LogicalKeyboardKey.enter) {
+                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
                         _testOpenSubtitlesConnection();
                         return KeyEventResult.handled;
                       }
@@ -3449,8 +2989,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         return ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
                             side: isFocused
-                                ? const BorderSide(
-                                    color: AppTheme.primaryBlue, width: 2)
+                                ? const BorderSide(color: AppTheme.primaryBlue, width: 2)
                                 : null,
                           ),
                           onPressed: _testOpenSubtitlesConnection,
@@ -3480,8 +3019,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       requestFirstSidebarFocus();
                       return KeyEventResult.handled;
                     }
-                    if (event.logicalKey == LogicalKeyboardKey.select ||
-                        event.logicalKey == LogicalKeyboardKey.enter) {
+                    if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
                       _toggleRealDebridEnabled(!_realDebridEnabled);
                       return KeyEventResult.handled;
                     }
@@ -3499,8 +3037,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                           curve: TVFocusStyle.animationCurve,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(8),
-                            boxShadow:
-                                isFocused ? TVFocusStyle.focusedShadow : null,
+                            boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
                           ),
                           child: SwitchListTile(
                             title: const Text('Enable Real-Debrid'),
@@ -3544,8 +3081,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         requestFirstSidebarFocus();
                         return KeyEventResult.handled;
                       }
-                      if (event.logicalKey == LogicalKeyboardKey.select ||
-                          event.logicalKey == LogicalKeyboardKey.enter) {
+                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
                         _toggleRealDebridForCatchup(!_realDebridForCatchup);
                         return KeyEventResult.handled;
                       }
@@ -3563,8 +3099,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                             curve: TVFocusStyle.animationCurve,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
-                              boxShadow:
-                                  isFocused ? TVFocusStyle.focusedShadow : null,
+                              boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
                             ),
                             child: CheckboxListTile(
                               title: const Text('Use for Catch-up TV'),
@@ -3583,8 +3118,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         requestFirstSidebarFocus();
                         return KeyEventResult.handled;
                       }
-                      if (event.logicalKey == LogicalKeyboardKey.select ||
-                          event.logicalKey == LogicalKeyboardKey.enter) {
+                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
                         _toggleRealDebridForVOD(!_realDebridForVOD);
                         return KeyEventResult.handled;
                       }
@@ -3602,8 +3136,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                             curve: TVFocusStyle.animationCurve,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
-                              boxShadow:
-                                  isFocused ? TVFocusStyle.focusedShadow : null,
+                              boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
                             ),
                             child: CheckboxListTile(
                               title: const Text('Use for VOD/Movies'),
@@ -3623,8 +3156,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         requestFirstSidebarFocus();
                         return KeyEventResult.handled;
                       }
-                      if (event.logicalKey == LogicalKeyboardKey.select ||
-                          event.logicalKey == LogicalKeyboardKey.enter) {
+                      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
                         _testRealDebridConnection();
                         return KeyEventResult.handled;
                       }
@@ -3636,8 +3168,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         return ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
                             side: isFocused
-                                ? const BorderSide(
-                                    color: AppTheme.primaryBlue, width: 2)
+                                ? const BorderSide(color: AppTheme.primaryBlue, width: 2)
                                 : null,
                           ),
                           onPressed: _testRealDebridConnection,
@@ -3666,8 +3197,8 @@ class _SettingsScreenState extends State<SettingsScreen>
           },
         ),
 
-        // AI Upscaling - COMMENTED OUT (AIUpscalingService removed)
-        /* Consumer<AIUpscalingService>(
+        // AI Upscaling
+        Consumer<AIUpscalingService>(
           builder: (context, aiService, child) {
             try {
               return _buildSectionCard(
@@ -3771,7 +3302,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               );
             }
           },
-        ), */
+        ),
 
         // Whisper Speech Models
         Consumer2<WhisperSpeechService, AIModelManager>(
@@ -3793,7 +3324,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               return _buildSectionCard(
                 title: '🎙️ Speech Recognition (Whisper GGML)',
                 subtitle:
-                    'Choose a Whisper GGML model (tiny, base, small) for voice search and live transcription. Everything runs 100% on-device.',
+                  'Choose a Whisper GGML model (tiny, base, small) for voice search and live transcription. Everything runs 100% on-device.',
                 children: [
                   _buildSpeechModelSummary(whisperService, modelManager),
                   const SizedBox(height: 16),
@@ -3864,8 +3395,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                                     ),
                                   ),
                                   FutureBuilder<int>(
-                                    future:
-                                        modelManager.getTotalDownloadedSize(),
+                                    future: modelManager
+                                        .getTotalDownloadedSize(),
                                     builder: (context, sizeSnapshot) {
                                       if (sizeSnapshot.hasData &&
                                           sizeSnapshot.data != null &&
@@ -3984,77 +3515,59 @@ class _SettingsScreenState extends State<SettingsScreen>
                 const SizedBox(height: AppSizes.sm),
                 Row(
                   children: [
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 16),
-                        decoration: BoxDecoration(
-                          color: AppTheme.cardBackground,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppTheme.divider),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.folder_outlined,
-                                color: AppTheme.textSecondary),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                recordingPath.isEmpty
-                                    ? 'No storage location selected'
-                                    : recordingPath,
-                                style: TextStyle(
-                                  color: recordingPath.isEmpty
-                                      ? AppTheme.textSecondary
-                                      : AppTheme.textPrimary,
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                          decoration: BoxDecoration(
+                            color: AppTheme.cardBackground,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppTheme.divider),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.folder_outlined, color: AppTheme.textSecondary),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  recordingPath.isEmpty ? 'No storage location selected' : recordingPath,
+                                  style: TextStyle(
+                                    color: recordingPath.isEmpty ? AppTheme.textSecondary : AppTheme.textPrimary,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
                     const SizedBox(width: AppSizes.sm),
-                    Focus(
-                      focusNode: _browseStorageButtonFocusNode,
-                      onKeyEvent: (node, event) {
-                        if (event is! KeyDownEvent)
+                      Focus(
+                        focusNode: _browseStorageButtonFocusNode,
+                        onKeyEvent: (node, event) {
+                          if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                            requestFirstSidebarFocus();
+                            return KeyEventResult.handled;
+                          }
+                          if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+                            _browseStorage();
+                            return KeyEventResult.handled;
+                          }
                           return KeyEventResult.ignored;
-                        if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                          requestFirstSidebarFocus();
-                          return KeyEventResult.handled;
-                        }
-                        if (event.logicalKey == LogicalKeyboardKey.select ||
-                            event.logicalKey == LogicalKeyboardKey.enter) {
-                          _browseStorage();
-                          return KeyEventResult.handled;
-                        }
-                        return KeyEventResult.ignored;
-                      },
-                      child: Builder(
-                        builder: (context) {
-                          final isFocused = Focus.of(context).hasFocus;
-                          return AnimatedScale(
-                            scale: isFocused ? TVFocusStyle.focusScale : 1.0,
-                            duration: TVFocusStyle.animationDuration,
-                            child: AnimatedContainer(
-                              duration: TVFocusStyle.animationDuration,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(8),
-                                boxShadow: isFocused
-                                    ? TVFocusStyle.focusedShadow
-                                    : TVFocusStyle.defaultShadow,
+                        },
+                        child: Builder(
+                          builder: (context) {
+                            final isFocused = Focus.of(context).hasFocus;
+                            return ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primaryBlue,
+                                side: isFocused
+                                    ? const BorderSide(color: Colors.white, width: 3)
+                                    : null,
                               ),
-                              child: ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppTheme.primaryBlue,
-                                ),
-                                onPressed: _browseStorage,
-                                icon: const Icon(Icons.folder_open),
-                                label: const Text('Browse'),
-                              ),
-                            ),
+                            onPressed: _browseStorage,
+                            icon: const Icon(Icons.folder_open),
+                            label: const Text('Browse'),
                           );
                         },
                       ),
@@ -4097,22 +3610,18 @@ class _SettingsScreenState extends State<SettingsScreen>
             _buildSectionCard(
               title: 'Display Options',
               children: [
-                _buildDropdown(
-                    'Time Zone',
-                    'UTC-5 (EST)',
-                    [
-                      'UTC-8 (PST)',
-                      'UTC-5 (EST)',
-                      'UTC+0 (GMT)',
-                      'UTC+1 (CET)',
-                    ],
-                    (value) {}),
+                _buildDropdown('Time Zone', 'UTC-5 (EST)', [
+                  'UTC-8 (PST)',
+                  'UTC-5 (EST)',
+                  'UTC+0 (GMT)',
+                  'UTC+1 (CET)',
+                ], (value) {}),
                 _buildSwitchTile('Show Channel Logos', _showChannelLogos),
                 _buildSwitchTile('Show Program Images', _showProgramImages),
               ],
             ),
-          ],
-        );
+              ],
+            );
       },
     );
   }
@@ -4129,8 +3638,8 @@ class _SettingsScreenState extends State<SettingsScreen>
           Text(
             title,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ), // Changed from headlineMedium
+              fontWeight: FontWeight.bold,
+            ), // Changed from headlineMedium
           ),
           const SizedBox(height: AppSizes.md), // Reduced from lg
           ...children,
@@ -4175,8 +3684,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.playlist_play,
-                        color: AppTheme.primaryBlue),
+                    const Icon(Icons.playlist_play, color: AppTheme.primaryBlue),
                     const SizedBox(width: AppSizes.sm),
                     Text(
                       'Saved Playlists',
@@ -4188,81 +3696,36 @@ class _SettingsScreenState extends State<SettingsScreen>
                 Text(
                   'Manage your saved playlist credentials',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.textSecondary,
-                      ),
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: AppSizes.lg),
+
                 if (!hasPlaylist)
-                  Focus(
-                    focusNode: _savedPlaylistFocusNode,
-                    onKeyEvent: (node, event) {
-                      if (event is! KeyDownEvent) return KeyEventResult.ignored;
-                      if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-                        _clearPlaylistCacheButtonFocusNode.requestFocus();
-                        return KeyEventResult.handled;
-                      }
-                      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                        _customEpgUrlFocusNode.requestFocus();
-                        return KeyEventResult.handled;
-                      }
-                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                        requestFirstSidebarFocus();
-                        return KeyEventResult.handled;
-                      }
-                      return KeyEventResult.ignored;
-                    },
-                    child: Builder(
-                      builder: (context) {
-                        final isFocused = Focus.of(context).hasFocus;
-                        return AnimatedContainer(
-                          duration: TVFocusStyle.animationDuration,
-                          padding: const EdgeInsets.all(AppSizes.md),
-                          decoration: BoxDecoration(
-                            color: AppTheme.cardBackground,
-                            borderRadius:
-                                BorderRadius.circular(AppSizes.radiusMd),
-                            border: Border.all(
-                              color: isFocused
-                                  ? AppTheme.primaryBlue
-                                  : AppTheme.divider,
-                              width: isFocused ? 2 : 1,
-                            ),
+                  Container(
+                    padding: const EdgeInsets.all(AppSizes.md),
+                    decoration: BoxDecoration(
+                      color: AppTheme.cardBackground,
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                      border: Border.all(color: AppTheme.divider),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.info_outline, color: AppTheme.textSecondary),
+                        SizedBox(width: AppSizes.md),
+                        Expanded(
+                          child: Text(
+                            'No saved playlist found. Use the fields above to add a playlist.',
+                            style: TextStyle(color: AppTheme.textSecondary),
                           ),
-                          child: const Row(
-                            children: [
-                              Icon(Icons.info_outline,
-                                  color: AppTheme.textSecondary),
-                              SizedBox(width: AppSizes.md),
-                              Expanded(
-                                child: Text(
-                                  'No saved playlist found. Use the fields above to add a playlist.',
-                                  style:
-                                      TextStyle(color: AppTheme.textSecondary),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
+                        ),
+                      ],
                     ),
                   )
                 else
                   Focus(
-                    focusNode: _savedPlaylistFocusNode,
                     onKeyEvent: (node, event) {
                       if (event is! KeyDownEvent) return KeyEventResult.ignored;
-                      if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-                        _clearPlaylistCacheButtonFocusNode.requestFocus();
-                        return KeyEventResult.handled;
-                      }
-                      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                        _customEpgUrlFocusNode.requestFocus();
-                        return KeyEventResult.handled;
-                      }
-                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                        requestFirstSidebarFocus();
-                        return KeyEventResult.handled;
-                      }
                       if (event.logicalKey == LogicalKeyboardKey.select ||
                           event.logicalKey == LogicalKeyboardKey.enter) {
                         context.go('/playlist-editor');
@@ -4270,128 +3733,114 @@ class _SettingsScreenState extends State<SettingsScreen>
                       }
                       return KeyEventResult.ignored;
                     },
-                    child: Builder(
-                      builder: (context) {
-                        final isFocused = Focus.of(context).hasFocus;
-                        return GestureDetector(
-                          onTap: () => context.go('/playlist-editor'),
-                          child: AnimatedContainer(
-                            duration: TVFocusStyle.animationDuration,
-                            curve: TVFocusStyle.animationCurve,
-                            padding: const EdgeInsets.all(AppSizes.md),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryBlue.withAlpha(
-                                (0.1 * 255).round(),
-                              ),
-                              borderRadius: BorderRadius.circular(
-                                AppSizes.radiusMd,
-                              ),
-                              border: Border.all(
-                                color: isFocused
-                                    ? AppTheme.primaryBlue
-                                    : AppTheme.primaryBlue
-                                        .withAlpha((0.3 * 255).round()),
-                                width: isFocused ? 2 : 1,
-                              ),
-                              boxShadow:
-                                  isFocused ? TVFocusStyle.focusedShadow : null,
+                    child: GestureDetector(
+                      onTap: () => context.go('/playlist-editor'),
+                      child: Container(
+                        padding: const EdgeInsets.all(AppSizes.md),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryBlue.withAlpha(
+                            (0.1 * 255).round(),
+                          ),
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusMd,
+                          ),
+                          border: Border.all(
+                            color: AppTheme.primaryBlue.withAlpha(
+                              (0.3 * 255).round(),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
                               children: [
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.playlist_play,
-                                      color: AppTheme.primaryBlue,
-                                      size: 24,
-                                    ),
-                                    const SizedBox(width: AppSizes.sm),
-                                    Expanded(
-                                      child: Text(
-                                        playlistName,
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 6,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.primaryBlue,
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        data['type'] == 'm3u'
-                                            ? 'M3U'
-                                            : 'Xtream',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: AppSizes.sm),
-                                    const Icon(
-                                      Icons.chevron_right,
-                                      color: AppTheme.textSecondary,
-                                    ),
-                                  ],
+                                const Icon(
+                                  Icons.playlist_play,
+                                  color: AppTheme.primaryBlue,
+                                  size: 24,
                                 ),
-                                const SizedBox(height: AppSizes.md),
-                                if (data['type'] == 'm3u') ...[
-                                  _buildInfoRow(
-                                      'URL', data['m3u_url'] ?? 'N/A'),
-                                ] else if (data['type'] == 'xtream') ...[
-                                  _buildInfoRow(
-                                    'Server',
-                                    data['xtream_server'] ?? 'N/A',
-                                  ),
-                                  const SizedBox(height: AppSizes.xs),
-                                  _buildInfoRow(
-                                    'Username',
-                                    data['xtream_username'] ?? 'N/A',
-                                  ),
-                                ],
-                                const SizedBox(height: AppSizes.md),
-                                Container(
-                                  padding: const EdgeInsets.all(AppSizes.sm),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.cardBackground,
-                                    borderRadius: BorderRadius.circular(
-                                      AppSizes.radiusSm,
+                                const SizedBox(width: AppSizes.sm),
+                                Expanded(
+                                  child: Text(
+                                    playlistName,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  child: const Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.edit,
-                                        size: 14,
-                                        color: AppTheme.textSecondary,
-                                      ),
-                                      SizedBox(width: 6),
-                                      Text(
-                                        'Tap to edit playlist settings',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: AppTheme.textSecondary,
-                                          fontStyle: FontStyle.italic,
-                                        ),
-                                      ),
-                                    ],
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
                                   ),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryBlue,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    data['type'] == 'm3u' ? 'M3U' : 'Xtream',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: AppSizes.sm),
+                                const Icon(
+                                  Icons.chevron_right,
+                                  color: AppTheme.textSecondary,
                                 ),
                               ],
                             ),
-                          ),
-                        );
-                      },
+                            const SizedBox(height: AppSizes.md),
+                            if (data['type'] == 'm3u') ...[
+                              _buildInfoRow('URL', data['m3u_url'] ?? 'N/A'),
+                            ] else if (data['type'] == 'xtream') ...[
+                              _buildInfoRow(
+                                'Server',
+                                data['xtream_server'] ?? 'N/A',
+                              ),
+                              const SizedBox(height: AppSizes.xs),
+                              _buildInfoRow(
+                                'Username',
+                                data['xtream_username'] ?? 'N/A',
+                              ),
+                            ],
+                            const SizedBox(height: AppSizes.md),
+                            Container(
+                              padding: const EdgeInsets.all(AppSizes.sm),
+                              decoration: BoxDecoration(
+                                color: AppTheme.cardBackground,
+                                borderRadius: BorderRadius.circular(
+                                  AppSizes.radiusSm,
+                                ),
+                              ),
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.edit,
+                                    size: 14,
+                                    color: AppTheme.textSecondary,
+                                  ),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'Tap to edit playlist settings',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: AppTheme.textSecondary,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
               ],
@@ -4444,18 +3893,18 @@ class _SettingsScreenState extends State<SettingsScreen>
             Text(
               title,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    // Changed from titleLarge
-                    fontWeight: FontWeight.bold,
-                  ),
+                // Changed from titleLarge
+                fontWeight: FontWeight.bold,
+              ),
             ),
             if (subtitle != null) ...[
               const SizedBox(height: 3), // Reduced spacing
               Text(
                 subtitle,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.textSecondary,
-                      fontSize: 11, // Smaller subtitle
-                    ),
+                  color: AppTheme.textSecondary,
+                  fontSize: 11, // Smaller subtitle
+                ),
               ),
             ],
             const SizedBox(height: AppSizes.sm), // Reduced from md
@@ -4466,20 +3915,17 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildSwitchTile(String title, bool value,
-      {String? subtitle, FocusNode? focusNode}) {
+  Widget _buildSwitchTile(String title, bool value, {String? subtitle}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSizes.sm),
       child: Focus(
-        focusNode: focusNode,
         onKeyEvent: (node, event) {
           if (event is! KeyDownEvent) return KeyEventResult.ignored;
           if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
             requestFirstSidebarFocus();
             return KeyEventResult.handled;
           }
-          if (event.logicalKey == LogicalKeyboardKey.select ||
-              event.logicalKey == LogicalKeyboardKey.enter) {
+          if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
             _handleSwitchTileChange(title, !value);
             return KeyEventResult.handled;
           }
@@ -4489,7 +3935,14 @@ class _SettingsScreenState extends State<SettingsScreen>
           builder: (context) {
             final isFocused = Focus.of(context).hasFocus;
             if (isFocused) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {});
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                Scrollable.ensureVisible(
+                  context,
+                  duration: const Duration(milliseconds: 150),
+                  curve: Curves.easeOut,
+                  alignment: 0.6,
+                );
+              });
             }
             return AnimatedScale(
               scale: isFocused ? TVFocusStyle.focusScale : 1.0,
@@ -4623,8 +4076,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             requestFirstSidebarFocus();
             return KeyEventResult.handled;
           }
-          if (event.logicalKey == LogicalKeyboardKey.select ||
-              event.logicalKey == LogicalKeyboardKey.enter) {
+          if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
             _handleAudioSwitchTileChange(title, !value);
             return KeyEventResult.handled;
           }
@@ -4634,7 +4086,14 @@ class _SettingsScreenState extends State<SettingsScreen>
           builder: (context) {
             final isFocused = Focus.of(context).hasFocus;
             if (isFocused) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {});
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                Scrollable.ensureVisible(
+                  context,
+                  duration: const Duration(milliseconds: 150),
+                  curve: Curves.easeOut,
+                  alignment: 0.6,
+                );
+              });
             }
             return Container(
               decoration: BoxDecoration(
@@ -4701,69 +4160,80 @@ class _SettingsScreenState extends State<SettingsScreen>
   ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSizes.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: AppSizes.sm),
-          Focus(
-            onKeyEvent: (node, event) {
-              if (event is! KeyDownEvent) return KeyEventResult.ignored;
-              if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                requestFirstSidebarFocus();
-                return KeyEventResult.handled;
-              }
-              return KeyEventResult.ignored;
-            },
-            child: Builder(
-              builder: (context) {
-                final isFocused = Focus.of(context).hasFocus;
-                if (isFocused) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {});
-                }
-                return Container(
-                  decoration: BoxDecoration(
+      child: Focus(
+        onKeyEvent: (node, event) {
+          if (event is! KeyDownEvent) return KeyEventResult.ignored;
+          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+            requestFirstSidebarFocus();
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: Builder(
+          builder: (context) {
+            final isFocused = Focus.of(context).hasFocus;
+            if (isFocused) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                Scrollable.ensureVisible(
+                  context,
+                  duration: const Duration(milliseconds: 150),
+                  curve: Curves.easeOut,
+                  alignment: 0.6,
+                );
+              });
+            }
+            return Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: isFocused
+                    ? Border.all(color: AppTheme.primaryBlue, width: 3)
+                    : null,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: Theme.of(context).textTheme.bodyMedium),
+                  const SizedBox(height: AppSizes.sm),
+                  TVFocusable(
                     borderRadius: BorderRadius.circular(10),
-                    border: isFocused
-                        ? Border.all(color: AppTheme.primaryBlue, width: 3)
-                        : null,
-                  ),
-                  child: DropdownButtonFormField<String>(
-                    initialValue: value,
-                    dropdownColor: AppTheme.darkBackgroundOpacity(0.95),
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: AppTheme.highlight,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                        borderSide: const BorderSide(
-                          color: AppTheme.primaryBlue,
-                          width: 2,
+                    enableScale: false,
+                    child: DropdownButtonFormField<String>(
+                      initialValue: value,
+                      dropdownColor: AppTheme.darkBackgroundOpacity(0.95),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: AppTheme.highlight,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                          borderSide: const BorderSide(
+                            color: AppTheme.primaryBlue,
+                            width: 2,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
                         ),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
+                      items: items.map((item) {
+                        return DropdownMenuItem(value: item, child: Text(item));
+                      }).toList(),
+                      onChanged: onChanged,
+                      // Ensure dropdown opens on focus + select
+                      onTap: () {
+                         // Default behavior
+                      },
                     ),
-                    items: items.map((item) {
-                      return DropdownMenuItem(value: item, child: Text(item));
-                    }).toList(),
-                    onChanged: onChanged,
-                    // Ensure dropdown opens on focus + select
-                    onTap: () {
-                      // Default behavior
-                    },
                   ),
-                );
-              },
-            ),
-          ),
-        ],
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -4826,8 +4296,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             borderRadius: BorderRadius.circular(8),
             borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 3),
           ),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         ),
       );
     }
@@ -4849,7 +4318,14 @@ class _SettingsScreenState extends State<SettingsScreen>
     focusNode.addListener(() {
       if (focusNode.hasFocus) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (focusNode.context != null) {}
+          if (focusNode.context != null) {
+            Scrollable.ensureVisible(
+              focusNode.context!,
+              duration: const Duration(milliseconds: 150),
+              curve: Curves.easeOut,
+              alignment: 0.5,
+            );
+          }
         });
       }
     });
@@ -4949,8 +4425,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           onKeyEvent: (node, event) {
             // Intercept up/down arrows even in edit mode
             if (event is! KeyDownEvent) return KeyEventResult.ignored;
-            if (event.logicalKey == LogicalKeyboardKey.arrowUp &&
-                onUpArrow != null) {
+            if (event.logicalKey == LogicalKeyboardKey.arrowUp && onUpArrow != null) {
               if (isEditable) {
                 onEditableChanged(false);
                 SystemChannels.textInput.invokeMethod('TextInput.hide');
@@ -4958,8 +4433,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               onUpArrow();
               return KeyEventResult.handled;
             }
-            if (event.logicalKey == LogicalKeyboardKey.arrowDown &&
-                onDownArrow != null) {
+            if (event.logicalKey == LogicalKeyboardKey.arrowDown && onDownArrow != null) {
               if (isEditable) {
                 onEditableChanged(false);
                 SystemChannels.textInput.invokeMethod('TextInput.hide');
@@ -5003,11 +4477,9 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide:
-                    const BorderSide(color: AppTheme.primaryBlue, width: 3),
+                borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 3),
               ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             ),
           ),
         ),
@@ -5049,15 +4521,14 @@ class _SettingsScreenState extends State<SettingsScreen>
   }) {
     final languages = TranslateLanguage.values.toList()
       ..sort(
-        (a, b) =>
-            _formatTranslateLanguage(a).compareTo(_formatTranslateLanguage(b)),
+        (a, b) => _formatTranslateLanguage(a)
+            .compareTo(_formatTranslateLanguage(b)),
       );
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.dialogBackground,
-        title: Text(
-            isTarget ? 'Select Target Language' : 'Select Source Language'),
+        backgroundColor: AppTheme.cardBackground,
+        title: Text(isTarget ? 'Select Target Language' : 'Select Source Language'),
         content: SizedBox(
           width: double.maxFinite,
           height: 420,
@@ -5101,7 +4572,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.dialogBackground,
+        backgroundColor: AppTheme.cardBackground,
         title: const Text('Export Transcriptions'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -5149,11 +4620,12 @@ class _SettingsScreenState extends State<SettingsScreen>
     final isReady = status == ModelDownloadStatus.downloaded ||
         status == ModelDownloadStatus.bundled;
     final color = isReady ? AppTheme.accentGreen : AppTheme.primaryBlue;
-    final icon =
-        isReady ? Icons.offline_bolt : Icons.download_for_offline_outlined;
+    final icon = isReady
+        ? Icons.offline_bolt
+        : Icons.download_for_offline_outlined;
     final subtitle = isReady
-        ? 'Ready for offline GGML speech features.'
-        : 'Download the ${activeModel.sizeFormatted} GGML binary to unlock voice features.';
+      ? 'Ready for offline GGML speech features.'
+      : 'Download the ${activeModel.sizeFormatted} GGML binary to unlock voice features.';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -5220,32 +4692,12 @@ class _SettingsScreenState extends State<SettingsScreen>
       actionWidgets.add(_buildActiveSpeechModelChip());
     } else {
       actionWidgets.add(
-        Focus(
-          child: Builder(
-            builder: (context) {
-              final isFocused = Focus.of(context).hasFocus;
-              return AnimatedScale(
-                scale: isFocused ? TVFocusStyle.focusScale : 1.0,
-                duration: TVFocusStyle.animationDuration,
-                child: AnimatedContainer(
-                  duration: TVFocusStyle.animationDuration,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: isFocused
-                        ? TVFocusStyle.focusedShadow
-                        : TVFocusStyle.defaultShadow,
-                  ),
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      whisperService.setSelectedModel(model.id);
-                    },
-                    icon: const Icon(Icons.radio_button_unchecked, size: 18),
-                    label: const Text('Set Active'),
-                  ),
-                ),
-              );
-            },
-          ),
+        OutlinedButton.icon(
+          onPressed: () {
+            whisperService.setSelectedModel(model.id);
+          },
+          icon: const Icon(Icons.radio_button_unchecked, size: 18),
+          label: const Text('Set Active'),
         ),
       );
     }
@@ -5278,72 +4730,32 @@ class _SettingsScreenState extends State<SettingsScreen>
       );
       if (status != ModelDownloadStatus.bundled) {
         actionWidgets.add(
-          Focus(
-            child: Builder(
-              builder: (context) {
-                final isFocused = Focus.of(context).hasFocus;
-                return AnimatedScale(
-                  scale: isFocused ? TVFocusStyle.focusScale : 1.0,
-                  duration: TVFocusStyle.animationDuration,
-                  child: AnimatedContainer(
-                    duration: TVFocusStyle.animationDuration,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: isFocused
-                          ? TVFocusStyle.focusedShadow
-                          : TVFocusStyle.defaultShadow,
-                    ),
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        _deleteSpeechModel(whisperService, model);
-                      },
-                      icon: const Icon(Icons.delete_outline, size: 18),
-                      label: const Text('Delete'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTheme.accentRed,
-                      ),
-                    ),
-                  ),
-                );
-              },
+          OutlinedButton.icon(
+            onPressed: () {
+              _deleteSpeechModel(whisperService, model);
+            },
+            icon: const Icon(Icons.delete_outline, size: 18),
+            label: const Text('Delete'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.accentRed,
             ),
           ),
         );
       }
     } else if (needsDownload || needsRetry) {
       actionWidgets.add(
-        Focus(
-          child: Builder(
-            builder: (context) {
-              final isFocused = Focus.of(context).hasFocus;
-              return AnimatedScale(
-                scale: isFocused ? TVFocusStyle.focusScale : 1.0,
-                duration: TVFocusStyle.animationDuration,
-                child: AnimatedContainer(
-                  duration: TVFocusStyle.animationDuration,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: isFocused
-                        ? TVFocusStyle.focusedShadow
-                        : TVFocusStyle.defaultShadow,
-                  ),
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      _downloadSpeechModel(whisperService, model);
-                    },
-                    icon: Icon(needsRetry ? Icons.refresh : Icons.download),
-                    label: Text(
-                      needsRetry
-                          ? 'Re-download ${model.sizeFormatted}'
-                          : 'Download ${model.sizeFormatted}',
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryBlue,
-                    ),
-                  ),
-                ),
-              );
-            },
+        ElevatedButton.icon(
+          onPressed: () {
+            _downloadSpeechModel(whisperService, model);
+          },
+          icon: Icon(needsRetry ? Icons.refresh : Icons.download),
+          label: Text(
+            needsRetry
+                ? 'Re-download ${model.sizeFormatted}'
+                : 'Download ${model.sizeFormatted}',
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.primaryBlue,
           ),
         ),
       );
@@ -5360,7 +4772,8 @@ class _SettingsScreenState extends State<SettingsScreen>
           color: background,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? AppTheme.primaryBlue : Colors.transparent,
+            color:
+                isSelected ? AppTheme.primaryBlue : Colors.transparent,
             width: 1.5,
           ),
         ),
@@ -5541,7 +4954,8 @@ class _SettingsScreenState extends State<SettingsScreen>
               ? '${model.name} downloaded successfully'
               : 'Failed to download ${model.name}',
         ),
-        backgroundColor: success ? AppTheme.accentGreen : AppTheme.accentRed,
+        backgroundColor:
+            success ? AppTheme.accentGreen : AppTheme.accentRed,
       ),
     );
   }
@@ -5553,7 +4967,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppTheme.dialogBackground,
+        backgroundColor: AppTheme.cardBackground,
         title: const Text('Delete model?'),
         content: Text(
           'Delete ${model.name}? This frees up ${model.sizeFormatted}. '
@@ -5583,14 +4997,17 @@ class _SettingsScreenState extends State<SettingsScreen>
       context,
       SnackBar(
         content: Text(
-          success ? '${model.name} deleted' : 'Could not delete ${model.name}',
+          success
+              ? '${model.name} deleted'
+              : 'Could not delete ${model.name}',
         ),
-        backgroundColor: success ? AppTheme.accentGreen : AppTheme.accentRed,
+        backgroundColor:
+            success ? AppTheme.accentGreen : AppTheme.accentRed,
       ),
     );
   }
 
-  Widget _buildAIModelDownloadCard(dynamic aiService) {
+  Widget _buildAIModelDownloadCard(AIUpscalingService aiService) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -5673,8 +5090,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                               ? 'Model detected successfully.'
                               : 'Model still not found. Place esrgan_x2.tflite in assets/models/',
                         ),
-                        backgroundColor:
-                            success ? AppTheme.accentGreen : AppTheme.accentRed,
+                        backgroundColor: success
+                            ? AppTheme.accentGreen
+                            : AppTheme.accentRed,
                       ),
                     );
                   },
@@ -5703,7 +5121,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.dialogBackground,
+        backgroundColor: AppTheme.cardBackground,
         title: const Text('Clear Transcriptions?'),
         content: Text(
           'This will delete all ${service.transcriptions.length} saved transcription entries.',
@@ -5845,7 +5263,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         context,
         SnackBar(
           content: Text(
-            'Playlist loaded successfully! ${provider.channelCount} channels found.',
+            'Playlist loaded successfully! ${provider.channels.length} channels found.',
           ),
           backgroundColor: AppTheme.accentGreen,
         ),
@@ -5903,22 +5321,12 @@ class _SettingsScreenState extends State<SettingsScreen>
       await prefs.setString('xtream_password', password);
       await prefs.setString('playlist_type', 'xtream');
 
-      // Auto-generate and save EPG URL for Xtream codes
-      final epgUrl = '$server/xmltv.php?username=$username&password=$password';
-      await prefs.setString('epg_url', epgUrl);
-
-      // Load EPG in background
-      if (mounted) {
-        final epgService = Provider.of<EpgService>(context, listen: false);
-        epgService.loadEpgFromUrl(epgUrl); // Load in background
-      }
-
       if (!mounted) return;
       showAppSnackBar(
         context,
         SnackBar(
           content: Text(
-            'Xtream playlist loaded! ${provider.channelCount} channels found.',
+            'Xtream playlist loaded! ${provider.channels.length} channels found.',
           ),
           backgroundColor: AppTheme.accentGreen,
         ),
@@ -5940,7 +5348,6 @@ class _SettingsScreenState extends State<SettingsScreen>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.dialogBackground,
         title: const Text('Clear Playlist Cache?'),
         content: const Text(
           'Are you sure you want to clear the playlist cache? This will remove all locally cached playlist data.',
@@ -5959,16 +5366,16 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
     if (confirm == true) {
       if (!mounted) return;
-
+      
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('m3u_url');
       await prefs.remove('playlist_type');
       await prefs.remove('xtream_server');
       await prefs.remove('xtream_username');
       await prefs.remove('xtream_password');
-
+      
       try {
-        // Provider.of<ChannelProvider>(context, listen: false).clearChannels();
+         // Provider.of<ChannelProvider>(context, listen: false).clearChannels(); 
       } catch (_) {}
 
       if (mounted) {
@@ -6040,8 +5447,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     setState(() {
       _autoDownloadSubtitles = value;
     });
-    Provider.of<OpenSubtitlesService>(context, listen: false)
-        .setAutoDownload(value);
+    Provider.of<OpenSubtitlesService>(context, listen: false).setAutoDownload(value);
   }
 
   Future<void> _testOpenSubtitlesConnection() async {
@@ -6071,19 +5477,17 @@ class _SettingsScreenState extends State<SettingsScreen>
   void _toggleRealDebridForCatchup(bool? value) {
     if (value == null) return;
     setState(() {
-      _realDebridForCatchup = value;
+      _realDebridForCatchup = value ?? true;
     });
-    Provider.of<RealDebridService>(context, listen: false)
-        .setEnableForCatchup(value);
+    Provider.of<RealDebridService>(context, listen: false).setEnableForCatchup(value ?? true);
   }
 
   void _toggleRealDebridForVOD(bool? value) {
     if (value == null) return;
     setState(() {
-      _realDebridForVOD = value;
+      _realDebridForVOD = value ?? true;
     });
-    Provider.of<RealDebridService>(context, listen: false)
-        .setEnableForVOD(value);
+    Provider.of<RealDebridService>(context, listen: false).setEnableForVOD(value ?? true);
   }
 
   Future<void> _testRealDebridConnection() async {
@@ -6109,7 +5513,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     setState(() {
       _aiUpscalingEnabled = value;
     });
-    // Provider.of<AIUpscalingService>(context, listen: false).setEnabled(value); // Commented out - service not implemented
+    Provider.of<AIUpscalingService>(context, listen: false).setEnabled(value);
   }
 }
 
