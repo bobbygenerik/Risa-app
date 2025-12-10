@@ -482,130 +482,117 @@ class _EPGScreenState extends State<EPGScreen>
 
   Widget _buildHeader(EpgService epgService) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(56, 12, 80, 12),
+      padding: const EdgeInsets.fromLTRB(56, 12, 24, 12),
       decoration: const BoxDecoration(
         color: Colors.transparent,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.dvr, color: Color(0xFF4a9eff), size: 20),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
+          // Left side - Guide title
+          Row(
             children: [
-              Text(
-                'Guide',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                      decoration: TextDecoration.none,
-                    ),
-              ),
-              Text(
-                DateFormat('EEEE, MMM dd').format(_selectedDate),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.white.withOpacity(0.7),
-                      fontSize: 12,
-                      decoration: TextDecoration.none,
-                    ),
+              const Icon(Icons.dvr, color: AppTheme.primaryBlue, size: AppSizes.iconMd),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Guide',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                          decoration: TextDecoration.none,
+                        ),
+                  ),
+                  Text(
+                    DateFormat('EEEE, MMM dd').format(_selectedDate),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.white.withOpacity(0.7),
+                          fontSize: 12,
+                          decoration: TextDecoration.none,
+                        ),
+                  ),
+                ],
               ),
             ],
           ),
           const Spacer(),
+          // Right side - Now and Refresh buttons
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Now button (icon only)
-              IconButton(
-                onPressed: _scrollToCurrentTime,
-                icon: const Icon(Icons.access_time, size: 20),
-                color: Color(0xFF4a9eff),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                tooltip: 'Jump to Now',
+              // Now button
+              Container(
+                decoration: BoxDecoration(
+                  color: AppTheme.darkBackgroundOpacity(0.3),
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                ),
+                child: IconButton(
+                  onPressed: _scrollToCurrentTime,
+                  icon: const Icon(Icons.access_time, size: AppSizes.iconSm),
+                  color: AppTheme.primaryBlue,
+                  tooltip: 'Jump to Now',
+                ),
               ),
               const SizedBox(width: 8),
-              // Refresh button with spinning animation when loading
+              // Refresh button
               Focus(
                 focusNode: _refreshButtonFocus,
-                    onKeyEvent: (node, event) {
-              if (event is KeyDownEvent) {
-                if (event.logicalKey == LogicalKeyboardKey.select ||
-                    event.logicalKey == LogicalKeyboardKey.enter) {
-                  if (!epgService.isLoading) {
-                    _triggerEpgRefresh();
+                onKeyEvent: (node, event) {
+                  if (event is KeyDownEvent) {
+                    if (event.logicalKey == LogicalKeyboardKey.select ||
+                        event.logicalKey == LogicalKeyboardKey.enter) {
+                      if (!epgService.isLoading) {
+                        _triggerEpgRefresh();
+                      }
+                      return KeyEventResult.handled;
+                    }
+                    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                      _firstCategoryFocus.requestFocus();
+                      return KeyEventResult.handled;
+                    }
                   }
-                  return KeyEventResult.handled;
-                }
-                if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                  _firstCategoryFocus.requestFocus();
-                  return KeyEventResult.handled;
-                }
-              }
-              return KeyEventResult.ignored;
-            },
-            child: Builder(
-              builder: (context) {
-                final isFocused = Focus.of(context).hasFocus;
-                return Container(
-                  decoration: isFocused
-                      ? BoxDecoration(
-                          border:
-                              Border.all(color: Color(0xFF4a9eff), width: 2),
-                          borderRadius: BorderRadius.circular(20),
-                        )
-                      : null,
-                  child: IconButton(
-                    icon: AnimatedBuilder(
-                      animation: _refreshAnimationController,
-                      builder: (context, child) {
-                        return Transform.rotate(
-                          angle: epgService.isLoading
-                              ? _refreshAnimationController.value * 2 * 3.14159
-                              : 0,
-                          child: Icon(
-                            Icons.refresh,
-                            size: 22,
-                            color: epgService.isLoading
-                                ? Color(0xFF4a9eff)
-                                : Colors.white.withOpacity(0.7),
-                          ),
-                        );
-                      },
-                    ),
-                    onPressed: epgService.isLoading
-                        ? null
-                        : () async {
-                            final prefs = await SharedPreferences.getInstance();
-                            final epgUrl = prefs.getString('epg_url') ??
-                                prefs.getString('custom_epg_url');
-
-                            if (epgUrl == null || epgUrl.isEmpty) {
-                              if (mounted && context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('No EPG URL configured'),
-                                    backgroundColor: AppTheme.accentRed,
-                                  ),
-                                );
-                              }
-                              return;
-                            }
-
-                            _refreshAnimationController.repeat();
-                            await epgService.refresh(epgUrl);
-                            _refreshAnimationController.stop();
-                            _refreshAnimationController.reset();
+                  return KeyEventResult.ignored;
+                },
+                child: Builder(
+                  builder: (context) {
+                    final isFocused = Focus.of(context).hasFocus;
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(8),
+                        border: isFocused
+                            ? Border.all(color: AppTheme.primaryBlue, width: 2)
+                            : null,
+                      ),
+                      child: IconButton(
+                        icon: AnimatedBuilder(
+                          animation: _refreshAnimationController,
+                          builder: (context, child) {
+                            return Transform.rotate(
+                              angle: epgService.isLoading
+                                  ? _refreshAnimationController.value * 2 * 3.14159
+                                  : 0,
+                              child: Icon(
+                                Icons.refresh,
+                                size: 18,
+                                color: epgService.isLoading
+                                    ? AppTheme.primaryBlue
+                                    : Colors.white.withOpacity(0.8),
+                              ),
+                            );
                           },
-                    tooltip: 'Refresh EPG Data',
-                  ),
-                );
-              },
-            ),
-          ),
+                        ),
+                        onPressed: epgService.isLoading ? null : _triggerEpgRefresh,
+                        tooltip: 'Refresh EPG Data',
+                      ),
+                    );
+                  },
+                ),
+              ),
             ],
           ),
         ],
@@ -722,11 +709,11 @@ class _EPGScreenState extends State<EPGScreen>
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                color: Color(0xFF4a9eff).withOpacity(0.2),
+                color: AppTheme.primaryBlue.withOpacity(0.2),
                 child: Row(
                   children: [
                     const Icon(Icons.info_outline,
-                        size: 16, color: Color(0xFF4a9eff)),
+                        size: AppSizes.iconSm, color: AppTheme.primaryBlue)),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
