@@ -281,10 +281,10 @@ class _SeriesScreenState extends State<SeriesScreen>
 
   Widget _buildEmptyState(BuildContext context) {
     return Scaffold(
-      backgroundColor: const AppTheme.darkBackground,
+      backgroundColor: const Color(0xFF050710),
       body: Container(
         decoration: const BoxDecoration(
-          color: AppTheme.darkBackground,
+          color: Color(0xFF050710),
         ),
         child: Center(
           child: Column(
@@ -515,7 +515,7 @@ class _SeriesScreenState extends State<SeriesScreen>
   Widget _buildPlaceholder(String title) {
     return Container(
       decoration: BoxDecoration(
-        color: const AppTheme.darkBackground,
+        color: const Color(0xFF050710),
       ),
       child: Center(
         child: Column(
@@ -739,9 +739,9 @@ class _SeriesScreenState extends State<SeriesScreen>
                           end: Alignment.centerRight,
                           colors: [
                             AppTheme.darkBackground,
-                            AppTheme.darkBackground.withOpacity(0.9),
-                            AppTheme.darkBackground.withOpacity(0.7),
-                            AppTheme.darkBackground.withOpacity(0.3),
+                            AppTheme.darkBackground.withValues(alpha: 0.9),
+                            AppTheme.darkBackground.withValues(alpha: 0.7),
+                            AppTheme.darkBackground.withValues(alpha: 0.3),
                             Colors.transparent,
                           ],
                           stops: const [0.0, 0.3, 0.6, 0.8, 1.0],
@@ -764,8 +764,8 @@ class _SeriesScreenState extends State<SeriesScreen>
                           end: Alignment.topCenter,
                           colors: [
                             AppTheme.darkBackground,
-                            AppTheme.darkBackground.withOpacity(0.8),
-                            AppTheme.darkBackground.withOpacity(0.4),
+                            AppTheme.darkBackground.withValues(alpha: 0.8),
+                            AppTheme.darkBackground.withValues(alpha: 0.4),
                             Colors.transparent,
                           ],
                           stops: const [0.0, 0.4, 0.7, 1.0],
@@ -906,228 +906,11 @@ class _SeriesScreenState extends State<SeriesScreen>
     );
   }
 
-  Widget _buildOldHeroBannerOverlay(BuildContext context, Content featuredSeries) {
-    final heroImage = featuredSeries.backdropUrl ?? featuredSeries.imageUrl;
-    final provider = Provider.of<ContentProvider>(context, listen: false);
-    final displaySeries = _curatedSeries.isNotEmpty ? _curatedSeries : provider.series;
-    final screenSize = MediaQuery.of(context).size;
-    final heroHeight = screenSize.height * 0.65;
-    
-    return Focus(
-      focusNode: _watchFocus,
-      onKeyEvent: (node, event) {
-        if (event is KeyDownEvent &&
-            (event.logicalKey == LogicalKeyboardKey.select ||
-             event.logicalKey == LogicalKeyboardKey.enter)) {
-          final encodedId = Uri.encodeComponent(featuredSeries.id);
-          context.push('/content/$encodedId', extra: featuredSeries);
-          return KeyEventResult.handled;
-        }
-        if (event is! KeyDownEvent) return KeyEventResult.ignored;
-        if (displaySeries.isEmpty) return KeyEventResult.ignored;
-        
-        if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-          _carouselTimer?.cancel();
-          setState(() {
-            _featuredIndex = (_featuredIndex - 1 + displaySeries.length) % displaySeries.length;
-          });
-          _startCarousel();
-          return KeyEventResult.handled;
-        }
-        if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-          _carouselTimer?.cancel();
-          setState(() {
-            _featuredIndex = (_featuredIndex + 1) % displaySeries.length;
-          });
-          _startCarousel();
-          return KeyEventResult.handled;
-        }
-        return KeyEventResult.ignored;
-      },
-      child: GestureDetector(
-        onTap: () {
-          final encodedId = Uri.encodeComponent(featuredSeries.id);
-          context.push('/content/$encodedId', extra: featuredSeries);
-        },
-        child: SizedBox(
-          height: heroHeight,
-          child: Stack(
-            children: [
-              // Solid background on left
-              Positioned(
-                top: 0,
-                left: 0,
-                width: screenSize.width * 0.45,
-                height: heroHeight,
-                child: Container(
-                  color: const AppTheme.darkBackground,
-                ),
-              ),
-              // Hero image starting at 45% from left
-              if (heroImage != null)
-                Positioned(
-                  top: 0,
-                  left: screenSize.width * 0.45,
-                  right: 0,
-                  height: heroHeight,
-                  child: CachedNetworkImage(
-                    imageUrl: heroImage,
-                    fit: BoxFit.contain,
-                    alignment: Alignment.center,
-                    placeholder: (context, url) => _buildBannerPlaceholder(),
-                    errorWidget: (context, url, error) {
-                      debugPrint('Series hero banner failed: $url - $error');
-                      return _buildBannerPlaceholder();
-                    },
-                  ),
-                ),
-              // Left gradient cloud overlay
-              Positioned(
-                top: 0,
-                left: screenSize.width * 0.40,
-                width: screenSize.width * 0.15,
-                height: heroHeight,
-                child: IgnorePointer(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                        colors: [
-                          const AppTheme.darkBackground,
-                          const AppTheme.darkBackground.withOpacity(0.8),
-                          const AppTheme.darkBackground.withOpacity(0.4),
-                          Colors.transparent,
-                        ],
-                        stops: const [0.0, 0.25, 0.6, 1.0],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              // Bottom gradient overlay - full width
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                height: heroHeight * 0.25,
-                child: IgnorePointer(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
-                        colors: [
-                          const AppTheme.darkBackground,
-                          const AppTheme.darkBackground.withOpacity(0.7),
-                          const AppTheme.darkBackground.withOpacity(0.3),
-                          Colors.transparent,
-                        ],
-                        stops: const [0.0, 0.4, 0.7, 1.0],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              // Top fade for nav bar area
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                height: 100,
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withAlpha((0.9 * 255).round()),
-                        Colors.black.withAlpha(0),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              // Featured info in left area
-              Positioned(
-                bottom: heroHeight * 0.40,
-                left: 120,
-                width: screenSize.width * 0.33,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      height: context.tvTextSize(24) * 1.3 * 2,
-                      child: Text(
-                        featuredSeries.title,
-                        style: TextStyle(
-                          color: AppTheme.textPrimary,
-                          fontSize: context.tvTextSize(24),
-                          fontWeight: FontWeight.w700,
-                          height: 1.3,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    SizedBox(height: context.tvSpacing(8)),
-                    SizedBox(
-                      height: context.tvTextSize(14) * 1.3 * 3,
-                      child: Text(
-                        featuredSeries.description ?? '',
-                        style: TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: context.tvTextSize(14),
-                          height: 1.3,
-                        ),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    SizedBox(height: context.tvSpacing(8)),
-                    SizedBox(
-                      height: context.tvTextSize(14) * 1.4,
-                      child: featuredSeries.rating != null
-                          ? Row(
-                              children: [
-                                Icon(Icons.star, color: Colors.amber, size: context.tvIconSize(16)),
-                                SizedBox(width: context.tvSpacing(4)),
-                                Text(
-                                  featuredSeries.ratingDisplay,
-                                  style: TextStyle(
-                                    color: AppTheme.textSecondary,
-                                    fontSize: context.tvTextSize(14),
-                                  ),
-                                ),
-                                if (featuredSeries.year != null) ...[
-                                  SizedBox(width: context.tvSpacing(12)),
-                                  Text(
-                                    featuredSeries.year.toString(),
-                                    style: TextStyle(
-                                      color: AppTheme.textSecondary,
-                                      fontSize: context.tvTextSize(14),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            )
-                          : Container(),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildBannerPlaceholder() {
     return Container(
       decoration: const BoxDecoration(
-        color: AppTheme.darkBackground,
+        color: Color(0xFF050710),
       ),
     );
   }

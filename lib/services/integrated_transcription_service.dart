@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:google_mlkit_translation/google_mlkit_translation.dart';
+import 'package:google_mlkit_language_id/google_mlkit_language_id.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:record/record.dart';
 
@@ -212,7 +213,7 @@ class IntegratedTranscriptionService extends ChangeNotifier {
   Future<void> _translateEntry(SubtitleEntry entry) async {
     try {
       // Detect source language
-      final languageId = GoogleMlKit.nlp.languageIdentifier();
+      final languageId = LanguageIdentifier(confidenceThreshold: 0.5);
       final detectedLanguage = await languageId.identifyLanguage(entry.originalText);
       
       // If already English or detection failed, no translation needed
@@ -274,29 +275,6 @@ class IntegratedTranscriptionService extends ChangeNotifier {
     return languageMap[languageCode];
   }
 
-  /// Ensure translation models are downloaded
-  Future<bool> _ensureModelsDownloaded() async {
-    try {
-      final sourceDownloaded = await _modelManager.isModelDownloaded(
-        _sourceLanguage.bcpCode,
-      );
-      final targetDownloaded = await _modelManager.isModelDownloaded(
-        _targetLanguage.bcpCode,
-      );
-
-      if (!sourceDownloaded || !targetDownloaded) {
-        debugPrint(
-          'Models not downloaded. Source: $sourceDownloaded, Target: $targetDownloaded',
-        );
-        return false;
-      }
-
-      return true;
-    } catch (e) {
-      debugPrint('Error checking models: $e');
-      return false;
-    }
-  }
 
   /// Download translation models
   Future<bool> downloadTranslationModels() async {

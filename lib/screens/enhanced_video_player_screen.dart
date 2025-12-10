@@ -17,14 +17,14 @@ class EnhancedVideoPlayerScreen extends StatefulWidget {
   final bool isLive;
 
   const EnhancedVideoPlayerScreen({
-    Key? key,
+    super.key,
     this.channel,
     this.streamUrl,
     this.videoUrl,
     this.title,
     this.subtitle,
     this.isLive = false,
-  }) : super(key: key);
+  });
 
   @override
   State<EnhancedVideoPlayerScreen> createState() => _EnhancedVideoPlayerScreenState();
@@ -36,7 +36,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   bool _showControls = true;
   bool _isPlaying = false;
   bool _showGuide = false;
-  double _progress = 0.0;
+  final double _progress = 0.0;
   SubtitleMode _subtitleMode = SubtitleMode.off;
   IntegratedTranscriptionService? _transcriptionService;
   
@@ -117,9 +117,11 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
   void _toggleMultiView() {
     // Show multi-view options
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Multi-view activated')),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Multi-view activated')),
+      );
+    }
   }
 
   void _toggleGuide() {
@@ -129,13 +131,12 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   Widget _buildSubtitleMenu() {
     return Dialog(
       backgroundColor: Colors.transparent,
-        elevation: 0,
       child: Container(
         constraints: const BoxConstraints(maxWidth: 280),
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.9),
+          color: Colors.black.withValues(alpha: 0.9),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -258,10 +259,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.black.withOpacity(0.7),
+            Colors.black.withValues(alpha: 0.7),
             Colors.transparent,
             Colors.transparent,
-            Colors.black.withOpacity(0.8),
+            Colors.black.withValues(alpha: 0.8),
           ],
           stops: const [0.0, 0.3, 0.7, 1.0],
         ),
@@ -374,7 +375,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                     margin: const EdgeInsets.symmetric(horizontal: 24),
                     child: LinearProgressIndicator(
                       value: _progress,
-                      backgroundColor: Colors.white.withOpacity(0.3),
+                      backgroundColor: Colors.white.withValues(alpha: 0.3),
                       valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
                     ),
                   ),
@@ -395,7 +396,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
+        color: Colors.black.withValues(alpha: 0.5),
         shape: BoxShape.circle,
       ),
       child: IconButton(
@@ -424,12 +425,16 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
               style: const TextStyle(color: Colors.grey),
             ),
             onTap: () async {
+              final navContext = context;
               await _exoController?.switchAudioByIndices(
                 rendererIndex: track['rendererIndex'] ?? 0,
                 groupIndex: track['groupIndex'] ?? 0,
                 trackIndex: track['trackIndex'] ?? 0,
               );
-              Navigator.pop(context);
+              if (mounted) {
+                // ignore: use_build_context_synchronously
+                Navigator.pop(navContext);
+              }
             },
           )).toList(),
         ),
@@ -441,7 +446,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     return GestureDetector(
       onTap: _toggleGuide,
       child: Container(
-        color: Colors.black.withOpacity(0.8),
+        color: Colors.black.withValues(alpha: 0.8),
         child: Center(
           child: Container(
             margin: const EdgeInsets.all(40),
@@ -474,7 +479,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                 Container(
                   padding: const EdgeInsets.all(AppSizes.lg),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryBlue.withOpacity(0.2),
+                    color: AppTheme.primaryBlue.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(AppSizes.radiusMd),
                   ),
                   child: Column(

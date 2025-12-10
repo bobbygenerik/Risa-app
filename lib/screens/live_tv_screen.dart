@@ -176,14 +176,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     // Focus is managed by navigation bar - don't auto-focus content
   }
 
-  late Size _screenSize;
+
 
   @override
   Widget build(BuildContext context) {
-    _screenSize = MediaQuery.of(context).size;
+
     final body = Container(
       decoration: const BoxDecoration(
-        color: AppTheme.darkBackground,
+        color: Color(0xFF050710),
       ),
       child: Consumer2<ChannelProvider, EpgService>(
         builder: (context, channelProvider, epgService, _) {
@@ -365,9 +365,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         end: Alignment.centerRight,
                         colors: [
                           AppTheme.darkBackground,
-                          AppTheme.darkBackground.withOpacity(0.9),
-                          AppTheme.darkBackground.withOpacity(0.7),
-                          AppTheme.darkBackground.withOpacity(0.3),
+                          AppTheme.darkBackground.withValues(alpha: 0.9),
+                          AppTheme.darkBackground.withValues(alpha: 0.7),
+                          AppTheme.darkBackground.withValues(alpha: 0.3),
                           Colors.transparent,
                         ],
                         stops: const [0.0, 0.3, 0.6, 0.8, 1.0],
@@ -390,8 +390,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         end: Alignment.topCenter,
                         colors: [
                           AppTheme.darkBackground,
-                          AppTheme.darkBackground.withOpacity(0.8),
-                          AppTheme.darkBackground.withOpacity(0.4),
+                          AppTheme.darkBackground.withValues(alpha: 0.8),
+                          AppTheme.darkBackground.withValues(alpha: 0.4),
                           Colors.transparent,
                         ],
                         stops: const [0.0, 0.4, 0.7, 1.0],
@@ -464,8 +464,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         : '';
     final progress = program?.progressPercentage ?? 0.0;
 
-    return Container(
-      child: Column(
+    return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -528,8 +527,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             ),
           ),
         ],
-      ),
-    );
+      );
   }
 
   Widget _buildChannelLogo(BuildContext context, Channel channel) {
@@ -636,7 +634,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Future<void> _fetchChannelArtwork(Channel channel) async {
     final channelKey = 'channel_${channel.id}';
     if (_artworkRequests.contains(channelKey) ||
-        _programArtwork.containsKey(channelKey)) return;
+        _programArtwork.containsKey(channelKey)) {
+      return;
+    }
     _artworkRequests.add(channelKey);
     try {
       debugPrint('LiveTV: Fetching TMDB art for channel: "${channel.name}"');
@@ -665,7 +665,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Future<void> _fetchProgramArtwork(Program program) async {
     if (_artworkRequests.contains(program.id) ||
-        _programArtwork.containsKey(program.id)) return;
+        _programArtwork.containsKey(program.id)) {
+      return;
+    }
     _artworkRequests.add(program.id);
     try {
       debugPrint('LiveTV: Fetching TMDB art for: "${program.title}"');
@@ -1077,7 +1079,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               child: Icon(
                 Icons.play_circle_outline,
                 size: 80,
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
               ),
             ),
           ),

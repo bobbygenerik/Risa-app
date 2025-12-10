@@ -17,7 +17,6 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-    // Size _screenSize; // not needed for TV spacing helpers
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   String? _profileImagePath;
@@ -126,7 +125,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-      // _screenSize = MediaQuery.of(context).size; // not used because we use tv helper via context
     // Simplified layout to avoid syntax/paren mismatches during build.
     // Keeps essential fields and save functionality.
     return CompatPopScope(
@@ -139,11 +137,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       },
       child: Container(
         decoration: const BoxDecoration(
-          color: AppTheme.darkBackground,
+          color: Color(0xFF050710),
         ),
         child: Scaffold(
           backgroundColor: Colors.transparent,
-        elevation: 0,
           appBar: _buildGlassAppBar(),
           body: SafeArea(
             child: Center(

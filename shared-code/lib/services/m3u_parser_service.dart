@@ -20,7 +20,7 @@ class M3UParserService {
   String? _epgUrl; // Store EPG URL from M3U header
 
   // Pre-compiled regex patterns for performance (avoid recreating per-line)
-  static final RegExp _attributeRegex = RegExp(r'(\w+-?\w+)="([^"]*)"');
+
   static final RegExp _epgUrlRegex = RegExp(r'x-tvg-url="([^"]+)"');
   static final RegExp _seriesEpisodeRegex = RegExp(r'S\d+E\d+', caseSensitive: false);
 
@@ -352,45 +352,7 @@ class M3UParserService {
     };
   }
 
-  /// Create a movie Content map directly (avoids object creation)
-  Map<String, dynamic> _createMovieMap(
-    String title,
-    String url,
-    Map<String, String> attrs,
-    int index,
-    int baseTimestamp,
-  ) {
-    return {
-      'id': '$baseTimestamp$index',
-      'title': title,
-      'streamUrl': url,
-      'posterUrl': attrs['tvg-logo'],
-      'type': 'movie',
-      'category': attrs['group-title'],
-      'genres': _extractGenres(attrs['group-title'] ?? ''),
-      'sortOrder': index,
-    };
-  }
 
-  /// Create a series Content map directly (avoids object creation)
-  Map<String, dynamic> _createSeriesMap(
-    String title,
-    String url,
-    Map<String, String> attrs,
-    int index,
-    int baseTimestamp,
-  ) {
-    return {
-      'id': '$baseTimestamp$index',
-      'title': title,
-      'streamUrl': url,
-      'posterUrl': attrs['tvg-logo'],
-      'type': 'series',
-      'category': attrs['group-title'],
-      'genres': _extractGenres(attrs['group-title'] ?? ''),
-      'sortOrder': index,
-    };
-  }
 
   /// Extracts channel name from EXTINF line
   String _extractChannelName(String info) {

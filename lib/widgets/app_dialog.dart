@@ -24,7 +24,7 @@ class AppDialog extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0xE6121629),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.3), width: 1),
+          border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.3), width: 1),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -93,13 +93,13 @@ class AppDialogButton extends StatelessWidget {
             duration: const Duration(milliseconds: 150),
             decoration: BoxDecoration(
               color: isPrimary
-                  ? (isFocused ? AppTheme.primaryBlue : AppTheme.primaryBlue.withOpacity(0.8))
-                  : (isFocused ? Colors.white.withOpacity(0.2) : Colors.transparent),
+                  ? (isFocused ? AppTheme.primaryBlue : AppTheme.primaryBlue.withValues(alpha: 0.8))
+                  : (isFocused ? Colors.white.withValues(alpha: 0.2) : Colors.transparent),
               borderRadius: BorderRadius.circular(6),
               border: Border.all(
                 color: isFocused
                     ? AppTheme.primaryBlue
-                    : (isPrimary ? AppTheme.primaryBlue.withOpacity(0.5) : Colors.white24),
+                    : (isPrimary ? AppTheme.primaryBlue.withValues(alpha: 0.5) : Colors.white24),
                 width: 1,
               ),
             ),

@@ -148,7 +148,7 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
                                   return GestureDetector(
                                     onTap: () => Navigator.pop(context, channel),
                                     child: Container(
-                                      color: isFocused ? Colors.blue.withOpacity(0.3) : Colors.transparent,
+                                      color: isFocused ? Colors.blue.withValues(alpha: 0.3) : Colors.transparent,
                                       child: ListTile(
                                         leading: (channel.logoUrl?.isNotEmpty ?? false)
                                             ? Image.network(

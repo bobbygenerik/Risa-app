@@ -18,12 +18,11 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
   List<FileSystemEntity> _files = [];
   bool _isLoading = true;
   String? _errorMessage;
-  late DateTime _currentTime;
+
 
   @override
   void initState() {
     super.initState();
-    _currentTime = DateTime.now();
     Future.delayed(const Duration(seconds: 1), _updateTime);
     _loadFiles();
   }
@@ -31,13 +30,8 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
   void _updateTime() {
     if (!mounted) return;
     setState(() {
-      _currentTime = DateTime.now();
     });
     Future.delayed(const Duration(seconds: 1), _updateTime);
-  }
-
-  String _formatTime(DateTime time) {
-    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 
   Future<void> _loadFiles() async {
@@ -173,10 +167,9 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
       },
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        elevation: 0,
         body: Container(
           decoration: const BoxDecoration(
-            color: AppTheme.darkBackground,
+            color: Color(0xFF050710),
           ),
           child: Column(
           children: [

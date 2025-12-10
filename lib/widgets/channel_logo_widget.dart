@@ -84,22 +84,6 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
     }
   }
 
-  Widget _buildPlaceholder() {
-    return widget.placeholder ??
-        Container(
-          width: widget.width,
-          height: widget.height,
-          decoration: BoxDecoration(
-            color: widget.backgroundColor ?? Colors.grey[800],
-            borderRadius: widget.borderRadius,
-          ),
-          child: Icon(
-            Icons.live_tv,
-            color: Colors.white54,
-            size: widget.width * 0.5,
-          ),
-        );
-  }
 
   @override
   Widget build(BuildContext context) {

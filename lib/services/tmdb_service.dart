@@ -427,7 +427,7 @@ class TMDBService {
         details = {'backdrop': logoUrl};
       } else {
         if (title.length <= 4) {
-          details = await getTVDetails(title + " channel", year: year);
+          details = await getTVDetails('$title channel', year: year);
         } else {
           details = await getTVDetails(title, year: year);
         }

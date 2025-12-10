@@ -152,12 +152,10 @@ class WhisperTranscriptionService extends ChangeNotifier {
   }
 
   Future<String> _translateText(String text) async {
-    if (_translator == null) {
-      _translator = OnDeviceTranslator(
+    _translator ??= OnDeviceTranslator(
         sourceLanguage: _sourceLanguage,
         targetLanguage: _targetLanguage,
       );
-    }
     
     try {
       return await _translator!.translateText(text);

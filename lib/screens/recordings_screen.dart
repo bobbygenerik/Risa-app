@@ -21,12 +21,11 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
   List<FileSystemEntity> _recordings = [];
   bool _isLoading = true;
   String? _errorMessage;
-  late DateTime _currentTime;
+
 
   @override
   void initState() {
     super.initState();
-    _currentTime = DateTime.now();
     Future.delayed(const Duration(seconds: 1), _updateTime);
     _loadRecordings();
   }
@@ -34,13 +33,8 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
   void _updateTime() {
     if (!mounted) return;
     setState(() {
-      _currentTime = DateTime.now();
     });
     Future.delayed(const Duration(seconds: 1), _updateTime);
-  }
-
-  String _formatTime(DateTime time) {
-    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 
   Future<void> _loadRecordings() async {
@@ -193,10 +187,9 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
       },
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        elevation: 0,
         body: Container(
           decoration: const BoxDecoration(
-            color: AppTheme.darkBackground,
+            color: Color(0xFF050710),
           ),
           child: Column(
           children: [
@@ -444,7 +437,11 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
                     size: context.tvIconSize(24),
                   ),
                   onPressed: () {
-                    // TODO: Play recording
+                    context.push('/player', extra: {
+                      'videoUrl': file.path,
+                      'title': fileName,
+                      'isLive': false,
+                    });
                     showAppSnackBar(
                       context,
                       SnackBar(content: Text('Playing recording...')),

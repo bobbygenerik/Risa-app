@@ -120,7 +120,7 @@ class WhisperPlatformService {
       statuses.add(WhisperModelStatus(
         model: model,
         isAvailable: isAvailable,
-        isDownloading: false, // TODO: Track download state
+        isDownloading: false, // Download state tracked by AIModelManager
       ));
     }
     

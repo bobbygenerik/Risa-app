@@ -1,5 +1,6 @@
 // ignore_for_file: todo
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/services/integrated_transcription_service.dart';
 import 'package:iptv_player/utils/app_theme.dart';
@@ -200,13 +201,13 @@ class TranscriptionControlPanel extends StatelessWidget {
                           ? null
                           : () {
                               final srt = service.exportAsSRT();
-                              debugPrint('Exported SRT:\n$srt');
-                              // TODO: Save to file or share
+                              // Copy to clipboard (simple cross-platform solution)
+                              Clipboard.setData(ClipboardData(text: srt));
                               showAppSnackBar(
                                 context,
                                 SnackBar(
                                   content: Text(
-                                    'Exported ${service.subtitles.length} subtitles',
+                                    'Exported ${service.subtitles.length} subtitles to clipboard',
                                   ),
                                 ),
                               );

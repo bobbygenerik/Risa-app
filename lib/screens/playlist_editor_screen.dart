@@ -131,13 +131,15 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
         // Save settings after successful update
         await _saveSettings();
         
-        showAppSnackBar(
-          context,
-          SnackBar(
-            content: Text('Playlist updated! ${provider.channels.length} channels, ${provider.moviesCount} movies, ${provider.seriesCount} series found.'),
-            backgroundColor: AppTheme.accentGreen,
-          ),
-        );
+        if (mounted) {
+          showAppSnackBar(
+            context,
+            SnackBar(
+              content: Text('Playlist updated! ${provider.channels.length} channels, ${provider.moviesCount} movies, ${provider.seriesCount} series found.'),
+              backgroundColor: AppTheme.accentGreen,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -241,10 +243,12 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
           ),
         );
         // Use go instead of pop to navigate safely
-        if (GoRouter.of(context).canPop()) {
-          context.pop();
-        } else {
-          context.go('/settings');
+        if (mounted) {
+          if (GoRouter.of(context).canPop()) {
+            context.pop();
+          } else {
+            context.go('/settings');
+          }
         }
       }
     }
@@ -336,10 +340,9 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
     if (_isLoading) {
       return Scaffold(
         backgroundColor: Colors.transparent,
-        elevation: 0,
         body: Container(
           decoration: const BoxDecoration(
-            color: AppTheme.darkBackground,
+            color: Color(0xFF050710),
           ),
           child: const Center(
             child: CircularProgressIndicator(color: AppTheme.primaryBlue),
@@ -350,7 +353,6 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-        elevation: 0,
       appBar: AppBar(
         backgroundColor: Colors.white.withAlpha((0.08 * 255).round()),
         title: const Text('Edit Playlist'),
@@ -374,7 +376,7 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
       ),
       body: Container(
         decoration: const BoxDecoration(
-          color: AppTheme.darkBackground,
+          color: Color(0xFF050710),
         ),
         child: SingleChildScrollView(
           padding: EdgeInsets.all(context.tvSpacing(32)),

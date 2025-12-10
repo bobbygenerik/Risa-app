@@ -1,5 +1,6 @@
 // ignore_for_file: sized_box_for_whitespace
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -45,7 +46,7 @@ class _EPGScreenState extends State<EPGScreen>
   final ScrollController _horizontalScrollController = ScrollController();
   final ScrollController _timeHeaderScrollController = ScrollController();
   final ScrollController _verticalScrollController = ScrollController();
-  final FocusNode _firstContentFocusNode = FocusNode();
+
 
   final FocusNode _refreshButtonFocus = FocusNode();
   final FocusNode _firstCategoryFocus = FocusNode();
@@ -242,7 +243,7 @@ class _EPGScreenState extends State<EPGScreen>
         prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
 
     if (epgUrl == null || epgUrl.isEmpty) {
-      if (mounted && context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('No EPG URL configured'),
@@ -287,7 +288,7 @@ class _EPGScreenState extends State<EPGScreen>
   @override
   Widget build(BuildContext context) {
     // Keep using WillPopScope for now to remain compatible with current SDK.
-    // TODO: Replace with `PopScope` when the project SDK is upgraded.
+    // Using CompatPopScope for backward compatibility
     // ignore: deprecated_member_use
     return Scaffold(
       body: CompatPopScope(
@@ -348,7 +349,7 @@ class _EPGScreenState extends State<EPGScreen>
 
             return Container(
               decoration: const BoxDecoration(
-                color: AppTheme.darkBackground,
+                color: Color(0xFF050710),
               ),
               child: Stack(
                 children: [
@@ -400,7 +401,7 @@ class _EPGScreenState extends State<EPGScreen>
   Widget _buildEmptyState(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: AppTheme.darkBackground,
+        color: Color(0xFF050710),
       ),
       child: Center(
         child: ConstrainedBox(
@@ -507,7 +508,7 @@ class _EPGScreenState extends State<EPGScreen>
                   Text(
                     DateFormat('EEEE, MMM dd').format(_selectedDate),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.white.withOpacity(0.7),
+                          color: Colors.white.withValues(alpha: 0.7),
                           decoration: TextDecoration.none,
                         ),
                   ),
@@ -558,7 +559,7 @@ class _EPGScreenState extends State<EPGScreen>
                     final isFocused = Focus.of(context).hasFocus;
                     return Container(
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.3),
+                        color: Colors.black.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(8),
                         border: isFocused
                             ? Border.all(color: AppTheme.primaryBlue, width: 2)
@@ -577,7 +578,7 @@ class _EPGScreenState extends State<EPGScreen>
                                 size: 18,
                                 color: epgService.isLoading
                                     ? AppTheme.primaryBlue
-                                    : Colors.white.withOpacity(0.8),
+                                    : Colors.white.withValues(alpha: 0.8),
                               ),
                             );
                           },
@@ -653,14 +654,14 @@ class _EPGScreenState extends State<EPGScreen>
             margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.03),
+              color: Colors.white.withValues(alpha: 0.03),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: isFocused
                     ? AppTheme.primaryBlue
                     : isSelected
-                        ? AppTheme.primaryBlue.withOpacity(0.5)
-                        : Colors.white.withOpacity(0.1),
+                        ? AppTheme.primaryBlue.withValues(alpha: 0.5)
+                        : Colors.white.withValues(alpha: 0.1),
                 width: isFocused ? 2 : 1,
               ),
             ),
@@ -669,7 +670,7 @@ class _EPGScreenState extends State<EPGScreen>
               style: TextStyle(
                 color: isFocused || isSelected
                     ? Colors.white
-                    : Colors.white.withOpacity(0.7),
+                    : Colors.white.withValues(alpha: 0.7),
                 fontSize: 14,
                 fontWeight: (isFocused || isSelected)
                     ? FontWeight.w600
@@ -705,7 +706,7 @@ class _EPGScreenState extends State<EPGScreen>
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                color: AppTheme.primaryBlue.withOpacity(0.2),
+                color: AppTheme.primaryBlue.withValues(alpha: 0.2),
                 child: Row(
                   children: [
                     const Icon(Icons.info_outline,
@@ -715,7 +716,7 @@ class _EPGScreenState extends State<EPGScreen>
                       child: Text(
                         'No EPG data. Configure EPG URL in Settings.',
                         style: TextStyle(
-                            color: Colors.white.withOpacity(0.7), fontSize: 12),
+                            color: Colors.white.withValues(alpha: 0.7), fontSize: 12),
                       ),
                     ),
                   ],
@@ -736,10 +737,10 @@ class _EPGScreenState extends State<EPGScreen>
                           height: 60,
                           margin: const EdgeInsets.only(bottom: 4, right: 4),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.03),
+                            color: Colors.white.withValues(alpha: 0.03),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: Colors.white.withOpacity(0.1),
+                              color: Colors.white.withValues(alpha: 0.1),
                               width: 1,
                             ),
                           ),
@@ -754,7 +755,7 @@ class _EPGScreenState extends State<EPGScreen>
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 14,
-                                color: Colors.white.withOpacity(0.9),
+                                color: Colors.white.withValues(alpha: 0.9),
                               ),
                             ),
                           ),
@@ -765,7 +766,6 @@ class _EPGScreenState extends State<EPGScreen>
                             onNotification: (notification) {
                               if (notification is ScrollUpdateNotification) {
                                 // Sync with horizontal scroll container
-                                final offset = _verticalScrollController.offset;
                                 WidgetsBinding.instance.addPostFrameCallback((_) {
                                   if (mounted && _horizontalScrollController.hasClients) {
                                     final horizontalParent = _horizontalScrollController.position.context.notificationContext;
@@ -875,7 +875,6 @@ class _EPGScreenState extends State<EPGScreen>
 
   /// Channel sidebar item (fixed on left)
   Widget _buildChannelSidebarItem(Channel channel) {
-    final isSelected = _selectedChannelId == channel.id;
     final isFirst = _selectedChannelId == null &&
         channel.id ==
             (_selectedCategory == '⭐ Favorites'
@@ -931,12 +930,12 @@ class _EPGScreenState extends State<EPGScreen>
               height: 60,
               margin: const EdgeInsets.only(bottom: 4, right: 8),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.03),
+                color: Colors.white.withValues(alpha: 0.03),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: isFocused
                       ? AppTheme.primaryBlue
-                      : Colors.white.withOpacity(0.1),
+                      : Colors.white.withValues(alpha: 0.1),
                   width: isFocused ? 2 : 1,
                 ),
               ),
@@ -996,10 +995,10 @@ class _EPGScreenState extends State<EPGScreen>
             height: 60,
             margin: EdgeInsets.only(right: 4, left: index == 0 ? 4 : 0),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.03),
+              color: Colors.white.withValues(alpha: 0.03),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: Colors.white.withOpacity(0.1),
+                color: Colors.white.withValues(alpha: 0.1),
                 width: 1,
               ),
             ),
@@ -1008,7 +1007,7 @@ class _EPGScreenState extends State<EPGScreen>
                 time.format(context),
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 0.7),
                 ),
               ),
             ),
@@ -1050,7 +1049,7 @@ class _EPGScreenState extends State<EPGScreen>
               child: Text(
                 'No EPG data',
                 style: TextStyle(
-                    fontSize: 12, color: Colors.white.withOpacity(0.5)),
+                    fontSize: 12, color: Colors.white.withValues(alpha: 0.5)),
               ),
             )
           : Stack(
@@ -1092,7 +1091,6 @@ class _EPGScreenState extends State<EPGScreen>
     final isLive = program.isCurrentlyPlaying;
     final hasCatchup = program.hasCatchup;
 
-    const epgCellBackground = Color(0xFF1E1E28);
     const epgLiveColor = Color(0xFF4a4fc9);
     const epgCatchupColor = Color(0xFFcc5a2d);
 
@@ -1115,10 +1113,10 @@ class _EPGScreenState extends State<EPGScreen>
             margin: const EdgeInsets.only(right: 4),
             decoration: BoxDecoration(
               color: isLive
-                  ? epgLiveColor.withOpacity(0.15)
+                  ? epgLiveColor.withValues(alpha: 0.15)
                   : hasCatchup
-                      ? epgCatchupColor.withOpacity(0.1)
-                      : Colors.white.withOpacity(0.03),
+                      ? epgCatchupColor.withValues(alpha: 0.1)
+                      : Colors.white.withValues(alpha: 0.03),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: isFocused
@@ -1127,7 +1125,7 @@ class _EPGScreenState extends State<EPGScreen>
                         ? epgLiveColor
                         : hasCatchup
                             ? epgCatchupColor
-                            : Colors.white.withOpacity(0.1),
+                            : Colors.white.withValues(alpha: 0.1),
                 width: isFocused ? 2 : 1,
               ),
             ),
@@ -1157,7 +1155,7 @@ class _EPGScreenState extends State<EPGScreen>
                                 fontSize: 12,
                                 fontWeight:
                                     isLive ? FontWeight.w600 : FontWeight.normal,
-                                color: Colors.white.withOpacity(0.9),
+                                color: Colors.white.withValues(alpha: 0.9),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -1169,7 +1167,7 @@ class _EPGScreenState extends State<EPGScreen>
                         '${DateFormat.jm().format(program.startTime)} - ${DateFormat.jm().format(program.endTime)}',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.white.withOpacity(0.6),
+                          color: Colors.white.withValues(alpha: 0.6),
                         ),
                         maxLines: 1,
                       ),
@@ -1211,7 +1209,7 @@ class _EPGScreenState extends State<EPGScreen>
                       return Container(
                         height: 200,
                         decoration: const BoxDecoration(
-                          color: AppTheme.darkBackground,
+                          color: Color(0xFF050710),
                         ),
                         child: const Icon(Icons.dvr, size: 64),
                       );
@@ -1264,7 +1262,7 @@ class _EPGScreenState extends State<EPGScreen>
                           SizedBox(width: 4),
                           Text(
                             'LIVE',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
@@ -1374,144 +1372,6 @@ class _EPGScreenState extends State<EPGScreen>
     return channelSidebarWidth + (hours * cellWidth);
   }
 
-  void _showChannelOptions(Channel channel) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E2E),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Channel Options'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Icon(
-                channel.isFavorite == true
-                    ? Icons.favorite
-                    : Icons.favorite_border,
-                color: AppTheme.accentRed,
-              ),
-              title: Text(
-                channel.isFavorite == true
-                    ? 'Remove from Favorites'
-                    : 'Add to Favorites',
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _toggleFavorite(channel);
-              },
-            ),
-            ListTile(
-              leading: const Icon(
-                Icons.visibility_off,
-                color: AppTheme.textSecondary,
-              ),
-              title: const Text('Hide Channel'),
-              onTap: () {
-                Navigator.pop(context);
-                _hideChannel(channel);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.edit, color: AppTheme.primaryBlue),
-              title: const Text('Edit Channel Number'),
-              onTap: () {
-                Navigator.pop(context);
-                _editChannelNumber(channel);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.link, color: AppTheme.accentGreen),
-              title: const Text('Assign EPG Source'),
-              onTap: () {
-                Navigator.pop(context);
-                _assignEPGSource(channel);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _toggleFavorite(Channel channel) {
-    final channelProvider = Provider.of<ChannelProvider>(
-      context,
-      listen: false,
-    );
-    if (channel.isFavorite == true) {
-      channelProvider.removeFromFavorites(channel);
-    } else {
-      channelProvider.addToFavorites(channel);
-    }
-    showAppSnackBar(
-      context,
-      SnackBar(
-        content: Text(
-          channel.isFavorite == true
-              ? 'Removed from favorites'
-              : 'Added to favorites',
-        ),
-      ),
-    );
-  }
-
-  void _hideChannel(Channel channel) {
-    // This would update the channel provider to mark channel as hidden
-    showAppSnackBar(
-      context,
-      SnackBar(
-        content: Text('${channel.name} has been hidden'),
-        action: SnackBarAction(
-          label: 'UNDO',
-          onPressed: () {
-            // Undo hide action
-          },
-        ),
-      ),
-    );
-  }
-
-  void _editChannelNumber(Channel channel) {
-    final controller = TextEditingController(
-      text: channel.channelNumber?.toString() ?? '',
-    );
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E2E),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Edit Channel Number'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'Channel Number',
-            hintText: 'Enter channel number',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // Update channel number
-              final localContext = context;
-              if (localContext.mounted) {
-                showAppSnackBar(localContext,
-                    const SnackBar(content: Text('Channel number updated')));
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
 
   /// Show context menu for channel long press
   void _showChannelContextMenu(BuildContext ctx, Channel channel) {
@@ -1741,8 +1601,9 @@ class _EPGScreenState extends State<EPGScreen>
                                 ? index - 1
                                 : index;
                         if (adjustedIndex < 0 ||
-                            adjustedIndex >= filteredIds.length)
+                            adjustedIndex >= filteredIds.length) {
                           return const SizedBox.shrink();
+                        }
 
                         final epgId = filteredIds[adjustedIndex];
                         final preview = epgService.getChannelPreview(epgId);
@@ -1887,10 +1748,6 @@ class _EPGScreenState extends State<EPGScreen>
     }
   }
 
-  void _assignEPGSource(Channel channel) {
-    // Use the new EPG channel selector instead of text input
-    _showEpgChannelSelector(channel);
-  }
 
   /// Show context menu for program long press
   void _showProgramContextMenu(Program program) {
@@ -2184,28 +2041,59 @@ class _EPGScreenState extends State<EPGScreen>
   }
 
   /// Schedule recording for a program
-  void _scheduleRecording(Program program) {
-    // TODO: Implement actual recording functionality
+  void _scheduleRecording(Program program) async {
     if (!mounted) return;
-    showAppSnackBar(
-        context,
-        SnackBar(
-          content: Text('Recording scheduled: ${program.title}'),
-          backgroundColor: AppTheme.accentRed,
-          action: SnackBarAction(
-            label: 'Undo',
-            textColor: Colors.white,
-            onPressed: () {
-              // Cancel recording
-            },
-          ),
-        ));
+    
+    // Store scheduled recording in SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    final recordings = prefs.getStringList('scheduled_recordings') ?? [];
+    final recordingData = {
+      'id': program.id,
+      'title': program.title,
+      'startTime': program.startTime.millisecondsSinceEpoch,
+      'endTime': program.endTime.millisecondsSinceEpoch,
+      'channelId': program.channelId,
+    };
+    recordings.add(json.encode(recordingData));
+    await prefs.setStringList('scheduled_recordings', recordings);
+    
+    if (mounted) {
+      showAppSnackBar(
+          context,
+          SnackBar(
+            content: Text('Recording scheduled: ${program.title}'),
+            backgroundColor: AppTheme.accentRed,
+            action: SnackBarAction(
+              label: 'Undo',
+              textColor: Colors.white,
+              onPressed: () async {
+                // Remove from scheduled recordings
+                final updatedRecordings = recordings.where((r) => 
+                  json.decode(r)['id'] != program.id).toList();
+                await prefs.setStringList('scheduled_recordings', updatedRecordings);
+              },
+            ),
+          ));
+    }
   }
 
   /// Set reminder for a program
-  void _setReminder(Program program) {
-    // TODO: Implement actual reminder/notification functionality
+  void _setReminder(Program program) async {
     if (!mounted) return;
+    
+    // Store reminder in SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    final reminders = prefs.getStringList('program_reminders') ?? [];
+    final reminderData = {
+      'id': program.id,
+      'title': program.title,
+      'startTime': program.startTime.millisecondsSinceEpoch,
+      'channelId': program.channelId,
+      'reminderTime': program.startTime.subtract(const Duration(minutes: 15)).millisecondsSinceEpoch,
+    };
+    reminders.add(json.encode(reminderData));
+    await prefs.setStringList('program_reminders', reminders);
+    
     final timeUntil = program.startTime.difference(DateTime.now());
     String timeStr;
     if (timeUntil.inHours > 0) {
@@ -2214,19 +2102,24 @@ class _EPGScreenState extends State<EPGScreen>
       timeStr = '${timeUntil.inMinutes}m';
     }
 
-    showAppSnackBar(
-        context,
-        SnackBar(
-          content: Text('Reminder set for ${program.title} (in $timeStr)'),
-          backgroundColor: AppTheme.primaryBlue,
-          action: SnackBarAction(
-            label: 'Undo',
-            textColor: Colors.white,
-            onPressed: () {
-              // Cancel reminder
-            },
-          ),
-        ));
+    if (mounted) {
+      showAppSnackBar(
+          context,
+          SnackBar(
+            content: Text('Reminder set for ${program.title} (in $timeStr)'),
+            backgroundColor: AppTheme.primaryBlue,
+            action: SnackBarAction(
+              label: 'Undo',
+              textColor: Colors.white,
+              onPressed: () async {
+                // Remove from reminders
+                final updatedReminders = reminders.where((r) => 
+                  json.decode(r)['id'] != program.id).toList();
+                await prefs.setStringList('program_reminders', updatedReminders);
+              },
+            ),
+          ));
+    }
   }
 
   void _playCatchup(Program program) {

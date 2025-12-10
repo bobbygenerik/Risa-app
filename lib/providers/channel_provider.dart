@@ -705,9 +705,8 @@ class ChannelProvider with ChangeNotifier {
           await prefs.setString('flutter.cached_playlist', playlistJson);
           debugPrint(
               'ChannelProvider: Saved playlist to flutter.cached_playlist for Android Auto');
-          debugPrint('ChannelProvider: flutter.cached_playlist contents: ' +
-              playlistJson.substring(
-                  0, playlistJson.length > 500 ? 500 : playlistJson.length));
+          debugPrint('ChannelProvider: flutter.cached_playlist contents: ${playlistJson.substring(
+                  0, playlistJson.length > 500 ? 500 : playlistJson.length)}');
         } catch (e) {
           debugPrint(
               'ChannelProvider: Failed to save playlist for Android Auto: $e');

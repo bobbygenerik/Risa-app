@@ -27,7 +27,7 @@ class ModernHomeScreen extends StatefulWidget {
 }
 
 class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerProviderStateMixin {
-    late Size _screenSize;
+  
   final PageController _pageController = PageController();
   final FocusNode _heroFocusNode = FocusNode(debugLabel: 'HeroBanner');
   int _currentPage = 0;
@@ -117,9 +117,11 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
       channelName: channel.name,
     );
     final showTitle = currentProgram?.title.isNotEmpty == true ? currentProgram!.title : channel.name;
+    final precacheContext = context;
     _getBestArt(showTitle).then((url) {
-      if (url != null && url.isNotEmpty) {
-        precacheImage(NetworkImage(url.replaceFirst('/w1280', '/w780')), context);
+      if (url != null && url.isNotEmpty && mounted) {
+        // ignore: use_build_context_synchronously
+        precacheImage(NetworkImage(url.replaceFirst('/w1280', '/w780')), precacheContext);
       }
     });
   }
@@ -150,14 +152,13 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
       ),
     );
     
-    if (shouldExit == true && context.mounted) {
+    if (shouldExit == true && mounted) {
       SystemNavigator.pop();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-      _screenSize = MediaQuery.of(context).size;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -166,7 +167,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
       },
       child: Container(
       decoration: const BoxDecoration(
-        color: AppTheme.darkBackground,
+        color: Color(0xFF050710),
       ),
       child: Consumer<ChannelProvider>(
         builder: (context, channelProvider, _) {
@@ -366,7 +367,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
                                     boxShadow: isFocused
                                         ? TVFocusStyle.focusedShadow
                                         : TVFocusStyle.defaultShadow,
-                                    color: const AppTheme.darkBackground,
+                                    color: const Color(0xFF050710),
                                   ),
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(24),
@@ -395,8 +396,8 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
                                                 begin: Alignment.centerLeft,
                                                 end: Alignment.centerRight,
                                                 colors: [
-                                                  AppTheme.darkBackground,
-                                                  AppTheme.darkBackground,
+                                                  Color(0xFF050710),
+                                                  Color(0xFF050710),
                                                   Color(0xDD050710),
                                                   Color(0x00050710),
                                                 ],
@@ -419,7 +420,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
                                                 colors: [
                                                   Color(0x00050710),
                                                   Color(0x99050710),
-                                                  AppTheme.darkBackground,
+                                                  Color(0xFF050710),
                                                 ],
                                                 stops: [0.0, 0.5, 1.0],
                                               ),
@@ -432,7 +433,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
                                           left: 24,
                                           child: Container(
                                             decoration: BoxDecoration(
-                                              color: Colors.black.withOpacity(0.7),
+                                              color: Colors.black.withValues(alpha: 0.7),
                                               borderRadius: BorderRadius.circular(8),
                                             ),
                                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -602,7 +603,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
       height: 400,
       width: double.infinity,
       decoration: const BoxDecoration(
-        color: AppTheme.darkBackground,
+        color: Color(0xFF050710),
       ),
       child: Center(
         child: Column(
@@ -627,7 +628,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
   Widget _buildPlaceholderGradient() {
     return Container(
       decoration: const BoxDecoration(
-        color: AppTheme.darkBackground,
+        color: Color(0xFF050710),
       ),
     );
   }
@@ -721,7 +722,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> with SingleTickerPr
                                           child: Container(
                                             padding: const EdgeInsets.all(12),
                                             decoration: const BoxDecoration(
-                                              color: AppTheme.darkBackground,
+                                              color: Color(0xFF050710),
                                               borderRadius: BorderRadius.only(
                                                 bottomLeft: Radius.circular(12),
                                                 bottomRight: Radius.circular(12),

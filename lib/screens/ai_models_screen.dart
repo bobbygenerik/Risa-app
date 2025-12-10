@@ -16,25 +16,9 @@ class AIModelsScreen extends StatefulWidget {
 }
 
 class _AIModelsScreenState extends State<AIModelsScreen> {
-  late DateTime _currentTime;
-
   @override
   void initState() {
     super.initState();
-    _currentTime = DateTime.now();
-    Future.delayed(const Duration(seconds: 1), _updateTime);
-  }
-
-  void _updateTime() {
-    if (!mounted) return;
-    setState(() {
-      _currentTime = DateTime.now();
-    });
-    Future.delayed(const Duration(seconds: 1), _updateTime);
-  }
-
-  String _formatTime(DateTime time) {
-    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -51,10 +35,13 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
   Widget _buildContent() {
     return Scaffold(
       backgroundColor: Colors.transparent,
-        elevation: 0,
       body: Container(
         decoration: const BoxDecoration(
-          color: AppTheme.darkBackground,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF050710), Color(0xFF0d1140)],
+          ),
         ),
         child: Consumer<AIModelManager>(
           builder: (context, modelManager, _) {
@@ -150,12 +137,7 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
 
     return Card(
       color: AppTheme.cardBackground,
-      elevation: 0,
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-        side: BorderSide(color: AppTheme.divider),
-      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

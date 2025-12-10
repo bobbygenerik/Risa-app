@@ -143,7 +143,7 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
     final tvHeight = widget.height != null ? context.tvSpacing(widget.height!) : null;
     return ClipRRect(
       borderRadius: widget.borderRadius ?? BorderRadius.circular(context.tvSpacing(12)),
-      child: Container(
+      child: SizedBox(
         width: tvWidth,
         height: tvHeight,
         child: _artworkUrl != null && _artworkUrl!.isNotEmpty

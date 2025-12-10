@@ -109,9 +109,9 @@ class _SearchPopupState extends State<SearchPopup> {
             width: 600,
             constraints: const BoxConstraints(maxHeight: 700),
             decoration: BoxDecoration(
-              color: const Color(0xFF050710).withOpacity(0.95),
+              color: const Color(0xFF050710).withValues(alpha: 0.95),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
             ),
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -123,10 +123,10 @@ class _SearchPopupState extends State<SearchPopup> {
                   style: const TextStyle(fontSize: 15, color: Colors.white),
                   decoration: InputDecoration(
                     hintText: 'Search...',
-                    hintStyle: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.5)),
+                    hintStyle: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.5)),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     filled: true,
-                    fillColor: Colors.white.withOpacity(0.05),
+                    fillColor: Colors.white.withValues(alpha: 0.05),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: BorderSide.none,
@@ -273,7 +273,7 @@ class _SearchPopupState extends State<SearchPopup> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: const Color(0xFF4a9eff).withOpacity(0.15),
+              color: const Color(0xFF4a9eff).withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
@@ -414,24 +414,8 @@ class _SearchPopupState extends State<SearchPopup> {
             // It seems /player is for channels.
             // Let's check MoviesScreen to see how it opens content.
 
-            // For now, I'll just print or show a snackbar if route is unknown,
-            // but actually I should check how MoviesScreen does it.
-            // Assuming I can just push a route.
-
-            // Re-checking main.dart routes...
-            // It seems we might not have a dedicated details route visible in the snippet.
-            // But typically it would be something like /movie/:id
-
-            // Let's use a safe fallback or just try to play it if it's a movie.
-            // If it's a series, we might need to show episodes.
-
-            // For this task, I'll assume we can navigate to a player or details.
-            // Let's just use a placeholder action or try to find the right route.
-            // Actually, let's look at how `MoviesScreen` does it.
-            // I'll add a TODO or generic navigation.
-
-            // Update: I'll check `MoviesScreen` in a moment.
-            // For now, I'll just close the popup.
+            final encodedId = Uri.encodeComponent(item.id);
+            context.push('/content/$encodedId', extra: item);
           },
           borderRadius: BorderRadius.circular(AppSizes.radiusMd),
           child: Column(

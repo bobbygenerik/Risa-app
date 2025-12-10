@@ -83,7 +83,7 @@ class _WhisperModelManagerState extends State<WhisperModelManager> {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(8),
         border: isSelected ? Border.all(color: AppTheme.primaryBlue, width: 1) : null,
       ),
@@ -108,7 +108,7 @@ class _WhisperModelManagerState extends State<WhisperModelManager> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: status.model.bundled ? Colors.green.withOpacity(0.2) : Colors.blue.withOpacity(0.2),
+                color: status.model.bundled ? Colors.green.withValues(alpha: 0.2) : Colors.blue.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
@@ -151,7 +151,7 @@ class _WhisperModelManagerState extends State<WhisperModelManager> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: AppTheme.primaryBlue.withOpacity(0.2),
+                color: AppTheme.primaryBlue.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: const Text(
@@ -173,7 +173,7 @@ class _WhisperModelManagerState extends State<WhisperModelManager> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
+          color: Colors.white.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(4),
         ),
         child: const Text(
@@ -194,8 +194,10 @@ class _WhisperModelManagerState extends State<WhisperModelManager> {
   }
 
   Future<void> _downloadModel(BuildContext context, String modelName) async {
+    final dialogContext = context; // Capture context before async gap
+    
     showDialog(
-      context: context,
+      context: dialogContext,
       barrierDismissible: false,
       builder: (context) => AppDialog(
         title: 'Downloading Model',
@@ -214,20 +216,28 @@ class _WhisperModelManagerState extends State<WhisperModelManager> {
     );
 
     try {
+      final navigator = Navigator.of(dialogContext);
       final success = await WhisperPlatformService.downloadModel(modelName);
       if (mounted) {
-        Navigator.of(context).pop(); // Close progress dialog
+        navigator.pop(); // Close progress dialog
         
         if (success) {
           await _loadModelStatuses(); // Refresh status
         } else {
-          _showErrorDialog(context, 'Failed to download model');
+          if (mounted) {
+            // ignore: use_build_context_synchronously
+            _showErrorDialog(dialogContext, 'Failed to download model');
+          }
         }
       }
     } catch (e) {
       if (mounted) {
-        Navigator.of(context).pop();
-        _showErrorDialog(context, 'Download error: $e');
+        // ignore: use_build_context_synchronously
+        Navigator.of(dialogContext).pop();
+        if (mounted) {
+          // ignore: use_build_context_synchronously
+          _showErrorDialog(dialogContext, 'Download error: $e');
+        }
       }
     }
   }

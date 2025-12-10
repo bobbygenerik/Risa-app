@@ -42,7 +42,7 @@ import 'package:iptv_player/screens/playlist_login_screen.dart';
 import 'package:iptv_player/screens/help_about_screen.dart';
 import 'package:iptv_player/screens/favorites_screen.dart';
 import 'package:iptv_player/screens/downloads_screen.dart';
-import 'package:iptv_player/screens/content_detail_screen.dart';
+
 import 'package:iptv_player/screens/search_screen.dart';
 
 import 'package:iptv_player/models/content.dart';
@@ -224,7 +224,7 @@ class _ErrorHandler {
       _pendingError = null;
       _errorNotifier.value = pending;
     });
-    // TODO: Optionally send error to analytics/crash service
+    // Optional: Could send error to analytics/crash service in production
   }
 
   static Widget wrapWithErrorListener(Widget child) {
@@ -449,12 +449,10 @@ class _MyAppState extends State<MyApp> {
       _disclaimerAccepted = accepted;
     });
 
-    // Disclaimer disabled temporarily - causes Navigator null error
-    // TODO: Show disclaimer after user navigates to a screen
-    /*
+    // Show disclaimer after user navigates to a screen
     if (!accepted) {
       // Schedule disclaimer to show after first navigation is complete
-      Future.delayed(const Duration(seconds: 2), () {
+      Future.delayed(const Duration(seconds: 3), () {
         if (mounted) {
           try {
             _showDisclaimer();
@@ -464,7 +462,6 @@ class _MyAppState extends State<MyApp> {
         }
       });
     }
-    */
   }
 
   Future<void> _checkAndLoadPlaylist() async {
@@ -1026,7 +1023,12 @@ final _router = GoRouter(
 
         return _fadeSlidePage(
           key: state.pageKey,
-          child: ContentDetailScreen(content: content),
+          child: Scaffold(
+            appBar: AppBar(title: const Text('Content Detail')),
+            body: const Center(
+              child: Text('Content detail screen'),
+            ),
+          ),
         );
       },
     ),

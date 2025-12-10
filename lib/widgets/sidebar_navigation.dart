@@ -225,7 +225,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
                 color: isFocused
-                  ? AppTheme.primaryBlue.withOpacity(0.15)
+                  ? AppTheme.primaryBlue.withValues(alpha: 0.15)
                   : Colors.transparent,
               ),
               alignment: Alignment.center,
@@ -271,7 +271,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        color: const Color(0xFF050710).withOpacity(0.95),
+        color: const Color(0xFF050710).withValues(alpha: 0.95),
         width: _isExpanded ? 160 : 48,
         child: Column(
         children: [
@@ -333,7 +333,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(8),
                                 color: isFocused
-                                  ? AppTheme.primaryBlue.withOpacity(0.15)
+                                  ? AppTheme.primaryBlue.withValues(alpha: 0.15)
                                   : Colors.transparent,
                               ),
                               alignment: Alignment.center,
@@ -366,7 +366,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                       padding: const EdgeInsets.symmetric(vertical: 6),
                       child: _buildTabButton(index),
                     );
-                  }).toList(),
+                  }),
                   const Spacer(),
                   Container(
                     padding: const EdgeInsets.only(bottom: 12),
@@ -422,7 +422,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
-                color: isFocused ? AppTheme.primaryBlue.withOpacity(0.15) : Colors.transparent,
+                color: isFocused ? AppTheme.primaryBlue.withValues(alpha: 0.15) : Colors.transparent,
               ),
               alignment: Alignment.center,
               child: _isExpanded

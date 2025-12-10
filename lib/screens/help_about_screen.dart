@@ -15,7 +15,7 @@ class HelpAboutScreen extends StatefulWidget {
 
 class _HelpAboutScreenState extends State<HelpAboutScreen> {
   int _selectedTab = 0;
-  late DateTime _currentTime;
+
   final List<FocusNode> _tabFocusNodes = [
     FocusNode(debugLabel: 'HelpTab'),
     FocusNode(debugLabel: 'AboutTab'),
@@ -25,7 +25,6 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
   @override
   void initState() {
     super.initState();
-    _currentTime = DateTime.now();
     Future.delayed(const Duration(seconds: 1), _updateTime);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -37,13 +36,8 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
   void _updateTime() {
     if (!mounted) return;
     setState(() {
-      _currentTime = DateTime.now();
     });
     Future.delayed(const Duration(seconds: 1), _updateTime);
-  }
-
-  String _formatTime(DateTime time) {
-    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -78,10 +72,9 @@ class _HelpAboutScreenState extends State<HelpAboutScreen> {
       },
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        elevation: 0,
         body: Container(
           decoration: const BoxDecoration(
-            color: AppTheme.darkBackground,
+            color: Color(0xFF050710),
           ),
           child: Column(
           children: [

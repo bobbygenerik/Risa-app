@@ -10,14 +10,7 @@ class ChannelLogoService {
   static bool _initialized = false;
   static const String _cacheFileName = 'channel_logos_cache.json';
   
-  // Popular TV logo databases (prioritized)
-  static const List<String> _logoSources = [
-    // tv-logos GitHub project (raw URLs)
-    'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/canada/',
-    'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/',
-    'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-kingdom/',
-    'https://raw.githubusercontent.com/tv-logo/tv-logos/main/international/',
-  ];
+
   
   // Known channel name to logo mappings (common channels)
   static final Map<String, String> _knownLogos = {

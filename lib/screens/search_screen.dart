@@ -101,7 +101,7 @@ class _SearchScreenState extends State<SearchScreen>
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: AppTheme.darkBackground,
+        color: Color(0xFF050710),
       ),
       child: Column(
         children: [
@@ -127,11 +127,11 @@ class _SearchScreenState extends State<SearchScreen>
                       style: const TextStyle(fontSize: 18, color: Colors.white),
                       decoration: InputDecoration(
                         hintText: 'Search for channels, movies, or series...',
-                        hintStyle: TextStyle(fontSize: 16, color: Colors.white.withOpacity(0.5)),
+                        hintStyle: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.5)),
                         prefixIcon: const Icon(Icons.search, color: AppTheme.primaryBlue, size: 24),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                         filled: true,
-                        fillColor: Colors.white.withOpacity(0.05),
+                        fillColor: Colors.white.withValues(alpha: 0.05),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide.none,
@@ -266,7 +266,7 @@ class _SearchScreenState extends State<SearchScreen>
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: AppTheme.primaryBlue.withOpacity(0.2),
+            color: AppTheme.primaryBlue.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
