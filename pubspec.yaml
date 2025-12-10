@@ -19,7 +19,7 @@ dependencies:
   video_player: ^2.7.2  # Android, iOS, Web support
   http: ^1.2.0
   dio: ^5.7.0
-  provider: ^6.1.2
+  provider: ^6.1.5+1
   xml: ^6.5.0
   shared_preferences: ^2.2.2
   path: ^1.8.3

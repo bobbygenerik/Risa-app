@@ -972,44 +972,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
 
 
-  Widget _buildShimmerHeroBackground() {
-    // A subtle shimmer/pulse effect while loading
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.3, end: 0.5),
-      duration: const Duration(milliseconds: 1000),
-      curve: Curves.easeInOut,
-      builder: (context, opacity, child) {
-        return Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                const Color(0xFF1a1a2e),
-                Color.lerp(
-                  const Color(0xFF16213e),
-                  AppTheme.primaryBlue,
-                  opacity - 0.3,
-                )!,
-              ],
-            ),
-          ),
-          child: Center(
-            child: SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  Colors.white.withAlpha((0.3 * 255).round()),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
+
 
   Widget _buildDefaultHeroBackground() {
     return Container(
@@ -1062,7 +1025,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               imageUrl: heroImage,
               fit: BoxFit.cover,
               alignment: Alignment.center,
-              placeholder: (_, __) => _buildShimmerHeroBackground(),
+              placeholder: (_, __) => _buildDefaultHeroBackground(),
               errorWidget: (_, __, ___) => _buildDefaultHeroBackground(),
             )
           : _buildDefaultHeroBackground();
@@ -1090,7 +1053,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 imageUrl: heroImage,
                 fit: BoxFit.cover,
                 alignment: Alignment.center,
-                placeholder: (_, __) => _buildShimmerHeroBackground(),
+                placeholder: (_, __) => _buildDefaultHeroBackground(),
                 errorWidget: (_, __, ___) => _buildDefaultHeroBackground(),
               ),
             ),

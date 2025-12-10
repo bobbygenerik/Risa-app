@@ -261,6 +261,10 @@ class _SeriesScreenState extends State<SeriesScreen>
         final series = contentProvider.series;
         final recentSeries = contentProvider.recentlyAddedSeries;
 
+        if (series.isEmpty && contentProvider.isLoading) {
+          return _buildSkeletonLoader();
+        }
+
         if (series.isEmpty) {
           return _wrapWithDirectionalFocus(_buildEmptyState(context));
         }
@@ -911,6 +915,103 @@ class _SeriesScreenState extends State<SeriesScreen>
     return Container(
       decoration: const BoxDecoration(
         color: Color(0xFF050710),
+      ),
+    );
+  }
+
+  Widget _buildSkeletonLoader() {
+    final screenSize = MediaQuery.of(context).size;
+    final heroHeight = screenSize.height * 0.65;
+    final cardWidth = screenSize.width / 6.5;
+    final cardHeight = cardWidth * 1.5;
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF050710),
+      ),
+      child: Stack(
+        children: [
+          // Hero skeleton
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: heroHeight,
+            child: Container(
+              color: AppTheme.cardBackground,
+            ),
+          ),
+          // Info box skeleton
+          Positioned(
+            bottom: heroHeight * 0.20,
+            left: 120,
+            width: screenSize.width * 0.33,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 30,
+                  width: screenSize.width * 0.25,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha((0.1 * 255).round()),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  height: 60,
+                  width: screenSize.width * 0.3,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha((0.1 * 255).round()),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Card rows skeleton
+          Positioned(
+            top: heroHeight + 40,
+            left: 48,
+            right: 80,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: List.generate(3, (rowIndex) => Padding(
+                padding: const EdgeInsets.only(bottom: 32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 20,
+                      width: 150,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withAlpha((0.1 * 255).round()),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: cardHeight,
+                      child: Row(
+                        children: List.generate(5, (cardIndex) => Padding(
+                          padding: const EdgeInsets.only(right: 16),
+                          child: Container(
+                            width: cardWidth,
+                            height: cardHeight,
+                            decoration: BoxDecoration(
+                              color: AppTheme.cardBackground,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        )),
+                      ),
+                    ),
+                  ],
+                ),
+              )),
+            ),
+          ),
+        ],
       ),
     );
   }
