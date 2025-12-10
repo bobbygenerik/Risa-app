@@ -17,6 +17,7 @@ import 'package:iptv_player/services/epg_service.dart';
 
 import 'package:iptv_player/services/whisper_transcription_service.dart';
 import 'package:iptv_player/services/whisper_speech_service.dart';
+import 'package:iptv_player/services/integrated_transcription_service.dart';
 import 'package:iptv_player/services/ai_model_manager.dart';
 import 'package:iptv_player/services/opensubtitles_service.dart';
 import 'package:iptv_player/services/real_debrid_service.dart';
@@ -633,6 +634,13 @@ class _MyAppState extends State<MyApp> {
           ChangeNotifierProvider(
             create: (_) {
               final service = RealDebridService();
+              _runDeferred(service.initialize);
+              return service;
+            },
+          ),
+          ChangeNotifierProvider(
+            create: (_) {
+              final service = IntegratedTranscriptionService();
               _runDeferred(service.initialize);
               return service;
             },

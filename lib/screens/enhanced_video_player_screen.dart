@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/channel.dart';
 import '../widgets/native_exoplayer.dart';
+import '../widgets/live_subtitle_overlay.dart';
+import '../services/integrated_transcription_service.dart';
 import '../utils/app_theme.dart';
+
+enum SubtitleMode { off, regular, liveTranslation }
 
 class EnhancedVideoPlayerScreen extends StatefulWidget {
   final Channel? channel;
@@ -32,10 +37,13 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   bool _isPlaying = false;
   bool _showGuide = false;
   double _progress = 0.0;
+  SubtitleMode _subtitleMode = SubtitleMode.off;
+  IntegratedTranscriptionService? _transcriptionService;
   
   @override
   void initState() {
     super.initState();
+    _transcriptionService = Provider.of<IntegratedTranscriptionService>(context, listen: false);
     _hideControlsAfterDelay();
   }
 
@@ -86,11 +94,25 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     }
   }
 
-  void _toggleSubtitles() {
-    // Toggle subtitle overlay visibility
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Subtitles toggled')),
+  void _showSubtitleMenu() {
+    showDialog(
+      context: context,
+      builder: (context) => _buildSubtitleMenu(),
     );
+  }
+
+  void _setSubtitleMode(SubtitleMode mode) async {
+    setState(() => _subtitleMode = mode);
+    
+    if (mode == SubtitleMode.liveTranslation && _transcriptionService != null) {
+      _transcriptionService!.setTranslationEnabled(true);
+      final streamUrl = widget.videoUrl ?? widget.channel?.url;
+      if (streamUrl != null) {
+        await _transcriptionService!.startTranscription();
+      }
+    } else if (_transcriptionService != null) {
+      await _transcriptionService!.stopTranscription();
+    }
   }
 
   void _toggleMultiView() {
@@ -104,8 +126,87 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     setState(() => _showGuide = !_showGuide);
   }
 
+  Widget _buildSubtitleMenu() {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 280),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.9),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildMenuOption(
+              'Off',
+              Icons.subtitles_off_outlined,
+              _subtitleMode == SubtitleMode.off,
+              () => _setSubtitleMode(SubtitleMode.off),
+            ),
+            _buildMenuOption(
+              'Regular Subtitles',
+              Icons.closed_caption_outlined,
+              _subtitleMode == SubtitleMode.regular,
+              () => _setSubtitleMode(SubtitleMode.regular),
+            ),
+            _buildMenuOption(
+              'Live Translation',
+              Icons.translate,
+              _subtitleMode == SubtitleMode.liveTranslation,
+              () => _setSubtitleMode(SubtitleMode.liveTranslation),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMenuOption(String title, IconData icon, bool selected, VoidCallback onTap) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          Navigator.pop(context);
+          onTap();
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                color: selected ? AppTheme.primaryBlue : Colors.white70,
+                size: 20,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: selected ? AppTheme.primaryBlue : Colors.white,
+                    fontSize: 16,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                ),
+              ),
+              if (selected)
+                Icon(
+                  Icons.check,
+                  color: AppTheme.primaryBlue,
+                  size: 18,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
+    _transcriptionService?.stopTranscription();
     super.dispose();
   }
 
@@ -131,6 +232,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
             
             if (_isLoading)
               const Center(child: CircularProgressIndicator(color: Colors.white)),
+            
+            // Subtitle overlay
+            if (_subtitleMode == SubtitleMode.liveTranslation)
+              const LiveSubtitleOverlay(showSubtitles: true),
             
             // Modern streaming controls
             if (_showControls && !_isLoading)
@@ -246,10 +351,12 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                           onPressed: _toggleAudio,
                         ),
                         const SizedBox(width: 12),
-                        // Subtitles
+                        // Subtitles Menu
                         _buildControlButton(
-                          icon: Icons.closed_caption,
-                          onPressed: _toggleSubtitles,
+                          icon: _subtitleMode == SubtitleMode.off 
+                            ? Icons.subtitles_outlined
+                            : Icons.subtitles,
+                          onPressed: _showSubtitleMenu,
                         ),
                         const SizedBox(width: 12),
                         // Multi-view
