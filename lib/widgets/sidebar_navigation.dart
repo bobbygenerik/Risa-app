@@ -44,7 +44,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
   late List<FocusNode> _tabFocusNodes;
   late int _activeTabIndex;
 
-  bool _isNavigating = false;
+
   late FocusNode _searchButtonFocusNode;
   late FocusNode _overflowButtonFocusNode;
   bool _isExpanded = false;
@@ -133,16 +133,9 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
   void _navigateToTab(int targetIndex) {
     if (targetIndex < 0 || targetIndex >= _tabs.length) return;
     
-    _isNavigating = true;
-    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _tabFocusNodes[targetIndex].requestFocus();
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (mounted) {
-          _isNavigating = false;
-        }
-      });
     });
   }
 
