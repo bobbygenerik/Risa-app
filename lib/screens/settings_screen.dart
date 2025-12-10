@@ -2,25 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:iptv_player/services/whisper_transcription_service.dart';
 import 'package:iptv_player/services/integrated_transcription_service.dart';
-import 'package:iptv_player/services/mlkit_translation_service.dart';
-import 'package:google_mlkit_translation/google_mlkit_translation.dart';
-// Drive sync removed: import omitted
 import 'package:iptv_player/services/opensubtitles_service.dart';
 import 'package:iptv_player/services/real_debrid_service.dart';
-import 'package:iptv_player/services/whisper_speech_service.dart';
 import 'package:iptv_player/services/epg_service.dart';
-import 'package:iptv_player/services/ai_model_manager.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:provider/provider.dart';
-
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:io';
-import 'package:iptv_player/utils/snackbar_helper.dart';
-import 'package:iptv_player/widgets/tv_focusable.dart';
-import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -31,7 +20,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen>
     with SingleTickerProviderStateMixin {
-  late Size _screenSize;
+
   TabController? _tabController;
 
   // Playlist Settings - Late initialization to avoid memory issues
@@ -55,41 +44,19 @@ class _SettingsScreenState extends State<SettingsScreen>
   // Boolean settings
   bool _hardwareAcceleration = true;
   bool _hardwareDecoding = true;
-  bool _hardwarePostProcessing = true;
-  bool _autoFrameRate = true;
+
   bool _autoPlayNextEpisode = true;
   bool _rememberPlaybackPosition = true;
-  bool _skipIntro = true;
-  bool _showChannelLogos = true;
-  bool _showProgramImages = true;
+
   bool _realDebridEnabled = false;
-  bool _realDebridForCatchup = true;
-  bool _realDebridForVOD = true;
+
   bool _openSubtitlesEnabled = false;
   bool _autoDownloadSubtitles = true;
   bool _transcriptionEnabled = false;
   bool _translationEnabled = false;
   bool _ttsEnabled = false;
 
-  // String settings
-  String _decoderType = 'Auto';
-  String _renderingEngine = 'Auto';
-  String _videoQuality = 'Auto';
-  String _aiQuality = 'Balanced';
-  String _preferredSubtitleLanguage = 'English';
-  String _selectedLanguage = 'English';
-  String _chromecastDevice = 'Chromecast';
 
-  // Audio settings
-  String _audioDecoderType = 'Auto';
-  String _preferredAudioLanguage = 'Default';
-  bool _audioPassthrough = false;
-  bool _audioBoost = false;
-  bool _normalizeAudio = false;
-  int _audioChannels = 0;
-
-  // Double settings
-  double _videoBufferSize = 50;
 
   // Focus nodes for TV navigation
   final FocusNode _m3uUrlFocusNode = FocusNode();
@@ -130,7 +97,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool _xtreamUsernameEditable = false;
   bool _xtreamPasswordEditable = false;
   bool _customEpgUrlEditable = false;
-  bool _secondaryEpgUrlEditable = false;
+
   bool _realDebridApiKeyEditable = false;
   bool _openSubtitlesUsernameEditable = false;
   bool _openSubtitlesPasswordEditable = false;
@@ -204,11 +171,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     _autoPlayNextEpisode = prefs.getBool('auto_play_next') ?? true;
     _hardwareAcceleration = prefs.getBool('hardware_acceleration') ?? true;
     _hardwareDecoding = prefs.getBool('hardware_decoding') ?? true;
-    _hardwarePostProcessing = prefs.getBool('hardware_postprocessing') ?? true;
-    _autoFrameRate = prefs.getBool('auto_frame_rate') ?? true;
+
     _realDebridEnabled = prefs.getBool('realdebrid_enabled') ?? false;
-    _realDebridForCatchup = prefs.getBool('realdebrid_catchup') ?? true;
-    _realDebridForVOD = prefs.getBool('realdebrid_vod') ?? true;
+
     _openSubtitlesEnabled = prefs.getBool('opensubtitles_enabled') ?? false;
 
     _autoDownloadSubtitles = prefs.getBool('auto_download_subtitles') ?? true;
@@ -217,31 +182,6 @@ class _SettingsScreenState extends State<SettingsScreen>
     _ttsEnabled = prefs.getBool('tts_enabled') ?? false;
     _rememberPlaybackPosition =
         prefs.getBool('remember_playback_position') ?? true;
-    _skipIntro = prefs.getBool('skip_intro_available') ?? true;
-    _showChannelLogos = prefs.getBool('show_channel_logos') ?? true;
-    _showProgramImages = prefs.getBool('show_program_images') ?? true;
-
-    // String settings
-    _decoderType = prefs.getString('decoder_type') ?? 'Auto';
-    _renderingEngine = prefs.getString('rendering_engine') ?? 'Auto';
-    _videoQuality = prefs.getString('video_quality') ?? 'Auto';
-    _aiQuality = prefs.getString('ai_quality') ?? 'Balanced';
-    _preferredSubtitleLanguage =
-        prefs.getString('subtitle_language') ?? 'English';
-    _selectedLanguage = prefs.getString('app_language') ?? 'English';
-    _chromecastDevice = prefs.getString('chromecast_device') ?? 'Chromecast';
-
-    // Audio settings
-    _audioDecoderType = prefs.getString('audio_decoder_type') ?? 'Auto';
-    _preferredAudioLanguage =
-        prefs.getString('preferred_audio_language') ?? 'Default';
-    _audioPassthrough = prefs.getBool('audio_passthrough') ?? false;
-    _audioBoost = prefs.getBool('audio_boost') ?? false;
-    _normalizeAudio = prefs.getBool('normalize_audio') ?? false;
-    _audioChannels = prefs.getInt('audio_channels') ?? 0;
-
-    // Double settings
-    _videoBufferSize = prefs.getDouble('video_buffer_size') ?? 50;
   }
 
   // Save custom EPG URL when the text field changes
@@ -336,7 +276,6 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   @override
   Widget build(BuildContext context) {
-    _screenSize = MediaQuery.of(context).size;
     return Scaffold(
       backgroundColor: const Color(0xFF050710),
       body: PopScope(
@@ -1028,7 +967,6 @@ class _SettingsScreenState extends State<SettingsScreen>
       focusNode: focusNode,
       child: Builder(
         builder: (context) {
-          final isFocused = Focus.of(context).hasFocus;
           return TextField(
             controller: controller,
             obscureText: obscureText,

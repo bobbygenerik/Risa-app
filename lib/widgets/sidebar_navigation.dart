@@ -43,7 +43,7 @@ class SidebarNavigation extends StatefulWidget {
 class _SidebarNavigationState extends State<SidebarNavigation> {
   late List<FocusNode> _tabFocusNodes;
   late int _activeTabIndex;
-  int _focusedTabIndex = 0;
+
   bool _isNavigating = false;
   late FocusNode _searchButtonFocusNode;
   late FocusNode _overflowButtonFocusNode;
