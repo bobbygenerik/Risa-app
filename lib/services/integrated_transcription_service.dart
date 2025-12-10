@@ -37,8 +37,8 @@ class IntegratedTranscriptionService extends ChangeNotifier {
   double _downloadProgress = 0.0;
 
   // Languages
-  TranslateLanguage _sourceLanguage = TranslateLanguage.english;
-  TranslateLanguage _targetLanguage = TranslateLanguage.spanish;
+  TranslateLanguage _sourceLanguage = TranslateLanguage.english; // Auto-detected
+  TranslateLanguage _targetLanguage = TranslateLanguage.english; // Always English
 
   // Data
   final List<SubtitleEntry> _subtitles = [];
@@ -210,21 +210,37 @@ class IntegratedTranscriptionService extends ChangeNotifier {
 
   /// Translate a subtitle entry (ON-DEVICE)
   Future<void> _translateEntry(SubtitleEntry entry) async {
-    if (_translator == null) return;
-
     try {
-      // Check if models are downloaded
-      final modelsReady = await _ensureModelsDownloaded();
-      if (!modelsReady) {
-        debugPrint('Translation models not ready');
+      // Detect source language
+      final languageId = OnDeviceLanguageIdentification();
+      final detectedLanguage = await languageId.identifyLanguage(entry.originalText);
+      
+      // If already English or detection failed, no translation needed
+      if (detectedLanguage == 'en' || detectedLanguage == 'und') {
+        entry.translatedText = entry.originalText;
+        _currentTranslatedText = entry.originalText;
+        notifyListeners();
+        return;
+      }
+      
+      // Create translator for detected language -> English
+      final sourceLanguage = _getTranslateLanguage(detectedLanguage);
+      if (sourceLanguage == null) {
         entry.translatedText = entry.originalText;
         return;
       }
+      
+      final translator = OnDeviceTranslator(
+        sourceLanguage: sourceLanguage,
+        targetLanguage: TranslateLanguage.english,
+      );
 
-      // Translate on-device
-      final translation = await _translator!.translateText(entry.originalText);
+      // Translate to English
+      final translation = await translator.translateText(entry.originalText);
       entry.translatedText = translation;
       _currentTranslatedText = translation;
+      
+      await translator.close();
 
       // Speak if TTS enabled
       if (_isTTSEnabled && translation.isNotEmpty) {
@@ -236,6 +252,26 @@ class IntegratedTranscriptionService extends ChangeNotifier {
       debugPrint('Translation error: $e');
       entry.translatedText = entry.originalText;
     }
+  }
+  
+  TranslateLanguage? _getTranslateLanguage(String languageCode) {
+    final languageMap = {
+      'es': TranslateLanguage.spanish,
+      'fr': TranslateLanguage.french,
+      'de': TranslateLanguage.german,
+      'it': TranslateLanguage.italian,
+      'pt': TranslateLanguage.portuguese,
+      'ru': TranslateLanguage.russian,
+      'ja': TranslateLanguage.japanese,
+      'ko': TranslateLanguage.korean,
+      'zh': TranslateLanguage.chinese,
+      'ar': TranslateLanguage.arabic,
+      'hi': TranslateLanguage.hindi,
+      'nl': TranslateLanguage.dutch,
+      'pl': TranslateLanguage.polish,
+      'tr': TranslateLanguage.turkish,
+    };
+    return languageMap[languageCode];
   }
 
   /// Ensure translation models are downloaded
