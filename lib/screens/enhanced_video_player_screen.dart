@@ -2,16 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:go_router/go_router.dart';
 import '../models/channel.dart';
+import '../models/content.dart';
 import '../widgets/live_subtitle_overlay.dart';
 import '../services/integrated_transcription_service.dart';
 import '../providers/settings_provider.dart';
+import '../providers/content_provider.dart';
 import '../utils/app_theme.dart';
 
 enum SubtitleMode { off, regular, liveTranslation }
 
 class EnhancedVideoPlayerScreen extends StatefulWidget {
   final Channel? channel;
+  final Content? content;
   final String? streamUrl;
   final String? videoUrl;
   final String? title;
@@ -21,6 +25,7 @@ class EnhancedVideoPlayerScreen extends StatefulWidget {
   const EnhancedVideoPlayerScreen({
     super.key,
     this.channel,
+    this.content,
     this.streamUrl,
     this.videoUrl,
     this.title,
@@ -51,7 +56,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   void _initializePlayer() async {
-    final url = widget.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '';
+    final url = widget.videoUrl ?? widget.content?.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '';
     final settings = Provider.of<SettingsProvider>(context, listen: false);
     await settings.initialize();
     
@@ -76,7 +81,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     // Restore saved position for VOD content
     if (!widget.isLive && rememberPosition) {
       final prefs = await SharedPreferences.getInstance();
-      final savedPosition = prefs.getInt('position_${widget.title ?? url}');
+      final key = widget.content?.id ?? widget.title ?? url;
+      final savedPosition = prefs.getInt('position_$key');
       if (savedPosition != null && savedPosition > 0) {
         await _vlcController!.seekTo(Duration(milliseconds: savedPosition));
       }
@@ -109,8 +115,19 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     final autoPlayNext = settings.autoPlayNextEpisode;
     
     // Only for VOD content, not live streams
-    if (!widget.isLive && autoPlayNext) {
-      // TODO: Implement next episode logic for series
+    if (!widget.isLive && autoPlayNext && widget.content != null) {
+      final contentProvider = Provider.of<ContentProvider>(context, listen: false);
+      final nextEpisode = contentProvider.getNextEpisode(widget.content!.id);
+      
+      if (nextEpisode != null) {
+        // Navigate to next episode
+        context.pushReplacement('/player', extra: {
+          'content': nextEpisode,
+          'videoUrl': nextEpisode.videoUrl,
+          'title': nextEpisode.displayTitle,
+          'isLive': false,
+        });
+      }
     }
   }
 
@@ -289,9 +306,19 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       
       if (settings.rememberPlaybackPosition) {
         final position = _vlcController!.value.position;
-        final url = widget.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '';
+        final key = widget.content?.id ?? widget.title ?? widget.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '';
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt('position_${widget.title ?? url}', position.inMilliseconds);
+        await prefs.setInt('position_$key', position.inMilliseconds);
+        
+        // Update watch progress for content
+        if (widget.content != null) {
+          final contentProvider = Provider.of<ContentProvider>(context, listen: false);
+          final duration = _vlcController!.value.duration;
+          if (duration.inMilliseconds > 0) {
+            final progress = position.inMilliseconds / duration.inMilliseconds;
+            await contentProvider.updateWatchProgress(widget.content!.id, progress);
+          }
+        }
       }
     }
   }

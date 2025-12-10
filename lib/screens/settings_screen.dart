@@ -350,10 +350,10 @@ class _SettingsScreenState extends State<SettingsScreen>
     return Container(
       width: 240,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         border: Border(
           right: BorderSide(
-            color: Colors.white.withOpacity(0.1),
+            color: Colors.white.withValues(alpha: 0.1),
             width: 1,
           ),
         ),
@@ -423,7 +423,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                               color: isFocused
                                   ? AppTheme.primaryBlue
                                   : (isSelected
-                                      ? AppTheme.primaryBlue.withOpacity(0.5)
+                                      ? AppTheme.primaryBlue.withValues(alpha: 0.5)
                                       : Colors.transparent),
                               width: isFocused ? 3.0 : (isSelected ? 2.0 : 0),
                             ),
@@ -921,8 +921,8 @@ class _SettingsScreenState extends State<SettingsScreen>
             child: Container(
               decoration: BoxDecoration(
                 color: isSelected 
-                    ? AppTheme.primaryBlue.withOpacity(0.8)
-                    : (isFocused ? AppTheme.primaryBlue.withOpacity(0.3) : Colors.transparent),
+                    ? AppTheme.primaryBlue.withValues(alpha: 0.8)
+                    : (isFocused ? AppTheme.primaryBlue.withValues(alpha: 0.3) : Colors.transparent),
                 borderRadius: BorderRadius.circular(8),
                 border: isFocused ? Border.all(color: AppTheme.primaryBlue, width: 2) : null,
               ),
@@ -978,14 +978,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ? Icon(prefixIcon, size: 18, color: AppTheme.textSecondary) 
                   : null,
               filled: true,
-              fillColor: Colors.white.withOpacity(0.05),
+              fillColor: Colors.white.withValues(alpha: 0.05),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -1015,11 +1015,11 @@ class _SettingsScreenState extends State<SettingsScreen>
             style: ElevatedButton.styleFrom(
               backgroundColor: isPrimary 
                   ? AppTheme.primaryBlue 
-                  : Colors.white.withOpacity(0.1),
+                  : Colors.white.withValues(alpha: 0.1),
               foregroundColor: isPrimary ? Colors.white : AppTheme.textPrimary,
               side: isFocused 
                   ? const BorderSide(color: AppTheme.primaryBlue, width: 2) 
-                  : BorderSide(color: Colors.white.withOpacity(0.2)),
+                  : BorderSide(color: Colors.white.withValues(alpha: 0.2)),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               elevation: 0,
               shape: RoundedRectangleBorder(
@@ -1043,12 +1043,12 @@ class _SettingsScreenState extends State<SettingsScreen>
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
+              color: Colors.white.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: isFocused 
                     ? AppTheme.primaryBlue 
-                    : Colors.white.withOpacity(0.1),
+                    : Colors.white.withValues(alpha: 0.1),
                 width: isFocused ? 2 : 1,
               ),
             ),
@@ -1068,7 +1068,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   onChanged: (newValue) => _handleSwitchTileChange(title, newValue),
                   activeColor: AppTheme.primaryBlue,
                   inactiveThumbColor: AppTheme.textSecondary,
-                  inactiveTrackColor: Colors.white.withOpacity(0.2),
+                  inactiveTrackColor: Colors.white.withValues(alpha: 0.2),
                 ),
               ],
             ),

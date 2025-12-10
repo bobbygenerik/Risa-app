@@ -134,6 +134,30 @@ class ContentProvider with ChangeNotifier {
     return null;
   }
 
+  /// Get next episode in series
+  Content? getNextEpisode(String currentContentId) {
+    final current = getContentById(currentContentId);
+    if (current?.type != ContentType.series || current?.seasonNumber == null || current?.episodeNumber == null) {
+      return null;
+    }
+    
+    // Find next episode in same season
+    final nextInSeason = _series.where((s) => 
+      s.title == current!.title &&
+      s.seasonNumber == current.seasonNumber &&
+      s.episodeNumber == (current.episodeNumber! + 1)
+    ).firstOrNull;
+    
+    if (nextInSeason != null) return nextInSeason;
+    
+    // Find first episode of next season
+    return _series.where((s) => 
+      s.title == current!.title &&
+      s.seasonNumber == (current.seasonNumber! + 1) &&
+      s.episodeNumber == 1
+    ).firstOrNull;
+  }
+
   /// Check if content is in favorites
   bool isInFavorites(String contentId) {
     final content = getContentById(contentId);
