@@ -244,7 +244,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
               )
         ),
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryBlue))
             : _playlists.isEmpty
             ? _buildEmptyState()
             : _buildPlaylistList(),

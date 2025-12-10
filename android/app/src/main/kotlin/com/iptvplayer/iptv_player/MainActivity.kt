@@ -17,6 +17,7 @@ import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
+import com.risa.iptv.WhisperPlugin
 
 @UnstableApi
 class MainActivity : FlutterActivity() {
@@ -36,6 +37,9 @@ class MainActivity : FlutterActivity() {
         
         // Handle Android Auto intent
         handleAndroidAutoIntent()
+
+        // Register Whisper plugin
+        flutterEngine.plugins.add(WhisperPlugin())
 
         // Register ExoPlayer platform view for native video rendering on Android TV
         flutterEngine

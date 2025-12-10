@@ -167,7 +167,7 @@ class _StartupLoaderState extends State<StartupLoader> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(),
+              CircularProgressIndicator(color: AppTheme.primaryBlue),
               SizedBox(height: 12),
               Text('Loading cache...', style: TextStyle(color: Colors.white)),
             ],
@@ -531,7 +531,7 @@ class _MyAppState extends State<MyApp> {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: AppTheme.darkTheme,
-        home: const Scaffold(body: Center(child: CircularProgressIndicator())),
+        home: const Scaffold(body: Center(child: CircularProgressIndicator(color: AppTheme.primaryBlue))),
       );
     }
 

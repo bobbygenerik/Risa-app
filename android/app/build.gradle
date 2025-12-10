@@ -36,22 +36,32 @@ android {
     defaultConfig {
         applicationId "com.risa.app"
         minSdkVersion 26
-        // Match compileSdk with a modern target to satisfy updated dependencies.
         targetSdk 36
         versionCode 20
         versionName "1.9.1"
         
-        // Reduce APK size by only including necessary architectures
-        // ndk {
-        //     // Include x86 for emulator compatibility while keeping release ABIs slim
-        //     abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
-        // }
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a'
+        }
+        
+        externalNativeBuild {
+            cmake {
+                cppFlags "-std=c++17"
+                arguments "-DANDROID_STL=c++_shared"
+            }
+        }
     }
 
     packagingOptions {
         jniLibs {
             // Force legacy extraction so ndk-translation can load ARM libs on x86 emulators
             useLegacyPackaging true
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
         }
     }
 
@@ -62,16 +72,11 @@ android {
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             
-            // Rename APK output to Risa-{version}.apk
             applicationVariants.all { variant ->
                 variant.outputs.all {
                     outputFileName = "Risa-${variant.versionName}.apk"
                 }
             }
-            
-            // Enable R8 full mode for more aggressive optimization
-            // This is the default in newer AGP versions but explicitly set for clarity
-            // R8 full mode provides better code optimization than ProGuard
         }
     }
 }

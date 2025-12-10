@@ -1,29 +1,13 @@
-# AI Upscaling Model
+# Whisper Models
 
-## Placeholder
+## Bundled Model
+Place `ggml-tiny.en.bin` in this directory to bundle it with the app.
 
-This directory should contain the TensorFlow Lite model file for AI upscaling.
+Download from: https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en.bin
 
-## To Add the Model:
+## Model Sizes
+- tiny.en: ~39MB (bundled)
+- base.en: ~142MB (downloadable)
+- small.en: ~466MB (downloadable)
 
-1. Download a pre-trained ESRGAN or SRCNN model
-2. Convert to TensorFlow Lite format (.tflite)
-3. Name it `esrgan_x2.tflite`
-4. Place it in this directory
-
-## Recommended Models:
-
-- **ESRGAN** (Enhanced Super-Resolution GAN) - Best quality
-- **SRCNN** (Super-Resolution CNN) - Faster, smaller file
-- **FSRCNN** (Fast SRCNN) - Fastest option
-
-## Model Sources:
-
-- TensorFlow Hub: https://tfhub.dev/
-- GitHub repositories with pre-trained models
-- Convert PyTorch models using `tf.lite.TFLiteConverter`
-
-## For Testing:
-
-The app will work without the model - it just won't enable AI upscaling.
-A placeholder/dummy model can be created for testing UI only.
+The tiny model provides fast transcription with reasonable accuracy for English content.

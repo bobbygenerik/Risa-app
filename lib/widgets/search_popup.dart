@@ -137,7 +137,7 @@ class _SearchPopupState extends State<SearchPopup> {
                 const SizedBox(height: 12),
                 Expanded(
                   child: _isSearching
-                      ? const Center(child: CircularProgressIndicator())
+                      ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryBlue))
                       : _buildResultsList(),
                 ),
               ],

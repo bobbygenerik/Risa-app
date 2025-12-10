@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_translation/google_mlkit_translation.dart';
-// import 'package:whisper_ggml/whisper_ggml.dart';
+import 'package:iptv_player/services/whisper_platform_service.dart';
 
 class WhisperTranscriptionService extends ChangeNotifier {
   bool _isInitialized = false;
@@ -15,16 +15,15 @@ class WhisperTranscriptionService extends ChangeNotifier {
   final List<SubtitleEntry> _subtitles = [];
   String _currentText = '';
   
-  dynamic _whisper;
   Timer? _recordingTimer;
   OnDeviceTranslator? _translator;
-  String? _modelPath;
+  String _selectedModel = 'tiny.en';
 
   bool get isInitialized => _isInitialized;
   bool get isTranscribing => _isTranscribing;
   bool get isTranslating => _isTranslating;
   bool get isTTSEnabled => _isTTSEnabled;
-  bool get isWhisperLoaded => _whisper != null;
+  bool get isWhisperLoaded => _isInitialized;
   String get lastError => _lastError;
   TranslateLanguage get sourceLanguage => _sourceLanguage;
   TranslateLanguage get targetLanguage => _targetLanguage;
@@ -35,9 +34,13 @@ class WhisperTranscriptionService extends ChangeNotifier {
 
   Future<bool> initialize() async {
     try {
-      _isInitialized = true;
+      final success = await WhisperPlatformService.initialize();
+      _isInitialized = success;
+      if (!success) {
+        _lastError = 'Failed to initialize Whisper platform service';
+      }
       notifyListeners();
-      return true;
+      return success;
     } catch (e) {
       _lastError = e.toString();
       notifyListeners();
@@ -45,12 +48,15 @@ class WhisperTranscriptionService extends ChangeNotifier {
     }
   }
 
-  Future<bool> loadWhisperModel(String modelPath) async {
+  Future<bool> loadWhisperModel(String modelName) async {
     try {
-      _modelPath = modelPath;
-      // _whisper = Whisper(model: WhisperModel.base);
-      _modelPath = modelPath;
-      _lastError = 'Whisper not available in this build';
+      final isAvailable = await WhisperPlatformService.isModelAvailable(modelName);
+      if (!isAvailable) {
+        _lastError = 'Model $modelName not available';
+        notifyListeners();
+        return false;
+      }
+      _selectedModel = modelName;
       notifyListeners();
       return true;
     } catch (e) {
@@ -61,8 +67,8 @@ class WhisperTranscriptionService extends ChangeNotifier {
   }
 
   Future<bool> startTranscription({String? streamUrl}) async {
-    if (_whisper == null) {
-      _lastError = 'Whisper model not loaded';
+    if (!_isInitialized) {
+      _lastError = 'Whisper not initialized';
       notifyListeners();
       return false;
     }
@@ -92,7 +98,7 @@ class WhisperTranscriptionService extends ChangeNotifier {
   }
   
   Future<void> _extractAndTranscribeAudio(String streamUrl) async {
-    if (_whisper == null) return;
+    if (!_isInitialized) return;
     
     try {
       final tempDir = Directory.systemTemp;
@@ -120,15 +126,15 @@ class WhisperTranscriptionService extends ChangeNotifier {
   }
 
   Future<void> _processAudioChunk(String audioPath) async {
-    if (_whisper == null) return;
+    if (!_isInitialized) return;
     
     try {
-      // final response = await _whisper!.transcribe(
-      //   transcribeRequest: TranscribeRequest(audio: audioPath),
-      //   modelPath: _modelPath!,
-      // );
-      final result = '';
-      if (result.isNotEmpty) {
+      final result = await WhisperPlatformService.transcribe(
+        audioPath: audioPath,
+        modelName: _selectedModel,
+      );
+      
+      if (result != null && result.isNotEmpty) {
         _currentText = result;
         
         final entry = SubtitleEntry(
@@ -225,10 +231,24 @@ class WhisperTranscriptionService extends ChangeNotifier {
     return '$hours:$minutes:$seconds,$millis';
   }
   
+  String get selectedModel => _selectedModel;
+  
+  void setSelectedModel(String modelName) {
+    _selectedModel = modelName;
+    notifyListeners();
+  }
+  
+  Future<List<WhisperModelStatus>> getAvailableModels() async {
+    return await WhisperPlatformService.getModelStatuses();
+  }
+  
+  Future<bool> downloadModel(String modelName, {Function(double)? onProgress}) async {
+    return await WhisperPlatformService.downloadModel(modelName, onProgress: onProgress);
+  }
+
   @override
   void dispose() {
     _recordingTimer?.cancel();
-    // _whisper = null;
     _translator?.close();
     super.dispose();
   }
