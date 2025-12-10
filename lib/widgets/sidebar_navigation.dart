@@ -65,7 +65,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
     _searchButtonFocusNode = FocusNode(debugLabel: 'SideSearchButton');
     _overflowButtonFocusNode = FocusNode(debugLabel: 'SideOverflowButton');
     _activeTabIndex = _resolveActiveTabIndex(widget.activeTab);
-    _focusedTabIndex = _activeTabIndex;
+
     _isExpanded = false;
     WidgetsBinding.instance.addPostFrameCallback((_) => _focusActiveTab());
     widget.onNavFocusRegistration?.call(_requestActiveTabFocus);
@@ -78,9 +78,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
     final newIndex = _resolveActiveTabIndex(widget.activeTab);
     if (newIndex != _activeTabIndex) {
       _activeTabIndex = newIndex;
-      if (!_isNavigating) {
-        _focusedTabIndex = newIndex;
-      }
+
       setState(() => _isExpanded = false);
       WidgetsBinding.instance.addPostFrameCallback((_) => _focusActiveTab());
     }
@@ -136,7 +134,6 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
     if (targetIndex < 0 || targetIndex >= _tabs.length) return;
     
     _isNavigating = true;
-    _focusedTabIndex = targetIndex;
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -155,12 +152,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
 
     return Focus(
       focusNode: _tabFocusNodes[index],
-      onFocusChange: (hasFocus) {
-        if (hasFocus) {
-          _focusedTabIndex = index;
-          setState(() {});
-        }
-      },
+
       onKeyEvent: (node, event) {
         if (event is! KeyDownEvent) return KeyEventResult.ignored;
         if (event.logicalKey == LogicalKeyboardKey.arrowUp) {

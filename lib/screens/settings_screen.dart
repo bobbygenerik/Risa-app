@@ -1133,7 +1133,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   Future<void> _handleClearEpg() async {
     try {
       final service = Provider.of<EpgService>(context, listen: false);
-      await service.clearEpg();
+      await service.clearCache();
       _showMessage('EPG cleared successfully!');
     } catch (e) {
       _showMessage('EPG clear failed: $e');
