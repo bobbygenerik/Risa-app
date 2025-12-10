@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_vlc_player/flutter_vlc_player.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/channel.dart';
 import '../widgets/live_subtitle_overlay.dart';
 import '../services/integrated_transcription_service.dart';
@@ -74,6 +75,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     
     // Restore saved position for VOD content
     if (!widget.isLive && rememberPosition) {
+      final prefs = await SharedPreferences.getInstance();
       final savedPosition = prefs.getInt('position_${widget.title ?? url}');
       if (savedPosition != null && savedPosition > 0) {
         await _vlcController!.seekTo(Duration(milliseconds: savedPosition));

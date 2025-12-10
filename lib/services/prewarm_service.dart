@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
-import 'package:iptv_player/providers/settings_provider.dart';
+// Settings provider import removed - not used in prewarm service
 
 /// Lightweight prewarm service to preload hero/backdrop images and
 /// initialize a temporary video controller for the featured Live TV channel.
