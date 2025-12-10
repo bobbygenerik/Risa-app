@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:iptv_player/utils/app_theme.dart';
 
 /// Represents a navigation tab in the sidebar
 class NavTab {
@@ -225,7 +226,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
                 color: isFocused
-                  ? const Color(0xFF4a9eff).withOpacity(0.15)
+                  ? AppTheme.primaryBlue.withOpacity(0.15)
                   : Colors.transparent,
               ),
               alignment: Alignment.center,
@@ -235,14 +236,14 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                     children: [
                       Icon(
                         tab.icon,
-                        color: isActive ? const Color(0xFF4a9eff) : Colors.white70,
+                        color: isActive ? AppTheme.primaryBlue : Colors.white70,
                         size: 18,
                       ),
                       const SizedBox(width: 10),
                       Text(
                         tab.label,
                         style: TextStyle(
-                          color: isActive ? const Color(0xFF4a9eff) : Colors.white70,
+                          color: isActive ? AppTheme.primaryBlue : Colors.white70,
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
                         ),
@@ -251,7 +252,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                   )
                 : Icon(
                     tab.icon,
-                    color: isActive ? const Color(0xFF4a9eff) : Colors.white70,
+                    color: isActive ? AppTheme.primaryBlue : Colors.white70,
                     size: 18,
                   ),
             ),
@@ -333,7 +334,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(8),
                                 color: isFocused
-                                  ? const Color(0xFF4a9eff).withOpacity(0.15)
+                                  ? AppTheme.primaryBlue.withOpacity(0.15)
                                   : Colors.transparent,
                               ),
                               alignment: Alignment.center,
@@ -422,7 +423,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
-                color: isFocused ? const Color(0xFF4a9eff).withOpacity(0.15) : Colors.transparent,
+                color: isFocused ? AppTheme.primaryBlue.withOpacity(0.15) : Colors.transparent,
               ),
               alignment: Alignment.center,
               child: _isExpanded

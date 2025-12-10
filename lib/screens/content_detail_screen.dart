@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/utils/app_theme.dart';
@@ -19,22 +20,50 @@ class ContentDetailScreen extends StatefulWidget {
 
 class _ContentDetailScreenState extends State<ContentDetailScreen> {
   bool _isDownloaded = false;
+  final FocusNode _backButtonFocus = FocusNode();
+  final FocusNode _playButtonFocus = FocusNode();
+  final FocusNode _myListButtonFocus = FocusNode();
+  final FocusNode _downloadButtonFocus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _playButtonFocus.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _backButtonFocus.dispose();
+    _playButtonFocus.dispose();
+    _myListButtonFocus.dispose();
+    _downloadButtonFocus.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Use TV spacing helpers
-
     return Scaffold(
       backgroundColor: const Color(0xFF050710),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeroBanner(),
-            _buildContentInfo(),
-            _buildSeasonSelector(),
-            _buildMoreLikeThis(),
-          ],
+      body: Focus(
+        onKeyEvent: (node, event) {
+          if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.goBack) {
+            Navigator.pop(context);
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeroBanner(),
+              _buildContentInfo(),
+              _buildSeasonSelector(),
+              _buildMoreLikeThis(),
+            ],
+          ),
         ),
       ),
     );
@@ -87,13 +116,25 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                       color: Colors.black.withAlpha((0.3 * 255).round()),
                       shape: BoxShape.circle,
                     ),
-                    child: IconButton(
-                      icon: Icon(
-                        Icons.arrow_back,
-                        color: AppTheme.textPrimary,
-                        size: context.tvIconSize(24),
+                    child: Focus(
+                      focusNode: _backButtonFocus,
+                      onKeyEvent: (node, event) {
+                        if (event is KeyDownEvent &&
+                            (event.logicalKey == LogicalKeyboardKey.select ||
+                             event.logicalKey == LogicalKeyboardKey.enter)) {
+                          Navigator.pop(context);
+                          return KeyEventResult.handled;
+                        }
+                        return KeyEventResult.ignored;
+                      },
+                      child: IconButton(
+                        icon: Icon(
+                          Icons.arrow_back,
+                          color: AppTheme.textPrimary,
+                          size: context.tvIconSize(24),
+                        ),
+                        onPressed: () => Navigator.pop(context),
                       ),
-                      onPressed: () => Navigator.pop(context),
                     ),
                   ),
                   const Spacer(),
@@ -140,83 +181,127 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                 Row(
                   children: [
                     // Play button
-                    BrandPrimaryButton(
-                      icon: Icons.play_arrow,
-                      label: 'Play',
-                      onPressed: () {
-                        if (widget.content.videoUrl != null) {
-                          context.push(
-                            '/vlc-player',
-                            extra: {
-                              'videoUrl': widget.content.videoUrl,
-                              'title': widget.content.title,
-                              'subtitle': widget.content.year?.toString(),
-                              'isLive': false,
-                            },
-                          );
-                        } else {
-                          showAppSnackBar(
-                            context,
-                            const SnackBar(
-                              content: Text('Video URL not available'),
-                            ),
-                          );
+                    Focus(
+                      focusNode: _playButtonFocus,
+                      onKeyEvent: (node, event) {
+                        if (event is KeyDownEvent) {
+                          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                            _backButtonFocus.requestFocus();
+                            return KeyEventResult.handled;
+                          }
+                          if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                            _myListButtonFocus.requestFocus();
+                            return KeyEventResult.handled;
+                          }
                         }
+                        return KeyEventResult.ignored;
                       },
+                      child: BrandPrimaryButton(
+                        icon: Icons.play_arrow,
+                        label: 'Play',
+                        onPressed: () {
+                          if (widget.content.videoUrl != null) {
+                            context.push(
+                              '/vlc-player',
+                              extra: {
+                                'videoUrl': widget.content.videoUrl,
+                                'title': widget.content.title,
+                                'subtitle': widget.content.year?.toString(),
+                                'isLive': false,
+                              },
+                            );
+                          } else {
+                            showAppSnackBar(
+                              context,
+                              const SnackBar(
+                                content: Text('Video URL not available'),
+                              ),
+                            );
+                          }
+                        },
+                      ),
                     ),
 
                     SizedBox(width: context.tvSpacing(20)),
 
                     // My List button
-                    Consumer<ContentProvider>(
-                      builder: (context, contentProvider, child) {
-                        final isInMyList = contentProvider.isInFavorites(widget.content.id);
-                        return OutlinedButton.icon(
-                          onPressed: () async {
-                            await contentProvider.toggleFavorite(widget.content.id);
-                          },
-                          icon: Icon(isInMyList ? Icons.check : Icons.add, size: context.tvIconSize(24)),
-                          label: Text('My List', style: TextStyle(fontSize: context.tvTextSize(16))),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppTheme.textPrimary,
-                            side: BorderSide(
-                              color: AppTheme.textPrimary.withAlpha(
-                                (0.5 * 255).round(),
+                    Focus(
+                      focusNode: _myListButtonFocus,
+                      onKeyEvent: (node, event) {
+                        if (event is KeyDownEvent) {
+                          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                            _playButtonFocus.requestFocus();
+                            return KeyEventResult.handled;
+                          }
+                          if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                            _downloadButtonFocus.requestFocus();
+                            return KeyEventResult.handled;
+                          }
+                        }
+                        return KeyEventResult.ignored;
+                      },
+                      child: Consumer<ContentProvider>(
+                        builder: (context, contentProvider, child) {
+                          final isInMyList = contentProvider.isInFavorites(widget.content.id);
+                          return OutlinedButton.icon(
+                            onPressed: () async {
+                              await contentProvider.toggleFavorite(widget.content.id);
+                            },
+                            icon: Icon(isInMyList ? Icons.check : Icons.add, size: context.tvIconSize(24)),
+                            label: Text('My List', style: TextStyle(fontSize: context.tvTextSize(16))),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppTheme.textPrimary,
+                              side: BorderSide(
+                                color: AppTheme.textPrimary.withAlpha(
+                                  (0.5 * 255).round(),
+                                ),
+                              ),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: context.tvSpacing(32),
+                                vertical: context.tvSpacing(20),
                               ),
                             ),
-                            padding: EdgeInsets.symmetric(
-                              horizontal: context.tvSpacing(32),
-                              vertical: context.tvSpacing(20),
-                            ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
 
                     SizedBox(width: context.tvSpacing(20)),
 
                     // Download button
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          _isDownloaded = !_isDownloaded;
-                        });
+                    Focus(
+                      focusNode: _downloadButtonFocus,
+                      onKeyEvent: (node, event) {
+                        if (event is KeyDownEvent) {
+                          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                            _myListButtonFocus.requestFocus();
+                            return KeyEventResult.handled;
+                          }
+                        }
+                        return KeyEventResult.ignored;
                       },
-                      icon: Icon(
-                        _isDownloaded ? Icons.download_done : Icons.download,
-                        size: context.tvIconSize(24),
-                      ),
-                      label: Text(_isDownloaded ? 'Downloaded' : 'Download', style: TextStyle(fontSize: context.tvTextSize(16))),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTheme.textPrimary,
-                        side: BorderSide(
-                          color: AppTheme.textPrimary.withAlpha(
-                            (0.5 * 255).round(),
-                          ),
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _isDownloaded = !_isDownloaded;
+                          });
+                        },
+                        icon: Icon(
+                          _isDownloaded ? Icons.download_done : Icons.download,
+                          size: context.tvIconSize(24),
                         ),
-                        padding: EdgeInsets.symmetric(
-                          horizontal: context.tvSpacing(32),
-                          vertical: context.tvSpacing(20),
+                        label: Text(_isDownloaded ? 'Downloaded' : 'Download', style: TextStyle(fontSize: context.tvTextSize(16))),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.textPrimary,
+                          side: BorderSide(
+                            color: AppTheme.textPrimary.withAlpha(
+                              (0.5 * 255).round(),
+                            ),
+                          ),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: context.tvSpacing(32),
+                            vertical: context.tvSpacing(20),
+                          ),
                         ),
                       ),
                     ),

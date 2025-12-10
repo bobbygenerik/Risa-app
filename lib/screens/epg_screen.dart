@@ -503,7 +503,6 @@ class _EPGScreenState extends State<EPGScreen>
                     'Guide',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600,
-                          fontSize: 16,
                           decoration: TextDecoration.none,
                         ),
                   ),
@@ -511,7 +510,6 @@ class _EPGScreenState extends State<EPGScreen>
                     DateFormat('EEEE, MMM dd').format(_selectedDate),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.white.withOpacity(0.7),
-                          fontSize: 12,
                           decoration: TextDecoration.none,
                         ),
                   ),
@@ -674,7 +672,7 @@ class _EPGScreenState extends State<EPGScreen>
                 color: isFocused || isSelected
                     ? Colors.white
                     : Colors.white.withOpacity(0.7),
-                fontSize: 13,
+                fontSize: Theme.of(context).textTheme.bodyMedium?.fontSize,
                 fontWeight: (isFocused || isSelected)
                     ? FontWeight.w600
                     : FontWeight.w500,
@@ -719,7 +717,7 @@ class _EPGScreenState extends State<EPGScreen>
                       child: Text(
                         'No EPG data. Configure EPG URL in Settings.',
                         style: TextStyle(
-                            color: Colors.white.withOpacity(0.7), fontSize: 12),
+                            color: Colors.white.withOpacity(0.7), fontSize: Theme.of(context).textTheme.bodySmall?.fontSize),
                       ),
                     ),
                   ],
@@ -757,7 +755,7 @@ class _EPGScreenState extends State<EPGScreen>
                                   : '${_selectedDate.month}/${_selectedDate.day}',
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
-                                fontSize: 13,
+                                fontSize: Theme.of(context).textTheme.bodyMedium?.fontSize,
                                 color: Colors.white.withOpacity(0.9),
                               ),
                             ),
@@ -1011,7 +1009,7 @@ class _EPGScreenState extends State<EPGScreen>
               child: Text(
                 time.format(context),
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
                   color: Colors.white.withOpacity(0.7),
                 ),
               ),
@@ -1054,7 +1052,7 @@ class _EPGScreenState extends State<EPGScreen>
               child: Text(
                 'No EPG data',
                 style: TextStyle(
-                    fontSize: 12, color: Colors.white.withOpacity(0.5)),
+                    fontSize: Theme.of(context).textTheme.bodySmall?.fontSize, color: Colors.white.withOpacity(0.5)),
               ),
             )
           : Stack(
@@ -1100,70 +1098,90 @@ class _EPGScreenState extends State<EPGScreen>
     const epgLiveColor = Color(0xFF4a4fc9);
     const epgCatchupColor = Color(0xFFcc5a2d);
 
-    return Container(
-      margin: const EdgeInsets.only(right: 4),
-      decoration: BoxDecoration(
-        color: isLive
-            ? epgLiveColor.withOpacity(0.15)
-            : hasCatchup
-                ? epgCatchupColor.withOpacity(0.1)
-                : Colors.white.withOpacity(0.03),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isLive
-              ? epgLiveColor
-              : hasCatchup
-                  ? epgCatchupColor
-                  : Colors.white.withOpacity(0.1),
-          width: 1,
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _showProgramDetails(program),
-          onLongPress: () => _showProgramContextMenu(program),
-          borderRadius: BorderRadius.circular(4),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Row(
-                  children: [
-                    if (hasCatchup) ...[
-                      const Icon(Icons.replay,
-                          size: 10, color: epgCatchupColor),
-                      const SizedBox(width: 3),
-                    ],
-                    Expanded(
-                      child: Text(
-                        program.title,
+    return Focus(
+      canRequestFocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.select ||
+              event.logicalKey == LogicalKeyboardKey.enter) {
+            _showProgramDetails(program);
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Builder(
+        builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
+          return Container(
+            margin: const EdgeInsets.only(right: 4),
+            decoration: BoxDecoration(
+              color: isLive
+                  ? epgLiveColor.withOpacity(0.15)
+                  : hasCatchup
+                      ? epgCatchupColor.withOpacity(0.1)
+                      : Colors.white.withOpacity(0.03),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isFocused
+                    ? AppTheme.primaryBlue
+                    : isLive
+                        ? epgLiveColor
+                        : hasCatchup
+                            ? epgCatchupColor
+                            : Colors.white.withOpacity(0.1),
+                width: isFocused ? 2 : 1,
+              ),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => _showProgramDetails(program),
+                onLongPress: () => _showProgramContextMenu(program),
+                borderRadius: BorderRadius.circular(4),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Row(
+                        children: [
+                          if (hasCatchup) ...[
+                            const Icon(Icons.replay,
+                                size: 10, color: epgCatchupColor),
+                            const SizedBox(width: 3),
+                          ],
+                          Expanded(
+                            child: Text(
+                              program.title,
+                              style: TextStyle(
+                                fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
+                                fontWeight:
+                                    isLive ? FontWeight.w600 : FontWeight.normal,
+                                color: Colors.white.withOpacity(0.9),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        '${DateFormat.jm().format(program.startTime)} - ${DateFormat.jm().format(program.endTime)}',
                         style: TextStyle(
-                          fontSize: 12,
-                          fontWeight:
-                              isLive ? FontWeight.w600 : FontWeight.normal,
-                          color: Colors.white.withOpacity(0.9),
+                          fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
+                          color: Colors.white.withOpacity(0.6),
                         ),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
-                ),
-                Text(
-                  '${DateFormat.jm().format(program.startTime)} - ${DateFormat.jm().format(program.endTime)}',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.white.withOpacity(0.6),
+                    ],
                   ),
-                  maxLines: 1,
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
@@ -1249,7 +1267,7 @@ class _EPGScreenState extends State<EPGScreen>
                           Text(
                             'LIVE',
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -1540,12 +1558,12 @@ class _EPGScreenState extends State<EPGScreen>
                         Text(
                           channel.name,
                           style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 16),
+                              fontWeight: FontWeight.bold, fontSize: Theme.of(context).textTheme.titleLarge?.fontSize),
                         ),
                         Text(
                           'ID: ${channel.tvgId ?? channel.id}',
                           style: TextStyle(
-                              color: AppTheme.textSecondary, fontSize: 12),
+                              color: AppTheme.textSecondary, fontSize: Theme.of(context).textTheme.bodySmall?.fontSize),
                         ),
                       ],
                     ),
@@ -1576,7 +1594,7 @@ class _EPGScreenState extends State<EPGScreen>
               subtitle: hasMapping
                   ? Text(
                       'Currently: ${epgService.getManualMapping(channel.tvgId ?? channel.id)}',
-                      style: const TextStyle(fontSize: 12))
+                      style: const TextStyle(fontSize: Theme.of(context).textTheme.bodySmall?.fontSize))
                   : null,
               onTap: () {
                 Navigator.pop(ctx);
@@ -1654,10 +1672,10 @@ class _EPGScreenState extends State<EPGScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Match EPG for ${channel.name}',
-                    style: const TextStyle(fontSize: 16)),
+                    style: const TextStyle(fontSize: Theme.of(context).textTheme.titleLarge?.fontSize)),
                 Text(
                   'ID: ${channel.tvgId ?? channel.id}',
-                  style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                  style: TextStyle(fontSize: Theme.of(context).textTheme.bodySmall?.fontSize, color: AppTheme.textSecondary),
                 ),
                 const SizedBox(height: 8),
                 TextField(
@@ -1712,7 +1730,7 @@ class _EPGScreenState extends State<EPGScreen>
                                   style: TextStyle(
                                     color: AppTheme.primaryBlue,
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 12,
+                                    fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
                                   ),
                                 ),
                               ],
@@ -1779,7 +1797,7 @@ class _EPGScreenState extends State<EPGScreen>
                                   if (preview != null)
                                     Text(
                                       'Now: $preview',
-                                      style: const TextStyle(fontSize: 11),
+                                      style: TextStyle(fontSize: Theme.of(context).textTheme.bodySmall?.fontSize),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -1787,7 +1805,7 @@ class _EPGScreenState extends State<EPGScreen>
                                     Text(
                                       'Match: ${(suggestionScore * 100).toInt()}%',
                                       style: TextStyle(
-                                        fontSize: 10,
+                                        fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
                                         color: suggestionScore > 0.7
                                             ? AppTheme.accentGreen
                                             : AppTheme.textSecondary,
@@ -1813,7 +1831,7 @@ class _EPGScreenState extends State<EPGScreen>
                                       child: Text(
                                         'All EPG Channels',
                                         style: TextStyle(
-                                            fontSize: 11,
+                                            fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
                                             color: AppTheme.textSecondary),
                                       ),
                                     ),
@@ -1954,7 +1972,7 @@ class _EPGScreenState extends State<EPGScreen>
                                 child: const Text(
                                   'LIVE',
                                   style: TextStyle(
-                                      fontSize: 10,
+                                      fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
                                       fontWeight: FontWeight.bold),
                                 ),
                               ),
@@ -1970,7 +1988,7 @@ class _EPGScreenState extends State<EPGScreen>
                                 child: const Text(
                                   'CATCHUP',
                                   style: TextStyle(
-                                      fontSize: 10,
+                                      fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
                                       fontWeight: FontWeight.bold),
                                 ),
                               ),
@@ -1980,7 +1998,7 @@ class _EPGScreenState extends State<EPGScreen>
                         Text(
                           program.title,
                           style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 16),
+                              fontWeight: FontWeight.bold, fontSize: Theme.of(context).textTheme.titleLarge?.fontSize),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1988,7 +2006,7 @@ class _EPGScreenState extends State<EPGScreen>
                         Text(
                           '${DateFormat.jm().format(program.startTime)} - ${DateFormat.jm().format(program.endTime)}',
                           style: TextStyle(
-                              color: AppTheme.textSecondary, fontSize: 12),
+                              color: AppTheme.textSecondary, fontSize: Theme.of(context).textTheme.bodySmall?.fontSize),
                         ),
                       ],
                     ),
@@ -2027,11 +2045,11 @@ class _EPGScreenState extends State<EPGScreen>
                               const Text('Watch Catchup',
                                   style: TextStyle(
                                       fontWeight: FontWeight.w600,
-                                      fontSize: 15)),
+                                      fontSize: Theme.of(context).textTheme.titleMedium?.fontSize)),
                               const SizedBox(height: 2),
                               Text('Watch from the beginning',
                                   style: TextStyle(
-                                      fontSize: 12,
+                                      fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
                                       color: AppTheme.textSecondary)),
                             ],
                           ),
@@ -2070,14 +2088,14 @@ class _EPGScreenState extends State<EPGScreen>
                               Text(isLive ? 'Record Now' : 'Schedule Recording',
                                   style: const TextStyle(
                                       fontWeight: FontWeight.w600,
-                                      fontSize: 15)),
+                                      fontSize: Theme.of(context).textTheme.titleMedium?.fontSize)),
                               const SizedBox(height: 2),
                               Text(
                                   isLive
                                       ? 'Start recording this program'
                                       : 'Record when it airs',
                                   style: TextStyle(
-                                      fontSize: 12,
+                                      fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
                                       color: AppTheme.textSecondary)),
                             ],
                           ),
@@ -2117,11 +2135,11 @@ class _EPGScreenState extends State<EPGScreen>
                               const Text('Set Reminder',
                                   style: TextStyle(
                                       fontWeight: FontWeight.w600,
-                                      fontSize: 15)),
+                                      fontSize: Theme.of(context).textTheme.titleMedium?.fontSize)),
                               const SizedBox(height: 2),
                               Text('Get notified when it starts',
                                   style: TextStyle(
-                                      fontSize: 12,
+                                      fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
                                       color: AppTheme.textSecondary)),
                             ],
                           ),
@@ -2152,7 +2170,7 @@ class _EPGScreenState extends State<EPGScreen>
                       const SizedBox(width: 16),
                       const Text('View Details',
                           style: TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: 15)),
+                              fontWeight: FontWeight.w600, fontSize: Theme.of(context).textTheme.titleMedium?.fontSize)),
                     ],
                   ),
                 ),
