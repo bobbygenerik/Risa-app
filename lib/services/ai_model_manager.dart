@@ -339,6 +339,8 @@ class AIModel {
     sizeBytes: 75 * 1024 * 1024, // ~75 MB
     category: ModelCategory.speechRecognition,
     usedBy: ['Voice Search', 'Live Transcription'],
+    isBundled: true,
+    assetPath: 'assets/models/ggml-tiny.bin',
   );
 
   static const whisperBase = AIModel(

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 // import 'package:iptv_player/widgets/top_navigation_bar.dart'; // Removed
-import 'package:iptv_player/widgets/search_popup.dart';
+
 import 'package:iptv_player/widgets/content_focus_provider.dart';
 import 'package:iptv_player/widgets/sidebar_navigation.dart'; // New import
 

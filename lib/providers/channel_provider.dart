@@ -15,7 +15,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 import 'content_provider.dart';
 import '../services/tmdb_enrichment_service.dart';
-import 'package:iptv_player/services/epg_service.dart' hide debugPrint;
+import 'package:iptv_player/services/epg_service.dart';
 
 /// Isolate function to extract unique category names only (fast)
 /// Preserves the order categories first appear in the playlist

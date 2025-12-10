@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/app_theme.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});

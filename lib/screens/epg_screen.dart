@@ -1,6 +1,5 @@
 // ignore_for_file: sized_box_for_whitespace
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -11,7 +10,6 @@ import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
-import 'package:iptv_player/widgets/native_exoplayer.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/services/epg_service.dart';
