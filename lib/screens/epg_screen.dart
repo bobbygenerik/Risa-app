@@ -672,7 +672,7 @@ class _EPGScreenState extends State<EPGScreen>
                 color: isFocused || isSelected
                     ? Colors.white
                     : Colors.white.withOpacity(0.7),
-                fontSize: Theme.of(context).textTheme.bodyMedium?.fontSize,
+                fontSize: 14,
                 fontWeight: (isFocused || isSelected)
                     ? FontWeight.w600
                     : FontWeight.w500,
@@ -711,13 +711,13 @@ class _EPGScreenState extends State<EPGScreen>
                 child: Row(
                   children: [
                     const Icon(Icons.info_outline,
-                        size: AppSizes.iconSm, color: AppTheme.primaryBlue)),
+                        size: AppSizes.iconSm, color: AppTheme.primaryBlue),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'No EPG data. Configure EPG URL in Settings.',
                         style: TextStyle(
-                            color: Colors.white.withOpacity(0.7), fontSize: Theme.of(context).textTheme.bodySmall?.fontSize),
+                            color: Colors.white.withOpacity(0.7), fontSize: 12),
                       ),
                     ),
                   ],
@@ -755,7 +755,7 @@ class _EPGScreenState extends State<EPGScreen>
                                   : '${_selectedDate.month}/${_selectedDate.day}',
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
-                                fontSize: Theme.of(context).textTheme.bodyMedium?.fontSize,
+                                fontSize: 14,
                                 color: Colors.white.withOpacity(0.9),
                               ),
                             ),
@@ -1009,7 +1009,7 @@ class _EPGScreenState extends State<EPGScreen>
               child: Text(
                 time.format(context),
                 style: TextStyle(
-                  fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
+                  fontSize: 12,
                   color: Colors.white.withOpacity(0.7),
                 ),
               ),
@@ -1052,7 +1052,7 @@ class _EPGScreenState extends State<EPGScreen>
               child: Text(
                 'No EPG data',
                 style: TextStyle(
-                    fontSize: Theme.of(context).textTheme.bodySmall?.fontSize, color: Colors.white.withOpacity(0.5)),
+                    fontSize: 12, color: Colors.white.withOpacity(0.5)),
               ),
             )
           : Stack(
@@ -1156,7 +1156,7 @@ class _EPGScreenState extends State<EPGScreen>
                             child: Text(
                               program.title,
                               style: TextStyle(
-                                fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
+                                fontSize: 12,
                                 fontWeight:
                                     isLive ? FontWeight.w600 : FontWeight.normal,
                                 color: Colors.white.withOpacity(0.9),
@@ -1170,7 +1170,7 @@ class _EPGScreenState extends State<EPGScreen>
                       Text(
                         '${DateFormat.jm().format(program.startTime)} - ${DateFormat.jm().format(program.endTime)}',
                         style: TextStyle(
-                          fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
+                          fontSize: 12,
                           color: Colors.white.withOpacity(0.6),
                         ),
                         maxLines: 1,
@@ -1266,8 +1266,8 @@ class _EPGScreenState extends State<EPGScreen>
                           SizedBox(width: 4),
                           Text(
                             'LIVE',
-                            style: TextStyle(
-                              fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
+                            style: const TextStyle(
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -1558,12 +1558,12 @@ class _EPGScreenState extends State<EPGScreen>
                         Text(
                           channel.name,
                           style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: Theme.of(context).textTheme.titleLarge?.fontSize),
+                              fontWeight: FontWeight.bold, fontSize: 18),
                         ),
                         Text(
                           'ID: ${channel.tvgId ?? channel.id}',
-                          style: TextStyle(
-                              color: AppTheme.textSecondary, fontSize: Theme.of(context).textTheme.bodySmall?.fontSize),
+                          style: const TextStyle(
+                              color: AppTheme.textSecondary, fontSize: 12),
                         ),
                       ],
                     ),
@@ -1594,7 +1594,7 @@ class _EPGScreenState extends State<EPGScreen>
               subtitle: hasMapping
                   ? Text(
                       'Currently: ${epgService.getManualMapping(channel.tvgId ?? channel.id)}',
-                      style: const TextStyle(fontSize: Theme.of(context).textTheme.bodySmall?.fontSize))
+                      style: const TextStyle(fontSize: 12))
                   : null,
               onTap: () {
                 Navigator.pop(ctx);
@@ -1672,10 +1672,10 @@ class _EPGScreenState extends State<EPGScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Match EPG for ${channel.name}',
-                    style: const TextStyle(fontSize: Theme.of(context).textTheme.titleLarge?.fontSize)),
+                    style: const TextStyle(fontSize: 18)),
                 Text(
                   'ID: ${channel.tvgId ?? channel.id}',
-                  style: TextStyle(fontSize: Theme.of(context).textTheme.bodySmall?.fontSize, color: AppTheme.textSecondary),
+                  style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                 ),
                 const SizedBox(height: 8),
                 TextField(
@@ -1730,7 +1730,7 @@ class _EPGScreenState extends State<EPGScreen>
                                   style: TextStyle(
                                     color: AppTheme.primaryBlue,
                                     fontWeight: FontWeight.bold,
-                                    fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
+                                    fontSize: 12,
                                   ),
                                 ),
                               ],
@@ -1797,7 +1797,7 @@ class _EPGScreenState extends State<EPGScreen>
                                   if (preview != null)
                                     Text(
                                       'Now: $preview',
-                                      style: TextStyle(fontSize: Theme.of(context).textTheme.bodySmall?.fontSize),
+                                      style: TextStyle(fontSize: 12),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -1805,7 +1805,7 @@ class _EPGScreenState extends State<EPGScreen>
                                     Text(
                                       'Match: ${(suggestionScore * 100).toInt()}%',
                                       style: TextStyle(
-                                        fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
+                                        fontSize: 12,
                                         color: suggestionScore > 0.7
                                             ? AppTheme.accentGreen
                                             : AppTheme.textSecondary,
@@ -1831,7 +1831,7 @@ class _EPGScreenState extends State<EPGScreen>
                                       child: Text(
                                         'All EPG Channels',
                                         style: TextStyle(
-                                            fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
+                                            fontSize: 12,
                                             color: AppTheme.textSecondary),
                                       ),
                                     ),
@@ -1972,7 +1972,7 @@ class _EPGScreenState extends State<EPGScreen>
                                 child: const Text(
                                   'LIVE',
                                   style: TextStyle(
-                                      fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
+                                      fontSize: 12,
                                       fontWeight: FontWeight.bold),
                                 ),
                               ),
@@ -1988,7 +1988,7 @@ class _EPGScreenState extends State<EPGScreen>
                                 child: const Text(
                                   'CATCHUP',
                                   style: TextStyle(
-                                      fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
+                                      fontSize: 12,
                                       fontWeight: FontWeight.bold),
                                 ),
                               ),
@@ -1998,7 +1998,7 @@ class _EPGScreenState extends State<EPGScreen>
                         Text(
                           program.title,
                           style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: Theme.of(context).textTheme.titleLarge?.fontSize),
+                              fontWeight: FontWeight.bold, fontSize: 18),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -2006,7 +2006,7 @@ class _EPGScreenState extends State<EPGScreen>
                         Text(
                           '${DateFormat.jm().format(program.startTime)} - ${DateFormat.jm().format(program.endTime)}',
                           style: TextStyle(
-                              color: AppTheme.textSecondary, fontSize: Theme.of(context).textTheme.bodySmall?.fontSize),
+                              color: AppTheme.textSecondary, fontSize: 12),
                         ),
                       ],
                     ),
@@ -2045,11 +2045,11 @@ class _EPGScreenState extends State<EPGScreen>
                               const Text('Watch Catchup',
                                   style: TextStyle(
                                       fontWeight: FontWeight.w600,
-                                      fontSize: Theme.of(context).textTheme.titleMedium?.fontSize)),
+                                      fontSize: 16)),
                               const SizedBox(height: 2),
                               Text('Watch from the beginning',
                                   style: TextStyle(
-                                      fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
+                                      fontSize: 12,
                                       color: AppTheme.textSecondary)),
                             ],
                           ),
@@ -2088,14 +2088,14 @@ class _EPGScreenState extends State<EPGScreen>
                               Text(isLive ? 'Record Now' : 'Schedule Recording',
                                   style: const TextStyle(
                                       fontWeight: FontWeight.w600,
-                                      fontSize: Theme.of(context).textTheme.titleMedium?.fontSize)),
+                                      fontSize: 16)),
                               const SizedBox(height: 2),
                               Text(
                                   isLive
                                       ? 'Start recording this program'
                                       : 'Record when it airs',
                                   style: TextStyle(
-                                      fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
+                                      fontSize: 12,
                                       color: AppTheme.textSecondary)),
                             ],
                           ),
@@ -2135,11 +2135,11 @@ class _EPGScreenState extends State<EPGScreen>
                               const Text('Set Reminder',
                                   style: TextStyle(
                                       fontWeight: FontWeight.w600,
-                                      fontSize: Theme.of(context).textTheme.titleMedium?.fontSize)),
+                                      fontSize: 16)),
                               const SizedBox(height: 2),
                               Text('Get notified when it starts',
                                   style: TextStyle(
-                                      fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
+                                      fontSize: 12,
                                       color: AppTheme.textSecondary)),
                             ],
                           ),
@@ -2170,7 +2170,7 @@ class _EPGScreenState extends State<EPGScreen>
                       const SizedBox(width: 16),
                       const Text('View Details',
                           style: TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: Theme.of(context).textTheme.titleMedium?.fontSize)),
+                              fontWeight: FontWeight.w600, fontSize: 16)),
                     ],
                   ),
                 ),

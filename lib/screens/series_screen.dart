@@ -275,8 +275,6 @@ class _SeriesScreenState extends State<SeriesScreen>
           series,
           recentSeries,
         );
-
-        return _wrapWithDirectionalFocus(stack);
       },
     );
   }

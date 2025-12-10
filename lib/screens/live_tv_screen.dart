@@ -1067,7 +1067,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
 
     // At top of screen - show video if enabled, otherwise image
-    if (_heroVideoPreview && featuredChannel.streamUrl != null) {
+    if (_heroVideoPreview && featuredChannel.url.isNotEmpty) {
       return Stack(
         children: [
           // Video player (placeholder for now)

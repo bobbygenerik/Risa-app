@@ -507,7 +507,7 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
                     ),
                     SizedBox(height: 6),
                     Text(
-                      'Manage on-device AI downloads for speech features.'
+                      'Manage on-device AI downloads for speech features.',
                       style: TextStyle(
                         color: AppTheme.textSecondary,
                         fontSize: 14,

@@ -4,13 +4,21 @@ import '../widgets/native_exoplayer.dart';
 import '../utils/app_theme.dart';
 
 class EnhancedVideoPlayerScreen extends StatefulWidget {
-  final Channel channel;
+  final Channel? channel;
   final String? streamUrl;
+  final String? videoUrl;
+  final String? title;
+  final String? subtitle;
+  final bool isLive;
 
   const EnhancedVideoPlayerScreen({
     Key? key,
-    required this.channel,
+    this.channel,
     this.streamUrl,
+    this.videoUrl,
+    this.title,
+    this.subtitle,
+    this.isLive = false,
   }) : super(key: key);
 
   @override
@@ -112,7 +120,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
             // Video player
             Center(
               child: NativeExoPlayer(
-                videoUrl: widget.streamUrl ?? widget.channel.url,
+                videoUrl: widget.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '',
                 autoPlay: true,
                 onCreated: (controller) {
                   _exoController = controller;
@@ -171,21 +179,22 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                     ),
                     const Spacer(),
                     // Live badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSizes.sm, vertical: AppSizes.xs),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                      ),
-                      child: const Text(
-                        'LIVE',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                    if (widget.isLive)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSizes.sm, vertical: AppSizes.xs),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                        ),
+                        child: const Text(
+                          'LIVE',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
                     const SizedBox(width: AppSizes.sm),
                     // Guide button
                     IconButton(
@@ -364,7 +373,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.channel.name,
+                        widget.title ?? widget.channel?.name ?? 'Video',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: AppTheme.textPrimary,
                           fontWeight: FontWeight.w600,
@@ -378,12 +387,13 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                         ),
                       ),
                       const SizedBox(height: AppSizes.xs),
-                      Text(
-                        'Category: ${widget.channel.category ?? 'General'}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.textTertiary,
+                      if (widget.subtitle != null)
+                        Text(
+                          widget.subtitle!,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppTheme.textTertiary,
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
