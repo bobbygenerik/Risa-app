@@ -299,10 +299,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 physics: const AlwaysScrollableScrollPhysics(),
               child: Padding(
                 padding: EdgeInsets.only(
-                  left: context.tvSpacing(48),
-                  right: context.tvSpacing(80),
-                  top: context.tvSpacing(80),
-                  bottom: context.tvSpacing(80),
+                  left: 0, // No left padding to prevent overflow
+                  right: 0,
+                  top: context.tvSpacing(40),
+                  bottom: context.tvSpacing(40),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -705,7 +705,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   ) {
     if (channels.isEmpty) return const SizedBox.shrink();
 
-    final screenWidth = MediaQuery.of(context).size.width;
+    final screenWidth = MediaQuery.of(context).size.width - 48; // Account for sidebar
     final screenHeight = MediaQuery.of(context).size.height;
     final isLandscape = screenWidth > screenHeight;
     final cardWidth = isLandscape ? (screenWidth / 5.5) : (screenWidth / 3.5);
@@ -730,7 +730,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           height: rowHeight,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.only(left: 24), // Remove right padding
+            padding: const EdgeInsets.only(left: 24, right: 132), // Add right padding to prevent overflow
             itemCount: channels.length,
             itemExtent: cardWidth + 16,
             itemBuilder: (context, index) {
@@ -1093,49 +1093,70 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             ],
           ),
         ),
-        // Card rows skeleton
-        Positioned(
-          top: heroHeight + 40,
-          left: 48,
-          right: 80,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: List.generate(3, (rowIndex) => Padding(
-              padding: const EdgeInsets.only(bottom: 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    height: 20,
-                    width: 150,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withAlpha((0.1 * 255).round()),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: cardHeight,
-                    child: Row(
-                      children: List.generate(5, (cardIndex) => Padding(
-                        padding: const EdgeInsets.only(right: 16),
+      // Card rows skeleton
+      Positioned(
+        top: heroHeight + context.tvSpacing(24),
+        left: 0,
+        right: 0,
+        bottom: 0,
+        child: SingleChildScrollView(
+          physics: const NeverScrollableScrollPhysics(),
+          child: Padding(
+            padding: EdgeInsets.only(
+              top: context.tvSpacing(40),
+              bottom: context.tvSpacing(40),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: List.generate(3, (rowIndex) {
+                return Padding(
+                  padding: EdgeInsets.only(bottom: context.tvSpacing(32)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
                         child: Container(
-                          width: cardWidth,
-                          height: cardHeight,
+                          height: 20,
+                          width: 150,
                           decoration: BoxDecoration(
-                            color: AppTheme.cardBackground,
-                            borderRadius: BorderRadius.circular(12),
+                            color: Colors.white.withAlpha((0.1 * 255).round()),
+                            borderRadius: BorderRadius.circular(4),
                           ),
                         ),
-                      )),
-                    ),
+                      ),
+                      SizedBox(height: context.tvSpacing(12)),
+                      SizedBox(
+                        height: cardHeight,
+                        child: ListView.builder(
+                          itemCount: 5,
+                          scrollDirection: Axis.horizontal,
+                          physics: const NeverScrollableScrollPhysics(),
+                          padding: const EdgeInsets.only(left: 24, right: 132),
+                          itemExtent: cardWidth + 16,
+                          itemBuilder: (context, index) {
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 16),
+                              child: Container(
+                                width: cardWidth,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.cardBackground,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            )),
+                );
+              }),
+            ),
           ),
         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
 }
