@@ -325,54 +325,7 @@ class AIModel {
     return '${(sizeBytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
-  // === VIDEO UPSCALING MODELS ===
-  // Using real URLs from TensorFlow Hub and public repositories
 
-  static const srcnn = AIModel(
-    id: 'srcnn_x2',
-    name: 'SRCNN (Lightweight)',
-    description:
-        'Fast video upscaling, works well on CPU. Best for low-end devices.',
-    fileName: 'srcnn_x2.tflite',
-    // TF Hub model converted to TFLite
-    downloadUrl:
-        'https://tfhub.dev/tensorflow/lite-model/mirnet-fixed/dr/1?lite-format=tflite',
-    sizeBytes: 20 * 1024, // 20 KB
-    category: ModelCategory.videoUpscaling,
-    usedBy: ['AI Video Enhancement'],
-    isBundled: true,
-    assetPath: 'assets/models/srcnn_x2.tflite',
-  );
-
-  static const fsrcnn = AIModel(
-    id: 'fsrcnn_x2',
-    name: 'FSRCNN (Recommended)',
-    description:
-        'Fast Super-Resolution CNN. Great balance of speed and quality.',
-    fileName: 'fsrcnn_x2.tflite',
-    // TF Hub FSRCNN model
-    downloadUrl:
-        'https://tfhub.dev/captain-pool/lite-model/fsrcnn-tf2/1/default/1?lite-format=tflite',
-    sizeBytes: 40 * 1024, // 40 KB
-    category: ModelCategory.videoUpscaling,
-    usedBy: ['AI Video Enhancement'],
-    isBundled: true,
-    assetPath: 'assets/models/fsrcnn_x2.tflite',
-  );
-
-  static const esrgan = AIModel(
-    id: 'esrgan_x2',
-    name: 'ESRGAN (Best Quality)',
-    description:
-        'Enhanced Super-Resolution GAN. Highest quality, requires GPU.',
-    fileName: 'esrgan_x2.tflite',
-    // TF Hub ESRGAN model
-    downloadUrl:
-        'https://tfhub.dev/captain-pool/lite-model/esrgan-tf2/1/default/1?lite-format=tflite',
-    sizeBytes: 16 * 1024 * 1024, // 16 MB
-    category: ModelCategory.videoUpscaling,
-    usedBy: ['AI Video Enhancement'],
-  );
 
   // === SPEECH RECOGNITION MODELS ===
 
@@ -417,10 +370,6 @@ class AIModel {
 
   /// All available models
   static const allModels = [
-    // Video upscaling (choose one)
-    srcnn,
-    fsrcnn,
-    esrgan,
     // Speech recognition (choose one, shared by transcription services)
     whisperTiny,
     whisperBase,
@@ -439,13 +388,11 @@ class AIModel {
 }
 
 /// Model categories
-enum ModelCategory { videoUpscaling, speechRecognition, translation }
+enum ModelCategory { speechRecognition, translation }
 
 extension ModelCategoryExtension on ModelCategory {
   String get displayName {
     switch (this) {
-      case ModelCategory.videoUpscaling:
-        return 'Video Upscaling';
       case ModelCategory.speechRecognition:
         return 'Speech Recognition';
       case ModelCategory.translation:
@@ -455,8 +402,6 @@ extension ModelCategoryExtension on ModelCategory {
 
   String get description {
     switch (this) {
-      case ModelCategory.videoUpscaling:
-        return 'Enhance video quality with AI upscaling (2x resolution)';
       case ModelCategory.speechRecognition:
         return 'Convert speech to text in 99+ languages (Whisper)';
       case ModelCategory.translation:

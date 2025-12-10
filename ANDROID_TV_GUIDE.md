@@ -28,7 +28,6 @@ Stream Hub is now fully optimized for Android TV with D-pad navigation, leanback
 - ✅ Remote control hints overlay
 - ✅ Auto-hiding controls
 - ✅ Hardware acceleration support
-- ✅ AI upscaling integration
 - ✅ Live TV indicator
 - ✅ Proper error handling
 
@@ -263,8 +262,6 @@ TVFocusHelper.buildTVButton(
 - VideoPlayerOptions with hardware decoding
 - Optimized for TV chipsets
 
-✅ **AI Upscaling Integration**
-- Real-time upscaling when enabled
 - Status indicator on screen
 - Quality preset display
 
@@ -357,7 +354,6 @@ final size = context.tvTextSize(16); // Converts to 24px for TV
 - **Use HLS (m3u8)**: Best for TV streaming
 - **Enable caching**: Reduce buffering
 - **Hardware decode**: Offload to GPU
-- **AI upscaling**: Optional, check GPU availability
 
 ### UI Rendering
 
@@ -407,7 +403,6 @@ final size = context.tvTextSize(16); // Converts to 24px for TV
 - [ ] Test with TV remote (not keyboard)
 - [ ] Check TV banner appears in launcher
 - [ ] Verify landscape orientation enforced
-- [ ] Test AI upscaling on/off
 - [ ] Check error handling for failed streams
 - [ ] Verify app works without touchscreen
 
@@ -429,7 +424,6 @@ Your IPTV player is now fully optimized for Android TV with:
 ✅ TV-friendly UI scaling
 ✅ Full-screen video player
 ✅ Hardware acceleration
-✅ AI upscaling support
 ✅ Remote control support
 ✅ Leanback launcher integration
 

@@ -28,7 +28,6 @@
 
 - ✅ **Advanced Features**
 - Cloud sync (removed)
-- On-device AI upscaling (FREE - no cloud costs)
 - OpenSubtitles integration (FREE API)
 - Hardware video acceleration
 - Favorites management
@@ -100,7 +99,6 @@ iptv-player/
 │   │   ├── epg_service.dart         # EPG data management
 │   │   ├── voice_search_service.dart # Speech-to-text
 │   │   ├── (cloud sync removed — use `lib/services/local_backup_service.dart`)
-│   │   └── ai_upscaling_service.dart # AI upscaling (FREE)
 │   ├── providers/                    # State management
 │   │   └── channel_provider.dart    # Channel state & favorites
 │   └── utils/                        # Utilities
@@ -156,7 +154,6 @@ iptv-player/
 **7 Tabs:**
 -- Account (Local Backup — Export / Import, logout)
 - General (Xtream Codes, M3U, Real-Debrid, startup)
-- Playback (OpenSubtitles, AI upscaling, video settings)
 - EPG (data sources, refresh, time format)
 - Entertainment (content, parental controls)
 - Appearance (theme, language, layout)
@@ -196,9 +193,7 @@ iptv-player/
    - Cloud sync has been removed and replaced by a local export/import backup workflow (`LocalBackupService`).
    - Export backups via `Settings > Account > Export Backup`; import via `Settings > Account > Import Backup`.
 
-5. **AIUpscalingService** (lib/services/ai_upscaling_service.dart)
    - TensorFlow Lite model loading
-   - Real-time frame upscaling
    - GPU/CPU acceleration
    - Quality presets (Fast/Balanced/Quality)
    - Performance monitoring
@@ -211,7 +206,6 @@ iptv-player/
 
 The Drive cloud sync feature has been removed from this repository and replaced by a local export/import backup workflow (`LocalBackupService`). If you need cloud sync in your fork, implement a provider-agnostic solution (S3/WebDAV/HTTP) and secure credential handling.
 
-### AI Video Upscaling (FREE)
 
 **What it does:**
 - Enhances video quality in real-time (e.g., 720p → 1440p)
@@ -220,7 +214,6 @@ The Drive cloud sync feature has been removed from this repository and replaced 
 - 3 quality presets with automatic optimization
 
 **Implementation:**
-- `AIUpscalingService` manages TFLite model
 - Tile-based processing for large frames
 - GPU acceleration on Android/iOS
 - CPU fallback with multi-threading
@@ -382,7 +375,6 @@ On first launch, users see a legal disclaimer dialog that:
 - OpenSubtitles settings UI
 - Hardware acceleration settings
 - Cloud sync service (archived)
-- AI upscaling service (full implementation)
 - State management setup
 - Design system & theming
 
@@ -475,7 +467,6 @@ On first launch, users see a legal disclaimer dialog that:
 - [ ] Sign out works
 - [ ] Data persists across devices
 
-### AI Upscaling
 - [ ] Enable toggle works
 - [ ] Quality presets switch
 - [ ] GPU status shows correctly
@@ -501,7 +492,6 @@ All dependencies configured, including:
 - State management (provider)
 - Routing (go_router)
 - Cloud sync (provider-specific packages)
-- AI upscaling (tflite_flutter, image)
 - Voice search (speech_to_text)
 
 ### android/app/build.gradle
@@ -530,7 +520,6 @@ Permissions:
    - No API costs
    - App data typically < 1 MB
 
-2. **AI Upscaling**
    - Runs on-device (TensorFlow Lite)
    - No cloud API calls
    - No per-request costs
@@ -550,7 +539,6 @@ Permissions:
 - Firebase Cloud Storage: $0.026/GB/month
 - AWS S3: $0.023/GB/month  
 - Google Cloud Vision API: $1.50 per 1000 images
-- OpenAI Upscaling: $0.02 per image
 
 **Total Developer Costs: $0 / month** 🎉
 
@@ -670,7 +658,6 @@ For issues, questions, or feature requests:
 
 ---
 
-**Status**: Feature-complete; cloud sync removed from mainline and AI upscaling implemented
 **Next Steps**: Configure OAuth, add AI model (optional), test on device
 **Deployment Ready**: Yes (with OAuth configuration)
 

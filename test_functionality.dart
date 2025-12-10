@@ -34,7 +34,6 @@ void main() async {
   results['Local Backup Service'] = await testServiceFile('lib/services/local_backup_service.dart');
   results['OpenSubtitles'] = await testServiceFile('lib/services/opensubtitles_service.dart');
   results['Real-Debrid'] = await testServiceFile('lib/services/real_debrid_service.dart');
-  results['AI Upscaling'] = await testServiceFile('lib/services/ai_upscaling_service.dart');
   results['Whisper Speech'] = await testServiceFile('lib/services/whisper_speech_service.dart');
   results['Xtream Codes'] = await testServiceFile('lib/services/xtream_codes_service.dart');
   

@@ -57,7 +57,6 @@ If you need cloud sync in a fork, implement a provider-agnostic solution (S3, We
 - Works 100% offline after download
 - No setup required
 
-### AI Video Upscaling
 
 **Status:** ⚠️ Needs model files
 - UI complete, model loading implemented
@@ -85,13 +84,11 @@ If you need cloud sync in a fork, implement a provider-agnostic solution (S3, We
 ### Web
  - Limited service support
  - No provider-specific cloud sync
- - No AI upscaling
 - OpenSubtitles and Real-Debrid work
 
 - ### Desktop (Linux/Windows/macOS)
 - Limited service support
 - No provider-specific cloud sync
-- AI upscaling available (CPU only)
 - OpenSubtitles and Real-Debrid work
 
 ## 🚀 Quick Start (Minimal Setup)

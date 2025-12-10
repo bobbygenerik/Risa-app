@@ -195,9 +195,6 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => EnhancedVideoPlayerScreen(
-          videoUrl: _channelsList[index].url,
-          title: _channelsList[index].name,
-          isLive: true,
           channel: _channelsList[index],
         ),
       ),
@@ -385,14 +382,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                   curve: TVFocusStyle.animationCurve,
                   margin: EdgeInsets.all(context.tvSpacing(1)),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xFF050710),
-                        Color(0xFF0d1140),
-                      ],
-                    ),
+                    color: const Color(0xFF050710),
                     boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
                   ),
                   child: Center(
@@ -531,14 +521,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF050710),
-                  Color(0xFF0d1140),
-                ],
-              )
+                    color: Color(0xFF050710),
                   ),
                   child: Row(
                     children: [

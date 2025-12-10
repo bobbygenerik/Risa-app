@@ -73,16 +73,6 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
 
                 const SizedBox(height: 24),
 
-                // Video Upscaling Models
-                _buildCategorySection(
-                  context,
-                  modelManager,
-                  ModelCategory.videoUpscaling,
-                  'Choose ONE model for AI video upscaling',
-                ),
-
-                const SizedBox(height: 24),
-
                 // Speech Recognition Models
                 _buildCategorySection(
                   context,
@@ -517,7 +507,7 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
                     ),
                     SizedBox(height: 6),
                     Text(
-                      'Manage on-device AI downloads for video upscaling and speech features.',
+                      'Manage on-device AI downloads for speech features.'
                       style: TextStyle(
                         color: AppTheme.textSecondary,
                         fontSize: 14,

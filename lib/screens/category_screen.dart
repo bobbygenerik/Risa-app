@@ -14,7 +14,9 @@ class CategoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ChannelProvider>(
+    return Scaffold(
+      backgroundColor: const Color(0xFF050710),
+      body: Consumer<ChannelProvider>(
       builder: (context, channelProvider, child) {
         // Get total count without converting all channels
         final totalCount = channelProvider.getChannelCountForCategory(category);
@@ -79,6 +81,7 @@ class CategoryScreen extends StatelessWidget {
           ),
         );
       },
+    ),
     );
   }
 

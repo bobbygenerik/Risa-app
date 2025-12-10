@@ -233,11 +233,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
   Widget _buildHeroPlaceholder() {
     return Container(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF050710), Color(0xFF0d1140)],
-        ),
+        color: Color(0xFF050710),
       ),
       child: Center(
         child: Icon(

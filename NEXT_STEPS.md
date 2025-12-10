@@ -6,7 +6,6 @@
 - The previous cloud sync feature has been removed from the application.
 - Use the Local Backup tools in `Settings → Account` to export/import data between devices.
 
-### 2. AI Video Upscaling UI ✅
 - **Location**: Settings → Playback tab
 - **Features**:
   - Enable/Disable toggle (auto-disabled if no model)
@@ -51,7 +50,6 @@ flutter run -d linux  # or -d android, -d chrome, etc.
 - Use Settings → Account → Import to restore from a JSON file
 - No app crashes; local backup is a manual process replacing cloud sync
 
-### Test 3: Check AI Upscaling
 
 **Expected behavior:**
 - AI toggle is disabled with message "Model not loaded"
@@ -77,16 +75,13 @@ If you still want to restore Drive sync in your fork, follow `OAUTH_SETUP_GUIDE.
 
 ### Option B: Add AI Model (10 minutes)
 
-**Why:** Enable AI upscaling for better video quality
 
 **Steps:**
 1. Open `AI_MODEL_SETUP_GUIDE.md`
 2. Download FSRCNN model (recommended, only 40 KB)
 3. Place in `assets/models/esrgan_x2.tflite`
 4. Run `flutter clean && flutter pub get && flutter run`
-5. Enable AI upscaling in Settings → Playback
 
-**Result:** 2x video upscaling (720p → 1440p)
 
 ---
 
@@ -97,7 +92,6 @@ If you still want to restore Drive sync in your fork, follow `OAUTH_SETUP_GUIDE.
 - **UI Screens**: 100% ✅
 - **Navigation**: 100% ✅
 - **State Management**: 100% ✅
-- **AI Upscaling**: 100% ✅ (UI + Service)
 - **Legal Compliance**: 100% ✅
 
 ### What Works Without Configuration
@@ -113,8 +107,6 @@ If you still want to restore Drive sync in your fork, follow `OAUTH_SETUP_GUIDE.
 - ✅ Hardware acceleration options
 
 - ### What Needs Configuration
-- ⏸️ AI Model file (for upscaling to work)
-- ⏸️ AI Model file (for upscaling to work)
 - ⏸️ Video player integration (future work)
 - ⏸️ Real IPTV provider connections (future work)
 
@@ -132,12 +124,10 @@ If you still want to restore Drive sync in your fork, follow `OAUTH_SETUP_GUIDE.
 ### Phase 2: AI Model Setup (Optional, 15 min)
 1. Follow `AI_MODEL_SETUP_GUIDE.md`
 2. Configure and add model file
-3. Test AI upscaling behavior
 
 ### Phase 3: AI Model Setup (Optional, 10 min)
 1. Follow `AI_MODEL_SETUP_GUIDE.md`
 2. Download and place model file
-3. Enable AI upscaling
 4. Check GPU status and FPS estimates
 
 ### Phase 4: Future Development
@@ -164,7 +154,6 @@ flutter run
 - See `OAUTH_SETUP_GUIDE.md` for configuration
 - App won't crash, just shows error message
 
-### "Model not found" for AI upscaling
 - This is EXPECTED without model file
 - See `AI_MODEL_SETUP_GUIDE.md` for setup
 - Feature is automatically disabled

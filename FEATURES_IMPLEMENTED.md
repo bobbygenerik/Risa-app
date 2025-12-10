@@ -157,7 +157,7 @@ Located in: **Settings > Playback > Hardware Acceleration**
 | Advanced Playlist Mgmt | ✅ | Xtream + M3U |
 | Universal Search | 🔜 | Voice search ready |
 | 4K/HDR Support | ✅ | Hardware acceleration |
-| AI Upscaling | ❌ | Hardware dependent |
+
 | Adaptive Bitrate (ABR) | 🔜 | Player integration |
 | Multi-Audio/Subtitle | ✅ | OpenSubtitles ready |
 | Parental Controls | ✅ | PIN + Rating limits |
@@ -177,7 +177,7 @@ Located in: **Settings > Playback > Hardware Acceleration**
 ### Features Omitted (Would Cost Money ❌)
 1. **nDVR (Cloud Recording)** - Requires cloud storage subscription
 2. **Cloud Synchronization** - Requires backend server/Firebase subscription
-3. **AI Upscaling** - Requires expensive GPU processing or cloud API
+
 
 ---
 
@@ -268,7 +268,6 @@ flutter run -d linux
 All cloud-based features that would incur costs have been omitted as requested:
 - ❌ nDVR (would need cloud storage)
 - ❌ Cloud sync (would need backend servers)
-- ❌ AI upscaling (would need cloud processing)
 
 All integrated APIs are FREE:
 - ✅ Real-Debrid (free tier)

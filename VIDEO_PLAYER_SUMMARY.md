@@ -19,11 +19,9 @@
   - Volume controls (Up/Down)
   - Exit player (Back/Escape)
 
-- ✅ **AI Upscaling Integration**
   - Automatic AI service activation when model available
   - On-screen indicator showing AI status
   - Quality preset display
-  - Real-time upscaling indicator
 
 - ✅ **Custom UI Overlays**
   - Title and subtitle display
@@ -111,7 +109,6 @@
 5. **Launch Fullscreen**: Click video area or press Select
 6. **Video Player Opens**: Full-screen player with controls
 7. **Remote Control**: Use D-pad for playback control
-8. **AI Upscaling**: Automatically enabled if model loaded
 9. **Exit**: Press Back button to return
 
 ### Technical Flow
@@ -123,7 +120,6 @@ MiniPlayerScreen
             └─> VideoPlayerScreen
                  ├─> Initialize VideoPlayerController (network URL)
                  ├─> Initialize ChewieController (controls)
-                 ├─> Enable AI upscaling (if available)
                  ├─> Setup KeyboardListener (D-pad events)
                  └─> Display video with overlays
 ```
@@ -208,7 +204,6 @@ void _handleKeyPress(KeyEvent event) {
    - Show on any key press
 
 3. **AI Indicator** (Top-Right)
-   - AI upscaling badge
    - Quality preset display
    - Only shown when AI enabled
 
@@ -237,10 +232,8 @@ Automatically enabled via:
 - AndroidManifest hardware acceleration flag
 - Chewie performance optimizations
 
-### AI Upscaling
 
 Automatically integrates when:
-- AIUpscalingService has model loaded
 - isModelLoaded returns true
 - Service is enabled in settings
 
@@ -286,7 +279,6 @@ adb install build/app/outputs/flutter-apk/app-release.apk
    - Test Seek with Left/Right arrows
    - Press Back to exit
 
-4. **Test AI Upscaling** (if model added):
    - Enable in Settings → Playback
    - Play video
    - See AI badge in top-right
@@ -368,7 +360,6 @@ Your IPTV player now has:
 
 ✅ **Professional video playback** with Chewie
 ✅ **Full Android TV support** with D-pad navigation
-✅ **AI upscaling integration** for better quality
 ✅ **Hardware acceleration** for smooth playback
 ✅ **TV-friendly UI** with proper sizing
 ✅ **Focus management** for remote control

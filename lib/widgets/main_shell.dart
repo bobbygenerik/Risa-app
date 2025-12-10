@@ -116,17 +116,10 @@ class _MainShellState extends State<MainShell> {
             Color(0xFF0d1140),
           ],
         )),
-        child: Row(
+        child: Stack(
           children: [
-            SidebarNavigation(
-              activeTab: widget.activeTab,
-              currentTime: _currentTime,
-              onSearch: _showSearchDialog,
-              onFocusContent: _requestContentFocus,
-              onNavFocusRegistration: _setNavFocusRequester,
-              onExpandRegistration: _setSidebarExpander,
-            ),
-            Expanded(
+            // Content area - fills entire screen, content can show behind nav bar
+            Positioned.fill(
               child: FocusTraversalGroup(
                 policy: WidgetOrderTraversalPolicy(),
                 child: Focus(
@@ -145,6 +138,56 @@ class _MainShellState extends State<MainShell> {
                   ),
                 ),
               ),
+            ),
+            // Navigation bar overlayed on top - completely transparent
+            // Removed TopNavigationBar
+            // Positioned(
+            //   top: 0,
+            //   left: 0,
+            //   right: 0,
+            //   height: navBarHeight,
+            //   child: FocusTraversalGroup(
+            //     policy: WidgetOrderTraversalPolicy(),
+            //     child: TopNavigationBar(
+            //       activeTab: widget.activeTab ?? 'home',
+            //       tabs: [
+            //         NavTab(
+            //             id: 'home',
+            //             label: 'Live TV',
+            //             icon: Icons.live_tv,
+            //             route: '/home'),
+            //         NavTab(
+            //             id: 'movies',
+            //             label: 'Movies',
+            //             icon: Icons.movie,
+            //             route: '/movies'),
+            //         NavTab(
+            //             id: 'series',
+            //             label: 'Series',
+            //             icon: Icons.tv,
+            //             route: '/series'),
+            //       ],
+            //       currentTime: _currentTime,
+            //       showLogoAndTime: true,
+            //       onSearch: _showSearchDialog,
+            //       onFocusContent: _requestContentFocus,
+            //       onNavFocusRegistration: _setNavFocusRequester,
+            //     ),
+            //   ),
+            // ),
+            // Sidebar - positioned with higher z-index than content
+            Positioned(
+              top: 0,
+              bottom: 0,
+              left: 0,
+              child: SidebarNavigation(
+                  activeTab: widget.activeTab,
+                  currentTime: _currentTime,
+                  onSearch: _showSearchDialog,
+                  onFocusContent: _requestContentFocus,
+                  onNavFocusRegistration: _setNavFocusRequester,
+                  onExpandRegistration: _setSidebarExpander,
+                ),
             ),
           ],
         ),

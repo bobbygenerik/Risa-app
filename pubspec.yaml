@@ -36,9 +36,7 @@ dependencies:
   
   # Cloud sync dependencies removed (Drive integration omitted)
   
-  # On-Device AI Upscaling (FREE - no cloud costs)
-  tflite_flutter: ^0.12.1
-  image: ^4.3.0
+
 
   # Optional/native media plugins referenced in the codebase
   # media_kit: any  # DISABLED: causes CMake errors on Linux
@@ -70,10 +68,8 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-  # Assets for AI Upscaling
   assets:
     - assets/images/
-    - assets/models/
 
 
 

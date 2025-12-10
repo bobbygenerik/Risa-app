@@ -33,7 +33,12 @@ class _SSLSettingsScreenState extends State<SSLSettingsScreen> {
     double vScale(double value) => value * (screenHeight / 1080);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('SSL Certificate Settings')),
+      backgroundColor: const Color(0xFF050710),
+      appBar: AppBar(
+        title: const Text('SSL Certificate Settings'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
       body: ListView(
         padding: EdgeInsets.all(scale(16)),
         children: [

@@ -103,7 +103,6 @@ All services are free:
 ## Development Notes
 
 ### BrightScript Limitations
-- No TensorFlow Lite (can't do AI upscaling on Roku)
 - Limited JSON parsing (use roXMLElement instead)
 - Single-threaded execution
 - Memory constraints on older Roku models

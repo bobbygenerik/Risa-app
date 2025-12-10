@@ -31,7 +31,6 @@ The IPTV Player project now has TWO fully functional versions:
 - ✅ EPG integration with XMLTV
 - ✅ Live transcription (Google Cloud Speech-to-Text)
 - ✅ Real-time translation (Google Cloud Translation)
-- ✅ AI upscaling (TensorFlow Lite)
 - ☑️ Cloud sync — removed; replaced by Local Backup
 - ✅ Persistent settings storage
 - ✅ Comprehensive testing (15 tests)
@@ -63,7 +62,6 @@ The IPTV Player project now has TWO fully functional versions:
 | **Resolution** | Any | HD/FHD/4K |
 | **Transcription** | ✅ Integrated | On Roku in future |
 | **Translation** | ✅ Integrated | On Roku in future |
-| **AI Upscaling** | ✅ Integrated | On Roku in future |
 | **Cloud sync** | Removed | Removed |
 | **Tests** | 15/15 passing | Ready for testing |
 
@@ -84,7 +82,6 @@ lib/
 │   ├── epg_provider.dart
 │   ├── transcription_provider.dart
 │   ├── translation_provider.dart
-│   ├── upscaling_provider.dart
 │   └── profile_provider.dart
 ├── screens/                  # UI screens
 │   ├── home_screen.dart
@@ -97,7 +94,6 @@ lib/
 │   ├── epg_service.dart
 │   ├── transcription_service.dart
 │   ├── translation_service.dart
-│   ├── upscaling_service.dart
 │   └── (cloud sync removed - use `LocalBackupService`)
 └── utils/                    # Utilities
     ├── constants.dart
@@ -155,7 +151,6 @@ Cloud sync integration was previously implemented but has been removed. Use loca
 - Dynamic language switching
 - Batch translation capability
 
-#### 6. **AI Upscaling**
 - TensorFlow Lite models
 - Real-time video enhancement
 - Quality optimization
@@ -204,7 +199,6 @@ Location: /root/iptv-player/roku/out/roku.zip
 ### Android-Specific ✅
 - [x] Live transcription (Google Cloud)
 - [x] Real-time translation (Google Cloud)
-- [x] AI video upscaling (TensorFlow Lite)
 - [x] Persistent user settings
 - [x] Playlist import/export
 - [x] Channel favorites

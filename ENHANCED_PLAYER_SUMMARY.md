@@ -19,7 +19,6 @@ All features from **Option 3** (Subtitles, Multiple Audio Tracks, Picture-in-Pic
 - ✅ Picture-in-Picture mode (Android 8.0+)
 - ✅ Live transcription overlay with real-time display
 - ✅ TV remote control support (all keys)
-- ✅ AI upscaling integration
 - ✅ Custom overlays and controls
 - ✅ Auto-hiding controls with timer
 - ✅ Error handling with retry

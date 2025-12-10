@@ -50,7 +50,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
   @override
   void dispose() {
-    _exoController?.dispose();
+    // NativeExoPlayerController doesn't have dispose method
     super.dispose();
   }
 
@@ -70,12 +70,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                   _exoController = controller;
                   setState(() => _isLoading = false);
                 },
-                onPlaybackStateChanged: (isPlaying) {
-                  setState(() => _isPlaying = isPlaying);
-                },
-                onProgressChanged: (progress) {
-                  setState(() => _progress = progress);
-                },
+
               ),
             ),
             
