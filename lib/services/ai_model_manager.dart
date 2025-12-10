@@ -21,7 +21,11 @@ class AIModelManager extends ChangeNotifier {
 
   /// Initialize the model manager
   Future<void> initialize() async {
-    await _checkAllModels();
+    try {
+      await _checkAllModels();
+    } catch (e) {
+      debugPrint('AIModelManager initialization error: $e');
+    }
     notifyListeners();
   }
 
@@ -68,7 +72,12 @@ class AIModelManager extends ChangeNotifier {
   /// Check status of all models
   Future<void> _checkAllModels() async {
     for (final model in AIModel.allModels) {
-      await _checkModelStatus(model);
+      try {
+        await _checkModelStatus(model);
+      } catch (e) {
+        debugPrint('Error checking model ${model.id}: $e');
+        _modelStatus[model.id] = ModelDownloadStatus.error;
+      }
     }
   }
 

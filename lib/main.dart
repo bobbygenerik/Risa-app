@@ -48,6 +48,7 @@ import 'package:iptv_player/screens/search_screen.dart';
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/profile_provider.dart';
+import 'package:iptv_player/providers/settings_provider.dart';
 import 'package:iptv_player/services/background_task_manager.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/services/ssl_handler.dart';
@@ -540,6 +541,13 @@ class _MyAppState extends State<MyApp> {
       MultiProvider(
         providers: [
           ChangeNotifierProvider.value(value: _profileProvider),
+          ChangeNotifierProvider(
+            create: (_) {
+              final provider = SettingsProvider();
+              provider.initialize();
+              return provider;
+            },
+          ),
           ChangeNotifierProvider(
             create: (_) => ContentProvider()..initialize(),
           ),

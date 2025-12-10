@@ -36,14 +36,14 @@ class VoiceSearchService with ChangeNotifier {
             notifyListeners();
           },
         );
-        // Don't notify during initialization - widgets will read initial state
       } else {
         _lastError = 'Microphone permission denied';
-        // Don't notify during initialization
+        _isAvailable = false;
       }
     } catch (e) {
-      _lastError = e.toString();
-      // Don't notify during initialization
+      debugPrint('VoiceSearchService initialization error: $e');
+      _lastError = 'Voice search unavailable';
+      _isAvailable = false;
     }
   }
 

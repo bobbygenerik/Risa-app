@@ -10,7 +10,7 @@ class SettingsProvider extends ChangeNotifier {
   bool _hardwareAcceleration = true;
   bool _hardwareDecoding = true;
   bool _hardwarePostProcessing = true;
-  bool _autoFrameRate = true;
+
   String _decoderType = 'Auto';
   String _renderingEngine = 'Auto';
 
@@ -41,7 +41,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get hardwareAcceleration => _hardwareAcceleration;
   bool get hardwareDecoding => _hardwareDecoding;
   bool get hardwarePostProcessing => _hardwarePostProcessing;
-  bool get autoFrameRate => _autoFrameRate;
+
   String get decoderType => _decoderType;
   String get renderingEngine => _renderingEngine;
   String get audioDecoderType => _audioDecoderType;
@@ -85,7 +85,7 @@ class SettingsProvider extends ChangeNotifier {
     _hardwareDecoding = prefs.getBool('hardware_decoding') ?? true;
     _hardwarePostProcessing =
         prefs.getBool('hardware_postprocessing') ?? true;
-    _autoFrameRate = prefs.getBool('auto_frame_rate') ?? true;
+
     _decoderType = prefs.getString('decoder_type') ?? 'Auto';
     _renderingEngine = prefs.getString('rendering_engine') ?? 'Auto';
 
@@ -133,12 +133,7 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setAutoFrameRate(bool value) async {
-    if (_autoFrameRate == value) return;
-    _autoFrameRate = value;
-    await _prefs?.setBool('auto_frame_rate', value);
-    notifyListeners();
-  }
+
 
   Future<void> setDecoderType(String value) async {
     if (_decoderType == value) return;

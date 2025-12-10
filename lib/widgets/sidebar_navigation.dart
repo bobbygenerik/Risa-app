@@ -138,18 +138,13 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
     _isNavigating = true;
     _focusedTabIndex = targetIndex;
     
-    _tabFocusNodes[targetIndex].requestFocus();
-    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _tabFocusNodes[targetIndex].requestFocus();
-        Future.delayed(const Duration(milliseconds: 150), () {
-          if (mounted) {
-            _isNavigating = false;
-          }
-        });
+      _tabFocusNodes[targetIndex].requestFocus();
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) {
+          _isNavigating = false;
+        }
       });
     });
   }
@@ -161,18 +156,10 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
     return Focus(
       focusNode: _tabFocusNodes[index],
       onFocusChange: (hasFocus) {
-        if (_isNavigating && !hasFocus) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted || !_isNavigating) return;
-            _tabFocusNodes[_focusedTabIndex].requestFocus();
-          });
-          return;
-        }
-        
         if (hasFocus) {
           _focusedTabIndex = index;
+          setState(() {});
         }
-        setState(() {});
       },
       onKeyEvent: (node, event) {
         if (event is! KeyDownEvent) return KeyEventResult.ignored;

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import '../models/channel.dart';
-import '../widgets/native_exoplayer.dart';
 import '../widgets/live_subtitle_overlay.dart';
 import '../services/integrated_transcription_service.dart';
+import '../providers/settings_provider.dart';
 import '../utils/app_theme.dart';
 
 enum SubtitleMode { off, regular, liveTranslation }
@@ -31,12 +32,12 @@ class EnhancedVideoPlayerScreen extends StatefulWidget {
 }
 
 class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
-  NativeExoPlayerController? _exoController;
+  VlcPlayerController? _vlcController;
   bool _isLoading = true;
   bool _showControls = true;
   bool _isPlaying = false;
   bool _showGuide = false;
-  final double _progress = 0.0;
+  double _progress = 0.0;
   SubtitleMode _subtitleMode = SubtitleMode.off;
   IntegratedTranscriptionService? _transcriptionService;
   
@@ -44,7 +45,71 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   void initState() {
     super.initState();
     _transcriptionService = Provider.of<IntegratedTranscriptionService>(context, listen: false);
+    _initializePlayer();
     _hideControlsAfterDelay();
+  }
+
+  void _initializePlayer() async {
+    final url = widget.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '';
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
+    await settings.initialize();
+    
+    final hwAccel = settings.hardwareAcceleration;
+    final hwDecoding = settings.hardwareDecoding;
+    final rememberPosition = settings.rememberPlaybackPosition;
+    
+    _vlcController = VlcPlayerController.network(
+      url,
+      hwAcc: hwAccel ? HwAcc.full : HwAcc.disabled,
+      autoPlay: true,
+      options: VlcPlayerOptions(
+        advanced: VlcAdvancedOptions([
+          if (hwDecoding) VlcAdvancedOptions.networkCaching(300),
+        ]),
+      ),
+    );
+    
+    await _vlcController!.initialize();
+    setState(() => _isLoading = false);
+    
+    // Restore saved position for VOD content
+    if (!widget.isLive && rememberPosition) {
+      final savedPosition = prefs.getInt('position_${widget.title ?? url}');
+      if (savedPosition != null && savedPosition > 0) {
+        await _vlcController!.seekTo(Duration(milliseconds: savedPosition));
+      }
+    }
+    
+    // Listen to player state changes
+    _vlcController!.addListener(() {
+      if (mounted) {
+        final isPlaying = _vlcController!.value.isPlaying;
+        final position = _vlcController!.value.position;
+        final duration = _vlcController!.value.duration;
+        
+        setState(() {
+          _isPlaying = isPlaying;
+          if (duration.inMilliseconds > 0) {
+            _progress = position.inMilliseconds / duration.inMilliseconds;
+          }
+        });
+        
+        // Handle video ended
+        if (!isPlaying && position == duration && duration.inMilliseconds > 0) {
+          _handleVideoEnded();
+        }
+      }
+    });
+  }
+  
+  void _handleVideoEnded() async {
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
+    final autoPlayNext = settings.autoPlayNextEpisode;
+    
+    // Only for VOD content, not live streams
+    if (!widget.isLive && autoPlayNext) {
+      // TODO: Implement next episode logic for series
+    }
   }
 
   void _hideControlsAfterDelay() {
@@ -60,34 +125,36 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
   void _togglePlayPause() {
     if (_isPlaying) {
-      _exoController?.pause();
-      setState(() => _isPlaying = false);
+      _vlcController?.pause();
     } else {
-      _exoController?.play();
-      setState(() => _isPlaying = true);
+      _vlcController?.play();
     }
   }
 
   void _rewind() async {
-    if (_exoController != null) {
-      final currentPos = await _exoController!.getPosition();
-      final newPos = (currentPos - 10000).clamp(0, currentPos);
-      await _exoController!.seekTo(newPos);
+    if (_vlcController != null) {
+      final currentPos = _vlcController!.value.position;
+      final newPos = currentPos - const Duration(seconds: 10);
+      if (newPos.inMilliseconds > 0) {
+        await _vlcController!.seekTo(newPos);
+      }
     }
   }
 
   void _fastForward() async {
-    if (_exoController != null) {
-      final currentPos = await _exoController!.getPosition();
-      final duration = await _exoController!.getDuration();
-      final newPos = (currentPos + 10000).clamp(0, duration);
-      await _exoController!.seekTo(newPos);
+    if (_vlcController != null) {
+      final currentPos = _vlcController!.value.position;
+      final duration = _vlcController!.value.duration;
+      final newPos = currentPos + const Duration(seconds: 10);
+      if (newPos < duration) {
+        await _vlcController!.seekTo(newPos);
+      }
     }
   }
 
   void _toggleAudio() async {
-    if (_exoController != null) {
-      final tracks = await _exoController!.listAudioTracks();
+    if (_vlcController != null) {
+      final tracks = await _vlcController!.getAudioTracks();
       if (tracks.isNotEmpty) {
         _showAudioTrackDialog(tracks);
       }
@@ -208,8 +275,23 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
   @override
   void dispose() {
+    _saveCurrentPosition();
     _transcriptionService?.stopTranscription();
+    _vlcController?.dispose();
     super.dispose();
+  }
+  
+  void _saveCurrentPosition() async {
+    if (!widget.isLive && _vlcController != null) {
+      final settings = Provider.of<SettingsProvider>(context, listen: false);
+      
+      if (settings.rememberPlaybackPosition) {
+        final position = _vlcController!.value.position;
+        final url = widget.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '';
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt('position_${widget.title ?? url}', position.inMilliseconds);
+      }
+    }
   }
 
   @override
@@ -221,16 +303,16 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         child: Stack(
           children: [
             // Video player
-            Center(
-              child: NativeExoPlayer(
-                videoUrl: widget.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '',
-                autoPlay: true,
-                onCreated: (controller) {
-                  _exoController = controller;
-                  setState(() => _isLoading = false);
-                },
+            if (_vlcController != null)
+              Center(
+                child: VlcPlayer(
+                  controller: _vlcController!,
+                  aspectRatio: 16 / 9,
+                  placeholder: const Center(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  ),
+                ),
               ),
-            ),
             
             if (_isLoading)
               const Center(child: CircularProgressIndicator(color: Colors.white)),
@@ -407,7 +489,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     );
   }
 
-  void _showAudioTrackDialog(List<Map<String, dynamic>> tracks) {
+  void _showAudioTrackDialog(Map<dynamic, dynamic> tracks) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -415,25 +497,15 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         title: const Text('Audio Tracks', style: TextStyle(color: Colors.white)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: tracks.map((track) => ListTile(
+          children: tracks.entries.map((entry) => ListTile(
             title: Text(
-              track['label'] ?? 'Track ${track['trackIndex']}',
+              entry.value ?? 'Track ${entry.key}',
               style: const TextStyle(color: Colors.white),
             ),
-            subtitle: Text(
-              track['language'] ?? '',
-              style: const TextStyle(color: Colors.grey),
-            ),
             onTap: () async {
-              final navContext = context;
-              await _exoController?.switchAudioByIndices(
-                rendererIndex: track['rendererIndex'] ?? 0,
-                groupIndex: track['groupIndex'] ?? 0,
-                trackIndex: track['trackIndex'] ?? 0,
-              );
+              await _vlcController?.setAudioTrack(entry.key);
               if (mounted) {
-                // ignore: use_build_context_synchronously
-                Navigator.pop(navContext);
+                Navigator.pop(context);
               }
             },
           )).toList(),

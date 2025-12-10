@@ -1067,7 +1067,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             imageUrl: heroImage,
             fit: BoxFit.cover,
             alignment: Alignment.center,
-            placeholder: (_, __) => _buildShimmerHeroBackground(),
+            placeholder: (_, __) => _buildDefaultHeroBackground(),
             errorWidget: (_, __, ___) => _buildDefaultHeroBackground(),
             imageBuilder: (context, imageProvider) {
               if (!_heroImageReady) {

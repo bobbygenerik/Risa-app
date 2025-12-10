@@ -16,7 +16,7 @@ dependencies:
 
   cupertino_icons: ^1.0.8
   # Video players
-  video_player: ^2.7.2  # Android, iOS, Web support
+  flutter_vlc_player: ^7.4.2  # VLC-based player for better IPTV support
   http: ^1.2.0
   dio: ^5.7.0
   provider: ^6.1.5+1
@@ -43,7 +43,7 @@ dependencies:
   # Optional/native media plugins referenced in the codebase
   # media_kit: any  # DISABLED: causes CMake errors on Linux
   # media_kit_video: any  # DISABLED: causes CMake errors on Linux
-  # flutter_vlc_player: any  # DISABLED: use video_player instead
+  # video_player: ^2.7.2  # DISABLED: switched to VLC for better IPTV support
   # vosk_flutter: any  # OPTIONAL: removed to avoid forcing transitive downgrades
   
   # Subtitles & Multiple Audio Tracks - REMOVED subtitle_wrapper_package (causes UnimplementedError on Linux)

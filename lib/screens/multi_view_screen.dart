@@ -1,14 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:video_player/video_player.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_vlc_player/flutter_vlc_player.dart';
+import 'package:provider/provider.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/screens/enhanced_video_player_screen.dart';
 import 'package:iptv_player/widgets/channel_selection_dialog.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
+import 'package:iptv_player/providers/settings_provider.dart';
 
 /// Multi-view screen for watching up to 4 streams simultaneously
 /// Supports 1, 2, or 4 player grid layouts with audio switching
@@ -28,7 +29,7 @@ class MultiViewScreen extends StatefulWidget {
 
 class _MultiViewScreenState extends State<MultiViewScreen> {
   late List<Channel> _channelsList;
-  final List<VideoPlayerController?> _controllers = [null, null, null, null];
+  final List<VlcPlayerController?> _controllers = [null, null, null, null];
   final List<bool> _isInitialized = [false, false, false, false];
   final List<bool> _hasError = [false, false, false, false];
 
@@ -70,19 +71,22 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
   }
 
   Future<void> _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
+    await settings.initialize();
     setState(() {
-      _hardwareAcceleration = prefs.getBool('hardware_acceleration') ?? true;
-      _videoBufferSize = prefs.getDouble('video_buffer_size') ?? 50;
-      _videoQuality = prefs.getString('video_quality') ?? 'Auto';
+      _hardwareAcceleration = settings.hardwareAcceleration;
+      _videoBufferSize = settings.videoBufferSize;
+      _videoQuality = settings.videoQuality;
     });
   }
 
   Future<void> _initializePlayers() async {
     for (int i = 0; i < _channelsList.length && i < 4; i++) {
       try {
-        _controllers[i] = VideoPlayerController.networkUrl(
-          Uri.parse(_channelsList[i].url),
+        _controllers[i] = VlcPlayerController.network(
+          _channelsList[i].url,
+          hwAcc: _hardwareAcceleration ? HwAcc.full : HwAcc.disabled,
+          autoPlay: true,
         );
 
         await _controllers[i]!.initialize();
@@ -90,9 +94,9 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
 
         // Mute all except the active audio player
         if (i != _activeAudioPlayer) {
-          await _controllers[i]!.setVolume(0.0);
+          await _controllers[i]!.setVolume(0);
         } else {
-          await _controllers[i]!.setVolume(1.0);
+          await _controllers[i]!.setVolume(100);
         }
 
         setState(() {
@@ -149,10 +153,10 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
     if (_controllers[index] == null || !_isInitialized[index]) return;
 
     // Mute old active player
-    _controllers[_activeAudioPlayer]?.setVolume(0.0);
+    _controllers[_activeAudioPlayer]?.setVolume(0);
 
     // Unmute new active player
-    _controllers[index]?.setVolume(1.0);
+    _controllers[index]?.setVolume(100);
 
     setState(() {
       _activeAudioPlayer = index;
@@ -226,8 +230,10 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
       // Initialize the new player
       try {
         _controllers[index]?.dispose();
-        _controllers[index] = VideoPlayerController.networkUrl(
-          Uri.parse(channel.url),
+        _controllers[index] = VlcPlayerController.network(
+          channel.url,
+          hwAcc: _hardwareAcceleration ? HwAcc.full : HwAcc.disabled,
+          autoPlay: true,
         );
 
         await _controllers[index]!.initialize();
@@ -235,9 +241,9 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
 
         // Mute by default unless it's the active audio player
         if (index != _activeAudioPlayer) {
-          await _controllers[index]!.setVolume(0.0);
+          await _controllers[index]!.setVolume(0);
         } else {
-          await _controllers[index]!.setVolume(1.0);
+          await _controllers[index]!.setVolume(100);
         }
 
         setState(() {
@@ -274,8 +280,8 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
           break;
         case LogicalKeyboardKey.keyM:
           // Mute/unmute focused player
-          final volume = _controllers[_focusedPlayer]?.value.volume ?? 0.0;
-          _controllers[_focusedPlayer]?.setVolume(volume > 0 ? 0.0 : 1.0);
+          final volume = _controllers[_focusedPlayer]?.value.volume ?? 0;
+          _controllers[_focusedPlayer]?.setVolume(volume > 0 ? 0 : 100);
           _startControlsTimer();
           break;
         case LogicalKeyboardKey.select:
@@ -474,9 +480,9 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
             // Video player
             if (isInitialized && !hasError && controller != null)
               Center(
-                child: AspectRatio(
-                  aspectRatio: controller.value.aspectRatio,
-                  child: VideoPlayer(controller),
+                child: VlcPlayer(
+                  controller: controller,
+                  aspectRatio: 16 / 9,
                 ),
               ),
 
