@@ -129,6 +129,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   Widget _buildSubtitleMenu() {
     return Dialog(
       backgroundColor: Colors.transparent,
+        elevation: 0,
       child: Container(
         constraints: const BoxConstraints(maxWidth: 280),
         decoration: BoxDecoration(

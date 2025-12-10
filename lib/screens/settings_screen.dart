@@ -47,6 +47,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
+        elevation: 0,
       body: PopScope(
         canPop: false,
         onPopInvoked: (didPop) {

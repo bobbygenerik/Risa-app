@@ -101,7 +101,7 @@ class _SearchScreenState extends State<SearchScreen>
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFF050710),
+        color: AppTheme.darkBackground,
       ),
       child: Column(
         children: [

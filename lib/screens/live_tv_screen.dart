@@ -178,11 +178,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   late Size _screenSize;
 
+  @override
   Widget build(BuildContext context) {
     _screenSize = MediaQuery.of(context).size;
     final body = Container(
       decoration: const BoxDecoration(
-        color: Color(0xFF050710),
+        color: AppTheme.darkBackground,
       ),
       child: Consumer2<ChannelProvider, EpgService>(
         builder: (context, channelProvider, epgService, _) {

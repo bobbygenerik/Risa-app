@@ -382,7 +382,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                   curve: TVFocusStyle.animationCurve,
                   margin: EdgeInsets.all(context.tvSpacing(1)),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF050710),
+                    color: const AppTheme.darkBackground,
                     boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
                   ),
                   child: Center(
@@ -521,7 +521,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: const BoxDecoration(
-                    color: Color(0xFF050710),
+                    color: AppTheme.darkBackground,
                   ),
                   child: Row(
                     children: [

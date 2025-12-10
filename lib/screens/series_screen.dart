@@ -281,10 +281,10 @@ class _SeriesScreenState extends State<SeriesScreen>
 
   Widget _buildEmptyState(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF050710),
+      backgroundColor: const AppTheme.darkBackground,
       body: Container(
         decoration: const BoxDecoration(
-          color: Color(0xFF050710),
+          color: AppTheme.darkBackground,
         ),
         child: Center(
           child: Column(
@@ -515,7 +515,7 @@ class _SeriesScreenState extends State<SeriesScreen>
   Widget _buildPlaceholder(String title) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF050710),
+        color: const AppTheme.darkBackground,
       ),
       child: Center(
         child: Column(
@@ -960,7 +960,7 @@ class _SeriesScreenState extends State<SeriesScreen>
                 width: screenSize.width * 0.45,
                 height: heroHeight,
                 child: Container(
-                  color: const Color(0xFF050710),
+                  color: const AppTheme.darkBackground,
                 ),
               ),
               // Hero image starting at 45% from left
@@ -994,9 +994,9 @@ class _SeriesScreenState extends State<SeriesScreen>
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                         colors: [
-                          const Color(0xFF050710),
-                          const Color(0xFF050710).withOpacity(0.8),
-                          const Color(0xFF050710).withOpacity(0.4),
+                          const AppTheme.darkBackground,
+                          const AppTheme.darkBackground.withOpacity(0.8),
+                          const AppTheme.darkBackground.withOpacity(0.4),
                           Colors.transparent,
                         ],
                         stops: const [0.0, 0.25, 0.6, 1.0],
@@ -1018,9 +1018,9 @@ class _SeriesScreenState extends State<SeriesScreen>
                         begin: Alignment.bottomCenter,
                         end: Alignment.topCenter,
                         colors: [
-                          const Color(0xFF050710),
-                          const Color(0xFF050710).withOpacity(0.7),
-                          const Color(0xFF050710).withOpacity(0.3),
+                          const AppTheme.darkBackground,
+                          const AppTheme.darkBackground.withOpacity(0.7),
+                          const AppTheme.darkBackground.withOpacity(0.3),
                           Colors.transparent,
                         ],
                         stops: const [0.0, 0.4, 0.7, 1.0],
@@ -1127,7 +1127,7 @@ class _SeriesScreenState extends State<SeriesScreen>
   Widget _buildBannerPlaceholder() {
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFF050710),
+        color: AppTheme.darkBackground,
       ),
     );
   }

@@ -368,6 +368,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _screenSize = MediaQuery.of(context).size;
     return Scaffold(
       backgroundColor: Colors.transparent,
+        elevation: 0,
       body: PopScope(
         canPop: false,
         // ignore: deprecated_member_use

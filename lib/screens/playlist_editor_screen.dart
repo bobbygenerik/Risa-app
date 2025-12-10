@@ -336,9 +336,10 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
     if (_isLoading) {
       return Scaffold(
         backgroundColor: Colors.transparent,
+        elevation: 0,
         body: Container(
           decoration: const BoxDecoration(
-            color: Color(0xFF050710),
+            color: AppTheme.darkBackground,
           ),
           child: const Center(
             child: CircularProgressIndicator(color: AppTheme.primaryBlue),
@@ -349,6 +350,7 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
+        elevation: 0,
       appBar: AppBar(
         backgroundColor: Colors.white.withAlpha((0.08 * 255).round()),
         title: const Text('Edit Playlist'),
@@ -372,7 +374,7 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
       ),
       body: Container(
         decoration: const BoxDecoration(
-          color: Color(0xFF050710),
+          color: AppTheme.darkBackground,
         ),
         child: SingleChildScrollView(
           padding: EdgeInsets.all(context.tvSpacing(32)),

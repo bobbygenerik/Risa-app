@@ -139,10 +139,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       },
       child: Container(
         decoration: const BoxDecoration(
-          color: Color(0xFF050710),
+          color: AppTheme.darkBackground,
         ),
         child: Scaffold(
           backgroundColor: Colors.transparent,
+        elevation: 0,
           appBar: _buildGlassAppBar(),
           body: SafeArea(
             child: Center(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:iptv_player/services/ssl_handler.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 
@@ -27,64 +28,98 @@ class _SSLSettingsScreenState extends State<SSLSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-    double scale(double value) => value * (screenWidth / 1920);
-    double vScale(double value) => value * (screenHeight / 1080);
-
     return Scaffold(
-      backgroundColor: const Color(0xFF050710),
+      backgroundColor: AppTheme.darkBackground,
       appBar: AppBar(
         title: const Text('SSL Certificate Settings'),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/settings'),
+        ),
       ),
-      body: ListView(
-        padding: EdgeInsets.all(scale(16)),
-        children: [
-          Card(
-            child: Padding(
-              padding: EdgeInsets.all(scale(16)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.security, color: AppTheme.accentOrange, size: scale(24)),
-                      SizedBox(width: scale(12)),
-                      Text(
-                        'Security Warning',
-                        style: TextStyle(
-                          fontSize: scale(18),
-                          fontWeight: FontWeight.bold,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSizes.xxl),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Warning card
+            Card(
+              color: AppTheme.cardBackground,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                side: BorderSide(color: AppTheme.accentOrange.withValues(alpha: 0.3)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(AppSizes.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.security, color: AppTheme.accentOrange, size: AppSizes.iconMd),
+                        const SizedBox(width: AppSizes.md),
+                        Text(
+                          'Security Warning',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.accentOrange,
+                          ),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSizes.md),
+                    Text(
+                      'Many IPTV providers use self-signed or misconfigured SSL certificates. '
+                      'Allowing all certificates enables compatibility but reduces security.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.textSecondary,
                       ),
-                    ],
-                  ),
-                  SizedBox(height: vScale(12)),
-                  Text(
-                    'Many IPTV providers use self-signed or misconfigured SSL certificates. '
-                    'Allowing all certificates enables compatibility but reduces security.',
-                    style: TextStyle(color: AppTheme.textSecondary, fontSize: scale(16)),
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          SizedBox(height: vScale(16)),
-          SwitchListTile(
-            title: Text('Allow All SSL Certificates', style: TextStyle(fontSize: scale(16))),
-            subtitle: Text(
-              'Enable for IPTV compatibility (recommended for most users)',
-              style: TextStyle(fontSize: scale(14)),
+            const SizedBox(height: AppSizes.xl),
+            
+            // Settings card
+            Card(
+              color: AppTheme.cardBackground,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                side: BorderSide(color: AppTheme.divider),
+              ),
+              child: SwitchListTile(
+                contentPadding: const EdgeInsets.all(AppSizes.lg),
+                title: Text(
+                  'Allow All SSL Certificates',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                subtitle: Padding(
+                  padding: const EdgeInsets.only(top: AppSizes.sm),
+                  child: Text(
+                    'Enable for IPTV compatibility (recommended for most users)',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                ),
+                value: _allowAll,
+                activeColor: AppTheme.primaryBlue,
+                onChanged: (value) async {
+                  await SSLHandler.setAllowAllCertificates(value);
+                  setState(() => _allowAll = value);
+                },
+              ),
             ),
-            value: _allowAll,
-            onChanged: (value) async {
-              await SSLHandler.setAllowAllCertificates(value);
-              setState(() => _allowAll = value);
-            },
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

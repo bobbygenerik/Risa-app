@@ -212,7 +212,7 @@ class IntegratedTranscriptionService extends ChangeNotifier {
   Future<void> _translateEntry(SubtitleEntry entry) async {
     try {
       // Detect source language
-      final languageId = OnDeviceLanguageIdentification();
+      final languageId = GoogleMlKit.nlp.languageIdentifier();
       final detectedLanguage = await languageId.identifyLanguage(entry.originalText);
       
       // If already English or detection failed, no translation needed

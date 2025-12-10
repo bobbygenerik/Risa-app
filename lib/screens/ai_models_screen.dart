@@ -51,13 +51,10 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
   Widget _buildContent() {
     return Scaffold(
       backgroundColor: Colors.transparent,
+        elevation: 0,
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF050710), Color(0xFF0d1140)],
-          ),
+          color: AppTheme.darkBackground,
         ),
         child: Consumer<AIModelManager>(
           builder: (context, modelManager, _) {
@@ -153,7 +150,12 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
 
     return Card(
       color: AppTheme.cardBackground,
+      elevation: 0,
       margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+        side: BorderSide(color: AppTheme.divider),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

@@ -218,23 +218,29 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppTheme.darkBackground,
       appBar: AppBar(
         title: const Text('Manage Playlists'),
-        backgroundColor: Colors.white.withAlpha((0.08 * 255).round()),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/settings'),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
             tooltip: 'Add New Playlist',
             onPressed: () {
-              context.go('/settings/playlist-login');
+              context.go('/playlist-login');
             },
           ),
         ],
       ),
       body: Container(
         decoration: const BoxDecoration(
-          color: Color(0xFF050710),
+          color: AppTheme.darkBackground,
         ),
         child: _isLoading
             ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryBlue))
@@ -289,7 +295,12 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
 
         return Card(
           color: AppTheme.cardBackground,
+          elevation: 0,
           margin: const EdgeInsets.only(bottom: AppSizes.md),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+            side: BorderSide(color: AppTheme.divider),
+          ),
           child: ListTile(
             contentPadding: const EdgeInsets.all(AppSizes.md),
             leading: Container(

@@ -348,7 +348,7 @@ class _EPGScreenState extends State<EPGScreen>
 
             return Container(
               decoration: const BoxDecoration(
-                color: Color(0xFF050710),
+                color: AppTheme.darkBackground,
               ),
               child: Stack(
                 children: [
@@ -400,7 +400,7 @@ class _EPGScreenState extends State<EPGScreen>
   Widget _buildEmptyState(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFF050710),
+        color: AppTheme.darkBackground,
       ),
       child: Center(
         child: ConstrainedBox(
@@ -1211,7 +1211,7 @@ class _EPGScreenState extends State<EPGScreen>
                       return Container(
                         height: 200,
                         decoration: const BoxDecoration(
-                          color: Color(0xFF050710),
+                          color: AppTheme.darkBackground,
                         ),
                         child: const Icon(Icons.dvr, size: 64),
                       );

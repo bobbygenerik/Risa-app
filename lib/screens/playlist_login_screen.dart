@@ -453,7 +453,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          color: Color(0xFF050710),
+          color: AppTheme.darkBackground,
         ),
         child: SafeArea(
           child: LayoutBuilder(

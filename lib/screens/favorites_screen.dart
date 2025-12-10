@@ -52,9 +52,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> with ContentFocusRegi
 
           return Scaffold(
             backgroundColor: Colors.transparent,
+        elevation: 0,
             body: Container(
               decoration: const BoxDecoration(
-                color: Color(0xFF050710),
+                color: AppTheme.darkBackground,
               ),
               child: Column(
               children: [

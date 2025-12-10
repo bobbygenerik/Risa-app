@@ -28,6 +28,8 @@ import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/screens/epg_screen.dart';
 import 'package:iptv_player/screens/settings_screen.dart';
 import 'package:iptv_player/screens/playlist_editor_screen.dart';
+import 'package:iptv_player/screens/playlist_manager_screen.dart';
+import 'package:iptv_player/screens/ssl_settings_screen.dart';
 import 'package:iptv_player/screens/edit_profile_screen.dart';
 import 'package:iptv_player/screens/recordings_screen.dart';
 import 'package:iptv_player/screens/ai_models_screen.dart';
@@ -953,6 +955,20 @@ final _router = GoRouter(
       pageBuilder: (context, state) => _fadeSlidePage(
         key: state.pageKey,
         child: const PlaylistEditorScreen(),
+      ),
+    ),
+    GoRoute(
+      path: '/playlist-manager',
+      pageBuilder: (context, state) => _fadeSlidePage(
+        key: state.pageKey,
+        child: const PlaylistManagerScreen(),
+      ),
+    ),
+    GoRoute(
+      path: '/ssl-settings',
+      pageBuilder: (context, state) => _fadeSlidePage(
+        key: state.pageKey,
+        child: const SSLSettingsScreen(),
       ),
     ),
     GoRoute(
