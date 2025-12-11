@@ -317,7 +317,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final heroImage = _resolveHeroImage(currentProgram);
     final screenSize = MediaQuery.of(context).size;
     final isTV = screenSize.width >= 1920 || screenSize.height >= 1080;
-    final heroHeight = screenSize.height;
+    final heroHeight = screenSize.height * 0.75;
     final sidebarWidth = AppSizes.sidebarWidth;
 
     return Focus(
@@ -457,7 +457,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               // Featured info (aligned with sidebar when at top)
               Positioned(
                 bottom: heroHeight * 0.35,
-                left: sidebarWidth + AppSizes.lg,
+                left: sidebarWidth + 8,
                 width: screenSize.width * 0.4,
                 child: Opacity(
                   opacity: (1.0 - (scrollProgress * 2.0)).clamp(0.0, 1.0),
@@ -473,16 +473,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   child: _buildChannelLogo(context, featuredChannel),
                 ),
               ),
-              // LIVE badge (fades out as user scrolls)
-              if (currentProgram != null)
-                Positioned(
-                  bottom: heroHeight * 0.35,
-                  right: AppSizes.lg,
-                  child: Opacity(
-                    opacity: 1.0 - scrollProgress,
-                    child: _buildLiveBadge(context),
-                  ),
-                ),
+
             ],
           );
         },
@@ -550,15 +541,38 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 : Container(),
           ),
           SizedBox(height: context.tvSpacing(4)),
-          // Time range - fixed height
+          // Time range with LIVE badge - fixed height
           SizedBox(
             height: context.tvTextSize(13) * 1.4,
-            child: Text(
-              timeRange,
-              style: TextStyle(
-                color: AppTheme.textSecondary,
-                fontSize: context.tvTextSize(13),
-              ),
+            child: Row(
+              children: [
+                if (program != null) ..[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppTheme.accentRed,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      'LIVE',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: context.tvTextSize(10),
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Text(
+                  timeRange,
+                  style: TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: context.tvTextSize(13),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -594,27 +608,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
-  Widget _buildLiveBadge(BuildContext context) {
-    return Container(
-      height: 40,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppTheme.accentRed,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Center(
-        child: Text(
-          'LIVE',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: context.tvTextSize(14),
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.5,
-          ),
-        ),
-      ),
-    );
-  }
+
 
   String? _resolveHeroImage(Program? program) {
     // Try program image first
@@ -806,6 +800,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 event.logicalKey == LogicalKeyboardKey.enter ||
                 event.logicalKey == LogicalKeyboardKey.space) {
               context.push('/player', extra: channel);
+              return KeyEventResult.handled;
+            }
+            if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
               return KeyEventResult.handled;
             }
           }
@@ -1130,7 +1127,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Widget _buildSkeletonLoader() {
     final screenSize = MediaQuery.of(context).size;
-    final heroHeight = screenSize.height * 0.65;
+    final heroHeight = screenSize.height * 0.75;
     final cardWidth = screenSize.width / 5.5;
     final cardHeight = cardWidth * 0.57;
 
@@ -1149,7 +1146,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         // Info box skeleton
         Positioned(
           bottom: heroHeight * 0.20,
-          left: 120,
+          left: 56,
           width: screenSize.width * 0.33,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
