@@ -425,7 +425,7 @@ class _MyAppState extends State<MyApp> {
     // Check if this is a new install or updated version
     final lastVersion = prefs.getString('app_version');
     const currentVersion =
-        '2.0.1'; // Increment this when you want to clear old data
+        '2.0.2'; // Increment this when you want to clear old data
 
     if (lastVersion != currentVersion) {
       // Clear old playlist data

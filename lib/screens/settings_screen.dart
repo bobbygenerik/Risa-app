@@ -349,14 +349,8 @@ class _SettingsScreenState extends State<SettingsScreen>
 
     return Container(
       width: 240,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        border: Border(
-          right: BorderSide(
-            color: Colors.white.withValues(alpha: 0.1),
-            width: 1,
-          ),
-        ),
+      decoration: const BoxDecoration(
+        color: Color(0xFF050710),
       ),
       child: Column(
         children: [
@@ -419,23 +413,21 @@ class _SettingsScreenState extends State<SettingsScreen>
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            border: Border.all(
-                              color: isFocused
-                                  ? AppTheme.primaryBlue
-                                  : (isSelected
-                                      ? AppTheme.primaryBlue.withValues(alpha: 0.5)
-                                      : Colors.transparent),
-                              width: isFocused ? 3.0 : (isSelected ? 2.0 : 0),
-                            ),
+                            border: isSelected
+                                ? Border.all(
+                                    color: AppTheme.primaryBlue.withValues(alpha: 0.5),
+                                    width: 2.0,
+                                  )
+                                : null,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
                             children: [
                               Icon(
                                 item['icon'] as IconData,
-                                color: (isFocused || isSelected)
+                                color: isSelected
                                     ? AppTheme.primaryBlue
-                                    : AppTheme.textSecondary,
+                                    : (isFocused ? AppTheme.textPrimary : AppTheme.textSecondary),
                                 size: 20,
                               ),
                               const SizedBox(width: 12),
@@ -443,13 +435,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                                 child: Text(
                                   item['title'] as String,
                                   style: TextStyle(
-                                    color: (isFocused || isSelected)
+                                    color: isSelected
                                         ? AppTheme.textPrimary
-                                        : AppTheme.textSecondary,
+                                        : (isFocused ? AppTheme.textPrimary : AppTheme.textSecondary),
                                     fontSize: 16,
-                                    fontWeight: (isFocused || isSelected)
+                                    fontWeight: isSelected
                                         ? FontWeight.w600
-                                        : FontWeight.w500,
+                                        : (isFocused ? FontWeight.w600 : FontWeight.w500),
                                   ),
                                 ),
                               ),
@@ -922,9 +914,8 @@ class _SettingsScreenState extends State<SettingsScreen>
               decoration: BoxDecoration(
                 color: isSelected 
                     ? AppTheme.primaryBlue.withValues(alpha: 0.8)
-                    : (isFocused ? AppTheme.primaryBlue.withValues(alpha: 0.3) : Colors.transparent),
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(8),
-                border: isFocused ? Border.all(color: AppTheme.primaryBlue, width: 2) : null,
               ),
               padding: const EdgeInsets.symmetric(vertical: 8),
               alignment: Alignment.center,
@@ -933,16 +924,16 @@ class _SettingsScreenState extends State<SettingsScreen>
                 children: [
                   Icon(
                     icon,
-                    color: (isSelected || isFocused) ? Colors.white : AppTheme.textSecondary,
+                    color: isSelected ? Colors.white : (isFocused ? AppTheme.textPrimary : AppTheme.textSecondary),
                     size: 16,
                   ),
                   const SizedBox(width: 8),
                   Text(
                     title,
                     style: TextStyle(
-                      color: (isSelected || isFocused) ? Colors.white : AppTheme.textSecondary,
+                      color: isSelected ? Colors.white : (isFocused ? AppTheme.textPrimary : AppTheme.textSecondary),
                       fontSize: 13,
-                      fontWeight: (isSelected || isFocused) ? FontWeight.w600 : FontWeight.normal,
+                      fontWeight: isSelected ? FontWeight.w600 : (isFocused ? FontWeight.w600 : FontWeight.normal),
                     ),
                   ),
                 ],
@@ -989,7 +980,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 2),
+                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
               ),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
@@ -1017,9 +1008,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ? AppTheme.primaryBlue 
                   : Colors.white.withValues(alpha: 0.1),
               foregroundColor: isPrimary ? Colors.white : AppTheme.textPrimary,
-              side: isFocused 
-                  ? const BorderSide(color: AppTheme.primaryBlue, width: 2) 
-                  : BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+              side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               elevation: 0,
               shape: RoundedRectangleBorder(
@@ -1046,10 +1035,8 @@ class _SettingsScreenState extends State<SettingsScreen>
               color: Colors.white.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: isFocused 
-                    ? AppTheme.primaryBlue 
-                    : Colors.white.withValues(alpha: 0.1),
-                width: isFocused ? 2 : 1,
+                color: Colors.white.withValues(alpha: 0.1),
+                width: 1,
               ),
             ),
             child: Row(
