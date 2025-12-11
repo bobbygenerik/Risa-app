@@ -4,6 +4,7 @@ import '../models/channel.dart';
 import '../providers/channel_provider.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
+import 'package:iptv_player/utils/app_theme.dart';
 
 class ChannelSelectionDialog extends StatefulWidget {
   const ChannelSelectionDialog({super.key});
@@ -19,7 +20,7 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: Colors.grey.shade900,
+      backgroundColor: const Color(0xFF050710),
       child: Container(
         width: MediaQuery.of(context).size.width * 0.9,
         height: MediaQuery.of(context).size.height * 0.8,
@@ -95,13 +96,15 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
                     hintText: 'Search channels...',
-                    hintStyle: TextStyle(color: Colors.grey.shade500),
+                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
                     prefixIcon: const Icon(Icons.search, color: Colors.white54),
                     filled: true,
-                    fillColor: Colors.grey.shade800,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide.none,
+                    fillColor: Colors.white.withValues(alpha: 0.05),
+                    border: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 2),
                     ),
                   ),
                   onChanged: (value) {
@@ -134,7 +137,7 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
                       ? Center(
                           child: Text(
                             'No channels found',
-                            style: TextStyle(color: Colors.grey.shade500),
+                            style: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
                           ),
                         )
                       : ListView.builder(
@@ -148,7 +151,7 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
                                   return GestureDetector(
                                     onTap: () => Navigator.pop(context, channel),
                                     child: Container(
-                                      color: isFocused ? Colors.blue.withValues(alpha: 0.3) : Colors.transparent,
+                                      color: isFocused ? AppTheme.primaryBlue.withValues(alpha: 0.2) : Colors.transparent,
                                       child: ListTile(
                                         leading: (channel.logoUrl?.isNotEmpty ?? false)
                                             ? Image.network(
@@ -168,7 +171,7 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
                                         ),
                                         subtitle: Text(
                                           channel.groupTitle ?? '',
-                                          style: TextStyle(color: Colors.grey.shade500),
+                                          style: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
                                         ),
                                         onTap: () => Navigator.pop(context, channel),
                                       ),
@@ -202,24 +205,18 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
                   _selectedCategory = isSelected ? null : category;
                 });
               },
-              child: Container(
-                decoration: BoxDecoration(
-                  border: isFocused ? Border.all(color: Colors.blue, width: 2) : null,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: FilterChip(
-                  label: Text(label),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    setState(() {
-                      _selectedCategory = selected ? category : null;
-                    });
-                  },
-                  backgroundColor: Colors.grey.shade800,
-                  selectedColor: Colors.blue,
-                  labelStyle: TextStyle(
-                    color: isSelected ? Colors.white : Colors.grey.shade400,
-                  ),
+              child: FilterChip(
+                label: Text(label),
+                selected: isSelected,
+                onSelected: (selected) {
+                  setState(() {
+                    _selectedCategory = selected ? category : null;
+                  });
+                },
+                backgroundColor: isFocused ? AppTheme.primaryBlue.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.05),
+                selectedColor: AppTheme.primaryBlue,
+                labelStyle: TextStyle(
+                  color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.7),
                 ),
               ),
             );

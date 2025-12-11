@@ -669,8 +669,21 @@ class EpgService with ChangeNotifier {
     if (_channelIdCache.isEmpty) {
       debugPrint(
           'EPG _findEpgKey: Primary EPG has ${_epgData.length} channels, Secondary has ${_secondaryEpgData.length}');
-      if (_epgData.isNotEmpty) {
-        debugPrint('EPG sample keys: ${_epgData.keys.take(5).join(", ")}');
+      final allKeys = {..._epgData.keys, ..._secondaryEpgData.keys};
+      if (allKeys.isNotEmpty) {
+        debugPrint('EPG sample keys: ${allKeys.take(10).join(", ")}');
+      } else {
+        debugPrint('❌ EPG: NO EPG DATA AVAILABLE FOR MATCHING!');
+      }
+      debugPrint('EPG: Starting channel matching analysis...');
+    }
+    
+    // Debug: Log first few channel lookups
+    if (_channelIdCache.length < 20) {
+      debugPrint('EPG: Looking for channel "$channelId" (name: "${channelName ?? 'none'}")');
+      // Show if EPG data is empty
+      if (_epgData.isEmpty && _secondaryEpgData.isEmpty) {
+        debugPrint('EPG: ❌ No EPG data loaded - this will cause all lookups to fail!');
       }
     }
     final allEpgKeys = {..._epgData.keys, ..._secondaryEpgData.keys};
@@ -823,7 +836,12 @@ class EpgService with ChangeNotifier {
     }
     // No match found - cache the miss
     _channelIdCache[cacheKey] = null;
-    debugPrint('EPG Miss: "$channelId"');
+    if (_channelIdCache.length < 20) {
+      debugPrint('EPG Miss: "$channelId" (name: "${channelName ?? 'none'}")');
+      // Show first few EPG keys for comparison
+      final sampleEpgKeys = {..._epgData.keys, ..._secondaryEpgData.keys}.take(5).toList();
+      debugPrint('EPG: Available keys sample: ${sampleEpgKeys.join(", ")}');
+    }
     return null;
   }
 
@@ -1300,5 +1318,76 @@ class EpgService with ChangeNotifier {
       'primaryChannels': _epgData.length,
       'secondaryChannels': _secondaryEpgData.length,
     };
+  }
+  
+  /// Debug method to analyze channel ID patterns vs EPG key patterns
+  void debugChannelMatching(List<Channel> channels) {
+    debugPrint('=== EPG MATCHING DEBUG ===');
+    debugPrint('Total channels: ${channels.length}');
+    debugPrint('Primary EPG channels: ${_epgData.length}');
+    debugPrint('Secondary EPG channels: ${_secondaryEpgData.length}');
+    debugPrint('Total EPG channels: ${_epgData.length + _secondaryEpgData.length}');
+    
+    // Check if EPG data is actually loaded
+    if (_epgData.isEmpty && _secondaryEpgData.isEmpty) {
+      debugPrint('❌ NO EPG DATA LOADED!');
+      debugPrint('This is likely the root cause of the matching issue.');
+      return;
+    }
+    
+    // Sample channel IDs
+    final sampleChannels = channels.take(10).toList();
+    debugPrint('\nSample channel IDs:');
+    for (final channel in sampleChannels) {
+      final tvgId = channel.tvgId ?? channel.id;
+      debugPrint('  "$tvgId" (name: "${channel.name}")');
+    }
+    
+    // Sample EPG keys from both primary and secondary
+    final allEpgKeys = {..._epgData.keys, ..._secondaryEpgData.keys};
+    final sampleEpgKeys = allEpgKeys.take(10).toList();
+    debugPrint('\nSample EPG keys:');
+    for (final key in sampleEpgKeys) {
+      final isPrimary = _epgData.containsKey(key);
+      debugPrint('  "$key" (${isPrimary ? "primary" : "secondary"})');
+    }
+    
+    // Test exact matches
+    int exactMatches = 0;
+    for (final channel in channels) {
+      final tvgId = channel.tvgId ?? channel.id;
+      if (allEpgKeys.contains(tvgId)) {
+        exactMatches++;
+      }
+    }
+    debugPrint('\nExact matches: $exactMatches/${channels.length}');
+    
+    // Test case-insensitive matches
+    int caseInsensitiveMatches = 0;
+    final lowerEpgKeys = allEpgKeys.map((k) => k.toLowerCase()).toSet();
+    for (final channel in channels) {
+      final tvgId = (channel.tvgId ?? channel.id).toLowerCase();
+      if (lowerEpgKeys.contains(tvgId)) {
+        caseInsensitiveMatches++;
+      }
+    }
+    debugPrint('Case-insensitive matches: $caseInsensitiveMatches/${channels.length}');
+    
+    // Test fuzzy matching (using the actual service method)
+    int fuzzyMatches = 0;
+    debugPrint('\nTesting fuzzy matches (first 5 channels):');
+    for (int i = 0; i < 5 && i < channels.length; i++) {
+      final channel = channels[i];
+      final tvgId = channel.tvgId ?? channel.id;
+      final hasMatch = hasEpgData(tvgId, channelName: channel.name);
+      if (hasMatch) fuzzyMatches++;
+      debugPrint('  "$tvgId" -> ${hasMatch ? "MATCH" : "NO MATCH"}');
+    }
+    
+    debugPrint('\n=== SUMMARY ===');
+    debugPrint('Exact matches: $exactMatches/${channels.length}');
+    debugPrint('Case-insensitive matches: $caseInsensitiveMatches/${channels.length}');
+    debugPrint('Fuzzy matches (sample): $fuzzyMatches/5');
+    debugPrint('=== END EPG DEBUG ===');
   }
 }

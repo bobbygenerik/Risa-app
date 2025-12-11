@@ -1,10 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:go_router/go_router.dart';
 import 'package:iptv_player/services/epg_service.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 
 class EpgDiagnosticScreen extends StatelessWidget {
   const EpgDiagnosticScreen({super.key});
+  
+  Future<Map<String, String?>> _getEpgConfiguration() async {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'primary': prefs.getString('custom_epg_url') ?? prefs.getString('epg_url'),
+      'secondary': prefs.getString('secondary_epg_url'),
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,6 +28,29 @@ class EpgDiagnosticScreen extends StatelessWidget {
         builder: (context, epgService, channelProvider, _) {
           final channels = channelProvider.channels;
           final epgChannels = epgService.getEpgChannelIds();
+          final stats = epgService.getMatchingStats(channels);
+          
+          // Trigger debug analysis
+          if (channels.isNotEmpty && epgService.hasData) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              epgService.debugChannelMatching(channels);
+              // Additional debug info
+              print('=== ADDITIONAL DEBUG ===');
+              print('EPG service hasData: ${epgService.hasData}');
+              print('EPG data keys count: ${epgService.epgData.length}');
+              print('Secondary EPG keys count: ${epgService.secondaryEpgData.length}');
+              print('Channel provider channels count: ${channels.length}');
+              
+              // Test first few channels manually
+              for (int i = 0; i < 5 && i < channels.length; i++) {
+                final channel = channels[i];
+                final tvgId = channel.tvgId ?? channel.id;
+                final hasEpg = epgService.hasEpgData(tvgId, channelName: channel.name);
+                print('Channel $i: "${channel.name}" (ID: "$tvgId") -> EPG: $hasEpg');
+              }
+              print('=== END ADDITIONAL DEBUG ===');
+            });
+          }
           
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -26,7 +59,11 @@ class EpgDiagnosticScreen extends StatelessWidget {
               children: [
                 Text(
                   'EPG Status: ${epgService.hasData ? "Loaded" : "No Data"}',
-                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: epgService.hasData ? Colors.green : Colors.red,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Text(
                   'EPG Channels: ${epgChannels.length}',
@@ -35,6 +72,83 @@ class EpgDiagnosticScreen extends StatelessWidget {
                 Text(
                   'Playlist Channels: ${channels.length}',
                   style: const TextStyle(color: Colors.white70, fontSize: 16),
+                ),
+                Text(
+                  'Matched: ${stats['matched']}/${stats['total']} (${((stats['matched']! / stats['total']!) * 100).toStringAsFixed(1)}%)',
+                  style: TextStyle(
+                    color: stats['matched']! > stats['total']! * 0.5 ? Colors.green : Colors.orange,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                
+                // EPG Configuration Status
+                FutureBuilder<Map<String, String?>>(
+                  future: _getEpgConfiguration(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) return const SizedBox.shrink();
+                    
+                    final config = snapshot.data!;
+                    final primaryUrl = config['primary'];
+                    final secondaryUrl = config['secondary'];
+                    
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: (primaryUrl?.isNotEmpty == true) ? Colors.green.withAlpha(50) : Colors.red.withAlpha(50),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: (primaryUrl?.isNotEmpty == true) ? Colors.green : Colors.red,
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'EPG Configuration',
+                            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Primary EPG URL: ${primaryUrl?.isNotEmpty == true ? "✓ Configured" : "❌ Not configured"}',
+                            style: TextStyle(
+                              color: (primaryUrl?.isNotEmpty == true) ? Colors.green : Colors.red,
+                              fontSize: 14,
+                            ),
+                          ),
+                          Text(
+                            'Secondary EPG URL: ${secondaryUrl?.isNotEmpty == true ? "✓ Configured" : "❌ Not configured"}',
+                            style: TextStyle(
+                              color: (secondaryUrl?.isNotEmpty == true) ? Colors.green : Colors.orange,
+                              fontSize: 14,
+                            ),
+                          ),
+                          if (primaryUrl?.isEmpty != false) ...[
+
+                            const SizedBox(height: 8),
+                            const Text(
+                              '⚠️ No EPG URL configured! This is likely why only 10 channels are matching.',
+                              style: TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 8),
+                            ElevatedButton.icon(
+                              onPressed: () => context.push('/epg-manager'),
+                              icon: const Icon(Icons.settings, size: 16),
+                              label: const Text('Configure EPG'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                textStyle: const TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 20),
                 

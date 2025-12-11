@@ -55,7 +55,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.cardBackground,
+        backgroundColor: const Color(0xFF050710),
         title: const Text('Delete Playlist'),
         content: Text('Are you sure you want to delete "${playlist.name}"?'),
         actions: [
@@ -162,13 +162,20 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.cardBackground,
+        backgroundColor: const Color(0xFF050710),
         title: const Text('Edit Playlist Name'),
         content: TextField(
           controller: nameController,
-          decoration: const InputDecoration(
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
             labelText: 'Playlist Name',
-            border: OutlineInputBorder(),
+            labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+            ),
+            focusedBorder: const UnderlineInputBorder(
+              borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
+            ),
           ),
           autofocus: true,
         ),
@@ -287,8 +294,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
         final playlist = _playlists[index];
         final isActive = playlist.id == _activePlaylistId;
 
-        return Card(
-          color: AppTheme.cardBackground,
+        return Container(
           margin: const EdgeInsets.only(bottom: AppSizes.md),
           child: ListTile(
             contentPadding: const EdgeInsets.all(AppSizes.md),
@@ -355,7 +361,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
             ),
             trailing: PopupMenuButton(
               icon: const Icon(Icons.more_vert, color: AppTheme.textPrimary),
-              color: AppTheme.cardBackground,
+              color: const Color(0xFF050710),
               itemBuilder: (context) => [
                 if (!isActive)
                   PopupMenuItem(

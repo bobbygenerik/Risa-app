@@ -1500,13 +1500,12 @@ class _EPGScreenState extends State<EPGScreen>
           }
 
           return AlertDialog(
-            backgroundColor: const Color(0xFF1E1E2E),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            backgroundColor: const Color(0xFF050710),
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Match EPG for ${channel.name}',
-                    style: const TextStyle(fontSize: 18)),
+                    style: const TextStyle(fontSize: 18, color: AppTheme.textPrimary)),
                 Text(
                   'ID: ${channel.tvgId ?? channel.id}',
                   style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
@@ -1514,12 +1513,19 @@ class _EPGScreenState extends State<EPGScreen>
                 const SizedBox(height: 8),
                 TextField(
                   controller: searchController,
+                  style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
                     hintText: 'Search EPG channels...',
-                    prefixIcon: const Icon(Icons.search),
+                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+                    prefixIcon: const Icon(Icons.search, color: Colors.white54),
                     isDense: true,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
+                    filled: true,
+                    fillColor: Colors.white.withValues(alpha: 0.05),
+                    border: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                    ),
+                    focusedBorder: const UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
                     ),
                   ),
                   onChanged: (value) {
@@ -1623,7 +1629,7 @@ class _EPGScreenState extends State<EPGScreen>
                                       : FontWeight.normal,
                                   color: isCurrentlyMapped
                                       ? AppTheme.accentGreen
-                                      : null,
+                                      : AppTheme.textPrimary,
                                 ),
                               ),
                               subtitle: Column(
@@ -1632,7 +1638,7 @@ class _EPGScreenState extends State<EPGScreen>
                                   if (preview != null)
                                     Text(
                                       'Now: $preview',
-                                      style: TextStyle(fontSize: 12),
+                                      style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -1659,7 +1665,7 @@ class _EPGScreenState extends State<EPGScreen>
                                     const EdgeInsets.symmetric(vertical: 8),
                                 child: Row(
                                   children: [
-                                    const Expanded(child: Divider()),
+                                    Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.1))),
                                     Padding(
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 8),
@@ -1670,7 +1676,7 @@ class _EPGScreenState extends State<EPGScreen>
                                             color: AppTheme.textSecondary),
                                       ),
                                     ),
-                                    const Expanded(child: Divider()),
+                                    Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.1))),
                                   ],
                                 ),
                               ),
@@ -1682,7 +1688,7 @@ class _EPGScreenState extends State<EPGScreen>
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Cancel'),
+                child: const Text('Cancel', style: TextStyle(color: AppTheme.primaryBlue)),
               ),
             ],
           );

@@ -430,15 +430,6 @@ class _SettingsScreenState extends State<SettingsScreen>
                               horizontal: 20, vertical: 8),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 12),
-                          decoration: BoxDecoration(
-                            border: isSelected
-                                ? Border.all(
-                                    color: AppTheme.primaryBlue.withValues(alpha: 0.5),
-                                    width: 2.0,
-                                  )
-                                : null,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
                           child: Row(
                             children: [
                               Icon(
@@ -454,7 +445,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                                   item['title'] as String,
                                   style: TextStyle(
                                     color: isSelected
-                                        ? AppTheme.textPrimary
+                                        ? AppTheme.primaryBlue
                                         : (isFocused ? AppTheme.textPrimary : AppTheme.textSecondary),
                                     fontSize: 16,
                                     fontWeight: isSelected
@@ -789,7 +780,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     children: [
                       CircleAvatar(
                         radius: 40,
-                        backgroundColor: AppTheme.highlight,
+                        backgroundColor: Colors.transparent,
                         backgroundImage: profile?.avatarUrl.isNotEmpty == true
                             ? NetworkImage(profile!.avatarUrl)
                             : null,
@@ -1399,7 +1390,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       focusNode: focusNode,
       child: Builder(
         builder: (context) {
-          return Container(
+          return SizedBox(
             width: 32,
             height: 32,
             child: IconButton(
@@ -1488,7 +1479,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
+        backgroundColor: const Color(0xFF050710),
         title: const Text('Translation Models', style: TextStyle(color: AppTheme.textPrimary)),
         content: SizedBox(
           width: double.maxFinite,
@@ -1517,7 +1508,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
+        backgroundColor: const Color(0xFF050710),
         title: const Text('Speech Recognition Models', style: TextStyle(color: AppTheme.textPrimary)),
         content: SizedBox(
           width: double.maxFinite,

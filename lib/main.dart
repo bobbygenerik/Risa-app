@@ -42,7 +42,7 @@ import 'package:iptv_player/screens/movies_screen.dart';
 import 'package:iptv_player/screens/series_screen.dart';
 import 'package:iptv_player/screens/enhanced_video_player_screen.dart';
 import 'package:iptv_player/screens/playlist_login_screen.dart';
-import 'package:iptv_player/screens/help_about_screen.dart';
+
 import 'package:iptv_player/screens/favorites_screen.dart';
 import 'package:iptv_player/screens/downloads_screen.dart';
 
@@ -965,11 +965,7 @@ final _router = GoRouter(
       pageBuilder: (context, state) =>
           _fadeSlidePage(key: state.pageKey, child: const RecordingsScreen()),
     ),
-    GoRoute(
-      path: '/help',
-      pageBuilder: (context, state) =>
-          _fadeSlidePage(key: state.pageKey, child: const HelpAboutScreen()),
-    ),
+
 
     GoRoute(
       path: '/playlist-editor',

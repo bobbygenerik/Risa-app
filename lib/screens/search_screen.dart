@@ -107,7 +107,7 @@ class _SearchScreenState extends State<SearchScreen>
         children: [
           // Search bar
           Padding(
-            padding: const EdgeInsets.fromLTRB(48, 24, 48, 16),
+            padding: const EdgeInsets.fromLTRB(120, 24, 120, 16),
             child: Row(
               children: [
                 Expanded(
@@ -132,13 +132,11 @@ class _SearchScreenState extends State<SearchScreen>
                         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                         filled: true,
                         fillColor: Colors.white.withValues(alpha: 0.05),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
+                        border: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
                         ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 2),
+                        focusedBorder: const UnderlineInputBorder(
+                          borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
                         ),
                       ),
                       onSubmitted: _performSearch,
@@ -331,12 +329,12 @@ class _SearchScreenState extends State<SearchScreen>
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
                   decoration: BoxDecoration(
-                    color: AppTheme.cardBackground,
+                    color: Colors.white.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isFocused ? AppTheme.primaryBlue : Colors.transparent,
+                    border: isFocused ? Border.all(
+                      color: AppTheme.primaryBlue,
                       width: 3,
-                    ),
+                    ) : null,
                     boxShadow: isFocused
                         ? [
                             BoxShadow(

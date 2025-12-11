@@ -22,9 +22,8 @@ class AppDialog extends StatelessWidget {
       child: Container(
         constraints: const BoxConstraints(maxWidth: 400),
         decoration: BoxDecoration(
-          color: const Color(0xE6121629),
+          color: const Color(0xFF050710),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.3), width: 1),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -42,7 +41,7 @@ class AppDialog extends StatelessWidget {
                   ),
                 ),
               ),
-              const Divider(height: 1, color: Colors.white12),
+              const SizedBox(height: 8),
             ],
             if (content != null)
               Padding(
@@ -50,7 +49,7 @@ class AppDialog extends StatelessWidget {
                 child: content!,
               ),
             if (actions != null && actions!.isNotEmpty) ...[
-              const Divider(height: 1, color: Colors.white12),
+              const SizedBox(height: 8),
               Padding(
                 padding: const EdgeInsets.all(12),
                 child: Row(
@@ -94,14 +93,8 @@ class AppDialogButton extends StatelessWidget {
             decoration: BoxDecoration(
               color: isPrimary
                   ? (isFocused ? AppTheme.primaryBlue : AppTheme.primaryBlue.withValues(alpha: 0.8))
-                  : (isFocused ? Colors.white.withValues(alpha: 0.2) : Colors.transparent),
+                  : (isFocused ? Colors.white.withValues(alpha: 0.1) : Colors.transparent),
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: isFocused
-                    ? AppTheme.primaryBlue
-                    : (isPrimary ? AppTheme.primaryBlue.withValues(alpha: 0.5) : Colors.white24),
-                width: 1,
-              ),
             ),
             child: Material(
               color: Colors.transparent,
