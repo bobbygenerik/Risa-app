@@ -473,7 +473,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             height: context.tvTextSize(13) * 1.4,
             child: Row(
               children: [
-                if (program != null) ..[
+                if (program != null) ...[
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
@@ -1042,8 +1042,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Widget _buildSkeletonLoader() {
     final screenSize = MediaQuery.of(context).size;
     final heroHeight = screenSize.height * 0.75;
+    final sidebarWidth = AppSizes.sidebarWidth;
     final cardWidth = screenSize.width / 5.5;
     final cardHeight = cardWidth * 0.57;
+    final rowHeight = cardHeight + 120;
 
     return Stack(
       children: [
@@ -1057,26 +1059,48 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             color: AppTheme.cardBackground,
           ),
         ),
-        // Info box skeleton
+        // Info box skeleton (matches actual position)
         Positioned(
-          bottom: heroHeight * 0.20,
-          left: 56,
-          width: screenSize.width * 0.33,
+          bottom: heroHeight * 0.35,
+          left: sidebarWidth + 8,
+          width: screenSize.width * 0.4,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Title skeleton
               Container(
-                height: 30,
-                width: screenSize.width * 0.25,
+                height: 32,
+                width: screenSize.width * 0.3,
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha((0.15 * 255).round()),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Description skeleton
+              Container(
+                height: 60,
+                width: screenSize.width * 0.35,
                 decoration: BoxDecoration(
                   color: Colors.white.withAlpha((0.1 * 255).round()),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
               const SizedBox(height: 8),
+              // Progress bar skeleton
               Container(
-                height: 60,
-                width: screenSize.width * 0.3,
+                height: 6,
+                width: screenSize.width * 0.25,
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha((0.1 * 255).round()),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Time range skeleton
+              Container(
+                height: 16,
+                width: 120,
                 decoration: BoxDecoration(
                   color: Colors.white.withAlpha((0.1 * 255).round()),
                   borderRadius: BorderRadius.circular(4),
@@ -1085,46 +1109,105 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             ],
           ),
         ),
-        // Card rows skeleton
+        // Channel logo skeleton
         Positioned(
-          top: heroHeight + 40,
-          left: 48,
-          right: 80,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: List.generate(3, (rowIndex) => Padding(
-              padding: const EdgeInsets.only(bottom: 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    height: 20,
-                    width: 150,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withAlpha((0.1 * 255).round()),
-                      borderRadius: BorderRadius.circular(4),
+          top: AppSizes.lg,
+          right: AppSizes.lg,
+          child: Container(
+            height: 40,
+            width: 80,
+            decoration: BoxDecoration(
+              color: AppTheme.cardBackground,
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+        // Scrollable content skeleton
+        Positioned(
+          top: heroHeight,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: Container(
+            color: AppTheme.darkBackground,
+            padding: EdgeInsets.only(
+              left: sidebarWidth + AppSizes.lg,
+              right: AppSizes.xxl,
+              top: AppSizes.xxl,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: List.generate(3, (rowIndex) => Padding(
+                padding: EdgeInsets.only(bottom: AppSizes.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Category title skeleton
+                    Container(
+                      height: 24,
+                      width: 180,
+                      margin: EdgeInsets.only(bottom: AppSizes.sm),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withAlpha((0.15 * 255).round()),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: cardHeight,
-                    child: Row(
-                      children: List.generate(5, (cardIndex) => Padding(
-                        padding: const EdgeInsets.only(right: 16),
-                        child: Container(
-                          width: cardWidth,
-                          height: cardHeight,
-                          decoration: BoxDecoration(
-                            color: AppTheme.cardBackground,
-                            borderRadius: BorderRadius.circular(12),
+                    // Channel cards row skeleton
+                    SizedBox(
+                      height: rowHeight,
+                      child: Row(
+                        children: List.generate(5, (cardIndex) => Padding(
+                          padding: EdgeInsets.only(right: AppSizes.lg),
+                          child: Column(
+                            children: [
+                              // Card skeleton
+                              Container(
+                                width: cardWidth,
+                                height: cardHeight,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.cardBackground,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              // Program title skeleton
+                              Container(
+                                width: cardWidth,
+                                height: 14,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withAlpha((0.1 * 255).round()),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              // Progress bar skeleton
+                              Container(
+                                width: cardWidth,
+                                height: 3,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withAlpha((0.1 * 255).round()),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              // Time range skeleton
+                              Container(
+                                width: cardWidth * 0.8,
+                                height: 11,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withAlpha((0.1 * 255).round()),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      )),
+                        )),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            )),
+                  ],
+                ),
+              )),
+            ),
           ),
         ),
       ],

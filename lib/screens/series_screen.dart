@@ -660,7 +660,7 @@ class _SeriesScreenState extends State<SeriesScreen>
   ) {
     final heroImage = featuredSeries.backdropUrl ?? featuredSeries.imageUrl;
     final screenSize = MediaQuery.of(context).size;
-    final heroHeight = screenSize.height;
+    final heroHeight = screenSize.height * 0.75;
     final sidebarWidth = AppSizes.sidebarWidth;
 
     return Focus(
@@ -671,12 +671,7 @@ class _SeriesScreenState extends State<SeriesScreen>
         animation: _scrollController,
         builder: (context, child) {
           final scrollOffset = _scrollController.hasClients ? _scrollController.offset : 0.0;
-          final scrollProgress = (scrollOffset / heroHeight).clamp(0.0, 1.0);
-          
-          final heroWidth = screenSize.width - (scrollProgress * (screenSize.width * 0.65));
-          final heroLeft = scrollProgress * (screenSize.width * 0.75);
-          final heroTop = scrollProgress * (-heroHeight * 0.3);
-          final heroHeightAnimated = heroHeight - (scrollProgress * heroHeight * 0.7);
+          final fadeProgress = (scrollOffset / (heroHeight * 0.5)).clamp(0.0, 1.0);
           
           return Container(
             decoration: const BoxDecoration(
@@ -684,6 +679,36 @@ class _SeriesScreenState extends State<SeriesScreen>
             ),
             child: Stack(
               children: [
+                // Fixed hero background
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: heroHeight,
+                  child: Opacity(
+                    opacity: 1.0 - fadeProgress,
+                    child: Focus(
+                      focusNode: _heroFocus,
+                      onKeyEvent: (node, event) {
+                        if (event is KeyDownEvent &&
+                            (event.logicalKey == LogicalKeyboardKey.select ||
+                             event.logicalKey == LogicalKeyboardKey.enter)) {
+                          final encodedId = Uri.encodeComponent(featuredSeries.id);
+                          context.push('/content/$encodedId', extra: featuredSeries);
+                          return KeyEventResult.handled;
+                        }
+                        return KeyEventResult.ignored;
+                      },
+                      child: GestureDetector(
+                        onTap: () {
+                          final encodedId = Uri.encodeComponent(featuredSeries.id);
+                          context.push('/content/$encodedId', extra: featuredSeries);
+                        },
+                        child: _buildHeroContent(featuredSeries, heroImage, 0.0),
+                      ),
+                    ),
+                  ),
+                ),
                 // Scrollable content
                 Positioned.fill(
                   child: SingleChildScrollView(
@@ -693,7 +718,8 @@ class _SeriesScreenState extends State<SeriesScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         SizedBox(height: heroHeight),
-                        Padding(
+                        Container(
+                          color: AppTheme.darkBackground,
                           padding: EdgeInsets.only(
                             left: sidebarWidth + AppSizes.lg,
                             right: AppSizes.xxl,
@@ -718,108 +744,13 @@ class _SeriesScreenState extends State<SeriesScreen>
                     ),
                   ),
                 ),
-                // Animated hero image
+                // Featured info overlay
                 Positioned(
-                  top: heroTop,
-                  left: heroLeft,
-                  width: heroWidth,
-                  height: heroHeightAnimated,
-                  child: Focus(
-                    focusNode: _heroFocus,
-                    onKeyEvent: (node, event) {
-                      if (event is KeyDownEvent &&
-                          (event.logicalKey == LogicalKeyboardKey.select ||
-                           event.logicalKey == LogicalKeyboardKey.enter)) {
-                        final encodedId = Uri.encodeComponent(featuredSeries.id);
-                        context.push('/content/$encodedId', extra: featuredSeries);
-                        return KeyEventResult.handled;
-                      }
-                      return KeyEventResult.ignored;
-                    },
-                    child: GestureDetector(
-                      onTap: () {
-                        final encodedId = Uri.encodeComponent(featuredSeries.id);
-                        context.push('/content/$encodedId', extra: featuredSeries);
-                      },
-                      child: _buildHeroContent(featuredSeries, heroImage, scrollProgress),
-                    ),
-                  ),
-                ),
-                // Left gradient overlay
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  width: screenSize.width * (0.75 * scrollProgress),
-                  height: heroHeightAnimated,
-                  child: IgnorePointer(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
-                          colors: [
-                            AppTheme.darkBackground,
-                            AppTheme.darkBackground.withValues(alpha: 0.9),
-                            AppTheme.darkBackground.withValues(alpha: 0.7),
-                            AppTheme.darkBackground.withValues(alpha: 0.3),
-                            Colors.transparent,
-                          ],
-                          stops: const [0.0, 0.3, 0.6, 0.8, 1.0],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                // Bottom gradient overlay
-                Positioned(
-                  left: heroLeft,
-                  right: 0,
-                  top: heroTop + heroHeightAnimated - (heroHeightAnimated * 0.3),
-                  height: heroHeightAnimated * 0.3,
-                  child: IgnorePointer(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                          colors: [
-                            AppTheme.darkBackground,
-                            AppTheme.darkBackground.withValues(alpha: 0.8),
-                            AppTheme.darkBackground.withValues(alpha: 0.4),
-                            Colors.transparent,
-                          ],
-                          stops: const [0.0, 0.4, 0.7, 1.0],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                // Top navigation fade
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: 100,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withAlpha((0.9 * 255).round()),
-                          Colors.black.withAlpha(0),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                // Featured info
-                Positioned(
-                  bottom: heroHeight * 0.35 + (scrollProgress * heroHeight * 0.2),
+                  bottom: heroHeight * 0.35,
                   left: sidebarWidth + AppSizes.lg,
-                  width: screenSize.width * 0.4 + (scrollProgress * screenSize.width * 0.3),
+                  width: screenSize.width * 0.4,
                   child: Opacity(
-                    opacity: 1.0 - scrollProgress,
+                    opacity: 1.0 - fadeProgress,
                     child: _buildFeaturedInfo(context, featuredSeries),
                   ),
                 ),
@@ -832,18 +763,6 @@ class _SeriesScreenState extends State<SeriesScreen>
   }
 
   Widget _buildHeroContent(Content featuredSeries, String? heroImage, double scrollProgress) {
-    if (scrollProgress > 0.1) {
-      return heroImage != null
-          ? CachedNetworkImage(
-              imageUrl: heroImage,
-              fit: BoxFit.cover,
-              alignment: Alignment.center,
-              placeholder: (_, __) => _buildBannerPlaceholder(),
-              errorWidget: (_, __, ___) => _buildBannerPlaceholder(),
-            )
-          : _buildBannerPlaceholder();
-    }
-
     return heroImage != null
         ? CachedNetworkImage(
             imageUrl: heroImage,
