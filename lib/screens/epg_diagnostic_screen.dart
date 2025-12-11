@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/services/epg_service.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
-import 'package:iptv_player/utils/app_theme.dart';
 
 class EpgDiagnosticScreen extends StatelessWidget {
   const EpgDiagnosticScreen({super.key});

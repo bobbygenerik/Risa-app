@@ -880,19 +880,20 @@ final _router = GoRouter(
     ShellRoute(
       builder: (context, state, child) {
         // Determine active tab from current location
-        final activeTab = state.matchedLocation.contains('/search')
+        final location = state.matchedLocation;
+        final activeTab = location == '/search'
             ? 'search'
-            : state.matchedLocation.contains('/movies')
+            : location == '/movies'
                 ? 'movies'
-                : state.matchedLocation.contains('/series')
+                : location == '/series'
                     ? 'series'
-                    : state.matchedLocation.contains('/epg')
-                        ? 'guide'
-                        : state.matchedLocation.contains('/settings')
+                    : location == '/epg'
+                        ? 'epg'
+                        : location == '/settings'
                             ? 'settings'
-                            : state.matchedLocation.contains('/favorites')
+                            : location == '/favorites'
                                 ? 'favorites'
-                                : state.matchedLocation.contains('/downloads')
+                                : location == '/downloads'
                                     ? 'downloads'
                                     : 'home';
 
