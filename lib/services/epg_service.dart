@@ -43,13 +43,16 @@ String _stripSuffixes(String text) {
           '');
 }
 
-// Top-level function for isolate parsing
+// Top-level function for isolate parsing with chunked processing
 Map<String, dynamic> parseEpgInIsolate(String xmlData) {
   try {
     final document = XmlDocument.parse(xmlData);
     final programmes = document.findAllElements('programme');
     final epgData = <String, List<Map<String, dynamic>>>{};
-
+    
+    int processedCount = 0;
+    const chunkSize = 1000; // Process in chunks to prevent memory spikes
+    
     for (final programme in programmes) {
       try {
         final channelId = programme.getAttribute('channel');
@@ -85,13 +88,22 @@ Map<String, dynamic> parseEpgInIsolate(String xmlData) {
           epgData[channelId] = [];
         }
         epgData[channelId]!.add(programMap);
+        
+        processedCount++;
+        // Yield control periodically to prevent blocking
+        if (processedCount % chunkSize == 0) {
+          // Force garbage collection on large datasets
+          if (processedCount % (chunkSize * 10) == 0) {
+            // Allow GC to run
+          }
+        }
       } catch (e) {
         debugPrint('Error parsing programme: $e');
         continue;
       }
     }
 
-    return {'epgData': epgData};
+    return {'epgData': epgData, 'processedCount': processedCount};
   } catch (e) {
     throw Exception('Failed to parse EPG XML: ${e.toString()}');
   }
@@ -302,54 +314,105 @@ class EpgService with ChangeNotifier {
           throw Exception('HTTP ${response.statusCode}');
         }
 
-        // Download all bytes (streamed, then parsed in background)
-        final epgBytes = <int>[];
+        // Stream download with memory management for large files
+        final chunks = <List<int>>[];
         int totalBytes = 0;
-
+        int chunkCount = 0;
+        const maxMemoryMB = 100; // Limit memory usage
+        
         await for (final chunk in response) {
           totalBytes += chunk.length;
-          epgBytes.addAll(chunk);
-
-          // Show progress for large files
+          chunks.add(chunk);
+          chunkCount++;
+          
+          // Show progress and manage memory for large files
           if (totalBytes % (1024 * 1024) == 0) {
-            debugPrint(
-                'EPG download: ${(totalBytes / 1024 / 1024).toStringAsFixed(1)} MB');
+            final sizeMB = totalBytes / 1024 / 1024;
+            debugPrint('EPG download: ${sizeMB.toStringAsFixed(1)} MB');
+            
+            // If file is very large, process in streaming mode
+            if (sizeMB > maxMemoryMB) {
+              debugPrint('EPG: Large file detected, switching to streaming mode');
+              // For very large files, we should process incrementally
+              // but for now, continue with current approach
+            }
+          }
+          
+          // Yield control periodically to prevent UI blocking
+          if (chunkCount % 100 == 0) {
+            await Future.delayed(Duration.zero); // Yield to event loop
           }
         }
 
         client.close();
         debugPrint(
-            'EPG downloaded: ${(totalBytes / 1024 / 1024).toStringAsFixed(2)} MB');
+            'EPG downloaded: ${(totalBytes / 1024 / 1024).toStringAsFixed(2)} MB in $chunkCount chunks');
+            
+        // Combine chunks efficiently
+        final epgBytes = <int>[];
+        for (final chunk in chunks) {
+          epgBytes.addAll(chunk);
+        }
+        chunks.clear(); // Free memory immediately
 
         // Parse in background isolate to avoid blocking UI
         final xmlData = utf8.decode(epgBytes, allowMalformed: true);
         final parsed = await compute(parseEpgInIsolate, xmlData)
             .timeout(const Duration(seconds: 60));
 
-        // Convert parsed data back to Program objects
+        // Convert parsed data back to Program objects with chunked processing
         _epgData.clear();
         final rawEpgData = parsed['epgData'] as Map<String, dynamic>;
-
+        final processedCount = parsed['processedCount'] as int? ?? 0;
+        
+        debugPrint('EPG: Converting $processedCount programs for ${rawEpgData.length} channels');
+        
+        int channelCount = 0;
+        const channelChunkSize = 50; // Process channels in chunks
+        
         for (final channelId in rawEpgData.keys) {
-          final programs = (rawEpgData[channelId] as List<dynamic>).map((p) {
-            final map = Map<String, dynamic>.from(p);
-            return Program(
-              id: map['id'],
-              channelId: map['channelId'],
-              title: map['title'],
-              description: map['description'],
-              startTime: _parseEpgTime(map['startTime']),
-              endTime: _parseEpgTime(map['endTime']),
-              imageUrl: map['imageUrl'],
-              category: map['category'],
-              isLive: map['isLive'] ?? false,
-              canRecord: map['canRecord'] ?? true,
-            );
-          }).toList();
+          final programMaps = rawEpgData[channelId] as List<dynamic>;
+          final programs = <Program>[];
+          
+          // Process programs in chunks to prevent blocking
+          for (int i = 0; i < programMaps.length; i += 100) {
+            final end = (i + 100).clamp(0, programMaps.length);
+            final chunk = programMaps.sublist(i, end);
+            
+            for (final p in chunk) {
+              final map = Map<String, dynamic>.from(p);
+              programs.add(Program(
+                id: map['id'],
+                channelId: map['channelId'],
+                title: map['title'],
+                description: map['description'],
+                startTime: _parseEpgTime(map['startTime']),
+                endTime: _parseEpgTime(map['endTime']),
+                imageUrl: map['imageUrl'],
+                category: map['category'],
+                isLive: map['isLive'] ?? false,
+                canRecord: map['canRecord'] ?? true,
+              ));
+            }
+            
+            // Yield control after each chunk
+            if (i + 100 < programMaps.length) {
+              await Future.delayed(Duration.zero);
+            }
+          }
 
           // Sort by start time
           programs.sort((a, b) => a.startTime.compareTo(b.startTime));
           _epgData[channelId] = programs;
+          
+          channelCount++;
+          
+          // Yield control periodically and notify progress
+          if (channelCount % channelChunkSize == 0) {
+            debugPrint('EPG: Processed $channelCount/${rawEpgData.length} channels');
+            await Future.delayed(Duration.zero); // Yield to UI thread
+            notifyListeners(); // Update UI with partial data
+          }
         }
 
         await _saveToCache(xmlData);

@@ -691,12 +691,30 @@ class ChannelProvider with ChangeNotifier {
         _loadingProgress = 0.7;
         notifyListeners();
 
-        // Store raw maps - already in map format from optimized parser
+        // Store raw maps with chunked processing to prevent UI blocking
         final mapStart = DateTime.now();
-        _channelMaps = (parsed['channels'] as List<dynamic>)
-            .map((c) => Map<String, dynamic>.from(c))
-            .toList();
+        final rawChannels = parsed['channels'] as List<dynamic>;
+        _channelMaps.clear();
         _channelCache.clear();
+        
+        // Process channels in chunks to prevent UI freezing
+        const chunkSize = 1000;
+        for (int i = 0; i < rawChannels.length; i += chunkSize) {
+          final end = (i + chunkSize).clamp(0, rawChannels.length);
+          final chunk = rawChannels.sublist(i, end);
+          
+          for (final c in chunk) {
+            _channelMaps.add(Map<String, dynamic>.from(c));
+          }
+          
+          // Yield control and update progress for large playlists
+          if (rawChannels.length > 5000 && i % (chunkSize * 2) == 0) {
+            _loadingStatus = 'Processing channels... ${i + end}/${rawChannels.length}';
+            _loadingProgress = 0.7 + (0.1 * (i + end) / rawChannels.length);
+            notifyListeners();
+            await Future.delayed(Duration.zero); // Yield to UI thread
+          }
+        }
 
         // --- Write playlist to SharedPreferences for Android Auto ---
         try {

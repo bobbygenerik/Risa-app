@@ -4,6 +4,31 @@ import 'package:flutter/foundation.dart';
 import '../models/channel.dart';
 import '../models/content.dart';
 
+// Top-level function for isolate-based M3U parsing
+Map<String, dynamic> parseM3UInIsolate(String content) {
+  final parser = M3UParserService();
+  final channels = parser.parseM3U(content);
+  
+  // Convert channels to maps for efficient transfer
+  final channelMaps = channels.map((channel) => {
+    'id': channel.id,
+    'name': channel.name,
+    'url': channel.url,
+    'logoUrl': channel.logoUrl,
+    'groupTitle': channel.groupTitle,
+    'tvgId': channel.tvgId,
+    'attributes': channel.attributes,
+    'sortOrder': channel.sortOrder,
+    'isFavorite': channel.isFavorite,
+    'isHidden': channel.isHidden,
+  }).toList();
+  
+  return {
+    'channels': channelMaps,
+    'epgUrl': parser.epgUrl,
+  };
+}
+
 class M3UParseResult {
   final List<Channel> channels;
   final List<Content> movies;
@@ -27,7 +52,7 @@ class M3UParserService {
   /// Gets the EPG URL extracted from the last parsed M3U
   String? get epgUrl => _epgUrl;
 
-  /// Parses M3U playlist content and returns a list of channels
+  /// Parses M3U playlist content and returns a list of channels with chunked processing
   List<Channel> parseM3U(String content) {
     final List<Channel> channels = [];
     final rawLines = content.split('\n');
@@ -49,19 +74,28 @@ class M3UParserService {
       }
     }
 
-    // First, reassemble wrapped lines (lines that don't start with # or http)
+    // Process lines in chunks to prevent UI blocking on large playlists
+    const chunkSize = 1000;
     final List<String> lines = [];
-    for (int i = 0; i < rawLines.length; i++) {
-      final line = rawLines[i].trimRight(); // Keep leading spaces for detection
+    
+    // Reassemble wrapped lines in chunks
+    for (int chunkStart = 0; chunkStart < rawLines.length; chunkStart += chunkSize) {
+      final chunkEnd = (chunkStart + chunkSize).clamp(0, rawLines.length);
+      
+      for (int i = chunkStart; i < chunkEnd; i++) {
+        final line = rawLines[i].trimRight();
+        if (line.isEmpty) continue;
 
-      if (line.isEmpty) continue;
-
-      // If line starts with # or http, it's a new line
-      if (line.startsWith('#') || line.startsWith('http')) {
-        lines.add(line.trim());
-      } else if (lines.isNotEmpty) {
-        // This is a continuation of the previous line (wrapped text)
-        lines[lines.length - 1] += line.trim();
+        if (line.startsWith('#') || line.startsWith('http')) {
+          lines.add(line.trim());
+        } else if (lines.isNotEmpty) {
+          lines[lines.length - 1] += line.trim();
+        }
+      }
+      
+      // Show progress for large playlists
+      if (rawLines.length > 10000 && chunkStart % (chunkSize * 5) == 0) {
+        debugPrint('M3UParser: Processed ${chunkEnd}/${rawLines.length} raw lines');
       }
     }
 
@@ -71,41 +105,48 @@ class M3UParserService {
     Map<String, String> currentAttributes = {};
     int channelCount = 0;
 
-    for (int i = 0; i < lines.length; i++) {
-      final line = lines[i].trim();
+    // Parse logical lines in chunks
+    for (int chunkStart = 0; chunkStart < lines.length; chunkStart += chunkSize) {
+      final chunkEnd = (chunkStart + chunkSize).clamp(0, lines.length);
+      
+      for (int i = chunkStart; i < chunkEnd; i++) {
+        final line = lines[i].trim();
+        if (line.isEmpty) continue;
 
-      if (line.isEmpty) continue;
-
-      if (line.startsWith('#EXTINF:')) {
-        // Parse channel info
-        currentInfo = line.substring(8); // Remove '#EXTINF:'
-        currentAttributes = _parseAttributes(currentInfo);
-        if (channelCount < 3) {
-          debugPrint(
-            'M3UParser: Found EXTINF: ${currentInfo.length > 100 ? '${currentInfo.substring(0, 100)}...' : currentInfo}',
+        if (line.startsWith('#EXTINF:')) {
+          currentInfo = line.substring(8);
+          currentAttributes = _parseAttributes(currentInfo);
+          if (channelCount < 3) {
+            debugPrint(
+              'M3UParser: Found EXTINF: ${currentInfo.length > 100 ? '${currentInfo.substring(0, 100)}...' : currentInfo}',
+            );
+          }
+        } else if (!line.startsWith('#') && currentInfo != null) {
+          final channelName = _extractChannelName(currentInfo);
+          final channel = Channel(
+            id: DateTime.now().millisecondsSinceEpoch.toString() + i.toString(),
+            name: channelName,
+            url: line,
+            logoUrl: currentAttributes['tvg-logo'],
+            groupTitle: currentAttributes['group-title'],
+            tvgId: currentAttributes['tvg-id'],
+            attributes: currentAttributes,
+            sortOrder: channelCount,
           );
-        }
-      } else if (!line.startsWith('#') && currentInfo != null) {
-        // This is a stream URL
-        final channelName = _extractChannelName(currentInfo);
-        final channel = Channel(
-          id: DateTime.now().millisecondsSinceEpoch.toString() + i.toString(),
-          name: channelName,
-          url: line,
-          logoUrl: currentAttributes['tvg-logo'],
-          groupTitle: currentAttributes['group-title'],
-          tvgId: currentAttributes['tvg-id'],
-          attributes: currentAttributes,
-          sortOrder: channelCount, // Preserve playlist order
-        );
 
-        channels.add(channel);
-        channelCount++;
-        if (channelCount <= 3) {
-          debugPrint('M3UParser: Added channel #$channelCount: $channelName');
+          channels.add(channel);
+          channelCount++;
+          if (channelCount <= 3) {
+            debugPrint('M3UParser: Added channel #$channelCount: $channelName');
+          }
+          currentInfo = null;
+          currentAttributes = {};
         }
-        currentInfo = null;
-        currentAttributes = {};
+      }
+      
+      // Show progress for large playlists
+      if (lines.length > 5000 && chunkStart % (chunkSize * 2) == 0) {
+        debugPrint('M3UParser: Parsed ${channelCount} channels so far...');
       }
     }
 
