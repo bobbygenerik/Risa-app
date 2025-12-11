@@ -564,19 +564,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   String? _getChannelCardImage(Program? program) {
     if (program == null) return null;
     
-    // Try direct program image first
+    // Try cached TMDB image first (higher quality)
+    final cached = _programArtwork[program.id];
+    if (cached != null && cached.isNotEmpty) {
+      return cached;
+    }
+    
+    // Try direct program image
     if (program.imageUrl != null && program.imageUrl!.isNotEmpty) {
       return program.imageUrl;
     }
     
-    // Try cached TMDB image
-    final cached = _programArtwork[program.id];
-    if (cached != null) {
-      return cached.isNotEmpty ? cached : null;
-    }
-    
-    // Fetch TMDB image if enabled
-    if (_tmdbEnabled) {
+    // Fetch TMDB image if enabled and not already cached
+    if (_tmdbEnabled && !_programArtwork.containsKey(program.id)) {
       _fetchProgramArtwork(program);
     }
     
@@ -1113,7 +1113,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         ? CachedNetworkImage(
             imageUrl: heroImage,
             fit: BoxFit.cover,
-            alignment: Alignment.topCenter,
+            alignment: Alignment.center,
             placeholder: (_, __) => _buildDefaultHeroBackground(),
             errorWidget: (_, __, ___) => _buildDefaultHeroBackground(),
             imageBuilder: (context, imageProvider) {

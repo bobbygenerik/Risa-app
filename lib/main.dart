@@ -454,6 +454,8 @@ class _MyAppState extends State<MyApp> {
   Future<void> _checkDisclaimer() async {
     final prefs = await SharedPreferences.getInstance();
     final accepted = prefs.getBool('disclaimer_accepted') ?? false;
+    
+    debugPrint('Disclaimer check: accepted = $accepted');
 
     setState(() {
       _disclaimerAccepted = accepted;
@@ -461,15 +463,21 @@ class _MyAppState extends State<MyApp> {
 
     // Only show disclaimer if never accepted before
     if (!accepted) {
+      debugPrint('Showing disclaimer in 2 seconds...');
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted && !_disclaimerAccepted) {
+          debugPrint('Actually showing disclaimer now');
           try {
             _showDisclaimer();
           } catch (e) {
             debugPrint('Failed to show disclaimer: $e');
           }
+        } else {
+          debugPrint('Skipping disclaimer - already accepted or unmounted');
         }
       });
+    } else {
+      debugPrint('Disclaimer already accepted, skipping');
     }
   }
 
@@ -527,14 +535,18 @@ class _MyAppState extends State<MyApp> {
     );
 
     if (result == true && mounted) {
+      debugPrint('User accepted disclaimer, saving to preferences');
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('disclaimer_accepted', true);
+      final saved = prefs.getBool('disclaimer_accepted') ?? false;
+      debugPrint('Disclaimer saved: $saved');
       setState(() {
         _disclaimerAccepted = true;
       });
     } else {
+      debugPrint('User declined disclaimer, should exit app');
       // User declined, exit app
-      // In production, you might want to close the app gracefully
+      SystemNavigator.pop();
     }
   }
 

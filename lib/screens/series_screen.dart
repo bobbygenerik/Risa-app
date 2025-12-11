@@ -799,7 +799,7 @@ class _SeriesScreenState extends State<SeriesScreen>
         ? CachedNetworkImage(
             imageUrl: heroImage,
             fit: BoxFit.cover,
-            alignment: Alignment.topCenter,
+            alignment: Alignment.center,
             placeholder: (_, __) => _buildBannerPlaceholder(),
             errorWidget: (_, __, ___) => _buildBannerPlaceholder(),
           )

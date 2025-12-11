@@ -66,33 +66,48 @@ class _VodCardImageState extends State<VodCardImage> {
 
   @override
   Widget build(BuildContext context) {
-    // Prefer TMDB poster over M3U tvg-logo for better quality
-    final imageUrl = _tmdbPosterUrl ?? widget.content.imageUrl;
-
-    if (imageUrl == null || imageUrl.isEmpty) {
-      return widget.placeholder;
+    // Show original image immediately if available, TMDB will replace when loaded
+    final imageUrl = widget.content.imageUrl;
+    final tmdbUrl = _tmdbPosterUrl;
+    
+    // If we have TMDB image, use it (higher quality)
+    if (tmdbUrl != null && tmdbUrl.isNotEmpty) {
+      return CachedNetworkImage(
+        imageUrl: tmdbUrl,
+        fit: widget.fit,
+        width: double.infinity,
+        height: double.infinity,
+        placeholder: (context, url) => widget.placeholder,
+        errorWidget: (context, url, error) {
+          // If TMDB fails, try original image
+          if (imageUrl != null && imageUrl.isNotEmpty) {
+            return CachedNetworkImage(
+              imageUrl: imageUrl,
+              fit: widget.fit,
+              width: double.infinity,
+              height: double.infinity,
+              placeholder: (context, url) => widget.placeholder,
+              errorWidget: (context, url, error) => widget.placeholder,
+            );
+          }
+          return widget.placeholder;
+        },
+      );
     }
-
-    return CachedNetworkImage(
-      imageUrl: imageUrl,
-      fit: widget.fit,
-      width: double.infinity,
-      height: double.infinity,
-      placeholder: (context, url) => widget.placeholder,
-      errorWidget: (context, url, error) {
-        // If TMDB fails, try original image
-        if (url == _tmdbPosterUrl && widget.content.imageUrl != null) {
-          return CachedNetworkImage(
-            imageUrl: widget.content.imageUrl!,
-            fit: widget.fit,
-            width: double.infinity,
-            height: double.infinity,
-            placeholder: (context, url) => widget.placeholder,
-            errorWidget: (context, url, error) => widget.placeholder,
-          );
-        }
-        return widget.placeholder;
-      },
-    );
+    
+    // If we have original image, show it while waiting for TMDB
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return CachedNetworkImage(
+        imageUrl: imageUrl,
+        fit: widget.fit,
+        width: double.infinity,
+        height: double.infinity,
+        placeholder: (context, url) => widget.placeholder,
+        errorWidget: (context, url, error) => widget.placeholder,
+      );
+    }
+    
+    // No images available
+    return widget.placeholder;
   }
 }

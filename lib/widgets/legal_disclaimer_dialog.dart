@@ -148,7 +148,10 @@ By continuing, you confirm you will only use this app for legal purposes and com
                 Expanded(
                   child: ElevatedButton(
                     onPressed: _accepted
-                        ? () => Navigator.of(context).pop(true)
+                        ? () {
+                            debugPrint('Continue button pressed');
+                            Navigator.of(context).pop(true);
+                          }
                         : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryBlue,

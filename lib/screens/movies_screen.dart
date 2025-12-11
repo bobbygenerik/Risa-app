@@ -699,7 +699,7 @@ class _MoviesScreenState extends State<MoviesScreen>
         ? CachedNetworkImage(
             imageUrl: heroImage,
             fit: BoxFit.cover,
-            alignment: Alignment.topCenter,
+            alignment: Alignment.center,
             placeholder: (_, __) => _buildBannerPlaceholder(),
             errorWidget: (_, __, ___) => _buildBannerPlaceholder(),
           )
