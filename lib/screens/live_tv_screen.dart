@@ -328,16 +328,26 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         animation: _scrollController,
         builder: (context, child) {
           final scrollOffset = _scrollController.hasClients ? _scrollController.offset : 0.0;
-          final scrollProgress = (scrollOffset / heroHeight).clamp(0.0, 1.0);
-          
-          // Hero shrinks and moves to right side as user scrolls
-          final heroWidth = screenSize.width - (scrollProgress * (screenSize.width * 0.4));
-          final heroLeft = scrollProgress * (screenSize.width * 0.6);
-          final heroTop = scrollProgress * (-heroHeight * 0.3);
-          final heroHeightAnimated = heroHeight - (scrollProgress * heroHeight * 0.7);
+          final fadeProgress = (scrollOffset / (heroHeight * 0.5)).clamp(0.0, 1.0);
           
           return Stack(
             children: [
+              // Fixed hero background
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: heroHeight,
+                child: Opacity(
+                  opacity: 1.0 - fadeProgress,
+                  child: _buildHeroContent(
+                    featuredChannel,
+                    currentProgram,
+                    heroImage,
+                    0.0,
+                  ),
+                ),
+              ),
               // Scrollable content
               Positioned.fill(
                 child: SingleChildScrollView(
@@ -346,10 +356,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Full screen hero spacer
+                      // Hero spacer
                       SizedBox(height: heroHeight),
                       // Content with sidebar alignment
-                      Padding(
+                      Container(
+                        color: AppTheme.darkBackground,
                         padding: EdgeInsets.only(
                           left: sidebarWidth + AppSizes.lg,
                           right: AppSizes.xxl,
@@ -371,109 +382,25 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   ),
                 ),
               ),
-              // Animated hero image/video
-              Positioned(
-                top: heroTop,
-                left: heroLeft,
-                width: heroWidth,
-                height: heroHeightAnimated,
-                child: _buildHeroContent(
-                  featuredChannel,
-                  currentProgram,
-                  heroImage,
-                  scrollProgress,
-                ),
-              ),
-              // Left gradient overlay (appears as user scrolls)
-              Positioned(
-                top: 0,
-                left: 0,
-                width: screenSize.width * (0.6 * scrollProgress),
-                height: heroHeightAnimated,
-                child: IgnorePointer(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                        colors: [
-                          AppTheme.darkBackground,
-                          AppTheme.darkBackground.withValues(alpha: 0.95),
-                          AppTheme.darkBackground.withValues(alpha: 0.85),
-                          AppTheme.darkBackground.withValues(alpha: 0.6),
-                          AppTheme.darkBackground.withValues(alpha: 0.3),
-                          Colors.transparent,
-                        ],
-                        stops: const [0.0, 0.2, 0.4, 0.7, 0.85, 1.0],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              // Bottom gradient overlay
-              Positioned(
-                left: heroLeft,
-                right: 0,
-                top: heroTop + heroHeightAnimated - (heroHeightAnimated * 0.3),
-                height: heroHeightAnimated * 0.3,
-                child: IgnorePointer(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
-                        colors: [
-                          AppTheme.darkBackground,
-                          AppTheme.darkBackground.withValues(alpha: 0.9),
-                          AppTheme.darkBackground.withValues(alpha: 0.7),
-                          AppTheme.darkBackground.withValues(alpha: 0.4),
-                          Colors.transparent,
-                        ],
-                        stops: const [0.0, 0.3, 0.6, 0.8, 1.0],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              // Top navigation fade
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                height: 100,
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withAlpha((0.9 * 255).round()),
-                        Colors.black.withAlpha(0),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              // Featured info (aligned with sidebar when at top)
+              // Hero info overlay
               Positioned(
                 bottom: heroHeight * 0.35,
                 left: sidebarWidth + 8,
                 width: screenSize.width * 0.4,
                 child: Opacity(
-                  opacity: (1.0 - (scrollProgress * 2.0)).clamp(0.0, 1.0),
+                  opacity: 1.0 - fadeProgress,
                   child: _buildFeaturedInfo(context, featuredChannel, currentProgram),
                 ),
               ),
-              // Channel logo (fades out as user scrolls)
+              // Channel logo
               Positioned(
                 top: AppSizes.lg,
                 right: AppSizes.lg,
                 child: Opacity(
-                  opacity: 1.0 - scrollProgress,
+                  opacity: 1.0 - fadeProgress,
                   child: _buildChannelLogo(context, featuredChannel),
                 ),
               ),
-
             ],
           );
         },
@@ -1059,20 +986,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     String? heroImage,
     double scrollProgress,
   ) {
-    // When scrolled (hero shrunk), always show static image
-    if (scrollProgress > 0.1) {
-      return heroImage != null && heroImage.isNotEmpty
-          ? CachedNetworkImage(
-              imageUrl: heroImage,
-              fit: BoxFit.cover,
-              alignment: Alignment.center,
-              placeholder: (_, __) => _buildDefaultHeroBackground(),
-              errorWidget: (_, __, ___) => _buildDefaultHeroBackground(),
-            )
-          : _buildDefaultHeroBackground();
-    }
-
-    // At top of screen - show video if enabled, otherwise image
+    // Show video if enabled, otherwise image
     if (_heroVideoPreview && featuredChannel.url.isNotEmpty) {
       return Stack(
         children: [
