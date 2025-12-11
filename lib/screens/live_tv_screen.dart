@@ -340,11 +340,35 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 height: heroHeight,
                 child: Opacity(
                   opacity: 1.0 - fadeProgress,
-                  child: _buildHeroContent(
-                    featuredChannel,
-                    currentProgram,
-                    heroImage,
-                    0.0,
+                  child: Stack(
+                    children: [
+                      _buildHeroContent(
+                        featuredChannel,
+                        currentProgram,
+                        heroImage,
+                        0.0,
+                      ),
+                      // Gradient fade at bottom
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        height: 120,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                AppTheme.darkBackground.withAlpha((0.8 * 255).round()),
+                                AppTheme.darkBackground,
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -384,7 +408,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               ),
               // Hero info overlay
               Positioned(
-                bottom: heroHeight * 0.35,
+                bottom: heroHeight * 0.45,
                 left: sidebarWidth,
                 width: screenSize.width * 0.4,
                 child: Opacity(
@@ -536,6 +560,28 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
 
+
+  String? _getChannelCardImage(Program? program) {
+    if (program == null) return null;
+    
+    // Try direct program image first
+    if (program.imageUrl != null && program.imageUrl!.isNotEmpty) {
+      return program.imageUrl;
+    }
+    
+    // Try cached TMDB image
+    final cached = _programArtwork[program.id];
+    if (cached != null) {
+      return cached.isNotEmpty ? cached : null;
+    }
+    
+    // Fetch TMDB image if enabled
+    if (_tmdbEnabled) {
+      _fetchProgramArtwork(program);
+    }
+    
+    return null;
+  }
 
   String? _resolveHeroImage(Program? program) {
     // Try program image first
@@ -786,11 +832,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         borderRadius: BorderRadius.circular(12),
                         child: Stack(
                           children: [
-                            if (currentProgram?.imageUrl != null &&
-                                currentProgram!.imageUrl!.isNotEmpty)
+                            if (_getChannelCardImage(currentProgram) != null)
                               Positioned.fill(
                                 child: CachedNetworkImage(
-                                  imageUrl: currentProgram.imageUrl!,
+                                  imageUrl: _getChannelCardImage(currentProgram)!,
                                   fit: BoxFit.cover,
                                   memCacheWidth: 400,
                                   placeholder: (_, __) => Container(
@@ -799,9 +844,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
                                         colors: [
+                                          Color(0xFF2a2a3e),
                                           Color(0xFF1a1a2e),
                                           AppTheme.cardBackground
                                         ],
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: Icon(
+                                        Icons.tv,
+                                        color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
+                                        size: 32,
                                       ),
                                     ),
                                   ),
@@ -811,9 +864,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
                                         colors: [
+                                          Color(0xFF2a2a3e),
                                           Color(0xFF1a1a2e),
                                           AppTheme.cardBackground
                                         ],
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: Icon(
+                                        Icons.tv,
+                                        color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
+                                        size: 32,
                                       ),
                                     ),
                                   ),
@@ -826,9 +887,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                     colors: [
+                                      Color(0xFF2a2a3e),
                                       Color(0xFF1a1a2e),
                                       AppTheme.cardBackground
                                     ],
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    Icons.tv,
+                                    color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
+                                    size: 32,
                                   ),
                                 ),
                               ),
@@ -878,39 +947,62 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                   ),
                                 ),
                               ),
+                            // Progress bar overlay at bottom
+                            if (currentProgram != null)
+                              Positioned(
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                child: Container(
+                                  height: 4,
+                                  decoration: BoxDecoration(
+                                    borderRadius: const BorderRadius.only(
+                                      bottomLeft: Radius.circular(12),
+                                      bottomRight: Radius.circular(12),
+                                    ),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: const BorderRadius.only(
+                                      bottomLeft: Radius.circular(12),
+                                      bottomRight: Radius.circular(12),
+                                    ),
+                                    child: LinearProgressIndicator(
+                                      value: progress,
+                                      backgroundColor: Colors.black.withAlpha((0.4 * 255).round()),
+                                      color: AppTheme.primaryBlue,
+                                      minHeight: 4,
+                                    ),
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ),
                     ),
                     if (currentProgram != null) ...[
                       const SizedBox(height: 8),
-                      Text(
-                        currentProgram.title,
-                        style: const TextStyle(
-                          color: AppTheme.textPrimary,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(2),
-                        child: LinearProgressIndicator(
-                          value: progress,
-                          backgroundColor:
-                              Colors.white.withAlpha((0.2 * 255).round()),
-                          color: AppTheme.primaryBlue,
-                          minHeight: 3,
+                      SizedBox(
+                        width: cardWidth,
+                        child: Text(
+                          currentProgram.title,
+                          style: const TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${_formatTime(currentProgram.startTime)} - ${_formatTime(currentProgram.endTime)}',
-                        style: const TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 11,
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: cardWidth,
+                        child: Text(
+                          '${_formatTime(currentProgram.startTime)} - ${_formatTime(currentProgram.endTime)}',
+                          style: const TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 11,
+                          ),
                         ),
                       ),
                     ],
@@ -1021,7 +1113,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         ? CachedNetworkImage(
             imageUrl: heroImage,
             fit: BoxFit.cover,
-            alignment: Alignment.center,
+            alignment: Alignment.topCenter,
             placeholder: (_, __) => _buildDefaultHeroBackground(),
             errorWidget: (_, __, ___) => _buildDefaultHeroBackground(),
             imageBuilder: (context, imageProvider) {
@@ -1212,7 +1304,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                     gradient: const LinearGradient(
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
-                                      colors: [Color(0xFF1a1a2e), AppTheme.cardBackground],
+                                      colors: [
+                                        Color(0xFF2a2a3e),
+                                        Color(0xFF1a1a2e),
+                                        AppTheme.cardBackground
+                                      ],
                                     ),
                                   ),
                                   child: Stack(
@@ -1230,6 +1326,22 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                           ),
                                         ),
                                       ),
+                                      // Progress bar overlay skeleton
+                                      Positioned(
+                                        bottom: 0,
+                                        left: 0,
+                                        right: 0,
+                                        child: Container(
+                                          height: 4,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withValues(alpha: 0.1),
+                                            borderRadius: const BorderRadius.only(
+                                              bottomLeft: Radius.circular(12),
+                                              bottomRight: Radius.circular(12),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -1243,17 +1355,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                 ),
-                                const SizedBox(height: 4),
-                                // Progress bar skeleton
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(2),
-                                  child: Container(
-                                    width: cardWidth,
-                                    height: 3,
-                                    color: Colors.white.withValues(alpha: 0.1),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
+                                const SizedBox(height: 8),
                                 // Time range skeleton
                                 Container(
                                   width: cardWidth * 0.8,

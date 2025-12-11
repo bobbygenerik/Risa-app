@@ -720,10 +720,11 @@ class _EPGScreenState extends State<EPGScreen>
                         // Today header
                         Container(
                           height: 64,
-                          margin: const EdgeInsets.only(bottom: 4),
+                          margin: const EdgeInsets.only(bottom: 4, right: 8),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.02),
+                            color: const Color(0xFF2a2a3e).withValues(alpha: 0.4),
                             borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
                           ),
                           child: Center(
                             child: Text(
@@ -915,11 +916,11 @@ class _EPGScreenState extends State<EPGScreen>
               height: 64,
               margin: const EdgeInsets.only(bottom: 4, right: 8),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.02),
+                color: const Color(0xFF2a2a3e).withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(8),
                 border: isFocused
                     ? Border.all(color: AppTheme.primaryBlue, width: 2)
-                    : null,
+                    : Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
@@ -982,8 +983,9 @@ class _EPGScreenState extends State<EPGScreen>
             height: 64,
             margin: const EdgeInsets.only(right: 4),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.02),
+              color: const Color(0xFF2a2a3e).withValues(alpha: 0.4),
               borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
             ),
             child: Center(
               child: Text(
@@ -1096,14 +1098,14 @@ class _EPGScreenState extends State<EPGScreen>
             margin: const EdgeInsets.only(right: 4),
             decoration: BoxDecoration(
               color: isLive
-                  ? epgLiveColor.withValues(alpha: 0.15)
+                  ? epgLiveColor.withValues(alpha: 0.25)
                   : hasCatchup
-                      ? epgCatchupColor.withValues(alpha: 0.1)
-                      : Colors.white.withValues(alpha: 0.03),
+                      ? epgCatchupColor.withValues(alpha: 0.2)
+                      : const Color(0xFF2a2a3e).withValues(alpha: 0.6),
               borderRadius: BorderRadius.circular(8),
               border: isFocused
                   ? Border.all(color: AppTheme.primaryBlue, width: 2)
-                  : null,
+                  : Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
             ),
             child: Material(
               color: Colors.transparent,

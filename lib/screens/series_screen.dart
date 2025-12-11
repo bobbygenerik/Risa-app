@@ -518,8 +518,16 @@ class _SeriesScreenState extends State<SeriesScreen>
 
   Widget _buildPlaceholder(String title) {
     return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF050710),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF2a2a3e),
+            Color(0xFF1a1a2e),
+            AppTheme.cardBackground
+          ],
+        ),
       ),
       child: Center(
         child: Column(
@@ -528,7 +536,7 @@ class _SeriesScreenState extends State<SeriesScreen>
             Icon(
               Icons.tv,
               size: context.tvIconSize(32),
-              color: Colors.white.withAlpha((0.2 * 255).round()),
+              color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
             ),
             SizedBox(height: context.tvSpacing(8)),
             Padding(
@@ -536,7 +544,7 @@ class _SeriesScreenState extends State<SeriesScreen>
               child: Text(
                 title,
                 style: TextStyle(
-                  color: Colors.white.withAlpha((0.5 * 255).round()),
+                  color: Colors.white.withAlpha((0.7 * 255).round()),
                   fontSize: context.tvTextSize(11),
                   fontWeight: FontWeight.w500,
                 ),
@@ -704,7 +712,31 @@ class _SeriesScreenState extends State<SeriesScreen>
                           final encodedId = Uri.encodeComponent(featuredSeries.id);
                           context.push('/content/$encodedId', extra: featuredSeries);
                         },
-                        child: _buildHeroContent(featuredSeries, heroImage, 0.0),
+                        child: Stack(
+                          children: [
+                            _buildHeroContent(featuredSeries, heroImage, 0.0),
+                            // Gradient fade at bottom
+                            Positioned(
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              height: 120,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.transparent,
+                                      AppTheme.darkBackground.withAlpha((0.8 * 255).round()),
+                                      AppTheme.darkBackground,
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -746,7 +778,7 @@ class _SeriesScreenState extends State<SeriesScreen>
                 ),
                 // Featured info overlay
                 Positioned(
-                  bottom: heroHeight * 0.35,
+                  bottom: heroHeight * 0.45,
                   left: sidebarWidth + AppSizes.lg,
                   width: screenSize.width * 0.4,
                   child: Opacity(
@@ -767,7 +799,7 @@ class _SeriesScreenState extends State<SeriesScreen>
         ? CachedNetworkImage(
             imageUrl: heroImage,
             fit: BoxFit.cover,
-            alignment: Alignment.center,
+            alignment: Alignment.topCenter,
             placeholder: (_, __) => _buildBannerPlaceholder(),
             errorWidget: (_, __, ___) => _buildBannerPlaceholder(),
           )

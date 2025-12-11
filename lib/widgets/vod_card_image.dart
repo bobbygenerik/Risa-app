@@ -79,7 +79,20 @@ class _VodCardImageState extends State<VodCardImage> {
       width: double.infinity,
       height: double.infinity,
       placeholder: (context, url) => widget.placeholder,
-      errorWidget: (context, url, error) => widget.placeholder,
+      errorWidget: (context, url, error) {
+        // If TMDB fails, try original image
+        if (url == _tmdbPosterUrl && widget.content.imageUrl != null) {
+          return CachedNetworkImage(
+            imageUrl: widget.content.imageUrl!,
+            fit: widget.fit,
+            width: double.infinity,
+            height: double.infinity,
+            placeholder: (context, url) => widget.placeholder,
+            errorWidget: (context, url, error) => widget.placeholder,
+          );
+        }
+        return widget.placeholder;
+      },
     );
   }
 }

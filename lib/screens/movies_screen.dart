@@ -411,8 +411,16 @@ class _MoviesScreenState extends State<MoviesScreen>
 
   Widget _buildPlaceholder(String title) {
     return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF050710),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF2a2a3e),
+            Color(0xFF1a1a2e),
+            AppTheme.cardBackground
+          ],
+        ),
       ),
       child: Center(
         child: Column(
@@ -421,7 +429,7 @@ class _MoviesScreenState extends State<MoviesScreen>
             Icon(
               Icons.movie,
               size: 48,
-              color: Colors.white.withAlpha((0.2 * 255).round()),
+              color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
             ),
             const SizedBox(height: 8),
             Padding(
@@ -429,7 +437,7 @@ class _MoviesScreenState extends State<MoviesScreen>
               child: Text(
                 title,
                 style: TextStyle(
-                  color: Colors.white.withAlpha((0.5 * 255).round()),
+                  color: Colors.white.withAlpha((0.7 * 255).round()),
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
                 ),
@@ -604,7 +612,31 @@ class _MoviesScreenState extends State<MoviesScreen>
                           final encodedId = Uri.encodeComponent(featuredMovie.id);
                           context.push('/content/$encodedId', extra: featuredMovie);
                         },
-                        child: _buildHeroContent(featuredMovie, heroImage, 0.0),
+                        child: Stack(
+                          children: [
+                            _buildHeroContent(featuredMovie, heroImage, 0.0),
+                            // Gradient fade at bottom
+                            Positioned(
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              height: 120,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.transparent,
+                                      AppTheme.darkBackground.withAlpha((0.8 * 255).round()),
+                                      AppTheme.darkBackground,
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -646,7 +678,7 @@ class _MoviesScreenState extends State<MoviesScreen>
                 ),
                 // Featured info overlay
                 Positioned(
-                  bottom: heroHeight * 0.35,
+                  bottom: heroHeight * 0.45,
                   left: sidebarWidth + AppSizes.lg,
                   width: screenSize.width * 0.4,
                   child: Opacity(
@@ -667,7 +699,7 @@ class _MoviesScreenState extends State<MoviesScreen>
         ? CachedNetworkImage(
             imageUrl: heroImage,
             fit: BoxFit.cover,
-            alignment: Alignment.center,
+            alignment: Alignment.topCenter,
             placeholder: (_, __) => _buildBannerPlaceholder(),
             errorWidget: (_, __, ___) => _buildBannerPlaceholder(),
           )
