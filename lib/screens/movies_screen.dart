@@ -769,13 +769,15 @@ class _MoviesScreenState extends State<MoviesScreen>
 
   Widget _buildSkeletonLoader() {
     final screenSize = MediaQuery.of(context).size;
-    final heroHeight = screenSize.height * 0.65;
+    final heroHeight = screenSize.height * 0.75;
+    final sidebarWidth = AppSizes.sidebarCollapsedWidth + AppSizes.lg;
     final cardWidth = screenSize.width / 6.5;
     final cardHeight = cardWidth * 1.5;
+    final rowHeight = cardWidth * 1.8;
 
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFF050710),
+        color: AppTheme.darkBackground,
       ),
       child: Stack(
         children: [
@@ -789,74 +791,176 @@ class _MoviesScreenState extends State<MoviesScreen>
               color: AppTheme.cardBackground,
             ),
           ),
-          // Info box skeleton
+          // Featured info skeleton - exact position as real content
           Positioned(
-            bottom: heroHeight * 0.20,
-            left: 120,
-            width: screenSize.width * 0.33,
+            bottom: heroHeight * 0.35,
+            left: sidebarWidth + AppSizes.lg,
+            width: screenSize.width * 0.4,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
+                // Title skeleton - matches displaySmall height
                 Container(
-                  height: 30,
-                  width: screenSize.width * 0.25,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withAlpha((0.1 * 255).round()),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  height: 60,
+                  height: 40,
                   width: screenSize.width * 0.3,
                   decoration: BoxDecoration(
+                    color: Colors.white.withAlpha((0.15 * 255).round()),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(height: AppSizes.sm),
+                // Description skeleton - 3 lines
+                Container(
+                  height: 60,
+                  width: screenSize.width * 0.35,
+                  decoration: BoxDecoration(
                     color: Colors.white.withAlpha((0.1 * 255).round()),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
-              ],
-            ),
-          ),
-          // Card rows skeleton
-          Positioned(
-            top: heroHeight + 40,
-            left: 48,
-            right: 80,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: List.generate(3, (rowIndex) => Padding(
-                padding: const EdgeInsets.only(bottom: 32),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(height: AppSizes.sm),
+                // Rating skeleton
+                Row(
                   children: [
                     Container(
-                      height: 20,
-                      width: 150,
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withAlpha((0.3 * 255).round()),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(width: AppSizes.xs),
+                    Container(
+                      width: 30,
+                      height: 14,
                       decoration: BoxDecoration(
                         color: Colors.white.withAlpha((0.1 * 255).round()),
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: cardHeight,
-                      child: Row(
-                        children: List.generate(5, (cardIndex) => Padding(
-                          padding: const EdgeInsets.only(right: 16),
-                          child: Container(
-                            width: cardWidth,
-                            height: cardHeight,
-                            decoration: BoxDecoration(
-                              color: AppTheme.cardBackground,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        )),
+                    const SizedBox(width: AppSizes.md),
+                    Container(
+                      width: 40,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withAlpha((0.1 * 255).round()),
+                        borderRadius: BorderRadius.circular(4),
                       ),
                     ),
                   ],
                 ),
-              )),
+              ],
+            ),
+          ),
+          // Scrollable content skeleton
+          Positioned(
+            top: heroHeight,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              color: AppTheme.darkBackground,
+              padding: EdgeInsets.only(
+                left: sidebarWidth + AppSizes.lg,
+                right: AppSizes.xxl,
+                top: AppSizes.xxl,
+                bottom: AppSizes.xxl,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(height: AppSizes.xxl),
+                  ...List.generate(3, (rowIndex) => Padding(
+                    padding: const EdgeInsets.only(bottom: 32),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Section header skeleton
+                        Container(
+                          height: 20,
+                          width: [180, 140, 160][rowIndex % 3].toDouble(),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withAlpha((0.15 * 255).round()),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        // Movie cards row skeleton
+                        SizedBox(
+                          height: rowHeight,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            padding: EdgeInsets.zero,
+                            itemCount: 5,
+                            itemExtent: cardWidth + AppSizes.lg,
+                            itemBuilder: (context, cardIndex) => Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Movie poster skeleton
+                                  Container(
+                                    width: cardWidth,
+                                    height: cardHeight,
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.cardBackground,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  // Title skeleton
+                                  Container(
+                                    width: cardWidth,
+                                    height: 14,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withAlpha((0.15 * 255).round()),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  // Year and rating skeleton
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 30,
+                                        height: 11,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withAlpha((0.1 * 255).round()),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        width: 8,
+                                        height: 8,
+                                        decoration: BoxDecoration(
+                                          color: Colors.amber.withAlpha((0.3 * 255).round()),
+                                          borderRadius: BorderRadius.circular(2),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Container(
+                                        width: 20,
+                                        height: 11,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withAlpha((0.1 * 255).round()),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )),
+                ],
+              ),
             ),
           ),
         ],

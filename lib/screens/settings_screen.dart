@@ -1570,11 +1570,12 @@ class _SettingsScreenState extends State<SettingsScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildModelTile('English (US)', true, 'Active'),
-              _buildModelTile('Spanish', false, 'Available'),
-              _buildModelTile('French', false, 'Available'),
-              _buildModelTile('German', false, 'Available'),
-              _buildModelTile('Japanese', true, 'Downloaded'),
+              _buildModelTile('Whisper Tiny (English)', false, 'Not downloaded (77MB)'),
+              _buildModelTile('Whisper Tiny (Multilingual)', false, 'Not downloaded (77MB)'),
+              _buildModelTile('Google Speech (English)', true, 'Built-in'),
+              _buildModelTile('Google Speech (Spanish)', false, 'Available'),
+              _buildModelTile('Google Speech (French)', false, 'Available'),
+              _buildModelTile('Google Speech (German)', false, 'Available'),
             ],
           ),
         ),

@@ -1043,86 +1043,118 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final screenSize = MediaQuery.of(context).size;
     final heroHeight = screenSize.height * 0.75;
     final sidebarWidth = AppSizes.sidebarCollapsedWidth + AppSizes.lg;
-    final cardWidth = screenSize.width / 5.5;
+    final isLandscape = screenSize.width > screenSize.height;
+    final cardWidth = isLandscape ? (screenSize.width / 5.5) : (screenSize.width / 3.5);
     final cardHeight = cardWidth * 0.57;
     final rowHeight = cardHeight + 120;
 
     return Stack(
       children: [
-        // Hero skeleton
+        // Hero background skeleton - matches your gradient background
         Positioned(
           top: 0,
           left: 0,
           right: 0,
           height: heroHeight,
           child: Container(
-            color: AppTheme.cardBackground,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF1a1a2e), AppTheme.cardBackground],
+              ),
+            ),
           ),
         ),
-        // Info box skeleton (matches actual position)
+        // Featured info skeleton - exact position as real content
         Positioned(
           bottom: heroHeight * 0.35,
           left: sidebarWidth,
           width: screenSize.width * 0.4,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // Title skeleton
+              // Title skeleton - matches 2-line height
               Container(
-                height: 32,
+                height: context.tvTextSize(24) * 1.3 * 2,
                 width: screenSize.width * 0.3,
                 decoration: BoxDecoration(
-                  color: Colors.white.withAlpha((0.15 * 255).round()),
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
-              const SizedBox(height: 8),
-              // Description skeleton
+              SizedBox(height: context.tvSpacing(8)),
+              // Description skeleton - matches 3-line height
               Container(
-                height: 60,
+                height: context.tvTextSize(14) * 1.3 * 3,
                 width: screenSize.width * 0.35,
                 decoration: BoxDecoration(
-                  color: Colors.white.withAlpha((0.1 * 255).round()),
+                  color: Colors.white.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
-              const SizedBox(height: 8),
-              // Progress bar skeleton
+              SizedBox(height: context.tvSpacing(8)),
+              // Progress bar skeleton - exact height
               Container(
                 height: 6,
                 width: screenSize.width * 0.25,
                 decoration: BoxDecoration(
-                  color: Colors.white.withAlpha((0.1 * 255).round()),
+                  color: Colors.white.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
               ),
-              const SizedBox(height: 8),
-              // Time range skeleton
-              Container(
-                height: 16,
-                width: 120,
-                decoration: BoxDecoration(
-                  color: Colors.white.withAlpha((0.1 * 255).round()),
-                  borderRadius: BorderRadius.circular(4),
+              SizedBox(height: context.tvSpacing(4)),
+              // Time range with LIVE badge skeleton
+              SizedBox(
+                height: context.tvTextSize(13) * 1.4,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentRed.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      width: 100,
+                      height: 13,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
         ),
-        // Channel logo skeleton
+        // Channel logo skeleton - exact position
         Positioned(
           top: AppSizes.lg,
           right: AppSizes.lg,
           child: Container(
             height: 40,
-            width: 80,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
               color: AppTheme.cardBackground,
               borderRadius: BorderRadius.circular(8),
             ),
+            child: Container(
+              width: 48,
+              height: 24,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
           ),
         ),
-        // Scrollable content skeleton
+        // Scrollable content skeleton - matches exact layout
         Positioned(
           top: heroHeight,
           left: 0,
@@ -1134,79 +1166,113 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               left: sidebarWidth,
               right: AppSizes.xxl,
               top: AppSizes.xxl,
+              bottom: AppSizes.xxl,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: List.generate(3, (rowIndex) => Padding(
-                padding: EdgeInsets.only(bottom: AppSizes.lg),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Category title skeleton
-                    Container(
-                      height: 24,
-                      width: 180,
-                      margin: EdgeInsets.only(bottom: AppSizes.sm),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withAlpha((0.15 * 255).round()),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    // Channel cards row skeleton
-                    SizedBox(
-                      height: rowHeight,
-                      child: Row(
-                        children: List.generate(5, (cardIndex) => Padding(
-                          padding: EdgeInsets.only(right: AppSizes.lg),
-                          child: Column(
-                            children: [
-                              // Card skeleton
-                              Container(
-                                width: cardWidth,
-                                height: cardHeight,
-                                decoration: BoxDecoration(
-                                  color: AppTheme.cardBackground,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              // Program title skeleton
-                              Container(
-                                width: cardWidth,
-                                height: 14,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withAlpha((0.1 * 255).round()),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              // Progress bar skeleton
-                              Container(
-                                width: cardWidth,
-                                height: 3,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withAlpha((0.1 * 255).round()),
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              // Time range skeleton
-                              Container(
-                                width: cardWidth * 0.8,
-                                height: 11,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withAlpha((0.1 * 255).round()),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-                            ],
+              children: [
+                SizedBox(height: AppSizes.xxl),
+                ...List.generate(3, (rowIndex) => Padding(
+                  padding: EdgeInsets.only(bottom: AppSizes.lg),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Category title skeleton - matches headlineSmall
+                      Padding(
+                        padding: EdgeInsets.only(bottom: AppSizes.sm),
+                        child: Container(
+                          height: 24,
+                          width: [180, 140, 160][rowIndex % 3].toDouble(),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
                           ),
-                        )),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              )),
+                      // Channel cards row skeleton
+                      SizedBox(
+                        height: rowHeight,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          padding: EdgeInsets.zero,
+                          itemCount: 5,
+                          itemExtent: cardWidth + AppSizes.lg,
+                          itemBuilder: (context, cardIndex) => SizedBox(
+                            width: cardWidth,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                // Card skeleton - matches exact styling
+                                Container(
+                                  width: cardWidth,
+                                  height: cardHeight,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    color: AppTheme.cardBackground,
+                                    gradient: const LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [Color(0xFF1a1a2e), AppTheme.cardBackground],
+                                    ),
+                                  ),
+                                  child: Stack(
+                                    children: [
+                                      // Channel logo placeholder
+                                      Positioned(
+                                        top: 8,
+                                        left: 8,
+                                        child: Container(
+                                          width: 40,
+                                          height: 24,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                // Program title skeleton
+                                Container(
+                                  width: cardWidth,
+                                  height: 14,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                // Progress bar skeleton
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(2),
+                                  child: Container(
+                                    width: cardWidth,
+                                    height: 3,
+                                    color: Colors.white.withValues(alpha: 0.1),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                // Time range skeleton
+                                Container(
+                                  width: cardWidth * 0.8,
+                                  height: 11,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: AppSizes.lg),
+                    ],
+                  ),
+                )),
+              ],
             ),
           ),
         ),
