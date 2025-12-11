@@ -60,16 +60,19 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
 
     try {
       await _saveUrls();
+      if (!mounted) return;
       final epgService = Provider.of<EpgService>(context, listen: false);
       await epgService.loadEpgFromUrl(_primaryUrlController.text.trim(), forceRefresh: true);
       _showMessage('Primary EPG updated successfully!');
     } catch (e) {
       _showMessage('Failed to update primary EPG: $e');
     } finally {
-      setState(() {
-        _isLoading = false;
-        _statusMessage = null;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _statusMessage = null;
+        });
+      }
     }
   }
 
@@ -86,16 +89,19 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
 
     try {
       await _saveUrls();
+      if (!mounted) return;
       final epgService = Provider.of<EpgService>(context, listen: false);
       await epgService.loadSecondaryEpgFromUrl(_secondaryUrlController.text.trim(), forceRefresh: true);
       _showMessage('Secondary EPG updated successfully!');
     } catch (e) {
       _showMessage('Failed to update secondary EPG: $e');
     } finally {
-      setState(() {
-        _isLoading = false;
-        _statusMessage = null;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _statusMessage = null;
+        });
+      }
     }
   }
 
@@ -112,10 +118,12 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
     } catch (e) {
       _showMessage('Failed to clear EPG cache: $e');
     } finally {
-      setState(() {
-        _isLoading = false;
-        _statusMessage = null;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _statusMessage = null;
+        });
+      }
     }
   }
 

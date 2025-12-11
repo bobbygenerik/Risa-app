@@ -57,7 +57,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool _autoDownloadSubtitles = true;
   bool _transcriptionEnabled = false;
   bool _translationEnabled = false;
-  bool _ttsEnabled = false;
+
 
   // EPG Settings
   int _epgCacheDuration = 6; // hours
@@ -189,7 +189,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     _autoDownloadSubtitles = prefs.getBool('auto_download_subtitles') ?? true;
     _transcriptionEnabled = prefs.getBool('transcription_enabled') ?? false;
     _translationEnabled = prefs.getBool('translation_enabled') ?? false;
-    _ttsEnabled = prefs.getBool('tts_enabled') ?? false;
+
     _rememberPlaybackPosition =
         prefs.getBool('remember_playback_position') ?? true;
 
@@ -924,7 +924,6 @@ class _SettingsScreenState extends State<SettingsScreen>
           children: [
             _buildSwitchTile('Enable Live Transcription', _transcriptionEnabled),
             _buildSwitchTile('Enable Translation', _translationEnabled),
-            _buildSwitchTile('Enable Text-to-Speech', _ttsEnabled),
             if (_transcriptionEnabled || _translationEnabled) ...[
               const SizedBox(height: 12),
               _buildFocusButton(
@@ -1322,7 +1321,6 @@ class _SettingsScreenState extends State<SettingsScreen>
         case 'Enable Real-Debrid': _realDebridEnabled = newValue; break;
         case 'Enable Live Transcription': _transcriptionEnabled = newValue; break;
         case 'Enable Translation': _translationEnabled = newValue; break;
-        case 'Enable Text-to-Speech': _ttsEnabled = newValue; break;
         case 'Store Program Descriptions': _storeDescriptions = newValue; break;
         case 'Show Channel Logos': _showLogos = newValue; break;
         case 'Show Program Images': _showImages = newValue; break;
@@ -1362,13 +1360,6 @@ class _SettingsScreenState extends State<SettingsScreen>
         if (newValue && mounted) {
           final service = Provider.of<IntegratedTranscriptionService>(context, listen: false);
           service.setTranslationEnabled(newValue);
-        }
-        break;
-      case 'Enable Text-to-Speech': 
-        await prefs.setBool('tts_enabled', newValue);
-        if (newValue && mounted) {
-          final service = Provider.of<IntegratedTranscriptionService>(context, listen: false);
-          service.setTTSEnabled(newValue);
         }
         break;
       case 'Store Program Descriptions': await prefs.setBool('epg_store_descriptions', newValue); break;
@@ -1443,8 +1434,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             const Text('Translation converts text to English on-device.', 
                 style: TextStyle(color: AppTheme.textSecondary)),
             const SizedBox(height: 16),
-            const Text('Text-to-Speech reads translated text aloud.', 
-                style: TextStyle(color: AppTheme.textSecondary)),
+
           ],
         ),
         actions: [
