@@ -365,10 +365,7 @@ class _EPGScreenState extends State<EPGScreen>
                             const SizedBox(width: 48),
                             // Category sidebar
                             _buildCategorySidebar(categoryNames),
-                            const SizedBox(width: 8),
-                            const VerticalDivider(
-                                width: 1, color: AppTheme.divider),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 16),
                             // Program grid with channel names
                             Expanded(
                               child: _buildProgramGrid(
@@ -653,18 +650,6 @@ class _EPGScreenState extends State<EPGScreen>
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.03),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: isFocused
-                    ? AppTheme.primaryBlue
-                    : isSelected
-                        ? AppTheme.primaryBlue.withValues(alpha: 0.5)
-                        : Colors.white.withValues(alpha: 0.1),
-                width: isFocused ? 2 : 1,
-              ),
-            ),
             child: Text(
               name,
               style: TextStyle(
@@ -734,15 +719,11 @@ class _EPGScreenState extends State<EPGScreen>
                       children: [
                         // Today header
                         Container(
-                          height: 60,
-                          margin: const EdgeInsets.only(bottom: 4, right: 4),
+                          height: 64,
+                          margin: const EdgeInsets.only(bottom: 4),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.03),
+                            color: Colors.white.withValues(alpha: 0.02),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.1),
-                              width: 1,
-                            ),
                           ),
                           child: Center(
                             child: Text(
@@ -796,7 +777,7 @@ class _EPGScreenState extends State<EPGScreen>
                       children: [
                         // Time header (scrolls horizontally)
                         Container(
-                          height: 60,
+                          height: 64,
                           margin: const EdgeInsets.only(bottom: 4),
                           child: NotificationListener<ScrollNotification>(
                             onNotification: (notification) {
@@ -911,6 +892,10 @@ class _EPGScreenState extends State<EPGScreen>
             _firstCategoryFocus.requestFocus();
             return KeyEventResult.handled;
           }
+          if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+            // Focus first program in the timeline for this channel
+            return KeyEventResult.ignored; // Let it find first focusable program
+          }
         }
         return KeyEventResult.ignored;
       },
@@ -927,46 +912,48 @@ class _EPGScreenState extends State<EPGScreen>
             },
             onLongPress: () => _showChannelContextMenu(context, channel),
             child: Container(
-              height: 60,
+              height: 64,
               margin: const EdgeInsets.only(bottom: 4, right: 8),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.03),
+                color: Colors.white.withValues(alpha: 0.02),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: isFocused
-                      ? AppTheme.primaryBlue
-                      : Colors.white.withValues(alpha: 0.1),
-                  width: isFocused ? 2 : 1,
-                ),
+                border: isFocused
+                    ? Border.all(color: AppTheme.primaryBlue, width: 2)
+                    : null,
               ),
-              child: Center(
-                child: Container(
-                  width: 48,
-                  height: 48,
-                  child: channel.logoUrl != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(7),
-                          child: Image.network(
-                            channel.logoUrl!,
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Center(
-                                child: Icon(
-                                  Icons.dvr,
-                                  color: AppTheme.primaryBlue,
-                                  size: 24,
-                                ),
-                              );
-                            },
-                          ),
-                        )
-                      : const Center(
-                          child: Icon(
-                            Icons.dvr,
-                            color: AppTheme.primaryBlue,
-                            size: 24,
-                          ),
-                        ),
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      child: channel.logoUrl != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(7),
+                              child: Image.network(
+                                channel.logoUrl!,
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Center(
+                                    child: Icon(
+                                      Icons.dvr,
+                                      color: AppTheme.primaryBlue,
+                                      size: 24,
+                                    ),
+                                  );
+                                },
+                              ),
+                            )
+                          : const Center(
+                              child: Icon(
+                                Icons.dvr,
+                                color: AppTheme.primaryBlue,
+                                size: 24,
+                              ),
+                            ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -984,7 +971,7 @@ class _EPGScreenState extends State<EPGScreen>
     final cellWidth = 240.0;
 
     return SizedBox(
-      height: 60,
+      height: 64,
       child: Row(
         children: List.generate(hoursToShow, (index) {
           final hour = (startHour + index) % 24;
@@ -992,15 +979,11 @@ class _EPGScreenState extends State<EPGScreen>
 
           return Container(
             width: cellWidth,
-            height: 60,
-            margin: EdgeInsets.only(right: 4, left: index == 0 ? 4 : 0),
+            height: 64,
+            margin: const EdgeInsets.only(right: 4),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.03),
+              color: Colors.white.withValues(alpha: 0.02),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.1),
-                width: 1,
-              ),
             ),
             child: Center(
               child: Text(
@@ -1039,7 +1022,7 @@ class _EPGScreenState extends State<EPGScreen>
     final totalWidth = 12 * cellWidth;
 
     return Container(
-      height: 60,
+      height: 64,
       width: totalWidth,
       margin: const EdgeInsets.only(bottom: 4, left: 4),
       child: dayPrograms.isEmpty
@@ -1077,7 +1060,7 @@ class _EPGScreenState extends State<EPGScreen>
                 return Positioned(
                   left: leftOffset,
                   top: 0,
-                  height: 60,
+                  height: 64,
                   width: width,
                   child: _buildProgramCellSimple(program),
                 );
@@ -1118,16 +1101,9 @@ class _EPGScreenState extends State<EPGScreen>
                       ? epgCatchupColor.withValues(alpha: 0.1)
                       : Colors.white.withValues(alpha: 0.03),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: isFocused
-                    ? AppTheme.primaryBlue
-                    : isLive
-                        ? epgLiveColor
-                        : hasCatchup
-                            ? epgCatchupColor
-                            : Colors.white.withValues(alpha: 0.1),
-                width: isFocused ? 2 : 1,
-              ),
+              border: isFocused
+                  ? Border.all(color: AppTheme.primaryBlue, width: 2)
+                  : null,
             ),
             child: Material(
               color: Colors.transparent,

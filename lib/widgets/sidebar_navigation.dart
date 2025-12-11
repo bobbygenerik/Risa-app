@@ -149,14 +149,18 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
       onKeyEvent: (node, event) {
         if (event is! KeyDownEvent) return KeyEventResult.ignored;
         if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-          final prev = (index - 1) < 0 ? _tabs.length - 1 : index - 1;
-          _navigateToTab(prev);
-          return KeyEventResult.handled;
+          if (index > 0) {
+            _navigateToTab(index - 1);
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
         }
         if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-          final next = (index + 1) % _tabs.length;
-          _navigateToTab(next);
-          return KeyEventResult.handled;
+          if (index < _tabs.length - 1) {
+            _navigateToTab(index + 1);
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
         }
         if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
           if (_isExpanded) {
