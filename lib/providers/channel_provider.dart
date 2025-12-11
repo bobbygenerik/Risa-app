@@ -314,9 +314,8 @@ class ChannelProvider with ChangeNotifier {
     if (_hasLoadedPlaylist) return; // Already loaded
 
     // Set loading immediately so UI shows loading state
-    // Use Future.microtask to avoid calling notifyListeners during build
     _isLoading = true;
-    Future.microtask(() => notifyListeners());
+    notifyListeners();
 
     StartupProbe.mark('ChannelProvider.autoLoadPlaylist invoked');
     await _loadWatchCounts();
@@ -326,7 +325,7 @@ class ChannelProvider with ChangeNotifier {
 
     if (playlistType == null) {
       _isLoading = false;
-      Future.microtask(() => notifyListeners());
+      notifyListeners();
       StartupProbe.mark('ChannelProvider.autoLoadPlaylist: no saved playlist');
       debugPrint('ChannelProvider: No saved playlist found');
       if (_channelMaps.isNotEmpty || _moviesCount > 0 || _seriesCount > 0) {
@@ -337,7 +336,7 @@ class ChannelProvider with ChangeNotifier {
         _moviesCachePath = null;
         _seriesCachePath = null;
         _cachedCategories = null;
-        Future.microtask(() => notifyListeners());
+        notifyListeners();
       }
       // Ensure stale cache does not resurrect old playlists when none are saved
       await prefs.remove('cached_playlist');

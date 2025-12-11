@@ -311,7 +311,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         await prefs.setInt('position_$key', position.inMilliseconds);
         
         // Update watch progress for content
-        if (widget.content != null) {
+        if (widget.content != null && mounted) {
           final contentProvider = Provider.of<ContentProvider>(context, listen: false);
           final duration = _vlcController!.value.duration;
           if (duration.inMilliseconds > 0) {
@@ -534,7 +534,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
             onTap: () async {
               await _vlcController?.setAudioTrack(entry.key);
               if (mounted) {
-                Navigator.pop(context);
+                Navigator.of(context).pop();
               }
             },
           )).toList(),

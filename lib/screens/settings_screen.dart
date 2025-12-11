@@ -1066,7 +1066,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 Switch(
                   value: value,
                   onChanged: (newValue) => _handleSwitchTileChange(title, newValue),
-                  activeColor: AppTheme.primaryBlue,
+                  activeThumbColor: AppTheme.primaryBlue,
                   inactiveThumbColor: AppTheme.textSecondary,
                   inactiveTrackColor: Colors.white.withValues(alpha: 0.2),
                 ),
