@@ -362,7 +362,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       Container(
                         color: AppTheme.darkBackground,
                         padding: EdgeInsets.only(
-                          left: sidebarWidth + AppSizes.lg,
+                          left: sidebarWidth,
                           right: AppSizes.xxl,
                           bottom: AppSizes.xxl,
                         ),
@@ -385,7 +385,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               // Hero info overlay
               Positioned(
                 bottom: heroHeight * 0.35,
-                left: sidebarWidth + 8,
+                left: sidebarWidth,
                 width: screenSize.width * 0.4,
                 child: Opacity(
                   opacity: 1.0 - fadeProgress,
@@ -1062,7 +1062,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         // Info box skeleton (matches actual position)
         Positioned(
           bottom: heroHeight * 0.35,
-          left: sidebarWidth + 8,
+          left: sidebarWidth,
           width: screenSize.width * 0.4,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1131,7 +1131,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           child: Container(
             color: AppTheme.darkBackground,
             padding: EdgeInsets.only(
-              left: sidebarWidth + AppSizes.lg,
+              left: sidebarWidth,
               right: AppSizes.xxl,
               top: AppSizes.xxl,
             ),
