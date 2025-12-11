@@ -924,15 +924,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           children: [
             _buildSwitchTile('Enable Live Transcription', _transcriptionEnabled),
             _buildSwitchTile('Enable Translation', _translationEnabled),
-            if (_transcriptionEnabled || _translationEnabled) ...[
-              const SizedBox(height: 12),
-              _buildFocusButton(
-                focusNode: FocusNode(),
-                onPressed: () => _showTranscriptionSettings(),
-                child: const Text('Configure Languages'),
-                isPrimary: true,
-              ),
-            ],
+
           ],
         ),
       ],
@@ -1419,33 +1411,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     }
   }
 
-  void _showTranscriptionSettings() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Transcription Settings', style: TextStyle(color: Colors.white)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Live transcription converts speech to text in real-time.', 
-                style: TextStyle(color: AppTheme.textSecondary)),
-            const SizedBox(height: 16),
-            const Text('Translation converts text to English on-device.', 
-                style: TextStyle(color: AppTheme.textSecondary)),
-            const SizedBox(height: 16),
 
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close', style: TextStyle(color: AppTheme.primaryBlue)),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildCounterButton({
     required FocusNode focusNode,
