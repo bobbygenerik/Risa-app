@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:iptv_player/utils/startup_probe.dart';
+import 'package:iptv_player/utils/performance_monitor.dart';
 import '../models/channel.dart';
 import '../models/content.dart';
 import '../services/m3u_parser_service.dart';
@@ -560,6 +561,8 @@ class ChannelProvider with ChangeNotifier {
 
   /// Implementation of loadPlaylistFromUrl using standard http.Client
   Future<void> _loadPlaylistFromUrlImpl(String url) async {
+    PerformanceMonitor.start('PLAYLIST_LOAD_TOTAL');
+    
     _isLoading = true;
     _errorMessage = null;
     _lastM3UContent = null; // Clear old content
@@ -681,9 +684,11 @@ class ChannelProvider with ChangeNotifier {
         _loadingProgress = 0.5;
         notifyListeners();
 
+        PerformanceMonitor.start('PLAYLIST_PARSE_ISOLATE');
         final parseStart = DateTime.now();
         final parsed = await compute(parsePlaylistFromFile, tempFile.path);
         final parseDuration = DateTime.now().difference(parseStart);
+        PerformanceMonitor.end('PLAYLIST_PARSE_ISOLATE');
         debugPrint(
             'ChannelProvider: Isolate parsing took ${parseDuration.inMilliseconds}ms');
 

@@ -761,6 +761,12 @@ class _SettingsScreenState extends State<SettingsScreen>
               onPressed: () => context.push('/epg-diagnostic'),
               child: const Text('EPG Diagnostic Tool'),
             ),
+            const SizedBox(height: 8),
+            _buildFocusButton(
+              focusNode: FocusNode(),
+              onPressed: () => context.push('/debug'),
+              child: const Text('Debug Performance'),
+            ),
           ],
         ),
       ],

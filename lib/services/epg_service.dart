@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:path_provider/path_provider.dart';
+import 'package:iptv_player/utils/performance_monitor.dart';
 
 /// Convert number words to digits for better matching
 String _convertNumberWords(String text) {
@@ -272,6 +273,8 @@ class EpgService with ChangeNotifier {
 
   /// Load EPG from URL with robust error handling and caching
   Future<void> loadEpgFromUrl(String url, {bool forceRefresh = false}) async {
+    PerformanceMonitor.start('EPG_LOAD_TOTAL');
+    
     if (url.isEmpty) {
       _error = 'EPG URL is empty';
       notifyListeners();
@@ -282,6 +285,7 @@ class EpgService with ChangeNotifier {
     // Check cache first if not forcing refresh
     if (!forceRefresh && await _loadFromCache()) {
       debugPrint('EPG loaded from cache');
+      PerformanceMonitor.end('EPG_LOAD_TOTAL');
       return;
     }
 
@@ -356,11 +360,14 @@ class EpgService with ChangeNotifier {
         chunks.clear(); // Free memory immediately
 
         // Parse in background isolate to avoid blocking UI
+        PerformanceMonitor.start('EPG_PARSE_ISOLATE');
         final xmlData = utf8.decode(epgBytes, allowMalformed: true);
         final parsed = await compute(parseEpgInIsolate, xmlData)
             .timeout(const Duration(seconds: 60));
+        PerformanceMonitor.end('EPG_PARSE_ISOLATE');
 
         // Convert parsed data back to Program objects with chunked processing
+        PerformanceMonitor.start('EPG_DATA_CONVERSION');
         _epgData.clear();
         final rawEpgData = parsed['epgData'] as Map<String, dynamic>;
         final processedCount = parsed['processedCount'] as int? ?? 0;
@@ -416,6 +423,8 @@ class EpgService with ChangeNotifier {
         }
 
         await _saveToCache(xmlData);
+        PerformanceMonitor.end('EPG_DATA_CONVERSION');
+        
         success = true;
         _error = null;
         _lastFetchTime = DateTime.now();
@@ -425,6 +434,8 @@ class EpgService with ChangeNotifier {
         // Log sample EPG keys for debugging
         final sampleKeys = _epgData.keys.take(10).toList();
         debugPrint('EPG sample keys: $sampleKeys');
+        
+        PerformanceMonitor.end('EPG_LOAD_TOTAL');
       } catch (e) {
         retryCount++;
         _error = e.toString();
