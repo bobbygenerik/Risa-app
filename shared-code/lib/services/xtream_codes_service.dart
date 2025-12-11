@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
-import 'package:iptv_player/models/content.dart';
+import '../models/content.dart';
 
 /// Service for fetching VOD content from Xtream Codes API
 class XtreamCodesService {

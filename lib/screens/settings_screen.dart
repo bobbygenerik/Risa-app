@@ -1125,7 +1125,6 @@ class _SettingsScreenState extends State<SettingsScreen>
       focusNode: focusNode,
       child: Builder(
         builder: (context) {
-          final isFocused = Focus.of(context).hasFocus;
           return ElevatedButton(
             onPressed: onPressed,
             style: ElevatedButton.styleFrom(
@@ -1152,7 +1151,6 @@ class _SettingsScreenState extends State<SettingsScreen>
       focusNode: focusNode,
       child: Builder(
         builder: (context) {
-          final isFocused = Focus.of(context).hasFocus;
           return Container(
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

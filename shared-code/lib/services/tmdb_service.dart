@@ -4,8 +4,6 @@ import 'dart:io';
 import 'dart:isolate';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:iptv_player/config/tmdb_config.dart';
-import 'package:iptv_player/config/omdb_config.dart';
 import 'package:path_provider/path_provider.dart';
 
 class _CacheItem {
@@ -16,9 +14,9 @@ class _CacheItem {
 }
 
 class TMDBService {
-  static const String _apiKey = TMDBConfig.apiKey;
+  static const String _apiKey = ''; // Configure in consuming app
   static const String _baseUrl = 'https://api.themoviedb.org/3';
-  static const String _omdbApiKey = OMDbConfig.apiKey;
+  static const String _omdbApiKey = ''; // Configure in consuming app
   static const String _omdbBaseUrl = 'https://www.omdbapi.com';
   // Simple in-memory cache: key -> _CacheItem
   // TTL defaults to 24 hours. Evicts oldest entries when size grows too large.

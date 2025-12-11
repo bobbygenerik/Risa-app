@@ -174,7 +174,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   void _toggleAudio() async {
     if (_vlcController != null) {
       final tracks = await _vlcController!.getAudioTracks();
-      if (tracks.isNotEmpty) {
+      if (tracks.isNotEmpty && mounted) {
         _showAudioTrackDialog(tracks);
       }
     }
@@ -527,9 +527,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   void _showAudioTrackDialog(Map<dynamic, dynamic> tracks) {
+    if (!mounted) return;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: Colors.black87,
         title: const Text('Audio Tracks', style: TextStyle(color: Colors.white)),
         content: Column(
@@ -539,11 +540,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
               entry.value ?? 'Track ${entry.key}',
               style: const TextStyle(color: Colors.white),
             ),
-            onTap: () async {
-              await _vlcController?.setAudioTrack(entry.key);
-              if (mounted) {
-                Navigator.of(context).pop();
-              }
+            onTap: () {
+              _vlcController?.setAudioTrack(entry.key);
+              Navigator.of(dialogContext).pop();
             },
           )).toList(),
         ),

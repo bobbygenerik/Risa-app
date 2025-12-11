@@ -1,17 +1,18 @@
 import 'package:flutter/foundation.dart';
-import 'package:iptv_player/config/oauth_config.dart';
 
 /// Service Validator
 /// Checks which external services are properly configured
 class ServiceValidator {
   /// Check OpenSubtitles availability
   static bool get isOpenSubtitlesAvailable {
-    return OAuthConfig.openSubtitlesApiKey.isNotEmpty;
+    // This would need to be configured by the consuming app
+    return false;
   }
 
   /// Check TMDB availability
   static bool get isTmdbAvailable {
-    return OAuthConfig.isTmdbConfigured;
+    // This would need to be configured by the consuming app
+    return false;
   }
 
   /// Check Whisper availability
