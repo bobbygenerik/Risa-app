@@ -34,6 +34,7 @@ import 'package:iptv_player/screens/edit_profile_screen.dart';
 import 'package:iptv_player/screens/recordings_screen.dart';
 import 'package:iptv_player/screens/ai_models_screen.dart';
 import 'package:iptv_player/screens/epg_diagnostic_screen.dart';
+import 'package:iptv_player/screens/epg_manager_screen.dart';
 import 'package:iptv_player/screens/exit_screen.dart';
 // modern_home_screen is unused in the redesigned UI; import removed to silence lints
 import 'package:iptv_player/screens/live_tv_screen.dart';
@@ -999,6 +1000,11 @@ final _router = GoRouter(
       path: '/epg-diagnostic',
       pageBuilder: (context, state) =>
           _fadeSlidePage(key: state.pageKey, child: const EpgDiagnosticScreen()),
+    ),
+    GoRoute(
+      path: '/epg-manager',
+      pageBuilder: (context, state) =>
+          _fadeSlidePage(key: state.pageKey, child: const EpgManagerScreen()),
     ),
     GoRoute(
       path: '/exit',

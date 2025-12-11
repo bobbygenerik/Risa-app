@@ -497,8 +497,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                 Expanded(
                   child: _buildFocusButton(
                     focusNode: FocusNode(),
-                    onPressed: () => context.push('/playlist-manager'),
-                    child: const Text('Manage Playlists'),
+                    onPressed: () => context.push('/epg-manager'),
+                    child: const Text('EPG Manager'),
                     isPrimary: true,
                   ),
                 ),
