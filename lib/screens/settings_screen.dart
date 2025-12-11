@@ -497,65 +497,25 @@ class _SettingsScreenState extends State<SettingsScreen>
             Row(
               children: [
                 Expanded(
-                  child: _buildFocusButton(
-                    focusNode: FocusNode(),
-                    onPressed: () => context.push('/epg-manager'),
-                    child: const Text('EPG Manager'),
-                    isPrimary: true,
+                  child: _buildTabButton(
+                    title: 'M3U URL',
+                    icon: Icons.link,
+                    isSelected: _playlistInputMethod == 0,
+                    onTap: () => setState(() => _playlistInputMethod = 0),
+                    focusNode: _m3uTabFocusNode,
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 24),
                 Expanded(
-                  child: _buildFocusButton(
-                    focusNode: FocusNode(),
-                    onPressed: _reloadPlaylist,
-                    child: const Text('Reload'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildFocusButton(
-                    focusNode: _clearPlaylistCacheButtonFocusNode,
-                    onPressed: _clearPlaylistCache,
-                    child: const Text('Clear Cache'),
+                  child: _buildTabButton(
+                    title: 'Xtream Codes',
+                    icon: Icons.dns,
+                    isSelected: _playlistInputMethod == 1,
+                    onTap: () => setState(() => _playlistInputMethod = 1),
+                    focusNode: _xtreamTabFocusNode,
                   ),
                 ),
               ],
-            ),
-          ],
-        ),
-        _buildSectionCard(
-          title: 'Playlist Source',
-          children: [
-            Container(
-              height: 40,
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: AppTheme.highlight,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _buildTabButton(
-                      title: 'M3U URL',
-                      icon: Icons.link,
-                      isSelected: _playlistInputMethod == 0,
-                      onTap: () => setState(() => _playlistInputMethod = 0),
-                      focusNode: _m3uTabFocusNode,
-                    ),
-                  ),
-                  Expanded(
-                    child: _buildTabButton(
-                      title: 'Xtream Codes',
-                      icon: Icons.dns,
-                      isSelected: _playlistInputMethod == 1,
-                      onTap: () => setState(() => _playlistInputMethod = 1),
-                      focusNode: _xtreamTabFocusNode,
-                    ),
-                  ),
-                ],
-              ),
             ),
             const SizedBox(height: 16),
             if (_playlistInputMethod == 0) ...[
@@ -580,7 +540,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   _buildFocusButton(
                     focusNode: _loadM3uButtonFocusNode,
                     onPressed: _loadM3uPlaylist,
-                    child: const Text('Load'),
+                    child: const Text('Load Playlist'),
                     isPrimary: true,
                   ),
                 ],
@@ -635,16 +595,36 @@ class _SettingsScreenState extends State<SettingsScreen>
                   _buildFocusButton(
                     focusNode: _loadXtreamButtonFocusNode,
                     onPressed: _loadXtreamPlaylist,
-                    child: const Text('Load'),
+                    child: const Text('Load Playlist'),
                     isPrimary: true,
                   ),
                 ],
               ),
             ],
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildFocusButton(
+                    focusNode: FocusNode(),
+                    onPressed: _reloadPlaylist,
+                    child: const Text('Reload Playlist'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildFocusButton(
+                    focusNode: _clearPlaylistCacheButtonFocusNode,
+                    onPressed: _clearPlaylistCache,
+                    child: const Text('Clear Cache'),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
         _buildSectionCard(
-          title: 'EPG Settings',
+          title: 'EPG Configuration',
           children: [
             _buildTVTextField(
               controller: _customEpgUrlController,
@@ -660,7 +640,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               focusNode: _secondaryEpgUrlFocusNode,
               isEditable: false,
               onEditableChanged: (value) {},
-              hintText: 'Secondary EPG URL (optional)',
+              hintText: 'Secondary EPG URL (backup)',
               prefixIcon: Icons.tv_outlined,
             ),
             const SizedBox(height: 16),
@@ -670,7 +650,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Cache Duration (hours)', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                      const Text('Auto-refresh (hours)', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                       const SizedBox(height: 4),
                       Row(
                         children: [
@@ -697,7 +677,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Retention Days', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                      const Text('Retention (days)', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                       const SizedBox(height: 4),
                       Row(
                         children: [
@@ -748,14 +728,14 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             const SizedBox(height: 8),
             _buildFocusButton(
-              focusNode: _viewUnmatchedChannelsFocusNode,
-              onPressed: () => context.push('/epg-diagnostic'),
-              child: const Text('View EPG Diagnostic'),
+              focusNode: FocusNode(),
+              onPressed: () => context.push('/epg-manager'),
+              child: const Text('Advanced EPG Manager'),
             ),
           ],
         ),
         _buildSectionCard(
-          title: 'Backup & Restore',
+          title: 'App Preferences',
           children: [
             Row(
               children: [
@@ -781,6 +761,12 @@ class _SettingsScreenState extends State<SettingsScreen>
             const Text(
               'Backup includes preferences, playlists, and settings',
               style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+            ),
+            const SizedBox(height: 16),
+            _buildFocusButton(
+              focusNode: _viewUnmatchedChannelsFocusNode,
+              onPressed: () => context.push('/epg-diagnostic'),
+              child: const Text('EPG Diagnostic Tool'),
             ),
           ],
         ),
@@ -1079,28 +1065,26 @@ class _SettingsScreenState extends State<SettingsScreen>
           return GestureDetector(
             onTap: onTap,
             child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
-                color: isSelected 
-                    ? AppTheme.primaryBlue.withValues(alpha: 0.8)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
+                border: isSelected ? Border(
+                  bottom: BorderSide(color: AppTheme.primaryBlue, width: 2),
+                ) : null,
               ),
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              alignment: Alignment.center,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
                     icon,
-                    color: isSelected ? Colors.white : (isFocused ? AppTheme.textPrimary : AppTheme.textSecondary),
+                    color: isSelected ? AppTheme.primaryBlue : (isFocused ? AppTheme.textPrimary : AppTheme.textSecondary),
                     size: 16,
                   ),
                   const SizedBox(width: 8),
                   Text(
                     title,
                     style: TextStyle(
-                      color: isSelected ? Colors.white : (isFocused ? AppTheme.textPrimary : AppTheme.textSecondary),
-                      fontSize: 13,
+                      color: isSelected ? AppTheme.primaryBlue : (isFocused ? AppTheme.textPrimary : AppTheme.textSecondary),
+                      fontSize: 14,
                       fontWeight: isSelected ? FontWeight.w600 : (isFocused ? FontWeight.w600 : FontWeight.normal),
                     ),
                   ),
@@ -1136,21 +1120,16 @@ class _SettingsScreenState extends State<SettingsScreen>
               prefixIcon: prefixIcon != null 
                   ? Icon(prefixIcon, size: 18, color: AppTheme.textSecondary) 
                   : null,
-              filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.05),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+              border: const UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.transparent),
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+              enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
               ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+              focusedBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: AppTheme.primaryBlue),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 14),
             ),
           );
         },
@@ -1173,9 +1152,9 @@ class _SettingsScreenState extends State<SettingsScreen>
             style: ElevatedButton.styleFrom(
               backgroundColor: isPrimary 
                   ? AppTheme.primaryBlue 
-                  : Colors.white.withValues(alpha: 0.1),
+                  : Colors.transparent,
               foregroundColor: isPrimary ? Colors.white : AppTheme.textPrimary,
-              side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+              side: isPrimary ? null : BorderSide(color: Colors.white.withValues(alpha: 0.3)),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               elevation: 0,
               shape: RoundedRectangleBorder(
@@ -1195,16 +1174,8 @@ class _SettingsScreenState extends State<SettingsScreen>
       child: Builder(
         builder: (context) {
           return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.1),
-                width: 1,
-              ),
-            ),
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
               children: [
                 Expanded(
@@ -1431,11 +1402,6 @@ class _SettingsScreenState extends State<SettingsScreen>
           return Container(
             width: 32,
             height: 32,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-            ),
             child: IconButton(
               onPressed: onPressed,
               icon: Icon(icon, size: 16, color: AppTheme.textPrimary),
