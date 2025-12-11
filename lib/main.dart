@@ -459,10 +459,9 @@ class _MyAppState extends State<MyApp> {
       _disclaimerAccepted = accepted;
     });
 
-    // Show disclaimer after user navigates to a screen
+    // Show disclaimer only on first app startup
     if (!accepted) {
-      // Schedule disclaimer to show after first navigation is complete
-      Future.delayed(const Duration(seconds: 3), () {
+      Future.delayed(const Duration(seconds: 2), () {
         if (mounted) {
           try {
             _showDisclaimer();

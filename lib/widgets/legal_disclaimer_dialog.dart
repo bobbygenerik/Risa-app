@@ -15,87 +15,93 @@ class _LegalDisclaimerDialogState extends State<LegalDisclaimerDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: AppTheme.dialogBackground,
+      backgroundColor: Colors.transparent,
       child: Container(
-        width: context.tvSpacing(600),
-        padding: EdgeInsets.all(context.tvSpacing(AppSizes.xxl)),
+        width: 520,
+        padding: const EdgeInsets.all(AppSizes.xl),
+        decoration: BoxDecoration(
+          color: const Color(0xFF050710),
+          borderRadius: BorderRadius.circular(AppSizes.radiusXl),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.12),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.35),
+              blurRadius: 40,
+              spreadRadius: 4,
+            ),
+          ],
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.gavel,
-              size: context.tvIconSize(64),
-              color: AppTheme.accentRed,
-            ),
-            SizedBox(height: context.tvSpacing(AppSizes.lg)),
-            Text(
-              'Legal Disclaimer',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppTheme.accentRed,
-                fontSize: context.tvTextSize(22),
+            Container(
+              padding: const EdgeInsets.all(AppSizes.lg),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [
+                    AppTheme.primaryBlue,
+                    AppTheme.accentPink,
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primaryBlue.withValues(alpha: 0.4),
+                    blurRadius: 20,
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.info_outline,
+                size: 42,
+                color: Colors.white,
               ),
             ),
-            SizedBox(height: context.tvSpacing(AppSizes.lg)),
+            const SizedBox(height: AppSizes.xl),
+            Text(
+              'Important Notice',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSizes.lg),
             Container(
-              height: context.tvSpacing(300),
-              padding: EdgeInsets.all(context.tvSpacing(AppSizes.md)),
+              height: 280,
+              padding: const EdgeInsets.all(AppSizes.md),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF050710),
-                  Color(0xFF0d1140),
-                ],
-              )
-                ,
-                borderRadius: BorderRadius.circular(context.tvSpacing(AppSizes.radiusMd)),
-                border: Border.all(color: AppTheme.divider),
+                color: Colors.white.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  width: 1,
+                ),
               ),
               child: SingleChildScrollView(
                 child: Text(
-                  '''IMPORTANT LEGAL NOTICE
+                  '''This media player is designed for legal content only.
 
-This application (Stream Hub) is a media player designed to play content from legitimate sources. Users are solely responsible for the content they access through this application.
+❌ PROHIBITED:
+• Pirated or copyrighted content without authorization
+• Illegal IPTV services or streams
+• Content that violates local laws
 
-⚠️ PROHIBITED USES:
+✅ PERMITTED:
+• Personal media libraries
+• Legal IPTV subscriptions
+• Public domain content
+• Content you own or have rights to access
 
-• Do NOT use this application to access copyrighted content without proper authorization
-• Do NOT use this application to stream or download pirated movies, TV shows, or live broadcasts
-• Do NOT share or distribute illegal IPTV playlists or subscription services
-• Do NOT use this application for any purpose that violates local, state, national, or international laws
+YOU ARE RESPONSIBLE for ensuring all content accessed through this app is legal in your jurisdiction.
 
-✓ PERMITTED USES:
+Copyright infringement can result in heavy fines, prosecution, and imprisonment.
 
-• Personal media libraries and home videos
-• Legally obtained IPTV services with valid subscriptions
-• Free-to-air broadcasts and public domain content
-• Content you own or have explicit permission to access
+The developers do not provide, host, or endorse any content. We are not responsible for how you use this software.
 
-📜 YOUR RESPONSIBILITIES:
-
-By using this application, you acknowledge that:
-
-1. You are responsible for ensuring all content you access is legal in your jurisdiction
-2. You will only use legitimate, authorized sources for streaming content
-3. You understand that piracy is illegal and can result in civil and criminal penalties
-4. The developers of this application are not responsible for your use of the software
-5. You will not use this application for any illegal purposes
-
-🚨 COPYRIGHT INFRINGEMENT:
-
-Copyright infringement is a serious crime. Penalties may include:
-• Heavy fines (up to \$150,000 per work in the US)
-• Criminal prosecution
-• Imprisonment
-• Civil lawsuits from copyright holders
-
-The developers of Stream Hub do not condone, support, or facilitate piracy in any form. This application is provided "as-is" for legitimate use only.
-
-If you do not agree with these terms or intend to use this application for illegal purposes, DO NOT proceed.
-
-By accepting this disclaimer, you confirm that you understand and will comply with all applicable laws.''',
+By continuing, you confirm you will only use this app for legal purposes and comply with all applicable laws.''',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     height: 1.5,
                   ),
@@ -103,48 +109,53 @@ By accepting this disclaimer, you confirm that you understand and will comply wi
               ),
             ),
             SizedBox(height: context.tvSpacing(AppSizes.lg)),
-            CheckboxListTile(
-              value: _accepted,
-              onChanged: (value) {
-                setState(() {
-                  _accepted = value ?? false;
-                });
-              },
-              title: Text(
-                'I have read and understand this disclaimer. I will only use this application for legal purposes.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              controlAffinity: ListTileControlAffinity.leading,
-              activeColor: AppTheme.primaryBlue,
-            ),
-            SizedBox(height: context.tvSpacing(AppSizes.lg)),
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TextButton(
-                  onPressed: () {
-                    // Exit app
-                    Navigator.of(context).pop(false);
+                Checkbox(
+                  value: _accepted,
+                  onChanged: (value) {
+                    setState(() {
+                      _accepted = value ?? false;
+                    });
                   },
-                  child: const Text('Decline & Exit'),
+                  activeColor: AppTheme.primaryBlue,
                 ),
-                const SizedBox(width: AppSizes.md),
-                ElevatedButton(
-                  onPressed: _accepted
-                      ? () {
-                          Navigator.of(context).pop(true);
-                        }
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryBlue,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSizes.xl,
-                      vertical: AppSizes.md,
+                const SizedBox(width: AppSizes.sm),
+                Expanded(
+                  child: Text(
+                    'I understand and will only use this app for legal content',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                  child: const Text('Accept & Continue'),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSizes.xl),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: AppSizes.md),
+                      side: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+                    ),
+                    child: const Text('Exit App'),
+                  ),
+                ),
+                const SizedBox(width: AppSizes.md),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _accepted
+                        ? () => Navigator.of(context).pop(true)
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryBlue,
+                      padding: const EdgeInsets.symmetric(vertical: AppSizes.md),
+                    ),
+                    child: const Text('Continue'),
+                  ),
                 ),
               ],
             ),

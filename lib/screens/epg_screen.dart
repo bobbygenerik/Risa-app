@@ -34,8 +34,9 @@ class EPGScreen extends StatefulWidget {
 
 class _EPGScreenState extends State<EPGScreen>
     with SingleTickerProviderStateMixin, ContentFocusRegistrant {
-  // Temporary stub to fix build error
-  double _calculateProgramsGridWidth() => _calculateGridWidth();
+  double _calculateProgramsGridWidth() {
+    return _calculateGridWidth();
+  }
   final DateTime _selectedDate = DateTime.now();
   final bool _isHourlyView = true;
   String? _selectedChannelId;
@@ -596,7 +597,7 @@ class _EPGScreenState extends State<EPGScreen>
 
   Widget _buildCategorySidebar(List<String> categories) {
     return Container(
-      width: 180,
+      width: 140,
       child: ListView.builder(
         itemCount: categories.length,
         itemBuilder: (context, index) {
@@ -680,7 +681,7 @@ class _EPGScreenState extends State<EPGScreen>
 
     // Show loading overlay but still display the grid structure
     final bool isLoading = epgService.isLoading;
-    const channelSidebarWidth = 160.0;
+    const channelSidebarWidth = 80.0;
 
     // Show loading indicator when EPG is loading
     return Stack(
@@ -922,39 +923,34 @@ class _EPGScreenState extends State<EPGScreen>
                     ? Border.all(color: AppTheme.primaryBlue, width: 2)
                     : Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      child: channel.logoUrl != null
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(7),
-                              child: Image.network(
-                                channel.logoUrl!,
-                                fit: BoxFit.contain,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Center(
-                                    child: Icon(
-                                      Icons.dvr,
-                                      color: AppTheme.primaryBlue,
-                                      size: 24,
-                                    ),
-                                  );
-                                },
-                              ),
-                            )
-                          : const Center(
-                              child: Icon(
-                                Icons.dvr,
-                                color: AppTheme.primaryBlue,
-                                size: 24,
-                              ),
-                            ),
-                    ),
-                  ],
+              child: Center(
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  child: channel.logoUrl != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(7),
+                          child: Image.network(
+                            channel.logoUrl!,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Center(
+                                child: Icon(
+                                  Icons.dvr,
+                                  color: AppTheme.primaryBlue,
+                                  size: 24,
+                                ),
+                              );
+                            },
+                          ),
+                        )
+                      : const Center(
+                          child: Icon(
+                            Icons.dvr,
+                            color: AppTheme.primaryBlue,
+                            size: 24,
+                          ),
+                        ),
                 ),
               ),
             ),
@@ -1007,7 +1003,7 @@ class _EPGScreenState extends State<EPGScreen>
     // Use channel.id as the unique key to prevent duplicate EPG data
     final channelKey = channel.tvgId ?? channel.id;
     final programs =
-        epgService.getProgramsForChannel(channelKey, channelName: null);
+        epgService.getProgramsForChannel(channelKey, channelName: channel.name);
 
     final now = DateTime.now();
     final startHour = (now.hour - 1).clamp(0, 23);
@@ -1346,7 +1342,7 @@ class _EPGScreenState extends State<EPGScreen>
     final hours = _isHourlyView ? 24 : 48;
     final cellWidth = _isHourlyView ? 120.0 : 60.0;
     const channelSidebarWidth =
-        160.0; // Must match the channel info section width
+        80.0; // Must match the channel info section width
     return channelSidebarWidth + (hours * cellWidth);
   }
 

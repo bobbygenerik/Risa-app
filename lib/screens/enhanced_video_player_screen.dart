@@ -65,7 +65,12 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     
     final rememberPosition = settings.rememberPlaybackPosition;
     
-    _videoController = VideoPlayerController.networkUrl(Uri.parse(url));
+    _videoController = VideoPlayerController.networkUrl(
+      Uri.parse(url),
+      httpHeaders: {
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36',
+      },
+    );
     await _videoController!.initialize();
     
     _chewieController = ChewieController(
@@ -74,6 +79,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       looping: false,
       showControls: false, // We'll use custom controls
       aspectRatio: _videoController!.value.aspectRatio,
+      allowFullScreen: false,
+      allowMuting: true,
+      allowPlaybackSpeedChanging: false,
       materialProgressColors: ChewieProgressColors(
         playedColor: const Color(0xFF007AFF),
         handleColor: const Color(0xFF007AFF),
@@ -431,7 +439,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                     // Guide button
                     IconButton(
                       onPressed: _toggleGuide,
-                      icon: const Icon(Icons.tv, color: Colors.white, size: 24),
+                      icon: const Icon(Icons.dvr, color: Colors.white, size: 24),
                     ),
                   ],
                 ),
@@ -463,7 +471,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                         _buildControlButton(
                           icon: _isPlaying ? Icons.pause : Icons.play_arrow,
                           onPressed: _togglePlayPause,
-                          size: 32,
                         ),
                         const SizedBox(width: 12),
                         // Fast Forward
@@ -517,18 +524,12 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   Widget _buildControlButton({
     required IconData icon,
     required VoidCallback onPressed,
-    double size = 24,
+    double size = 20,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.5),
-        shape: BoxShape.circle,
-      ),
-      child: IconButton(
-        onPressed: onPressed,
-        icon: Icon(icon, color: Colors.white, size: size),
-        padding: EdgeInsets.all(size == 32 ? 12 : 8),
-      ),
+    return IconButton(
+      onPressed: onPressed,
+      icon: Icon(icon, color: Colors.white, size: size),
+      padding: const EdgeInsets.all(8),
     );
   }
 
