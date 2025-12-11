@@ -385,10 +385,11 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
           ),
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              itemCount: menuItems.length,
-              itemBuilder: (context, index) {
+            child: Center(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: menuItems.length,
+                itemBuilder: (context, index) {
                 final item = menuItems[index];
                 final bool isSelected = _tabController.index == index;
                 return GestureDetector(
@@ -462,6 +463,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ),
                 );
               },
+            ),
             ),
           ),
         ],
@@ -946,10 +948,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                     },
                   ),
                 ),
-                _buildFocusButton(
-                  focusNode: _browseStorageButtonFocusNode,
-                  onPressed: _browseStorage,
-                  child: const Text('Browse'),
+                SizedBox(
+                  width: 80,
+                  child: _buildFocusButton(
+                    focusNode: _browseStorageButtonFocusNode,
+                    onPressed: _browseStorage,
+                    child: const Text('Browse'),
+                  ),
                 ),
               ],
             ),
@@ -1138,21 +1143,33 @@ class _SettingsScreenState extends State<SettingsScreen>
       focusNode: focusNode,
       child: Builder(
         builder: (context) {
-          return ElevatedButton(
-            onPressed: onPressed,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isPrimary 
-                  ? AppTheme.primaryBlue 
-                  : Colors.transparent,
-              foregroundColor: isPrimary ? Colors.white : AppTheme.textPrimary,
-              side: isPrimary ? null : BorderSide(color: Colors.white.withValues(alpha: 0.3)),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+          final isFocused = Focus.of(context).hasFocus;
+          return SizedBox(
+            height: 40,
+            child: ElevatedButton(
+              onPressed: onPressed,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isPrimary 
+                    ? AppTheme.primaryBlue 
+                    : Colors.transparent,
+                foregroundColor: isPrimary 
+                    ? Colors.white 
+                    : (isFocused ? Colors.white : AppTheme.textPrimary),
+                side: isPrimary ? null : BorderSide(
+                  color: isFocused 
+                      ? AppTheme.primaryBlue 
+                      : Colors.white.withValues(alpha: 0.3)
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                elevation: 0,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
               ),
+              child: child,
             ),
-            child: child,
           );
         },
       ),
@@ -1390,13 +1407,28 @@ class _SettingsScreenState extends State<SettingsScreen>
       focusNode: focusNode,
       child: Builder(
         builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
           return SizedBox(
             width: 32,
             height: 32,
-            child: IconButton(
+            child: ElevatedButton(
               onPressed: onPressed,
-              icon: Icon(icon, size: 16, color: AppTheme.textPrimary),
-              padding: EdgeInsets.zero,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                foregroundColor: isFocused ? Colors.white : AppTheme.textPrimary,
+                side: BorderSide(
+                  color: isFocused 
+                      ? AppTheme.primaryBlue 
+                      : Colors.white.withValues(alpha: 0.3)
+                ),
+                padding: EdgeInsets.zero,
+                minimumSize: const Size(32, 32),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+              child: Icon(icon, size: 16),
             ),
           );
         },
