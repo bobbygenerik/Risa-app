@@ -11,6 +11,7 @@ import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
+import 'package:iptv_player/models/profile_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -795,23 +796,36 @@ class _SettingsScreenState extends State<SettingsScreen>
           title: 'Profile',
           children: [
             Center(
-              child: Column(
-                children: [
-                  const CircleAvatar(
-                    radius: 40,
-                    backgroundColor: AppTheme.highlight,
-                    child: Icon(Icons.person, size: 40, color: AppTheme.primaryBlue),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('User Profile', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 16),
-                  _buildFocusButton(
-                    focusNode: _editProfileButtonFocusNode,
-                    onPressed: () => context.push('/edit-profile'),
-                    child: const Text('Edit Profile'),
-                    isPrimary: true,
-                  ),
-                ],
+              child: Consumer<ProfileProvider>(
+                builder: (context, profileProvider, _) {
+                  final profile = profileProvider.activeProfile;
+                  return Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 40,
+                        backgroundColor: AppTheme.highlight,
+                        backgroundImage: profile?.avatarUrl.isNotEmpty == true
+                            ? NetworkImage(profile!.avatarUrl)
+                            : null,
+                        child: profile?.avatarUrl.isEmpty != false
+                            ? const Icon(Icons.person, size: 40, color: AppTheme.primaryBlue)
+                            : null,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        profile?.name ?? 'User Profile',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildFocusButton(
+                        focusNode: _editProfileButtonFocusNode,
+                        onPressed: () => context.push('/edit-profile'),
+                        child: const Text('Edit Profile'),
+                        isPrimary: true,
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ],
