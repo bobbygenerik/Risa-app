@@ -59,7 +59,7 @@ dependencies:
   google_mlkit_translation: ^0.13.0  # On-device translation (auto-downloads language packs) - TRUE OFFLINE
   google_mlkit_language_id: ^0.13.0  # On-device text language identification
   record: ^6.1.2  # Audio recording for transcription
-  flutter_tts: ^4.0.2  # Text-to-speech for transcription services
+  # flutter_tts: ^4.0.2  # REMOVED: Text-to-speech not used, was causing plugin errors
   # No stable whisper Flutter packages available - keeping manual implementation
 
 dev_dependencies:

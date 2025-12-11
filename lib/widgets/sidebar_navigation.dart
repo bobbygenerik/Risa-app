@@ -250,7 +250,9 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
           Padding(
             padding: const EdgeInsets.only(top: 6, bottom: 6),
             child: Image(
-              image: const AssetImage('assets/images/lonelogo (1).png'),
+              image: AssetImage(_isExpanded 
+                ? 'assets/images/croppedlogo2.png'
+                : 'assets/images/lonelogo (1).png'),
               height: _isExpanded ? 32 : 24,
             ),
           ),

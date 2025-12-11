@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 import 'package:google_mlkit_language_id/google_mlkit_language_id.dart';
-import 'package:flutter_tts/flutter_tts.dart';
+// import 'package:flutter_tts/flutter_tts.dart'; // REMOVED: not used
 import 'package:record/record.dart';
 
 /// Integrated On-Device Transcription and Translation Service
@@ -26,8 +26,7 @@ class IntegratedTranscriptionService extends ChangeNotifier {
   final OnDeviceTranslatorModelManager _modelManager =
       OnDeviceTranslatorModelManager();
 
-  // Text-to-speech
-  final FlutterTts _tts = FlutterTts();
+  // Text-to-speech - REMOVED (not used)
 
   // State
   bool _isInitialized = false;
@@ -105,11 +104,7 @@ class IntegratedTranscriptionService extends ChangeNotifier {
         targetLanguage: _targetLanguage,
       );
 
-      // Initialize TTS
-      await _tts.setLanguage(_targetLanguage.bcpCode);
-      await _tts.setSpeechRate(0.9);
-      await _tts.setVolume(0.8);
-      await _tts.setPitch(1.0);
+      // TTS initialization removed (not used)
 
       // Start cleanup timer
       _cleanupTimer = Timer.periodic(const Duration(seconds: 30), (_) {
@@ -243,10 +238,7 @@ class IntegratedTranscriptionService extends ChangeNotifier {
       
       await translator.close();
 
-      // Speak if TTS enabled
-      if (_isTTSEnabled && translation.isNotEmpty) {
-        await _tts.speak(translation);
-      }
+      // TTS speak functionality removed (not used)
 
       notifyListeners();
     } catch (e) {
@@ -329,12 +321,10 @@ class IntegratedTranscriptionService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Enable/disable TTS
+  /// Enable/disable TTS - REMOVED (not used)
   void setTTSEnabled(bool enabled) {
     _isTTSEnabled = enabled;
-    if (!enabled) {
-      _tts.stop();
-    }
+    // TTS functionality removed
     notifyListeners();
   }
 
@@ -352,7 +342,7 @@ class IntegratedTranscriptionService extends ChangeNotifier {
     if (_targetLanguage == language) return;
 
     _targetLanguage = language;
-    await _tts.setLanguage(language.bcpCode);
+    // TTS language setting removed (not used)
     await _updateTranslator();
     notifyListeners();
   }
@@ -458,7 +448,7 @@ class IntegratedTranscriptionService extends ChangeNotifier {
     _cleanupTimer?.cancel();
     _speech.cancel();
     _translator?.close();
-    _tts.stop();
+    // TTS stop removed (not used)
     _recorder.dispose();
     super.dispose();
   }

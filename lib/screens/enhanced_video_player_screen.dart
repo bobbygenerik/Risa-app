@@ -190,14 +190,18 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   void _setSubtitleMode(SubtitleMode mode) async {
     setState(() => _subtitleMode = mode);
     
-    if (mode == SubtitleMode.liveTranslation && _transcriptionService != null) {
-      _transcriptionService!.setTranslationEnabled(true);
-      final streamUrl = widget.videoUrl ?? widget.channel?.url;
-      if (streamUrl != null) {
-        await _transcriptionService!.startTranscription();
+    try {
+      if (mode == SubtitleMode.liveTranslation && _transcriptionService != null) {
+        _transcriptionService!.setTranslationEnabled(true);
+        final streamUrl = widget.videoUrl ?? widget.channel?.url;
+        if (streamUrl != null) {
+          await _transcriptionService!.startTranscription();
+        }
+      } else if (_transcriptionService != null) {
+        await _transcriptionService!.stopTranscription();
       }
-    } else if (_transcriptionService != null) {
-      await _transcriptionService!.stopTranscription();
+    } catch (e) {
+      debugPrint('TTS/Transcription error: $e');
     }
   }
 
@@ -295,7 +299,11 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   @override
   void dispose() {
     _saveCurrentPosition();
-    _transcriptionService?.stopTranscription();
+    try {
+      _transcriptionService?.stopTranscription();
+    } catch (e) {
+      debugPrint('TTS cleanup error: $e');
+    }
     _vlcController?.dispose();
     super.dispose();
   }
