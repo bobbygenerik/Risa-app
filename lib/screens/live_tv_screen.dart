@@ -976,24 +976,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Widget _buildDefaultHeroBackground() {
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF1a1a2e),
-            const Color(0xFF16213e),
-            AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
-          ],
-        ),
-      ),
-      child: Center(
-        child: Icon(
-          Icons.live_tv,
-          size: 120,
-          color: Colors.white.withAlpha((0.15 * 255).round()),
-        ),
-      ),
+      color: const Color(0xFF050710),
     );
   }
 
