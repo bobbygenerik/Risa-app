@@ -44,7 +44,11 @@ class ProfileProvider extends ChangeNotifier {
       _profiles = [];
     }
     final activeId = prefs.getString(_activeProfileKey);
-    _activeProfile = _findProfile(activeId) ?? (_profiles.isNotEmpty ? _profiles.first : null);
+    if (_profiles.isNotEmpty) {
+      _activeProfile = _findProfile(activeId) ?? _profiles.first;
+    } else {
+      _activeProfile = null;
+    }
     _notifyIfActive();
   }
 
@@ -73,7 +77,7 @@ class ProfileProvider extends ChangeNotifier {
   }
 
   UserProfile? _findProfile(String? id) {
-    if (id == null) {
+    if (id == null || _profiles.isEmpty) {
       return _profiles.isNotEmpty ? _profiles.first : null;
     }
     try {

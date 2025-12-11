@@ -722,16 +722,22 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _showProfileDialog() async {
     final navigatorContext = _rootNavigatorKey.currentContext;
-    if (navigatorContext == null) {
+    if (navigatorContext == null || !mounted) {
       _profileDialogScheduled = false;
       return;
     }
 
-    await showDialog(
-      context: navigatorContext,
-      barrierDismissible: false,
-      builder: (context) => _ProfileSelectionDialog(),
-    );
+    try {
+      await showDialog(
+        context: navigatorContext,
+        barrierDismissible: false,
+        builder: (context) => _ProfileSelectionDialog(),
+      );
+    } catch (e) {
+      debugPrint('Error showing profile dialog: $e');
+    } finally {
+      _profileDialogScheduled = false;
+    }
   }
 
   void _ensureDefaultProfile(ProfileProvider provider) {
