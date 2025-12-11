@@ -84,7 +84,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
     }
     if (oldWidget.onNavFocusRegistration != widget.onNavFocusRegistration &&
         widget.onNavFocusRegistration != null) {
-      widget.onNavFocusRegistration!.call(_requestActiveTabFocus);
+      widget.onNavFocusRegistration?.call(_requestActiveTabFocus);
     }
   }
 

@@ -445,9 +445,22 @@ class _MoviesScreenState extends State<MoviesScreen>
   }
 
   List<Widget> _buildGenreSections(BuildContext context, List<Content> movies) {
+    // Filter out movies without proper info
+    final validMovies = movies.where((movie) {
+      // Skip movies with generic/placeholder titles
+      final title = movie.title.toLowerCase();
+      if (title == 'movie' || 
+          title == 'movie to be announced' ||
+          title.startsWith('movie ') ||
+          title.contains('to be announced')) {
+        return false;
+      }
+      return true;
+    }).toList();
+    
     // Group movies by genre (prefer TMDB genres, fallback to M3U genres)
     final genreMap = <String, List<Content>>{};
-    for (final movie in movies) {
+    for (final movie in validMovies) {
       // Use allGenres getter which prefers tmdbGenres over genres
       final movieGenres = movie.allGenres;
       if (movieGenres.isNotEmpty) {
@@ -459,7 +472,7 @@ class _MoviesScreenState extends State<MoviesScreen>
       }
     }
 
-    debugPrint('Movies: Total=${movies.length}, Genres=${genreMap.keys.join(", ")}');
+    debugPrint('Movies: Total=${movies.length}, Valid=${validMovies.length}, Genres=${genreMap.keys.join(", ")}');
     for (final entry in genreMap.entries) {
       debugPrint('  ${entry.key}: ${entry.value.length} movies');
     }
@@ -560,8 +573,8 @@ class _MoviesScreenState extends State<MoviesScreen>
           final scrollOffset = _scrollController.hasClients ? _scrollController.offset : 0.0;
           final scrollProgress = (scrollOffset / heroHeight).clamp(0.0, 1.0);
           
-          final heroWidth = screenSize.width - (scrollProgress * (screenSize.width * 0.4));
-          final heroLeft = scrollProgress * (screenSize.width * 0.6);
+          final heroWidth = screenSize.width - (scrollProgress * (screenSize.width * 0.65));
+          final heroLeft = scrollProgress * (screenSize.width * 0.75);
           final heroTop = scrollProgress * (-heroHeight * 0.3);
           final heroHeightAnimated = heroHeight - (scrollProgress * heroHeight * 0.7);
           
@@ -636,7 +649,7 @@ class _MoviesScreenState extends State<MoviesScreen>
                 Positioned(
                   top: 0,
                   left: 0,
-                  width: screenSize.width * (0.6 * scrollProgress),
+                  width: screenSize.width * (0.75 * scrollProgress),
                   height: heroHeightAnimated,
                   child: IgnorePointer(
                     child: Container(
@@ -702,9 +715,9 @@ class _MoviesScreenState extends State<MoviesScreen>
                 ),
                 // Featured info
                 Positioned(
-                  bottom: heroHeight * 0.35,
+                  bottom: heroHeight * 0.35 + (scrollProgress * heroHeight * 0.2),
                   left: sidebarWidth + AppSizes.lg,
-                  width: screenSize.width * 0.4,
+                  width: screenSize.width * 0.4 + (scrollProgress * screenSize.width * 0.3),
                   child: Opacity(
                     opacity: 1.0 - scrollProgress,
                     child: _buildFeaturedInfo(context, featuredMovie),
@@ -769,6 +782,13 @@ class _MoviesScreenState extends State<MoviesScreen>
               style: Theme.of(context).textTheme.displaySmall?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textPrimary,
+                shadows: [
+                  Shadow(
+                    offset: const Offset(1, 1),
+                    blurRadius: 3,
+                    color: Colors.black.withValues(alpha: 0.8),
+                  ),
+                ],
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -778,6 +798,13 @@ class _MoviesScreenState extends State<MoviesScreen>
               featuredMovie.description ?? '',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: AppTheme.textSecondary,
+                shadows: [
+                  Shadow(
+                    offset: const Offset(1, 1),
+                    blurRadius: 2,
+                    color: Colors.black.withValues(alpha: 0.7),
+                  ),
+                ],
               ),
               maxLines: 3,
               overflow: TextOverflow.ellipsis,

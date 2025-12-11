@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -63,7 +64,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     final epgService = Provider.of<EpgService>(context, listen: false);
 
-    // Try to find a channel with artwork for initial display
+    // Try to find a channel with complete program info
     for (int i = 0; i < channels.length && i < 20; i++) {
       final channel = channels[i];
       final program = epgService.getCurrentProgram(
@@ -71,7 +72,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         channelName: channel.name,
       );
       final heroImage = _resolveHeroImage(program);
-      if (heroImage != null && heroImage.isNotEmpty) {
+      if (heroImage != null && heroImage.isNotEmpty && 
+          program != null && 
+          program.title.isNotEmpty && 
+          program.description != null && 
+          program.description!.isNotEmpty) {
         setState(() {
           _featuredIndex = i;
         });
@@ -149,9 +154,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       final channels = channelProvider.channels;
       if (channels.isEmpty) return;
       setState(() {
-        // Find next channel with artwork for hero
+        // Find next channel with complete program info, starting from random position for variety
         int attempts = 0;
-        int nextIndex = (_featuredIndex + 1) % channels.length;
+        int startOffset = Random().nextInt(channels.length);
+        int nextIndex = startOffset;
         while (attempts < channels.length) {
           final channel = channels[nextIndex];
           final epgService = Provider.of<EpgService>(context, listen: false);
@@ -160,17 +166,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             channelName: channel.name,
           );
           final heroImage = _resolveHeroImage(program);
-          if (heroImage != null && heroImage.isNotEmpty) {
+          if (heroImage != null && heroImage.isNotEmpty && 
+              program != null && 
+              program.title.isNotEmpty && 
+              program.description != null && 
+              program.description!.isNotEmpty &&
+              nextIndex != _featuredIndex) { // Don't repeat same channel
             _featuredIndex = nextIndex;
             break;
           }
           nextIndex = (nextIndex + 1) % channels.length;
           attempts++;
         }
-        // If no channels with artwork found, just use next index
-        if (attempts >= channels.length) {
-          _featuredIndex = (_featuredIndex + 1) % channels.length;
-        }
+        // If no channels with complete info found, don't change index
       });
     });
     // Focus is managed by navigation bar - don't auto-focus content
@@ -189,13 +197,29 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         builder: (context, channelProvider, epgService, _) {
           final channels = channelProvider.channels;
 
-          // Show skeleton when no channels OR when EPG is loading for first time
+          // Show skeleton when no channels OR when EPG is loading for first time OR when channels exist but no EPG data
           if (channels.isEmpty && channelProvider.isLoading) {
             return _buildSkeletonLoader();
           }
           
           if (channels.isNotEmpty && epgService.isLoading && !epgService.hasData) {
             return _buildSkeletonLoader();
+          }
+          
+          if (channels.isNotEmpty && !epgService.hasData) {
+            return _buildSkeletonLoader();
+          }
+          
+          // Also show skeleton if EPG has data but no current program for featured channel
+          if (channels.isNotEmpty && epgService.hasData) {
+            final featuredChannel = channels[_featuredIndex.clamp(0, channels.length - 1)];
+            final currentProgram = epgService.getCurrentProgram(
+              featuredChannel.tvgId ?? featuredChannel.id,
+              channelName: featuredChannel.name,
+            );
+            if (currentProgram == null) {
+              return _buildSkeletonLoader();
+            }
           }
 
           if (channels.isEmpty) {
@@ -269,6 +293,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       return requestNavigationFocus()
           ? KeyEventResult.handled
           : KeyEventResult.ignored;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      final screenHeight = MediaQuery.of(context).size.height;
+      _scrollController.animateTo(
+        screenHeight * 0.8,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeOutCubic,
+      );
+      return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
   }
@@ -365,12 +398,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         end: Alignment.centerRight,
                         colors: [
                           AppTheme.darkBackground,
-                          AppTheme.darkBackground.withValues(alpha: 0.9),
-                          AppTheme.darkBackground.withValues(alpha: 0.7),
+                          AppTheme.darkBackground.withValues(alpha: 0.95),
+                          AppTheme.darkBackground.withValues(alpha: 0.85),
+                          AppTheme.darkBackground.withValues(alpha: 0.6),
                           AppTheme.darkBackground.withValues(alpha: 0.3),
                           Colors.transparent,
                         ],
-                        stops: const [0.0, 0.3, 0.6, 0.8, 1.0],
+                        stops: const [0.0, 0.2, 0.4, 0.7, 0.85, 1.0],
                       ),
                     ),
                   ),
@@ -390,11 +424,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         end: Alignment.topCenter,
                         colors: [
                           AppTheme.darkBackground,
-                          AppTheme.darkBackground.withValues(alpha: 0.8),
+                          AppTheme.darkBackground.withValues(alpha: 0.9),
+                          AppTheme.darkBackground.withValues(alpha: 0.7),
                           AppTheme.darkBackground.withValues(alpha: 0.4),
                           Colors.transparent,
                         ],
-                        stops: const [0.0, 0.4, 0.7, 1.0],
+                        stops: const [0.0, 0.3, 0.6, 0.8, 1.0],
                       ),
                     ),
                   ),
@@ -425,7 +460,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 left: sidebarWidth + AppSizes.lg,
                 width: screenSize.width * 0.4,
                 child: Opacity(
-                  opacity: 1.0 - scrollProgress,
+                  opacity: (1.0 - (scrollProgress * 2.0)).clamp(0.0, 1.0),
                   child: _buildFeaturedInfo(context, featuredChannel, currentProgram),
                 ),
               ),
@@ -457,7 +492,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Widget _buildFeaturedInfo(
       BuildContext context, Channel channel, Program? program) {
-    final title = program?.title ?? 'Live TV';
+    final title = program?.title ?? channel.name;
     final description = program?.description ?? '';
     final timeRange = program != null
         ? '${_formatTime(program.startTime)} - ${_formatTime(program.endTime)}'
@@ -501,15 +536,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           SizedBox(height: context.tvSpacing(8)),
           // Progress bar - fixed height
           SizedBox(
-            height: 4,
+            height: 6,
             child: program != null
                 ? ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(6),
                     child: LinearProgressIndicator(
                       value: progress,
-                      backgroundColor: Colors.white.withAlpha((0.2 * 255).round()),
+                      backgroundColor: Colors.white.withAlpha((0.3 * 255).round()),
                       color: AppTheme.primaryBlue,
-                      minHeight: 4,
+                      minHeight: 6,
                     ),
                   )
                 : Container(),
@@ -784,6 +819,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               channel.tvgId ?? channel.id,
               channelName: channel.name,
             );
+            if (currentProgram == null) {
+              debugPrint('LiveTV Card: No EPG for "${channel.name}" (tvgId: ${channel.tvgId})');
+            }
+            if (currentProgram == null) {
+              debugPrint('LiveTV: No EPG data for channel "${channel.name}" (tvgId: ${channel.tvgId}, id: ${channel.id})');
+            }
             final progress = currentProgram?.progressPercentage ?? 0.0;
 
             return GestureDetector(
@@ -893,6 +934,26 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                       ),
                               ),
                             ),
+                            if (currentProgram == null)
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text(
+                                    'NO EPG',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ),

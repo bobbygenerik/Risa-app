@@ -21,7 +21,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen>
     with SingleTickerProviderStateMixin {
 
-  TabController? _tabController;
+  late TabController _tabController;
 
   // Playlist Settings - Late initialization to avoid memory issues
   late final TextEditingController _m3uUrlController;
@@ -55,6 +55,13 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool _transcriptionEnabled = false;
   bool _translationEnabled = false;
   bool _ttsEnabled = false;
+
+  // EPG Settings
+  int _epgCacheDuration = 6; // hours
+  int _epgRetentionDays = 7; // days
+  bool _storeDescriptions = true;
+  bool _showLogos = true;
+  bool _showImages = true;
 
 
 
@@ -133,7 +140,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       _menuFocusNodes.add(FocusNode(debugLabel: 'SettingsMenu$i'));
     }
     // Rebuild when the active tab changes so we can lazily render tab content
-    _tabController!.addListener(() {
+    _tabController.addListener(() {
       if (mounted) setState(() {});
     });
     // Load settings - no setState during init
@@ -182,6 +189,13 @@ class _SettingsScreenState extends State<SettingsScreen>
     _ttsEnabled = prefs.getBool('tts_enabled') ?? false;
     _rememberPlaybackPosition =
         prefs.getBool('remember_playback_position') ?? true;
+
+    // EPG Settings
+    _epgCacheDuration = prefs.getInt('epg_cache_duration') ?? 6;
+    _epgRetentionDays = prefs.getInt('epg_retention_days') ?? 7;
+    _storeDescriptions = prefs.getBool('epg_store_descriptions') ?? true;
+    _showLogos = prefs.getBool('epg_show_logos') ?? true;
+    _showImages = prefs.getBool('epg_show_images') ?? true;
   }
 
   // Save custom EPG URL when the text field changes
@@ -205,8 +219,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     for (var n in _menuFocusNodes) {
       n.dispose();
     }
-    _tabController?.removeListener(() {});
-    _tabController?.dispose();
+    _tabController.removeListener(() {});
+    _tabController.dispose();
     _m3uUrlController.dispose();
     _m3uUrlFocusNode.dispose();
     _xtreamServerController.dispose();
@@ -255,19 +269,19 @@ class _SettingsScreenState extends State<SettingsScreen>
   void _focusFirstContentElement() {
     // Focus the first interactive element in the current tab's content area
     Future.microtask(() {
-      if (_tabController!.index == 0) {
+      if (_tabController.index == 0) {
         // General tab - focus M3U tab button
         _m3uTabFocusNode.requestFocus();
-      } else if (_tabController!.index == 1) {
+      } else if (_tabController.index == 1) {
         // Account tab
         _editProfileButtonFocusNode.requestFocus();
-      } else if (_tabController!.index == 2) {
+      } else if (_tabController.index == 2) {
         // Playback tab - focus first switch
         _playbackFirstFocusNode.requestFocus();
-      } else if (_tabController!.index == 3) {
+      } else if (_tabController.index == 3) {
         // AI Features tab - focus first switch
         _aiFirstFocusNode.requestFocus();
-      } else if (_tabController!.index == 4) {
+      } else if (_tabController.index == 4) {
         // Recordings tab
         _browseStorageButtonFocusNode.requestFocus();
       }
@@ -314,7 +328,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   builder: (context) {
                     // Build only the active tab to avoid constructing
                     // heavy consumers for hidden tabs (reduces memory use)
-                    switch (_tabController!.index) {
+                    switch (_tabController.index) {
                       case 0:
                         return _buildGeneralSettings();
                       case 1:
@@ -372,12 +386,12 @@ class _SettingsScreenState extends State<SettingsScreen>
               itemCount: menuItems.length,
               itemBuilder: (context, index) {
                 final item = menuItems[index];
-                final bool isSelected = _tabController!.index == index;
+                final bool isSelected = _tabController.index == index;
                 return GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () {
                     setState(() {
-                      _tabController!.index = index;
+                      _tabController.index = index;
                     });
                   },
                   child: Focus(
@@ -388,7 +402,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       if (key == LogicalKeyboardKey.arrowDown) {
                         final next = (index + 1) % menuItems.length;
                         _menuFocusNodes[next].requestFocus();
-                        setState(() => _tabController!.index = next);
+                        setState(() => _tabController.index = next);
                         return KeyEventResult.handled;
                       } else if (key == LogicalKeyboardKey.arrowUp) {
                         if (index == 0) {
@@ -396,7 +410,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         }
                         final prev = index - 1;
                         _menuFocusNodes[prev].requestFocus();
-                        setState(() => _tabController!.index = prev);
+                        setState(() => _tabController.index = prev);
                         return KeyEventResult.handled;
                       } else if (key == LogicalKeyboardKey.arrowRight) {
                         _focusFirstContentElement();
@@ -463,7 +477,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   // Allow parent shell to request focus into this screen's sidebar
   void requestFirstSidebarFocus() {
     if (_menuFocusNodes.isNotEmpty) {
-      final idx = _tabController!.index.clamp(0, _menuFocusNodes.length - 1);
+      final idx = _tabController.index.clamp(0, _menuFocusNodes.length - 1);
       _menuFocusNodes[idx].requestFocus();
     }
   }
@@ -473,6 +487,39 @@ class _SettingsScreenState extends State<SettingsScreen>
       title: 'General',
       children: [
         _buildPlaylistStatusCard(),
+        _buildSectionCard(
+          title: 'Playlist Management',
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: _buildFocusButton(
+                    focusNode: FocusNode(),
+                    onPressed: () => context.push('/playlist-manager'),
+                    child: const Text('Manage Playlists'),
+                    isPrimary: true,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildFocusButton(
+                    focusNode: FocusNode(),
+                    onPressed: _reloadPlaylist,
+                    child: const Text('Reload'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildFocusButton(
+                    focusNode: _clearPlaylistCacheButtonFocusNode,
+                    onPressed: _clearPlaylistCache,
+                    child: const Text('Clear Cache'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
         _buildSectionCard(
           title: 'Playlist Source',
           children: [
@@ -600,10 +647,81 @@ class _SettingsScreenState extends State<SettingsScreen>
               focusNode: _customEpgUrlFocusNode,
               isEditable: _customEpgUrlEditable,
               onEditableChanged: (value) => setState(() => _customEpgUrlEditable = value),
-              hintText: 'Custom EPG URL (optional)',
+              hintText: 'Primary EPG URL (optional)',
               prefixIcon: Icons.tv_outlined,
             ),
             const SizedBox(height: 12),
+            _buildTVTextField(
+              controller: _secondaryEpgUrlController,
+              focusNode: _secondaryEpgUrlFocusNode,
+              isEditable: false,
+              onEditableChanged: (value) {},
+              hintText: 'Secondary EPG URL (optional)',
+              prefixIcon: Icons.tv_outlined,
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Cache Duration (hours)', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          _buildCounterButton(
+                            focusNode: _epgIntervalMinusFocusNode,
+                            icon: Icons.remove,
+                            onPressed: () => _adjustEpgCacheDuration(-1),
+                          ),
+                          const SizedBox(width: 12),
+                          Text('$_epgCacheDuration', style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
+                          const SizedBox(width: 12),
+                          _buildCounterButton(
+                            focusNode: _epgIntervalPlusFocusNode,
+                            icon: Icons.add,
+                            onPressed: () => _adjustEpgCacheDuration(1),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 24),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Retention Days', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          _buildCounterButton(
+                            focusNode: _epgPastDaysMinusFocusNode,
+                            icon: Icons.remove,
+                            onPressed: () => _adjustEpgRetentionDays(-1),
+                          ),
+                          const SizedBox(width: 12),
+                          Text('$_epgRetentionDays', style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
+                          const SizedBox(width: 12),
+                          _buildCounterButton(
+                            focusNode: _epgPastDaysPlusFocusNode,
+                            icon: Icons.add,
+                            onPressed: () => _adjustEpgRetentionDays(1),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildSwitchTile('Store Program Descriptions', _storeDescriptions, focusNode: _storeDescriptionsSwitchFocusNode),
+            _buildSwitchTile('Show Channel Logos', _showLogos, focusNode: _showLogosSwitchFocusNode),
+            _buildSwitchTile('Show Program Images', _showImages, focusNode: _showImagesSwitchFocusNode),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
@@ -623,6 +741,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 8),
+            _buildFocusButton(
+              focusNode: _viewUnmatchedChannelsFocusNode,
+              onPressed: () => context.push('/epg-diagnostic'),
+              child: const Text('View EPG Diagnostic'),
             ),
           ],
         ),
@@ -824,7 +948,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     return Container(
       decoration: const BoxDecoration(color: Color(0xFF050710)),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.only(left: 68, top: 20, right: 20, bottom: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1154,6 +1278,9 @@ class _SettingsScreenState extends State<SettingsScreen>
         case 'Enable Live Transcription': _transcriptionEnabled = newValue; break;
         case 'Enable Translation': _translationEnabled = newValue; break;
         case 'Enable Text-to-Speech': _ttsEnabled = newValue; break;
+        case 'Store Program Descriptions': _storeDescriptions = newValue; break;
+        case 'Show Channel Logos': _showLogos = newValue; break;
+        case 'Show Program Images': _showImages = newValue; break;
       }
     });
     
@@ -1199,6 +1326,9 @@ class _SettingsScreenState extends State<SettingsScreen>
           service.setTTSEnabled(newValue);
         }
         break;
+      case 'Store Program Descriptions': await prefs.setBool('epg_store_descriptions', newValue); break;
+      case 'Show Channel Logos': await prefs.setBool('epg_show_logos', newValue); break;
+      case 'Show Program Images': await prefs.setBool('epg_show_images', newValue); break;
     }
   }
 
@@ -1279,5 +1409,75 @@ class _SettingsScreenState extends State<SettingsScreen>
         ],
       ),
     );
+  }
+
+  Widget _buildCounterButton({
+    required FocusNode focusNode,
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    return Focus(
+      focusNode: focusNode,
+      child: Builder(
+        builder: (context) {
+          return Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+            ),
+            child: IconButton(
+              onPressed: onPressed,
+              icon: Icon(icon, size: 16, color: AppTheme.textPrimary),
+              padding: EdgeInsets.zero,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _adjustEpgCacheDuration(int delta) async {
+    final newValue = (_epgCacheDuration + delta).clamp(1, 24);
+    if (newValue != _epgCacheDuration) {
+      setState(() => _epgCacheDuration = newValue);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('epg_cache_duration', newValue);
+    }
+  }
+
+  void _adjustEpgRetentionDays(int delta) async {
+    final newValue = (_epgRetentionDays + delta).clamp(1, 14);
+    if (newValue != _epgRetentionDays) {
+      setState(() => _epgRetentionDays = newValue);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('epg_retention_days', newValue);
+    }
+  }
+
+  Future<void> _clearPlaylistCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('cached_playlist');
+      await prefs.remove('cache_timestamp');
+      
+      _showMessage('Playlist cache cleared successfully!');
+    } catch (e) {
+      _showMessage('Failed to clear cache: $e');
+    }
+  }
+
+  Future<void> _reloadPlaylist() async {
+    try {
+      if (mounted) {
+        final provider = Provider.of<ChannelProvider>(context, listen: false);
+        await provider.autoLoadPlaylist();
+        _showMessage('Playlist reloaded successfully!');
+      }
+    } catch (e) {
+      _showMessage('Failed to reload playlist: $e');
+    }
   }
 }

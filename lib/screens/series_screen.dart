@@ -552,9 +552,25 @@ class _SeriesScreenState extends State<SeriesScreen>
   }
 
   List<Widget> _buildGenreSections(BuildContext context, List<Content> series) {
+    // Filter out series without proper info
+    final validSeries = series.where((show) {
+      // Skip shows with generic/placeholder titles
+      final title = show.title.toLowerCase();
+      if (title == 'series' || 
+          title == 'show' ||
+          title == 'series to be announced' ||
+          title == 'show to be announced' ||
+          title.startsWith('series ') ||
+          title.startsWith('show ') ||
+          title.contains('to be announced')) {
+        return false;
+      }
+      return true;
+    }).toList();
+    
     // Group series by genre (prefer TMDB genres, fallback to M3U genres)
     final genreMap = <String, List<Content>>{};
-    for (final show in series) {
+    for (final show in validSeries) {
       // Use allGenres getter which prefers tmdbGenres over genres
       final showGenres = show.allGenres;
       if (showGenres.isNotEmpty) {
@@ -657,8 +673,8 @@ class _SeriesScreenState extends State<SeriesScreen>
           final scrollOffset = _scrollController.hasClients ? _scrollController.offset : 0.0;
           final scrollProgress = (scrollOffset / heroHeight).clamp(0.0, 1.0);
           
-          final heroWidth = screenSize.width - (scrollProgress * (screenSize.width * 0.4));
-          final heroLeft = scrollProgress * (screenSize.width * 0.6);
+          final heroWidth = screenSize.width - (scrollProgress * (screenSize.width * 0.65));
+          final heroLeft = scrollProgress * (screenSize.width * 0.75);
           final heroTop = scrollProgress * (-heroHeight * 0.3);
           final heroHeightAnimated = heroHeight - (scrollProgress * heroHeight * 0.7);
           
@@ -733,7 +749,7 @@ class _SeriesScreenState extends State<SeriesScreen>
                 Positioned(
                   top: 0,
                   left: 0,
-                  width: screenSize.width * (0.6 * scrollProgress),
+                  width: screenSize.width * (0.75 * scrollProgress),
                   height: heroHeightAnimated,
                   child: IgnorePointer(
                     child: Container(
@@ -799,9 +815,9 @@ class _SeriesScreenState extends State<SeriesScreen>
                 ),
                 // Featured info
                 Positioned(
-                  bottom: heroHeight * 0.35,
+                  bottom: heroHeight * 0.35 + (scrollProgress * heroHeight * 0.2),
                   left: sidebarWidth + AppSizes.lg,
-                  width: screenSize.width * 0.4,
+                  width: screenSize.width * 0.4 + (scrollProgress * screenSize.width * 0.3),
                   child: Opacity(
                     opacity: 1.0 - scrollProgress,
                     child: _buildFeaturedInfo(context, featuredSeries),
@@ -866,6 +882,13 @@ class _SeriesScreenState extends State<SeriesScreen>
               style: Theme.of(context).textTheme.displaySmall?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textPrimary,
+                shadows: [
+                  Shadow(
+                    offset: const Offset(1, 1),
+                    blurRadius: 3,
+                    color: Colors.black.withValues(alpha: 0.8),
+                  ),
+                ],
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -875,6 +898,13 @@ class _SeriesScreenState extends State<SeriesScreen>
               featuredSeries.description ?? '',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: AppTheme.textSecondary,
+                shadows: [
+                  Shadow(
+                    offset: const Offset(1, 1),
+                    blurRadius: 2,
+                    color: Colors.black.withValues(alpha: 0.7),
+                  ),
+                ],
               ),
               maxLines: 3,
               overflow: TextOverflow.ellipsis,

@@ -33,6 +33,7 @@ import 'package:iptv_player/screens/ssl_settings_screen.dart';
 import 'package:iptv_player/screens/edit_profile_screen.dart';
 import 'package:iptv_player/screens/recordings_screen.dart';
 import 'package:iptv_player/screens/ai_models_screen.dart';
+import 'package:iptv_player/screens/epg_diagnostic_screen.dart';
 // modern_home_screen is unused in the redesigned UI; import removed to silence lints
 import 'package:iptv_player/screens/live_tv_screen.dart';
 import 'package:iptv_player/screens/movies_screen.dart';
@@ -886,7 +887,13 @@ final _router = GoRouter(
                     ? 'series'
                     : state.matchedLocation.contains('/epg')
                         ? 'guide'
-                        : 'home';
+                        : state.matchedLocation.contains('/settings')
+                            ? 'settings'
+                            : state.matchedLocation.contains('/favorites')
+                                ? 'favorites'
+                                : state.matchedLocation.contains('/downloads')
+                                    ? 'downloads'
+                                    : 'home';
 
         return MainShell(activeTab: activeTab, child: child);
       },
@@ -985,6 +992,11 @@ final _router = GoRouter(
       path: '/ai-models',
       pageBuilder: (context, state) =>
           _fadeSlidePage(key: state.pageKey, child: const AIModelsScreen()),
+    ),
+    GoRoute(
+      path: '/epg-diagnostic',
+      pageBuilder: (context, state) =>
+          _fadeSlidePage(key: state.pageKey, child: const EpgDiagnosticScreen()),
     ),
     GoRoute(
       path: '/content/:id',
