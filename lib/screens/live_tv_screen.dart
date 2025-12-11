@@ -318,7 +318,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final screenSize = MediaQuery.of(context).size;
     final isTV = screenSize.width >= 1920 || screenSize.height >= 1080;
     final heroHeight = screenSize.height * 0.75;
-    final sidebarWidth = AppSizes.sidebarWidth;
+    final sidebarWidth = AppSizes.sidebarCollapsedWidth + AppSizes.lg;
 
     return Focus(
       canRequestFocus: false,
@@ -1042,7 +1042,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Widget _buildSkeletonLoader() {
     final screenSize = MediaQuery.of(context).size;
     final heroHeight = screenSize.height * 0.75;
-    final sidebarWidth = AppSizes.sidebarWidth;
+    final sidebarWidth = AppSizes.sidebarCollapsedWidth + AppSizes.lg;
     final cardWidth = screenSize.width / 5.5;
     final cardHeight = cardWidth * 0.57;
     final rowHeight = cardHeight + 120;

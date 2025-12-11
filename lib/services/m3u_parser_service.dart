@@ -95,7 +95,7 @@ class M3UParserService {
       
       // Show progress for large playlists
       if (rawLines.length > 10000 && chunkStart % (chunkSize * 5) == 0) {
-        debugPrint('M3UParser: Processed ${chunkEnd}/${rawLines.length} raw lines');
+        debugPrint('M3UParser: Processed $chunkEnd/${rawLines.length} raw lines');
       }
     }
 
@@ -146,7 +146,7 @@ class M3UParserService {
       
       // Show progress for large playlists
       if (lines.length > 5000 && chunkStart % (chunkSize * 2) == 0) {
-        debugPrint('M3UParser: Parsed ${channelCount} channels so far...');
+        debugPrint('M3UParser: Parsed $channelCount channels so far...');
       }
     }
 

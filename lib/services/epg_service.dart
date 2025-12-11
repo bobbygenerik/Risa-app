@@ -343,8 +343,8 @@ class EpgService with ChangeNotifier {
           }
           
           // Yield control periodically to prevent UI blocking
-          if (chunkCount % 100 == 0) {
-            await Future.delayed(Duration.zero); // Yield to event loop
+          if (chunkCount % 50 == 0) {
+            await Future.delayed(const Duration(milliseconds: 1)); // Yield to event loop
           }
         }
 
@@ -404,7 +404,7 @@ class EpgService with ChangeNotifier {
             
             // Yield control after each chunk
             if (i + 100 < programMaps.length) {
-              await Future.delayed(Duration.zero);
+              await Future.delayed(const Duration(milliseconds: 1));
             }
           }
 
@@ -417,7 +417,7 @@ class EpgService with ChangeNotifier {
           // Yield control periodically and notify progress
           if (channelCount % channelChunkSize == 0) {
             debugPrint('EPG: Processed $channelCount/${rawEpgData.length} channels');
-            await Future.delayed(Duration.zero); // Yield to UI thread
+            await Future.delayed(const Duration(milliseconds: 2)); // Yield to UI thread
             notifyListeners(); // Update UI with partial data
           }
         }

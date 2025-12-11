@@ -529,7 +529,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     onPressed: () => _m3uUrlController.clear(),
                     child: const Text('Clear'),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   _buildFocusButton(
                     focusNode: _loadM3uButtonFocusNode,
                     onPressed: _loadM3uPlaylist,
@@ -584,7 +584,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     onPressed: _clearXtreamFields,
                     child: const Text('Clear'),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   _buildFocusButton(
                     focusNode: _loadXtreamButtonFocusNode,
                     onPressed: _loadXtreamPlaylist,
@@ -604,7 +604,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     child: const Text('Reload Playlist'),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 12),
                 Expanded(
                   child: _buildFocusButton(
                     focusNode: _clearPlaylistCacheButtonFocusNode,
@@ -709,7 +709,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     isPrimary: true,
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 12),
                 Expanded(
                   child: _buildFocusButton(
                     focusNode: _clearEpgButtonFocusNode,
@@ -720,10 +720,24 @@ class _SettingsScreenState extends State<SettingsScreen>
               ],
             ),
             const SizedBox(height: 8),
-            _buildFocusButton(
-              focusNode: FocusNode(),
-              onPressed: () => context.push('/epg-manager'),
-              child: const Text('Advanced EPG Manager'),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildFocusButton(
+                    focusNode: FocusNode(),
+                    onPressed: () => context.push('/epg-manager'),
+                    child: const Text('Advanced EPG Manager'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildFocusButton(
+                    focusNode: _viewUnmatchedChannelsFocusNode,
+                    onPressed: () => context.push('/epg-diagnostic'),
+                    child: const Text('EPG Diagnostic Tool'),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -740,7 +754,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     isPrimary: true,
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 12),
                 Expanded(
                   child: _buildFocusButton(
                     focusNode: FocusNode(),
@@ -756,12 +770,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
             ),
             const SizedBox(height: 16),
-            _buildFocusButton(
-              focusNode: _viewUnmatchedChannelsFocusNode,
-              onPressed: () => context.push('/epg-diagnostic'),
-              child: const Text('EPG Diagnostic Tool'),
-            ),
-            const SizedBox(height: 8),
+
             _buildFocusButton(
               focusNode: FocusNode(),
               onPressed: () => context.push('/debug'),
@@ -1157,14 +1166,14 @@ class _SettingsScreenState extends State<SettingsScreen>
               style: ElevatedButton.styleFrom(
                 backgroundColor: isPrimary 
                     ? AppTheme.primaryBlue 
-                    : Colors.transparent,
+                    : const Color(0xFF1A1A1A),
                 foregroundColor: isPrimary 
                     ? Colors.white 
                     : (isFocused ? Colors.white : AppTheme.textPrimary),
-                side: isPrimary ? null : BorderSide(
+                side: BorderSide(
                   color: isFocused 
                       ? AppTheme.primaryBlue 
-                      : Colors.white.withValues(alpha: 0.3)
+                      : Colors.transparent
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 elevation: 0,
@@ -1415,26 +1424,26 @@ class _SettingsScreenState extends State<SettingsScreen>
         builder: (context) {
           final isFocused = Focus.of(context).hasFocus;
           return SizedBox(
-            width: 32,
-            height: 32,
+            width: 40,
+            height: 40,
             child: ElevatedButton(
               onPressed: onPressed,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
+                backgroundColor: const Color(0xFF1A1A1A),
                 foregroundColor: isFocused ? Colors.white : AppTheme.textPrimary,
                 side: BorderSide(
                   color: isFocused 
                       ? AppTheme.primaryBlue 
-                      : Colors.white.withValues(alpha: 0.3)
+                      : Colors.transparent
                 ),
                 padding: EdgeInsets.zero,
-                minimumSize: const Size(32, 32),
+                minimumSize: const Size(40, 40),
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(6),
                 ),
               ),
-              child: Icon(icon, size: 16),
+              child: Icon(icon, size: 18),
             ),
           );
         },

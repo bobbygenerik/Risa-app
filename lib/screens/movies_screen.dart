@@ -561,7 +561,7 @@ class _MoviesScreenState extends State<MoviesScreen>
     final heroImage = featuredMovie.backdropUrl ?? featuredMovie.imageUrl;
     final screenSize = MediaQuery.of(context).size;
     final heroHeight = screenSize.height * 0.75;
-    final sidebarWidth = AppSizes.sidebarWidth;
+    final sidebarWidth = AppSizes.sidebarCollapsedWidth + AppSizes.lg;
 
     return Focus(
       canRequestFocus: false,
