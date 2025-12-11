@@ -85,18 +85,22 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
       ),
     );
 
-    if (confirmed == true) {
+    if (confirmed == true && mounted) {
+      final epgService = Provider.of<EpgService>(context, listen: false);
       setState(() {
         _isLoading = true;
         _statusMessage = 'Clearing all EPG data...';
       });
 
       try {
-        final epgService = Provider.of<EpgService>(context, listen: false);
         await epgService.clearCache();
-        _showMessage('All EPG data cleared successfully!');
+        if (mounted) {
+          _showMessage('All EPG data cleared successfully!');
+        }
       } catch (e) {
-        _showMessage('Failed to clear EPG data: $e');
+        if (mounted) {
+          _showMessage('Failed to clear EPG data: $e');
+        }
       } finally {
         if (mounted) {
           setState(() {

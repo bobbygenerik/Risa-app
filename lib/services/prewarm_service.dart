@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_vlc_player/flutter_vlc_player.dart';
+import 'package:video_player/video_player.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 // Settings provider import removed - not used in prewarm service
@@ -9,7 +9,7 @@ import 'package:iptv_player/providers/content_provider.dart';
 /// Lightweight prewarm service to preload hero/backdrop images and
 /// initialize a temporary video controller for the featured Live TV channel.
 class PrewarmService {
-  static VlcPlayerController? _prewarmedController;
+  static VideoPlayerController? _prewarmedController;
 
   /// Precache a small set of images used on the main screens to reduce jank
   /// when the user first visits them.
@@ -92,11 +92,7 @@ class PrewarmService {
   static Future<void> _initPrewarmController(String url) async {
     try {
       await _prewarmedController?.dispose();
-      _prewarmedController = VlcPlayerController.network(
-        url,
-        hwAcc: HwAcc.full, // Use full acceleration for prewarm
-        autoPlay: false,
-      );
+      _prewarmedController = VideoPlayerController.networkUrl(Uri.parse(url));
       await _prewarmedController!.initialize();
       // Keep paused and ready
       await _prewarmedController!.pause();

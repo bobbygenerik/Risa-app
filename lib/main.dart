@@ -384,13 +384,15 @@ class _MyAppState extends State<MyApp> {
             groupTitle: 'Android Auto',
           );
 
-          // Wait for router to be ready
-          await Future.delayed(const Duration(milliseconds: 500));
-
-          if (mounted) {
-            final context = _rootNavigatorKey.currentContext;
-            if (context != null) {
-              context.go('/player', extra: channel);
+          // Capture context before async operations
+          final context = _rootNavigatorKey.currentContext;
+          if (context != null) {
+            // Wait for router to be ready and navigate
+            await Future.delayed(const Duration(milliseconds: 500));
+            
+            if (mounted) {
+              // ignore: use_build_context_synchronously
+              GoRouter.of(context).go('/player', extra: channel);
             }
           }
         }
@@ -515,14 +517,17 @@ class _MyAppState extends State<MyApp> {
   Future<void> _showDisclaimer() async {
     // Make sure we have a valid context
     if (!mounted) return;
+    
+    final navigatorContext = _rootNavigatorKey.currentContext;
+    if (navigatorContext == null) return;
 
     final result = await showDialog<bool>(
-      context: context,
+      context: navigatorContext,
       barrierDismissible: false,
       builder: (context) => const LegalDisclaimerDialog(),
     );
 
-    if (result == true) {
+    if (result == true && mounted) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('disclaimer_accepted', true);
       setState(() {
@@ -1107,21 +1112,7 @@ final _router = GoRouter(
         );
       },
     ),
-    GoRoute(
-      path: '/vlc-player',
-      pageBuilder: (context, state) {
-        final params = state.extra as Map<String, dynamic>?;
-        return _fadeSlidePage(
-          key: state.pageKey,
-          child: EnhancedVideoPlayerScreen(
-            videoUrl: params?['videoUrl'] ?? '',
-            title: params?['title'] ?? 'Video',
-            subtitle: params?['subtitle'],
-            isLive: params?['isLive'] ?? false,
-          ),
-        );
-      },
-    ),
+
   ],
 );
 

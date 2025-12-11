@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_vlc_player/flutter_vlc_player.dart';
+import 'package:video_player/video_player.dart';
+import 'package:chewie/chewie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 import '../models/channel.dart';
@@ -39,7 +40,8 @@ class EnhancedVideoPlayerScreen extends StatefulWidget {
 }
 
 class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
-  VlcPlayerController? _vlcController;
+  VideoPlayerController? _videoController;
+  ChewieController? _chewieController;
   bool _isLoading = true;
   bool _showControls = true;
   bool _isPlaying = false;
@@ -61,22 +63,25 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     final settings = Provider.of<SettingsProvider>(context, listen: false);
     await settings.initialize();
     
-    final hwAccel = settings.hardwareAcceleration;
-    final hwDecoding = settings.hardwareDecoding;
     final rememberPosition = settings.rememberPlaybackPosition;
     
-    _vlcController = VlcPlayerController.network(
-      url,
-      hwAcc: hwAccel ? HwAcc.full : HwAcc.disabled,
+    _videoController = VideoPlayerController.networkUrl(Uri.parse(url));
+    await _videoController!.initialize();
+    
+    _chewieController = ChewieController(
+      videoPlayerController: _videoController!,
       autoPlay: true,
-      options: VlcPlayerOptions(
-        advanced: VlcAdvancedOptions([
-          if (hwDecoding) VlcAdvancedOptions.networkCaching(300),
-        ]),
+      looping: false,
+      showControls: false, // We'll use custom controls
+      aspectRatio: _videoController!.value.aspectRatio,
+      materialProgressColors: ChewieProgressColors(
+        playedColor: const Color(0xFF007AFF),
+        handleColor: const Color(0xFF007AFF),
+        backgroundColor: Colors.white.withValues(alpha: 0.3),
+        bufferedColor: Colors.white.withValues(alpha: 0.5),
       ),
     );
     
-    await _vlcController!.initialize();
     setState(() => _isLoading = false);
     
     // Restore saved position for VOD content
@@ -85,16 +90,16 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       final key = widget.content?.id ?? widget.title ?? url;
       final savedPosition = prefs.getInt('position_$key');
       if (savedPosition != null && savedPosition > 0) {
-        await _vlcController!.seekTo(Duration(milliseconds: savedPosition));
+        await _videoController!.seekTo(Duration(milliseconds: savedPosition));
       }
     }
     
     // Listen to player state changes
-    _vlcController!.addListener(() {
+    _videoController!.addListener(() {
       if (mounted) {
-        final isPlaying = _vlcController!.value.isPlaying;
-        final position = _vlcController!.value.position;
-        final duration = _vlcController!.value.duration;
+        final isPlaying = _videoController!.value.isPlaying;
+        final position = _videoController!.value.position;
+        final duration = _videoController!.value.duration;
         
         setState(() {
           _isPlaying = isPlaying;
@@ -145,39 +150,41 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
   void _togglePlayPause() {
     if (_isPlaying) {
-      _vlcController?.pause();
+      _videoController?.pause();
     } else {
-      _vlcController?.play();
+      _videoController?.play();
     }
   }
 
   void _rewind() async {
-    if (_vlcController != null) {
-      final currentPos = _vlcController!.value.position;
+    if (_videoController != null) {
+      final currentPos = _videoController!.value.position;
       final newPos = currentPos - const Duration(seconds: 10);
       if (newPos.inMilliseconds > 0) {
-        await _vlcController!.seekTo(newPos);
+        await _videoController!.seekTo(newPos);
       }
     }
   }
 
   void _fastForward() async {
-    if (_vlcController != null) {
-      final currentPos = _vlcController!.value.position;
-      final duration = _vlcController!.value.duration;
+    if (_videoController != null) {
+      final currentPos = _videoController!.value.position;
+      final duration = _videoController!.value.duration;
       final newPos = currentPos + const Duration(seconds: 10);
       if (newPos < duration) {
-        await _vlcController!.seekTo(newPos);
+        await _videoController!.seekTo(newPos);
       }
     }
   }
 
   void _toggleAudio() async {
-    if (_vlcController != null) {
-      final tracks = await _vlcController!.getAudioTracks();
-      if (tracks.isNotEmpty && mounted) {
-        _showAudioTrackDialog(tracks);
-      }
+    // ExoPlayer doesn't expose audio tracks directly like VLC
+    // This would need platform-specific implementation
+    if (mounted) {
+      showAppSnackBar(
+        context,
+        const SnackBar(content: Text('Audio track selection not available')),
+      );
     }
   }
 
@@ -306,16 +313,17 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     } catch (e) {
       debugPrint('TTS cleanup error: $e');
     }
-    _vlcController?.dispose();
+    _chewieController?.dispose();
+    _videoController?.dispose();
     super.dispose();
   }
   
   void _saveCurrentPosition() async {
-    if (!widget.isLive && _vlcController != null) {
+    if (!widget.isLive && _videoController != null) {
       final settings = Provider.of<SettingsProvider>(context, listen: false);
       
       if (settings.rememberPlaybackPosition) {
-        final position = _vlcController!.value.position;
+        final position = _videoController!.value.position;
         final key = widget.content?.id ?? widget.title ?? widget.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '';
         final prefs = await SharedPreferences.getInstance();
         await prefs.setInt('position_$key', position.inMilliseconds);
@@ -323,7 +331,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         // Update watch progress for content
         if (widget.content != null && mounted) {
           final contentProvider = Provider.of<ContentProvider>(context, listen: false);
-          final duration = _vlcController!.value.duration;
+          final duration = _videoController!.value.duration;
           if (duration.inMilliseconds > 0) {
             final progress = position.inMilliseconds / duration.inMilliseconds;
             await contentProvider.updateWatchProgress(widget.content!.id, progress);
@@ -342,14 +350,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         child: Stack(
           children: [
             // Video player
-            if (_vlcController != null)
+            if (_chewieController != null)
               Center(
-                child: VlcPlayer(
-                  controller: _vlcController!,
-                  aspectRatio: 16 / 9,
-                  placeholder: const Center(
-                    child: CircularProgressIndicator(color: Colors.white),
-                  ),
+                child: Chewie(
+                  controller: _chewieController!,
                 ),
               ),
             
@@ -528,29 +532,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     );
   }
 
-  void _showAudioTrackDialog(Map<dynamic, dynamic> tracks) {
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: Colors.black87,
-        title: const Text('Audio Tracks', style: TextStyle(color: Colors.white)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: tracks.entries.map((entry) => ListTile(
-            title: Text(
-              entry.value ?? 'Track ${entry.key}',
-              style: const TextStyle(color: Colors.white),
-            ),
-            onTap: () {
-              _vlcController?.setAudioTrack(entry.key);
-              Navigator.of(dialogContext).pop();
-            },
-          )).toList(),
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildGuideOverlay() {
     return GestureDetector(

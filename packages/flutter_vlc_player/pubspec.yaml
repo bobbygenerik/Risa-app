@@ -1,9 +1,0 @@
-name: flutter_vlc_player
-description: "Local shim package to provide a minimal flutter_vlc_player API surface for builds"
-version: 0.0.1
-environment:
-  sdk: '>=3.2.6 <4.0.0'
-
-flutter:
-  plugin:
-    platforms: {}

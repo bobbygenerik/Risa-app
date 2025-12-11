@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_vlc_player/flutter_vlc_player.dart';
+import 'package:video_player/video_player.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/utils/app_theme.dart';
@@ -29,7 +29,7 @@ class MultiViewScreen extends StatefulWidget {
 
 class _MultiViewScreenState extends State<MultiViewScreen> {
   late List<Channel> _channelsList;
-  final List<VlcPlayerController?> _controllers = [null, null, null, null];
+  final List<VideoPlayerController?> _controllers = [null, null, null, null];
   final List<bool> _isInitialized = [false, false, false, false];
   final List<bool> _hasError = [false, false, false, false];
 
@@ -83,20 +83,15 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
   Future<void> _initializePlayers() async {
     for (int i = 0; i < _channelsList.length && i < 4; i++) {
       try {
-        _controllers[i] = VlcPlayerController.network(
-          _channelsList[i].url,
-          hwAcc: _hardwareAcceleration ? HwAcc.full : HwAcc.disabled,
-          autoPlay: true,
-        );
-
+        _controllers[i] = VideoPlayerController.networkUrl(Uri.parse(_channelsList[i].url));
         await _controllers[i]!.initialize();
         await _controllers[i]!.play();
 
         // Mute all except the active audio player
         if (i != _activeAudioPlayer) {
-          await _controllers[i]!.setVolume(0);
+          await _controllers[i]!.setVolume(0.0);
         } else {
-          await _controllers[i]!.setVolume(100);
+          await _controllers[i]!.setVolume(1.0);
         }
 
         setState(() {
@@ -153,10 +148,10 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
     if (_controllers[index] == null || !_isInitialized[index]) return;
 
     // Mute old active player
-    _controllers[_activeAudioPlayer]?.setVolume(0);
+    _controllers[_activeAudioPlayer]?.setVolume(0.0);
 
     // Unmute new active player
-    _controllers[index]?.setVolume(100);
+    _controllers[index]?.setVolume(1.0);
 
     setState(() {
       _activeAudioPlayer = index;
@@ -230,20 +225,15 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
       // Initialize the new player
       try {
         _controllers[index]?.dispose();
-        _controllers[index] = VlcPlayerController.network(
-          channel.url,
-          hwAcc: _hardwareAcceleration ? HwAcc.full : HwAcc.disabled,
-          autoPlay: true,
-        );
-
+        _controllers[index] = VideoPlayerController.networkUrl(Uri.parse(channel.url));
         await _controllers[index]!.initialize();
         await _controllers[index]!.play();
 
         // Mute by default unless it's the active audio player
         if (index != _activeAudioPlayer) {
-          await _controllers[index]!.setVolume(0);
+          await _controllers[index]!.setVolume(0.0);
         } else {
-          await _controllers[index]!.setVolume(100);
+          await _controllers[index]!.setVolume(1.0);
         }
 
         setState(() {
@@ -280,8 +270,8 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
           break;
         case LogicalKeyboardKey.keyM:
           // Mute/unmute focused player
-          final volume = _controllers[_focusedPlayer]?.value.volume ?? 0;
-          _controllers[_focusedPlayer]?.setVolume(volume > 0 ? 0 : 100);
+          final volume = _controllers[_focusedPlayer]?.value.volume ?? 0.0;
+          _controllers[_focusedPlayer]?.setVolume(volume > 0 ? 0.0 : 1.0);
           _startControlsTimer();
           break;
         case LogicalKeyboardKey.select:
@@ -480,9 +470,9 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
             // Video player
             if (isInitialized && !hasError && controller != null)
               Center(
-                child: VlcPlayer(
-                  controller: controller,
+                child: AspectRatio(
                   aspectRatio: 16 / 9,
+                  child: VideoPlayer(controller),
                 ),
               ),
 
