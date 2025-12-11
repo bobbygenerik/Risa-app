@@ -595,24 +595,27 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
             ],
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildFocusButton(
-                    focusNode: FocusNode(),
-                    onPressed: _reloadPlaylist,
-                    child: const Text('Reload Playlist'),
+            SizedBox(
+              height: 40,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildFocusButton(
+                      focusNode: FocusNode(),
+                      onPressed: _reloadPlaylist,
+                      child: const Text('Reload Playlist'),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildFocusButton(
-                    focusNode: _clearPlaylistCacheButtonFocusNode,
-                    onPressed: _clearPlaylistCache,
-                    child: const Text('Clear Cache'),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildFocusButton(
+                      focusNode: _clearPlaylistCacheButtonFocusNode,
+                      onPressed: _clearPlaylistCache,
+                      child: const Text('Clear Cache'),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
@@ -724,17 +727,17 @@ class _SettingsScreenState extends State<SettingsScreen>
               children: [
                 Expanded(
                   child: _buildFocusButton(
-                    focusNode: FocusNode(),
-                    onPressed: () => context.push('/epg-manager'),
-                    child: const Text('Advanced EPG Manager'),
+                    focusNode: _viewUnmatchedChannelsFocusNode,
+                    onPressed: () => context.push('/epg-diagnostic'),
+                    child: const Text('EPG Diagnostic Tool'),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: _buildFocusButton(
-                    focusNode: _viewUnmatchedChannelsFocusNode,
-                    onPressed: () => context.push('/epg-diagnostic'),
-                    child: const Text('EPG Diagnostic Tool'),
+                    focusNode: FocusNode(),
+                    onPressed: () => context.push('/epg-manager'),
+                    child: const Text('Advanced EPG Manager'),
                   ),
                 ),
               ],
@@ -770,11 +773,16 @@ class _SettingsScreenState extends State<SettingsScreen>
               style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
             ),
             const SizedBox(height: 16),
-
-            _buildFocusButton(
-              focusNode: FocusNode(),
-              onPressed: () => context.push('/debug'),
-              child: const Text('Debug Performance'),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildFocusButton(
+                    focusNode: FocusNode(),
+                    onPressed: () => context.push('/debug'),
+                    child: const Text('Debug Performance'),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

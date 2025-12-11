@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/services/epg_service.dart';
@@ -14,58 +13,21 @@ class EpgManagerScreen extends StatefulWidget {
 }
 
 class _EpgManagerScreenState extends State<EpgManagerScreen> {
-  final TextEditingController _primaryUrlController = TextEditingController();
-  final TextEditingController _secondaryUrlController = TextEditingController();
-  
   bool _isLoading = false;
   String? _statusMessage;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadUrls();
-  }
-
-  @override
-  void dispose() {
-    _primaryUrlController.dispose();
-    _secondaryUrlController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadUrls() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _primaryUrlController.text = prefs.getString('custom_epg_url') ?? '';
-      _secondaryUrlController.text = prefs.getString('secondary_epg_url') ?? '';
-    });
-  }
-
-  Future<void> _saveUrls() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('custom_epg_url', _primaryUrlController.text);
-    await prefs.setString('secondary_epg_url', _secondaryUrlController.text);
-  }
-
-  Future<void> _updatePrimaryEpg() async {
-    if (_primaryUrlController.text.trim().isEmpty) {
-      _showMessage('Please enter a primary EPG URL');
-      return;
-    }
-
+  Future<void> _forceRefreshAll() async {
     setState(() {
       _isLoading = true;
-      _statusMessage = 'Updating primary EPG...';
+      _statusMessage = 'Force refreshing all EPG sources...';
     });
 
     try {
-      await _saveUrls();
-      if (!mounted) return;
       final epgService = Provider.of<EpgService>(context, listen: false);
-      await epgService.loadEpgFromUrl(_primaryUrlController.text.trim(), forceRefresh: true);
-      _showMessage('Primary EPG updated successfully!');
+      await epgService.loadEpg();
+      _showMessage('All EPG sources refreshed successfully!');
     } catch (e) {
-      _showMessage('Failed to update primary EPG: $e');
+      _showMessage('Failed to refresh EPG: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -76,53 +38,72 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
     }
   }
 
-  Future<void> _updateSecondaryEpg() async {
-    if (_secondaryUrlController.text.trim().isEmpty) {
-      _showMessage('Please enter a secondary EPG URL');
-      return;
-    }
-
+  Future<void> _rebuildChannelMappings() async {
     setState(() {
       _isLoading = true;
-      _statusMessage = 'Updating secondary EPG...';
-    });
-
-    try {
-      await _saveUrls();
-      if (!mounted) return;
-      final epgService = Provider.of<EpgService>(context, listen: false);
-      await epgService.loadSecondaryEpgFromUrl(_secondaryUrlController.text.trim(), forceRefresh: true);
-      _showMessage('Secondary EPG updated successfully!');
-    } catch (e) {
-      _showMessage('Failed to update secondary EPG: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _statusMessage = null;
-        });
-      }
-    }
-  }
-
-  Future<void> _clearEpgCache() async {
-    setState(() {
-      _isLoading = true;
-      _statusMessage = 'Clearing EPG cache...';
+      _statusMessage = 'Rebuilding channel mappings...';
     });
 
     try {
       final epgService = Provider.of<EpgService>(context, listen: false);
+      // Rebuild mappings by clearing cache and reloading
       await epgService.clearCache();
-      _showMessage('EPG cache cleared successfully!');
+      await epgService.loadEpg();
+      _showMessage('Channel mappings rebuilt successfully!');
     } catch (e) {
-      _showMessage('Failed to clear EPG cache: $e');
+      _showMessage('Failed to rebuild mappings: $e');
     } finally {
       if (mounted) {
         setState(() {
           _isLoading = false;
           _statusMessage = null;
         });
+      }
+    }
+  }
+
+  Future<void> _clearAllEpgData() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF050710),
+        title: const Text('Clear All EPG Data', style: TextStyle(color: AppTheme.textPrimary)),
+        content: const Text(
+          'This will remove all EPG data and channel mappings. You will need to reload EPG from settings.',
+          style: TextStyle(color: AppTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Clear All', style: TextStyle(color: AppTheme.accentRed)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      setState(() {
+        _isLoading = true;
+        _statusMessage = 'Clearing all EPG data...';
+      });
+
+      try {
+        final epgService = Provider.of<EpgService>(context, listen: false);
+        await epgService.clearCache();
+        _showMessage('All EPG data cleared successfully!');
+      } catch (e) {
+        _showMessage('Failed to clear EPG data: $e');
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _statusMessage = null;
+          });
+        }
       }
     }
   }
@@ -180,28 +161,18 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
                   
                   const SizedBox(height: 24),
                   
-                  // Primary EPG Section
-                  _buildEpgSection(
-                    title: 'Primary EPG Source',
-                    controller: _primaryUrlController,
-                    onUpdate: _updatePrimaryEpg,
-                    icon: Icons.tv,
-                  ),
+                  // Advanced Management Section
+                  _buildAdvancedActionsSection(),
                   
                   const SizedBox(height: 24),
                   
-                  // Secondary EPG Section
-                  _buildEpgSection(
-                    title: 'Secondary EPG Source',
-                    controller: _secondaryUrlController,
-                    onUpdate: _updateSecondaryEpg,
-                    icon: Icons.tv_outlined,
-                  ),
+                  // Channel Mapping Section
+                  _buildChannelMappingSection(),
                   
                   const SizedBox(height: 24),
                   
-                  // Actions Section
-                  _buildActionsSection(),
+                  // Maintenance Section
+                  _buildMaintenanceSection(),
                   
                   if (_isLoading && _statusMessage != null) ...[
                     const SizedBox(height: 24),
@@ -219,10 +190,8 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
   Widget _buildStatusCard(EpgService epgService) {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      decoration: const BoxDecoration(
+        color: Colors.transparent,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -283,110 +252,17 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
     );
   }
 
-  Widget _buildEpgSection({
-    required String title,
-    required TextEditingController controller,
-    required VoidCallback onUpdate,
-    required IconData icon,
-  }) {
+  Widget _buildAdvancedActionsSection() {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: AppTheme.primaryBlue, size: 20),
-              const SizedBox(width: 12),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: controller,
-            style: const TextStyle(color: AppTheme.textPrimary),
-            decoration: InputDecoration(
-              hintText: 'Enter EPG URL (e.g., http://example.com/epg.xml)',
-              hintStyle: const TextStyle(color: AppTheme.textSecondary),
-              prefixIcon: const Icon(Icons.link, size: 18, color: AppTheme.textSecondary),
-              filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.05),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : onUpdate,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryBlue,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text('Update EPG'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              ElevatedButton(
-                onPressed: () => controller.clear(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white.withValues(alpha: 0.1),
-                  foregroundColor: AppTheme.textPrimary,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text('Clear'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionsSection() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      decoration: const BoxDecoration(
+        color: Colors.transparent,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Actions',
+            'Advanced EPG Management',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
@@ -398,12 +274,12 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
             children: [
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: _isLoading ? null : _clearEpgCache,
-                  icon: const Icon(Icons.clear_all, size: 18),
-                  label: const Text('Clear Cache'),
+                  onPressed: _isLoading ? null : _forceRefreshAll,
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: const Text('Force Refresh All'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white.withValues(alpha: 0.1),
-                    foregroundColor: AppTheme.textPrimary,
+                    backgroundColor: AppTheme.primaryBlue,
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -418,7 +294,7 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
                   icon: const Icon(Icons.analytics, size: 18),
                   label: const Text('Diagnostics'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white.withValues(alpha: 0.1),
+                    backgroundColor: const Color(0xFF1A1A1A),
                     foregroundColor: AppTheme.textPrimary,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
@@ -428,6 +304,101 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChannelMappingSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: const BoxDecoration(
+        color: Colors.transparent,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Channel Mapping',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _isLoading ? null : _rebuildChannelMappings,
+                  icon: const Icon(Icons.build, size: 18),
+                  label: const Text('Rebuild Mappings'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1A1A1A),
+                    foregroundColor: AppTheme.textPrimary,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => context.push('/channel-mapping'),
+                  icon: const Icon(Icons.link, size: 18),
+                  label: const Text('Manual Mapping'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1A1A1A),
+                    foregroundColor: AppTheme.textPrimary,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMaintenanceSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: const BoxDecoration(
+        color: Colors.transparent,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Maintenance',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: _isLoading ? null : _clearAllEpgData,
+            icon: const Icon(Icons.delete_forever, size: 18),
+            label: const Text('Clear All EPG Data'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.accentRed.withValues(alpha: 0.2),
+              foregroundColor: AppTheme.accentRed,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              minimumSize: const Size(double.infinity, 0),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
           ),
         ],
       ),

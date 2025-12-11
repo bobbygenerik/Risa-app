@@ -387,8 +387,11 @@ class _MyAppState extends State<MyApp> {
           // Wait for router to be ready
           await Future.delayed(const Duration(milliseconds: 500));
 
-          if (_rootNavigatorKey.currentContext != null) {
-            _rootNavigatorKey.currentContext!.go('/player', extra: channel);
+          if (mounted) {
+            final context = _rootNavigatorKey.currentContext;
+            if (context != null) {
+              context.go('/player', extra: channel);
+            }
           }
         }
       }
