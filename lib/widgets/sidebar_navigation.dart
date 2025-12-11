@@ -357,6 +357,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
   }
 
   Widget _buildBottomButton(IconData icon, String label, String route) {
+    final isActive = GoRouterState.of(context).uri.path == route;
     return Focus(
       onKeyEvent: (node, event) {
         if (event is! KeyDownEvent) return KeyEventResult.ignored;
@@ -403,19 +404,27 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                 ? Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(icon, color: Colors.white70, size: 18),
+                      Icon(
+                        icon, 
+                        color: isActive ? AppTheme.primaryBlue : Colors.white70, 
+                        size: 18
+                      ),
                       const SizedBox(width: 10),
                       Text(
                         label,
-                        style: const TextStyle(
-                          color: Colors.white70,
+                        style: TextStyle(
+                          color: isActive ? AppTheme.primaryBlue : Colors.white70,
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
                   )
-                : Icon(icon, color: Colors.white70, size: 18),
+                : Icon(
+                    icon, 
+                    color: isActive ? AppTheme.primaryBlue : Colors.white70, 
+                    size: 18
+                  ),
             ),
           );
         },
