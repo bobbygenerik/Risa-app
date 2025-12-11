@@ -924,7 +924,23 @@ class _SettingsScreenState extends State<SettingsScreen>
           children: [
             _buildSwitchTile('Enable Live Transcription', _transcriptionEnabled),
             _buildSwitchTile('Enable Translation', _translationEnabled),
-
+          ],
+        ),
+        _buildSectionCard(
+          title: 'Language Models',
+          children: [
+            _buildFocusButton(
+              focusNode: FocusNode(),
+              onPressed: _showLanguageModelsDialog,
+              child: const Text('Manage Translation Models'),
+              isPrimary: true,
+            ),
+            const SizedBox(height: 8),
+            _buildFocusButton(
+              focusNode: FocusNode(),
+              onPressed: _showSpeechModelsDialog,
+              child: const Text('Speech Recognition Models'),
+            ),
           ],
         ),
       ],
@@ -1510,5 +1526,103 @@ class _SettingsScreenState extends State<SettingsScreen>
     } catch (e) {
       _showMessage('Import failed: $e');
     }
+  }
+
+  void _showLanguageModelsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        title: const Text('Translation Models', style: TextStyle(color: AppTheme.textPrimary)),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildModelTile('English ↔ Spanish', true, 'Downloaded'),
+              _buildModelTile('English ↔ French', false, 'Not downloaded'),
+              _buildModelTile('English ↔ German', false, 'Not downloaded'),
+              _buildModelTile('English ↔ Japanese', true, 'Downloaded'),
+              _buildModelTile('English ↔ Chinese', false, 'Not downloaded'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close', style: TextStyle(color: AppTheme.primaryBlue)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSpeechModelsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        title: const Text('Speech Recognition Models', style: TextStyle(color: AppTheme.textPrimary)),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildModelTile('English (US)', true, 'Active'),
+              _buildModelTile('Spanish', false, 'Available'),
+              _buildModelTile('French', false, 'Available'),
+              _buildModelTile('German', false, 'Available'),
+              _buildModelTile('Japanese', true, 'Downloaded'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close', style: TextStyle(color: AppTheme.primaryBlue)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _deleteModel(String language) {
+    _showMessage('Deleted $language model');
+    Navigator.of(context).pop();
+  }
+
+  void _downloadModel(String language) {
+    _showMessage('Downloading $language model...');
+    Navigator.of(context).pop();
+  }
+
+  Widget _buildModelTile(String language, bool isDownloaded, String status) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(
+        isDownloaded ? Icons.check_circle : Icons.download,
+        color: isDownloaded ? AppTheme.accentGreen : AppTheme.textSecondary,
+      ),
+      title: Text(
+        language,
+        style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+      ),
+      subtitle: Text(
+        status,
+        style: TextStyle(
+          color: isDownloaded ? AppTheme.accentGreen : AppTheme.textSecondary,
+          fontSize: 12,
+        ),
+      ),
+      trailing: isDownloaded
+          ? IconButton(
+              icon: const Icon(Icons.delete, color: AppTheme.textSecondary, size: 20),
+              onPressed: () => _deleteModel(language),
+            )
+          : IconButton(
+              icon: const Icon(Icons.download, color: AppTheme.primaryBlue, size: 20),
+              onPressed: () => _downloadModel(language),
+            ),
+    );
   }
 }
