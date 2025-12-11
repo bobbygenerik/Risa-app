@@ -237,15 +237,21 @@ class AppTheme {
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return textPrimary;
+            return Colors.white;
           }
-          return textTertiary;
+          return Colors.white.withValues(alpha: 0.8);
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return primaryBlue;
           }
-          return highlight;
+          return Colors.white.withValues(alpha: 0.2);
+        }),
+        trackOutlineColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.transparent;
+          }
+          return Colors.white.withValues(alpha: 0.3);
         }),
       ),
       
