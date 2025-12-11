@@ -6,6 +6,7 @@ import 'package:iptv_player/services/integrated_transcription_service.dart';
 import 'package:iptv_player/services/opensubtitles_service.dart';
 import 'package:iptv_player/services/real_debrid_service.dart';
 import 'package:iptv_player/services/epg_service.dart';
+import 'package:iptv_player/services/backup_service.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
@@ -751,6 +752,36 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
           ],
         ),
+        _buildSectionCard(
+          title: 'Backup & Restore',
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: _buildFocusButton(
+                    focusNode: FocusNode(),
+                    onPressed: _exportBackup,
+                    child: const Text('Export Backup'),
+                    isPrimary: true,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildFocusButton(
+                    focusNode: FocusNode(),
+                    onPressed: _importBackup,
+                    child: const Text('Import Backup'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Backup includes preferences, playlists, and settings',
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -1477,6 +1508,35 @@ class _SettingsScreenState extends State<SettingsScreen>
       }
     } catch (e) {
       _showMessage('Failed to reload playlist: $e');
+    }
+  }
+
+  Future<void> _exportBackup() async {
+    try {
+      final filePath = await BackupService.exportBackup();
+      if (filePath != null) {
+        _showMessage('Backup exported to: $filePath');
+      } else {
+        _showMessage('Failed to export backup');
+      }
+    } catch (e) {
+      _showMessage('Export failed: $e');
+    }
+  }
+
+  Future<void> _importBackup() async {
+    try {
+      final success = await BackupService.importBackup();
+      if (success) {
+        _showMessage('Backup imported successfully! Restart app to apply changes.');
+        // Reload settings after import
+        _loadSettingsSync();
+        setState(() {});
+      } else {
+        _showMessage('Import cancelled or failed');
+      }
+    } catch (e) {
+      _showMessage('Import failed: $e');
     }
   }
 }
