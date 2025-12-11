@@ -69,7 +69,13 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       Uri.parse(url),
       httpHeaders: {
         'User-Agent': 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36',
+        'Connection': 'keep-alive',
+        'Accept': '*/*',
       },
+      videoPlayerOptions: VideoPlayerOptions(
+        mixWithOthers: true,
+        allowBackgroundPlayback: false,
+      ),
     );
     await _videoController!.initialize();
     
@@ -82,6 +88,29 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       allowFullScreen: false,
       allowMuting: true,
       allowPlaybackSpeedChanging: false,
+      autoInitialize: true,
+      errorBuilder: (context, errorMessage) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error, color: Colors.red, size: 60),
+              const SizedBox(height: 16),
+              Text('Stream Error', style: TextStyle(color: Colors.white, fontSize: 18)),
+              const SizedBox(height: 8),
+              Text(errorMessage, style: TextStyle(color: Colors.white70), textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  _videoController?.seekTo(Duration.zero);
+                  _videoController?.play();
+                },
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        );
+      },
       materialProgressColors: ChewieProgressColors(
         playedColor: const Color(0xFF007AFF),
         handleColor: const Color(0xFF007AFF),
@@ -105,9 +134,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     // Listen to player state changes
     _videoController!.addListener(() {
       if (mounted) {
-        final isPlaying = _videoController!.value.isPlaying;
-        final position = _videoController!.value.position;
-        final duration = _videoController!.value.duration;
+        final value = _videoController!.value;
+        final isPlaying = value.isPlaying;
+        final position = value.position;
+        final duration = value.duration;
         
         setState(() {
           _isPlaying = isPlaying;
@@ -115,6 +145,17 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
             _progress = position.inMilliseconds / duration.inMilliseconds;
           }
         });
+        
+        // Handle errors by restarting playback
+        if (value.hasError) {
+          debugPrint('Video error: ${value.errorDescription}');
+          Future.delayed(const Duration(seconds: 1), () {
+            if (mounted && _videoController != null) {
+              _videoController!.seekTo(position);
+              _videoController!.play();
+            }
+          });
+        }
         
         // Handle video ended
         if (!isPlaying && position == duration && duration.inMilliseconds > 0) {

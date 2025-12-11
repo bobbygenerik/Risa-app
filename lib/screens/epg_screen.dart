@@ -745,29 +745,14 @@ class _EPGScreenState extends State<EPGScreen>
                         ),
                         // Channel list (lazy loaded)
                         Expanded(
-                          child: NotificationListener<ScrollNotification>(
-                            onNotification: (notification) {
-                              if (notification is ScrollUpdateNotification) {
-                                // Sync with horizontal scroll container
-                                WidgetsBinding.instance.addPostFrameCallback((_) {
-                                  if (mounted && _horizontalScrollController.hasClients) {
-                                    final horizontalParent = _horizontalScrollController.position.context.notificationContext;
-                                    if (horizontalParent != null) {
-                                      ScrollUpdateNotification(metrics: _verticalScrollController.position, context: horizontalParent, scrollDelta: notification.scrollDelta).dispatch(horizontalParent);
-                                    }
-                                  }
-                                });
-                              }
-                              return false;
+                          child: ListView.builder(
+                            controller: _verticalScrollController,
+                            physics: const ClampingScrollPhysics(),
+                            itemCount: channels.length,
+                            itemExtent: 64,
+                            itemBuilder: (context, index) {
+                              return _buildChannelSidebarItem(channels[index]);
                             },
-                            child: ListView.builder(
-                              controller: _verticalScrollController,
-                              itemCount: channels.length,
-                              itemExtent: 64,
-                              itemBuilder: (context, index) {
-                                return _buildChannelSidebarItem(channels[index]);
-                              },
-                            ),
                           ),
                         ),
                       ],
@@ -791,6 +776,7 @@ class _EPGScreenState extends State<EPGScreen>
                             child: SingleChildScrollView(
                               controller: _timeHeaderScrollController,
                               scrollDirection: Axis.horizontal,
+                              physics: const ClampingScrollPhysics(),
                               child: SizedBox(
                                 width: _calculateProgramsGridWidth(),
                                 child: _buildTimeHeaderOnly(),
@@ -810,11 +796,12 @@ class _EPGScreenState extends State<EPGScreen>
                             child: SingleChildScrollView(
                               controller: _horizontalScrollController,
                               scrollDirection: Axis.horizontal,
+                              physics: const ClampingScrollPhysics(),
                               child: SizedBox(
                                 width: _calculateProgramsGridWidth(),
                                 child: ListView.builder(
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  shrinkWrap: true,
+                                  controller: _verticalScrollController,
+                                  physics: const ClampingScrollPhysics(),
                                   itemCount: channels.length,
                                   itemExtent: 64,
                                   itemBuilder: (context, index) {

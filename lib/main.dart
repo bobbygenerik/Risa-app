@@ -459,10 +459,10 @@ class _MyAppState extends State<MyApp> {
       _disclaimerAccepted = accepted;
     });
 
-    // Show disclaimer only on first app startup
+    // Only show disclaimer if never accepted before
     if (!accepted) {
       Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
+        if (mounted && !_disclaimerAccepted) {
           try {
             _showDisclaimer();
           } catch (e) {
@@ -514,8 +514,8 @@ class _MyAppState extends State<MyApp> {
 
   // ignore: unused_element
   Future<void> _showDisclaimer() async {
-    // Make sure we have a valid context
-    if (!mounted) return;
+    // Make sure we have a valid context and disclaimer hasn't been accepted
+    if (!mounted || _disclaimerAccepted) return;
     
     final navigatorContext = _rootNavigatorKey.currentContext;
     if (navigatorContext == null) return;
