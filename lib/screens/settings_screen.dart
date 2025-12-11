@@ -978,17 +978,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
           ],
         ),
-        _buildSectionCard(
-          title: 'AI Models',
-          children: [
-            _buildFocusButton(
-              focusNode: FocusNode(),
-              onPressed: () => context.push('/ai-models'),
-              child: const Text('Manage AI Models'),
-              isPrimary: true,
-            ),
-          ],
-        ),
+
       ],
     );
   }
