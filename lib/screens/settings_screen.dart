@@ -310,6 +310,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const SizedBox(width: 48), // Space for collapsed main sidebar
             _buildSidebarMenu(),
             Expanded(
               child: FocusScope(

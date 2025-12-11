@@ -172,6 +172,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
         if (event.logicalKey == LogicalKeyboardKey.enter ||
             event.logicalKey == LogicalKeyboardKey.select ||
             event.logicalKey == LogicalKeyboardKey.space) {
+          setState(() => _isExpanded = false);
           context.go(tab.route);
           return KeyEventResult.handled;
         }
@@ -186,6 +187,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
               if (!_isExpanded) {
                 setState(() => _isExpanded = true);
               } else {
+                setState(() => _isExpanded = false);
                 context.go(tab.route);
               }
             },
@@ -375,6 +377,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
         if (event.logicalKey == LogicalKeyboardKey.enter ||
             event.logicalKey == LogicalKeyboardKey.select ||
             event.logicalKey == LogicalKeyboardKey.space) {
+          setState(() => _isExpanded = false);
           context.go(route);
           return KeyEventResult.handled;
         }
@@ -388,6 +391,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
               if (!_isExpanded) {
                 setState(() => _isExpanded = true);
               } else {
+                setState(() => _isExpanded = false);
                 context.go(route);
               }
             },
