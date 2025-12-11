@@ -10,6 +10,7 @@ import '../services/integrated_transcription_service.dart';
 import '../providers/settings_provider.dart';
 import '../providers/content_provider.dart';
 import '../utils/app_theme.dart';
+import '../utils/snackbar_helper.dart';
 
 enum SubtitleMode { off, regular, liveTranslation }
 
@@ -208,7 +209,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   void _toggleMultiView() {
     // Show multi-view options
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      showAppSnackBar(
+        context,
         const SnackBar(content: Text('Multi-view activated')),
       );
     }

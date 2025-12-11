@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/services/epg_service.dart';
 
 class EpgManagerScreen extends StatefulWidget {
@@ -120,7 +121,8 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
 
   void _showMessage(String message) {
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      showAppSnackBar(
+        context,
         SnackBar(content: Text(message)),
       );
     }

@@ -7,6 +7,7 @@ import 'package:iptv_player/services/opensubtitles_service.dart';
 import 'package:iptv_player/services/real_debrid_service.dart';
 import 'package:iptv_player/services/epg_service.dart';
 import 'package:iptv_player/services/backup_service.dart';
+import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
@@ -1406,7 +1407,8 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _showMessage(String message) {
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      showAppSnackBar(
+        context,
         SnackBar(content: Text(message)),
       );
     }
