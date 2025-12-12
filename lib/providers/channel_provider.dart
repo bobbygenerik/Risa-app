@@ -16,7 +16,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 import 'content_provider.dart';
 import '../services/tmdb_enrichment_service.dart';
-import 'package:iptv_player/services/epg_service.dart';
+import 'package:iptv_player/services/incremental_epg_service.dart';
 
 /// Isolate function to extract unique category names only (fast)
 /// Preserves the order categories first appear in the playlist
@@ -80,7 +80,7 @@ class ChannelProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   ContentProvider? _contentProvider;
-  EpgService? _epgService; // Add EpgService reference
+  IncrementalEpgService? _epgService; // Add IncrementalEpgService reference
   bool _hasLoadedPlaylist = false;
   String? _lastM3UContent; // Store last content for debugging
   bool _disposed = false; // Track if provider is disposed
@@ -118,8 +118,8 @@ class ChannelProvider with ChangeNotifier {
     _contentProvider = provider;
   }
 
-  // Set the EpgService reference for EPG loading
-  void setEpgService(EpgService service) {
+  // Set the IncrementalEpgService reference for EPG loading
+  void setEpgService(IncrementalEpgService service) {
     _epgService = service;
   }
 

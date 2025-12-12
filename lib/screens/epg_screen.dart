@@ -13,7 +13,7 @@ import 'package:iptv_player/widgets/brand_button.dart';
 
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/program.dart';
-import 'package:iptv_player/services/epg_service.dart';
+import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
@@ -87,7 +87,7 @@ class _EPGScreenState extends State<EPGScreen>
 
     // Load EPG data on init with retry logic
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final epgService = Provider.of<EpgService>(context, listen: false);
+      final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
 
       // Load EPG favorites from SharedPreferences
       final prefs = await SharedPreferences.getInstance();
@@ -180,7 +180,7 @@ class _EPGScreenState extends State<EPGScreen>
     _timerService.registerCustomCallback('epg_auto_refresh', 1800, () async { // 30 minutes = 1800 seconds
       if (!mounted) return;
 
-      final epgService = Provider.of<EpgService>(context, listen: false);
+      final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
       final prefs = await SharedPreferences.getInstance();
       final epgUrl =
           prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
@@ -287,7 +287,7 @@ class _EPGScreenState extends State<EPGScreen>
     await _refreshAnimationController.repeat();
 
     if (!mounted) return;
-    final epgService = Provider.of<EpgService>(context, listen: false);
+    final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
 
     // Refresh EPG in background
     await epgService.refresh(epgUrl);
@@ -319,7 +319,7 @@ class _EPGScreenState extends State<EPGScreen>
           context.go('/home');
           return false;
         },
-        child: Consumer2<ChannelProvider, EpgService>(
+        child: Consumer2<ChannelProvider, IncrementalEpgService>(
           builder: (context, channelProvider, epgService, child) {
             final hasChannels = channelProvider.hasChannels;
 
@@ -481,7 +481,7 @@ class _EPGScreenState extends State<EPGScreen>
     );
   }
 
-  Widget _buildHeader(EpgService epgService) {
+  Widget _buildHeader(IncrementalEpgService epgService) {
     return Container(
       padding: const EdgeInsets.fromLTRB(56, 12, 24, 12),
       decoration: const BoxDecoration(
@@ -677,7 +677,7 @@ class _EPGScreenState extends State<EPGScreen>
 
 
 
-  Widget _buildProgramGrid(List<Channel> channels, EpgService epgService, List<Channel> allChannels) {
+  Widget _buildProgramGrid(List<Channel> channels, IncrementalEpgService epgService, List<Channel> allChannels) {
     debugPrint(
         'EPG Grid: isLoading=${epgService.isLoading}, hasData=${epgService.hasData}, epgData keys=${epgService.epgData.keys.length}');
 
@@ -1041,7 +1041,7 @@ class _EPGScreenState extends State<EPGScreen>
   /// Show context menu for channel long press
   void _showChannelContextMenu(BuildContext ctx, Channel channel) {
     if (!mounted) return;
-    final epgService = Provider.of<EpgService>(context, listen: false);
+    final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
     final hasMapping = epgService.hasManualMapping(channel.tvgId ?? channel.id);
 
     unawaited(showModalBottomSheet(
@@ -1134,7 +1134,7 @@ class _EPGScreenState extends State<EPGScreen>
   /// Show EPG channel selection dialog
   void _showEpgChannelSelector(Channel channel) {
     if (!mounted) return;
-    final epgService = Provider.of<EpgService>(context, listen: false);
+    final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
     final epgChannelIds = epgService.getEpgChannelIds();
 
     if (epgChannelIds.isEmpty) {
@@ -1383,7 +1383,7 @@ class _EPGScreenState extends State<EPGScreen>
 
   /// Set EPG mapping for a channel
   Future<void> _setEpgMapping(Channel channel, String epgChannelId) async {
-    final epgService = Provider.of<EpgService>(context, listen: false);
+    final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
     await epgService.setManualMapping(
         channel.tvgId ?? channel.id, epgChannelId);
 
@@ -1400,7 +1400,7 @@ class _EPGScreenState extends State<EPGScreen>
 
   /// Remove EPG mapping for a channel
   Future<void> _removeEpgMapping(Channel channel) async {
-    final epgService = Provider.of<EpgService>(context, listen: false);
+    final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
     await epgService.removeManualMapping(channel.tvgId ?? channel.id);
 
     if (mounted) {

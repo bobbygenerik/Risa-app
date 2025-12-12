@@ -14,6 +14,7 @@ import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/services/voice_search_service.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/epg_service.dart';
+import 'package:iptv_player/services/incremental_epg_service.dart';
 
 import 'package:iptv_player/services/whisper_transcription_service.dart';
 import 'package:iptv_player/services/whisper_speech_service.dart';
@@ -553,21 +554,12 @@ class _MyAppState extends State<MyApp> {
           ),
           ChangeNotifierProvider(
             create: (context) {
-              final service = EpgService();
-              // Initialize EPG and force refresh on app start
-              unawaited(Future.microtask(() async {
-                await service.initialize();
-                debugPrint(
-                    'Main: EPG initialized with ${service.totalChannelCount} channels');
-                // Force a background refresh to ensure fresh data
-                await service.loadEpg();
-                debugPrint(
-                    'Main: EPG refresh complete, total channels: ${service.totalChannelCount}');
-              }));
+              final service = IncrementalEpgService();
+              unawaited(service.initialize());
               return service;
             },
           ),
-          ChangeNotifierProxyProvider2<ContentProvider, EpgService, ChannelProvider>(
+          ChangeNotifierProxyProvider2<ContentProvider, IncrementalEpgService, ChannelProvider>(
             create: (context) {
               final provider = ChannelProvider();
               // Defer playlist loading until after first frame is rendered
@@ -585,7 +577,6 @@ class _MyAppState extends State<MyApp> {
             },
             update: (context, contentProvider, epgService, channelProvider) {
               channelProvider?.setContentProvider(contentProvider);
-              channelProvider?.setEpgService(epgService);
               return channelProvider ?? ChannelProvider();
             },
           ),
