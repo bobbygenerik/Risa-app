@@ -10,6 +10,8 @@ import 'package:iptv_player/services/backup_service.dart';
 import 'package:iptv_player/services/whisper_model_service.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
+import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/models/profile_provider.dart';
@@ -526,17 +528,20 @@ class _SettingsScreenState extends State<SettingsScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  _buildFocusButton(
+                  Focus(
                     focusNode: _clearM3uButtonFocusNode,
-                    onPressed: () => _m3uUrlController.clear(),
-                    child: const Text('Clear'),
+                    child: BrandSecondaryButton(
+                      label: 'Clear',
+                      onPressed: () => _m3uUrlController.clear(),
+                    ),
                   ),
                   const SizedBox(width: 12),
-                  _buildFocusButton(
+                  Focus(
                     focusNode: _loadM3uButtonFocusNode,
-                    onPressed: _loadM3uPlaylist,
-                    child: const Text('Load Playlist'),
-                    isPrimary: true,
+                    child: BrandPrimaryButton(
+                      label: 'Load Playlist',
+                      onPressed: _loadM3uPlaylist,
+                    ),
                   ),
                 ],
               ),
@@ -581,17 +586,20 @@ class _SettingsScreenState extends State<SettingsScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  _buildFocusButton(
+                  Focus(
                     focusNode: _clearXtreamButtonFocusNode,
-                    onPressed: _clearXtreamFields,
-                    child: const Text('Clear'),
+                    child: BrandSecondaryButton(
+                      label: 'Clear',
+                      onPressed: _clearXtreamFields,
+                    ),
                   ),
                   const SizedBox(width: 12),
-                  _buildFocusButton(
+                  Focus(
                     focusNode: _loadXtreamButtonFocusNode,
-                    onPressed: _loadXtreamPlaylist,
-                    child: const Text('Load Playlist'),
-                    isPrimary: true,
+                    child: BrandPrimaryButton(
+                      label: 'Load Playlist',
+                      onPressed: _loadXtreamPlaylist,
+                    ),
                   ),
                 ],
               ),
@@ -602,18 +610,21 @@ class _SettingsScreenState extends State<SettingsScreen>
               child: Row(
                 children: [
                   Expanded(
-                    child: _buildFocusButton(
-                      focusNode: FocusNode(),
+                    child: BrandSecondaryButton(
+                      label: 'Reload Playlist',
                       onPressed: _reloadPlaylist,
-                      child: const Text('Reload Playlist'),
+                      expand: true,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _buildFocusButton(
+                    child: Focus(
                       focusNode: _clearPlaylistCacheButtonFocusNode,
-                      onPressed: _clearPlaylistCache,
-                      child: const Text('Clear Cache'),
+                      child: BrandSecondaryButton(
+                        label: 'Clear Cache',
+                        onPressed: _clearPlaylistCache,
+                        expand: true,
+                      ),
                     ),
                   ),
                 ],
@@ -652,18 +663,26 @@ class _SettingsScreenState extends State<SettingsScreen>
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          _buildCounterButton(
+                          Focus(
                             focusNode: _epgIntervalMinusFocusNode,
-                            icon: Icons.remove,
-                            onPressed: () => _adjustEpgCacheDuration(-1),
+                            child: BrandSecondaryButton(
+                              label: '',
+                              icon: Icons.remove,
+                              onPressed: () => _adjustEpgCacheDuration(-1),
+                              padding: EdgeInsets.all(context.tvSpacing(8)),
+                            ),
                           ),
                           const SizedBox(width: 12),
                           Text('$_epgCacheDuration', style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
                           const SizedBox(width: 12),
-                          _buildCounterButton(
+                          Focus(
                             focusNode: _epgIntervalPlusFocusNode,
-                            icon: Icons.add,
-                            onPressed: () => _adjustEpgCacheDuration(1),
+                            child: BrandSecondaryButton(
+                              label: '',
+                              icon: Icons.add,
+                              onPressed: () => _adjustEpgCacheDuration(1),
+                              padding: EdgeInsets.all(context.tvSpacing(8)),
+                            ),
                           ),
                         ],
                       ),
@@ -679,18 +698,26 @@ class _SettingsScreenState extends State<SettingsScreen>
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          _buildCounterButton(
+                          Focus(
                             focusNode: _epgPastDaysMinusFocusNode,
-                            icon: Icons.remove,
-                            onPressed: () => _adjustEpgRetentionDays(-1),
+                            child: BrandSecondaryButton(
+                              label: '',
+                              icon: Icons.remove,
+                              onPressed: () => _adjustEpgRetentionDays(-1),
+                              padding: EdgeInsets.all(context.tvSpacing(8)),
+                            ),
                           ),
                           const SizedBox(width: 12),
                           Text('$_epgRetentionDays', style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
                           const SizedBox(width: 12),
-                          _buildCounterButton(
+                          Focus(
                             focusNode: _epgPastDaysPlusFocusNode,
-                            icon: Icons.add,
-                            onPressed: () => _adjustEpgRetentionDays(1),
+                            child: BrandSecondaryButton(
+                              label: '',
+                              icon: Icons.add,
+                              onPressed: () => _adjustEpgRetentionDays(1),
+                              padding: EdgeInsets.all(context.tvSpacing(8)),
+                            ),
                           ),
                         ],
                       ),
@@ -829,11 +856,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 16),
-                      _buildFocusButton(
+                      Focus(
                         focusNode: _editProfileButtonFocusNode,
-                        onPressed: () => context.push('/edit-profile'),
-                        child: const Text('Edit Profile'),
-                        isPrimary: true,
+                        child: BrandPrimaryButton(
+                          label: 'Edit Profile',
+                          onPressed: () => context.push('/edit-profile'),
+                        ),
                       ),
                     ],
                   );
@@ -898,11 +926,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                 obscureText: true,
               ),
               const SizedBox(height: 12),
-              _buildFocusButton(
-                focusNode: FocusNode(),
+              BrandPrimaryButton(
+                label: 'Test Connection',
                 onPressed: _testOpenSubtitlesConnection,
-                child: const Text('Test Connection'),
-                isPrimary: true,
               ),
             ],
           ],
@@ -922,11 +948,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                 prefixIcon: Icons.vpn_key,
               ),
               const SizedBox(height: 12),
-              _buildFocusButton(
-                focusNode: FocusNode(),
+              BrandPrimaryButton(
+                label: 'Test API Key',
                 onPressed: _testRealDebridConnection,
-                child: const Text('Test API Key'),
-                isPrimary: true,
               ),
             ],
           ],
@@ -941,17 +965,14 @@ class _SettingsScreenState extends State<SettingsScreen>
         _buildSectionCard(
           title: 'Language Models',
           children: [
-            _buildFocusButton(
-              focusNode: FocusNode(),
+            BrandPrimaryButton(
+              label: 'Manage Translation Models',
               onPressed: _showLanguageModelsDialog,
-              child: const Text('Manage Translation Models'),
-              isPrimary: true,
             ),
             const SizedBox(height: 8),
-            _buildFocusButton(
-              focusNode: FocusNode(),
+            BrandSecondaryButton(
+              label: 'Speech Recognition Models',
               onPressed: _showSpeechModelsDialog,
-              child: const Text('Speech Recognition Models'),
             ),
           ],
         ),
@@ -983,10 +1004,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                 ),
                 SizedBox(
                   width: 80,
-                  child: _buildFocusButton(
+                  child: Focus(
                     focusNode: _browseStorageButtonFocusNode,
-                    onPressed: _browseStorage,
-                    child: const Text('Browse'),
+                    child: BrandSecondaryButton(
+                      label: 'Browse',
+                      onPressed: _browseStorage,
+                    ),
                   ),
                 ),
               ],
@@ -1166,48 +1189,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildFocusButton({
-    required FocusNode focusNode,
-    required VoidCallback onPressed,
-    required Widget child,
-    bool isPrimary = false,
-  }) {
-    return Focus(
-      focusNode: focusNode,
-      child: Builder(
-        builder: (context) {
-          final isFocused = Focus.of(context).hasFocus;
-          return SizedBox(
-            height: 40,
-            child: ElevatedButton(
-              onPressed: onPressed,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isPrimary 
-                    ? AppTheme.primaryBlue 
-                    : const Color(0xFF1A1A1A),
-                foregroundColor: isPrimary 
-                    ? Colors.white 
-                    : (isFocused ? Colors.white : AppTheme.textPrimary),
-                side: BorderSide(
-                  color: isFocused 
-                      ? AppTheme.primaryBlue 
-                      : Colors.transparent
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                elevation: 0,
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              ),
-              child: child,
-            ),
-          );
-        },
-      ),
-    );
-  }
+
 
   Widget _buildSwitchTile(String title, bool value, {FocusNode? focusNode}) {
     return Focus(
@@ -1431,43 +1413,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
 
 
-  Widget _buildCounterButton({
-    required FocusNode focusNode,
-    required IconData icon,
-    required VoidCallback onPressed,
-  }) {
-    return Focus(
-      focusNode: focusNode,
-      child: Builder(
-        builder: (context) {
-          final isFocused = Focus.of(context).hasFocus;
-          return SizedBox(
-            width: 40,
-            height: 40,
-            child: ElevatedButton(
-              onPressed: onPressed,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1A1A1A),
-                foregroundColor: isFocused ? Colors.white : AppTheme.textPrimary,
-                side: BorderSide(
-                  color: isFocused 
-                      ? AppTheme.primaryBlue 
-                      : Colors.transparent
-                ),
-                padding: EdgeInsets.zero,
-                minimumSize: const Size(40, 40),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              ),
-              child: Icon(icon, size: 18),
-            ),
-          );
-        },
-      ),
-    );
-  }
+
 
   void _adjustEpgCacheDuration(int delta) async {
     final newValue = (_epgCacheDuration + delta).clamp(1, 24);
