@@ -20,6 +20,7 @@ import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/widgets/brand_badge.dart';
 import 'package:iptv_player/utils/app_typography.dart';
+import 'package:iptv_player/utils/app_colors.dart';
 
 /// A focused Live TV screen. Shows a hero for the currently airing program
 /// on a featured channel, plus channel rows below.
@@ -232,7 +233,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     final body = Container(
       decoration: const BoxDecoration(
-        color: Color(0xFF050710),
+        color: AppColors.background,
       ),
       child: Consumer2<ChannelProvider, EpgService>(
         builder: (context, channelProvider, epgService, _) {
@@ -495,7 +496,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.4),
+        color: AppColors.overlayLight,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -532,8 +533,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     borderRadius: BorderRadius.circular(6),
                     child: LinearProgressIndicator(
                       value: progress,
-                      backgroundColor: Colors.white.withAlpha((0.3 * 255).round()),
-                      color: AppTheme.primaryBlue,
+                      backgroundColor: AppColors.progressBackground,
+                      color: AppColors.progressForeground,
                       minHeight: 6,
                     ),
                   )
@@ -1083,7 +1084,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Widget _buildDefaultHeroBackground() {
     return Container(
-      color: const Color(0xFF050710),
+      color: AppColors.background,
     );
   }
 
@@ -1119,7 +1120,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               child: Icon(
                 Icons.play_circle_outline,
                 size: 80,
-                color: Colors.white.withValues(alpha: 0.7),
+                color: AppColors.whiteWithOpacity(0.7),
               ),
             ),
           ),

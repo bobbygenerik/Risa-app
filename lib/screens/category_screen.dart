@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/widgets/brand_badge.dart';
 import 'package:iptv_player/utils/app_typography.dart';
+import 'package:iptv_player/utils/app_colors.dart';
 
 class CategoryScreen extends StatelessWidget {
   final String category;
@@ -17,7 +18,7 @@ class CategoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF050710),
+      backgroundColor: AppColors.background,
       body: Consumer<ChannelProvider>(
       builder: (context, channelProvider, child) {
         // Get total count without converting all channels
@@ -179,7 +180,7 @@ class CategoryScreen extends StatelessWidget {
                             icon: Icon(
                               isFavorite ? Icons.favorite : Icons.favorite_border,
                               size: context.tvIconSize(16),
-                              color: isFavorite ? AppTheme.accentRed : Colors.white,
+                              color: isFavorite ? AppTheme.accentRed : AppColors.textPrimary,
                             ),
                             onPressed: () {
                               if (isFavorite) {

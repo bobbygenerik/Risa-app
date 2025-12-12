@@ -17,6 +17,7 @@ import 'package:iptv_player/services/epg_service.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
+import 'package:iptv_player/utils/app_colors.dart';
 
 class EPGScreen extends StatefulWidget {
   final Channel? initialChannel;
@@ -1051,8 +1052,8 @@ class _EPGScreenState extends State<EPGScreen>
     final isLive = program.isCurrentlyPlaying;
     final hasCatchup = program.hasCatchup;
 
-    const epgLiveColor = Color(0xFF4a4fc9);
-    const epgCatchupColor = Color(0xFFcc5a2d);
+    const epgLiveColor = AppColors.epgLive;
+    const epgCatchupColor = AppColors.epgCatchup;
 
     return Focus(
       canRequestFocus: true,
@@ -1140,7 +1141,7 @@ class _EPGScreenState extends State<EPGScreen>
     showDialog(
       context: context,
       builder: (dialogContext) => Dialog(
-        backgroundColor: const Color(0xFF1E1E2E),
+        backgroundColor: AppColors.cardDark,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Container(
           width: 600,
