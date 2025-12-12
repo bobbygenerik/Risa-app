@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/program.dart';
-import 'package:iptv_player/services/epg_service.dart';
+import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/app_colors.dart';
 import 'package:iptv_player/widgets/cached_image.dart';
@@ -116,7 +116,7 @@ class EPGChannelItem extends StatelessWidget {
 
 class EPGProgramsGrid extends StatelessWidget {
   final List<Channel> channels;
-  final EpgService epgService;
+  final IncrementalEpgService epgService;
   final bool isLoadingMore;
   final ScrollController horizontalController;
   final ScrollController verticalController;
@@ -165,7 +165,7 @@ class EPGProgramsGrid extends StatelessWidget {
 
 class EPGProgramRow extends StatelessWidget {
   final Channel channel;
-  final EpgService epgService;
+  final IncrementalEpgService epgService;
   final Function(Program) onProgramTap;
 
   const EPGProgramRow({
