@@ -12,6 +12,7 @@ import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/providers/settings_provider.dart';
 import 'package:iptv_player/services/timer_service.dart';
 import 'package:iptv_player/services/focus_pool_service.dart';
+import 'package:iptv_player/services/http_client_service.dart';
 
 /// Multi-view screen for watching up to 4 streams simultaneously
 /// Supports 1, 2, or 4 player grid layouts with audio switching
@@ -147,10 +148,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
         controller = VideoPlayerController.networkUrl(
           Uri.parse(channel.url),
           httpHeaders: {
-            'User-Agent': 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36',
-            'Connection': 'keep-alive',
-            'Accept': '*/*',
-            'Cache-Control': 'no-cache',
+            ...HttpClientService().videoHeaders,
             'X-Quality-Hint': quality,
           },
           videoPlayerOptions: VideoPlayerOptions(
@@ -165,10 +163,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
         controller = VideoPlayerController.networkUrl(
           Uri.parse(channel.url),
           httpHeaders: {
-            'User-Agent': 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36',
-            'Connection': 'keep-alive',
-            'Accept': '*/*',
-            'Cache-Control': 'no-cache',
+            ...HttpClientService().videoHeaders,
             'X-Quality-Hint': index == _focusedPlayer ? 'high' : 'medium',
           },
           videoPlayerOptions: VideoPlayerOptions(

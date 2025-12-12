@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
+import 'package:iptv_player/services/http_client_service.dart';
 // Settings provider import removed - not used in prewarm service
 
 /// Lightweight prewarm service to preload hero/backdrop images and
@@ -92,7 +93,10 @@ class PrewarmService {
   static Future<void> _initPrewarmController(String url) async {
     try {
       await _prewarmedController?.dispose();
-      _prewarmedController = VideoPlayerController.networkUrl(Uri.parse(url));
+      _prewarmedController = VideoPlayerController.networkUrl(
+        Uri.parse(url),
+        httpHeaders: HttpClientService().videoHeaders,
+      );
       await _prewarmedController!.initialize();
       // Keep paused and ready
       await _prewarmedController!.pause();

@@ -14,6 +14,7 @@ import '../providers/content_provider.dart';
 import '../utils/app_theme.dart';
 import '../utils/snackbar_helper.dart';
 import '../screens/epg_screen.dart';
+import '../services/http_client_service.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 enum SubtitleMode { off, regular, liveTranslation }
@@ -56,6 +57,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   @override
   void initState() {
     super.initState();
+    HttpClientService().initialize();
     _transcriptionService = Provider.of<IntegratedTranscriptionService>(context, listen: false);
     _initializePlayer();
     _hideControlsAfterDelay();
@@ -70,12 +72,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     
     _videoController = VideoPlayerController.networkUrl(
       Uri.parse(url),
-      httpHeaders: {
-        'User-Agent': 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36',
-        'Connection': 'keep-alive',
-        'Accept': '*/*',
-        'Cache-Control': 'no-cache',
-      },
+      httpHeaders: HttpClientService().videoHeaders,
       videoPlayerOptions: VideoPlayerOptions(
         mixWithOthers: true,
         allowBackgroundPlayback: false,

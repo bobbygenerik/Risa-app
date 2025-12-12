@@ -59,6 +59,7 @@ import 'package:iptv_player/providers/settings_provider.dart';
 import 'package:iptv_player/services/background_task_manager.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/services/ssl_handler.dart';
+import 'package:iptv_player/services/http_client_service.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -117,6 +118,10 @@ void main() {
       await SSLHandler.init();
       HttpOverrides.global = IPTVHttpOverrides();
       StartupProbe.mark('SSL handler configured');
+      
+      // Initialize HTTP client service with connection pooling
+      HttpClientService().initialize();
+      StartupProbe.mark('HTTP client service initialized');
 
       // Only lock landscape on Android TV, allow portrait on mobile
       if (!kIsWeb && Platform.isAndroid) {
