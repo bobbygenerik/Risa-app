@@ -16,6 +16,7 @@ class IncrementalEpgService with ChangeNotifier {
   
   static const String _channelListCacheKey = 'epg_channel_list';
   static const int _channelsPerBatch = 50;
+  static const int _maxRetries = 3;
 
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -37,7 +38,9 @@ class IncrementalEpgService with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     
-    try {
+    int retryCount = 0;
+    while (retryCount < _maxRetries) {
+      try {
       final client = HttpClient()
         ..connectionTimeout = const Duration(seconds: 30)
         ..badCertificateCallback = (cert, host, port) => true;
@@ -83,16 +86,24 @@ class IncrementalEpgService with ChangeNotifier {
       
       debugPrint('EPG: Found ${channelIds.length} channels');
       _error = null;
-    } catch (e) {
-      _error = e.toString();
-      debugPrint('EPG channel list error: $e');
-      
-      // Try loading from cache
-      final prefs = await SharedPreferences.getInstance();
-      final cached = prefs.getStringList(_channelListCacheKey);
-      if (cached != null) {
-        _availableChannels.addAll(cached);
-        _error = 'Using cached channel list';
+      break;
+      } catch (e) {
+        retryCount++;
+        if (retryCount >= _maxRetries) {
+          _error = e.toString();
+          debugPrint('EPG channel list error after $retryCount attempts: $e');
+          
+          // Try loading from cache
+          final prefs = await SharedPreferences.getInstance();
+          final cached = prefs.getStringList(_channelListCacheKey);
+          if (cached != null) {
+            _availableChannels.addAll(cached);
+            _error = 'Using cached channel list';
+          }
+          break;
+        } else {
+          await Future.delayed(Duration(seconds: retryCount));
+        }
       }
     }
     
@@ -109,7 +120,9 @@ class IncrementalEpgService with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     
-    try {
+    int retryCount = 0;
+    while (retryCount < _maxRetries) {
+      try {
       final client = HttpClient()
         ..connectionTimeout = const Duration(seconds: 30)
         ..badCertificateCallback = (cert, host, port) => true;
@@ -178,9 +191,17 @@ class IncrementalEpgService with ChangeNotifier {
       
       debugPrint('EPG: Loaded ${channelData.length} channels');
       _error = null;
-    } catch (e) {
-      _error = e.toString();
-      debugPrint('EPG batch load error: $e');
+      break;
+      } catch (e) {
+        retryCount++;
+        if (retryCount >= _maxRetries) {
+          _error = e.toString();
+          debugPrint('EPG batch load error after $retryCount attempts: $e');
+          break;
+        } else {
+          await Future.delayed(Duration(seconds: retryCount));
+        }
+      }
     }
     
     _isLoading = false;
