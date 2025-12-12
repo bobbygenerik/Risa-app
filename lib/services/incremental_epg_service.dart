@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:xml/xml.dart';
 import 'package:iptv_player/models/program.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:path_provider/path_provider.dart';
+
 
 class IncrementalEpgService with ChangeNotifier {
   final Map<String, List<Program>> _loadedChannels = {};

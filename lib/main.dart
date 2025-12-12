@@ -13,7 +13,7 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/services/voice_search_service.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
-import 'package:iptv_player/services/epg_service.dart';
+
 import 'package:iptv_player/services/incremental_epg_service.dart';
 
 import 'package:iptv_player/services/whisper_transcription_service.dart';
