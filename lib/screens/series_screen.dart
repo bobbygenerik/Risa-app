@@ -16,6 +16,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/widgets/vod_card_image.dart';
+import 'package:iptv_player/utils/app_spacing.dart';
 
 class SeriesScreen extends StatefulWidget {
   const SeriesScreen({super.key});
@@ -401,9 +402,8 @@ class _SeriesScreenState extends State<SeriesScreen>
 
     if (seriesMap.isEmpty) return const SizedBox.shrink();
     
-    final screenWidth = MediaQuery.of(context).size.width;
-    final cardWidth = screenWidth / 6.5; // Portrait cards
-    final rowHeight = cardWidth * 1.8; // Portrait aspect ratio + title space
+    final cardWidth = context.cardWidth();
+    final rowHeight = context.rowHeight();
 
     return SizedBox(
       height: rowHeight,
@@ -426,9 +426,8 @@ class _SeriesScreenState extends State<SeriesScreen>
     List<Content> episodes,
   ) {
     final firstEpisode = episodes.first;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final cardWidth = screenWidth / 6.5; // Portrait cards
-    final cardHeight = cardWidth * 1.5; // Portrait aspect ratio
+    final cardWidth = context.cardWidth();
+    final cardHeight = context.cardHeight();
 
     return Padding(
       padding: const EdgeInsets.only(right: 12),

@@ -9,6 +9,7 @@ import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/widgets/brand_badge.dart';
 import 'package:iptv_player/utils/app_typography.dart';
 import 'package:iptv_player/utils/app_colors.dart';
+import 'package:iptv_player/utils/app_spacing.dart';
 
 class CategoryScreen extends StatelessWidget {
   final String category;
@@ -25,7 +26,7 @@ class CategoryScreen extends StatelessWidget {
         final totalCount = channelProvider.getChannelCountForCategory(category);
 
         return Padding(
-          padding: EdgeInsets.all(context.tvSpacing(32)), // AppSizes.lg assumed 32
+          padding: context.screenPaddingInsets,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -36,7 +37,7 @@ class CategoryScreen extends StatelessWidget {
                     icon: const Icon(Icons.arrow_back),
                     onPressed: () => context.go('/home'),
                   ),
-                  const SizedBox(width: 8),
+                  context.spacingSmBox,
                   Text(
                     category,
                     style: AppTypography.screenTitle(context),
@@ -48,7 +49,7 @@ class CategoryScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: AppSizes.xl),
+              context.spacingXlBox,
 
               // Channels Grid - lazy loading with GridView.builder
               Expanded(
@@ -57,8 +58,8 @@ class CategoryScreen extends StatelessWidget {
                     : GridView.builder(
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 6,
-                          crossAxisSpacing: AppSizes.md,
-                          mainAxisSpacing: AppSizes.md,
+                          crossAxisSpacing: AppSpacing.gridSpacing,
+                          mainAxisSpacing: AppSpacing.gridSpacing,
                           childAspectRatio: 0.85,
                         ),
                         itemCount: totalCount,
@@ -96,7 +97,7 @@ class CategoryScreen extends StatelessWidget {
                 size: context.tvIconSize(80),
                 color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
               ),
-              SizedBox(height: context.tvSpacing(32)),
+              context.spacingXxlBox,
               Text(
                 'No channels in this category',
                 style: AppTypography.sectionHeader(context),

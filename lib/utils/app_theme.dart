@@ -293,6 +293,8 @@ class AppTheme {
   }
 }
 
+/// Legacy AppSizes class - use AppSpacing instead for new code
+/// Kept for backward compatibility
 class AppSizes {
   // Spacing scale (optimized for TV 10-foot interface - more compact)
   static const double xs = 4.0;

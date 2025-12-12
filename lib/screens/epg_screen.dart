@@ -18,6 +18,7 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
 import 'package:iptv_player/utils/app_colors.dart';
+import 'package:iptv_player/utils/app_spacing.dart';
 
 class EPGScreen extends StatefulWidget {
   final Channel? initialChannel;
@@ -405,13 +406,13 @@ class _EPGScreenState extends State<EPGScreen>
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 520),
           child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSizes.xl,
-              vertical: AppSizes.xl,
+            padding: EdgeInsets.symmetric(
+              horizontal: context.spacingXl(),
+              vertical: context.spacingXl(),
             ),
             decoration: BoxDecoration(
               color: Colors.white.withAlpha((0.05 * 255).round()),
-              borderRadius: BorderRadius.circular(AppSizes.radiusXl),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
               border: Border.all(
                 color: Colors.white.withAlpha((0.12 * 255).round()),
                 width: 1,
@@ -421,7 +422,7 @@ class _EPGScreenState extends State<EPGScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(AppSizes.lg),
+                  padding: EdgeInsets.all(context.spacingLg()),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: const LinearGradient(
@@ -482,7 +483,7 @@ class _EPGScreenState extends State<EPGScreen>
           // Left side - Guide title
           Row(
             children: [
-              const Icon(Icons.dvr, color: AppTheme.primaryBlue, size: AppSizes.iconMd),
+              const Icon(Icons.dvr, color: AppTheme.primaryBlue, size: 24),
               const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
