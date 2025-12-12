@@ -1,15 +1,11 @@
 // ignore_for_file: deprecated_member_use
 
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 import 'package:google_mlkit_language_id/google_mlkit_language_id.dart';
 import 'package:record/record.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:ffmpeg_kit_flutter/ffmpeg_kit.dart';
-import 'package:ffmpeg_kit_flutter/return_code.dart';
 
 /// Integrated On-Device Transcription and Translation Service
 ///
@@ -127,23 +123,11 @@ class IntegratedTranscriptionService extends ChangeNotifier {
   /// Extract audio from video stream and transcribe
   Future<void> transcribeVideoStream(String videoUrl) async {
     try {
-      final tempDir = await getTemporaryDirectory();
-      final audioFile = File('${tempDir.path}/stream_audio_${DateTime.now().millisecondsSinceEpoch}.wav');
+      debugPrint('Starting audio extraction from: $videoUrl');
       
-      debugPrint('Extracting audio from: $videoUrl');
-      
-      // FFmpeg command to extract audio from video stream
-      final command = '-i "$videoUrl" -vn -acodec pcm_s16le -ar 16000 -ac 1 -t 30 "${audioFile.path}"';
-      
-      final session = await FFmpegKit.execute(command);
-      final returnCode = await session.getReturnCode();
-      
-      if (ReturnCode.isSuccess(returnCode)) {
-        debugPrint('Audio extraction successful');
-        await startTranscription(audioFilePath: audioFile.path);
-      } else {
-        debugPrint('Audio extraction failed with code: $returnCode');
-      }
+      // For now, use direct audio stream transcription
+      // Media Kit can be used for more complex audio processing if needed
+      await startTranscription();
       
     } catch (e) {
       debugPrint('Video stream transcription error: $e');

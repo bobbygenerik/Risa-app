@@ -31,7 +31,8 @@ dependencies:
   go_router: ^16.1.0
   intl: ^0.20.2
   wakelock_plus: ^1.2.8
-  ffmpeg_kit_flutter: ^6.0.3
+  media_kit: ^1.1.10+1  # Modern media processing library
+  media_kit_libs_audio: ^1.0.4  # Audio-only libraries for smaller footprint
 
 
   animations: ^2.0.11
