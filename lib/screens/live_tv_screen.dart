@@ -17,6 +17,7 @@ import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/service_validator.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
+import 'package:iptv_player/widgets/brand_button.dart';
 
 /// A focused Live TV screen. Shows a hero for the currently airing program
 /// on a featured channel, plus channel rows below.
@@ -581,19 +582,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             ),
           ),
           const SizedBox(height: 16),
-          Focus(
-            child: ElevatedButton.icon(
-              onPressed: () {
-                context.push('/player', extra: channel);
-              },
-              icon: const Icon(Icons.play_arrow, size: 20),
-              label: const Text('Watch Live'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-            ),
+          BrandPrimaryButton(
+            onPressed: () => context.push('/player', extra: channel),
+            icon: Icons.play_arrow,
+            label: 'Watch Live',
           ),
         ],
       ),

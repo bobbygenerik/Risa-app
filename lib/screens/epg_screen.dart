@@ -1250,17 +1250,14 @@ class _EPGScreenState extends State<EPGScreen>
                   // Watch Catch-up button (only for catchup programs)
                   if (program.hasCatchup)
                     Expanded(
-                      child: ElevatedButton.icon(
+                      child: BrandPrimaryButton(
                         onPressed: () {
                           Navigator.pop(dialogContext);
                           _playCatchup(program);
                         },
-                        icon: const Icon(Icons.replay),
-                        label: const Text('Watch Catch-up'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.accentOrange,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
+                        icon: Icons.replay,
+                        label: 'Watch Catch-up',
+                        expand: true,
                       ),
                     ),
                   if (program.hasCatchup && program.isFutureProgram)
@@ -1268,7 +1265,7 @@ class _EPGScreenState extends State<EPGScreen>
                   // Record button (only for future programs)
                   if (program.isFutureProgram)
                     Expanded(
-                      child: OutlinedButton.icon(
+                      child: BrandSecondaryButton(
                         onPressed: () {
                           // Record functionality
                           Navigator.pop(dialogContext);
@@ -1281,19 +1278,16 @@ class _EPGScreenState extends State<EPGScreen>
                             ),
                           );
                         },
-                        icon: const Icon(Icons.fiber_manual_record),
-                        label: const Text('Record'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          side: const BorderSide(color: AppTheme.accentRed),
-                        ),
+                        icon: Icons.fiber_manual_record,
+                        label: 'Record',
+                        expand: true,
                       ),
                     ),
                   // Remind button (only for future programs)
                   if (program.isFutureProgram) ...[
                     const SizedBox(width: AppSizes.sm),
                     Expanded(
-                      child: OutlinedButton.icon(
+                      child: BrandSecondaryButton(
                         onPressed: () {
                           // Set reminder
                           Navigator.pop(dialogContext);
@@ -1306,12 +1300,8 @@ class _EPGScreenState extends State<EPGScreen>
                             ),
                           );
                         },
-                        icon: const Icon(Icons.alarm),
-                        label: const Text('Remind'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          side: const BorderSide(color: AppTheme.primaryBlue),
-                        ),
+                        icon: Icons.alarm,
+                        label: 'Remind',
                       ),
                     ),
                   ],
@@ -1670,9 +1660,9 @@ class _EPGScreenState extends State<EPGScreen>
                     ),
             ),
             actions: [
-              TextButton(
+              BrandSecondaryButton(
                 onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Cancel', style: TextStyle(color: AppTheme.primaryBlue)),
+                label: 'Cancel',
               ),
             ],
           );
