@@ -12,6 +12,8 @@ import '../providers/settings_provider.dart';
 import '../providers/content_provider.dart';
 import '../utils/app_theme.dart';
 import '../utils/snackbar_helper.dart';
+import '../screens/epg_screen.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 enum SubtitleMode { off, regular, liveTranslation }
 
@@ -120,6 +122,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     );
     
     setState(() => _isLoading = false);
+    
+    // Keep screen on during video playback
+    WakelockPlus.enable();
     
     // Restore saved position for VOD content
     if (!widget.isLive && rememberPosition) {
@@ -252,23 +257,20 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         _transcriptionService!.setTranslationEnabled(true);
         final streamUrl = widget.videoUrl ?? widget.channel?.url;
         if (streamUrl != null) {
-          await _transcriptionService!.startTranscription();
+          // Start transcribing the video stream
+          await _transcriptionService!.transcribeVideoStream(streamUrl);
         }
       } else if (_transcriptionService != null) {
         await _transcriptionService!.stopTranscription();
       }
     } catch (e) {
-      debugPrint('TTS/Transcription error: $e');
+      debugPrint('Transcription error: $e');
     }
   }
 
   void _toggleMultiView() {
-    // Show multi-view options
     if (mounted) {
-      showAppSnackBar(
-        context,
-        const SnackBar(content: Text('Multi-view activated')),
-      );
+      context.push('/multi-view');
     }
   }
 
@@ -362,6 +364,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     } catch (e) {
       debugPrint('TTS cleanup error: $e');
     }
+    WakelockPlus.disable();
     _chewieController?.dispose();
     _videoController?.dispose();
     super.dispose();
@@ -400,7 +403,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           children: [
             // Video player
             if (_chewieController != null)
-              Center(
+              Positioned.fill(
                 child: Chewie(
                   controller: _chewieController!,
                 ),
@@ -522,7 +525,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                         const SizedBox(width: 24),
                         // Audio
                         _buildControlButton(
-                          icon: Icons.volume_up,
+                          icon: Icons.audiotrack,
                           onPressed: _toggleAudio,
                         ),
                         const SizedBox(width: 12),
@@ -536,20 +539,23 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                         const SizedBox(width: 12),
                         // Multi-view
                         _buildControlButton(
-                          icon: Icons.picture_in_picture_alt,
+                          icon: Icons.grid_view,
                           onPressed: _toggleMultiView,
                         ),
                       ],
                     ),
                   ),
                   // Progress bar
-                  Container(
-                    height: 4,
-                    margin: const EdgeInsets.symmetric(horizontal: 24),
-                    child: LinearProgressIndicator(
-                      value: _progress,
-                      backgroundColor: Colors.white.withValues(alpha: 0.3),
-                      valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: SizedBox(
+                      height: 4,
+                      width: double.infinity,
+                      child: LinearProgressIndicator(
+                        value: _progress,
+                        backgroundColor: Colors.white.withValues(alpha: 0.3),
+                        valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -577,84 +583,36 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
 
   Widget _buildGuideOverlay() {
-    return GestureDetector(
-      onTap: _toggleGuide,
-      child: Container(
-        color: Colors.black.withValues(alpha: 0.8),
-        child: Center(
-          child: Container(
-            margin: const EdgeInsets.all(40),
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppTheme.dialogBackground,
-              borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-              border: Border.all(color: AppTheme.primaryBlue),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Program Guide',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: AppTheme.textPrimary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: _toggleGuide,
-                      icon: const Icon(Icons.close, color: AppTheme.textPrimary),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSizes.lg),
-                Container(
-                  padding: const EdgeInsets.all(AppSizes.lg),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryBlue.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.title ?? widget.channel?.name ?? 'Video',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: AppTheme.textPrimary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: AppSizes.sm),
-                      Text(
-                        'Now Playing: Live Stream',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: AppSizes.xs),
-                      if (widget.subtitle != null)
-                        Text(
-                          widget.subtitle!,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.textTertiary,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: AppSizes.lg),
-                Text(
-                  'Tap anywhere to close',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.textTertiary,
-                  ),
-                ),
-              ],
+    return Container(
+      color: Colors.black.withValues(alpha: 0.7),
+      child: Stack(
+        children: [
+          // EPG Screen embedded as overlay
+          Positioned.fill(
+            child: EPGScreen(
+              initialChannel: widget.channel,
+              continuePlayback: true,
             ),
           ),
-        ),
+          // Close button
+          Positioned(
+            top: 40,
+            right: 20,
+            child: SafeArea(
+              child: IconButton(
+                onPressed: _toggleGuide,
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 24),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -59,14 +59,15 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
         title: const Text('Delete Playlist'),
         content: Text('Are you sure you want to delete "${playlist.name}"?'),
         actions: [
-          TextButton(
+          BrandSecondaryButton(
+            label: 'Cancel',
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           ),
-          TextButton(
+          BrandPrimaryButton(
+            label: 'Delete',
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: AppTheme.accentRed),
-            child: const Text('Delete'),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           ),
         ],
       ),
@@ -180,13 +181,15 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
           autofocus: true,
         ),
         actions: [
-          TextButton(
+          BrandSecondaryButton(
+            label: 'Cancel',
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           ),
-          ElevatedButton(
+          BrandPrimaryButton(
+            label: 'Save',
             onPressed: () => Navigator.pop(context, nameController.text),
-            child: const Text('Save'),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           ),
         ],
       ),

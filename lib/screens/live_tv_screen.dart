@@ -38,7 +38,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   final Set<String> _artworkRequests = {};
   late final bool _tmdbEnabled;
 
-  bool _heroImageReady = false;
   bool _heroVideoPreview = false;
 
   @override
@@ -147,41 +146,80 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _carouselTimer?.cancel();
     // Start a timer that advances featured index every 8 seconds
     _carouselTimer = Timer.periodic(const Duration(seconds: 8), (_) {
-      final channelProvider = Provider.of<ChannelProvider>(
-        context,
-        listen: false,
-      );
-      final channels = channelProvider.channels;
-      if (channels.isEmpty) return;
-      setState(() {
-        // Find next channel with complete program info, starting from random position for variety
-        int attempts = 0;
-        int startOffset = Random().nextInt(channels.length);
-        int nextIndex = startOffset;
-        while (attempts < channels.length) {
-          final channel = channels[nextIndex];
-          final epgService = Provider.of<EpgService>(context, listen: false);
-          final program = epgService.getCurrentProgram(
-            channel.tvgId ?? channel.id,
-            channelName: channel.name,
-          );
-          final heroImage = _resolveHeroImage(program);
-          if (heroImage != null && heroImage.isNotEmpty && 
-              program != null && 
-              program.title.isNotEmpty && 
-              program.description != null && 
-              program.description!.isNotEmpty &&
-              nextIndex != _featuredIndex) { // Don't repeat same channel
-            _featuredIndex = nextIndex;
-            break;
-          }
-          nextIndex = (nextIndex + 1) % channels.length;
-          attempts++;
-        }
-        // If no channels with complete info found, don't change index
-      });
+      _nextHero();
     });
     // Focus is managed by navigation bar - don't auto-focus content
+  }
+
+  void _nextHero() {
+    final channelProvider = Provider.of<ChannelProvider>(
+      context,
+      listen: false,
+    );
+    final channels = channelProvider.channels;
+    if (channels.isEmpty) return;
+    setState(() {
+      // Find next channel with complete program info, starting from random position for variety
+      int attempts = 0;
+      int startOffset = Random().nextInt(channels.length);
+      int nextIndex = startOffset;
+      while (attempts < channels.length) {
+        final channel = channels[nextIndex];
+        final epgService = Provider.of<EpgService>(context, listen: false);
+        final program = epgService.getCurrentProgram(
+          channel.tvgId ?? channel.id,
+          channelName: channel.name,
+        );
+        final heroImage = _resolveHeroImage(program);
+        if (heroImage != null && heroImage.isNotEmpty && 
+            program != null && 
+            program.title.isNotEmpty && 
+            program.description != null && 
+            program.description!.isNotEmpty &&
+            nextIndex != _featuredIndex) { // Don't repeat same channel
+          _featuredIndex = nextIndex;
+          break;
+        }
+        nextIndex = (nextIndex + 1) % channels.length;
+        attempts++;
+      }
+      // If no channels with complete info found, don't change index
+    });
+  }
+
+  void _previousHero() {
+    final channelProvider = Provider.of<ChannelProvider>(
+      context,
+      listen: false,
+    );
+    final channels = channelProvider.channels;
+    if (channels.isEmpty) return;
+    setState(() {
+      // Find previous channel with complete program info
+      int attempts = 0;
+      int prevIndex = (_featuredIndex - 1 + channels.length) % channels.length;
+      while (attempts < channels.length) {
+        final channel = channels[prevIndex];
+        final epgService = Provider.of<EpgService>(context, listen: false);
+        final program = epgService.getCurrentProgram(
+          channel.tvgId ?? channel.id,
+          channelName: channel.name,
+        );
+        final heroImage = _resolveHeroImage(program);
+        if (heroImage != null && heroImage.isNotEmpty && 
+            program != null && 
+            program.title.isNotEmpty && 
+            program.description != null && 
+            program.description!.isNotEmpty &&
+            prevIndex != _featuredIndex) { // Don't repeat same channel
+          _featuredIndex = prevIndex;
+          break;
+        }
+        prevIndex = (prevIndex - 1 + channels.length) % channels.length;
+        attempts++;
+      }
+      // If no channels with complete info found, don't change index
+    });
   }
 
 
@@ -284,27 +322,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return body;
   }
 
-  KeyEventResult _handleDirectionalKeyEvent(
-    FocusNode node,
-    KeyEvent event,
-  ) {
-    if (event is! KeyDownEvent) return KeyEventResult.ignored;
-    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-      return requestNavigationFocus()
-          ? KeyEventResult.handled
-          : KeyEventResult.ignored;
-    }
-    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-      final screenHeight = MediaQuery.of(context).size.height;
-      _scrollController.animateTo(
-        screenHeight * 0.8,
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeOutCubic,
-      );
-      return KeyEventResult.handled;
-    }
-    return KeyEventResult.ignored;
-  }
+
 
   Widget _buildFullScreenHero(
     BuildContext context,
@@ -321,9 +339,39 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final sidebarWidth = AppSizes.sidebarCollapsedWidth + AppSizes.lg;
 
     return Focus(
-      canRequestFocus: false,
-      skipTraversal: true,
-      onKeyEvent: _handleDirectionalKeyEvent,
+      focusNode: _heroFocus,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.select ||
+              event.logicalKey == LogicalKeyboardKey.enter) {
+            context.push('/player', extra: featuredChannel);
+            return KeyEventResult.handled;
+          }
+          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+            _previousHero();
+            return KeyEventResult.handled;
+          }
+          if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+            _nextHero();
+            return KeyEventResult.handled;
+          }
+          if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+            return requestNavigationFocus()
+                ? KeyEventResult.handled
+                : KeyEventResult.ignored;
+          }
+          if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+            final screenHeight = MediaQuery.of(context).size.height;
+            _scrollController.animateTo(
+              screenHeight * 0.8,
+              duration: const Duration(milliseconds: 600),
+              curve: Curves.easeOutCubic,
+            );
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
       child: AnimatedBuilder(
         animation: _scrollController,
         builder: (context, child) {
@@ -441,7 +489,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         : '';
     final progress = program?.progressPercentage ?? 0.0;
 
-    return Column(
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -526,8 +580,24 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               ],
             ),
           ),
+          const SizedBox(height: 16),
+          Focus(
+            child: ElevatedButton.icon(
+              onPressed: () {
+                context.push('/player', extra: channel);
+              },
+              icon: const Icon(Icons.play_arrow, size: 20),
+              label: const Text('Watch Live'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
+          ),
         ],
-      );
+      ),
+    );
   }
 
   Widget _buildChannelLogo(BuildContext context, Channel channel) {
@@ -561,23 +631,38 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
 
 
-  String? _getChannelCardImage(Program? program) {
-    if (program == null) return null;
-    
-    // Try cached TMDB image first (higher quality)
-    final cached = _programArtwork[program.id];
-    if (cached != null && cached.isNotEmpty) {
-      return cached;
+  String? _getChannelCardImage(Program? program, Channel? channel) {
+    // Try program artwork first
+    if (program != null) {
+      // Try cached TMDB image first (higher quality)
+      final cached = _programArtwork[program.id];
+      if (cached != null && cached.isNotEmpty) {
+        return cached;
+      }
+      
+      // Try direct program image
+      if (program.imageUrl != null && program.imageUrl!.isNotEmpty) {
+        return program.imageUrl;
+      }
+      
+      // Fetch TMDB image if enabled and not already cached
+      if (_tmdbEnabled && !_programArtwork.containsKey(program.id)) {
+        _fetchProgramArtwork(program);
+      }
     }
     
-    // Try direct program image
-    if (program.imageUrl != null && program.imageUrl!.isNotEmpty) {
-      return program.imageUrl;
-    }
-    
-    // Fetch TMDB image if enabled and not already cached
-    if (_tmdbEnabled && !_programArtwork.containsKey(program.id)) {
-      _fetchProgramArtwork(program);
+    // Fallback to channel-based artwork if no program artwork
+    if (channel != null) {
+      final channelKey = 'channel_${channel.id}';
+      final cachedChannelArt = _programArtwork[channelKey];
+      if (cachedChannelArt != null && cachedChannelArt.isNotEmpty) {
+        return cachedChannelArt;
+      }
+      
+      // Fetch TMDB artwork based on channel name if enabled
+      if (_tmdbEnabled && !_artworkRequests.contains(channelKey)) {
+        _fetchChannelArtwork(channel);
+      }
     }
     
     return null;
@@ -832,10 +917,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         borderRadius: BorderRadius.circular(12),
                         child: Stack(
                           children: [
-                            if (_getChannelCardImage(currentProgram) != null)
+                            if (_getChannelCardImage(currentProgram, channel) != null)
                               Positioned.fill(
                                 child: CachedNetworkImage(
-                                  imageUrl: _getChannelCardImage(currentProgram)!,
+                                  imageUrl: _getChannelCardImage(currentProgram, channel)!,
                                   fit: BoxFit.cover,
                                   memCacheWidth: 400,
                                   placeholder: (_, __) => Container(
@@ -1116,17 +1201,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             alignment: Alignment.center,
             placeholder: (_, __) => _buildDefaultHeroBackground(),
             errorWidget: (_, __, ___) => _buildDefaultHeroBackground(),
-            imageBuilder: (context, imageProvider) {
-              if (!_heroImageReady) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) setState(() => _heroImageReady = true);
-                });
-              }
-              return Image(
-                  image: imageProvider,
-                  fit: BoxFit.cover,
-                  alignment: Alignment.center);
-            },
           )
         : _buildDefaultHeroBackground();
   }

@@ -7,11 +7,13 @@ import 'package:iptv_player/services/opensubtitles_service.dart';
 import 'package:iptv_player/services/real_debrid_service.dart';
 import 'package:iptv_player/services/epg_service.dart';
 import 'package:iptv_player/services/backup_service.dart';
+import 'package:iptv_player/services/whisper_model_service.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/models/profile_provider.dart';
+import 'package:iptv_player/widgets/legal_disclaimer_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -780,6 +782,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                     focusNode: FocusNode(),
                     onPressed: () => context.push('/debug'),
                     child: const Text('Debug Performance'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildFocusButton(
+                    focusNode: FocusNode(),
+                    onPressed: _showDisclaimer,
+                    child: const Text('Legal Disclaimer'),
                   ),
                 ),
               ],
@@ -1562,41 +1572,115 @@ class _SettingsScreenState extends State<SettingsScreen>
   void _showSpeechModelsDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF050710),
-        title: const Text('Speech Recognition Models', style: TextStyle(color: AppTheme.textPrimary)),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildModelTile('Whisper Tiny (English)', false, 'Not downloaded (77MB)'),
-              _buildModelTile('Whisper Tiny (Multilingual)', false, 'Not downloaded (77MB)'),
-              _buildModelTile('Google Speech (English)', true, 'Built-in'),
-              _buildModelTile('Google Speech (Spanish)', false, 'Available'),
-              _buildModelTile('Google Speech (French)', false, 'Available'),
-              _buildModelTile('Google Speech (German)', false, 'Available'),
-            ],
+      builder: (context) => Consumer<WhisperModelService>(
+        builder: (context, whisperService, _) => AlertDialog(
+          backgroundColor: const Color(0xFF050710),
+          title: const Text('Speech Recognition Models', style: TextStyle(color: AppTheme.textPrimary)),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildWhisperModelTile('Whisper Tiny (Multilingual)', '77MB', whisperService),
+                _buildWhisperModelTile('Whisper Base (Multilingual)', '142MB', whisperService),
+                _buildWhisperModelTile('Whisper Small (Multilingual)', '244MB', whisperService),
+                _buildModelTile('Google Speech (English)', true, 'Built-in'),
+                _buildModelTile('Google Speech (Spanish)', false, 'Available'),
+                _buildModelTile('Google Speech (French)', false, 'Available'),
+                _buildModelTile('Google Speech (German)', false, 'Available'),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close', style: TextStyle(color: AppTheme.primaryBlue)),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close', style: TextStyle(color: AppTheme.primaryBlue)),
-          ),
-        ],
       ),
     );
   }
 
-  void _deleteModel(String language) {
-    _showMessage('Deleted $language model');
-    Navigator.of(context).pop();
+  Future<void> _deleteWhisperModel(String modelName) async {
+    final whisperService = Provider.of<WhisperModelService>(context, listen: false);
+    final success = await whisperService.deleteModel(modelName);
+    if (success) {
+      _showMessage('Deleted $modelName');
+    } else {
+      _showMessage('Failed to delete $modelName');
+    }
   }
 
-  void _downloadModel(String language) {
-    _showMessage('Downloading $language model...');
-    Navigator.of(context).pop();
+  Future<void> _downloadWhisperModel(String modelName) async {
+    final whisperService = Provider.of<WhisperModelService>(context, listen: false);
+    final success = await whisperService.downloadModel(modelName);
+    if (!success) {
+      _showMessage('Failed to download $modelName');
+    }
+  }
+
+  Widget _buildWhisperModelTile(String modelName, String size, WhisperModelService whisperService) {
+    final isDownloaded = whisperService.downloadedModels.contains(modelName);
+    final isDownloading = whisperService.isDownloading[modelName] ?? false;
+    final progress = whisperService.downloadProgress[modelName] ?? 0.0;
+    
+    String status;
+    if (isDownloaded) {
+      status = 'Downloaded';
+    } else if (isDownloading) {
+      status = 'Downloading ${(progress * 100).toInt()}%';
+    } else {
+      status = 'Not downloaded ($size)';
+    }
+
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(
+        isDownloaded ? Icons.check_circle : (isDownloading ? Icons.downloading : Icons.download),
+        color: isDownloaded ? AppTheme.accentGreen : (isDownloading ? AppTheme.primaryBlue : AppTheme.textSecondary),
+      ),
+      title: Text(
+        modelName,
+        style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            status,
+            style: TextStyle(
+              color: isDownloaded ? AppTheme.accentGreen : (isDownloading ? AppTheme.primaryBlue : AppTheme.textSecondary),
+              fontSize: 12,
+            ),
+          ),
+          if (isDownloading)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: LinearProgressIndicator(
+                value: progress,
+                backgroundColor: Colors.grey[800],
+                valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
+              ),
+            ),
+        ],
+      ),
+      trailing: isDownloaded
+          ? IconButton(
+              icon: const Icon(Icons.delete, color: AppTheme.textSecondary, size: 20),
+              onPressed: () => _deleteWhisperModel(modelName),
+            )
+          : (isDownloading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : IconButton(
+                  icon: const Icon(Icons.download, color: AppTheme.primaryBlue, size: 20),
+                  onPressed: () => _downloadWhisperModel(modelName),
+                )),
+    );
   }
 
   Widget _buildModelTile(String language, bool isDownloaded, String status) {
@@ -1618,16 +1702,15 @@ class _SettingsScreenState extends State<SettingsScreen>
         ),
       ),
       trailing: isDownloaded
-          ? IconButton(
-              icon: const Icon(Icons.delete, color: AppTheme.textSecondary, size: 20),
-              onPressed: () => _deleteModel(language),
-            )
-          : IconButton(
-              icon: const Icon(Icons.download, color: AppTheme.primaryBlue, size: 20),
-              onPressed: () => _downloadModel(language),
-            ),
+          ? const Icon(Icons.check_circle, color: AppTheme.accentGreen, size: 20)
+          : const Icon(Icons.info_outline, color: AppTheme.textSecondary, size: 20),
     );
   }
 
-
+  void _showDisclaimer() {
+    showDialog(
+      context: context,
+      builder: (context) => const LegalDisclaimerDialog(),
+    );
+  }
 }

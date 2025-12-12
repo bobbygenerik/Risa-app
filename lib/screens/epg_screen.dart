@@ -146,9 +146,8 @@ class _EPGScreenState extends State<EPGScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_horizontalScrollController.hasClients) return;
 
-      // Scroll to show current hour at the start (aligned with Today box)
-      // The grid starts 1 hour before current time, so we need to scroll 1 cell width (244px including margin)
-      final scrollPosition = 244.0;
+      // Grid starts from current time, so scroll to beginning (position 0)
+      final scrollPosition = 0.0;
 
       if (animate) {
         _horizontalScrollController.animateTo(
@@ -747,7 +746,7 @@ class _EPGScreenState extends State<EPGScreen>
                         Expanded(
                           child: ListView.builder(
                             controller: _verticalScrollController,
-                            physics: const ClampingScrollPhysics(),
+                            physics: const BouncingScrollPhysics(),
                             itemCount: channels.length,
                             itemExtent: 64,
                             itemBuilder: (context, index) {
@@ -776,7 +775,7 @@ class _EPGScreenState extends State<EPGScreen>
                             child: SingleChildScrollView(
                               controller: _timeHeaderScrollController,
                               scrollDirection: Axis.horizontal,
-                              physics: const ClampingScrollPhysics(),
+                              physics: const BouncingScrollPhysics(),
                               child: SizedBox(
                                 width: _calculateProgramsGridWidth(),
                                 child: _buildTimeHeaderOnly(),
@@ -796,7 +795,7 @@ class _EPGScreenState extends State<EPGScreen>
                             child: SingleChildScrollView(
                               controller: _horizontalScrollController,
                               scrollDirection: Axis.horizontal,
-                              physics: const ClampingScrollPhysics(),
+                              physics: const BouncingScrollPhysics(),
                               child: SizedBox(
                                 width: _calculateProgramsGridWidth(),
                                 child: ListView.builder(
@@ -950,7 +949,7 @@ class _EPGScreenState extends State<EPGScreen>
   /// Time header only (no channel sidebar part)
   Widget _buildTimeHeaderOnly() {
     final now = DateTime.now();
-    final startHour = (now.hour - 1).clamp(0, 23);
+    final startHour = now.hour; // Start from current hour, not 1 hour before
     final hoursToShow = 12;
     final cellWidth = 240.0;
 
@@ -993,7 +992,7 @@ class _EPGScreenState extends State<EPGScreen>
         epgService.getProgramsForChannel(channelKey, channelName: channel.name);
 
     final now = DateTime.now();
-    final startHour = (now.hour - 1).clamp(0, 23);
+    final startHour = now.hour; // Start from current hour, not 1 hour before
     final displayStart = DateTime(
         _selectedDate.year, _selectedDate.month, _selectedDate.day, startHour);
     final displayEnd = displayStart.add(const Duration(hours: 12));

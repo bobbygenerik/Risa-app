@@ -1,12 +1,15 @@
 // ignore_for_file: deprecated_member_use
 
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 import 'package:google_mlkit_language_id/google_mlkit_language_id.dart';
-// import 'package:flutter_tts/flutter_tts.dart'; // REMOVED: not used
 import 'package:record/record.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:ffmpeg_kit_flutter/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter/return_code.dart';
 
 /// Integrated On-Device Transcription and Translation Service
 ///
@@ -104,8 +107,6 @@ class IntegratedTranscriptionService extends ChangeNotifier {
         targetLanguage: _targetLanguage,
       );
 
-      // TTS initialization removed (not used)
-
       // Start cleanup timer
       _cleanupTimer = Timer.periodic(const Duration(seconds: 30), (_) {
         _cleanupOldSubtitles();
@@ -123,8 +124,34 @@ class IntegratedTranscriptionService extends ChangeNotifier {
     }
   }
 
-  /// Start live transcription
-  Future<void> startTranscription() async {
+  /// Extract audio from video stream and transcribe
+  Future<void> transcribeVideoStream(String videoUrl) async {
+    try {
+      final tempDir = await getTemporaryDirectory();
+      final audioFile = File('${tempDir.path}/stream_audio_${DateTime.now().millisecondsSinceEpoch}.wav');
+      
+      debugPrint('Extracting audio from: $videoUrl');
+      
+      // FFmpeg command to extract audio from video stream
+      final command = '-i "$videoUrl" -vn -acodec pcm_s16le -ar 16000 -ac 1 -t 30 "${audioFile.path}"';
+      
+      final session = await FFmpegKit.execute(command);
+      final returnCode = await session.getReturnCode();
+      
+      if (ReturnCode.isSuccess(returnCode)) {
+        debugPrint('Audio extraction successful');
+        await startTranscription(audioFilePath: audioFile.path);
+      } else {
+        debugPrint('Audio extraction failed with code: $returnCode');
+      }
+      
+    } catch (e) {
+      debugPrint('Video stream transcription error: $e');
+    }
+  }
+
+  /// Start live transcription from audio stream
+  Future<void> startTranscription({String? audioFilePath}) async {
     if (!_isInitialized) {
       await initialize();
     }
@@ -135,29 +162,50 @@ class IntegratedTranscriptionService extends ChangeNotifier {
       _isTranscribing = true;
       notifyListeners();
 
-      // Start speech recognition
-  await _speech.listen(
-        onResult: (result) async {
-          _currentText = result.recognizedWords;
+      if (audioFilePath != null) {
+        // Use Whisper for audio file transcription
+        await _transcribeWithWhisper(audioFilePath);
+      } else {
+        // Fallback to speech recognition for live audio
+        await _speech.listen(
+          onResult: (result) async {
+            _currentText = result.recognizedWords;
 
-          if (result.finalResult && _currentText.isNotEmpty) {
-            await _addSubtitle(_currentText);
-            _currentText = '';
-          }
+            if (result.finalResult && _currentText.isNotEmpty) {
+              await _addSubtitle(_currentText);
+              _currentText = '';
+            }
 
-          notifyListeners();
-        },
-        listenFor: const Duration(seconds: 30),
-        pauseFor: const Duration(seconds: 3),
-        partialResults: true,
-        listenMode: stt.ListenMode.dictation,
-      );
+            notifyListeners();
+          },
+          listenFor: const Duration(seconds: 30),
+          pauseFor: const Duration(seconds: 3),
+          partialResults: true,
+          listenMode: stt.ListenMode.dictation,
+        );
+      }
 
       debugPrint('✅ Transcription started');
     } catch (e) {
       debugPrint('Failed to start transcription: $e');
       _isTranscribing = false;
       notifyListeners();
+    }
+  }
+
+  /// Transcribe audio file using Whisper
+  Future<void> _transcribeWithWhisper(String audioFilePath) async {
+    try {
+      // This would integrate with your Whisper implementation
+      // For now, using placeholder - you'd need to implement actual Whisper integration
+      debugPrint('Transcribing with Whisper: $audioFilePath');
+      
+      // Placeholder - replace with actual Whisper transcription
+      await Future.delayed(const Duration(seconds: 2));
+      await _addSubtitle('Whisper transcription result would go here');
+      
+    } catch (e) {
+      debugPrint('Whisper transcription error: $e');
     }
   }
 

@@ -21,8 +21,9 @@ import 'package:iptv_player/services/integrated_transcription_service.dart';
 import 'package:iptv_player/services/ai_model_manager.dart';
 import 'package:iptv_player/services/opensubtitles_service.dart';
 import 'package:iptv_player/services/real_debrid_service.dart';
+import 'package:iptv_player/services/whisper_model_service.dart';
 import 'package:iptv_player/widgets/main_shell.dart';
-import 'package:iptv_player/widgets/legal_disclaimer_dialog.dart';
+
 import 'package:iptv_player/widgets/app_dialog.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/screens/epg_screen.dart';
@@ -437,48 +438,29 @@ class _MyAppState extends State<MyApp> {
         '2.0.2'; // Increment this when you want to clear old data
 
     if (lastVersion != currentVersion) {
-      // Clear old playlist data
-      await prefs.remove('playlist_type');
-      await prefs.remove('m3u_url');
-      await prefs.remove('xtream_server');
-      await prefs.remove('xtream_username');
-      await prefs.remove('xtream_password');
+      // Only clear cache files, preserve user settings
+      await prefs.remove('cached_playlist');
+      await prefs.remove('cache_timestamp');
+      
+      // Don't clear user's playlist URLs and EPG settings
+      // await prefs.remove('playlist_type');
+      // await prefs.remove('m3u_url');
+      // await prefs.remove('xtream_server');
+      // await prefs.remove('xtream_username');
+      // await prefs.remove('xtream_password');
 
       // Save new version
       await prefs.setString('app_version', currentVersion);
 
-      debugPrint('Cleared old playlist data - new version: $currentVersion');
+      debugPrint('Cleared cache data - preserved user settings - new version: $currentVersion');
     }
   }
 
   Future<void> _checkDisclaimer() async {
-    final prefs = await SharedPreferences.getInstance();
-    final accepted = prefs.getBool('disclaimer_accepted') ?? false;
-    
-    debugPrint('Disclaimer check: accepted = $accepted');
-
+    // Disclaimer removed from startup - now available in settings
     setState(() {
-      _disclaimerAccepted = accepted;
+      _disclaimerAccepted = true;
     });
-
-    // Only show disclaimer if never accepted before
-    if (!accepted) {
-      debugPrint('Showing disclaimer in 2 seconds...');
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted && !_disclaimerAccepted) {
-          debugPrint('Actually showing disclaimer now');
-          try {
-            _showDisclaimer();
-          } catch (e) {
-            debugPrint('Failed to show disclaimer: $e');
-          }
-        } else {
-          debugPrint('Skipping disclaimer - already accepted or unmounted');
-        }
-      });
-    } else {
-      debugPrint('Disclaimer already accepted, skipping');
-    }
   }
 
   Future<void> _checkAndLoadPlaylist() async {
@@ -520,35 +502,7 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  // ignore: unused_element
-  Future<void> _showDisclaimer() async {
-    // Make sure we have a valid context and disclaimer hasn't been accepted
-    if (!mounted || _disclaimerAccepted) return;
-    
-    final navigatorContext = _rootNavigatorKey.currentContext;
-    if (navigatorContext == null) return;
 
-    final result = await showDialog<bool>(
-      context: navigatorContext,
-      barrierDismissible: false,
-      builder: (context) => const LegalDisclaimerDialog(),
-    );
-
-    if (result == true && mounted) {
-      debugPrint('User accepted disclaimer, saving to preferences');
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('disclaimer_accepted', true);
-      final saved = prefs.getBool('disclaimer_accepted') ?? false;
-      debugPrint('Disclaimer saved: $saved');
-      setState(() {
-        _disclaimerAccepted = true;
-      });
-    } else {
-      debugPrint('User declined disclaimer, should exit app');
-      // User declined, exit app
-      SystemNavigator.pop();
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -671,6 +625,13 @@ class _MyAppState extends State<MyApp> {
           ChangeNotifierProvider(
             create: (_) {
               final service = IntegratedTranscriptionService();
+              _runDeferred(service.initialize);
+              return service;
+            },
+          ),
+          ChangeNotifierProvider(
+            create: (_) {
+              final service = WhisperModelService();
               _runDeferred(service.initialize);
               return service;
             },

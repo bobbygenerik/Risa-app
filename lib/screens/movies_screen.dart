@@ -71,32 +71,64 @@ class _MoviesScreenState extends State<MoviesScreen>
   void _startCarousel() {
     _carouselTimer?.cancel();
     _carouselTimer = Timer.periodic(const Duration(seconds: 8), (_) {
-      final provider = Provider.of<ContentProvider>(context, listen: false);
-      final movies = _curatedMovies.isNotEmpty
-          ? _curatedMovies
-          : provider.movies;
-      if (movies.isEmpty) return;
-      if (mounted) {
-        setState(() {
-          // Find next item with artwork
-          int attempts = 0;
-          int nextIndex = (_featuredIndex + 1) % movies.length;
-          while (attempts < movies.length) {
-            final movie = movies[nextIndex];
-            if (movie.backdropUrl != null || movie.imageUrl != null) {
-              _featuredIndex = nextIndex;
-              break;
-            }
-            nextIndex = (nextIndex + 1) % movies.length;
-            attempts++;
-          }
-          // If no items with artwork found, just use next index
-          if (attempts >= movies.length) {
-            _featuredIndex = (_featuredIndex + 1) % movies.length;
-          }
-        });
-      }
+      _nextHero();
     });
+  }
+
+  void _nextHero() {
+    final provider = Provider.of<ContentProvider>(context, listen: false);
+    final movies = _curatedMovies.isNotEmpty
+        ? _curatedMovies
+        : provider.movies;
+    if (movies.isEmpty) return;
+    if (mounted) {
+      setState(() {
+        // Find next item with artwork
+        int attempts = 0;
+        int nextIndex = (_featuredIndex + 1) % movies.length;
+        while (attempts < movies.length) {
+          final movie = movies[nextIndex];
+          if (movie.backdropUrl != null || movie.imageUrl != null) {
+            _featuredIndex = nextIndex;
+            break;
+          }
+          nextIndex = (nextIndex + 1) % movies.length;
+          attempts++;
+        }
+        // If no items with artwork found, just use next index
+        if (attempts >= movies.length) {
+          _featuredIndex = (_featuredIndex + 1) % movies.length;
+        }
+      });
+    }
+  }
+
+  void _previousHero() {
+    final provider = Provider.of<ContentProvider>(context, listen: false);
+    final movies = _curatedMovies.isNotEmpty
+        ? _curatedMovies
+        : provider.movies;
+    if (movies.isEmpty) return;
+    if (mounted) {
+      setState(() {
+        // Find previous item with artwork
+        int attempts = 0;
+        int prevIndex = (_featuredIndex - 1 + movies.length) % movies.length;
+        while (attempts < movies.length) {
+          final movie = movies[prevIndex];
+          if (movie.backdropUrl != null || movie.imageUrl != null) {
+            _featuredIndex = prevIndex;
+            break;
+          }
+          prevIndex = (prevIndex - 1 + movies.length) % movies.length;
+          attempts++;
+        }
+        // If no items with artwork found, just use previous index
+        if (attempts >= movies.length) {
+          _featuredIndex = (_featuredIndex - 1 + movies.length) % movies.length;
+        }
+      });
+    }
   }
 
   @override
@@ -598,12 +630,21 @@ class _MoviesScreenState extends State<MoviesScreen>
                     child: Focus(
                       focusNode: _heroFocus,
                       onKeyEvent: (node, event) {
-                        if (event is KeyDownEvent &&
-                            (event.logicalKey == LogicalKeyboardKey.select ||
-                             event.logicalKey == LogicalKeyboardKey.enter)) {
-                          final encodedId = Uri.encodeComponent(featuredMovie.id);
-                          context.push('/content/$encodedId', extra: featuredMovie);
-                          return KeyEventResult.handled;
+                        if (event is KeyDownEvent) {
+                          if (event.logicalKey == LogicalKeyboardKey.select ||
+                              event.logicalKey == LogicalKeyboardKey.enter) {
+                            final encodedId = Uri.encodeComponent(featuredMovie.id);
+                            context.push('/content/$encodedId', extra: featuredMovie);
+                            return KeyEventResult.handled;
+                          }
+                          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                            _previousHero();
+                            return KeyEventResult.handled;
+                          }
+                          if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                            _nextHero();
+                            return KeyEventResult.handled;
+                          }
                         }
                         return KeyEventResult.ignored;
                       },
@@ -707,27 +748,16 @@ class _MoviesScreenState extends State<MoviesScreen>
   }
 
   Widget _buildFeaturedInfo(BuildContext context, Content featuredMovie) {
-    return Focus(
-      focusNode: _playFocus,
-      onKeyEvent: (node, event) {
-        if (event is KeyDownEvent &&
-            (event.logicalKey == LogicalKeyboardKey.select ||
-             event.logicalKey == LogicalKeyboardKey.enter)) {
-          final encodedId = Uri.encodeComponent(featuredMovie.id);
-          context.push('/content/$encodedId', extra: featuredMovie);
-          return KeyEventResult.handled;
-        }
-        return KeyEventResult.ignored;
-      },
-      child: GestureDetector(
-        onTap: () {
-          final encodedId = Uri.encodeComponent(featuredMovie.id);
-          context.push('/content/$encodedId', extra: featuredMovie);
-        },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(12),
+      ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
             Text(
               featuredMovie.title,
               style: Theme.of(context).textTheme.displaySmall?.copyWith(
@@ -785,8 +815,42 @@ class _MoviesScreenState extends State<MoviesScreen>
                   ],
                 ],
               ),
-          ],
-        ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Focus(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      final encodedId = Uri.encodeComponent(featuredMovie.id);
+                      context.push('/content/$encodedId', extra: featuredMovie);
+                    },
+                    icon: const Icon(Icons.play_arrow, size: 20),
+                    label: const Text('Play'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Focus(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      final encodedId = Uri.encodeComponent(featuredMovie.id);
+                      context.push('/content/$encodedId', extra: featuredMovie);
+                    },
+                    icon: const Icon(Icons.info_outline, size: 20),
+                    label: const Text('More Info'),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.white),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+        ],
       ),
     );
   }
@@ -823,7 +887,7 @@ class _MoviesScreenState extends State<MoviesScreen>
               color: AppTheme.cardBackground,
             ),
           ),
-          // Featured info skeleton - exact position as real content
+          // Featured info skeleton
           Positioned(
             bottom: heroHeight * 0.35,
             left: sidebarWidth + AppSizes.lg,
@@ -832,7 +896,6 @@ class _MoviesScreenState extends State<MoviesScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Title skeleton - matches displaySmall height
                 Container(
                   height: 40,
                   width: screenSize.width * 0.3,
@@ -842,7 +905,6 @@ class _MoviesScreenState extends State<MoviesScreen>
                   ),
                 ),
                 const SizedBox(height: AppSizes.sm),
-                // Description skeleton - 3 lines
                 Container(
                   height: 60,
                   width: screenSize.width * 0.35,
@@ -851,42 +913,10 @@ class _MoviesScreenState extends State<MoviesScreen>
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
-                const SizedBox(height: AppSizes.sm),
-                // Rating skeleton
-                Row(
-                  children: [
-                    Container(
-                      width: 16,
-                      height: 16,
-                      decoration: BoxDecoration(
-                        color: Colors.amber.withAlpha((0.3 * 255).round()),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(width: AppSizes.xs),
-                    Container(
-                      width: 30,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withAlpha((0.1 * 255).round()),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    const SizedBox(width: AppSizes.md),
-                    Container(
-                      width: 40,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withAlpha((0.1 * 255).round()),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),
-          // Scrollable content skeleton
+          // Content skeleton
           Positioned(
             top: heroHeight,
             left: 0,
@@ -909,81 +939,29 @@ class _MoviesScreenState extends State<MoviesScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Section header skeleton
                         Container(
                           height: 20,
-                          width: [180, 140, 160][rowIndex % 3].toDouble(),
+                          width: 180.0,
                           decoration: BoxDecoration(
                             color: Colors.white.withAlpha((0.15 * 255).round()),
                             borderRadius: BorderRadius.circular(4),
                           ),
                         ),
                         const SizedBox(height: 8),
-                        // Movie cards row skeleton
                         SizedBox(
                           height: rowHeight,
                           child: ListView.builder(
                             scrollDirection: Axis.horizontal,
-                            padding: EdgeInsets.zero,
                             itemCount: 5,
-                            itemExtent: cardWidth + AppSizes.lg,
                             itemBuilder: (context, cardIndex) => Padding(
                               padding: const EdgeInsets.only(right: 12),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Movie poster skeleton
-                                  Container(
-                                    width: cardWidth,
-                                    height: cardHeight,
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.cardBackground,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  // Title skeleton
-                                  Container(
-                                    width: cardWidth,
-                                    height: 14,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withAlpha((0.15 * 255).round()),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  // Year and rating skeleton
-                                  Row(
-                                    children: [
-                                      Container(
-                                        width: 30,
-                                        height: 11,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withAlpha((0.1 * 255).round()),
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Container(
-                                        width: 8,
-                                        height: 8,
-                                        decoration: BoxDecoration(
-                                          color: Colors.amber.withAlpha((0.3 * 255).round()),
-                                          borderRadius: BorderRadius.circular(2),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Container(
-                                        width: 20,
-                                        height: 11,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withAlpha((0.1 * 255).round()),
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                              child: Container(
+                                width: cardWidth,
+                                height: cardHeight,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.cardBackground,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
                             ),
                           ),

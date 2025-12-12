@@ -135,32 +135,64 @@ class _SeriesScreenState extends State<SeriesScreen>
   void _startCarousel() {
     _carouselTimer?.cancel();
     _carouselTimer = Timer.periodic(const Duration(seconds: 8), (_) {
-      final provider = Provider.of<ContentProvider>(context, listen: false);
-      final series = _curatedSeries.isNotEmpty
-          ? _curatedSeries
-          : provider.series;
-      if (series.isEmpty) return;
-      if (mounted) {
-        setState(() {
-          // Find next item with artwork
-          int attempts = 0;
-          int nextIndex = (_featuredIndex + 1) % series.length;
-          while (attempts < series.length) {
-            final show = series[nextIndex];
-            if (show.backdropUrl != null || show.imageUrl != null) {
-              _featuredIndex = nextIndex;
-              break;
-            }
-            nextIndex = (nextIndex + 1) % series.length;
-            attempts++;
-          }
-          // If no items with artwork found, just use next index
-          if (attempts >= series.length) {
-            _featuredIndex = (_featuredIndex + 1) % series.length;
-          }
-        });
-      }
+      _nextHero();
     });
+  }
+
+  void _nextHero() {
+    final provider = Provider.of<ContentProvider>(context, listen: false);
+    final series = _curatedSeries.isNotEmpty
+        ? _curatedSeries
+        : provider.series;
+    if (series.isEmpty) return;
+    if (mounted) {
+      setState(() {
+        // Find next item with artwork
+        int attempts = 0;
+        int nextIndex = (_featuredIndex + 1) % series.length;
+        while (attempts < series.length) {
+          final show = series[nextIndex];
+          if (show.backdropUrl != null || show.imageUrl != null) {
+            _featuredIndex = nextIndex;
+            break;
+          }
+          nextIndex = (nextIndex + 1) % series.length;
+          attempts++;
+        }
+        // If no items with artwork found, just use next index
+        if (attempts >= series.length) {
+          _featuredIndex = (_featuredIndex + 1) % series.length;
+        }
+      });
+    }
+  }
+
+  void _previousHero() {
+    final provider = Provider.of<ContentProvider>(context, listen: false);
+    final series = _curatedSeries.isNotEmpty
+        ? _curatedSeries
+        : provider.series;
+    if (series.isEmpty) return;
+    if (mounted) {
+      setState(() {
+        // Find previous item with artwork
+        int attempts = 0;
+        int prevIndex = (_featuredIndex - 1 + series.length) % series.length;
+        while (attempts < series.length) {
+          final show = series[prevIndex];
+          if (show.backdropUrl != null || show.imageUrl != null) {
+            _featuredIndex = prevIndex;
+            break;
+          }
+          prevIndex = (prevIndex - 1 + series.length) % series.length;
+          attempts++;
+        }
+        // If no items with artwork found, just use previous index
+        if (attempts >= series.length) {
+          _featuredIndex = (_featuredIndex - 1 + series.length) % series.length;
+        }
+      });
+    }
   }
 
   Future<void> _prepareCuratedSeriesList() async {
@@ -698,12 +730,21 @@ class _SeriesScreenState extends State<SeriesScreen>
                     child: Focus(
                       focusNode: _heroFocus,
                       onKeyEvent: (node, event) {
-                        if (event is KeyDownEvent &&
-                            (event.logicalKey == LogicalKeyboardKey.select ||
-                             event.logicalKey == LogicalKeyboardKey.enter)) {
-                          final encodedId = Uri.encodeComponent(featuredSeries.id);
-                          context.push('/content/$encodedId', extra: featuredSeries);
-                          return KeyEventResult.handled;
+                        if (event is KeyDownEvent) {
+                          if (event.logicalKey == LogicalKeyboardKey.select ||
+                              event.logicalKey == LogicalKeyboardKey.enter) {
+                            final encodedId = Uri.encodeComponent(featuredSeries.id);
+                            context.push('/content/$encodedId', extra: featuredSeries);
+                            return KeyEventResult.handled;
+                          }
+                          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                            _previousHero();
+                            return KeyEventResult.handled;
+                          }
+                          if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                            _nextHero();
+                            return KeyEventResult.handled;
+                          }
                         }
                         return KeyEventResult.ignored;
                       },
@@ -807,27 +848,16 @@ class _SeriesScreenState extends State<SeriesScreen>
   }
 
   Widget _buildFeaturedInfo(BuildContext context, Content featuredSeries) {
-    return Focus(
-      focusNode: _watchFocus,
-      onKeyEvent: (node, event) {
-        if (event is KeyDownEvent &&
-            (event.logicalKey == LogicalKeyboardKey.select ||
-             event.logicalKey == LogicalKeyboardKey.enter)) {
-          final encodedId = Uri.encodeComponent(featuredSeries.id);
-          context.push('/content/$encodedId', extra: featuredSeries);
-          return KeyEventResult.handled;
-        }
-        return KeyEventResult.ignored;
-      },
-      child: GestureDetector(
-        onTap: () {
-          final encodedId = Uri.encodeComponent(featuredSeries.id);
-          context.push('/content/$encodedId', extra: featuredSeries);
-        },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(12),
+      ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
             Text(
               featuredSeries.title,
               style: Theme.of(context).textTheme.displaySmall?.copyWith(
@@ -885,12 +915,45 @@ class _SeriesScreenState extends State<SeriesScreen>
                   ],
                 ],
               ),
-          ],
-        ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Focus(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      final encodedId = Uri.encodeComponent(featuredSeries.id);
+                      context.push('/content/$encodedId', extra: featuredSeries);
+                    },
+                    icon: const Icon(Icons.play_arrow, size: 20),
+                    label: const Text('Watch'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Focus(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      final encodedId = Uri.encodeComponent(featuredSeries.id);
+                      context.push('/content/$encodedId', extra: featuredSeries);
+                    },
+                    icon: const Icon(Icons.info_outline, size: 20),
+                    label: const Text('More Info'),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.white),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+        ],
       ),
     );
   }
-
 
   Widget _buildBannerPlaceholder() {
     return Container(
