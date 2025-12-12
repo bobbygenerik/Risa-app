@@ -6,6 +6,8 @@ import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
+import 'package:iptv_player/widgets/brand_badge.dart';
+import 'package:iptv_player/utils/app_typography.dart';
 
 class CategoryScreen extends StatelessWidget {
   final String category;
@@ -36,16 +38,12 @@ class CategoryScreen extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     category,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: AppTypography.screenTitle(context),
                   ),
                   const Spacer(),
                   Text(
                     '$totalCount channels',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppTheme.textSecondary,
-                    ),
+                    style: AppTypography.countText(context),
                   ),
                 ],
               ),
@@ -100,7 +98,7 @@ class CategoryScreen extends StatelessWidget {
               SizedBox(height: context.tvSpacing(32)),
               Text(
                 'No channels in this category',
-                style: TextStyle(fontSize: context.tvTextSize(18)),
+                style: AppTypography.sectionHeader(context),
               ),
             ],
           ),
@@ -167,24 +165,9 @@ class CategoryScreen extends StatelessWidget {
                         // Live badge
                         Positioned(
                           top: context.tvSpacing(4),
-                            left: context.tvSpacing(4),
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: context.tvSpacing(6),
-                              vertical: context.tvSpacing(2),
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppTheme.accentRed,
-                              borderRadius: BorderRadius.circular(context.tvSpacing(3)),
-                            ),
-                            child: Text(
-                              'LIVE',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: context.tvTextSize(8),
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                          left: context.tvSpacing(4),
+                          child: BrandBadge.live(
+                            fontSize: context.tvTextSize(8),
                           ),
                         ),
 
@@ -222,9 +205,9 @@ class CategoryScreen extends StatelessWidget {
                     children: [
                       Text(
                         channel.name,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        style: AppTypography.caption(context).copyWith(
                           fontWeight: FontWeight.w600,
-                          fontSize: context.tvTextSize(11),
+                          color: AppTheme.textPrimary,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -255,7 +238,7 @@ class CategoryScreen extends StatelessWidget {
               SizedBox(height: context.tvSpacing(8)),
               Text(
                 name.substring(0, name.length > 15 ? 15 : name.length),
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: context.tvTextSize(11)),
+                style: AppTypography.caption(context),
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,

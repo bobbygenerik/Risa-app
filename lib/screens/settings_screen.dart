@@ -12,6 +12,9 @@ import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
+import 'package:iptv_player/widgets/brand_card.dart';
+import 'package:iptv_player/widgets/brand_switch.dart';
+import 'package:iptv_player/widgets/brand_text_field.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/models/profile_provider.dart';
@@ -1058,24 +1061,9 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Widget _buildSectionCard({required String title, required List<Widget> children}) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textPrimary,
-              letterSpacing: 0.3,
-            ),
-          ),
-          const SizedBox(height: 16),
-          ...children,
-        ],
-      ),
+    return BrandSectionCard(
+      title: title,
+      children: children,
     );
   }
 
@@ -1083,27 +1071,10 @@ class _SettingsScreenState extends State<SettingsScreen>
     return Consumer<ChannelProvider>(
       builder: (context, provider, _) {
         final hasChannels = provider.hasChannels;
-        return _buildSectionCard(
+        return BrandStatusCard(
           title: 'Playlist Status',
-          children: [
-            Row(
-              children: [
-                Icon(
-                  hasChannels ? Icons.check_circle : Icons.warning_amber_outlined,
-                  color: hasChannels ? AppTheme.accentGreen : AppTheme.accentOrange,
-                  size: 20,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  hasChannels ? '${provider.channelCount} channels loaded' : 'No playlist loaded',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-              ],
-            ),
-          ],
+          message: hasChannels ? '${provider.channelCount} channels loaded' : 'No playlist loaded',
+          isSuccess: hasChannels,
         );
       },
     );
@@ -1165,70 +1136,23 @@ class _SettingsScreenState extends State<SettingsScreen>
     IconData? prefixIcon,
     bool obscureText = false,
   }) {
-    return Focus(
+    return BrandTextField(
+      controller: controller,
       focusNode: focusNode,
-      child: Builder(
-        builder: (context) {
-          return TextField(
-            controller: controller,
-            obscureText: obscureText,
-            style: const TextStyle(color: AppTheme.textPrimary),
-            decoration: InputDecoration(
-              hintText: hintText,
-              hintStyle: const TextStyle(color: AppTheme.textSecondary),
-              prefixIcon: prefixIcon != null 
-                  ? Icon(prefixIcon, size: 18, color: AppTheme.textSecondary) 
-                  : null,
-              border: const UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.transparent),
-              ),
-              enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
-              ),
-              focusedBorder: const UnderlineInputBorder(
-                borderSide: BorderSide(color: AppTheme.primaryBlue),
-              ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 14),
-            ),
-          );
-        },
-      ),
+      hintText: hintText,
+      prefixIcon: prefixIcon,
+      obscureText: obscureText,
     );
   }
 
 
 
   Widget _buildSwitchTile(String title, bool value, {FocusNode? focusNode}) {
-    return Focus(
+    return BrandSwitchTile(
+      title: title,
+      value: value,
+      onChanged: (newValue) => _handleSwitchTileChange(title, newValue),
       focusNode: focusNode,
-      child: Builder(
-        builder: (context) {
-          return Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                ),
-                Switch(
-                  value: value,
-                  onChanged: (newValue) => _handleSwitchTileChange(title, newValue),
-                  activeThumbColor: AppTheme.primaryBlue,
-                  inactiveThumbColor: AppTheme.textSecondary,
-                  inactiveTrackColor: Colors.white.withValues(alpha: 0.2),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
     );
   }
 

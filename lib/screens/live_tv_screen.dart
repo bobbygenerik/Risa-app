@@ -18,6 +18,8 @@ import 'package:iptv_player/services/service_validator.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
+import 'package:iptv_player/widgets/brand_badge.dart';
+import 'package:iptv_player/utils/app_typography.dart';
 
 /// A focused Live TV screen. Shows a hero for the currently airing program
 /// on a featured channel, plus channel rows below.
@@ -505,12 +507,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             height: context.tvTextSize(24) * 1.3 * 2,
             child: Text(
               title,
-              style: TextStyle(
-                color: AppTheme.textPrimary,
-                fontSize: context.tvTextSize(24),
-                fontWeight: FontWeight.w700,
-                height: 1.3,
-              ),
+              style: AppTypography.heroTitle(context),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -521,11 +518,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             height: context.tvTextSize(14) * 1.3 * 3,
             child: Text(
               description,
-              style: TextStyle(
-                color: AppTheme.textSecondary,
-                fontSize: context.tvTextSize(14),
-                height: 1.3,
-              ),
+              style: AppTypography.heroDescription(context),
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
             ),
@@ -553,30 +546,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             child: Row(
               children: [
                 if (program != null) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppTheme.accentRed,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      'LIVE',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: context.tvTextSize(10),
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
+                  const BrandBadge.live(),
                   const SizedBox(width: 8),
                 ],
                 Text(
                   timeRange,
-                  style: TextStyle(
-                    color: AppTheme.textSecondary,
-                    fontSize: context.tvTextSize(13),
-                  ),
+                  style: AppTypography.smallText(context),
                 ),
               ],
             ),
@@ -1005,23 +980,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                               ),
                             ),
                             if (currentProgram == null)
-                              Positioned(
+                              const Positioned(
                                 top: 8,
                                 right: 8,
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: const Text(
-                                    'NO EPG',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 8,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                                child: BrandBadge.noEpg(
+                                  fontSize: 8,
                                 ),
                               ),
                             // Progress bar overlay at bottom
@@ -1062,11 +1025,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         width: cardWidth,
                         child: Text(
                           currentProgram.title,
-                          style: const TextStyle(
-                            color: AppTheme.textPrimary,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: AppTypography.programTitle(context),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1076,10 +1035,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         width: cardWidth,
                         child: Text(
                           '${_formatTime(currentProgram.startTime)} - ${_formatTime(currentProgram.endTime)}',
-                          style: const TextStyle(
-                            color: AppTheme.textSecondary,
-                            fontSize: 11,
-                          ),
+                          style: AppTypography.programTime(context),
                         ),
                       ),
                     ],
@@ -1113,10 +1069,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             const SizedBox(width: 12),
             Text(
               'Loading categories...',
-              style: TextStyle(
-                color: AppTheme.textSecondary.withAlpha((0.8 * 255).round()),
-                fontSize: 14,
-              ),
+              style: AppTypography.loadingText(context),
             ),
           ],
         ),

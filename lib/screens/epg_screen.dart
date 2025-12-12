@@ -415,13 +415,6 @@ class _EPGScreenState extends State<EPGScreen>
                 color: Colors.white.withAlpha((0.12 * 255).round()),
                 width: 1,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha((0.35 * 255).round()),
-                  blurRadius: 40,
-                  spreadRadius: 4,
-                ),
-              ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
