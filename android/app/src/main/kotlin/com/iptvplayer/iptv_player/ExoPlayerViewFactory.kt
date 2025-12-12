@@ -1,4 +1,4 @@
-package com.risa.app
+package com.iptvplayer.iptv_player
 
 import android.content.Context
 import androidx.media3.common.util.UnstableApi

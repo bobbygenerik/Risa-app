@@ -289,10 +289,12 @@ class ChannelProvider with ChangeNotifier {
     notifyListeners();
 
     // Persist watch counts
-    final prefs = await SharedPreferences.getInstance();
-    final watchCountsJson =
-        _watchCounts.map((k, v) => MapEntry(k, v.toString()));
-    await prefs.setString('channel_watch_counts', json.encode(watchCountsJson));
+    unawaited((() async {
+      final prefs = await SharedPreferences.getInstance();
+      final watchCountsJson =
+          _watchCounts.map((k, v) => MapEntry(k, v.toString()));
+      await prefs.setString('channel_watch_counts', json.encode(watchCountsJson));
+    })());
   }
 
   /// Load watch counts from storage
@@ -376,7 +378,7 @@ class ChannelProvider with ChangeNotifier {
           _seriesCachePath = '${dir.path}/series_cache.json';
 
           // Asynchronously read counts from VOD cache files without blocking
-          Future.microtask(() async {
+          unawaited(Future.microtask(() async {
             if (_moviesCachePath != null) {
               final moviesFile = File(_moviesCachePath!);
               if (await moviesFile.exists()) {
@@ -393,10 +395,10 @@ class ChannelProvider with ChangeNotifier {
                 if (!_disposed) notifyListeners();
               }
             }
-          });
+          }));
 
           _cachedCategories = null;
-          _computeCategoriesAsync();
+          unawaited(_computeCategoriesAsync());
 
           // VOD is loaded on demand by UI, no need to preload here
 
@@ -465,7 +467,7 @@ class ChannelProvider with ChangeNotifier {
 
           _cachedCategories = null; // Clear cache when channels change
           // Trigger async category extraction in background (non-blocking)
-          _computeCategoriesAsync();
+          unawaited(_computeCategoriesAsync());
 
           if (_contentProvider != null) {
             _contentProvider!.loadMovies(movies.take(100).toList());
@@ -473,7 +475,7 @@ class ChannelProvider with ChangeNotifier {
           }
 
           // Save to JSON cache for faster loading next time
-          _saveJsonCache(parsed);
+          unawaited(_saveJsonCache(parsed));
 
           _isLoading = false;
           _hasLoadedPlaylist = true;
@@ -761,7 +763,7 @@ class ChannelProvider with ChangeNotifier {
 
         _cachedCategories = null; // Clear cache when channels change
         // Trigger async category extraction in background (non-blocking)
-        _computeCategoriesAsync();
+        unawaited(_computeCategoriesAsync());
 
         debugPrint(
             'ChannelProvider: Parsed ${_channelMaps.length} channels (isolate)');
@@ -803,7 +805,7 @@ class ChannelProvider with ChangeNotifier {
         }
 
         // Save to JSON cache for faster loading next time
-        _saveJsonCache(parsed);
+        unawaited(_saveJsonCache(parsed));
 
         // Auto-save EPG URL from M3U x-tvg-url attribute
         final epgUrl = parsed['epgUrl'] as String?;
@@ -811,10 +813,10 @@ class ChannelProvider with ChangeNotifier {
           debugPrint(
               'ChannelProvider: Found EPG URL in M3U: $epgUrl (auto-saving)');
           await prefs.setString('epg_url', epgUrl);
-          _epgService?.loadEpg(); // Trigger EPG loading
+          unawaited(_epgService?.loadEpg()); // Trigger EPG loading
         }
 
-        await _loadXtreamVOD(url);
+        unawaited(_loadXtreamVOD(url));
 
         _loadingProgress = 1.0;
         _loadingStatus = 'Complete!';
@@ -823,7 +825,7 @@ class ChannelProvider with ChangeNotifier {
         notifyListeners();
 
         // Start background TMDB enrichment (non-blocking)
-        _startBackgroundEnrichment();
+        unawaited(_startBackgroundEnrichment());
       } finally {
         client.close();
       }
@@ -963,7 +965,7 @@ class ChannelProvider with ChangeNotifier {
 
       _cachedCategories = null; // Clear cache when channels change
       // Trigger async category extraction in background (non-blocking)
-      _computeCategoriesAsync();
+      unawaited(_computeCategoriesAsync());
 
       debugPrint(
           'ChannelProvider: Parsed ${_channelMaps.length} channels (direct client)');
@@ -994,17 +996,17 @@ class ChannelProvider with ChangeNotifier {
       if (epgUrl != null && epgUrl.isNotEmpty) {
         debugPrint('ChannelProvider: Found EPG URL: $epgUrl (auto-saving)');
         await prefs.setString('epg_url', epgUrl);
-        _epgService?.loadEpg(); // Trigger EPG loading
+        unawaited(_epgService?.loadEpg()); // Trigger EPG loading
       }
 
-      await _loadXtreamVOD(url);
+      unawaited(_loadXtreamVOD(url));
 
       _isLoading = false;
       _hasLoadedPlaylist = true;
       notifyListeners();
 
       // Start background TMDB enrichment (non-blocking)
-      _startBackgroundEnrichment();
+      unawaited(_startBackgroundEnrichment());
     } catch (e, stackTrace) {
       debugPrint('ChannelProvider: Error with direct client: $e');
       debugPrint('ChannelProvider: Stack trace: $stackTrace');
@@ -1066,14 +1068,14 @@ class ChannelProvider with ChangeNotifier {
             'ChannelProvider: Found EPG URL in M3U: $epgUrl (auto-saving)');
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('epg_url', epgUrl);
-        _epgService?.loadEpg(); // Trigger EPG loading
+        unawaited(_epgService?.loadEpg()); // Trigger EPG loading
       }
 
       _isLoading = false;
       notifyListeners();
 
       // Start background TMDB enrichment (non-blocking)
-      _startBackgroundEnrichment();
+      unawaited(_startBackgroundEnrichment());
     } catch (e, stackTrace) {
       debugPrint('ChannelProvider: Error parsing playlist string: $e');
       debugPrint('ChannelProvider: Stack trace: $stackTrace');
@@ -1092,7 +1094,7 @@ class ChannelProvider with ChangeNotifier {
       return [];
     }
     // Trigger async computation
-    _computeCategoriesAsync();
+    unawaited(_computeCategoriesAsync());
     return [];
   }
 
@@ -1351,7 +1353,7 @@ class ChannelProvider with ChangeNotifier {
         'ChannelProvider: Starting background TMDB enrichment for $_moviesCount movies and $_seriesCount series');
 
     // Run in background without awaiting
-    Future.microtask(() async {
+    unawaited(Future.microtask(() async {
       try {
         // Load all movies and series for enrichment
         final allMovies = await getMovies(limit: 999999);
@@ -1390,7 +1392,7 @@ class ChannelProvider with ChangeNotifier {
       } finally {
         _isEnriching = false;
       }
-    });
+    }));
   }
 
   /// Save enriched VOD content back to cache files

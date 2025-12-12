@@ -174,7 +174,10 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
             color: Colors.transparent,
             borderRadius: BorderRadius.circular(widget.borderRadius - 2),
           ),
-          padding: widget.padding,
+          padding: EdgeInsets.symmetric(
+            horizontal: context.tvSpacing(20),
+            vertical: context.tvSpacing(12),
+          ),
           child: Row(
             mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
             mainAxisAlignment: widget.expand
@@ -183,15 +186,15 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
             children: [
               if (widget.icon != null) ...[
                 context.iconSm(widget.icon!, color: Colors.white),
-                const SizedBox(width: 8),
+                SizedBox(width: context.tvSpacing(8)),
               ],
               Flexible(
                 child: Text(
                   widget.label,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 16,
+                    fontSize: context.tvTextSize(16),
                     fontWeight: FontWeight.w600,
                   ),
                 ),

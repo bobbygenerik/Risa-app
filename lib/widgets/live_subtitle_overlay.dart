@@ -6,6 +6,7 @@ import 'package:iptv_player/services/integrated_transcription_service.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
+import 'package:iptv_player/widgets/brand_button.dart';
 
 /// Live subtitle overlay widget
 /// Displays real-time transcription and translation on video
@@ -158,12 +159,12 @@ class TranscriptionControlPanel extends StatelessWidget {
                       ],
                     )
                   else
-                    ElevatedButton.icon(
+                    BrandPrimaryButton(
                       onPressed: () async {
                         await service.downloadTranslationModels();
                       },
-                      icon: const Icon(Icons.download),
-                      label: const Text('Download Language Models'),
+                      icon: Icons.download,
+                      label: 'Download Language Models',
                     ),
                 ],
 
@@ -180,10 +181,17 @@ class TranscriptionControlPanel extends StatelessWidget {
                 // Actions
                 Row(
                   children: [
-                    ElevatedButton.icon(
-                      onPressed: service.subtitles.isEmpty
-                          ? null
-                          : () {
+                    service.subtitles.isEmpty
+                        ? Opacity(
+                            opacity: 0.5,
+                            child: BrandSecondaryButton(
+                              onPressed: () {}, // Disabled
+                              icon: Icons.clear,
+                              label: 'Clear',
+                            ),
+                          )
+                        : BrandSecondaryButton(
+                            onPressed: () {
                               service.clearSubtitles();
                               showAppSnackBar(
                                 context,
@@ -192,14 +200,21 @@ class TranscriptionControlPanel extends StatelessWidget {
                                 ),
                               );
                             },
-                      icon: const Icon(Icons.clear),
-                      label: const Text('Clear'),
-                    ),
+                            icon: Icons.clear,
+                            label: 'Clear',
+                          ),
                     const SizedBox(width: AppSizes.sm),
-                    ElevatedButton.icon(
-                      onPressed: service.subtitles.isEmpty
-                          ? null
-                          : () {
+                    service.subtitles.isEmpty
+                        ? Opacity(
+                            opacity: 0.5,
+                            child: BrandSecondaryButton(
+                              onPressed: () {}, // Disabled
+                              icon: Icons.save,
+                              label: 'Export SRT',
+                            ),
+                          )
+                        : BrandSecondaryButton(
+                            onPressed: () {
                               final srt = service.exportAsSRT();
                               // Copy to clipboard (simple cross-platform solution)
                               Clipboard.setData(ClipboardData(text: srt));
@@ -212,9 +227,9 @@ class TranscriptionControlPanel extends StatelessWidget {
                                 ),
                               );
                             },
-                      icon: const Icon(Icons.save),
-                      label: const Text('Export SRT'),
-                    ),
+                            icon: Icons.save,
+                            label: 'Export SRT',
+                          ),
                   ],
                 ),
 

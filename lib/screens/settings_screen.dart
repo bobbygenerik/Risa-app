@@ -1274,15 +1274,15 @@ class _SettingsScreenState extends State<SettingsScreen>
       case 'Enable Live Transcription': 
         await prefs.setBool('transcription_enabled', newValue);
         if (newValue && mounted) {
-          final service = Provider.of<IntegratedTranscriptionService>(context, listen: false);
-          await service.initialize();
+          final transcriptionService = Provider.of<IntegratedTranscriptionService>(context, listen: false);
+          await transcriptionService.initialize();
         }
         break;
       case 'Enable Translation': 
         await prefs.setBool('translation_enabled', newValue);
         if (newValue && mounted) {
-          final service = Provider.of<IntegratedTranscriptionService>(context, listen: false);
-          service.setTranslationEnabled(newValue);
+          final transcriptionService = Provider.of<IntegratedTranscriptionService>(context, listen: false);
+          transcriptionService.setTranslationEnabled(newValue);
         }
         break;
       case 'Store Program Descriptions': await prefs.setBool('epg_store_descriptions', newValue); break;

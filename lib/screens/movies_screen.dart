@@ -724,12 +724,15 @@ class _MoviesScreenState extends State<MoviesScreen>
 
   Widget _buildHeroContent(Content featuredMovie, String? heroImage, double scrollProgress) {
     return heroImage != null
-        ? CachedNetworkImage(
-            imageUrl: heroImage,
-            fit: BoxFit.cover,
-            alignment: Alignment.center,
-            placeholder: (_, __) => _buildBannerPlaceholder(),
-            errorWidget: (_, __, ___) => _buildBannerPlaceholder(),
+        ? Positioned.fill(
+            child: CachedNetworkImage(
+              imageUrl: heroImage,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+              placeholder: (_, __) => _buildBannerPlaceholder(),
+              errorWidget: (_, __, ___) => _buildBannerPlaceholder(),
+            ),
           )
         : _buildBannerPlaceholder();
   }

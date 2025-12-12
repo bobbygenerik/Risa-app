@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -221,7 +222,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
       if (mounted) {
         try {
           final epgService = Provider.of<EpgService>(context, listen: false);
-          epgService.loadEpgFromUrl(epgUrl); // Load in background, don't await
+          await epgService.loadEpgFromUrl(epgUrl); // Load in background, don't await
         } catch (e) {
           debugPrint('Failed to start EPG load: $e');
         }

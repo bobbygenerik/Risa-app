@@ -183,14 +183,14 @@ class WhisperTranscriptionService extends ChangeNotifier {
 
   Future<void> setSourceLanguage(TranslateLanguage language) async {
     _sourceLanguage = language;
-    _translator?.close();
+    unawaited(_translator?.close());
     _translator = null;
     notifyListeners();
   }
 
   Future<void> setTargetLanguage(TranslateLanguage language) async {
     _targetLanguage = language;
-    _translator?.close();
+    unawaited(_translator?.close());
     _translator = null;
     notifyListeners();
   }

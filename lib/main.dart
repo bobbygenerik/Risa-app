@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 // ignore_for_file: todo
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -43,6 +43,8 @@ import 'package:iptv_player/screens/live_tv_screen.dart';
 import 'package:iptv_player/screens/movies_screen.dart';
 import 'package:iptv_player/screens/series_screen.dart';
 import 'package:iptv_player/screens/enhanced_video_player_screen.dart';
+import 'package:iptv_player/screens/content_detail_screen.dart';
+import 'package:iptv_player/screens/multi_view_screen.dart';
 import 'package:iptv_player/screens/playlist_login_screen.dart';
 
 import 'package:iptv_player/screens/favorites_screen.dart';
@@ -60,6 +62,40 @@ import 'package:iptv_player/services/ssl_handler.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
+class _DeviceMemoryInfo {
+  final bool isLowMemory;
+  _DeviceMemoryInfo({required this.isLowMemory});
+}
+
+Future<_DeviceMemoryInfo> _getDeviceMemoryInfo() async {
+  try {
+    if (kIsWeb) return _DeviceMemoryInfo(isLowMemory: false);
+    
+    // Simple heuristic: assume low memory if running on older Android
+    if (Platform.isAndroid) {
+      final info = await Process.run('getprop', ['ro.build.version.sdk']);
+      final sdkVersion = int.tryParse(info.stdout.toString().trim()) ?? 30;
+      return _DeviceMemoryInfo(isLowMemory: sdkVersion < 26); // Android 8.0+
+    }
+    
+    return _DeviceMemoryInfo(isLowMemory: false);
+  } catch (e) {
+    return _DeviceMemoryInfo(isLowMemory: false);
+  }
+}
+
+final _suppressedErrorPatterns = {
+  '429',
+  'rate limit',
+  'HttpException',
+  'SocketException',
+  'ClientException',
+};
+
+bool _shouldSuppressError(String errorStr) {
+  return _suppressedErrorPatterns.any((pattern) => errorStr.contains(pattern));
+}
+
 void main() {
   StartupProbe.mark('main() entry');
   runZonedGuarded(
@@ -71,9 +107,10 @@ void main() {
       WidgetsFlutterBinding.ensureInitialized();
       StartupProbe.mark('Flutter bindings initialized');
 
-      // Limit image cache to prevent OOM errors
-      PaintingBinding.instance.imageCache.maximumSize = 100;
-      PaintingBinding.instance.imageCache.maximumSizeBytes = 50 << 20; // 50MB
+      // Optimize image cache for IPTV with many channel logos
+      final memoryInfo = await _getDeviceMemoryInfo();
+      PaintingBinding.instance.imageCache.maximumSize = memoryInfo.isLowMemory ? 150 : 300;
+      PaintingBinding.instance.imageCache.maximumSizeBytes = memoryInfo.isLowMemory ? 75 << 20 : 150 << 20;
       StartupProbe.mark('Image cache limits configured');
 
       // Initialize SSL handler for IPTV providers with certificate issues
@@ -83,7 +120,7 @@ void main() {
 
       // Only lock landscape on Android TV, allow portrait on mobile
       if (!kIsWeb && Platform.isAndroid) {
-        SystemChrome.setPreferredOrientations([
+        await SystemChrome.setPreferredOrientations([
           DeviceOrientation.landscapeLeft,
           DeviceOrientation.landscapeRight,
         ]);
@@ -92,9 +129,8 @@ void main() {
 
       FlutterError.onError = (FlutterErrorDetails details) {
         // Suppress rate-limit errors from image loading (HTTP 429)
-        final exception = details.exception;
-        if (exception.toString().contains('429') ||
-            exception.toString().contains('rate limit')) {
+        final errorStr = details.exception.toString();
+        if (_shouldSuppressError(errorStr)) {
           debugPrint('Suppressed image error: ${details.exception}');
           return;
         }
@@ -130,30 +166,19 @@ class _StartupLoaderState extends State<StartupLoader> {
   void initState() {
     super.initState();
     StartupProbe.mark('StartupLoader initState');
-    _initialize();
+    unawaited(_initialize());
   }
 
   Future<void> _initialize() async {
-    StartupProbe.mark('StartupLoader: TMDB init start');
-    const tmdbBudget = Duration(milliseconds: 600);
-    final tmdbFuture = TMDBService.init().then<bool>((_) {
-      StartupProbe.mark('StartupLoader: TMDB init finished');
-      return true;
+    StartupProbe.mark('StartupLoader: background TMDB init start');
+    // Initialize TMDB in background without blocking startup
+    unawaited(TMDBService.init().then((_) {
+      StartupProbe.mark('StartupLoader: background TMDB init finished');
     }).catchError((error, stack) {
       debugPrint('TMDBService.init() failed during startup: $error');
-      return true;
-    });
-
-    final completedWithinBudget = await Future.any<bool>([
-      tmdbFuture,
-      Future.delayed(tmdbBudget, () => false),
-    ]);
-
-    if (!mounted) return;
-
-    if (!completedWithinBudget) {
-      StartupProbe.mark('StartupLoader: continuing without TMDB init');
-    }
+    }));
+    
+    StartupProbe.mark('StartupLoader: continuing with background TMDB init');
 
     // EPG loading is now handled by the EpgService provider's initialize() method
     // which loads from cache or fetches from URL automatically
@@ -198,14 +223,7 @@ class _ErrorHandler {
     // Filter out HTTP 429 (rate limit) errors from image loading
     // These are handled gracefully by error widgets, no need to show a global error
     final errorString = error.toString();
-    if (errorString.contains('429') ||
-        errorString.contains('rate limit') ||
-        errorString.contains('HttpException') &&
-            errorString.contains('imgur') ||
-        errorString.contains('SocketException') &&
-            errorString.contains('image.tmdb.org') ||
-        errorString.contains('ClientException') &&
-            errorString.contains('SocketException')) {
+    if (_shouldSuppressError(errorString)) {
       debugPrint('Suppressed network/image error: $error');
       return;
     }
@@ -347,11 +365,11 @@ class _MyAppState extends State<MyApp> {
   }) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      if (delay == Duration.zero) {
-        Future.microtask(action);
-      } else {
-        Future.delayed(delay, action);
-      }
+      final future = delay == Duration.zero
+          ? Future.microtask(action)
+          : Future.delayed(delay, action);
+      _pendingDeferredOperations.add(future);
+      future.whenComplete(() => _pendingDeferredOperations.remove(future));
     });
   }
 
@@ -532,7 +550,7 @@ class _MyAppState extends State<MyApp> {
             create: (context) {
               final service = EpgService();
               // Initialize EPG and force refresh on app start
-              Future.microtask(() async {
+              unawaited(Future.microtask(() async {
                 await service.initialize();
                 debugPrint(
                     'Main: EPG initialized with ${service.totalChannelCount} channels');
@@ -540,7 +558,7 @@ class _MyAppState extends State<MyApp> {
                 await service.loadEpg();
                 debugPrint(
                     'Main: EPG refresh complete, total channels: ${service.totalChannelCount}');
-              });
+              }));
               return service;
             },
           ),
@@ -775,8 +793,12 @@ class _MyAppState extends State<MyApp> {
   void dispose() {
     BackgroundTaskManager.stop();
     _profileProvider.dispose();
+    // Cancel any pending deferred operations
+    _pendingDeferredOperations.clear();
     super.dispose();
   }
+  
+  final Set<Future> _pendingDeferredOperations = {};
 }
 
 class _ProfileSelectionDialog extends StatefulWidget {
@@ -813,7 +835,7 @@ class _ProfileSelectionDialogState extends State<_ProfileSelectionDialog> {
                     leading: CircleAvatar(child: Text(p.name[0])),
                     title: Text(p.name, style: const TextStyle(color: Colors.white)),
                     onTap: () {
-                      provider.setActiveProfile(p.id);
+                      unawaited(provider.setActiveProfile(p.id));
                       Navigator.of(context).pop();
                     },
                   ),
@@ -837,7 +859,7 @@ class _ProfileSelectionDialogState extends State<_ProfileSelectionDialog> {
               final profile = UserProfile(id: id, name: name, avatarUrl: '');
               final rootNav = _rootNavigatorKey.currentState;
               await provider.addProfile(profile);
-              provider.setActiveProfile(profile.id);
+              unawaited(provider.setActiveProfile(profile.id));
               rootNav?.pop();
             }
           },
@@ -1044,12 +1066,7 @@ final _router = GoRouter(
 
         return _fadeSlidePage(
           key: state.pageKey,
-          child: Scaffold(
-            appBar: AppBar(title: const Text('Content Detail')),
-            body: const Center(
-              child: Text('Content detail screen'),
-            ),
-          ),
+          child: ContentDetailScreen(content: content),
         );
       },
     ),
@@ -1080,6 +1097,28 @@ final _router = GoRouter(
             title: title,
             isLive: isLive,
             channel: channel,
+          ),
+        );
+      },
+    ),
+    GoRoute(
+      path: '/multi-view',
+      pageBuilder: (context, state) {
+        final data = state.extra;
+        List<Channel>? channels;
+        Channel? initialChannel;
+        
+        if (data is List<Channel>) {
+          channels = data;
+        } else if (data is Channel) {
+          initialChannel = data;
+        }
+        
+        return _fadeSlidePage(
+          key: state.pageKey,
+          child: MultiViewScreen(
+            channels: channels,
+            initialChannel: initialChannel,
           ),
         );
       },

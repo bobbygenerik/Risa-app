@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:iptv_player/services/voice_search_service.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/app_dialog.dart';
+import 'package:iptv_player/widgets/brand_button.dart';
 
 class VoiceSearchButton extends StatefulWidget {
   final Function(String)? onSearchResult;
@@ -305,7 +306,7 @@ class VoiceSearchOverlay extends StatelessWidget {
 
                 const SizedBox(height: AppSizes.xxl),
 
-                TextButton(onPressed: onClose, child: const Text('Close')),
+                BrandSecondaryButton(onPressed: onClose, label: 'Close'),
               ],
             ),
           ),

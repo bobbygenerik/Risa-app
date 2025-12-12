@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
+import 'package:iptv_player/widgets/brand_button.dart';
 
 class LegalDisclaimerDialog extends StatefulWidget {
   const LegalDisclaimerDialog({super.key});
@@ -135,30 +136,31 @@ By continuing, you confirm you will only use this app for legal purposes and com
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
+                  child: BrandSecondaryButton(
                     onPressed: () => Navigator.of(context).pop(false),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: AppSizes.md),
-                      side: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
-                    ),
-                    child: const Text('Exit App'),
+                    label: 'Exit App',
+                    expand: true,
                   ),
                 ),
                 const SizedBox(width: AppSizes.md),
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: _accepted
-                        ? () {
+                  child: _accepted
+                      ? BrandPrimaryButton(
+                          onPressed: () {
                             debugPrint('Continue button pressed');
                             Navigator.of(context).pop(true);
-                          }
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryBlue,
-                      padding: const EdgeInsets.symmetric(vertical: AppSizes.md),
-                    ),
-                    child: const Text('Continue'),
-                  ),
+                          },
+                          label: 'Continue',
+                          expand: true,
+                        )
+                      : Opacity(
+                          opacity: 0.5,
+                          child: BrandPrimaryButton(
+                            onPressed: () {}, // Disabled
+                            label: 'Continue',
+                            expand: true,
+                          ),
+                        ),
                 ),
               ],
             ),

@@ -23,6 +23,10 @@ linter:
   rules:
     avoid_print: false  # Disable avoid_print to reduce noisy info-level issues
     # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
+    # Error handling lints
+    unawaited_futures: true
+    use_build_context_synchronously: true
+    avoid_catching_errors: true
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options
@@ -37,5 +41,11 @@ analyzer:
     - "packages/**"
     - "test_functionality.dart"
     - "**/build/**"
-    - "**/android/**"
-    - "**/ios/**"
+    - "**/android/app/src/main/java/**"
+    - "**/android/app/src/main/kotlin/**"
+    - "**/ios/Runner/**"
+    - "**/android/gradle/**"
+    - "**/ios/Pods/**"
+    - "**/.cxx/**"
+    - "**/CMakeFiles/**"
+    - "**/whisper-src/**"

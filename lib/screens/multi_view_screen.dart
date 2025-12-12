@@ -10,6 +10,8 @@ import 'package:iptv_player/widgets/channel_selection_dialog.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/providers/settings_provider.dart';
+import 'package:iptv_player/services/timer_service.dart';
+import 'package:iptv_player/services/focus_pool_service.dart';
 
 /// Multi-view screen for watching up to 4 streams simultaneously
 /// Supports 1, 2, or 4 player grid layouts with audio switching
@@ -35,9 +37,11 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
 
   int _activeAudioPlayer = 0; // Which player's audio is active
   int _focusedPlayer = 0; // Which player has focus for controls
-  final FocusNode _screenFocusNode = FocusNode();
-  final FocusScopeNode _controlsFocusScope = FocusScopeNode();
-  final List<FocusNode> _playerFocusNodes = List.generate(4, (_) => FocusNode());
+  final FocusPoolService _focusPool = FocusPoolService();
+  
+  late final FocusNode _screenFocusNode;
+  late final FocusScopeNode _controlsFocusScope;
+  late final List<FocusNode> _playerFocusNodes;
 
   // Settings loaded from SharedPreferences
   // These fields are persisted for future playback tuning but not yet applied
@@ -52,7 +56,12 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
   // Layout options
   int _gridSize = 4; // 1, 2, or 4 players
   bool _showControls = true;
-  Timer? _controlsTimer;
+  final TimerService _timerService = TimerService();
+  
+  // Memory optimization
+  final List<VideoPlayerController> _controllerPool = [];
+  final Set<int> _visibleTiles = {};
+  final Set<int> _loadingTiles = {};
 
   @override
   void initState() {
@@ -65,8 +74,15 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
     } else {
       _channelsList = [];
     }
+    
+    // Get focus nodes from pool
+    _screenFocusNode = _focusPool.getFocusNode('multi_view_screen', debugLabel: 'Multi-view Screen');
+    _controlsFocusScope = FocusScopeNode(debugLabel: 'Multi-view Controls');
+    _playerFocusNodes = List.generate(4, (i) => 
+      _focusPool.getFocusNode('multi_view_player_$i', debugLabel: 'Multi-view Player $i'));
+    
     _loadSettings();
-    _initializePlayers();
+    _updateVisibleTiles();
     _startControlsTimer();
   }
 
@@ -80,56 +96,189 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
     });
   }
 
-  Future<void> _initializePlayers() async {
-    for (int i = 0; i < _channelsList.length && i < 4; i++) {
-      try {
-        _controllers[i] = VideoPlayerController.networkUrl(Uri.parse(_channelsList[i].url));
-        await _controllers[i]!.initialize();
-        await _controllers[i]!.play();
-
-        // Mute all except the active audio player
-        if (i != _activeAudioPlayer) {
-          await _controllers[i]!.setVolume(0.0);
-        } else {
-          await _controllers[i]!.setVolume(1.0);
-        }
-
-        setState(() {
-          _isInitialized[i] = true;
-        });
-      } catch (e) {
-        debugPrint('Error initializing player $i: $e');
-        setState(() {
-          _hasError[i] = true;
-        });
+  void _updateVisibleTiles() {
+    _visibleTiles.clear();
+    if (_gridSize == 1) {
+      _visibleTiles.add(_focusedPlayer);
+    } else if (_gridSize == 2) {
+      _visibleTiles.addAll([0, 1]);
+    } else {
+      _visibleTiles.addAll([0, 1, 2, 3]);
+    }
+    
+    // Initialize visible tiles
+    for (int i in _visibleTiles) {
+      if (i < _channelsList.length && !_isInitialized[i] && !_loadingTiles.contains(i)) {
+        _initializePlayer(i);
       }
+    }
+    
+    // Dispose invisible tiles
+    for (int i = 0; i < _controllers.length; i++) {
+      if (!_visibleTiles.contains(i) && _controllers[i] != null) {
+        _disposePlayer(i);
+      }
+    }
+  }
+  
+  Future<void> _initializePlayer(int index) async {
+    if (index >= _channelsList.length) return;
+    if (_controllers[index] != null) return;
+    if (_loadingTiles.contains(index)) return;
+
+    _loadingTiles.add(index);
+    final channel = _channelsList[index];
+    if (channel.url.isEmpty) {
+      setState(() {
+        _hasError[index] = true;
+      });
+      _loadingTiles.remove(index);
+      return;
+    }
+
+    try {
+      // Try to reuse controller from pool
+      VideoPlayerController? controller = _getPooledController();
+      
+      if (controller == null) {
+        // Use lower quality for non-focused players
+        final quality = index == _focusedPlayer ? 'high' : 'medium';
+        
+        controller = VideoPlayerController.networkUrl(
+          Uri.parse(channel.url),
+          httpHeaders: {
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36',
+            'Connection': 'keep-alive',
+            'Accept': '*/*',
+            'Cache-Control': 'no-cache',
+            'X-Quality-Hint': quality,
+          },
+          videoPlayerOptions: VideoPlayerOptions(
+            mixWithOthers: true,
+            allowBackgroundPlayback: false,
+          ),
+          formatHint: VideoFormat.hls,
+        );
+      } else {
+        // Reuse existing controller with new URL
+        await controller.dispose();
+        controller = VideoPlayerController.networkUrl(
+          Uri.parse(channel.url),
+          httpHeaders: {
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36',
+            'Connection': 'keep-alive',
+            'Accept': '*/*',
+            'Cache-Control': 'no-cache',
+            'X-Quality-Hint': index == _focusedPlayer ? 'high' : 'medium',
+          },
+          videoPlayerOptions: VideoPlayerOptions(
+            mixWithOthers: true,
+            allowBackgroundPlayback: false,
+          ),
+          formatHint: VideoFormat.hls,
+        );
+      }
+      
+      _controllers[index] = controller;
+      await controller.initialize();
+      await controller.setPlaybackSpeed(1.0);
+      await controller.play();
+
+      // Mute all except the active audio player
+      if (index != _activeAudioPlayer) {
+        await controller.setVolume(0.0);
+      } else {
+        await controller.setVolume(1.0);
+      }
+
+      setState(() {
+        _isInitialized[index] = true;
+        _hasError[index] = false;
+      });
+    } catch (e) {
+      debugPrint('Error initializing player $index: $e');
+      setState(() {
+        _hasError[index] = true;
+      });
+    } finally {
+      _loadingTiles.remove(index);
+    }
+  }
+  
+  VideoPlayerController? _getPooledController() {
+    if (_controllerPool.isNotEmpty) {
+      return _controllerPool.removeLast();
+    }
+    return null;
+  }
+  
+  void _disposePlayer(int index) {
+    final controller = _controllers[index];
+    if (controller != null) {
+      // Stop playback before disposal
+      if (controller.value.isInitialized) {
+        unawaited(controller.pause());
+      }
+      
+      // Add to pool for reuse instead of disposing immediately
+      if (_controllerPool.length < 2) {
+        _controllerPool.add(controller);
+      } else {
+        unawaited(controller.dispose());
+      }
+      
+      _controllers[index] = null;
+      setState(() {
+        _isInitialized[index] = false;
+        _hasError[index] = false;
+      });
     }
   }
 
   @override
   void dispose() {
-    _controlsTimer?.cancel();
-    _screenFocusNode.dispose();
-    for (var controller in _controllers) {
-      controller?.dispose();
-    }
-    for (var node in _playerFocusNodes) {
-      node.dispose();
+    _timerService.unregister('multi_view_controls');
+    _focusPool.returnFocusNode('multi_view_screen');
+    for (int i = 0; i < 4; i++) {
+      _focusPool.returnFocusNode('multi_view_player_$i');
     }
     _controlsFocusScope.dispose();
+    
+    // Dispose all active controllers
+    for (var controller in _controllers) {
+      if (controller != null) {
+        unawaited(controller.dispose());
+      }
+    }
+    
+    // Dispose all pooled controllers
+    for (var controller in _controllerPool) {
+      unawaited(controller.dispose());
+    }
+    
+    // Clear collections
+    _controllers.clear();
+    _controllerPool.clear();
+    _visibleTiles.clear();
+    _loadingTiles.clear();
+    
     super.dispose();
   }
 
   void _startControlsTimer() {
-    _controlsTimer?.cancel();
     setState(() => _showControls = true);
-    _controlsTimer = Timer(const Duration(seconds: 5), () {
+    
+    // Unregister existing timer and register new one
+    _timerService.unregister('multi_view_controls');
+    _timerService.registerCustomCallback('multi_view_controls', 5, () {
       if (mounted) {
         setState(() => _showControls = false);
         // Return focus to the currently focused player
         if (_focusedPlayer < _playerFocusNodes.length) {
           _playerFocusNodes[_focusedPlayer].requestFocus();
         }
+        // Unregister after execution since this is a one-time timer
+        _timerService.unregister('multi_view_controls');
       }
     });
     
@@ -148,10 +297,10 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
     if (_controllers[index] == null || !_isInitialized[index]) return;
 
     // Mute old active player
-    _controllers[_activeAudioPlayer]?.setVolume(0.0);
+    unawaited(_controllers[_activeAudioPlayer]?.setVolume(0.0));
 
     // Unmute new active player
-    _controllers[index]?.setVolume(1.0);
+    unawaited(_controllers[index]?.setVolume(1.0));
 
     setState(() {
       _activeAudioPlayer = index;
@@ -164,6 +313,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
     setState(() {
       _focusedPlayer = index;
     });
+    _updateVisibleTiles();
     _startControlsTimer();
   }
 
@@ -172,9 +322,9 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
 
     final isPlaying = _controllers[index]!.value.isPlaying;
     if (isPlaying) {
-      _controllers[index]!.pause();
+      unawaited(_controllers[index]!.pause());
     } else {
-      _controllers[index]!.play();
+      unawaited(_controllers[index]!.play());
     }
     _startControlsTimer();
   }
@@ -204,6 +354,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
     setState(() {
       _gridSize = size;
     });
+    _updateVisibleTiles();
     _startControlsTimer();
   }
 
@@ -214,6 +365,12 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
     );
 
     if (channel != null) {
+      // Dispose old player first
+      _disposePlayer(index);
+      
+      // Wait a frame to ensure disposal completes
+      await Future.delayed(const Duration(milliseconds: 50));
+      
       setState(() {
         if (index >= _channelsList.length) {
           _channelsList.add(channel);
@@ -222,29 +379,9 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
         }
       });
 
-      // Initialize the new player
-      try {
-        _controllers[index]?.dispose();
-        _controllers[index] = VideoPlayerController.networkUrl(Uri.parse(channel.url));
-        await _controllers[index]!.initialize();
-        await _controllers[index]!.play();
-
-        // Mute by default unless it's the active audio player
-        if (index != _activeAudioPlayer) {
-          await _controllers[index]!.setVolume(0.0);
-        } else {
-          await _controllers[index]!.setVolume(1.0);
-        }
-
-        setState(() {
-          _isInitialized[index] = true;
-          _hasError[index] = false;
-        });
-      } catch (e) {
-        debugPrint('Error initializing new player $index: $e');
-        setState(() {
-          _hasError[index] = true;
-        });
+      // Initialize new player if visible
+      if (_visibleTiles.contains(index)) {
+        await _initializePlayer(index);
       }
     }
   }
@@ -271,7 +408,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
         case LogicalKeyboardKey.keyM:
           // Mute/unmute focused player
           final volume = _controllers[_focusedPlayer]?.value.volume ?? 0.0;
-          _controllers[_focusedPlayer]?.setVolume(volume > 0 ? 0.0 : 1.0);
+          unawaited(_controllers[_focusedPlayer]?.setVolume(volume > 0 ? 0.0 : 1.0));
           _startControlsTimer();
           break;
         case LogicalKeyboardKey.select:
@@ -359,7 +496,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
           if (event is KeyDownEvent && 
               (event.logicalKey == LogicalKeyboardKey.select || 
                event.logicalKey == LogicalKeyboardKey.enter)) {
-            _selectChannelForSlot(index);
+            unawaited(_selectChannelForSlot(index));
             return KeyEventResult.handled;
           }
           return KeyEventResult.ignored;
@@ -794,7 +931,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                           final controller = _controllers[_focusedPlayer];
                           if (controller != null) {
                             final position = controller.value.position;
-                            controller.seekTo(position - const Duration(seconds: 10));
+                            unawaited(controller.seekTo(position - const Duration(seconds: 10)));
                           }
                           _startControlsTimer();
                         },
@@ -813,7 +950,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                           final controller = _controllers[_focusedPlayer];
                           if (controller != null) {
                             final position = controller.value.position;
-                            controller.seekTo(position + const Duration(seconds: 10));
+                            unawaited(controller.seekTo(position + const Duration(seconds: 10)));
                           }
                           _startControlsTimer();
                         },

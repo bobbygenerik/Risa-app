@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
@@ -125,7 +126,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     if (confirmed == true) {
       try {
         await file.delete();
-        _loadFiles(); // Reload list
+        unawaited(_loadFiles()); // Reload list
         if (mounted) {
           showAppSnackBar(
             context,

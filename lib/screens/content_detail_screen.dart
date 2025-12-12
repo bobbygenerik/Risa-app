@@ -9,6 +9,7 @@ import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 
+
 class ContentDetailScreen extends StatefulWidget {
   final Content content;
 
@@ -85,6 +86,8 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                     Image.network(
                       heroImage,
                       fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
                       errorBuilder: (_, __, ___) => _buildHeroPlaceholder(),
                     ),
                     Container(
@@ -201,15 +204,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                         label: 'Play',
                         onPressed: () {
                           if (widget.content.videoUrl != null) {
-                            context.push(
-                              '/vlc-player',
-                              extra: {
-                                'videoUrl': widget.content.videoUrl,
-                                'title': widget.content.title,
-                                'subtitle': widget.content.year?.toString(),
-                                'isLive': false,
-                              },
-                            );
+                            context.push('/player', extra: widget.content);
                           } else {
                             showAppSnackBar(
                               context,
@@ -243,24 +238,12 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                       child: Consumer<ContentProvider>(
                         builder: (context, contentProvider, child) {
                           final isInMyList = contentProvider.isInFavorites(widget.content.id);
-                          return OutlinedButton.icon(
+                          return BrandSecondaryButton(
                             onPressed: () async {
                               await contentProvider.toggleFavorite(widget.content.id);
                             },
-                            icon: Icon(isInMyList ? Icons.check : Icons.add, size: context.tvIconSize(24)),
-                            label: Text('My List', style: TextStyle(fontSize: context.tvTextSize(16))),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppTheme.textPrimary,
-                              side: BorderSide(
-                                color: AppTheme.textPrimary.withAlpha(
-                                  (0.5 * 255).round(),
-                                ),
-                              ),
-                              padding: EdgeInsets.symmetric(
-                                horizontal: context.tvSpacing(32),
-                                vertical: context.tvSpacing(20),
-                              ),
-                            ),
+                            icon: isInMyList ? Icons.check : Icons.add,
+                            label: 'My List',
                           );
                         },
                       ),
@@ -280,29 +263,14 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                         }
                         return KeyEventResult.ignored;
                       },
-                      child: OutlinedButton.icon(
+                      child: BrandSecondaryButton(
                         onPressed: () {
                           setState(() {
                             _isDownloaded = !_isDownloaded;
                           });
                         },
-                        icon: Icon(
-                          _isDownloaded ? Icons.download_done : Icons.download,
-                          size: context.tvIconSize(24),
-                        ),
-                        label: Text(_isDownloaded ? 'Downloaded' : 'Download', style: TextStyle(fontSize: context.tvTextSize(16))),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppTheme.textPrimary,
-                          side: BorderSide(
-                            color: AppTheme.textPrimary.withAlpha(
-                              (0.5 * 255).round(),
-                            ),
-                          ),
-                          padding: EdgeInsets.symmetric(
-                            horizontal: context.tvSpacing(32),
-                            vertical: context.tvSpacing(20),
-                          ),
-                        ),
+                        icon: _isDownloaded ? Icons.download_done : Icons.download,
+                        label: _isDownloaded ? 'Downloaded' : 'Download',
                       ),
                     ),
                   ],

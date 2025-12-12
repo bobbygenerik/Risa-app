@@ -9,6 +9,7 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/content.dart';
+import 'package:iptv_player/widgets/brand_button.dart';
 
 class SearchPopup extends StatefulWidget {
   const SearchPopup({super.key});
@@ -235,20 +236,10 @@ class _SearchPopupState extends State<SearchPopup> {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: AppSizes.md),
-        child: TextButton.icon(
+        child: BrandSecondaryButton(
           onPressed: onPressed,
-          icon: const Icon(Icons.expand_more, color: AppTheme.primaryBlue),
-          label: const Text(
-            'Load More',
-            style: TextStyle(color: AppTheme.primaryBlue),
-          ),
-          style: TextButton.styleFrom(
-            backgroundColor: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
-            padding: const EdgeInsets.symmetric(
-              horizontal: 24,
-              vertical: 12,
-            ),
-          ),
+          icon: Icons.expand_more,
+          label: 'Load More',
         ),
       ),
     );

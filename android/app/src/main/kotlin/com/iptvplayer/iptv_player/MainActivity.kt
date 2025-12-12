@@ -18,6 +18,8 @@ import io.flutter.plugin.common.MethodChannel
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 import com.risa.iptv.WhisperPlugin
+import com.iptvplayer.iptv_player.ExoPlayerAudioCapturer
+import com.iptvplayer.iptv_player.ExoPlayerViewFactory
 
 @UnstableApi
 class MainActivity : FlutterActivity() {

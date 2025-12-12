@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -43,7 +44,7 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
   @override
   void initState() {
     super.initState();
-    _loadPlaylistData();
+    unawaited(_loadPlaylistData());
   }
 
   @override
@@ -149,7 +150,7 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
         final errorMessage = provider.errorMessage ?? e.toString();
         
         // Show detailed error in dialog instead of snackbar
-        showDialog(
+        unawaited(showDialog(
           context: context,
           builder: (context) => AlertDialog(
             backgroundColor: AppTheme.dialogBackground,
@@ -194,7 +195,7 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
               ),
             ],
           ),
-        );
+        ));
       }
     }
   }
@@ -290,9 +291,11 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
       child: GestureDetector(
         onTap: () {
           onEditableChange(true);
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            focusNode.requestFocus();
-          });
+          unawaited(Future(() {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              focusNode.requestFocus();
+            });
+          }));
         },
             child: TextField(
           controller: controller,

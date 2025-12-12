@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/services/whisper_transcription_service.dart';
@@ -190,13 +191,13 @@ class _WhisperModelManagerState extends State<WhisperModelManager> {
 
   void _selectModel(String modelName, WhisperTranscriptionService service) {
     service.setSelectedModel(modelName);
-    service.loadWhisperModel(modelName);
+    unawaited(service.loadWhisperModel(modelName));
   }
 
   Future<void> _downloadModel(BuildContext context, String modelName) async {
     final dialogContext = context; // Capture context before async gap
     
-    showDialog(
+    unawaited(showDialog(
       context: dialogContext,
       barrierDismissible: false,
       builder: (context) => AppDialog(
@@ -213,7 +214,7 @@ class _WhisperModelManagerState extends State<WhisperModelManager> {
           ],
         ),
       ),
-    );
+    ));
 
     try {
       final navigator = Navigator.of(dialogContext);

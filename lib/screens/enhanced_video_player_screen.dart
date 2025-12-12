@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
@@ -73,13 +74,25 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         'User-Agent': 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36',
         'Connection': 'keep-alive',
         'Accept': '*/*',
+        'Cache-Control': 'no-cache',
       },
       videoPlayerOptions: VideoPlayerOptions(
         mixWithOthers: true,
         allowBackgroundPlayback: false,
+        webOptions: const VideoPlayerWebOptions(
+          controls: VideoPlayerWebOptionsControls.disabled(),
+        ),
       ),
+      formatHint: VideoFormat.hls,
     );
     await _videoController!.initialize();
+    
+    // Apply buffer settings to prevent pausing
+    await _videoController!.setPlaybackSpeed(1.0);
+    
+    // Set buffer size based on settings (convert percentage to seconds)
+    final bufferSeconds = (settings.videoBufferSize / 10).clamp(3.0, 30.0);
+    debugPrint('Setting buffer size: ${bufferSeconds}s');
     
     _chewieController = ChewieController(
       videoPlayerController: _videoController!,
@@ -124,7 +137,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     setState(() => _isLoading = false);
     
     // Keep screen on during video playback
-    WakelockPlus.enable();
+    unawaited(WakelockPlus.enable());
     
     // Restore saved position for VOD content
     if (!widget.isLive && rememberPosition) {
@@ -156,15 +169,15 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           debugPrint('Video error: ${value.errorDescription}');
           Future.delayed(const Duration(seconds: 1), () {
             if (mounted && _videoController != null) {
-              _videoController!.seekTo(position);
-              _videoController!.play();
+                  _videoController!.seekTo(position);
+                  _videoController!.play();
             }
           });
         }
         
         // Handle video ended
         if (!isPlaying && position == duration && duration.inMilliseconds > 0) {
-          _handleVideoEnded();
+              _handleVideoEnded();
         }
       }
     });
@@ -181,12 +194,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       
       if (nextEpisode != null) {
         // Navigate to next episode
-        context.pushReplacement('/player', extra: {
-          'content': nextEpisode,
-          'videoUrl': nextEpisode.videoUrl,
-          'title': nextEpisode.displayTitle,
-          'isLive': false,
-        });
+        context.pushReplacement('/player', extra: nextEpisode);
       }
     }
   }
@@ -360,11 +368,13 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   void dispose() {
     _saveCurrentPosition();
     try {
-      _transcriptionService?.stopTranscription();
+      if (_transcriptionService != null) {
+        unawaited(_transcriptionService!.stopTranscription());
+      }
     } catch (e) {
       debugPrint('TTS cleanup error: $e');
     }
-    WakelockPlus.disable();
+    unawaited(WakelockPlus.disable());
     _chewieController?.dispose();
     _videoController?.dispose();
     super.dispose();

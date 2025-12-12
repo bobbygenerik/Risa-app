@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:iptv_player/widgets/cached_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
@@ -22,6 +23,8 @@ import 'package:iptv_player/widgets/brand_badge.dart';
 import 'package:iptv_player/utils/app_typography.dart';
 import 'package:iptv_player/utils/app_colors.dart';
 import 'package:iptv_player/utils/app_icons.dart';
+import 'package:iptv_player/services/timer_service.dart';
+import 'package:iptv_player/services/focus_pool_service.dart';
 
 /// A focused Live TV screen. Shows a hero for the currently airing program
 /// on a featured channel, plus channel rows below.
@@ -34,11 +37,13 @@ class LiveTVScreen extends StatefulWidget {
 
 class _LiveTVScreenState extends State<LiveTVScreen>
     with ContentFocusRegistrant<LiveTVScreen> {
-  Timer? _carouselTimer;
   int _featuredIndex = 0;
-  final ScrollController _scrollController = ScrollController();
-  final FocusNode _heroFocus = FocusNode();
-  final FocusNode _settingsButtonFocus = FocusNode();
+  final TimerService _timerService = TimerService();
+  final FocusPoolService _focusPool = FocusPoolService();
+  late final ScrollController _scrollController;
+  
+  late final FocusNode _heroFocus;
+  late final FocusNode _settingsButtonFocus;
   final Map<String, String?> _programArtwork = {};
   final Set<String> _artworkRequests = {};
   late final bool _tmdbEnabled;
@@ -49,6 +54,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   void initState() {
     super.initState();
     _tmdbEnabled = ServiceValidator.isTmdbAvailable;
+    
+    // Initialize scroll controller
+    _scrollController = ScrollController();
+    
+    // Get focus nodes from pool
+    _heroFocus = _focusPool.getFocusNode('live_tv_hero', debugLabel: 'Live TV Hero');
+    _settingsButtonFocus = _focusPool.getFocusNode('live_tv_settings', debugLabel: 'Live TV Settings');
     // Start carousel once the widget is built - will be updated when channels load
     WidgetsBinding.instance.addPostFrameCallback(
       (_) {
@@ -108,10 +120,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   @override
   void dispose() {
-    _carouselTimer?.cancel();
+    _timerService.unregister('live_tv_carousel');
     _scrollController.dispose();
-    _heroFocus.dispose();
-    _settingsButtonFocus.dispose();
+    _focusPool.returnFocusNodes(['live_tv_hero', 'live_tv_settings']);
     super.dispose();
   }
 
@@ -147,10 +158,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   void _startCarouselIfNeeded() {
-    // Cancel existing timer
-    _carouselTimer?.cancel();
-    // Start a timer that advances featured index every 8 seconds
-    _carouselTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+    // Register carousel timer (8 seconds)
+    _timerService.registerCustomCallback('live_tv_carousel', 8, () {
       _nextHero();
     });
     // Focus is managed by navigation bar - don't auto-focus content
@@ -163,6 +172,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
     final channels = channelProvider.channels;
     if (channels.isEmpty) return;
+    final epgService = Provider.of<EpgService>(context, listen: false);
     setState(() {
       // Find next channel with complete program info, starting from random position for variety
       int attempts = 0;
@@ -170,7 +180,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       int nextIndex = startOffset;
       while (attempts < channels.length) {
         final channel = channels[nextIndex];
-        final epgService = Provider.of<EpgService>(context, listen: false);
         final program = epgService.getCurrentProgram(
           channel.tvgId ?? channel.id,
           channelName: channel.name,
@@ -199,13 +208,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
     final channels = channelProvider.channels;
     if (channels.isEmpty) return;
+    final epgService = Provider.of<EpgService>(context, listen: false);
     setState(() {
       // Find previous channel with complete program info
       int attempts = 0;
       int prevIndex = (_featuredIndex - 1 + channels.length) % channels.length;
       while (attempts < channels.length) {
         final channel = channels[prevIndex];
-        final epgService = Provider.of<EpgService>(context, listen: false);
         final program = epgService.getCurrentProgram(
           channel.tvgId ?? channel.id,
           channelName: channel.name,
@@ -577,22 +586,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         borderRadius: BorderRadius.circular(8),
       ),
       child: Center(
-        child: channel.logoUrl != null && channel.logoUrl!.isNotEmpty
-            ? Image.network(
-                channel.logoUrl!,
-                fit: BoxFit.contain,
-                height: 24,
-                errorBuilder: (_, __, ___) => const Icon(
-                  Icons.tv,
-                  color: AppTheme.primaryBlue,
-                  size: 24,
-                ),
-              )
-            : const Icon(
-                Icons.tv,
-                color: AppTheme.primaryBlue,
-                size: 24,
-              ),
+        child: CachedChannelLogo(
+          logoUrl: channel.logoUrl,
+          size: 24,
+          fallbackIcon: Icons.tv,
+        ),
       ),
     );
   }
@@ -619,8 +617,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       }
     }
     
-    // Fallback to channel-based artwork if no program artwork
-    if (channel != null) {
+    // Only use channel-based TMDB artwork if no program artwork found
+    // Don't fall back to channel logos for cards
+    if (channel != null && program != null) {
       final channelKey = 'channel_${channel.id}';
       final cachedChannelArt = _programArtwork[channelKey];
       if (cachedChannelArt != null && cachedChannelArt.isNotEmpty) {
@@ -633,6 +632,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       }
     }
     
+    // Return null instead of falling back to channel logo
     return null;
   }
 
@@ -834,19 +834,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           }
           return KeyEventResult.ignored;
         },
-        child: Builder(
-          builder: (context) {
+        child: Selector<EpgService, Program?>(
+          selector: (_, epgService) => epgService.getCurrentProgram(
+            channel.tvgId ?? channel.id,
+            channelName: channel.name,
+          ),
+          builder: (context, currentProgram, _) {
             final isFocused = Focus.of(context).hasFocus;
-            final epgService = Provider.of<EpgService>(context, listen: false);
-            final currentProgram = epgService.getCurrentProgram(
-              channel.tvgId ?? channel.id,
-              channelName: channel.name,
-            );
             if (currentProgram == null) {
               debugPrint('LiveTV Card: No EPG for "${channel.name}" (tvgId: ${channel.tvgId})');
-            }
-            if (currentProgram == null) {
-              debugPrint('LiveTV: No EPG data for channel "${channel.name}" (tvgId: ${channel.tvgId}, id: ${channel.id})');
             }
             final progress = currentProgram?.progressPercentage ?? 0.0;
 
@@ -1129,7 +1125,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               child: CachedNetworkImage(
                 imageUrl: heroImage,
                 fit: BoxFit.cover,
-                alignment: Alignment.center,
+                width: double.infinity,
+                height: double.infinity,
                 placeholder: (_, __) => _buildDefaultHeroBackground(),
                 errorWidget: (_, __, ___) => _buildDefaultHeroBackground(),
               ),
@@ -1140,12 +1137,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     // Default: show static image
     return heroImage != null && heroImage.isNotEmpty
-        ? CachedNetworkImage(
-            imageUrl: heroImage,
-            fit: BoxFit.cover,
-            alignment: Alignment.center,
-            placeholder: (_, __) => _buildDefaultHeroBackground(),
-            errorWidget: (_, __, ___) => _buildDefaultHeroBackground(),
+        ? Positioned.fill(
+            child: CachedNetworkImage(
+              imageUrl: heroImage,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+              placeholder: (_, __) => _buildDefaultHeroBackground(),
+              errorWidget: (_, __, ___) => _buildDefaultHeroBackground(),
+            ),
           )
         : _buildDefaultHeroBackground();
   }

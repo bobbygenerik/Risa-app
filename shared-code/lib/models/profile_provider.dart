@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -50,15 +51,15 @@ class ProfileProvider extends ChangeNotifier {
 
   Future<void> addProfile(UserProfile profile) async {
     _profiles.add(profile);
-    await _saveProfiles();
-    setActiveProfile(profile.id);
+    unawaited(_saveProfiles());
+    unawaited(setActiveProfile(profile.id));
   }
 
   Future<void> removeProfile(String id) async {
     _profiles.removeWhere((p) => p.id == id);
-    await _saveProfiles();
+    unawaited(_saveProfiles());
     if (_activeProfile?.id == id && _profiles.isNotEmpty) {
-      setActiveProfile(_profiles.first.id);
+      unawaited(setActiveProfile(_profiles.first.id));
     } else if (_profiles.isEmpty) {
       _activeProfile = null;
       await _saveActiveProfileId(null);

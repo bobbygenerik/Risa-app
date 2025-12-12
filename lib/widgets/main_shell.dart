@@ -5,7 +5,8 @@ import 'package:go_router/go_router.dart';
 // import 'package:iptv_player/widgets/top_navigation_bar.dart'; // Removed
 
 import 'package:iptv_player/widgets/content_focus_provider.dart';
-import 'package:iptv_player/widgets/sidebar_navigation.dart'; // New import
+import 'package:iptv_player/widgets/sidebar_navigation.dart';
+import 'package:iptv_player/services/timer_service.dart';
 
 const bool kForceSearchPopup = bool.fromEnvironment(
   'FORCE_SEARCH_POPUP',
@@ -29,7 +30,7 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   late String _currentTime;
-  late Timer _timeTimer;
+  final TimerService _timerService = TimerService();
   ContentFocusCallback? _contentFocusCallback;
   int _nextFocusToken = 0;
   int? _activeFocusToken;
@@ -43,7 +44,7 @@ class _MainShellState extends State<MainShell> {
   void initState() {
     super.initState();
     _updateTime();
-    _timeTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+    _timerService.registerSecondCallback('main_shell_time', () {
       if (mounted) {
         setState(() => _updateTime());
       }
@@ -68,7 +69,7 @@ class _MainShellState extends State<MainShell> {
 
   @override
   void dispose() {
-    _timeTimer.cancel();
+    _timerService.unregister('main_shell_time');
     _contentFocusScope.dispose();
     super.dispose();
   }
@@ -104,8 +105,15 @@ class _MainShellState extends State<MainShell> {
     // final scale = isTV ? 1.2 : 1.0; // Removed
     // final navBarHeight = 64.0 * scale; // AppSizes.appBarHeight * scale // Removed
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          context.go('/exit');
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
       body: Container(
         decoration: const BoxDecoration(
             gradient: LinearGradient(
@@ -191,6 +199,7 @@ class _MainShellState extends State<MainShell> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

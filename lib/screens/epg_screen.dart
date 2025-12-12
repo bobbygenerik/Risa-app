@@ -1,6 +1,6 @@
 // ignore_for_file: sized_box_for_whitespace
 import 'dart:async';
-import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -10,7 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
-import 'package:iptv_player/widgets/tv_focusable.dart';
+
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/services/epg_service.dart';
@@ -20,6 +20,11 @@ import 'package:iptv_player/widgets/content_focus_provider.dart';
 import 'package:iptv_player/utils/app_colors.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:iptv_player/utils/app_icons.dart';
+import 'package:iptv_player/widgets/cached_image.dart';
+import 'package:iptv_player/services/timer_service.dart';
+import 'package:iptv_player/services/focus_pool_service.dart';
+import 'package:iptv_player/widgets/epg_widgets.dart';
+import 'package:iptv_player/state/epg_screen_state.dart';
 
 class EPGScreen extends StatefulWidget {
   final Channel? initialChannel;
@@ -37,33 +42,42 @@ class EPGScreen extends StatefulWidget {
 
 class _EPGScreenState extends State<EPGScreen>
     with SingleTickerProviderStateMixin, ContentFocusRegistrant {
-  double _calculateProgramsGridWidth() {
-    return _calculateGridWidth();
-  }
-  final DateTime _selectedDate = DateTime.now();
-  final bool _isHourlyView = true;
-  String? _selectedChannelId;
-  String? _selectedCategory;
-  Set<String> _epgFavoriteChannelIds = {}; // EPG-specific favorites
+  late final EPGScreenState _epgState;
   late AnimationController _refreshAnimationController;
 
-  final ScrollController _horizontalScrollController = ScrollController();
-  final ScrollController _timeHeaderScrollController = ScrollController();
-  final ScrollController _verticalScrollController = ScrollController();
+  late final ScrollController _horizontalScrollController;
+  late final ScrollController _timeHeaderScrollController;
+  late final ScrollController _verticalScrollController;
 
-
-  final FocusNode _refreshButtonFocus = FocusNode();
-  final FocusNode _firstCategoryFocus = FocusNode();
-  final FocusNode _firstChannelFocus = FocusNode();
-  Timer? _epgRefreshTimer;
+  final TimerService _timerService = TimerService();
+  final FocusPoolService _focusPool = FocusPoolService();
+  
+  late final FocusNode _refreshButtonFocus;
+  late final FocusNode _firstCategoryFocus;
+  late final FocusNode _firstChannelFocus;
 
   @override
   void initState() {
     super.initState();
+    _epgState = EPGScreenState();
     _refreshAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     );
+    
+    // Initialize scroll controllers
+    _horizontalScrollController = ScrollController();
+    _timeHeaderScrollController = ScrollController();
+    _verticalScrollController = ScrollController();
+    
+    // Get focus nodes from pool
+    _refreshButtonFocus = _focusPool.getFocusNode('epg_refresh', debugLabel: 'EPG Refresh');
+    _firstCategoryFocus = _focusPool.getFocusNode('epg_first_category', debugLabel: 'EPG First Category');
+    _firstChannelFocus = _focusPool.getFocusNode('epg_first_channel', debugLabel: 'EPG First Channel');
+    
+    // Sync scroll controllers
+    _horizontalScrollController.addListener(_syncHorizontalScroll);
+    _timeHeaderScrollController.addListener(_syncTimeHeaderScroll);
 
     // Start EPG auto-refresh timer (check every 30 minutes)
     _startEpgAutoRefresh();
@@ -78,9 +92,7 @@ class _EPGScreenState extends State<EPGScreen>
       // Load EPG favorites from SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       final favoritesList = prefs.getStringList('epg_favorite_channels') ?? [];
-      setState(() {
-        _epgFavoriteChannelIds = Set.from(favoritesList);
-      });
+      _epgState.setEpgFavoriteChannelIds(Set.from(favoritesList));
 
       // Wait for EPG service to initialize (max 5 seconds)
       int initWaitCount = 0;
@@ -153,11 +165,11 @@ class _EPGScreenState extends State<EPGScreen>
       final scrollPosition = 0.0;
 
       if (animate) {
-        _horizontalScrollController.animateTo(
+        unawaited(_horizontalScrollController.animateTo(
           scrollPosition,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
-        );
+        ));
       } else {
         _horizontalScrollController.jumpTo(scrollPosition);
       }
@@ -165,13 +177,8 @@ class _EPGScreenState extends State<EPGScreen>
   }
 
   void _startEpgAutoRefresh() {
-    _epgRefreshTimer?.cancel();
-    _epgRefreshTimer =
-        Timer.periodic(const Duration(minutes: 30), (timer) async {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
+    _timerService.registerCustomCallback('epg_auto_refresh', 1800, () async { // 30 minutes = 1800 seconds
+      if (!mounted) return;
 
       final epgService = Provider.of<EpgService>(context, listen: false);
       final prefs = await SharedPreferences.getInstance();
@@ -209,30 +216,49 @@ class _EPGScreenState extends State<EPGScreen>
     });
   }
 
+  void _syncHorizontalScroll() {
+    if (!_epgState.syncingScroll && _timeHeaderScrollController.hasClients) {
+      _epgState.setSyncingScroll(true);
+      _timeHeaderScrollController.jumpTo(_horizontalScrollController.offset);
+      _epgState.setSyncingScroll(false);
+    }
+  }
+  
+  void _syncTimeHeaderScroll() {
+    if (!_epgState.syncingScroll && _horizontalScrollController.hasClients) {
+      _epgState.setSyncingScroll(true);
+      _horizontalScrollController.jumpTo(_timeHeaderScrollController.offset);
+      _epgState.setSyncingScroll(false);
+    }
+  }
+
   @override
   void dispose() {
     // Restore system UI when leaving
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _refreshAnimationController.dispose();
+    _horizontalScrollController.removeListener(_syncHorizontalScroll);
+    _timeHeaderScrollController.removeListener(_syncTimeHeaderScroll);
     _horizontalScrollController.dispose();
     _timeHeaderScrollController.dispose();
     _verticalScrollController.dispose();
 
-    _refreshButtonFocus.dispose();
-    _firstCategoryFocus.dispose();
-    _firstChannelFocus.dispose();
-    _epgRefreshTimer?.cancel();
+    _focusPool.returnFocusNodes(['epg_refresh', 'epg_first_category', 'epg_first_channel']);
+    _timerService.unregister('epg_auto_refresh');
+    _epgState.dispose();
     super.dispose();
   }
 
+
+  
   /// Scroll the channel list back to the top when category changes
   void _scrollChannelListToTop() {
     if (_verticalScrollController.hasClients) {
-      _verticalScrollController.animateTo(
+      unawaited(_verticalScrollController.animateTo(
         0,
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOut,
-      );
+      ));
     }
   }
 
@@ -258,7 +284,7 @@ class _EPGScreenState extends State<EPGScreen>
     }
 
     // Start spinning animation
-    _refreshAnimationController.repeat();
+    await _refreshAnimationController.repeat();
 
     if (!mounted) return;
     final epgService = Provider.of<EpgService>(context, listen: false);
@@ -274,18 +300,12 @@ class _EPGScreenState extends State<EPGScreen>
   }
 
   Future<void> _toggleEpgFavorite(Channel channel) async {
-    setState(() {
-      if (_epgFavoriteChannelIds.contains(channel.id)) {
-        _epgFavoriteChannelIds.remove(channel.id);
-      } else {
-        _epgFavoriteChannelIds.add(channel.id);
-      }
-    });
+    _epgState.toggleEpgFavorite(channel.id);
 
     // Save to SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(
-        'epg_favorite_channels', _epgFavoriteChannelIds.toList());
+        'epg_favorite_channels', _epgState.epgFavoriteChannelIds.toList());
   }
 
   @override
@@ -314,38 +334,27 @@ class _EPGScreenState extends State<EPGScreen>
               ...categoryList
             ]; // Favorites first, then categories
 
-            // Get filtered channels based on selection (limited for performance)
-            List<Channel> filteredChannels;
-            if (_selectedCategory == '⭐ Favorites') {
-              filteredChannels = channelProvider.getFilteredChannels(
-                favoriteIds: _epgFavoriteChannelIds,
+            // Get all filtered channels for pagination
+            List<Channel> allFilteredChannels;
+            if (_epgState.selectedCategory == '⭐ Favorites') {
+              allFilteredChannels = channelProvider.getFilteredChannels(
+                favoriteIds: _epgState.epgFavoriteChannelIds,
                 excludeHidden: true,
-                limit: 500,
               );
-            } else if (_selectedCategory != null) {
-              filteredChannels = channelProvider.getFilteredChannels(
-                category: _selectedCategory,
+            } else if (_epgState.selectedCategory != null) {
+              allFilteredChannels = channelProvider.getFilteredChannels(
+                category: _epgState.selectedCategory,
                 excludeHidden: true,
-                limit: 1000, // Allow up to 1000 channels per category
               );
             } else {
-              filteredChannels = channelProvider.getFilteredChannels(
+              allFilteredChannels = channelProvider.getFilteredChannels(
                 excludeHidden: true,
-                limit: 500, // Show 500 when no category selected
               );
             }
-
-            // Sort by sortOrder
-            filteredChannels.sort((a, b) {
-              // Sort by custom order first, then by channel number, then by name
-              if (a.sortOrder != null && b.sortOrder != null) {
-                return a.sortOrder!.compareTo(b.sortOrder!);
-              }
-              if (a.channelNumber != null && b.channelNumber != null) {
-                return a.channelNumber!.compareTo(b.channelNumber!);
-              }
-              return a.name.compareTo(b.name);
-            });
+            
+            // Apply pagination
+            _epgState.updatePaginatedChannels(allFilteredChannels);
+            final filteredChannels = _epgState.paginatedChannels;
 
             // Calculate header height for offset
             const headerHeight = 72.0; // Approximate header height
@@ -372,7 +381,7 @@ class _EPGScreenState extends State<EPGScreen>
                             // Program grid with channel names
                             Expanded(
                               child: _buildProgramGrid(
-                                  filteredChannels, epgService),
+                                  filteredChannels, epgService, allFilteredChannels),
                             ),
                           ],
                         ),
@@ -499,7 +508,7 @@ class _EPGScreenState extends State<EPGScreen>
                         ),
                   ),
                   Text(
-                    DateFormat('EEEE, MMM dd').format(_selectedDate),
+                    DateFormat('EEEE, MMM dd').format(_epgState.selectedDate),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.white.withValues(alpha: 0.7),
                           decoration: TextDecoration.none,
@@ -536,7 +545,7 @@ class _EPGScreenState extends State<EPGScreen>
                     if (event.logicalKey == LogicalKeyboardKey.select ||
                         event.logicalKey == LogicalKeyboardKey.enter) {
                       if (!epgService.isLoading) {
-                        _triggerEpgRefresh();
+                        unawaited(_triggerEpgRefresh());
                       }
                       return KeyEventResult.handled;
                     }
@@ -576,7 +585,7 @@ class _EPGScreenState extends State<EPGScreen>
                             );
                           },
                         ),
-                        onPressed: epgService.isLoading ? null : _triggerEpgRefresh,
+                        onPressed: epgService.isLoading ? null : () => unawaited(_triggerEpgRefresh()),
                         tooltip: 'Refresh EPG Data',
                       ),
                     );
@@ -599,12 +608,10 @@ class _EPGScreenState extends State<EPGScreen>
           final category = categories[index];
           return _buildCategoryItem(
             name: category,
-            isSelected: _selectedCategory == category,
+            isSelected: _epgState.selectedCategory == category,
             isFirst: index == 0,
             onTap: () {
-              setState(() {
-                _selectedCategory = category;
-              });
+              _epgState.setSelectedCategory(category);
               // Scroll channel list to top
               _scrollChannelListToTop();
             },
@@ -670,7 +677,7 @@ class _EPGScreenState extends State<EPGScreen>
 
 
 
-  Widget _buildProgramGrid(List<Channel> channels, EpgService epgService) {
+  Widget _buildProgramGrid(List<Channel> channels, EpgService epgService, List<Channel> allChannels) {
     debugPrint(
         'EPG Grid: isLoading=${epgService.isLoading}, hasData=${epgService.hasData}, epgData keys=${epgService.epgData.keys.length}');
 
@@ -724,12 +731,12 @@ class _EPGScreenState extends State<EPGScreen>
                           ),
                           child: Center(
                             child: Text(
-                              _selectedDate.day == DateTime.now().day &&
-                                      _selectedDate.month ==
+                              _epgState.selectedDate.day == DateTime.now().day &&
+                                      _epgState.selectedDate.month ==
                                           DateTime.now().month &&
-                                      _selectedDate.year == DateTime.now().year
+                                      _epgState.selectedDate.year == DateTime.now().year
                                   ? 'Today'
-                                  : '${_selectedDate.month}/${_selectedDate.day}',
+                                  : '${_epgState.selectedDate.month}/${_epgState.selectedDate.day}',
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 14,
@@ -738,16 +745,17 @@ class _EPGScreenState extends State<EPGScreen>
                             ),
                           ),
                         ),
-                        // Channel list (lazy loaded)
+                        // Channel list with pagination
                         Expanded(
-                          child: ListView.builder(
-                            controller: _verticalScrollController,
-                            physics: const BouncingScrollPhysics(),
-                            itemCount: channels.length,
-                            itemExtent: 64,
-                            itemBuilder: (context, index) {
-                              return _buildChannelSidebarItem(channels[index]);
+                          child: EPGChannelSidebar(
+                            channels: channels,
+                            isLoadingMore: _epgState.isLoadingMore,
+                            onLoadMore: () => _epgState.loadMoreChannels(allChannels),
+                            onChannelTap: (channel) {
+                              context.push('/player', extra: channel);
                             },
+                            onChannelLongPress: (channel) => _showChannelContextMenu(context, channel),
+                            controller: _verticalScrollController,
                           ),
                         ),
                       ],
@@ -761,51 +769,26 @@ class _EPGScreenState extends State<EPGScreen>
                         Container(
                           height: 64,
                           margin: const EdgeInsets.only(bottom: 4),
-                          child: NotificationListener<ScrollNotification>(
-                            onNotification: (notification) {
-                              if (notification is ScrollUpdateNotification) {
-                                _horizontalScrollController.jumpTo(_timeHeaderScrollController.offset);
-                              }
-                              return false;
-                            },
-                            child: SingleChildScrollView(
-                              controller: _timeHeaderScrollController,
-                              scrollDirection: Axis.horizontal,
-                              physics: const BouncingScrollPhysics(),
-                              child: SizedBox(
-                                width: _calculateProgramsGridWidth(),
-                                child: _buildTimeHeaderOnly(),
-                              ),
+                          child: SingleChildScrollView(
+                            controller: _timeHeaderScrollController,
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            child: SizedBox(
+                              width: _epgState.calculateProgramsGridWidth(),
+                              child: _buildTimeHeaderOnly(),
                             ),
                           ),
                         ),
                         // Programs grid (lazy loaded with synchronized scroll)
                         Expanded(
-                          child: NotificationListener<ScrollNotification>(
-                            onNotification: (notification) {
-                              if (notification is ScrollUpdateNotification && notification.depth == 0) {
-                                _timeHeaderScrollController.jumpTo(_horizontalScrollController.offset);
-                              }
-                              return false;
-                            },
-                            child: SingleChildScrollView(
-                              controller: _horizontalScrollController,
-                              scrollDirection: Axis.horizontal,
-                              physics: const BouncingScrollPhysics(),
-                              child: SizedBox(
-                                width: _calculateProgramsGridWidth(),
-                                child: ListView.builder(
-                                  controller: _verticalScrollController,
-                                  physics: const ClampingScrollPhysics(),
-                                  itemCount: channels.length,
-                                  itemExtent: 64,
-                                  itemBuilder: (context, index) {
-                                    return _buildProgramRowOnly(
-                                        channels[index], epgService);
-                                  },
-                                ),
-                              ),
-                            ),
+                          child: EPGProgramsGrid(
+                            channels: channels,
+                            epgService: epgService,
+                            isLoadingMore: _epgState.isLoadingMore,
+                            horizontalController: _horizontalScrollController,
+                            verticalController: _verticalScrollController,
+                            gridWidth: _epgState.calculateProgramsGridWidth(),
+                            onProgramTap: _showProgramDetails,
                           ),
                         ),
                       ],
@@ -838,109 +821,7 @@ class _EPGScreenState extends State<EPGScreen>
     );
   }
 
-  /// Channel sidebar item (fixed on left)
-  Widget _buildChannelSidebarItem(Channel channel) {
-    final isFirst = _selectedChannelId == null &&
-        channel.id ==
-            (_selectedCategory == '⭐ Favorites'
-                ? Provider.of<ChannelProvider>(context, listen: false)
-                    .getFilteredChannels(
-                        favoriteIds: _epgFavoriteChannelIds,
-                        excludeHidden: true,
-                        limit: 1)
-                    .firstOrNull
-                    ?.id
-                : Provider.of<ChannelProvider>(context, listen: false)
-                    .getFilteredChannels(
-                        category: _selectedCategory,
-                        excludeHidden: true,
-                        limit: 1)
-                    .firstOrNull
-                    ?.id);
 
-    return Focus(
-      focusNode: isFirst ? _firstChannelFocus : null,
-      canRequestFocus: true,
-      onKeyEvent: (node, event) {
-        if (event is KeyDownEvent) {
-          if (event.logicalKey == LogicalKeyboardKey.select ||
-              event.logicalKey == LogicalKeyboardKey.enter) {
-            setState(() {
-              _selectedChannelId = channel.id;
-            });
-            // Navigate to full player
-            context.push('/player', extra: channel);
-            return KeyEventResult.handled;
-          }
-          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-            _firstCategoryFocus.requestFocus();
-            return KeyEventResult.handled;
-          }
-          if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-            // Focus first program in the timeline for this channel
-            return KeyEventResult.ignored; // Let it find first focusable program
-          }
-        }
-        return KeyEventResult.ignored;
-      },
-      child: Builder(
-        builder: (context) {
-          final isFocused = Focus.of(context).hasFocus;
-          return GestureDetector(
-            onTap: () {
-              setState(() {
-                _selectedChannelId = channel.id;
-              });
-              // Navigate to full player
-              context.push('/player', extra: channel);
-            },
-            onLongPress: () => _showChannelContextMenu(context, channel),
-            child: Container(
-              height: 64,
-              margin: const EdgeInsets.only(bottom: 4, right: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF2a2a3e).withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(8),
-                border: isFocused
-                    ? Border.all(color: AppTheme.primaryBlue, width: 2)
-                    : Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
-              ),
-              child: Center(
-                child: Container(
-                  width: 48,
-                  height: 48,
-                  child: channel.logoUrl != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(7),
-                          child: Image.network(
-                            channel.logoUrl!,
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Center(
-                                child: Icon(
-                                  Icons.dvr,
-                                  color: AppTheme.primaryBlue,
-                                  size: 24,
-                                ),
-                              );
-                            },
-                          ),
-                        )
-                      : const Center(
-                          child: Icon(
-                            Icons.dvr,
-                            color: AppTheme.primaryBlue,
-                            size: 24,
-                          ),
-                        ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
 
   /// Time header only (no channel sidebar part)
   Widget _buildTimeHeaderOnly() {
@@ -980,167 +861,15 @@ class _EPGScreenState extends State<EPGScreen>
     );
   }
 
-  /// Program row only (no channel info part)
-  Widget _buildProgramRowOnly(Channel channel, EpgService epgService) {
-    // Use channel.id as the unique key to prevent duplicate EPG data
-    final channelKey = channel.tvgId ?? channel.id;
-    final programs =
-        epgService.getProgramsForChannel(channelKey, channelName: channel.name);
 
-    final now = DateTime.now();
-    final startHour = now.hour; // Start from current hour, not 1 hour before
-    final displayStart = DateTime(
-        _selectedDate.year, _selectedDate.month, _selectedDate.day, startHour);
-    final displayEnd = displayStart.add(const Duration(hours: 12));
+  
 
-    final dayPrograms = programs.where((program) {
-      return program.startTime.isBefore(displayEnd) &&
-          program.endTime.isAfter(displayStart);
-    }).toList();
 
-    final cellWidth = 240.0;
-    final totalWidth = 12 * cellWidth;
 
-    return Container(
-      height: 64,
-      width: totalWidth,
-      margin: const EdgeInsets.only(bottom: 4, left: 4),
-      child: dayPrograms.isEmpty
-          ? Container(
-              alignment: Alignment.centerLeft,
-              padding: const EdgeInsets.only(left: 12),
-              child: Text(
-                'No EPG data',
-                style: TextStyle(
-                    fontSize: 12, color: Colors.white.withValues(alpha: 0.5)),
-              ),
-            )
-          : Stack(
-              clipBehavior: Clip.hardEdge,
-              children: dayPrograms.map((program) {
-                final programStart = program.startTime.isBefore(displayStart)
-                    ? displayStart
-                    : program.startTime;
-                final programEnd = program.endTime.isAfter(displayEnd)
-                    ? displayEnd
-                    : program.endTime;
-
-                final minutesFromStart =
-                    programStart.difference(displayStart).inMinutes;
-                final leftOffset = (minutesFromStart / 60) * (cellWidth + 4);
-
-                final visibleDuration =
-                    programEnd.difference(programStart).inMinutes;
-                final calculatedWidth = (visibleDuration / 60) * (cellWidth + 4) - 4;
-                final maxWidth =
-                    (totalWidth - leftOffset).clamp(0.0, double.infinity);
-                final minWidth = maxWidth < 30.0 ? maxWidth : 30.0;
-                final width = calculatedWidth.clamp(minWidth, maxWidth);
-
-                return Positioned(
-                  left: leftOffset,
-                  top: 0,
-                  height: 64,
-                  width: width,
-                  child: _buildProgramCellSimple(program),
-                );
-              }).toList(),
-            ),
-    );
-  }
-
-  /// Simple program cell (used in the new layout)
-  Widget _buildProgramCellSimple(Program program) {
-    final isLive = program.isCurrentlyPlaying;
-    final hasCatchup = program.hasCatchup;
-
-    const epgLiveColor = AppColors.epgLive;
-    const epgCatchupColor = AppColors.epgCatchup;
-
-    return Focus(
-      canRequestFocus: true,
-      onKeyEvent: (node, event) {
-        if (event is KeyDownEvent) {
-          if (event.logicalKey == LogicalKeyboardKey.select ||
-              event.logicalKey == LogicalKeyboardKey.enter) {
-            _showProgramDetails(program);
-            return KeyEventResult.handled;
-          }
-        }
-        return KeyEventResult.ignored;
-      },
-      child: Builder(
-        builder: (context) {
-          final isFocused = Focus.of(context).hasFocus;
-          return Container(
-            margin: const EdgeInsets.only(right: 4),
-            decoration: BoxDecoration(
-              color: isLive
-                  ? epgLiveColor.withValues(alpha: 0.25)
-                  : hasCatchup
-                      ? epgCatchupColor.withValues(alpha: 0.2)
-                      : const Color(0xFF2a2a3e).withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(8),
-              border: isFocused
-                  ? Border.all(color: AppTheme.primaryBlue, width: 2)
-                  : Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () => _showProgramDetails(program),
-                onLongPress: () => _showProgramContextMenu(program),
-                borderRadius: BorderRadius.circular(4),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Row(
-                        children: [
-                          if (hasCatchup) ...[
-                            const Icon(Icons.replay,
-                                size: 10, color: epgCatchupColor),
-                            const SizedBox(width: 3),
-                          ],
-                          Expanded(
-                            child: Text(
-                              program.title,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight:
-                                    isLive ? FontWeight.w600 : FontWeight.normal,
-                                color: Colors.white.withValues(alpha: 0.9),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        '${DateFormat.jm().format(program.startTime)} - ${DateFormat.jm().format(program.endTime)}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.white.withValues(alpha: 0.6),
-                        ),
-                        maxLines: 1,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
 
   void _showProgramDetails(Program program) {
     final rootContext = context; // Capture parent context for snackbars
-    showDialog(
+    unawaited(showDialog(
       context: context,
       builder: (dialogContext) => Dialog(
         backgroundColor: AppColors.cardDark,
@@ -1154,22 +883,18 @@ class _EPGScreenState extends State<EPGScreen>
             children: [
               // Program image
               if (program.imageUrl != null)
-                ClipRRect(
+                CachedImage(
+                  imageUrl: program.imageUrl!,
+                  height: 200,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
                   borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-                  child: Image.network(
-                    program.imageUrl!,
+                  errorWidget: Container(
                     height: 200,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        height: 200,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF050710),
-                        ),
-                        child: const Icon(Icons.dvr, size: 64),
-                      );
-                    },
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF050710),
+                    ),
+                    child: const Icon(Icons.dvr, size: 64),
                   ),
                 ),
 
@@ -1307,16 +1032,10 @@ class _EPGScreenState extends State<EPGScreen>
           ),
         ),
       ),
-    );
+    ));
   }
 
-  double _calculateGridWidth() {
-    final hours = _isHourlyView ? 24 : 48;
-    final cellWidth = _isHourlyView ? 120.0 : 60.0;
-    const channelSidebarWidth =
-        80.0; // Must match the channel info section width
-    return channelSidebarWidth + (hours * cellWidth);
-  }
+
 
 
   /// Show context menu for channel long press
@@ -1325,7 +1044,7 @@ class _EPGScreenState extends State<EPGScreen>
     final epgService = Provider.of<EpgService>(context, listen: false);
     final hasMapping = epgService.hasManualMapping(channel.tvgId ?? channel.id);
 
-    showModalBottomSheet(
+    unawaited(showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF1E1E2E),
       shape: const RoundedRectangleBorder(
@@ -1340,20 +1059,11 @@ class _EPGScreenState extends State<EPGScreen>
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  if (channel.logoUrl != null)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        channel.logoUrl!,
-                        width: 40,
-                        height: 40,
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) =>
-                            const Icon(Icons.tv, size: 40),
-                      ),
-                    )
-                  else
-                    const Icon(Icons.tv, size: 40, color: AppTheme.primaryBlue),
+                  CachedChannelLogo(
+                    logoUrl: channel.logoUrl,
+                    size: 40,
+                    fallbackIcon: Icons.tv,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -1379,17 +1089,17 @@ class _EPGScreenState extends State<EPGScreen>
             // Options
             ListTile(
               leading: Icon(
-                _epgFavoriteChannelIds.contains(channel.id)
+                _epgState.epgFavoriteChannelIds.contains(channel.id)
                     ? Icons.favorite
                     : Icons.favorite_border,
                 color: AppTheme.accentPink,
               ),
-              title: Text(_epgFavoriteChannelIds.contains(channel.id)
+              title: Text(_epgState.epgFavoriteChannelIds.contains(channel.id)
                   ? 'Remove from Favorites'
                   : 'Add to Favorites'),
               onTap: () {
                 Navigator.pop(ctx);
-                _toggleEpgFavorite(channel);
+                unawaited(_toggleEpgFavorite(channel));
               },
             ),
             ListTile(
@@ -1418,7 +1128,7 @@ class _EPGScreenState extends State<EPGScreen>
           ],
         ),
       ),
-    );
+    ));
   }
 
   /// Show EPG channel selection dialog
@@ -1448,7 +1158,7 @@ class _EPGScreenState extends State<EPGScreen>
       limit: 15,
     );
 
-    showDialog(
+    unawaited(showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) {
@@ -1464,8 +1174,12 @@ class _EPGScreenState extends State<EPGScreen>
             filteredIds = [...suggestions.map((e) => e.key), ...otherIds];
           } else {
             filteredIds = epgChannelIds
-                .where((id) =>
-                    id.toLowerCase().contains(searchQuery.toLowerCase()))
+                .where((id) {
+                  final displayName = _getDisplayNameForEpgId(id).toLowerCase();
+                  final idLower = id.toLowerCase();
+                  final queryLower = searchQuery.toLowerCase();
+                  return displayName.contains(queryLower) || idLower.contains(queryLower);
+                })
                 .toList();
           }
 
@@ -1592,7 +1306,7 @@ class _EPGScreenState extends State<EPGScreen>
                                       : const Icon(Icons.tv_outlined,
                                           color: AppTheme.textSecondary),
                               title: Text(
-                                epgId,
+                                _getDisplayNameForEpgId(epgId),
                                 style: TextStyle(
                                   fontWeight: isCurrentlyMapped || isSuggested
                                       ? FontWeight.bold
@@ -1664,7 +1378,7 @@ class _EPGScreenState extends State<EPGScreen>
           );
         },
       ),
-    );
+    ));
   }
 
   /// Set EPG mapping for a channel
@@ -1701,377 +1415,44 @@ class _EPGScreenState extends State<EPGScreen>
   }
 
 
-  /// Show context menu for program long press
-  void _showProgramContextMenu(Program program) {
-    if (!mounted) return;
-    final isLive = program.isCurrentlyPlaying;
-    final hasCatchup = program.hasCatchup;
-    final isPast = program.endTime.isBefore(DateTime.now());
-    final isFuture = program.startTime.isAfter(DateTime.now());
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1E1E2E),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header with program info
-            Container(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Program image or icon
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: isLive
-                          ? AppTheme.primaryBlue
-                          : hasCatchup
-                              ? const Color(0xFFcc5a2d)
-                                  .withAlpha((0.3 * 255).round())
-                              : AppTheme.cardBackground,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: program.imageUrl != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              program.imageUrl!,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Icon(
-                                isLive ? Icons.live_tv : Icons.tv,
-                                color: Colors.white,
-                              ),
-                            ),
-                          )
-                        : Icon(
-                            isLive
-                                ? Icons.live_tv
-                                : hasCatchup
-                                    ? Icons.replay
-                                    : Icons.tv,
-                            color: Colors.white,
-                            size: 28,
-                          ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            if (isLive)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
-                                margin: const EdgeInsets.only(right: 8),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.accentRed,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: const Text(
-                                  'LIVE',
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                            if (hasCatchup && !isLive)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
-                                margin: const EdgeInsets.only(right: 8),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFcc5a2d),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: const Text(
-                                  'CATCHUP',
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          program.title,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 18),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${DateFormat.jm().format(program.startTime)} - ${DateFormat.jm().format(program.endTime)}',
-                          style: TextStyle(
-                              color: AppTheme.textSecondary, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
-            const SizedBox(height: 8),
 
-            // Watch Catchup option (only if has catchup and not live)
-            if (hasCatchup && !isLive && isPast)
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: TVFocusable(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    _playCatchup(program);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFcc5a2d)
-                          .withAlpha((0.15 * 255).round()),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.replay, color: Color(0xFFcc5a2d)),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Watch Catchup',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 16)),
-                              const SizedBox(height: 2),
-                              Text('Watch from the beginning',
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      color: AppTheme.textSecondary)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
 
-            // Record option (for future or live programs)
-            if (!isPast || isLive)
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: TVFocusable(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    _scheduleRecording(program);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppTheme.accentRed.withAlpha((0.15 * 255).round()),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.fiber_manual_record,
-                            color: AppTheme.accentRed),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(isLive ? 'Record Now' : 'Schedule Recording',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 16)),
-                              const SizedBox(height: 2),
-                              Text(
-                                  isLive
-                                      ? 'Start recording this program'
-                                      : 'Record when it airs',
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      color: AppTheme.textSecondary)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
 
-            // Set Reminder (for future programs)
-            if (isFuture)
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: TVFocusable(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    _setReminder(program);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color:
-                          AppTheme.primaryBlue.withAlpha((0.15 * 255).round()),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.alarm_add,
-                            color: AppTheme.primaryBlue),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Set Reminder',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 16)),
-                              const SizedBox(height: 2),
-                              Text('Get notified when it starts',
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      color: AppTheme.textSecondary)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
 
-            // View Details
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: TVFocusable(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  _showProgramDetails(program);
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppTheme.cardBackground,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline, color: AppTheme.textSecondary),
-                      const SizedBox(width: 16),
-                      const Text('View Details',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: 16)),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
 
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Schedule recording for a program
-  void _scheduleRecording(Program program) async {
-    if (!mounted) return;
+  /// Convert EPG ID to readable display name
+  String _getDisplayNameForEpgId(String epgId) {
+    // Remove domain suffixes
+    String name = epgId.split('.').first;
     
-    // Store scheduled recording in SharedPreferences
-    final prefs = await SharedPreferences.getInstance();
-    final recordings = prefs.getStringList('scheduled_recordings') ?? [];
-    final recordingData = {
-      'id': program.id,
-      'title': program.title,
-      'startTime': program.startTime.millisecondsSinceEpoch,
-      'endTime': program.endTime.millisecondsSinceEpoch,
-      'channelId': program.channelId,
+    // Convert common patterns to readable names
+    final patterns = {
+      RegExp(r'^bbc(\d+)$', caseSensitive: false): (Match m) => 'BBC ${m.group(1)}',
+      RegExp(r'^itv(\d+)?$', caseSensitive: false): (Match m) => 'ITV${m.group(1) ?? ''}',
+      RegExp(r'^channel(\d+)$', caseSensitive: false): (Match m) => 'Channel ${m.group(1)}',
+      RegExp(r'^sky(\w+)$', caseSensitive: false): (Match m) => 'Sky ${m.group(1)!.toUpperCase()}',
+      RegExp(r'^fox(\w+)?$', caseSensitive: false): (Match m) => 'FOX${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
+      RegExp(r'^cnn(\w+)?$', caseSensitive: false): (Match m) => 'CNN${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
+      RegExp(r'^abc(\w+)?$', caseSensitive: false): (Match m) => 'ABC${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
+      RegExp(r'^nbc(\w+)?$', caseSensitive: false): (Match m) => 'NBC${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
+      RegExp(r'^cbs(\w+)?$', caseSensitive: false): (Match m) => 'CBS${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
     };
-    recordings.add(json.encode(recordingData));
-    await prefs.setStringList('scheduled_recordings', recordings);
     
-    if (mounted) {
-      showAppSnackBar(
-          context,
-          SnackBar(
-            content: Text('Recording scheduled: ${program.title}'),
-            backgroundColor: AppTheme.accentRed,
-            action: SnackBarAction(
-              label: 'Undo',
-              textColor: Colors.white,
-              onPressed: () async {
-                // Remove from scheduled recordings
-                final updatedRecordings = recordings.where((r) => 
-                  json.decode(r)['id'] != program.id).toList();
-                await prefs.setStringList('scheduled_recordings', updatedRecordings);
-              },
-            ),
-          ));
+    for (final pattern in patterns.entries) {
+      final match = pattern.key.firstMatch(name);
+      if (match != null) {
+        return pattern.value(match);
+      }
     }
-  }
-
-  /// Set reminder for a program
-  void _setReminder(Program program) async {
-    if (!mounted) return;
     
-    // Store reminder in SharedPreferences
-    final prefs = await SharedPreferences.getInstance();
-    final reminders = prefs.getStringList('program_reminders') ?? [];
-    final reminderData = {
-      'id': program.id,
-      'title': program.title,
-      'startTime': program.startTime.millisecondsSinceEpoch,
-      'channelId': program.channelId,
-      'reminderTime': program.startTime.subtract(const Duration(minutes: 15)).millisecondsSinceEpoch,
-    };
-    reminders.add(json.encode(reminderData));
-    await prefs.setStringList('program_reminders', reminders);
+    // Capitalize first letter and replace underscores/hyphens with spaces
+    name = name.replaceAll(RegExp(r'[_-]'), ' ');
+    if (name.isNotEmpty) {
+      name = name[0].toUpperCase() + name.substring(1).toLowerCase();
+    }
     
-    final timeUntil = program.startTime.difference(DateTime.now());
-    String timeStr;
-    if (timeUntil.inHours > 0) {
-      timeStr = '${timeUntil.inHours}h ${timeUntil.inMinutes % 60}m';
-    } else {
-      timeStr = '${timeUntil.inMinutes}m';
-    }
-
-    if (mounted) {
-      showAppSnackBar(
-          context,
-          SnackBar(
-            content: Text('Reminder set for ${program.title} (in $timeStr)'),
-            backgroundColor: AppTheme.primaryBlue,
-            action: SnackBarAction(
-              label: 'Undo',
-              textColor: Colors.white,
-              onPressed: () async {
-                // Remove from reminders
-                final updatedReminders = reminders.where((r) => 
-                  json.decode(r)['id'] != program.id).toList();
-                await prefs.setStringList('program_reminders', updatedReminders);
-              },
-            ),
-          ));
-    }
+    return name.isEmpty ? epgId : name;
   }
 
   void _playCatchup(Program program) {

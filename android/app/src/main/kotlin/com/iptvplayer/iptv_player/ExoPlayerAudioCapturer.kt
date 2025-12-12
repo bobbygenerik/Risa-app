@@ -1,6 +1,6 @@
 @file:Suppress("TooGenericExceptionCaught", "XXE")
 
-package com.risa.app
+package com.iptvplayer.iptv_player
 
 import android.content.Context
 import android.os.Handler
@@ -76,8 +76,12 @@ class ExoPlayerAudioCapturer(private val context: Context) {
                         Log.e(TAG, "Failed to post to handler: ${e.message}")
                     }
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error processing audio buffer: ${e.message}")
+            } catch (e: IllegalStateException) {
+                Log.e(TAG, "Audio processor state error: ${e.message}")
+            } catch (e: RuntimeException) {
+                Log.e(TAG, "Runtime error processing audio buffer: ${e.message}")
+            } catch (e: OutOfMemoryError) {
+                Log.e(TAG, "Out of memory processing audio buffer: ${e.message}")
             }
         }
         

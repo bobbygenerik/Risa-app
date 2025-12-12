@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/widgets/brand_button.dart';
 
 class ExitScreen extends StatefulWidget {
   const ExitScreen({super.key});
@@ -149,35 +150,9 @@ class _ExitScreenState extends State<ExitScreen> {
                       }
                       return KeyEventResult.ignored;
                     },
-                    child: Builder(
-                      builder: (context) {
-                        final isFocused = Focus.of(context).hasFocus;
-                        return ElevatedButton(
-                          onPressed: () => context.go('/home'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                Colors.white.withValues(alpha: 0.1),
-                            foregroundColor: AppTheme.textPrimary,
-                            side: BorderSide(
-                              color: isFocused
-                                  ? AppTheme.primaryBlue
-                                  : Colors.white.withValues(alpha: 0.2),
-                              width: isFocused ? 2 : 1,
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 32, vertical: 16),
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: const Text(
-                            'Go Back',
-                            style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.w600),
-                          ),
-                        );
-                      },
+                    child: BrandSecondaryButton(
+                      onPressed: () => context.go('/home'),
+                      label: 'Go Back',
                     ),
                   ),
                   const SizedBox(width: 24),
@@ -197,33 +172,9 @@ class _ExitScreenState extends State<ExitScreen> {
                       }
                       return KeyEventResult.ignored;
                     },
-                    child: Builder(
-                      builder: (context) {
-                        final isFocused = Focus.of(context).hasFocus;
-                        return ElevatedButton(
-                          onPressed: () => SystemNavigator.pop(),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.accentRed,
-                            foregroundColor: Colors.white,
-                            side: BorderSide(
-                              color:
-                                  isFocused ? Colors.white : Colors.transparent,
-                              width: isFocused ? 2 : 0,
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 32, vertical: 16),
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: const Text(
-                            'Exit App',
-                            style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.w600),
-                          ),
-                        );
-                      },
+                    child: BrandPrimaryButton(
+                      onPressed: () => SystemNavigator.pop(),
+                      label: 'Exit App',
                     ),
                   ),
                 ],

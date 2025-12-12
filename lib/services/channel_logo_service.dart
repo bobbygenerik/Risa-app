@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -189,7 +190,7 @@ class ChannelLogoService {
         // Verify the URL works
         if (await _verifyUrl(url)) {
           _logoCache[normalized] = url;
-          _saveCache();
+          unawaited(_saveCache());
           return url;
         }
       }
@@ -200,14 +201,14 @@ class ChannelLogoService {
       final url = _knownLogos[normalized]!;
       if (await _verifyUrl(url)) {
         _logoCache[normalized] = url;
-        _saveCache();
+        unawaited(_saveCache());
         return url;
       }
     }
     
     // Cache miss - store null to avoid repeated lookups
     _logoCache[normalized] = null;
-    _saveCache();
+    unawaited(_saveCache());
     return null;
   }
 

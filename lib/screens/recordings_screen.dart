@@ -1,4 +1,5 @@
 // ignore_for_file: todo
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/utils/app_theme.dart';
@@ -128,7 +129,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
     if (confirmed == true) {
       try {
         await file.delete();
-        _loadRecordings(); // Reload list
+        unawaited(_loadRecordings()); // Reload list
         if (mounted) {
           showAppSnackBar(
             context,
