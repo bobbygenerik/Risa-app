@@ -247,6 +247,7 @@ class IncrementalEpgService with ChangeNotifier {
   String? getManualMapping(String channelId) => null;
   List<String> getEpgChannelIds() => _availableChannels.toList();
   List<MapEntry<String, double>> getSuggestedMatches(String channelId, String? channelName, {int limit = 10}) => [];
+  String? getChannelPreview(String epgChannelId) => null;
   Future<void> setManualMapping(String channelId, String epgChannelId) async {}
   Future<void> removeManualMapping(String channelId) async {}
 }
