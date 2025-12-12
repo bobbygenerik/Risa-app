@@ -97,18 +97,18 @@ class _EPGScreenState extends State<EPGScreen>
       // Wait for EPG service to initialize (max 5 seconds)
       int initWaitCount = 0;
       while (
-          !epgService.hasData && epgService.isLoading && initWaitCount < 50) {
+          epgService.availableChannels.isEmpty && epgService.isLoading && initWaitCount < 50) {
         await Future.delayed(const Duration(milliseconds: 100));
         initWaitCount++;
       }
 
-      debugPrint('EPG Screen: hasData = ${epgService.hasData}');
-      debugPrint('EPG Screen: epgData.length = ${epgService.epgData.length}');
+      debugPrint('EPG Screen: availableChannels = ${epgService.availableChannels.length}');
+      debugPrint('EPG Screen: loadedChannels = ${epgService.loadedChannelCount}');
       debugPrint('EPG Screen: isLoading = ${epgService.isLoading}');
       debugPrint('EPG Screen: error = ${epgService.error}');
 
       // Load EPG if we don't have data yet (with retry)
-      if (!epgService.hasData) {
+      if (epgService.availableChannels.isEmpty) {
         final epgUrl =
             prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
         if (epgUrl != null && epgUrl.isNotEmpty) {
@@ -121,9 +121,8 @@ class _EPGScreenState extends State<EPGScreen>
 
           while (!success && retryCount < maxRetries && mounted) {
             try {
-              await epgService.loadEpgFromUrl(epgUrl,
-                  forceRefresh: retryCount > 0);
-              if (epgService.hasData) {
+              await epgService.initialize();
+              if (epgService.availableChannels.isNotEmpty) {
                 success = true;
                 debugPrint('EPG Screen: Successfully loaded EPG data');
               } else if (epgService.error != null) {
@@ -187,7 +186,7 @@ class _EPGScreenState extends State<EPGScreen>
 
       if (epgUrl != null && epgUrl.isNotEmpty && !epgService.isLoading) {
         debugPrint('EPG Screen: Auto-refreshing EPG data...');
-        await epgService.refresh(epgUrl);
+        await epgService.initialize();
       }
     });
   }
@@ -290,7 +289,7 @@ class _EPGScreenState extends State<EPGScreen>
     final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
 
     // Refresh EPG in background
-    await epgService.refresh(epgUrl);
+    await epgService.initialize();
 
     // Stop spinning
     _refreshAnimationController.stop();
@@ -679,7 +678,7 @@ class _EPGScreenState extends State<EPGScreen>
 
   Widget _buildProgramGrid(List<Channel> channels, IncrementalEpgService epgService, List<Channel> allChannels) {
     debugPrint(
-        'EPG Grid: isLoading=${epgService.isLoading}, hasData=${epgService.hasData}, epgData keys=${epgService.epgData.keys.length}');
+        'EPG Grid: isLoading=${epgService.isLoading}, availableChannels=${epgService.availableChannels.length}, loadedChannels=${epgService.loadedChannelCount}');
 
     // Show loading overlay but still display the grid structure
     final bool isLoading = epgService.isLoading;
@@ -690,7 +689,7 @@ class _EPGScreenState extends State<EPGScreen>
       children: [
         Column(
           children: [
-            if (!epgService.hasData && !isLoading)
+            if (epgService.availableChannels.isEmpty && !isLoading)
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
