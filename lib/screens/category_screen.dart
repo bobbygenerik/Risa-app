@@ -9,6 +9,7 @@ import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/widgets/brand_badge.dart';
 import 'package:iptv_player/utils/app_typography.dart';
 import 'package:iptv_player/utils/app_colors.dart';
+import 'package:iptv_player/utils/app_icons.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
 
 class CategoryScreen extends StatelessWidget {
@@ -34,7 +35,7 @@ class CategoryScreen extends StatelessWidget {
               Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back),
+                    icon: context.backIcon(),
                     onPressed: () => context.go('/home'),
                   ),
                   context.spacingSmBox,
@@ -93,7 +94,7 @@ class CategoryScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                Icons.tv_off,
+                AppIcons.tvOff,
                 size: context.tvIconSize(80),
                 color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
               ),
@@ -179,7 +180,7 @@ class CategoryScreen extends StatelessWidget {
                           right: context.scale(4),
                           child: IconButton(
                             icon: Icon(
-                              isFavorite ? Icons.favorite : Icons.favorite_border,
+                              isFavorite ? AppIcons.favorite : AppIcons.favoriteOutline,
                               size: context.tvIconSize(16),
                               color: isFavorite ? AppTheme.accentRed : AppColors.textPrimary,
                             ),
@@ -233,7 +234,7 @@ class CategoryScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                Icons.live_tv,
+                AppIcons.liveTV,
                 size: context.tvIconSize(40),
                 color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
               ),

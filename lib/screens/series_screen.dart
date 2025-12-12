@@ -17,6 +17,7 @@ import 'package:iptv_player/widgets/content_focus_provider.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/widgets/vod_card_image.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
+import 'package:iptv_player/utils/app_icons.dart';
 
 class SeriesScreen extends StatefulWidget {
   const SeriesScreen({super.key});
@@ -328,9 +329,8 @@ class _SeriesScreenState extends State<SeriesScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.tv,
-                size: context.tvIconSize(48),
+              context.iconXl(
+                AppIcons.series,
                 color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
               ),
               SizedBox(height: context.tvSpacing(AppSizes.lg)),
@@ -565,9 +565,8 @@ class _SeriesScreenState extends State<SeriesScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.tv,
-              size: context.tvIconSize(32),
+            context.iconLg(
+              AppIcons.series,
               color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
             ),
             SizedBox(height: context.tvSpacing(8)),
@@ -880,7 +879,7 @@ class _SeriesScreenState extends State<SeriesScreen>
               Row(
                 children: [
                   if (featuredSeries.rating != null) ...[
-                    const Icon(Icons.star, color: Colors.amber, size: 16),
+                    context.starIcon(color: Colors.amber),
                     SizedBox(width: AppSizes.xs),
                     Text(
                       featuredSeries.ratingDisplay,
@@ -905,7 +904,7 @@ class _SeriesScreenState extends State<SeriesScreen>
               children: [
                 BrandPrimaryButton(
                   label: 'Watch',
-                  icon: Icons.play_arrow,
+                  icon: AppIcons.play,
                   onPressed: () {
                     final encodedId = Uri.encodeComponent(featuredSeries.id);
                     context.push('/content/$encodedId', extra: featuredSeries);
@@ -914,7 +913,7 @@ class _SeriesScreenState extends State<SeriesScreen>
                 const SizedBox(width: 12),
                 BrandSecondaryButton(
                   label: 'More Info',
-                  icon: Icons.info_outline,
+                  icon: AppIcons.info,
                   onPressed: () {
                     final encodedId = Uri.encodeComponent(featuredSeries.id);
                     context.push('/content/$encodedId', extra: featuredSeries);

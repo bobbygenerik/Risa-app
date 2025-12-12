@@ -19,6 +19,7 @@ import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
 import 'package:iptv_player/utils/app_colors.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
+import 'package:iptv_player/utils/app_icons.dart';
 
 class EPGScreen extends StatefulWidget {
   final Channel? initialChannel;
@@ -440,7 +441,7 @@ class _EPGScreenState extends State<EPGScreen>
                     ],
                   ),
                   child: const Icon(
-                    Icons.tv_off_outlined,
+                    AppIcons.tvOff,
                     size: 42,
                     color: Colors.white,
                   ),
@@ -455,7 +456,7 @@ class _EPGScreenState extends State<EPGScreen>
                 ),
                 const SizedBox(height: AppSizes.xl),
                 BrandPrimaryButton(
-                  icon: Icons.playlist_add_circle,
+                  icon: AppIcons.add,
                   label: 'Add Playlist',
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSizes.xl,
@@ -483,7 +484,7 @@ class _EPGScreenState extends State<EPGScreen>
           // Left side - Guide title
           Row(
             children: [
-              const Icon(Icons.dvr, color: AppTheme.primaryBlue, size: 24),
+              context.iconMd(AppIcons.dvr, color: AppTheme.primaryBlue),
               const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -521,7 +522,7 @@ class _EPGScreenState extends State<EPGScreen>
                 ),
                 child: IconButton(
                   onPressed: _scrollToCurrentTime,
-                  icon: const Icon(Icons.access_time, size: AppSizes.iconSm),
+                  icon: context.timeIcon(),
                   color: AppTheme.primaryBlue,
                   tooltip: 'Jump to Now',
                 ),
@@ -566,7 +567,7 @@ class _EPGScreenState extends State<EPGScreen>
                                   ? _refreshAnimationController.value * 2 * 3.14159
                                   : 0,
                               child: Icon(
-                                Icons.refresh,
+                                AppIcons.refresh,
                                 size: 18,
                                 color: epgService.isLoading
                                     ? AppTheme.primaryBlue
@@ -1250,7 +1251,7 @@ class _EPGScreenState extends State<EPGScreen>
                           Navigator.pop(dialogContext);
                           _playCatchup(program);
                         },
-                        icon: Icons.replay,
+                        icon: AppIcons.replay,
                         label: 'Watch Catch-up',
                         expand: true,
                       ),
@@ -1273,7 +1274,7 @@ class _EPGScreenState extends State<EPGScreen>
                             ),
                           );
                         },
-                        icon: Icons.fiber_manual_record,
+                        icon: AppIcons.record,
                         label: 'Record',
                         expand: true,
                       ),
@@ -1295,7 +1296,7 @@ class _EPGScreenState extends State<EPGScreen>
                             ),
                           );
                         },
-                        icon: Icons.alarm,
+                        icon: AppIcons.alarm,
                         label: 'Remind',
                       ),
                     ),

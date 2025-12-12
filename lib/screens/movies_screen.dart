@@ -16,6 +16,7 @@ import 'package:iptv_player/widgets/content_focus_provider.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/widgets/vod_card_image.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
+import 'package:iptv_player/utils/app_icons.dart';
 
 class MoviesScreen extends StatefulWidget {
   const MoviesScreen({super.key});
@@ -241,9 +242,8 @@ class _MoviesScreenState extends State<MoviesScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.movie,
-                size: 80,
+              context.iconXxl(
+                AppIcons.movie,
                 color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
               ),
               const SizedBox(height: AppSizes.lg),
@@ -458,9 +458,8 @@ class _MoviesScreenState extends State<MoviesScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.movie,
-              size: 48,
+            context.iconXl(
+              AppIcons.movie,
               color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
             ),
             const SizedBox(height: 8),
@@ -783,7 +782,7 @@ class _MoviesScreenState extends State<MoviesScreen>
               Row(
                 children: [
                   if (featuredMovie.rating != null) ...[
-                    const Icon(Icons.star, color: Colors.amber, size: 16),
+                    context.starIcon(color: Colors.amber),
                     SizedBox(width: AppSizes.xs),
                     Text(
                       featuredMovie.ratingDisplay,
@@ -808,7 +807,7 @@ class _MoviesScreenState extends State<MoviesScreen>
               children: [
                 BrandPrimaryButton(
                   label: 'Play',
-                  icon: Icons.play_arrow,
+                  icon: AppIcons.play,
                   onPressed: () {
                     final encodedId = Uri.encodeComponent(featuredMovie.id);
                     context.push('/content/$encodedId', extra: featuredMovie);
@@ -817,7 +816,7 @@ class _MoviesScreenState extends State<MoviesScreen>
                 const SizedBox(width: 12),
                 BrandSecondaryButton(
                   label: 'More Info',
-                  icon: Icons.info_outline,
+                  icon: AppIcons.info,
                   onPressed: () {
                     final encodedId = Uri.encodeComponent(featuredMovie.id);
                     context.push('/content/$encodedId', extra: featuredMovie);

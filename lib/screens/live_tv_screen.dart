@@ -21,6 +21,7 @@ import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/widgets/brand_badge.dart';
 import 'package:iptv_player/utils/app_typography.dart';
 import 'package:iptv_player/utils/app_colors.dart';
+import 'package:iptv_player/utils/app_icons.dart';
 
 /// A focused Live TV screen. Shows a hero for the currently airing program
 /// on a featured channel, plus channel rows below.
@@ -269,9 +270,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.live_tv,
-                    size: 80,
+                  context.iconXxl(
+                    AppIcons.liveTV,
                     color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
                   ),
                   SizedBox(height: context.tvSpacing(24)),
@@ -1117,9 +1117,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           Container(
             color: Colors.black,
             child: Center(
-              child: Icon(
+              child: context.iconXxl(
                 Icons.play_circle_outline,
-                size: 80,
                 color: AppColors.whiteWithOpacity(0.7),
               ),
             ),
