@@ -8,6 +8,7 @@ import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/go_to_settings_button.dart';
+import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/service_validator.dart';
 import 'package:go_router/go_router.dart';
@@ -655,29 +656,14 @@ class _SeriesScreenState extends State<SeriesScreen>
                           ),
                         ] : null,
                       ),
-                      child: TextButton(
+                      child: BrandSecondaryButton(
+                        label: 'Load More ($genre)',
                         onPressed: () {
                           debugPrint('Load More pressed for genre: $genre');
                           setState(() {
                             _genreDisplayCounts[genre] = displayCount + _itemsPerPage;
                           });
                         },
-                        style: TextButton.styleFrom(
-                          backgroundColor: isFocused
-                              ? AppTheme.primaryBlue
-                              : AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
-                          padding: EdgeInsets.symmetric(
-                            horizontal: context.tvSpacing(24),
-                            vertical: context.tvSpacing(12),
-                          ),
-                        ),
-                        child: Text(
-                          'Load More ($genre)',
-                          style: TextStyle(
-                            color: isFocused ? Colors.white : AppTheme.primaryBlue,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
                       ),
                     );
                   },
@@ -918,35 +904,22 @@ class _SeriesScreenState extends State<SeriesScreen>
             const SizedBox(height: 16),
             Row(
               children: [
-                Focus(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      final encodedId = Uri.encodeComponent(featuredSeries.id);
-                      context.push('/content/$encodedId', extra: featuredSeries);
-                    },
-                    icon: const Icon(Icons.play_arrow, size: 20),
-                    label: const Text('Watch'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                  ),
+                BrandPrimaryButton(
+                  label: 'Watch',
+                  icon: Icons.play_arrow,
+                  onPressed: () {
+                    final encodedId = Uri.encodeComponent(featuredSeries.id);
+                    context.push('/content/$encodedId', extra: featuredSeries);
+                  },
                 ),
                 const SizedBox(width: 12),
-                Focus(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      final encodedId = Uri.encodeComponent(featuredSeries.id);
-                      context.push('/content/$encodedId', extra: featuredSeries);
-                    },
-                    icon: const Icon(Icons.info_outline, size: 20),
-                    label: const Text('More Info'),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.white),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                  ),
+                BrandSecondaryButton(
+                  label: 'More Info',
+                  icon: Icons.info_outline,
+                  onPressed: () {
+                    final encodedId = Uri.encodeComponent(featuredSeries.id);
+                    context.push('/content/$encodedId', extra: featuredSeries);
+                  },
                 ),
               ],
             ),

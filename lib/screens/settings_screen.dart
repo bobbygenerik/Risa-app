@@ -734,19 +734,24 @@ class _SettingsScreenState extends State<SettingsScreen>
             Row(
               children: [
                 Expanded(
-                  child: _buildFocusButton(
+                  child: Focus(
                     focusNode: _updateEpgButtonFocusNode,
-                    onPressed: _handleUpdateEpg,
-                    child: const Text('Update EPG'),
-                    isPrimary: true,
+                    child: BrandPrimaryButton(
+                      label: 'Update EPG',
+                      onPressed: _handleUpdateEpg,
+                      expand: true,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _buildFocusButton(
+                  child: Focus(
                     focusNode: _clearEpgButtonFocusNode,
-                    onPressed: _handleClearEpg,
-                    child: const Text('Clear EPG'),
+                    child: BrandSecondaryButton(
+                      label: 'Clear EPG',
+                      onPressed: _handleClearEpg,
+                      expand: true,
+                    ),
                   ),
                 ),
               ],
@@ -755,18 +760,21 @@ class _SettingsScreenState extends State<SettingsScreen>
             Row(
               children: [
                 Expanded(
-                  child: _buildFocusButton(
+                  child: Focus(
                     focusNode: _viewUnmatchedChannelsFocusNode,
-                    onPressed: () => context.push('/epg-diagnostic'),
-                    child: const Text('EPG Diagnostic Tool'),
+                    child: BrandSecondaryButton(
+                      label: 'EPG Diagnostic Tool',
+                      onPressed: () => context.push('/epg-diagnostic'),
+                      expand: true,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _buildFocusButton(
-                    focusNode: FocusNode(),
+                  child: BrandSecondaryButton(
+                    label: 'Advanced EPG Manager',
                     onPressed: () => context.push('/epg-manager'),
-                    child: const Text('Advanced EPG Manager'),
+                    expand: true,
                   ),
                 ),
               ],
@@ -779,19 +787,18 @@ class _SettingsScreenState extends State<SettingsScreen>
             Row(
               children: [
                 Expanded(
-                  child: _buildFocusButton(
-                    focusNode: FocusNode(),
+                  child: BrandPrimaryButton(
+                    label: 'Export Backup',
                     onPressed: _exportBackup,
-                    child: const Text('Export Backup'),
-                    isPrimary: true,
+                    expand: true,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _buildFocusButton(
-                    focusNode: FocusNode(),
+                  child: BrandSecondaryButton(
+                    label: 'Import Backup',
                     onPressed: _importBackup,
-                    child: const Text('Import Backup'),
+                    expand: true,
                   ),
                 ),
               ],
@@ -805,18 +812,18 @@ class _SettingsScreenState extends State<SettingsScreen>
             Row(
               children: [
                 Expanded(
-                  child: _buildFocusButton(
-                    focusNode: FocusNode(),
+                  child: BrandSecondaryButton(
+                    label: 'Debug Performance',
                     onPressed: () => context.push('/debug'),
-                    child: const Text('Debug Performance'),
+                    expand: true,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _buildFocusButton(
-                    focusNode: FocusNode(),
+                  child: BrandSecondaryButton(
+                    label: 'Legal Disclaimer',
                     onPressed: _showDisclaimer,
-                    child: const Text('Legal Disclaimer'),
+                    expand: true,
                   ),
                 ),
               ],
