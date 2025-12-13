@@ -248,112 +248,116 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: Container(
-                    child: Column(
-              children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 4, bottom: 4),
-            child: Image(
-              image: AssetImage(_isExpanded 
-                ? 'assets/images/croppedlogo2.png'
-                : 'assets/images/lonelogo (1).png'),
-              height: _isExpanded ? 28 : 20,
-            ),
-          ),
-          Expanded(
-            child: FocusTraversalGroup(
-              policy: WidgetOrderTraversalPolicy(),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.3),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+              ),
               child: Column(
                 children: [
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Focus(
-                      focusNode: _searchButtonFocusNode,
-                      onFocusChange: (_) => setState(() {}),
-                      onKeyEvent: (node, event) {
-                        if (event is! KeyDownEvent) return KeyEventResult.ignored;
-                        if (event.logicalKey == LogicalKeyboardKey.enter ||
-                            event.logicalKey == LogicalKeyboardKey.select ||
-                            event.logicalKey == LogicalKeyboardKey.space) {
-                          widget.onSearch?.call();
-                          return KeyEventResult.handled;
-                        }
-                        if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-                          if (_isExpanded) {
-                            setState(() => _isExpanded = false);
-                            return KeyEventResult.handled;
-                          }
-                          return KeyEventResult.ignored;
-                        }
-                        if (event.logicalKey == LogicalKeyboardKey.arrowLeft && _isExpanded) {
-                          setState(() => _isExpanded = false);
-                          return KeyEventResult.handled;
-                        }
-                        return KeyEventResult.ignored;
-                      },
-                      child: Builder(
-                        builder: (context) {
-                          final isFocused = Focus.of(context).hasFocus;
-                          return GestureDetector(
-                            onTap: () {
-                              if (!_isExpanded) {
-                                setState(() => _isExpanded = true);
-                              } else {
-                                widget.onSearch?.call();
-                              }
-                            },
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 150),
-                              curve: Curves.easeOut,
-                              height: 32,
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(6),
-                                color: isFocused
-                                  ? AppTheme.primaryBlue.withValues(alpha: 0.15)
-                                  : Colors.transparent,
-                              ),
-                              alignment: Alignment.center,
-                              child: _isExpanded
-                                ? const Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.search, color: Colors.white70, size: 16),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        'Search',
-                                        style: TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w500,
-                                        ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4, bottom: 4),
+                    child: Image(
+                      image: AssetImage(_isExpanded 
+                        ? 'assets/images/croppedlogo2.png'
+                        : 'assets/images/lonelogo (1).png'),
+                      height: _isExpanded ? 28 : 20,
+                    ),
+                  ),
+                  Expanded(
+                    child: FocusTraversalGroup(
+                      policy: WidgetOrderTraversalPolicy(),
+                      child: Column(
+                        children: [
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Focus(
+                              focusNode: _searchButtonFocusNode,
+                              onFocusChange: (_) => setState(() {}),
+                              onKeyEvent: (node, event) {
+                                if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                                if (event.logicalKey == LogicalKeyboardKey.enter ||
+                                    event.logicalKey == LogicalKeyboardKey.select ||
+                                    event.logicalKey == LogicalKeyboardKey.space) {
+                                  widget.onSearch?.call();
+                                  return KeyEventResult.handled;
+                                }
+                                if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                                  if (_isExpanded) {
+                                    setState(() => _isExpanded = false);
+                                    return KeyEventResult.handled;
+                                  }
+                                  return KeyEventResult.ignored;
+                                }
+                                if (event.logicalKey == LogicalKeyboardKey.arrowLeft && _isExpanded) {
+                                  setState(() => _isExpanded = false);
+                                  return KeyEventResult.handled;
+                                }
+                                return KeyEventResult.ignored;
+                              },
+                              child: Builder(
+                                builder: (context) {
+                                  final isFocused = Focus.of(context).hasFocus;
+                                  return GestureDetector(
+                                    onTap: () {
+                                      if (!_isExpanded) {
+                                        setState(() => _isExpanded = true);
+                                      } else {
+                                        widget.onSearch?.call();
+                                      }
+                                    },
+                                    child: AnimatedContainer(
+                                      duration: const Duration(milliseconds: 150),
+                                      curve: Curves.easeOut,
+                                      height: 32,
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(6),
+                                        color: isFocused
+                                          ? AppTheme.primaryBlue.withValues(alpha: 0.15)
+                                          : Colors.transparent,
                                       ),
-                                    ],
-                                  )
-                                : const Icon(Icons.search, color: Colors.white70, size: 16),
+                                      alignment: Alignment.center,
+                                      child: _isExpanded
+                                        ? const Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.search, color: Colors.white70, size: 16),
+                                              SizedBox(width: 8),
+                                              Text(
+                                                'Search',
+                                                style: TextStyle(
+                                                  color: Colors.white70,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ],
+                                          )
+                                        : const Icon(Icons.search, color: Colors.white70, size: 16),
+                                    ),
+                                  );
+                                },
+                              ),
                             ),
-                          );
-                        },
+                          ),
+                          ..._tabs.map((tab) {
+                            final index = _tabs.indexOf(tab);
+                            return Container(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: _buildTabButton(index),
+                            );
+                          }),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: _buildBottomButton(Icons.settings, 'Settings', '/settings'),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  ..._tabs.map((tab) {
-                    final index = _tabs.indexOf(tab);
-                    return Container(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: _buildTabButton(index),
-                    );
-                  }),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: _buildBottomButton(Icons.settings, 'Settings', '/settings'),
-                  ),
                 ],
-              ),
-            ),
-          ),
-              ],
               ),
             ),
           ),

@@ -372,7 +372,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       {'title': 'Recordings', 'icon': Icons.fiber_manual_record},
     ];
 
-    return Container(
+    return SizedBox(
       width: 240,
       child: Column(
         children: [
