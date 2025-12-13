@@ -1,3 +1,4 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 // ignore_for_file: sized_box_for_whitespace
 import 'dart:async';
 
@@ -85,73 +86,15 @@ class _EPGScreenState extends State<EPGScreen>
     // Hide system UI for immersive experience
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
-    // Load EPG data on init with retry logic
+    // Load EPG data on init - non-blocking
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
-
       // Load EPG favorites from SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       final favoritesList = prefs.getStringList('epg_favorite_channels') ?? [];
       _epgState.setEpgFavoriteChannelIds(Set.from(favoritesList));
 
-      // Wait for EPG service to initialize (max 5 seconds)
-      int initWaitCount = 0;
-      while (
-          epgService.availableChannels.isEmpty && epgService.isLoading && initWaitCount < 50) {
-        await Future.delayed(const Duration(milliseconds: 100));
-        initWaitCount++;
-      }
-
-      debugPrint('EPG Screen: availableChannels = ${epgService.availableChannels.length}');
-      debugPrint('EPG Screen: loadedChannels = ${epgService.loadedChannelCount}');
-      debugPrint('EPG Screen: isLoading = ${epgService.isLoading}');
-      debugPrint('EPG Screen: error = ${epgService.error}');
-
-      // Load EPG if we don't have data yet (with retry)
-      if (epgService.availableChannels.isEmpty) {
-        final epgUrl =
-            prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
-        if (epgUrl != null && epgUrl.isNotEmpty) {
-          debugPrint('EPG Screen: Loading EPG data from URL: $epgUrl');
-
-          // Try loading with exponential backoff retry
-          int retryCount = 0;
-          const maxRetries = 3;
-          bool success = false;
-
-          while (!success && retryCount < maxRetries && mounted) {
-            try {
-              await epgService.initialize();
-              if (epgService.availableChannels.isNotEmpty) {
-                success = true;
-                debugPrint('EPG Screen: Successfully loaded EPG data');
-              } else if (epgService.error != null) {
-                throw Exception(epgService.error);
-              }
-            } catch (e) {
-              retryCount++;
-              if (retryCount < maxRetries) {
-                final delaySeconds = retryCount * 2; // 2s, 4s, 6s
-                debugPrint(
-                    'EPG Screen: Load failed, retrying in ${delaySeconds}s... (attempt $retryCount/$maxRetries)');
-                await Future.delayed(Duration(seconds: delaySeconds));
-              } else {
-                debugPrint(
-                    'EPG Screen: Failed to load EPG after $maxRetries attempts: $e');
-              }
-            }
-          }
-        } else {
-          debugPrint('EPG Screen: No EPG URL configured');
-        }
-      }
-
-      if (!mounted) return;
-
       // Scroll to current time position (no animation for initial load)
       _scrollToCurrentTime(animate: false);
-
-
     });
   }
 
@@ -185,7 +128,7 @@ class _EPGScreenState extends State<EPGScreen>
           prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
 
       if (epgUrl != null && epgUrl.isNotEmpty && !epgService.isLoading) {
-        debugPrint('EPG Screen: Auto-refreshing EPG data...');
+        debugLog('EPG Screen: Auto-refreshing EPG data...');
         await epgService.initialize();
       }
     });
@@ -677,7 +620,7 @@ class _EPGScreenState extends State<EPGScreen>
 
 
   Widget _buildProgramGrid(List<Channel> channels, IncrementalEpgService epgService, List<Channel> allChannels) {
-    debugPrint(
+    debugLog(
         'EPG Grid: isLoading=${epgService.isLoading}, availableChannels=${epgService.availableChannels.length}, loadedChannels=${epgService.loadedChannelCount}');
 
     // Show loading overlay but still display the grid structure

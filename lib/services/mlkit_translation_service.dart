@@ -1,3 +1,4 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_translation/google_mlkit_translation.dart';
@@ -44,7 +45,7 @@ class MLKitTranslationService extends ChangeNotifier {
   /// Initialize the translation service
   Future<bool> initialize() async {
     if (!_isSupportedPlatform) {
-      debugPrint('ML Kit translation is not supported on this platform.');
+      debugLog('ML Kit translation is not supported on this platform.');
       _isInitialized = false;
       _isEnabled = false;
       notifyListeners();
@@ -68,17 +69,17 @@ class MLKitTranslationService extends ChangeNotifier {
       );
 
       if (!sourceDownloaded || !targetDownloaded) {
-        debugPrint('Translation models not downloaded yet');
-        debugPrint('Source (${_sourceLanguage.bcpCode}): $sourceDownloaded');
-        debugPrint('Target (${_targetLanguage.bcpCode}): $targetDownloaded');
+        debugLog('Translation models not downloaded yet');
+        debugLog('Source (${_sourceLanguage.bcpCode}): $sourceDownloaded');
+        debugLog('Target (${_targetLanguage.bcpCode}): $targetDownloaded');
       }
 
       _isInitialized = true;
       notifyListeners();
-      debugPrint('ML Kit Translation service initialized');
+      debugLog('ML Kit Translation service initialized');
       return true;
     } catch (e) {
-      debugPrint('Translation initialization error: $e');
+      debugLog('Translation initialization error: $e');
       _isInitialized = false;
       notifyListeners();
       return false;
@@ -103,7 +104,7 @@ class MLKitTranslationService extends ChangeNotifier {
       // Check if models are downloaded
       final modelsReady = await _ensureModelsDownloaded();
       if (!modelsReady) {
-        debugPrint('Models not ready, returning original text');
+        debugLog('Models not ready, returning original text');
         return text;
       }
 
@@ -111,7 +112,7 @@ class MLKitTranslationService extends ChangeNotifier {
       final translation = await _translator!.translateText(text);
       return translation;
     } catch (e) {
-      debugPrint('Translation error: $e');
+      debugLog('Translation error: $e');
       return text;
     }
   }
@@ -131,7 +132,7 @@ class MLKitTranslationService extends ChangeNotifier {
 
       return sourceDownloaded && targetDownloaded;
     } catch (e) {
-      debugPrint('Error checking model status: $e');
+      debugLog('Error checking model status: $e');
       return false;
     }
   }
@@ -139,7 +140,7 @@ class MLKitTranslationService extends ChangeNotifier {
   /// Download language models
   Future<bool> downloadLanguageModels() async {
     if (!_isSupportedPlatform) {
-      debugPrint('Model download skipped: unsupported platform.');
+      debugLog('Model download skipped: unsupported platform.');
       return false;
     }
     if (_isDownloading) return false;
@@ -149,14 +150,14 @@ class MLKitTranslationService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      debugPrint('Downloading translation models...');
+      debugLog('Downloading translation models...');
 
       // Download source language model
       final sourceDownloaded = await _modelManager.isModelDownloaded(
         _sourceLanguage.bcpCode,
       );
       if (!sourceDownloaded) {
-        debugPrint('Downloading ${_sourceLanguage.bcpCode} model...');
+        debugLog('Downloading ${_sourceLanguage.bcpCode} model...');
         await _modelManager.downloadModel(_sourceLanguage.bcpCode);
         _downloadProgress = 0.5;
         notifyListeners();
@@ -167,19 +168,19 @@ class MLKitTranslationService extends ChangeNotifier {
         _targetLanguage.bcpCode,
       );
       if (!targetDownloaded) {
-        debugPrint('Downloading ${_targetLanguage.bcpCode} model...');
+        debugLog('Downloading ${_targetLanguage.bcpCode} model...');
         await _modelManager.downloadModel(_targetLanguage.bcpCode);
         _downloadProgress = 1.0;
         notifyListeners();
       }
 
-      debugPrint('✅ Translation models downloaded successfully');
+      debugLog('✅ Translation models downloaded successfully');
       _isDownloading = false;
       _downloadProgress = 1.0;
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint('Model download error: $e');
+      debugLog('Model download error: $e');
       _isDownloading = false;
       _downloadProgress = 0.0;
       notifyListeners();
@@ -194,10 +195,10 @@ class MLKitTranslationService extends ChangeNotifier {
     }
     try {
       await _modelManager.deleteModel(languageCode);
-      debugPrint('Deleted model: $languageCode');
+      debugLog('Deleted model: $languageCode');
       notifyListeners();
     } catch (e) {
-      debugPrint('Error deleting model: $e');
+      debugLog('Error deleting model: $e');
     }
   }
 
@@ -230,7 +231,7 @@ class MLKitTranslationService extends ChangeNotifier {
 
       return downloaded;
     } catch (e) {
-      debugPrint('Error getting downloaded models: $e');
+      debugLog('Error getting downloaded models: $e');
       return [];
     }
   }
@@ -243,7 +244,7 @@ class MLKitTranslationService extends ChangeNotifier {
     try {
       return await _modelManager.isModelDownloaded(languageCode);
     } catch (e) {
-      debugPrint('Error checking model status: $e');
+      debugLog('Error checking model status: $e');
       return false;
     }
   }
@@ -284,7 +285,7 @@ class MLKitTranslationService extends ChangeNotifier {
         targetLanguage: _targetLanguage,
       );
     } catch (e) {
-      debugPrint('Error updating translator: $e');
+      debugLog('Error updating translator: $e');
     }
   }
 
@@ -298,13 +299,13 @@ class MLKitTranslationService extends ChangeNotifier {
     if (source != null) {
       await setSourceLanguage(source);
     } else {
-      debugPrint('Unknown source language code: $sourceCode');
+      debugLog('Unknown source language code: $sourceCode');
     }
 
     if (target != null) {
       await setTargetLanguage(target);
     } else {
-      debugPrint('Unknown target language code: $targetCode');
+      debugLog('Unknown target language code: $targetCode');
     }
   }
 

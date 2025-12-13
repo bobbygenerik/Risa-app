@@ -1,3 +1,4 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -101,7 +102,7 @@ class WhisperModelService extends ChangeNotifier {
       _isDownloading[modelName] = false;
       _downloadProgress.remove(modelName);
       notifyListeners();
-      debugPrint('Whisper model download failed: $e');
+      debugLog('Whisper model download failed: $e');
       return false;
     }
   }
@@ -121,7 +122,7 @@ class WhisperModelService extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint('Failed to delete model: $e');
+      debugLog('Failed to delete model: $e');
       return false;
     }
   }

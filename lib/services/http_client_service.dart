@@ -8,8 +8,11 @@ class HttpClientService {
 
   late final Dio _dio;
   late final HttpClient _httpClient;
+  bool _isInitialized = false;
 
   void initialize() {
+    if (_isInitialized) return;
+    
     // Configure HttpClient with connection pooling
     _httpClient = HttpClient()
       ..maxConnectionsPerHost = 6
@@ -34,10 +37,13 @@ class HttpClientService {
         handler.next(options);
       },
     ));
+    
+    _isInitialized = true;
   }
 
   Dio get dio => _dio;
   HttpClient get httpClient => _httpClient;
+  bool get isInitialized => _isInitialized;
 
   Map<String, String> get videoHeaders => {
     'User-Agent': 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36',

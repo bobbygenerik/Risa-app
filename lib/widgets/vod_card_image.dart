@@ -1,3 +1,4 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
@@ -39,25 +40,24 @@ class _VodCardImageState extends State<VodCardImage> {
     _isFetching = true;
 
     try {
-      debugPrint('VodCardImage: Fetching TMDB poster for "${widget.content.title}"');
-      final details = await TMDBService.getMovieDetails(
+      debugLog('VodCardImage: Fetching artwork for "${widget.content.title}"');
+      final posterUrl = await TMDBService.getBestBackdrop(
         widget.content.title,
         year: widget.content.year,
       );
       
-      if (mounted && details != null && details['poster'] != null) {
-        final posterUrl = details['poster'] as String;
-        debugPrint('VodCardImage: Got TMDB poster for "${widget.content.title}": $posterUrl');
+      if (mounted && posterUrl != null) {
+        debugLog('VodCardImage: Got artwork for "${widget.content.title}": $posterUrl');
         setState(() {
           _tmdbPosterUrl = posterUrl;
           _fetchedTmdb = true;
         });
       } else {
-        debugPrint('VodCardImage: No TMDB poster found for "${widget.content.title}"');
+        debugLog('VodCardImage: No artwork found for "${widget.content.title}"');
         _fetchedTmdb = true;
       }
     } catch (e) {
-      debugPrint('VodCardImage: Failed to fetch TMDB poster for ${widget.content.title}: $e');
+      debugLog('VodCardImage: Failed to fetch artwork for ${widget.content.title}: $e');
       _fetchedTmdb = true;
     } finally {
       _isFetching = false;
@@ -67,7 +67,6 @@ class _VodCardImageState extends State<VodCardImage> {
   @override
   Widget build(BuildContext context) {
     // Show original image immediately if available, TMDB will replace when loaded
-    final imageUrl = widget.content.imageUrl;
     final tmdbUrl = _tmdbPosterUrl;
     
     // If we have TMDB image, use it (higher quality)
@@ -78,36 +77,11 @@ class _VodCardImageState extends State<VodCardImage> {
         width: double.infinity,
         height: double.infinity,
         placeholder: (context, url) => widget.placeholder,
-        errorWidget: (context, url, error) {
-          // If TMDB fails, try original image
-          if (imageUrl != null && imageUrl.isNotEmpty) {
-            return CachedNetworkImage(
-              imageUrl: imageUrl,
-              fit: widget.fit,
-              width: double.infinity,
-              height: double.infinity,
-              placeholder: (context, url) => widget.placeholder,
-              errorWidget: (context, url, error) => widget.placeholder,
-            );
-          }
-          return widget.placeholder;
-        },
-      );
-    }
-    
-    // If we have original image, show it while waiting for TMDB
-    if (imageUrl != null && imageUrl.isNotEmpty) {
-      return CachedNetworkImage(
-        imageUrl: imageUrl,
-        fit: widget.fit,
-        width: double.infinity,
-        height: double.infinity,
-        placeholder: (context, url) => widget.placeholder,
         errorWidget: (context, url, error) => widget.placeholder,
       );
     }
     
-    // No images available
+    // No images available - don't show original M3U image
     return widget.placeholder;
   }
 }

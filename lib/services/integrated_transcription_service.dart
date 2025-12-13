@@ -1,3 +1,4 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 // ignore_for_file: deprecated_member_use
 
 import 'dart:async';
@@ -80,11 +81,11 @@ class IntegratedTranscriptionService extends ChangeNotifier {
       // Initialize speech recognition
       final speechInitialized = await _speech.initialize(
         onError: (error) {
-          debugPrint('Speech recognition error: $error');
+          debugLog('Speech recognition error: $error');
           notifyListeners();
         },
         onStatus: (status) {
-          debugPrint('Speech status: $status');
+          debugLog('Speech status: $status');
           if (status == 'done' || status == 'notListening') {
             _isTranscribing = false;
             notifyListeners();
@@ -93,7 +94,7 @@ class IntegratedTranscriptionService extends ChangeNotifier {
       );
 
       if (!speechInitialized) {
-        debugPrint('Failed to initialize speech recognition');
+        debugLog('Failed to initialize speech recognition');
         return false;
       }
 
@@ -110,10 +111,10 @@ class IntegratedTranscriptionService extends ChangeNotifier {
 
       _isInitialized = true;
       notifyListeners();
-      debugPrint('✅ Integrated transcription service initialized');
+      debugLog('✅ Integrated transcription service initialized');
       return true;
     } catch (e) {
-      debugPrint('Initialization error: $e');
+      debugLog('Initialization error: $e');
       _isInitialized = false;
       notifyListeners();
       return false;
@@ -123,14 +124,14 @@ class IntegratedTranscriptionService extends ChangeNotifier {
   /// Extract audio from video stream and transcribe
   Future<void> transcribeVideoStream(String videoUrl) async {
     try {
-      debugPrint('Starting audio extraction from: $videoUrl');
+      debugLog('Starting audio extraction from: $videoUrl');
       
       // For now, use direct audio stream transcription
       // Media Kit can be used for more complex audio processing if needed
       await startTranscription();
       
     } catch (e) {
-      debugPrint('Video stream transcription error: $e');
+      debugLog('Video stream transcription error: $e');
     }
   }
 
@@ -169,9 +170,9 @@ class IntegratedTranscriptionService extends ChangeNotifier {
         );
       }
 
-      debugPrint('✅ Transcription started');
+      debugLog('✅ Transcription started');
     } catch (e) {
-      debugPrint('Failed to start transcription: $e');
+      debugLog('Failed to start transcription: $e');
       _isTranscribing = false;
       notifyListeners();
     }
@@ -182,14 +183,14 @@ class IntegratedTranscriptionService extends ChangeNotifier {
     try {
       // This would integrate with your Whisper implementation
       // For now, using placeholder - you'd need to implement actual Whisper integration
-      debugPrint('Transcribing with Whisper: $audioFilePath');
+      debugLog('Transcribing with Whisper: $audioFilePath');
       
       // Placeholder - replace with actual Whisper transcription
       await Future.delayed(const Duration(seconds: 2));
       await _addSubtitle('Whisper transcription result would go here');
       
     } catch (e) {
-      debugPrint('Whisper transcription error: $e');
+      debugLog('Whisper transcription error: $e');
     }
   }
 
@@ -202,9 +203,9 @@ class IntegratedTranscriptionService extends ChangeNotifier {
       _isTranscribing = false;
       _currentText = '';
       notifyListeners();
-      debugPrint('✅ Transcription stopped');
+      debugLog('✅ Transcription stopped');
     } catch (e) {
-      debugPrint('Failed to stop transcription: $e');
+      debugLog('Failed to stop transcription: $e');
     }
   }
 
@@ -274,7 +275,7 @@ class IntegratedTranscriptionService extends ChangeNotifier {
 
       notifyListeners();
     } catch (e) {
-      debugPrint('Translation error: $e');
+      debugLog('Translation error: $e');
       entry.translatedText = entry.originalText;
     }
   }
@@ -309,14 +310,14 @@ class IntegratedTranscriptionService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      debugPrint('Downloading translation models...');
+      debugLog('Downloading translation models...');
 
       // Download source language
       final sourceDownloaded = await _modelManager.isModelDownloaded(
         _sourceLanguage.bcpCode,
       );
       if (!sourceDownloaded) {
-        debugPrint('Downloading ${_sourceLanguage.bcpCode}...');
+        debugLog('Downloading ${_sourceLanguage.bcpCode}...');
         await _modelManager.downloadModel(_sourceLanguage.bcpCode);
         _downloadProgress = 0.5;
         notifyListeners();
@@ -327,7 +328,7 @@ class IntegratedTranscriptionService extends ChangeNotifier {
         _targetLanguage.bcpCode,
       );
       if (!targetDownloaded) {
-        debugPrint('Downloading ${_targetLanguage.bcpCode}...');
+        debugLog('Downloading ${_targetLanguage.bcpCode}...');
         await _modelManager.downloadModel(_targetLanguage.bcpCode);
         _downloadProgress = 1.0;
         notifyListeners();
@@ -336,10 +337,10 @@ class IntegratedTranscriptionService extends ChangeNotifier {
       _isDownloadingModels = false;
       _downloadProgress = 1.0;
       notifyListeners();
-      debugPrint('✅ Translation models downloaded');
+      debugLog('✅ Translation models downloaded');
       return true;
     } catch (e) {
-      debugPrint('Model download error: $e');
+      debugLog('Model download error: $e');
       _isDownloadingModels = false;
       _downloadProgress = 0.0;
       notifyListeners();
@@ -388,7 +389,7 @@ class IntegratedTranscriptionService extends ChangeNotifier {
         targetLanguage: _targetLanguage,
       );
     } catch (e) {
-      debugPrint('Error updating translator: $e');
+      debugLog('Error updating translator: $e');
     }
   }
 

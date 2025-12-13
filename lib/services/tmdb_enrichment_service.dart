@@ -1,5 +1,5 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 
@@ -27,7 +27,7 @@ class TMDBEnrichmentService {
     bool onlyMissing = true, // Only enrich items without tmdbGenres
   }) async {
     if (_isEnriching) {
-      debugPrint('TMDBEnrichment: Already enriching, skipping');
+      debugLog('TMDBEnrichment: Already enriching, skipping');
       return content;
     }
     
@@ -42,12 +42,12 @@ class TMDBEnrichmentService {
     _totalItems = toEnrich.length;
     
     if (_totalItems == 0) {
-      debugPrint('TMDBEnrichment: No items to enrich');
+      debugLog('TMDBEnrichment: No items to enrich');
       _isEnriching = false;
       return content;
     }
     
-    debugPrint('TMDBEnrichment: Starting enrichment of $_totalItems items');
+    debugLog('TMDBEnrichment: Starting enrichment of $_totalItems items');
     
     // Create a map for quick lookup by ID
     final Map<String, Content> enrichedMap = {
@@ -67,7 +67,7 @@ class TMDBEnrichmentService {
         _processedItems += batch.length;
         onProgress?.call(_processedItems, _totalItems);
         
-        debugPrint('TMDBEnrichment: Progress $_processedItems/$_totalItems');
+        debugLog('TMDBEnrichment: Progress $_processedItems/$_totalItems');
         
         // Delay between batches to respect rate limits
         if (i + _batchSize < toEnrich.length) {
@@ -75,9 +75,9 @@ class TMDBEnrichmentService {
         }
       }
       
-      debugPrint('TMDBEnrichment: Completed enrichment of $_totalItems items');
+      debugLog('TMDBEnrichment: Completed enrichment of $_totalItems items');
     } catch (e) {
-      debugPrint('TMDBEnrichment: Error during enrichment: $e');
+      debugLog('TMDBEnrichment: Error during enrichment: $e');
     } finally {
       _isEnriching = false;
     }
@@ -113,12 +113,12 @@ class TMDBEnrichmentService {
           backdropUrl: item.backdropUrl ?? details['backdrop'],
         );
         
-        debugPrint('TMDBEnrichment: Enriched "${item.title}" with genres: ${tmdbGenres.join(", ")}');
+        debugLog('TMDBEnrichment: Enriched "${item.title}" with genres: ${tmdbGenres.join(", ")}');
       } else {
-        debugPrint('TMDBEnrichment: No TMDB data found for "${item.title}"');
+        debugLog('TMDBEnrichment: No TMDB data found for "${item.title}"');
       }
     } catch (e) {
-      debugPrint('TMDBEnrichment: Error enriching "${item.title}": $e');
+      debugLog('TMDBEnrichment: Error enriching "${item.title}": $e');
       // Continue with next item on error
     }
   }
@@ -126,7 +126,7 @@ class TMDBEnrichmentService {
   /// Cancel ongoing enrichment
   void cancel() {
     if (_isEnriching) {
-      debugPrint('TMDBEnrichment: Cancelling enrichment');
+      debugLog('TMDBEnrichment: Cancelling enrichment');
       _isEnriching = false;
     }
   }

@@ -1,3 +1,4 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -53,49 +54,313 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   double _progress = 0.0;
   SubtitleMode _subtitleMode = SubtitleMode.off;
   IntegratedTranscriptionService? _transcriptionService;
+  Timer? _progressThrottle;
   
   @override
   void initState() {
     super.initState();
-    HttpClientService().initialize();
     _transcriptionService = Provider.of<IntegratedTranscriptionService>(context, listen: false);
-    _initializePlayer();
+    unawaited(_initializePlayer());
     _hideControlsAfterDelay();
   }
 
-  void _initializePlayer() async {
+  @override
+  void dispose() {
+    _progressThrottle?.cancel();
+    unawaited(_saveCurrentPosition());
+    try {
+      if (_transcriptionService != null) {
+        unawaited(_transcriptionService!.stopTranscription());
+      }
+    } catch (e) {
+      debugLog('TTS cleanup error: $e');
+    }
+    unawaited(WakelockPlus.disable());
+    _chewieController?.dispose();
+    _videoController?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveCurrentPosition() async {
+    if (!widget.isLive && _videoController?.value.isInitialized == true) {
+      final settings = Provider.of<SettingsProvider>(context, listen: false);
+      
+      if (settings.rememberPlaybackPosition) {
+        final position = _videoController!.value.position;
+        final key = widget.content?.id ?? widget.title ?? widget.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '';
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt('position_$key', position.inMilliseconds);
+        
+        // Update watch progress for content
+        if (widget.content != null && mounted) {
+          final contentProvider = Provider.of<ContentProvider>(context, listen: false);
+          final duration = _videoController!.value.duration;
+          if (duration.inMilliseconds > 0) {
+            final progress = position.inMilliseconds / duration.inMilliseconds;
+            await contentProvider.updateWatchProgress(widget.content!.id, progress);
+          }
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: GestureDetector(
+        onTap: _toggleControls,
+        child: Stack(
+          children: [
+            // Video player
+            if (_chewieController != null)
+              Positioned.fill(
+                child: Chewie(
+                  controller: _chewieController!,
+                ),
+              ),
+            
+            if (_isLoading)
+              const Center(child: CircularProgressIndicator(color: Colors.white)),
+            
+            // Subtitle overlay
+            if (_subtitleMode == SubtitleMode.liveTranslation)
+              const LiveSubtitleOverlay(showSubtitles: true),
+            
+            // Modern streaming controls
+            if (_showControls && !_isLoading)
+              _buildModernControls(),
+              
+            // Guide overlay
+            if (_showGuide)
+              _buildGuideOverlay(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModernControls() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.black.withValues(alpha: 0.7),
+            Colors.transparent,
+            Colors.transparent,
+            Colors.black.withValues(alpha: 0.8),
+          ],
+          stops: const [0.0, 0.3, 0.7, 1.0],
+        ),
+      ),
+      child: Stack(
+        children: [
+          // Top bar
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: Row(
+                  children: [
+                    // Back button
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+                    ),
+                    const Spacer(),
+                    // Live badge
+                    if (widget.isLive)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'LIVE',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(width: 16),
+                    // Guide button
+                    IconButton(
+                      onPressed: _toggleGuide,
+                      icon: const Icon(Icons.dvr, color: Colors.white, size: 24),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          
+          // Bottom controls
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Control buttons
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    child: Row(
+                      children: [
+                        // Rewind
+                        _buildControlButton(
+                          icon: Icons.replay_10,
+                          onPressed: _rewind,
+                        ),
+                        const SizedBox(width: 12),
+                        // Play/Pause
+                        _buildControlButton(
+                          icon: _isPlaying ? Icons.pause : Icons.play_arrow,
+                          onPressed: _togglePlayPause,
+                        ),
+                        const SizedBox(width: 12),
+                        // Fast Forward
+                        _buildControlButton(
+                          icon: Icons.forward_10,
+                          onPressed: _fastForward,
+                        ),
+                        const SizedBox(width: 24),
+                        // Audio
+                        _buildControlButton(
+                          icon: Icons.audiotrack,
+                          onPressed: _toggleAudio,
+                        ),
+                        const SizedBox(width: 12),
+                        // Subtitles Menu
+                        _buildControlButton(
+                          icon: _subtitleMode == SubtitleMode.off 
+                            ? Icons.subtitles_outlined
+                            : Icons.subtitles,
+                          onPressed: _showSubtitleMenu,
+                        ),
+                        const SizedBox(width: 12),
+                        // Multi-view
+                        _buildControlButton(
+                          icon: Icons.grid_view,
+                          onPressed: _toggleMultiView,
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Progress bar
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: SizedBox(
+                      height: 4,
+                      width: double.infinity,
+                      child: LinearProgressIndicator(
+                        value: _progress,
+                        backgroundColor: Colors.white.withValues(alpha: 0.3),
+                        valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildControlButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+    double size = 20,
+  }) {
+    return IconButton(
+      onPressed: onPressed,
+      icon: Icon(icon, color: Colors.white, size: size),
+      padding: const EdgeInsets.all(8),
+    );
+  }
+
+  Widget _buildGuideOverlay() {
+    return Container(
+      color: Colors.black.withValues(alpha: 0.7),
+      child: Stack(
+        children: [
+          // EPG Screen embedded as overlay
+          Positioned.fill(
+            child: EPGScreen(
+              initialChannel: widget.channel,
+              continuePlayback: true,
+            ),
+          ),
+          // Close button
+          Positioned(
+            top: 40,
+            right: 20,
+            child: SafeArea(
+              child: IconButton(
+                onPressed: _toggleGuide,
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 24),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _initializePlayer() async {
     final url = widget.videoUrl ?? widget.content?.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '';
     final settings = Provider.of<SettingsProvider>(context, listen: false);
     await settings.initialize();
     
     final rememberPosition = settings.rememberPlaybackPosition;
     
-    _videoController = VideoPlayerController.networkUrl(
-      Uri.parse(url),
-      httpHeaders: HttpClientService().videoHeaders,
-      videoPlayerOptions: VideoPlayerOptions(
-        mixWithOthers: true,
-        allowBackgroundPlayback: false,
-        webOptions: const VideoPlayerWebOptions(
-          controls: VideoPlayerWebOptionsControls.disabled(),
+    try {
+      _videoController = VideoPlayerController.networkUrl(
+        Uri.parse(url),
+        httpHeaders: HttpClientService().isInitialized ? HttpClientService().videoHeaders : {},
+        videoPlayerOptions: VideoPlayerOptions(
+          mixWithOthers: true,
+          allowBackgroundPlayback: false,
+          webOptions: const VideoPlayerWebOptions(
+            controls: VideoPlayerWebOptionsControls.disabled(),
+          ),
         ),
-      ),
-      formatHint: VideoFormat.hls,
-    );
-    await _videoController!.initialize();
-    
-    // Apply buffer settings to prevent pausing
-    await _videoController!.setPlaybackSpeed(1.0);
-    
-    // Set buffer size based on settings (convert percentage to seconds)
-    final bufferSeconds = (settings.videoBufferSize / 10).clamp(3.0, 30.0);
-    debugPrint('Setting buffer size: ${bufferSeconds}s');
+        formatHint: VideoFormat.hls,
+      );
+      await _videoController!.initialize();
+    } catch (e) {
+      debugLog('Video initialization error: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showErrorDialog('Failed to load stream', 'The video stream could not be loaded. Please check your connection and try again.');
+      }
+      return;
+    }
     
     _chewieController = ChewieController(
       videoPlayerController: _videoController!,
       autoPlay: true,
       looping: false,
-      showControls: false, // We'll use custom controls
+      showControls: false,
       aspectRatio: _videoController!.value.aspectRatio,
       allowFullScreen: false,
       allowMuting: true,
@@ -108,9 +373,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
             children: [
               const Icon(Icons.error, color: Colors.red, size: 60),
               const SizedBox(height: 16),
-              Text('Stream Error', style: TextStyle(color: Colors.white, fontSize: 18)),
+              const Text('Stream Error', style: TextStyle(color: Colors.white, fontSize: 18)),
               const SizedBox(height: 8),
-              Text(errorMessage, style: TextStyle(color: Colors.white70), textAlign: TextAlign.center),
+              Text(errorMessage, style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () {
@@ -133,10 +398,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     
     setState(() => _isLoading = false);
     
-    // Keep screen on during video playback
     unawaited(WakelockPlus.enable());
     
-    // Restore saved position for VOD content
     if (!widget.isLive && rememberPosition) {
       final prefs = await SharedPreferences.getInstance();
       final key = widget.content?.id ?? widget.title ?? url;
@@ -146,7 +409,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       }
     }
     
-    // Listen to player state changes
     _videoController!.addListener(() {
       if (mounted) {
         final value = _videoController!.value;
@@ -154,52 +416,98 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         final position = value.position;
         final duration = value.duration;
         
-        setState(() {
-          _isPlaying = isPlaying;
-          if (duration.inMilliseconds > 0) {
-            _progress = position.inMilliseconds / duration.inMilliseconds;
+        _progressThrottle?.cancel();
+        _progressThrottle = Timer(const Duration(milliseconds: 100), () {
+          if (mounted) {
+            setState(() {
+              _isPlaying = isPlaying;
+              if (duration.inMilliseconds > 0) {
+                _progress = position.inMilliseconds / duration.inMilliseconds;
+              }
+            });
           }
         });
         
-        // Handle errors by restarting playback
         if (value.hasError) {
-          debugPrint('Video error: ${value.errorDescription}');
-          Future.delayed(const Duration(seconds: 1), () {
-            if (mounted && _videoController != null) {
-                  _videoController!.seekTo(position);
-                  _videoController!.play();
-            }
-          });
+          debugLog('Video error: ${value.errorDescription}');
+          _handleVideoError(value.errorDescription ?? 'Unknown error');
         }
         
-        // Handle video ended
         if (!isPlaying && position == duration && duration.inMilliseconds > 0) {
-              _handleVideoEnded();
+          unawaited(_handleVideoEnded());
         }
       }
     });
   }
   
-  void _handleVideoEnded() async {
+  void _handleVideoError(String error) async {
+    if (!mounted) return;
+    
+    if (error.contains('Source error') || error.contains('ExoPlaybackException')) {
+      _showErrorDialog('Stream Error', 'The video stream encountered an error. This may be due to network issues or an invalid stream URL.');
+    } else {
+      unawaited(Future.delayed(const Duration(seconds: 2), () {
+        if (mounted && _videoController != null && !_videoController!.value.hasError) {
+          _videoController!.play();
+        }
+      }));
+    }
+  }
+  
+  void _showErrorDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: Text(title, style: const TextStyle(color: Colors.white)),
+        content: Text(message, style: const TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pop(context);
+            },
+            child: const Text('Close'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              unawaited(_retryStream());
+            },
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Future<void> _retryStream() async {
+    setState(() => _isLoading = true);
+    unawaited(_videoController?.dispose());
+    _chewieController?.dispose();
+    _videoController = null;
+    _chewieController = null;
+    await _initializePlayer();
+  }
+
+  Future<void> _handleVideoEnded() async {
     final settings = Provider.of<SettingsProvider>(context, listen: false);
     final autoPlayNext = settings.autoPlayNextEpisode;
     
-    // Only for VOD content, not live streams
     if (!widget.isLive && autoPlayNext && widget.content != null) {
       final contentProvider = Provider.of<ContentProvider>(context, listen: false);
       final nextEpisode = contentProvider.getNextEpisode(widget.content!.id);
       
       if (nextEpisode != null) {
-        // Navigate to next episode
         context.pushReplacement('/player', extra: nextEpisode);
       }
     }
   }
 
   void _hideControlsAfterDelay() {
-    Future.delayed(const Duration(seconds: 4), () {
+    unawaited(Future.delayed(const Duration(seconds: 4), () {
       if (mounted) setState(() => _showControls = false);
-    });
+    }));
   }
 
   void _toggleControls() {
@@ -208,15 +516,17 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   void _togglePlayPause() {
-    if (_isPlaying) {
-      _videoController?.pause();
-    } else {
-      _videoController?.play();
+    if (_videoController?.value.isInitialized == true) {
+      if (_isPlaying) {
+        _videoController?.pause();
+      } else {
+        _videoController?.play();
+      }
     }
   }
 
   void _rewind() async {
-    if (_videoController != null) {
+    if (_videoController?.value.isInitialized == true) {
       final currentPos = _videoController!.value.position;
       final newPos = currentPos - const Duration(seconds: 10);
       if (newPos.inMilliseconds > 0) {
@@ -226,7 +536,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   void _fastForward() async {
-    if (_videoController != null) {
+    if (_videoController?.value.isInitialized == true) {
       final currentPos = _videoController!.value.position;
       final duration = _videoController!.value.duration;
       final newPos = currentPos + const Duration(seconds: 10);
@@ -237,8 +547,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   void _toggleAudio() async {
-    // ExoPlayer doesn't expose audio tracks directly like VLC
-    // This would need platform-specific implementation
     if (mounted) {
       showAppSnackBar(
         context,
@@ -262,14 +570,13 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         _transcriptionService!.setTranslationEnabled(true);
         final streamUrl = widget.videoUrl ?? widget.channel?.url;
         if (streamUrl != null) {
-          // Start transcribing the video stream
           await _transcriptionService!.transcribeVideoStream(streamUrl);
         }
       } else if (_transcriptionService != null) {
         await _transcriptionService!.stopTranscription();
       }
     } catch (e) {
-      debugPrint('Transcription error: $e');
+      debugLog('Transcription error: $e');
     }
   }
 
@@ -357,269 +664,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _saveCurrentPosition();
-    try {
-      if (_transcriptionService != null) {
-        unawaited(_transcriptionService!.stopTranscription());
-      }
-    } catch (e) {
-      debugPrint('TTS cleanup error: $e');
-    }
-    unawaited(WakelockPlus.disable());
-    _chewieController?.dispose();
-    _videoController?.dispose();
-    super.dispose();
-  }
-  
-  void _saveCurrentPosition() async {
-    if (!widget.isLive && _videoController != null) {
-      final settings = Provider.of<SettingsProvider>(context, listen: false);
-      
-      if (settings.rememberPlaybackPosition) {
-        final position = _videoController!.value.position;
-        final key = widget.content?.id ?? widget.title ?? widget.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '';
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt('position_$key', position.inMilliseconds);
-        
-        // Update watch progress for content
-        if (widget.content != null && mounted) {
-          final contentProvider = Provider.of<ContentProvider>(context, listen: false);
-          final duration = _videoController!.value.duration;
-          if (duration.inMilliseconds > 0) {
-            final progress = position.inMilliseconds / duration.inMilliseconds;
-            await contentProvider.updateWatchProgress(widget.content!.id, progress);
-          }
-        }
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: GestureDetector(
-        onTap: _toggleControls,
-        child: Stack(
-          children: [
-            // Video player
-            if (_chewieController != null)
-              Positioned.fill(
-                child: Chewie(
-                  controller: _chewieController!,
-                ),
-              ),
-            
-            if (_isLoading)
-              const Center(child: CircularProgressIndicator(color: Colors.white)),
-            
-            // Subtitle overlay
-            if (_subtitleMode == SubtitleMode.liveTranslation)
-              const LiveSubtitleOverlay(showSubtitles: true),
-            
-            // Modern streaming controls
-            if (_showControls && !_isLoading)
-              _buildModernControls(),
-              
-            // Guide overlay
-            if (_showGuide)
-              _buildGuideOverlay(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildModernControls() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.black.withValues(alpha: 0.7),
-            Colors.transparent,
-            Colors.transparent,
-            Colors.black.withValues(alpha: 0.8),
-          ],
-          stops: const [0.0, 0.3, 0.7, 1.0],
-        ),
-      ),
-      child: Stack(
-        children: [
-          // Top bar
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.sm),
-                child: Row(
-                  children: [
-                    // Back button
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
-                    ),
-                    const Spacer(),
-                    // Live badge
-                    if (widget.isLive)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: AppSizes.sm, vertical: AppSizes.xs),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                        ),
-                        child: const Text(
-                          'LIVE',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    const SizedBox(width: AppSizes.sm),
-                    // Guide button
-                    IconButton(
-                      onPressed: _toggleGuide,
-                      icon: const Icon(Icons.dvr, color: Colors.white, size: 24),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          
-          // Bottom controls
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Control buttons (left-aligned)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                    child: Row(
-                      children: [
-                        // Rewind
-                        _buildControlButton(
-                          icon: Icons.replay_10,
-                          onPressed: _rewind,
-                        ),
-                        const SizedBox(width: 12),
-                        // Play/Pause
-                        _buildControlButton(
-                          icon: _isPlaying ? Icons.pause : Icons.play_arrow,
-                          onPressed: _togglePlayPause,
-                        ),
-                        const SizedBox(width: 12),
-                        // Fast Forward
-                        _buildControlButton(
-                          icon: Icons.forward_10,
-                          onPressed: _fastForward,
-                        ),
-                        const SizedBox(width: 24),
-                        // Audio
-                        _buildControlButton(
-                          icon: Icons.audiotrack,
-                          onPressed: _toggleAudio,
-                        ),
-                        const SizedBox(width: 12),
-                        // Subtitles Menu
-                        _buildControlButton(
-                          icon: _subtitleMode == SubtitleMode.off 
-                            ? Icons.subtitles_outlined
-                            : Icons.subtitles,
-                          onPressed: _showSubtitleMenu,
-                        ),
-                        const SizedBox(width: 12),
-                        // Multi-view
-                        _buildControlButton(
-                          icon: Icons.grid_view,
-                          onPressed: _toggleMultiView,
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Progress bar
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: SizedBox(
-                      height: 4,
-                      width: double.infinity,
-                      child: LinearProgressIndicator(
-                        value: _progress,
-                        backgroundColor: Colors.white.withValues(alpha: 0.3),
-                        valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildControlButton({
-    required IconData icon,
-    required VoidCallback onPressed,
-    double size = 20,
-  }) {
-    return IconButton(
-      onPressed: onPressed,
-      icon: Icon(icon, color: Colors.white, size: size),
-      padding: const EdgeInsets.all(8),
-    );
-  }
-
-
-
-  Widget _buildGuideOverlay() {
-    return Container(
-      color: Colors.black.withValues(alpha: 0.7),
-      child: Stack(
-        children: [
-          // EPG Screen embedded as overlay
-          Positioned.fill(
-            child: EPGScreen(
-              initialChannel: widget.channel,
-              continuePlayback: true,
-            ),
-          ),
-          // Close button
-          Positioned(
-            top: 40,
-            right: 20,
-            child: SafeArea(
-              child: IconButton(
-                onPressed: _toggleGuide,
-                icon: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.7),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Icon(Icons.close, color: Colors.white, size: 24),
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

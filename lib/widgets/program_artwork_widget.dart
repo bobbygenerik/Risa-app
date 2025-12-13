@@ -1,7 +1,8 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
-import 'package:iptv_player/services/epg_service.dart';
+import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
@@ -56,12 +57,11 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
   Future<void> _fetchArtwork() async {
     if (!mounted) return;
 
-    final epgService = Provider.of<EpgService>(context, listen: false);
+    final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
     
     // Get current program from EPG
     final currentProgram = epgService.getCurrentProgram(
       widget.channel.tvgId ?? widget.channel.id,
-      channelName: widget.channel.name,
     );
     
     // Determine the search title
@@ -69,7 +69,7 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
         ? currentProgram!.title 
         : widget.channel.name;
     
-    debugPrint('ProgramArtwork: Channel "${widget.channel.name}" - searching for "$searchTitle"');
+    debugLog('ProgramArtwork: Channel "${widget.channel.name}" - searching for "$searchTitle"');
     
     // Check cache
     if (_artworkCache.containsKey(searchTitle)) {
@@ -109,23 +109,23 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
       }
       
       // Fetch from TMDB
-      debugPrint('ProgramArtwork: Fetching TMDB art for "$searchTitle"');
+      debugLog('ProgramArtwork: Fetching TMDB art for "$searchTitle"');
       final url = await TMDBService.getBestBackdrop(searchTitle);
       
       _artworkCache[searchTitle] = url;
       
       if (mounted) {
         if (url != null) {
-          debugPrint('ProgramArtwork: Found art for "$searchTitle": $url');
+          debugLog('ProgramArtwork: Found art for "$searchTitle": $url');
         } else {
-          debugPrint('ProgramArtwork: No art found for "$searchTitle"');
+          debugLog('ProgramArtwork: No art found for "$searchTitle"');
         }
         setState(() {
           _artworkUrl = url;
         });
       }
     } catch (e) {
-      debugPrint('ProgramArtwork: Error fetching art for "$searchTitle": $e');
+      debugLog('ProgramArtwork: Error fetching art for "$searchTitle": $e');
       _artworkCache[searchTitle] = null;
       if (mounted) {
         setState(() {

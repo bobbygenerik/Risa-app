@@ -75,12 +75,16 @@ class CachedChannelLogo extends StatelessWidget {
   final String? logoUrl;
   final double size;
   final IconData fallbackIcon;
+  final int? cacheWidth;
+  final int? cacheHeight;
 
   const CachedChannelLogo({
     super.key,
     required this.logoUrl,
     this.size = 48,
     this.fallbackIcon = Icons.tv,
+    this.cacheWidth,
+    this.cacheHeight,
   });
 
   @override
@@ -93,16 +97,38 @@ class CachedChannelLogo extends StatelessWidget {
       );
     }
 
-    return CachedImage(
+    return CachedNetworkImage(
       imageUrl: logoUrl!,
       width: size,
       height: size,
       fit: BoxFit.contain,
-      borderRadius: BorderRadius.circular(8),
-      errorWidget: Icon(
-        fallbackIcon,
-        size: size,
-        color: Colors.white54,
+      memCacheWidth: cacheWidth ?? (size * 2).toInt(),
+      memCacheHeight: cacheHeight ?? (size * 2).toInt(),
+      placeholder: (context, url) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: Colors.grey.withAlpha((0.2 * 255).round()),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          fallbackIcon,
+          size: size * 0.6,
+          color: Colors.white54,
+        ),
+      ),
+      errorWidget: (context, url, error) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: Colors.grey.withAlpha((0.2 * 255).round()),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          fallbackIcon,
+          size: size * 0.6,
+          color: Colors.white54,
+        ),
       ),
     );
   }

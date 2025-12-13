@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:iptv_player/utils/debug_helper.dart';
 
 /// Simple stopwatch-powered logger to understand app startup sequencing.
 class StartupProbe {
@@ -8,6 +8,6 @@ class StartupProbe {
 
   /// Emit a timestamped marker to logcat (tagged with `startup:` prefix).
   static void mark(String label) {
-    debugPrint('startup: ${_stopwatch.elapsedMilliseconds}ms - $label');
+    debugLog('startup: ${_stopwatch.elapsedMilliseconds}ms - $label');
   }
 }

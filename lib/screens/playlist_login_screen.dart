@@ -1,10 +1,11 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
-import 'package:iptv_player/services/epg_service.dart';
+import 'package:iptv_player/services/incremental_epg_service.dart';
 // import 'package:iptv_player/models/saved_playlist.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
@@ -221,10 +222,10 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
       // Auto-load EPG data
       if (mounted) {
         try {
-          final epgService = Provider.of<EpgService>(context, listen: false);
-          await epgService.loadEpgFromUrl(epgUrl); // Load in background, don't await
+          final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
+          await epgService.initialize(); // Load in background, don't await
         } catch (e) {
-          debugPrint('Failed to start EPG load: $e');
+          debugLog('Failed to start EPG load: $e');
         }
       }
 

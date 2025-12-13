@@ -1,3 +1,4 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -191,7 +192,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
         _hasError[index] = false;
       });
     } catch (e) {
-      debugPrint('Error initializing player $index: $e');
+      debugLog('Error initializing player $index: $e');
       setState(() {
         _hasError[index] = true;
       });

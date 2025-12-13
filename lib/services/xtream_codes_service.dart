@@ -1,7 +1,7 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 import 'package:iptv_player/models/content.dart';
@@ -24,7 +24,7 @@ class XtreamCodesService {
   static http.Client _createDefaultClient() {
     final ioClient = HttpClient(context: SecurityContext(withTrustedRoots: true))
       ..badCertificateCallback = (cert, host, port) {
-        debugPrint('XtreamCodes: Accepting cert from $host:$port');
+        debugLog('XtreamCodes: Accepting cert from $host:$port');
         return true;
       }
       ..connectionTimeout = const Duration(seconds: 15)
@@ -34,7 +34,7 @@ class XtreamCodesService {
     try {
       ioClient.findProxy = (uri) => 'DIRECT';
     } catch (e) {
-      debugPrint('XtreamCodes: Could not set proxy: $e');
+      debugLog('XtreamCodes: Could not set proxy: $e');
     }
     
     return IOClient(ioClient);
@@ -43,17 +43,17 @@ class XtreamCodesService {
   /// Make HTTP request with error handling
   Future<http.Response> _makeRequest(String url) async {
     try {
-      debugPrint('XtreamCodes: Requesting $url');
+      debugLog('XtreamCodes: Requesting $url');
       final response = await _client.get(Uri.parse(url)).timeout(
         const Duration(seconds: 20),
         onTimeout: () {
           throw TimeoutException('Request timeout after 20 seconds');
         },
       );
-      debugPrint('XtreamCodes: Response status ${response.statusCode}');
+      debugLog('XtreamCodes: Response status ${response.statusCode}');
       return response;
     } catch (e) {
-      debugPrint('XtreamCodes: Request failed: $e');
+      debugLog('XtreamCodes: Request failed: $e');
       rethrow;
     }
   }
@@ -80,7 +80,7 @@ class XtreamCodesService {
       }
       return [];
     } catch (e) {
-      debugPrint('XtreamCodes: Error fetching VOD categories: $e');
+      debugLog('XtreamCodes: Error fetching VOD categories: $e');
       return [];
     }
   }
@@ -97,7 +97,7 @@ class XtreamCodesService {
       }
       return [];
     } catch (e) {
-      debugPrint('XtreamCodes: Error fetching series categories: $e');
+      debugLog('XtreamCodes: Error fetching series categories: $e');
       return [];
     }
   }
@@ -114,7 +114,7 @@ class XtreamCodesService {
       }
       return [];
     } catch (e) {
-      debugPrint('XtreamCodes: Error fetching movies for category $categoryId: $e');
+      debugLog('XtreamCodes: Error fetching movies for category $categoryId: $e');
       return [];
     }
   }
@@ -122,26 +122,26 @@ class XtreamCodesService {
   /// Fetch all movies from all categories
   Future<List<Content>> getAllMovies() async {
     try {
-      debugPrint('XtreamCodes: Fetching VOD categories...');
+      debugLog('XtreamCodes: Fetching VOD categories...');
       final categories = await getVodCategories();
-      debugPrint('XtreamCodes: Found ${categories.length} VOD categories');
+      debugLog('XtreamCodes: Found ${categories.length} VOD categories');
 
       final List<Content> allMovies = [];
 
       for (final category in categories) {
         final categoryId = category['category_id'].toString();
         final categoryName = category['category_name'] ?? 'Unknown';
-        debugPrint('XtreamCodes: Fetching movies from "$categoryName" (ID: $categoryId)...');
+        debugLog('XtreamCodes: Fetching movies from "$categoryName" (ID: $categoryId)...');
 
         final movies = await getMoviesByCategory(categoryId, categoryName: categoryName);
-        debugPrint('XtreamCodes: Found ${movies.length} movies in "$categoryName"');
+        debugLog('XtreamCodes: Found ${movies.length} movies in "$categoryName"');
         allMovies.addAll(movies);
       }
 
-      debugPrint('XtreamCodes: Total movies loaded: ${allMovies.length}');
+      debugLog('XtreamCodes: Total movies loaded: ${allMovies.length}');
       return allMovies;
     } catch (e) {
-      debugPrint('XtreamCodes: Error fetching all movies: $e');
+      debugLog('XtreamCodes: Error fetching all movies: $e');
       return [];
     }
   }
@@ -158,7 +158,7 @@ class XtreamCodesService {
       }
       return [];
     } catch (e) {
-      debugPrint('XtreamCodes: Error fetching series for category $categoryId: $e');
+      debugLog('XtreamCodes: Error fetching series for category $categoryId: $e');
       return [];
     }
   }
@@ -166,26 +166,26 @@ class XtreamCodesService {
   /// Fetch all series from all categories
   Future<List<Content>> getAllSeries() async {
     try {
-      debugPrint('XtreamCodes: Fetching series categories...');
+      debugLog('XtreamCodes: Fetching series categories...');
       final categories = await getSeriesCategories();
-      debugPrint('XtreamCodes: Found ${categories.length} series categories');
+      debugLog('XtreamCodes: Found ${categories.length} series categories');
 
       final List<Content> allSeries = [];
 
       for (final category in categories) {
         final categoryId = category['category_id'].toString();
         final categoryName = category['category_name'] ?? 'Unknown';
-        debugPrint('XtreamCodes: Fetching series from "$categoryName" (ID: $categoryId)...');
+        debugLog('XtreamCodes: Fetching series from "$categoryName" (ID: $categoryId)...');
 
         final series = await getSeriesByCategory(categoryId, categoryName: categoryName);
-        debugPrint('XtreamCodes: Found ${series.length} series in "$categoryName"');
+        debugLog('XtreamCodes: Found ${series.length} series in "$categoryName"');
         allSeries.addAll(series);
       }
 
-      debugPrint('XtreamCodes: Total series loaded: ${allSeries.length}');
+      debugLog('XtreamCodes: Total series loaded: ${allSeries.length}');
       return allSeries;
     } catch (e) {
-      debugPrint('XtreamCodes: Error fetching all series: $e');
+      debugLog('XtreamCodes: Error fetching all series: $e');
       return [];
     }
   }
@@ -201,7 +201,7 @@ class XtreamCodesService {
       }
       return null;
     } catch (e) {
-      debugPrint('XtreamCodes: Error fetching movie info: $e');
+      debugLog('XtreamCodes: Error fetching movie info: $e');
       return null;
     }
   }
@@ -217,7 +217,7 @@ class XtreamCodesService {
       }
       return null;
     } catch (e) {
-      debugPrint('XtreamCodes: Error fetching series info: $e');
+      debugLog('XtreamCodes: Error fetching series info: $e');
       return null;
     }
   }
@@ -235,7 +235,7 @@ class XtreamCodesService {
         : null;
 
     if (imageUrl != null || backdropUrl != null) {
-      debugPrint('Movie "${data['name']}": imageUrl=$imageUrl, backdropUrl=$backdropUrl');
+      debugLog('Movie "${data['name']}": imageUrl=$imageUrl, backdropUrl=$backdropUrl');
     }
 
     return Content(
@@ -263,7 +263,7 @@ class XtreamCodesService {
         : null;
 
     if (cover != null || backdropUrl != null) {
-      debugPrint('Series "${data['name']}": cover=$cover, backdropUrl=$backdropUrl');
+      debugLog('Series "${data['name']}": cover=$cover, backdropUrl=$backdropUrl');
     }
 
     return Content(

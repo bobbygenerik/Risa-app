@@ -1,3 +1,4 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
@@ -147,7 +148,7 @@ By continuing, you confirm you will only use this app for legal purposes and com
                   child: _accepted
                       ? BrandPrimaryButton(
                           onPressed: () {
-                            debugPrint('Continue button pressed');
+                            debugLog('Continue button pressed');
                             Navigator.of(context).pop(true);
                           },
                           label: 'Continue',

@@ -1,5 +1,5 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -9,7 +9,7 @@ import 'package:iptv_player/widgets/cached_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
-import 'package:iptv_player/services/epg_service.dart';
+import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/program.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
@@ -64,57 +64,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     // Start carousel once the widget is built - will be updated when channels load
     WidgetsBinding.instance.addPostFrameCallback(
       (_) {
-        _findInitialChannelWithArtwork();
         _startCarouselIfNeeded();
-        _loadEpgData();
         _loadHeroVideoPreferenceSetting();
       },
     );
   }
 
-  void _findInitialChannelWithArtwork() {
-    final channelProvider =
-        Provider.of<ChannelProvider>(context, listen: false);
-    final channels = channelProvider.channels;
-    if (channels.isEmpty) return;
 
-    final epgService = Provider.of<EpgService>(context, listen: false);
 
-    // Try to find a channel with complete program info
-    for (int i = 0; i < channels.length && i < 20; i++) {
-      final channel = channels[i];
-      final program = epgService.getCurrentProgram(
-        channel.tvgId ?? channel.id,
-        channelName: channel.name,
-      );
-      final heroImage = _resolveHeroImage(program);
-      if (heroImage != null && heroImage.isNotEmpty && 
-          program != null && 
-          program.title.isNotEmpty && 
-          program.description != null && 
-          program.description!.isNotEmpty) {
-        setState(() {
-          _featuredIndex = i;
-        });
-        return;
-      }
-    }
-  }
 
-  Future<void> _loadEpgData() async {
-    final epgService = Provider.of<EpgService>(context, listen: false);
-
-    debugPrint(
-        'LiveTV: EPG hasData=${epgService.hasData}, isLoading=${epgService.isLoading}, error=${epgService.error}');
-
-    // If EPG has no data, try to load from cache or URL
-    if (!epgService.hasData && !epgService.isLoading) {
-      debugPrint('LiveTV: Initializing EPG service...');
-      await epgService.initialize();
-      debugPrint(
-          'LiveTV: EPG initialized - hasData=${epgService.hasData}, error=${epgService.error}');
-    }
-  }
 
 
 
@@ -172,32 +130,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
     final channels = channelProvider.channels;
     if (channels.isEmpty) return;
-    final epgService = Provider.of<EpgService>(context, listen: false);
     setState(() {
-      // Find next channel with complete program info, starting from random position for variety
-      int attempts = 0;
-      int startOffset = Random().nextInt(channels.length);
-      int nextIndex = startOffset;
-      while (attempts < channels.length) {
-        final channel = channels[nextIndex];
-        final program = epgService.getCurrentProgram(
-          channel.tvgId ?? channel.id,
-          channelName: channel.name,
-        );
-        final heroImage = _resolveHeroImage(program);
-        if (heroImage != null && heroImage.isNotEmpty && 
-            program != null && 
-            program.title.isNotEmpty && 
-            program.description != null && 
-            program.description!.isNotEmpty &&
-            nextIndex != _featuredIndex) { // Don't repeat same channel
-          _featuredIndex = nextIndex;
-          break;
-        }
-        nextIndex = (nextIndex + 1) % channels.length;
-        attempts++;
-      }
-      // If no channels with complete info found, don't change index
+      // Simply cycle to next channel without EPG dependency
+      _featuredIndex = (_featuredIndex + 1) % channels.length;
     });
   }
 
@@ -208,31 +143,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
     final channels = channelProvider.channels;
     if (channels.isEmpty) return;
-    final epgService = Provider.of<EpgService>(context, listen: false);
     setState(() {
-      // Find previous channel with complete program info
-      int attempts = 0;
-      int prevIndex = (_featuredIndex - 1 + channels.length) % channels.length;
-      while (attempts < channels.length) {
-        final channel = channels[prevIndex];
-        final program = epgService.getCurrentProgram(
-          channel.tvgId ?? channel.id,
-          channelName: channel.name,
-        );
-        final heroImage = _resolveHeroImage(program);
-        if (heroImage != null && heroImage.isNotEmpty && 
-            program != null && 
-            program.title.isNotEmpty && 
-            program.description != null && 
-            program.description!.isNotEmpty &&
-            prevIndex != _featuredIndex) { // Don't repeat same channel
-          _featuredIndex = prevIndex;
-          break;
-        }
-        prevIndex = (prevIndex - 1 + channels.length) % channels.length;
-        attempts++;
-      }
-      // If no channels with complete info found, don't change index
+      // Simply cycle to previous channel without EPG dependency
+      _featuredIndex = (_featuredIndex - 1 + channels.length) % channels.length;
     });
   }
 
@@ -245,33 +158,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       decoration: const BoxDecoration(
         color: AppColors.background,
       ),
-      child: Consumer2<ChannelProvider, EpgService>(
+      child: Consumer2<ChannelProvider, IncrementalEpgService>(
         builder: (context, channelProvider, epgService, _) {
           final channels = channelProvider.channels;
 
-          // Show skeleton when no channels OR when EPG is loading for first time OR when channels exist but no EPG data
+          // Show skeleton only when channels are loading
           if (channels.isEmpty && channelProvider.isLoading) {
             return _buildSkeletonLoader();
-          }
-          
-          if (channels.isNotEmpty && epgService.isLoading && !epgService.hasData) {
-            return _buildSkeletonLoader();
-          }
-          
-          if (channels.isNotEmpty && !epgService.hasData) {
-            return _buildSkeletonLoader();
-          }
-          
-          // Also show skeleton if EPG has data but no current program for featured channel
-          if (channels.isNotEmpty && epgService.hasData) {
-            final featuredChannel = channels[_featuredIndex.clamp(0, channels.length - 1)];
-            final currentProgram = epgService.getCurrentProgram(
-              featuredChannel.tvgId ?? featuredChannel.id,
-              channelName: featuredChannel.name,
-            );
-            if (currentProgram == null) {
-              return _buildSkeletonLoader();
-            }
           }
 
           if (channels.isEmpty) {
@@ -310,10 +203,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           if (_featuredIndex >= channels.length) _featuredIndex = 0;
 
           final featuredChannel = channels[_featuredIndex];
-          final currentProgram = epgService.getCurrentProgram(
-            featuredChannel.tvgId ?? featuredChannel.id,
-            channelName: featuredChannel.name,
-          );
+          // Don't load EPG data synchronously - let it load lazily
+          Program? currentProgram;
+          try {
+            currentProgram = epgService.getCurrentProgram(
+              featuredChannel.tvgId ?? featuredChannel.id,
+            );
+          } catch (e) {
+            // Ignore EPG errors to prevent freezing
+            currentProgram = null;
+          }
 
           // Get grouped channels (may be empty while computing in background)
           final groupedChannels = channelProvider.getGroupedChannels();
@@ -694,20 +593,20 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
     _artworkRequests.add(channelKey);
     try {
-      debugPrint('LiveTV: Fetching TMDB art for channel: "${channel.name}"');
+      debugLog('LiveTV: Fetching TMDB art for channel: "${channel.name}"');
       final image = await TMDBService.getBestBackdrop(channel.name);
       if (!mounted) return;
       if (image != null) {
-        debugPrint(
+        debugLog(
             'LiveTV: Found TMDB art for channel "${channel.name}": $image');
       } else {
-        debugPrint('LiveTV: No TMDB art found for channel "${channel.name}"');
+        debugLog('LiveTV: No TMDB art found for channel "${channel.name}"');
       }
       setState(() {
         _programArtwork[channelKey] = image ?? '';
       });
     } catch (e) {
-      debugPrint(
+      debugLog(
           'LiveTV: Error fetching TMDB art for channel "${channel.name}": $e');
       if (mounted) {
         setState(() {
@@ -725,19 +624,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     }
     _artworkRequests.add(program.id);
     try {
-      debugPrint('LiveTV: Fetching TMDB art for: "${program.title}"');
+      debugLog('LiveTV: Fetching TMDB art for: "${program.title}"');
       final image = await TMDBService.getBestBackdrop(program.title);
       if (!mounted) return;
       if (image != null) {
-        debugPrint('LiveTV: Found TMDB art for "${program.title}": $image');
+        debugLog('LiveTV: Found TMDB art for "${program.title}": $image');
       } else {
-        debugPrint('LiveTV: No TMDB art found for "${program.title}"');
+        debugLog('LiveTV: No TMDB art found for "${program.title}"');
       }
       setState(() {
         _programArtwork[program.id] = image ?? '';
       });
     } catch (e) {
-      debugPrint('LiveTV: Error fetching TMDB art for "${program.title}": $e');
+      debugLog('LiveTV: Error fetching TMDB art for "${program.title}": $e');
       if (mounted) {
         setState(() {
           _programArtwork[program.id] = '';
@@ -834,15 +733,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           }
           return KeyEventResult.ignored;
         },
-        child: Selector<EpgService, Program?>(
+        child: Selector<IncrementalEpgService, Program?>(
           selector: (_, epgService) => epgService.getCurrentProgram(
             channel.tvgId ?? channel.id,
-            channelName: channel.name,
           ),
           builder: (context, currentProgram, _) {
             final isFocused = Focus.of(context).hasFocus;
             if (currentProgram == null) {
-              debugPrint('LiveTV Card: No EPG for "${channel.name}" (tvgId: ${channel.tvgId})');
+              debugLog('LiveTV Card: No EPG for "${channel.name}" (tvgId: ${channel.tvgId})');
             }
             final progress = currentProgram?.progressPercentage ?? 0.0;
 

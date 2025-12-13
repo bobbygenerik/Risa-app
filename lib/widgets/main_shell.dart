@@ -1,3 +1,4 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -220,7 +221,7 @@ class _MainShellState extends State<MainShell> {
     final token = ++_nextFocusToken;
     _contentFocusCallback = callback;
     _activeFocusToken = token;
-    debugPrint('content_focus: Shell registered focus callback token=$token');
+    debugLog('content_focus: Shell registered focus callback token=$token');
     // Don't auto-focus content - let the navbar keep focus
     // User can press down arrow to focus content
     return token;
@@ -230,13 +231,13 @@ class _MainShellState extends State<MainShell> {
     if (_activeFocusToken == token) {
       _activeFocusToken = null;
       _contentFocusCallback = null;
-      debugPrint(
+      debugLog(
           'content_focus: Shell unregistered focus callback token=$token');
     }
   }
 
   bool _requestContentFocus() {
-    debugPrint('content_focus: Shell requesting content focus');
+    debugLog('content_focus: Shell requesting content focus');
     
     // Try callback first
     final callback = _contentFocusCallback;
@@ -244,7 +245,7 @@ class _MainShellState extends State<MainShell> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         final handled = callback();
-        debugPrint('content_focus: Callback ${handled ? 'succeeded' : 'failed'}');
+        debugLog('content_focus: Callback ${handled ? 'succeeded' : 'failed'}');
       });
       setState(() {}); // Collapse sidebar
       return true;
@@ -254,7 +255,7 @@ class _MainShellState extends State<MainShell> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final handled = _focusFirstContentChild();
-      debugPrint('content_focus: Fallback ${handled ? 'succeeded' : 'failed'}');
+      debugLog('content_focus: Fallback ${handled ? 'succeeded' : 'failed'}');
     });
     setState(() {}); // Collapse sidebar
     return true;
@@ -298,11 +299,11 @@ class _MainShellState extends State<MainShell> {
   bool _requestNavFocus() {
     final requester = _navFocusRequester;
     if (requester == null) {
-      debugPrint('content_focus: Nav focus requester unavailable');
+      debugLog('content_focus: Nav focus requester unavailable');
       return false;
     }
     final handled = requester();
-    debugPrint(
+    debugLog(
         'content_focus: Nav focus request ${handled ? 'succeeded' : 'failed'}');
     return handled;
   }

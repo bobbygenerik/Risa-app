@@ -1,8 +1,8 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:iptv_player/config/tmdb_config.dart';
 import 'package:iptv_player/config/omdb_config.dart';
@@ -184,7 +184,7 @@ class TMDBService {
         }
       }
     } catch (e) {
-      debugPrint('TMDB API error: $e');
+      debugLog('TMDB API error: $e');
     }
 
     return null;
@@ -219,7 +219,7 @@ class TMDBService {
         }
       }
     } catch (e) {
-      debugPrint('TMDB API error: $e');
+      debugLog('TMDB API error: $e');
     }
 
     return null;
@@ -274,7 +274,7 @@ class TMDBService {
         }
       }
     } catch (e) {
-      debugPrint('TMDB API error: $e');
+      debugLog('TMDB API error: $e');
     }
 
     return null;
@@ -315,7 +315,7 @@ class TMDBService {
         }
       }
     } catch (e) {
-      debugPrint('OMDb API error for "$title": $e');
+      debugLog('OMDb API error for "$title": $e');
     }
 
     return null;
@@ -373,7 +373,7 @@ class TMDBService {
         }
       }
     } catch (e) {
-      debugPrint('TMDB API error: $e');
+      debugLog('TMDB API error: $e');
     }
 
     return null;
@@ -436,17 +436,17 @@ class TMDBService {
       
       // If TMDB didn't find anything, try OMDb as fallback
       if (details == null || (details['backdrop'] == null && details['poster'] == null)) {
-        debugPrint('TMDB miss for "$title", trying OMDb as fallback...');
+        debugLog('TMDB miss for "$title", trying OMDb as fallback...');
         final omdbTV = await _getOMDbDetails(title, year: year, type: 'series');
         final omdbMovie = await _getOMDbDetails(title, year: year, type: 'movie');
         details = omdbTV ?? omdbMovie;
         if (details != null) {
-          debugPrint('OMDb found artwork for "$title": ${details['backdrop'] ?? details['poster']}');
+          debugLog('OMDb found artwork for "$title": ${details['backdrop'] ?? details['poster']}');
         } else {
-          debugPrint('No artwork found for "$title" in TMDB or OMDb');
+          debugLog('No artwork found for "$title" in TMDB or OMDb');
         }
       } else {
-        debugPrint('TMDB found artwork for "$title": ${details['backdrop'] ?? details['poster']}');
+        debugLog('TMDB found artwork for "$title": ${details['backdrop'] ?? details['poster']}');
       }
 
       final image =
@@ -494,10 +494,9 @@ class TMDBService {
       }
     }
     
-    // Fetch uncached in parallel with rate limiting
+    // Fetch uncached in smaller batches for Live TV performance
     if (uncached.isNotEmpty) {
-      // Process in chunks of 5 to avoid rate limiting
-      const chunkSize = 5;
+      const chunkSize = 3; // Reduced from 5 for better Live TV performance
       for (var i = 0; i < uncached.length; i += chunkSize) {
         final chunk = uncached.skip(i).take(chunkSize).toList();
         final futures = chunk.map((title) => getBestBackdrop(title, year: year));
@@ -507,9 +506,9 @@ class TMDBService {
           results[chunk[j]] = chunkResults[j];
         }
         
-        // Small delay between chunks to respect rate limits
+        // Shorter delay for Live TV responsiveness
         if (i + chunkSize < uncached.length) {
-          await Future.delayed(const Duration(milliseconds: 200));
+          await Future.delayed(const Duration(milliseconds: 100));
         }
       }
     }

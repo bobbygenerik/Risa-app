@@ -1,3 +1,4 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -56,7 +57,7 @@ Future<void> clearPlaylistCache() async {
     }
     await prefs.remove(ChannelProvider._playlistCacheFilePathKey);
   }
-  debugPrint('ChannelProvider: Playlist cache cleared');
+  debugLog('ChannelProvider: Playlist cache cleared');
 }
 
 class ChannelProvider with ChangeNotifier {
@@ -237,7 +238,7 @@ class ChannelProvider with ChangeNotifier {
           .map((m) => Content.fromMap(Map<String, dynamic>.from(m)))
           .toList();
     } catch (e) {
-      debugPrint('ChannelProvider: Error loading movies: $e');
+      debugLog('ChannelProvider: Error loading movies: $e');
       return [];
     }
   }
@@ -258,7 +259,7 @@ class ChannelProvider with ChangeNotifier {
           .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
           .toList();
     } catch (e) {
-      debugPrint('ChannelProvider: Error loading series: $e');
+      debugLog('ChannelProvider: Error loading series: $e');
       return [];
     }
   }
@@ -308,7 +309,7 @@ class ChannelProvider with ChangeNotifier {
             decoded.map((k, v) => MapEntry(k, int.tryParse(v.toString()) ?? 0));
       }
     } catch (e) {
-      debugPrint('Error loading watch counts: $e');
+      debugLog('Error loading watch counts: $e');
     }
   }
 
@@ -322,7 +323,7 @@ class ChannelProvider with ChangeNotifier {
 
     StartupProbe.mark('ChannelProvider.autoLoadPlaylist invoked');
     await _loadWatchCounts();
-    debugPrint('ChannelProvider: Auto-loading playlist...');
+    debugLog('ChannelProvider: Auto-loading playlist...');
     final prefs = await SharedPreferences.getInstance();
     final playlistType = prefs.getString('playlist_type');
 
@@ -330,7 +331,7 @@ class ChannelProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       StartupProbe.mark('ChannelProvider.autoLoadPlaylist: no saved playlist');
-      debugPrint('ChannelProvider: No saved playlist found');
+      debugLog('ChannelProvider: No saved playlist found');
       if (_channelMaps.isNotEmpty || _moviesCount > 0 || _seriesCount > 0) {
         _channelMaps = [];
         _channelCache.clear();
@@ -361,7 +362,7 @@ class ChannelProvider with ChangeNotifier {
 
       if (await jsonCacheFile.exists()) {
         try {
-          debugPrint('ChannelProvider: Loading from pre-parsed JSON cache...');
+          debugLog('ChannelProvider: Loading from pre-parsed JSON cache...');
           final cacheLoadStart = DateTime.now();
 
           final jsonString = await jsonCacheFile.readAsString();
@@ -407,13 +408,13 @@ class ChannelProvider with ChangeNotifier {
           notifyListeners();
 
           final totalCacheLoad = DateTime.now().difference(cacheLoadStart);
-          debugPrint(
+          debugLog(
               'ChannelProvider: JSON cache loaded in ${totalCacheLoad.inMilliseconds}ms with ${_channelMaps.length} channels');
           StartupProbe.mark(
               'ChannelProvider.autoLoadPlaylist: JSON cache load finished');
           return;
         } catch (e) {
-          debugPrint(
+          debugLog(
               'ChannelProvider: JSON cache load failed: $e, trying M3U cache');
         }
       }
@@ -424,7 +425,7 @@ class ChannelProvider with ChangeNotifier {
       try {
         final file = File(cacheFilePath);
         if (await file.exists()) {
-          debugPrint(
+          debugLog(
               'ChannelProvider: Loading from M3U file cache (streaming parser)...');
           final cacheLoadStart = DateTime.now();
 
@@ -432,7 +433,7 @@ class ChannelProvider with ChangeNotifier {
           final parseStart = DateTime.now();
           final parsed = await compute(parsePlaylistFromFile, cacheFilePath);
           final parseDuration = DateTime.now().difference(parseStart);
-          debugPrint(
+          debugLog(
               'ChannelProvider: Cache isolate parsing took ${parseDuration.inMilliseconds}ms');
 
           // Store raw maps - already in map format from optimized parser
@@ -462,7 +463,7 @@ class ChannelProvider with ChangeNotifier {
               json.encode(series.map((s) => s.toMap()).toList()));
 
           final mapDuration = DateTime.now().difference(mapStart);
-          debugPrint(
+          debugLog(
               'ChannelProvider: Cache map conversion took ${mapDuration.inMilliseconds}ms');
 
           _cachedCategories = null; // Clear cache when channels change
@@ -481,36 +482,36 @@ class ChannelProvider with ChangeNotifier {
           _hasLoadedPlaylist = true;
           notifyListeners();
           final totalCacheLoad = DateTime.now().difference(cacheLoadStart);
-          debugPrint(
+          debugLog(
               'ChannelProvider: File cache loaded in ${totalCacheLoad.inMilliseconds}ms with ${_channelMaps.length} channels');
           StartupProbe.mark(
               'ChannelProvider.autoLoadPlaylist: file cache load finished');
           return;
         }
       } catch (e) {
-        debugPrint(
+        debugLog(
             'ChannelProvider: File cache load failed: $e, loading from network');
         _isLoading = false;
         notifyListeners();
       }
-      debugPrint(
+      debugLog(
           'ChannelProvider: File cache expired or not found, loading from network');
     }
 
-    debugPrint('ChannelProvider: Playlist type: $playlistType');
+    debugLog('ChannelProvider: Playlist type: $playlistType');
 
     try {
       String? playlistUrl;
 
       if (playlistType == 'm3u') {
         playlistUrl = prefs.getString('m3u_url');
-        debugPrint('ChannelProvider: M3U URL: $playlistUrl');
+        debugLog('ChannelProvider: M3U URL: $playlistUrl');
       } else if (playlistType == 'xtream') {
         final server = prefs.getString('xtream_server');
         final username = prefs.getString('xtream_username');
         final password = prefs.getString('xtream_password');
 
-        debugPrint(
+        debugLog(
           'ChannelProvider: Xtream - Server: $server, User: $username',
         );
         if (server != null && username != null && password != null) {
@@ -520,22 +521,22 @@ class ChannelProvider with ChangeNotifier {
       }
 
       if (playlistUrl != null && playlistUrl.isNotEmpty) {
-        debugPrint('ChannelProvider: Loading playlist URL: $playlistUrl');
+        debugLog('ChannelProvider: Loading playlist URL: $playlistUrl');
         StartupProbe.mark(
             'ChannelProvider.autoLoadPlaylist: downloading playlist');
         await loadPlaylistFromUrl(playlistUrl);
         _hasLoadedPlaylist = true;
-        debugPrint('ChannelProvider: Auto-load completed successfully');
+        debugLog('ChannelProvider: Auto-load completed successfully');
         StartupProbe.mark(
             'ChannelProvider.autoLoadPlaylist: network load finished');
       } else {
-        debugPrint('ChannelProvider: Playlist URL is empty');
+        debugLog('ChannelProvider: Playlist URL is empty');
         StartupProbe.mark(
             'ChannelProvider.autoLoadPlaylist: playlist url empty');
       }
     } catch (e) {
       // Silently fail - user can manually load from settings
-      debugPrint('ChannelProvider: Auto-load playlist failed: $e');
+      debugLog('ChannelProvider: Auto-load playlist failed: $e');
       StartupProbe.mark('ChannelProvider.autoLoadPlaylist: failed ($e)');
     }
   }
@@ -552,7 +553,7 @@ class ChannelProvider with ChangeNotifier {
       if (e.toString().contains('HandshakeException') ||
           e.toString().contains('WRONG_VERSION_NUMBER') ||
           e.toString().contains('CERTIFICATE_VERIFY_FAILED')) {
-        debugPrint(
+        debugLog(
             'ChannelProvider: Handshake error detected, retrying with direct HttpClient: $e');
         await _loadPlaylistWithDirectClient(url);
       } else {
@@ -572,15 +573,15 @@ class ChannelProvider with ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
 
     try {
-      debugPrint('ChannelProvider: Loading playlist from URL: $url');
-      debugPrint(
+      debugLog('ChannelProvider: Loading playlist from URL: $url');
+      debugLog(
         'ChannelProvider: Starting streamed download with 90 second timeout...',
       );
 
       // Create HttpClient with maximum TLS compatibility (no SecurityContext)
       final ioClient = HttpClient()
         ..badCertificateCallback = (cert, host, port) {
-          debugPrint('ChannelProvider: Accepting cert from $host:$port');
+          debugLog('ChannelProvider: Accepting cert from $host:$port');
           return true;
         }
         ..connectionTimeout = const Duration(seconds: 90)
@@ -589,7 +590,7 @@ class ChannelProvider with ChangeNotifier {
       try {
         ioClient.findProxy = (uri) => 'DIRECT';
       } catch (e) {
-        debugPrint('ChannelProvider: Could not set proxy: $e');
+        debugLog('ChannelProvider: Could not set proxy: $e');
       }
 
       http.Client client = IOClient(ioClient);
@@ -605,7 +606,7 @@ class ChannelProvider with ChangeNotifier {
         final streamedResponse = await client.send(request).timeout(
           const Duration(seconds: 90),
           onTimeout: () {
-            debugPrint(
+            debugLog(
               'ChannelProvider: Request timed out after 90 seconds',
             );
             throw Exception(
@@ -617,10 +618,10 @@ class ChannelProvider with ChangeNotifier {
           throw e;
         });
 
-        debugPrint(
+        debugLog(
           'ChannelProvider: Response received - status: ${streamedResponse.statusCode}',
         );
-        debugPrint(
+        debugLog(
           'ChannelProvider: Content-Type: ${streamedResponse.headers['content-type']}',
         );
 
@@ -678,7 +679,7 @@ class ChannelProvider with ChangeNotifier {
           await sink.close();
         }
         final downloadDuration = DateTime.now().difference(downloadStart);
-        debugPrint(
+        debugLog(
             'ChannelProvider: Downloaded $totalBytes bytes in ${downloadDuration.inMilliseconds}ms');
 
         // Parse playlist from file in background isolate (memory efficient)
@@ -691,7 +692,7 @@ class ChannelProvider with ChangeNotifier {
         final parsed = await compute(parsePlaylistFromFile, tempFile.path);
         final parseDuration = DateTime.now().difference(parseStart);
         PerformanceMonitor.end('PLAYLIST_PARSE_ISOLATE');
-        debugPrint(
+        debugLog(
             'ChannelProvider: Isolate parsing took ${parseDuration.inMilliseconds}ms');
 
         _loadingStatus = 'Processing channels...';
@@ -727,12 +728,12 @@ class ChannelProvider with ChangeNotifier {
         try {
           final playlistJson = json.encode(_channelMaps);
           await prefs.setString('flutter.cached_playlist', playlistJson);
-          debugPrint(
+          debugLog(
               'ChannelProvider: Saved playlist to flutter.cached_playlist for Android Auto');
-          debugPrint('ChannelProvider: flutter.cached_playlist contents: ${playlistJson.substring(
+          debugLog('ChannelProvider: flutter.cached_playlist contents: ${playlistJson.substring(
                   0, playlistJson.length > 500 ? 500 : playlistJson.length)}');
         } catch (e) {
-          debugPrint(
+          debugLog(
               'ChannelProvider: Failed to save playlist for Android Auto: $e');
         }
 
@@ -758,16 +759,16 @@ class ChannelProvider with ChangeNotifier {
         await File(_seriesCachePath!)
             .writeAsString(json.encode(series.map((s) => s.toMap()).toList()));
         final mapDuration = DateTime.now().difference(mapStart);
-        debugPrint(
+        debugLog(
             'ChannelProvider: Map conversion took ${mapDuration.inMilliseconds}ms');
 
         _cachedCategories = null; // Clear cache when channels change
         // Trigger async category extraction in background (non-blocking)
         unawaited(_computeCategoriesAsync());
 
-        debugPrint(
+        debugLog(
             'ChannelProvider: Parsed ${_channelMaps.length} channels (isolate)');
-        debugPrint(
+        debugLog(
             'ChannelProvider: Parsed $_moviesCount movies, $_seriesCount series (isolate)');
 
         _loadingStatus = 'Loading initial VOD content...';
@@ -800,7 +801,7 @@ class ChannelProvider with ChangeNotifier {
           await prefs.setInt('cache_timestamp', now);
           await prefs.remove(
               'cached_playlist'); // Remove old SharedPreferences cache if any
-          debugPrint(
+          debugLog(
               'ChannelProvider: Playlist cached to file (${cacheFile.path}, $totalBytes bytes)');
         }
 
@@ -810,7 +811,7 @@ class ChannelProvider with ChangeNotifier {
         // Auto-save EPG URL from M3U x-tvg-url attribute
         final epgUrl = parsed['epgUrl'] as String?;
         if (epgUrl != null && epgUrl.isNotEmpty) {
-          debugPrint(
+          debugLog(
               'ChannelProvider: Found EPG URL in M3U: $epgUrl (auto-saving)');
           await prefs.setString('epg_url', epgUrl);
           unawaited(_epgService?.initialize()); // Trigger EPG loading
@@ -830,8 +831,8 @@ class ChannelProvider with ChangeNotifier {
         client.close();
       }
     } catch (e, stackTrace) {
-      debugPrint('ChannelProvider: Error loading playlist: $e');
-      debugPrint('ChannelProvider: Stack trace: $stackTrace');
+      debugLog('ChannelProvider: Error loading playlist: $e');
+      debugLog('ChannelProvider: Stack trace: $stackTrace');
 
       _loadingProgress = 0.0;
       _loadingStatus = '';
@@ -884,7 +885,7 @@ class ChannelProvider with ChangeNotifier {
         HttpClient(context: SecurityContext(withTrustedRoots: true))
           ..badCertificateCallback =
               (X509Certificate cert, String host, int port) {
-            debugPrint('ChannelProvider: Accepting cert from $host:$port');
+            debugLog('ChannelProvider: Accepting cert from $host:$port');
             return true;
           }
           ..connectionTimeout = const Duration(seconds: 90)
@@ -893,11 +894,11 @@ class ChannelProvider with ChangeNotifier {
     try {
       httpClient.findProxy = (uri) => 'DIRECT';
     } catch (e) {
-      debugPrint('ChannelProvider: Could not set proxy: $e');
+      debugLog('ChannelProvider: Could not set proxy: $e');
     }
 
     try {
-      debugPrint(
+      debugLog(
           'ChannelProvider: Using direct HttpClient with improved TLS handling');
 
       final request = await httpClient.getUrl(Uri.parse(url));
@@ -933,7 +934,7 @@ class ChannelProvider with ChangeNotifier {
         await sink.close();
       }
 
-      debugPrint(
+      debugLog(
           'ChannelProvider: Downloaded $totalBytes bytes to temp file (direct client)');
 
       // Parse from file in background isolate (memory efficient)
@@ -967,7 +968,7 @@ class ChannelProvider with ChangeNotifier {
       // Trigger async category extraction in background (non-blocking)
       unawaited(_computeCategoriesAsync());
 
-      debugPrint(
+      debugLog(
           'ChannelProvider: Parsed ${_channelMaps.length} channels (direct client)');
 
       if (_contentProvider != null) {
@@ -987,14 +988,14 @@ class ChannelProvider with ChangeNotifier {
         await prefs.setString(_playlistCacheFilePathKey, cacheFile.path);
         await prefs.setInt('cache_timestamp', now);
         await prefs.remove('cached_playlist');
-        debugPrint(
+        debugLog(
             'ChannelProvider: Playlist cached to file (${cacheFile.path}, $totalBytes bytes)');
       }
 
       // Auto-save EPG URL
       final epgUrl = parsed['epgUrl'] as String?;
       if (epgUrl != null && epgUrl.isNotEmpty) {
-        debugPrint('ChannelProvider: Found EPG URL: $epgUrl (auto-saving)');
+        debugLog('ChannelProvider: Found EPG URL: $epgUrl (auto-saving)');
         await prefs.setString('epg_url', epgUrl);
         unawaited(_epgService?.initialize()); // Trigger EPG loading
       }
@@ -1008,8 +1009,8 @@ class ChannelProvider with ChangeNotifier {
       // Start background TMDB enrichment (non-blocking)
       unawaited(_startBackgroundEnrichment());
     } catch (e, stackTrace) {
-      debugPrint('ChannelProvider: Error with direct client: $e');
-      debugPrint('ChannelProvider: Stack trace: $stackTrace');
+      debugLog('ChannelProvider: Error with direct client: $e');
+      debugLog('ChannelProvider: Stack trace: $stackTrace');
       _errorMessage = e.toString();
       _isLoading = false;
       notifyListeners();
@@ -1064,7 +1065,7 @@ class ChannelProvider with ChangeNotifier {
       // Auto-save EPG URL from M3U x-tvg-url attribute
       final epgUrl = parsed['epgUrl'] as String?;
       if (epgUrl != null && epgUrl.isNotEmpty) {
-        debugPrint(
+        debugLog(
             'ChannelProvider: Found EPG URL in M3U: $epgUrl (auto-saving)');
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('epg_url', epgUrl);
@@ -1077,8 +1078,8 @@ class ChannelProvider with ChangeNotifier {
       // Start background TMDB enrichment (non-blocking)
       unawaited(_startBackgroundEnrichment());
     } catch (e, stackTrace) {
-      debugPrint('ChannelProvider: Error parsing playlist string: $e');
-      debugPrint('ChannelProvider: Stack trace: $stackTrace');
+      debugLog('ChannelProvider: Error parsing playlist string: $e');
+      debugLog('ChannelProvider: Stack trace: $stackTrace');
       _errorMessage = e.toString();
       _isLoading = false;
       notifyListeners();
@@ -1136,10 +1137,10 @@ class ChannelProvider with ChangeNotifier {
 
       final jsonData = json.encode(cacheData);
       await jsonCacheFile.writeAsString(jsonData);
-      debugPrint(
+      debugLog(
           'ChannelProvider: Saved JSON cache (channels only, ${jsonData.length} bytes)');
     } catch (e) {
-      debugPrint('ChannelProvider: Failed to save JSON cache: $e');
+      debugLog('ChannelProvider: Failed to save JSON cache: $e');
       // Non-fatal - cache is optional
     }
   }
@@ -1159,10 +1160,10 @@ class ChannelProvider with ChangeNotifier {
       _cachedCategories =
           await compute(_extractCategoriesInIsolate, groupTitles);
 
-      debugPrint(
+      debugLog(
           'ChannelProvider: Found ${_cachedCategories!.length} categories from ${_channelMaps.length} channels');
     } catch (e) {
-      debugPrint('ChannelProvider: Error extracting categories: $e');
+      debugLog('ChannelProvider: Error extracting categories: $e');
       // Fallback - just use a few hardcoded
       _cachedCategories = ['All Channels'];
     }
@@ -1209,13 +1210,13 @@ class ChannelProvider with ChangeNotifier {
       final password = uri.queryParameters['password'];
 
       if (username == null || password == null) {
-        debugPrint(
+        debugLog(
           'ChannelProvider: Cannot load VOD - missing credentials in URL',
         );
         return;
       }
 
-      debugPrint('ChannelProvider: Loading VOD from Xtream Codes API...');
+      debugLog('ChannelProvider: Loading VOD from Xtream Codes API...');
       final xtreamService = XtreamCodesService(
         serverUrl: serverUrl,
         username: username,
@@ -1231,7 +1232,7 @@ class ChannelProvider with ChangeNotifier {
       final List<Content> xtreamMovies = results[0];
       final List<Content> xtreamSeries = results[1];
 
-      debugPrint(
+      debugLog(
         'ChannelProvider: Loaded ${xtreamMovies.length} movies, ${xtreamSeries.length} series from Xtream API',
       );
 
@@ -1264,7 +1265,7 @@ class ChannelProvider with ChangeNotifier {
         _contentProvider!.loadSeries(firstSeries);
       }
     } catch (e) {
-      debugPrint('ChannelProvider: Error loading Xtream VOD: $e');
+      debugLog('ChannelProvider: Error loading Xtream VOD: $e');
       // Don't fail the whole playlist load if VOD fails
     }
   }
@@ -1349,7 +1350,7 @@ class ChannelProvider with ChangeNotifier {
     if (_isEnriching || _contentProvider == null) return;
 
     _isEnriching = true;
-    debugPrint(
+    debugLog(
         'ChannelProvider: Starting background TMDB enrichment for $_moviesCount movies and $_seriesCount series');
 
     // Run in background without awaiting
@@ -1359,20 +1360,20 @@ class ChannelProvider with ChangeNotifier {
         final allMovies = await getMovies(limit: 999999);
         final allSeries = await getSeries(limit: 999999);
 
-        debugPrint('ChannelProvider: Enriching ${allMovies.length} movies...');
+        debugLog('ChannelProvider: Enriching ${allMovies.length} movies...');
         final enrichedMovies = await _enrichmentService.enrichContent(
           allMovies,
           onProgress: (current, total) {
-            debugPrint(
+            debugLog(
                 'ChannelProvider: Movie enrichment progress: $current/$total');
           },
         );
 
-        debugPrint('ChannelProvider: Enriching ${allSeries.length} series...');
+        debugLog('ChannelProvider: Enriching ${allSeries.length} series...');
         final enrichedSeries = await _enrichmentService.enrichContent(
           allSeries,
           onProgress: (current, total) {
-            debugPrint(
+            debugLog(
                 'ChannelProvider: Series enrichment progress: $current/$total');
           },
         );
@@ -1386,9 +1387,9 @@ class ChannelProvider with ChangeNotifier {
           _contentProvider!.loadSeries(enrichedSeries.take(100).toList());
         }
 
-        debugPrint('ChannelProvider: Background TMDB enrichment completed');
+        debugLog('ChannelProvider: Background TMDB enrichment completed');
       } catch (e) {
-        debugPrint('ChannelProvider: Error during background enrichment: $e');
+        debugLog('ChannelProvider: Error during background enrichment: $e');
       } finally {
         _isEnriching = false;
       }
@@ -1402,18 +1403,18 @@ class ChannelProvider with ChangeNotifier {
       if (_moviesCachePath != null) {
         final moviesJson = json.encode(movies.map((m) => m.toMap()).toList());
         await File(_moviesCachePath!).writeAsString(moviesJson);
-        debugPrint(
+        debugLog(
             'ChannelProvider: Saved ${movies.length} enriched movies to cache');
       }
 
       if (_seriesCachePath != null) {
         final seriesJson = json.encode(series.map((s) => s.toMap()).toList());
         await File(_seriesCachePath!).writeAsString(seriesJson);
-        debugPrint(
+        debugLog(
             'ChannelProvider: Saved ${series.length} enriched series to cache');
       }
     } catch (e) {
-      debugPrint('ChannelProvider: Error saving enriched content: $e');
+      debugLog('ChannelProvider: Error saving enriched content: $e');
     }
   }
 }

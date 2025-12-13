@@ -71,7 +71,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
   }
 
   Widget _buildHeroBanner() {
-    final heroImage = widget.content.backdropUrl ?? widget.content.imageUrl;
+    final heroImage = widget.content.backdropUrl;
     return Stack(
       children: [
         // Background image

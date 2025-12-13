@@ -1,3 +1,4 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -194,7 +195,7 @@ class _MoviesScreenState extends State<MoviesScreen>
         });
       }
     } catch (e) {
-      debugPrint('MoviesScreen: Error batch-fetching TMDB art: $e');
+      debugLog('MoviesScreen: Error batch-fetching TMDB art: $e');
     }
   }
 
@@ -511,16 +512,16 @@ class _MoviesScreenState extends State<MoviesScreen>
       }
     }
 
-    debugPrint('Movies: Total=${movies.length}, Valid=${validMovies.length}, Genres=${genreMap.keys.join(", ")}');
+    debugLog('Movies: Total=${movies.length}, Valid=${validMovies.length}, Genres=${genreMap.keys.join(", ")}');
     for (final entry in genreMap.entries) {
-      debugPrint('  ${entry.key}: ${entry.value.length} movies');
+      debugLog('  ${entry.key}: ${entry.value.length} movies');
     }
     
     // Log first 3 movies to help debug genre issues
     if (movies.isNotEmpty) {
-      debugPrint('Sample movies for genre debugging:');
+      debugLog('Sample movies for genre debugging:');
       for (final movie in movies.take(3)) {
-        debugPrint('  Title: "${movie.title}", TMDB Genres: ${movie.tmdbGenres?.join(", ") ?? "NONE"}, M3U Genres: ${movie.genres?.join(", ") ?? "NONE"}');
+        debugLog('  Title: "${movie.title}", TMDB Genres: ${movie.tmdbGenres?.join(", ") ?? "NONE"}, M3U Genres: ${movie.genres?.join(", ") ?? "NONE"}');
       }
     }
 
@@ -560,7 +561,7 @@ class _MoviesScreenState extends State<MoviesScreen>
                       child: BrandSecondaryButton(
                         label: 'Load More ($genre)',
                         onPressed: () {
-                          debugPrint('Load More pressed for genre: $genre');
+                          debugLog('Load More pressed for genre: $genre');
                           setState(() {
                             _genreDisplayCounts[genre] = displayCount + _itemsPerPage;
                           });
@@ -585,7 +586,7 @@ class _MoviesScreenState extends State<MoviesScreen>
     List<Content> allMovies,
     List<Content> recentMovies,
   ) {
-    final heroImage = featuredMovie.backdropUrl ?? featuredMovie.imageUrl;
+    final heroImage = featuredMovie.backdropUrl;
     final screenSize = MediaQuery.of(context).size;
     final heroHeight = screenSize.height * 0.75;
     final sidebarWidth = AppSizes.sidebarCollapsedWidth + AppSizes.lg;
@@ -972,13 +973,17 @@ class _MoviesScreenState extends State<MoviesScreen>
               m.title,
               year: m.year,
             );
-            if (details != null) {
+            final bestBackdrop = await TMDBService.getBestBackdrop(
+              m.title,
+              year: m.year,
+            );
+            if (details != null || bestBackdrop != null) {
               final patched = m.copyWith(
-                backdropUrl: details['backdrop'] ?? m.backdropUrl,
-                imageUrl: details['poster'] ?? m.imageUrl,
-                rating: (details['rating'] as double?) ?? m.rating,
-                description: details['overview'] ?? m.description,
-                genres: (details['genres'] as List<String>?) ?? m.genres,
+                backdropUrl: bestBackdrop ?? details?['backdrop'] ?? m.backdropUrl,
+                imageUrl: details?['poster'] ?? m.imageUrl,
+                rating: (details?['rating'] as double?) ?? m.rating,
+                description: details?['overview'] ?? m.description,
+                genres: (details?['genres'] as List<String>?) ?? m.genres,
               );
               enhancedMovies.add(patched);
               curated.add(patched);

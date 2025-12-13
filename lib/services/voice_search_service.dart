@@ -1,3 +1,4 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/foundation.dart';
@@ -41,7 +42,7 @@ class VoiceSearchService with ChangeNotifier {
         _isAvailable = false;
       }
     } catch (e) {
-      debugPrint('VoiceSearchService initialization error: $e');
+      debugLog('VoiceSearchService initialization error: $e');
       _lastError = 'Voice search unavailable';
       _isAvailable = false;
     }

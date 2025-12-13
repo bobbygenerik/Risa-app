@@ -1,6 +1,6 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import '../models/channel.dart';
 import '../models/content.dart';
 
@@ -59,8 +59,8 @@ class M3UParserService {
 
     _epgUrl = null; // Reset EPG URL
 
-    debugPrint('M3UParser: Parsing ${rawLines.length} raw lines');
-    debugPrint(
+    debugLog('M3UParser: Parsing ${rawLines.length} raw lines');
+    debugLog(
       'M3UParser: First line: ${rawLines.isNotEmpty ? rawLines[0] : "EMPTY"}',
     );
 
@@ -70,7 +70,7 @@ class M3UParserService {
       final urlMatch = _epgUrlRegex.firstMatch(firstLine);
       if (urlMatch != null) {
         _epgUrl = urlMatch.group(1);
-        debugPrint('M3UParser: Found EPG URL: $_epgUrl');
+        debugLog('M3UParser: Found EPG URL: $_epgUrl');
       }
     }
 
@@ -95,11 +95,11 @@ class M3UParserService {
       
       // Show progress for large playlists
       if (rawLines.length > 10000 && chunkStart % (chunkSize * 5) == 0) {
-        debugPrint('M3UParser: Processed $chunkEnd/${rawLines.length} raw lines');
+        debugLog('M3UParser: Processed $chunkEnd/${rawLines.length} raw lines');
       }
     }
 
-    debugPrint('M3UParser: Reassembled into ${lines.length} logical lines');
+    debugLog('M3UParser: Reassembled into ${lines.length} logical lines');
 
     String? currentInfo;
     Map<String, String> currentAttributes = {};
@@ -117,7 +117,7 @@ class M3UParserService {
           currentInfo = line.substring(8);
           currentAttributes = _parseAttributes(currentInfo);
           if (channelCount < 3) {
-            debugPrint(
+            debugLog(
               'M3UParser: Found EXTINF: ${currentInfo.length > 100 ? '${currentInfo.substring(0, 100)}...' : currentInfo}',
             );
           }
@@ -137,7 +137,7 @@ class M3UParserService {
           channels.add(channel);
           channelCount++;
           if (channelCount <= 3) {
-            debugPrint('M3UParser: Added channel #$channelCount: $channelName');
+            debugLog('M3UParser: Added channel #$channelCount: $channelName');
           }
           currentInfo = null;
           currentAttributes = {};
@@ -146,11 +146,11 @@ class M3UParserService {
       
       // Show progress for large playlists
       if (lines.length > 5000 && chunkStart % (chunkSize * 2) == 0) {
-        debugPrint('M3UParser: Parsed $channelCount channels so far...');
+        debugLog('M3UParser: Parsed $channelCount channels so far...');
       }
     }
 
-    debugPrint('M3UParser: Total channels parsed: ${channels.length}');
+    debugLog('M3UParser: Total channels parsed: ${channels.length}');
     return channels;
   }
 
@@ -181,7 +181,7 @@ class M3UParserService {
           final urlMatch = _epgUrlRegex.firstMatch(line);
           if (urlMatch != null) {
             _epgUrl = urlMatch.group(1);
-            debugPrint('M3UParser: (stream) Found EPG URL: $_epgUrl');
+            debugLog('M3UParser: (stream) Found EPG URL: $_epgUrl');
           }
         }
       }
@@ -190,7 +190,7 @@ class M3UParserService {
         currentInfo = line.substring(8);
         currentAttributes = _parseAttributes(currentInfo!);
         if (channelCount < 3) {
-          debugPrint(
+          debugLog(
             'M3UParser: (stream) Found EXTINF: ${currentInfo!.length > 100 ? '${currentInfo!.substring(0, 100)}...' : currentInfo}',
           );
         }
@@ -237,7 +237,7 @@ class M3UParserService {
           channels.add(channel);
           channelCount++;
           if (channelCount <= 3) {
-            debugPrint(
+            debugLog(
               'M3UParser: (stream) Added channel #$channelCount: $channelName',
             );
           }
@@ -271,8 +271,8 @@ class M3UParserService {
       processLogicalLine(pendingLine.trim());
     }
 
-    debugPrint('M3UParser: (stream) Total channels parsed: ${channels.length}');
-    debugPrint(
+    debugLog('M3UParser: (stream) Total channels parsed: ${channels.length}');
+    debugLog(
       'M3UParser: (stream) Movies detected: ${movies.length}, Series detected: ${series.length}',
     );
     return M3UParseResult(channels: channels, movies: movies, series: series);
@@ -552,11 +552,11 @@ class M3UParserService {
     final imageUrl = attributes['tvg-logo'];
     
     if (index < 5) {
-      debugPrint('M3U Movie #$index: "$title"');
-      debugPrint('  group-title: "$groupTitle"');
-      debugPrint('  tvg-logo: "$imageUrl"');
-      debugPrint('  url: "$url"');
-      debugPrint('  genres: $genres');
+      debugLog('M3U Movie #$index: "$title"');
+      debugLog('  group-title: "$groupTitle"');
+      debugLog('  tvg-logo: "$imageUrl"');
+      debugLog('  url: "$url"');
+      debugLog('  genres: $genres');
     }
     
     return Content(
@@ -623,10 +623,10 @@ class M3UParserService {
 
   /// Extract genres from group title
   List<String>? _extractGenres(String? groupTitle) {
-    debugPrint('M3U _extractGenres called with: "$groupTitle"');
+    debugLog('M3U _extractGenres called with: "$groupTitle"');
     
     if (groupTitle == null || groupTitle.isEmpty) {
-      debugPrint('M3U _extractGenres returning null (empty groupTitle)');
+      debugLog('M3U _extractGenres returning null (empty groupTitle)');
       return null;
     }
     
@@ -672,13 +672,13 @@ class M3UParserService {
     // Check if the group-title matches any known genre
     for (final entry in genreMap.entries) {
       if (lower.contains(entry.key)) {
-        debugPrint('M3U _extractGenres found genre "${entry.value}" from "$groupTitle"');
+        debugLog('M3U _extractGenres found genre "${entry.value}" from "$groupTitle"');
         return [entry.value];
       }
     }
     
     // If no match, use the group-title directly as the genre
-    debugPrint('M3U _extractGenres returning: [$cleaned]');
+    debugLog('M3U _extractGenres returning: [$cleaned]');
     return [cleaned];
   }
 

@@ -1,3 +1,4 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -131,7 +132,7 @@ class _SeriesScreenState extends State<SeriesScreen>
         });
       }
     } catch (e) {
-      debugPrint('SeriesScreen: Error batch-fetching TMDB art: $e');
+      debugLog('SeriesScreen: Error batch-fetching TMDB art: $e');
     }
   }
 
@@ -215,13 +216,17 @@ class _SeriesScreenState extends State<SeriesScreen>
               s.title,
               year: s.year,
             );
-            if (details != null) {
+            final bestBackdrop = await TMDBService.getBestBackdrop(
+              s.title,
+              year: s.year,
+            );
+            if (details != null || bestBackdrop != null) {
               final patched = s.copyWith(
-                backdropUrl: details['backdrop'] ?? s.backdropUrl,
-                imageUrl: details['poster'] ?? s.imageUrl,
-                rating: (details['rating'] as double?) ?? s.rating,
-                description: details['overview'] ?? s.description,
-                genres: (details['genres'] as List<String>?) ?? s.genres,
+                backdropUrl: bestBackdrop ?? details?['backdrop'] ?? s.backdropUrl,
+                imageUrl: details?['poster'] ?? s.imageUrl,
+                rating: (details?['rating'] as double?) ?? s.rating,
+                description: details?['overview'] ?? s.description,
+                genres: (details?['genres'] as List<String>?) ?? s.genres,
               );
               enhancedSeries.add(patched);
               curated.add(patched);
@@ -657,7 +662,7 @@ class _SeriesScreenState extends State<SeriesScreen>
                       child: BrandSecondaryButton(
                         label: 'Load More ($genre)',
                         onPressed: () {
-                          debugPrint('Load More pressed for genre: $genre');
+                          debugLog('Load More pressed for genre: $genre');
                           setState(() {
                             _genreDisplayCounts[genre] = displayCount + _itemsPerPage;
                           });
@@ -682,7 +687,7 @@ class _SeriesScreenState extends State<SeriesScreen>
     List<Content> allSeries,
     List<Content> recentSeries,
   ) {
-    final heroImage = featuredSeries.backdropUrl ?? featuredSeries.imageUrl;
+    final heroImage = featuredSeries.backdropUrl;
     final screenSize = MediaQuery.of(context).size;
     final heroHeight = screenSize.height * 0.75;
     final sidebarWidth = AppSizes.sidebarCollapsedWidth + AppSizes.lg;

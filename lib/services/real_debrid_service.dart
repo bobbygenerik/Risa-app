@@ -1,3 +1,4 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -31,7 +32,7 @@ class RealDebridService extends ChangeNotifier {
 
   /// Initialize service
   Future<void> initialize() async {
-    debugPrint('Real-Debrid Service initialized');
+    debugLog('Real-Debrid Service initialized');
   }
 
   /// Set API key
@@ -61,7 +62,7 @@ class RealDebridService extends ChangeNotifier {
   /// Test connection and get account info
   Future<bool> testConnection() async {
     if (_apiKey == null || _apiKey!.isEmpty) {
-      debugPrint('Real-Debrid: Missing API key');
+      debugLog('Real-Debrid: Missing API key');
       return false;
     }
 
@@ -80,16 +81,16 @@ class RealDebridService extends ChangeNotifier {
         _isAuthenticated = true;
         notifyListeners();
 
-        debugPrint('Real-Debrid: Connection successful - User: $_username');
+        debugLog('Real-Debrid: Connection successful - User: $_username');
         return true;
       } else {
-        debugPrint('Real-Debrid: Connection failed - ${response.statusCode}');
+        debugLog('Real-Debrid: Connection failed - ${response.statusCode}');
         _isAuthenticated = false;
         notifyListeners();
         return false;
       }
     } catch (e) {
-      debugPrint('Real-Debrid: Connection error - $e');
+      debugLog('Real-Debrid: Connection error - $e');
       _isAuthenticated = false;
       notifyListeners();
       return false;
@@ -116,11 +117,11 @@ class RealDebridService extends ChangeNotifier {
         }
         return false;
       } else {
-        debugPrint('Real-Debrid: Failed to get supported hosts');
+        debugLog('Real-Debrid: Failed to get supported hosts');
         return false;
       }
     } catch (e) {
-      debugPrint('Real-Debrid: Error checking link support - $e');
+      debugLog('Real-Debrid: Error checking link support - $e');
       return false;
     }
   }
@@ -143,16 +144,16 @@ class RealDebridService extends ChangeNotifier {
         final data = jsonDecode(response.body);
         final downloadUrl = data['download'];
 
-        debugPrint('Real-Debrid: Link unrestricted successfully');
+        debugLog('Real-Debrid: Link unrestricted successfully');
         return downloadUrl;
       } else {
-        debugPrint(
+        debugLog(
           'Real-Debrid: Failed to unrestrict link - ${response.statusCode}',
         );
         return null;
       }
     } catch (e) {
-      debugPrint('Real-Debrid: Error unrestricting link - $e');
+      debugLog('Real-Debrid: Error unrestricting link - $e');
       return null;
     }
   }
@@ -179,17 +180,17 @@ class RealDebridService extends ChangeNotifier {
     // Check if link is supported
     final supported = await isLinkSupported(originalUrl);
     if (!supported) {
-      debugPrint('Real-Debrid: Link not supported, using original URL');
+      debugLog('Real-Debrid: Link not supported, using original URL');
       return originalUrl;
     }
 
     // Unrestrict the link
     final unrestrictedUrl = await unrestrictLink(originalUrl);
     if (unrestrictedUrl != null) {
-      debugPrint('Real-Debrid: Using unrestricted URL');
+      debugLog('Real-Debrid: Using unrestricted URL');
       return unrestrictedUrl;
     } else {
-      debugPrint('Real-Debrid: Failed to unrestrict, using original URL');
+      debugLog('Real-Debrid: Failed to unrestrict, using original URL');
       return originalUrl;
     }
   }
@@ -208,11 +209,11 @@ class RealDebridService extends ChangeNotifier {
         final List<dynamic> hosts = jsonDecode(response.body);
         return hosts.map((h) => h['name'] as String).toList();
       } else {
-        debugPrint('Real-Debrid: Failed to get hosts');
+        debugLog('Real-Debrid: Failed to get hosts');
         return [];
       }
     } catch (e) {
-      debugPrint('Real-Debrid: Error getting hosts - $e');
+      debugLog('Real-Debrid: Error getting hosts - $e');
       return [];
     }
   }
@@ -230,11 +231,11 @@ class RealDebridService extends ChangeNotifier {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        debugPrint('Real-Debrid: Failed to get traffic info');
+        debugLog('Real-Debrid: Failed to get traffic info');
         return null;
       }
     } catch (e) {
-      debugPrint('Real-Debrid: Error getting traffic info - $e');
+      debugLog('Real-Debrid: Error getting traffic info - $e');
       return null;
     }
   }

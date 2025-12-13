@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
-import 'package:iptv_player/services/epg_service.dart';
+import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 
 class EpgDiagnosticScreen extends StatelessWidget {
@@ -24,31 +24,30 @@ class EpgDiagnosticScreen extends StatelessWidget {
         title: const Text('EPG Diagnostic'),
         backgroundColor: const Color(0xFF050710),
       ),
-      body: Consumer2<EpgService, ChannelProvider>(
+      body: Consumer2<IncrementalEpgService, ChannelProvider>(
         builder: (context, epgService, channelProvider, _) {
           final channels = channelProvider.channels;
           final epgChannels = epgService.getEpgChannelIds();
-          final stats = epgService.getMatchingStats(channels);
+          // Calculate basic stats since getMatchingStats doesn't exist
+          final matched = channels.where((c) => epgService.hasEpgData(c.tvgId ?? c.id)).length;
+          final stats = {'matched': matched, 'total': channels.length};
           
-          // Trigger debug analysis
-          if (channels.isNotEmpty && epgService.hasData) {
+          // Debug info for IncrementalEpgService
+          if (channels.isNotEmpty && epgService.availableChannels.isNotEmpty) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              epgService.debugChannelMatching(channels);
-              // Additional debug info
-              print('=== ADDITIONAL DEBUG ===');
-              print('EPG service hasData: ${epgService.hasData}');
-              print('EPG data keys count: ${epgService.epgData.length}');
-              print('Secondary EPG keys count: ${epgService.secondaryEpgData.length}');
+              print('=== INCREMENTAL EPG DEBUG ===');
+              print('EPG available channels: ${epgService.availableChannels.length}');
+              print('EPG loaded channels: ${epgService.loadedChannelCount}');
               print('Channel provider channels count: ${channels.length}');
               
               // Test first few channels manually
               for (int i = 0; i < 5 && i < channels.length; i++) {
                 final channel = channels[i];
                 final tvgId = channel.tvgId ?? channel.id;
-                final hasEpg = epgService.hasEpgData(tvgId, channelName: channel.name);
+                final hasEpg = epgService.hasEpgData(tvgId);
                 print('Channel $i: "${channel.name}" (ID: "$tvgId") -> EPG: $hasEpg');
               }
-              print('=== END ADDITIONAL DEBUG ===');
+              print('=== END INCREMENTAL EPG DEBUG ===');
             });
           }
           
@@ -58,9 +57,9 @@ class EpgDiagnosticScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'EPG Status: ${epgService.hasData ? "Loaded" : "No Data"}',
+                  'EPG Status: ${epgService.availableChannels.isNotEmpty ? "Loaded" : "No Data"}',
                   style: TextStyle(
-                    color: epgService.hasData ? Colors.green : Colors.red,
+                    color: epgService.availableChannels.isNotEmpty ? Colors.green : Colors.red,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -174,7 +173,6 @@ class EpgDiagnosticScreen extends StatelessWidget {
                 ...channels.take(10).map((channel) {
                   final hasEpg = epgService.hasEpgData(
                     channel.tvgId ?? channel.id,
-                    channelName: channel.name,
                   );
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),

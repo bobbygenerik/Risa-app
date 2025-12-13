@@ -1,3 +1,4 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -123,7 +124,7 @@ class WhisperSpeechService extends ChangeNotifier {
 
     final success = await manager.downloadModel(modelId);
     if (!success) {
-      debugPrint('WhisperSpeechService: auto-download failed for $modelId');
+      debugLog('WhisperSpeechService: auto-download failed for $modelId');
     }
   }
 

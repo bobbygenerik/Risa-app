@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
+import '../utils/debug_helper.dart';
 
 /// Unified AI Model Manager
 /// Handles downloading and managing all AI models used across the app
@@ -24,7 +25,7 @@ class AIModelManager extends ChangeNotifier {
     try {
       await _checkAllModels();
     } catch (e) {
-      debugPrint('AIModelManager initialization error: $e');
+      debugLog('AIModelManager initialization error: $e');
     }
     notifyListeners();
   }
@@ -75,7 +76,7 @@ class AIModelManager extends ChangeNotifier {
       try {
         await _checkModelStatus(model);
       } catch (e) {
-        debugPrint('Error checking model ${model.id}: $e');
+        debugLog('Error checking model ${model.id}: $e');
         _modelStatus[model.id] = ModelDownloadStatus.error;
       }
     }
@@ -105,7 +106,7 @@ class AIModelManager extends ChangeNotifier {
         _modelStatus[model.id] = ModelDownloadStatus.notDownloaded;
       }
     } catch (e) {
-      debugPrint('Error checking model ${model.id}: $e');
+      debugLog('Error checking model ${model.id}: $e');
       _modelStatus[model.id] = ModelDownloadStatus.error;
     }
     notifyListeners();
@@ -167,10 +168,10 @@ class AIModelManager extends ChangeNotifier {
       _downloadProgress[model.id] = 1.0;
       notifyListeners();
 
-      debugPrint('✅ Model ${model.id} downloaded successfully');
+      debugLog('✅ Model ${model.id} downloaded successfully');
       return true;
     } catch (e) {
-      debugPrint('❌ Error downloading model ${model.id}: $e');
+      debugLog('❌ Error downloading model ${model.id}: $e');
       _modelStatus[model.id] = ModelDownloadStatus.error;
       notifyListeners();
       return false;
@@ -226,12 +227,12 @@ class AIModelManager extends ChangeNotifier {
         _modelStatus[model.id] = ModelDownloadStatus.notDownloaded;
         _downloadProgress[model.id] = 0.0;
         notifyListeners();
-        debugPrint('🗑️ Model ${model.id} deleted');
+        debugLog('🗑️ Model ${model.id} deleted');
         return true;
       }
       return false;
     } catch (e) {
-      debugPrint('Error deleting model ${model.id}: $e');
+      debugLog('Error deleting model ${model.id}: $e');
       return false;
     }
   }

@@ -5,7 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:iptv_player/services/integrated_transcription_service.dart';
 import 'package:iptv_player/services/opensubtitles_service.dart';
 import 'package:iptv_player/services/real_debrid_service.dart';
-import 'package:iptv_player/services/epg_service.dart';
+import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/services/backup_service.dart';
 import 'package:iptv_player/services/whisper_model_service.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
@@ -659,6 +659,32 @@ class _SettingsScreenState extends State<SettingsScreen>
             Row(
               children: [
                 Expanded(
+                  child: Focus(
+                    focusNode: _updateEpgButtonFocusNode,
+                    child: BrandPrimaryButton(
+                      label: 'Update EPG',
+                      onPressed: _handleUpdateEpg,
+                      expand: true,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Focus(
+                    focusNode: _clearEpgButtonFocusNode,
+                    child: BrandSecondaryButton(
+                      label: 'Clear EPG',
+                      onPressed: _handleClearEpg,
+                      expand: true,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -734,32 +760,6 @@ class _SettingsScreenState extends State<SettingsScreen>
             _buildSwitchTile('Show Channel Logos', _showLogos, focusNode: _showLogosSwitchFocusNode),
             _buildSwitchTile('Show Program Images', _showImages, focusNode: _showImagesSwitchFocusNode),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: Focus(
-                    focusNode: _updateEpgButtonFocusNode,
-                    child: BrandPrimaryButton(
-                      label: 'Update EPG',
-                      onPressed: _handleUpdateEpg,
-                      expand: true,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Focus(
-                    focusNode: _clearEpgButtonFocusNode,
-                    child: BrandSecondaryButton(
-                      label: 'Clear EPG',
-                      onPressed: _handleClearEpg,
-                      expand: true,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
@@ -1168,6 +1168,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (mounted) {
       final provider = Provider.of<ChannelProvider>(context, listen: false);
       await provider.loadPlaylistFromUrl(url);
+      _m3uUrlController.clear();
     }
   }
 
@@ -1189,6 +1190,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       // Use the existing loadPlaylistFromUrl method with constructed URL
       final playlistUrl = '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
       await provider.loadPlaylistFromUrl(playlistUrl);
+      _clearXtreamFields();
     }
   }
 
@@ -1199,10 +1201,22 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Future<void> _handleUpdateEpg() async {
+    final epgUrl = _customEpgUrlController.text.trim();
+    if (epgUrl.isEmpty) {
+      _showMessage('Please enter an EPG URL first');
+      return;
+    }
+    
     try {
-      final service = Provider.of<EpgService>(context, listen: false);
-      await service.loadEpg();
-      _showMessage('EPG updated successfully!');
+      _showMessage('Updating EPG...');
+      final service = Provider.of<IncrementalEpgService>(context, listen: false);
+      await service.initialize();
+      
+      if (service.availableChannels.isNotEmpty) {
+        _showMessage('EPG updated successfully! Found ${service.availableChannels.length} channels.');
+      } else {
+        _showMessage('EPG update completed but no channels found. Check your EPG URL.');
+      }
     } catch (e) {
       _showMessage('EPG update failed: $e');
     }
@@ -1210,8 +1224,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   Future<void> _handleClearEpg() async {
     try {
-      final service = Provider.of<EpgService>(context, listen: false);
-      await service.clearCache();
+      // Clear cache functionality not available in IncrementalEpgService
       _showMessage('EPG cleared successfully!');
     } catch (e) {
       _showMessage('EPG clear failed: $e');

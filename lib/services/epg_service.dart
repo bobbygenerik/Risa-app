@@ -1,3 +1,4 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
@@ -99,7 +100,7 @@ Map<String, dynamic> parseEpgInIsolate(String xmlData) {
           }
         }
       } catch (e) {
-        debugPrint('Error parsing programme: $e');
+        debugLog('Error parsing programme: $e');
         continue;
       }
     }
@@ -163,12 +164,12 @@ class EpgService with ChangeNotifier {
 
   /// Initialize EPG service - called automatically and manually
   Future<void> initialize() async {
-    debugPrint(
+    debugLog(
         'EpgService: Initializing (initialized flag: $_initialized, data: ${_epgData.length} channels)...');
 
     // Skip if already initialized AND has data
     if (_initialized && _epgData.isNotEmpty) {
-      debugPrint(
+      debugLog(
           'EpgService: Already initialized with ${_epgData.length} channels, skipping...');
       return;
     }
@@ -180,30 +181,30 @@ class EpgService with ChangeNotifier {
       await loadManualMappings();
 
       // Load from cache immediately
-      debugPrint('EpgService: Loading from cache...');
+      debugLog('EpgService: Loading from cache...');
       final cacheLoaded = await _loadFromCache();
       if (cacheLoaded) {
-        debugPrint(
+        debugLog(
             'EpgService: ✓ Loaded ${_epgData.length} channels from cache');
         notifyListeners();
       } else {
-        debugPrint('EpgService: ✗ No cache found');
+        debugLog('EpgService: ✗ No cache found');
       }
 
       // Also load secondary cache
       final secondaryCacheLoaded = await _loadSecondaryFromCache();
       if (secondaryCacheLoaded) {
-        debugPrint(
+        debugLog(
             'EpgService: ✓ Loaded ${_secondaryEpgData.length} secondary channels from cache');
         notifyListeners();
       }
 
-      debugPrint('EpgService: Total channels loaded: $totalChannelCount');
+      debugLog('EpgService: Total channels loaded: $totalChannelCount');
 
       // Refresh in background if needed
       _refreshInBackground();
     } catch (e) {
-      debugPrint('EpgService: Initialization error: $e');
+      debugLog('EpgService: Initialization error: $e');
       _error = 'Failed to initialize EPG service: $e';
       notifyListeners();
     }
@@ -218,21 +219,21 @@ class EpgService with ChangeNotifier {
     final secondaryEpgUrl = prefs.getString('secondary_epg_url');
 
     if (epgUrl != null && epgUrl.isNotEmpty) {
-      debugPrint(
+      debugLog(
           'EpgService: Triggering loadEpgFromUrl from public loadEpg() method.');
       await loadEpgFromUrl(epgUrl, forceRefresh: true);
     } else {
-      debugPrint('EpgService: No EPG URL found in SharedPreferences.');
+      debugLog('EpgService: No EPG URL found in SharedPreferences.');
       _error = 'No EPG URL configured.';
       notifyListeners();
     }
 
     if (secondaryEpgUrl != null && secondaryEpgUrl.isNotEmpty) {
-      debugPrint(
+      debugLog(
           'EpgService: Triggering loadSecondaryEpgFromUrl from public loadEpg() method.');
       await loadSecondaryEpgFromUrl(secondaryEpgUrl, forceRefresh: true);
     } else {
-      debugPrint(
+      debugLog(
           'EpgService: No secondary EPG URL found in SharedPreferences.');
     }
   }
@@ -248,7 +249,7 @@ class EpgService with ChangeNotifier {
         final age = DateTime.now().difference(_lastFetchTime!);
         needsRefresh = age > _cacheValidity;
         if (needsRefresh) {
-          debugPrint(
+          debugLog(
               'EpgService: Cache is ${age.inHours}h old, refreshing in background');
         }
       }
@@ -257,7 +258,7 @@ class EpgService with ChangeNotifier {
         final epgUrl =
             prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
         if (epgUrl != null && epgUrl.isNotEmpty) {
-          debugPrint('EpgService: Starting background EPG refresh...');
+          debugLog('EpgService: Starting background EPG refresh...');
           await loadEpgFromUrl(epgUrl, forceRefresh: true);
         }
 
@@ -267,7 +268,7 @@ class EpgService with ChangeNotifier {
         }
       }
     } catch (e) {
-      debugPrint('EpgService: Background refresh error: $e');
+      debugLog('EpgService: Background refresh error: $e');
     }
   }
 
@@ -281,10 +282,10 @@ class EpgService with ChangeNotifier {
       return;
     }
 
-    debugPrint('EPG: loadEpgFromUrl called. forceRefresh: $forceRefresh');
+    debugLog('EPG: loadEpgFromUrl called. forceRefresh: $forceRefresh');
     // Check cache first if not forcing refresh
     if (!forceRefresh && await _loadFromCache()) {
-      debugPrint('EPG loaded from cache');
+      debugLog('EPG loaded from cache');
       PerformanceMonitor.end('EPG_LOAD_TOTAL');
       return;
     }
@@ -298,7 +299,7 @@ class EpgService with ChangeNotifier {
 
     while (retryCount < _maxRetries && !success) {
       try {
-        debugPrint(
+        debugLog(
             'Fetching EPG from URL (attempt ${retryCount + 1}/$_maxRetries): $url');
 
         // Use streaming to handle large EPG files efficiently
@@ -312,7 +313,7 @@ class EpgService with ChangeNotifier {
         final response =
             await request.close().timeout(const Duration(seconds: 60));
 
-        debugPrint('EPG HTTP response: ${response.statusCode}');
+        debugLog('EPG HTTP response: ${response.statusCode}');
 
         if (response.statusCode != 200) {
           throw Exception('HTTP ${response.statusCode}');
@@ -332,11 +333,11 @@ class EpgService with ChangeNotifier {
           // Show progress and manage memory for large files
           if (totalBytes % (1024 * 1024) == 0) {
             final sizeMB = totalBytes / 1024 / 1024;
-            debugPrint('EPG download: ${sizeMB.toStringAsFixed(1)} MB');
+            debugLog('EPG download: ${sizeMB.toStringAsFixed(1)} MB');
             
             // If file is very large, process in streaming mode
             if (sizeMB > maxMemoryMB) {
-              debugPrint('EPG: Large file detected, switching to streaming mode');
+              debugLog('EPG: Large file detected, switching to streaming mode');
               // For very large files, we should process incrementally
               // but for now, continue with current approach
             }
@@ -349,7 +350,7 @@ class EpgService with ChangeNotifier {
         }
 
         client.close();
-        debugPrint(
+        debugLog(
             'EPG downloaded: ${(totalBytes / 1024 / 1024).toStringAsFixed(2)} MB in $chunkCount chunks');
             
         // Combine chunks efficiently
@@ -372,7 +373,7 @@ class EpgService with ChangeNotifier {
         final rawEpgData = parsed['epgData'] as Map<String, dynamic>;
         final processedCount = parsed['processedCount'] as int? ?? 0;
         
-        debugPrint('EPG: Converting $processedCount programs for ${rawEpgData.length} channels');
+        debugLog('EPG: Converting $processedCount programs for ${rawEpgData.length} channels');
         
         int channelCount = 0;
         const channelChunkSize = 50; // Process channels in chunks
@@ -416,7 +417,7 @@ class EpgService with ChangeNotifier {
           
           // Yield control periodically and notify progress
           if (channelCount % channelChunkSize == 0) {
-            debugPrint('EPG: Processed $channelCount/${rawEpgData.length} channels');
+            debugLog('EPG: Processed $channelCount/${rawEpgData.length} channels');
             await Future.delayed(const Duration(milliseconds: 2)); // Yield to UI thread
             notifyListeners(); // Update UI with partial data
           }
@@ -430,31 +431,31 @@ class EpgService with ChangeNotifier {
         _lastFetchTime = DateTime.now();
         _channelIdCache.clear(); // Clear cache when EPG data changes
         _normalizedEpgKeys = null; // Clear normalized keys cache
-        debugPrint('EPG parsed successfully: ${_epgData.length} channels');
+        debugLog('EPG parsed successfully: ${_epgData.length} channels');
         // Log sample EPG keys for debugging
         final sampleKeys = _epgData.keys.take(10).toList();
-        debugPrint('EPG sample keys: $sampleKeys');
+        debugLog('EPG sample keys: $sampleKeys');
         
         PerformanceMonitor.end('EPG_LOAD_TOTAL');
       } catch (e) {
         retryCount++;
         _error = e.toString();
-        debugPrint('EPG fetch error (attempt $retryCount): $_error');
-        debugPrint('EPG error stack trace: ${StackTrace.current}');
+        debugLog('EPG fetch error (attempt $retryCount): $_error');
+        debugLog('EPG error stack trace: ${StackTrace.current}');
 
         if (retryCount < _maxRetries) {
-          debugPrint('Retrying in ${_retryDelay.inSeconds} seconds...');
+          debugLog('Retrying in ${_retryDelay.inSeconds} seconds...');
           await Future.delayed(_retryDelay);
         } else {
-          debugPrint(
+          debugLog(
               'EPG fetch failed after $_maxRetries attempts, trying cache...');
           // Try loading from cache as fallback
           if (await _loadFromCache()) {
-            debugPrint('EPG loaded from cache as fallback');
+            debugLog('EPG loaded from cache as fallback');
             _error = 'Using cached EPG data (network unavailable)';
             success = true;
           } else {
-            debugPrint('EPG cache also unavailable');
+            debugLog('EPG cache also unavailable');
           }
         }
       }
@@ -469,7 +470,7 @@ class EpgService with ChangeNotifier {
       {bool forceRefresh = false}) async {
     // Check cache first if not forcing refresh
     if (!forceRefresh && await _loadSecondaryFromCache()) {
-      debugPrint('Secondary EPG loaded from cache');
+      debugLog('Secondary EPG loaded from cache');
       return;
     }
 
@@ -482,7 +483,7 @@ class EpgService with ChangeNotifier {
 
     while (retryCount < _maxRetries && !success) {
       try {
-        debugPrint(
+        debugLog(
             'Fetching secondary EPG from URL (attempt ${retryCount + 1}/$_maxRetries)...');
 
         final client = HttpClient()
@@ -503,11 +504,11 @@ class EpgService with ChangeNotifier {
         }
 
         client.close();
-        debugPrint(
+        debugLog(
             'Secondary EPG downloaded: ${(totalBytes / 1024 / 1024).toStringAsFixed(2)} MB');
 
         final xmlData = utf8.decode(epgBytes, allowMalformed: true);
-        debugPrint('Secondary EPG: Starting background parsing...');
+        debugLog('Secondary EPG: Starting background parsing...');
 
         final parsed = await compute(parseEpgInIsolate, xmlData);
 
@@ -544,12 +545,12 @@ class EpgService with ChangeNotifier {
         _error = null;
         _channelIdCache.clear(); // Clear cache when EPG data changes
         _normalizedEpgKeys = null; // Clear normalized keys cache
-        debugPrint(
+        debugLog(
             'Secondary EPG parsed: ${_secondaryEpgData.length} unique channels added');
       } catch (e) {
         retryCount++;
         _error = e.toString();
-        debugPrint('Secondary EPG fetch error (attempt $retryCount): $_error');
+        debugLog('Secondary EPG fetch error (attempt $retryCount): $_error');
 
         if (retryCount < _maxRetries) {
           await Future.delayed(_retryDelay);
@@ -572,9 +573,9 @@ class EpgService with ChangeNotifier {
       await prefs.setString(
           _secondaryCacheTimeKey, DateTime.now().toIso8601String());
 
-      debugPrint('Secondary EPG saved to cache: ${file.path}');
+      debugLog('Secondary EPG saved to cache: ${file.path}');
     } catch (e) {
-      debugPrint('Failed to save secondary EPG cache: $e');
+      debugLog('Failed to save secondary EPG cache: $e');
     }
   }
 
@@ -590,7 +591,7 @@ class EpgService with ChangeNotifier {
       final age = DateTime.now().difference(cacheTime);
 
       if (age > _cacheValidity) {
-        debugPrint('Secondary EPG cache expired');
+        debugLog('Secondary EPG cache expired');
         return false;
       }
 
@@ -599,7 +600,7 @@ class EpgService with ChangeNotifier {
 
       if (!await file.exists()) return false;
 
-      debugPrint('Secondary EPG: Loading from cache...');
+      debugLog('Secondary EPG: Loading from cache...');
       final cachedData = await file.readAsString();
 
       final parsed = await compute(parseEpgInIsolate, cachedData);
@@ -630,11 +631,11 @@ class EpgService with ChangeNotifier {
         _secondaryEpgData[channelId] = programs;
       }
 
-      debugPrint(
+      debugLog(
           'Secondary EPG loaded from cache: ${_secondaryEpgData.length} channels');
       return true;
     } catch (e) {
-      debugPrint('Failed to load secondary EPG from cache: $e');
+      debugLog('Failed to load secondary EPG from cache: $e');
       return false;
     }
   }
@@ -656,7 +657,7 @@ class EpgService with ChangeNotifier {
         return DateTime(year, month, day, hour, minute, second);
       }
     } catch (e) {
-      debugPrint('Error parsing EPG time "$timeStr": $e');
+      debugLog('Error parsing EPG time "$timeStr": $e');
     }
     return DateTime.now();
   }
@@ -741,23 +742,23 @@ class EpgService with ChangeNotifier {
     }
     // Log EPG data size on first lookup
     if (_channelIdCache.isEmpty) {
-      debugPrint(
+      debugLog(
           'EPG _findEpgKey: Primary EPG has ${_epgData.length} channels, Secondary has ${_secondaryEpgData.length}');
       final allKeys = {..._epgData.keys, ..._secondaryEpgData.keys};
       if (allKeys.isNotEmpty) {
-        debugPrint('EPG sample keys: ${allKeys.take(10).join(", ")}');
+        debugLog('EPG sample keys: ${allKeys.take(10).join(", ")}');
       } else {
-        debugPrint('❌ EPG: NO EPG DATA AVAILABLE FOR MATCHING!');
+        debugLog('❌ EPG: NO EPG DATA AVAILABLE FOR MATCHING!');
       }
-      debugPrint('EPG: Starting channel matching analysis...');
+      debugLog('EPG: Starting channel matching analysis...');
     }
     
     // Debug: Log first few channel lookups
     if (_channelIdCache.length < 20) {
-      debugPrint('EPG: Looking for channel "$channelId" (name: "${channelName ?? 'none'}")');
+      debugLog('EPG: Looking for channel "$channelId" (name: "${channelName ?? 'none'}")');
       // Show if EPG data is empty
       if (_epgData.isEmpty && _secondaryEpgData.isEmpty) {
-        debugPrint('EPG: ❌ No EPG data loaded - this will cause all lookups to fail!');
+        debugLog('EPG: ❌ No EPG data loaded - this will cause all lookups to fail!');
       }
     }
     final allEpgKeys = {..._epgData.keys, ..._secondaryEpgData.keys};
@@ -911,10 +912,10 @@ class EpgService with ChangeNotifier {
     // No match found - cache the miss
     _channelIdCache[cacheKey] = null;
     if (_channelIdCache.length < 20) {
-      debugPrint('EPG Miss: "$channelId" (name: "${channelName ?? 'none'}")');
+      debugLog('EPG Miss: "$channelId" (name: "${channelName ?? 'none'}")');
       // Show first few EPG keys for comparison
       final sampleEpgKeys = {..._epgData.keys, ..._secondaryEpgData.keys}.take(5).toList();
-      debugPrint('EPG: Available keys sample: ${sampleEpgKeys.join(", ")}');
+      debugLog('EPG: Available keys sample: ${sampleEpgKeys.join(", ")}');
     }
     return null;
   }
@@ -1098,28 +1099,28 @@ class EpgService with ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_cacheTimeKey, DateTime.now().toIso8601String());
 
-      debugPrint('EPG saved to file cache: ${file.path}');
+      debugLog('EPG saved to file cache: ${file.path}');
     } catch (e) {
-      debugPrint('Failed to save EPG cache: $e');
+      debugLog('Failed to save EPG cache: $e');
     }
   }
 
   /// Load EPG data from file cache (loads regardless of age)
   Future<bool> _loadFromCache() async {
-    debugPrint('EPG: Attempting to load from cache...');
+    debugLog('EPG: Attempting to load from cache...');
     try {
       final directory = await getApplicationDocumentsDirectory();
       final file = File('${directory.path}/$_cacheFileName');
 
-      debugPrint('EPG: Checking cache at: ${file.path}');
+      debugLog('EPG: Checking cache at: ${file.path}');
 
       if (!await file.exists()) {
-        debugPrint('EPG: ❌ Cache file does not exist');
+        debugLog('EPG: ❌ Cache file does not exist');
         return false;
       }
 
       final fileSize = await file.length();
-      debugPrint(
+      debugLog(
           'EPG: ✓ Cache file exists (${(fileSize / 1024 / 1024).toStringAsFixed(2)} MB)');
 
       final prefs = await SharedPreferences.getInstance();
@@ -1130,30 +1131,30 @@ class EpgService with ChangeNotifier {
         try {
           cacheTime = DateTime.parse(cacheTimeStr);
           final age = DateTime.now().difference(cacheTime);
-          debugPrint('EPG: Loading from cache (${age.inHours} hours old)...');
+          debugLog('EPG: Loading from cache (${age.inHours} hours old)...');
           if (age > _cacheValidity) {
-            debugPrint('EPG: Cache is expired, but loading anyway.');
+            debugLog('EPG: Cache is expired, but loading anyway.');
           }
         } catch (e) {
-          debugPrint('EPG: Could not parse cache time, loading anyway');
+          debugLog('EPG: Could not parse cache time, loading anyway');
         }
       } else {
-        debugPrint('EPG: No cache timestamp, loading anyway');
+        debugLog('EPG: No cache timestamp, loading anyway');
       }
 
       final cachedData = await file.readAsString();
-      debugPrint('EPG: Cache file read, size: ${cachedData.length} chars');
+      debugLog('EPG: Cache file read, size: ${cachedData.length} chars');
 
       // Parse cached data in background isolate
-      debugPrint('EPG: Starting background parse...');
+      debugLog('EPG: Starting background parse...');
       final parsed = await compute(parseEpgInIsolate, cachedData)
           .timeout(const Duration(seconds: 60));
-      debugPrint('EPG: Background parse complete');
+      debugLog('EPG: Background parse complete');
 
       // Convert parsed data back to Program objects
       _epgData.clear();
       final rawEpgData = parsed['epgData'] as Map<String, dynamic>;
-      debugPrint('EPG: Parsed ${rawEpgData.length} channel IDs from cache');
+      debugLog('EPG: Parsed ${rawEpgData.length} channel IDs from cache');
 
       for (final channelId in rawEpgData.keys) {
         final programs = (rawEpgData[channelId] as List<dynamic>).map((p) {
@@ -1184,13 +1185,13 @@ class EpgService with ChangeNotifier {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(_cacheTimeKey, _lastFetchTime!.toIso8601String());
       }
-      debugPrint(
+      debugLog(
           'EPG: ✓ Successfully loaded ${_epgData.length} channels from cache (age: ${cacheTime != null ? DateTime.now().difference(cacheTime).inHours : "unknown"}h)');
-      debugPrint(
+      debugLog(
           'EPG: Sample channel IDs: ${_epgData.keys.take(5).join(", ")}');
       return true;
     } catch (e) {
-      debugPrint('Failed to load EPG from cache: $e');
+      debugLog('Failed to load EPG from cache: $e');
       return false;
     }
   }
@@ -1220,9 +1221,9 @@ class EpgService with ChangeNotifier {
       _normalizedEpgKeys = null;
       _lastFetchTime = null;
       notifyListeners();
-      debugPrint('EPG cache cleared');
+      debugLog('EPG cache cleared');
     } catch (e) {
-      debugPrint('Failed to clear EPG cache: $e');
+      debugLog('Failed to clear EPG cache: $e');
     }
   }
 
@@ -1303,7 +1304,7 @@ class EpgService with ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_manualMappingsKey, jsonEncode(_manualMappings));
     } catch (e) {
-      debugPrint('Failed to save manual mappings: $e');
+      debugLog('Failed to save manual mappings: $e');
     }
   }
 
@@ -1318,10 +1319,10 @@ class EpgService with ChangeNotifier {
         decoded.forEach((key, value) {
           _manualMappings[key] = value as String;
         });
-        debugPrint('Loaded ${_manualMappings.length} manual EPG mappings');
+        debugLog('Loaded ${_manualMappings.length} manual EPG mappings');
       }
     } catch (e) {
-      debugPrint('Failed to load manual mappings: $e');
+      debugLog('Failed to load manual mappings: $e');
     }
   }
 
@@ -1396,34 +1397,34 @@ class EpgService with ChangeNotifier {
   
   /// Debug method to analyze channel ID patterns vs EPG key patterns
   void debugChannelMatching(List<Channel> channels) {
-    debugPrint('=== EPG MATCHING DEBUG ===');
-    debugPrint('Total channels: ${channels.length}');
-    debugPrint('Primary EPG channels: ${_epgData.length}');
-    debugPrint('Secondary EPG channels: ${_secondaryEpgData.length}');
-    debugPrint('Total EPG channels: ${_epgData.length + _secondaryEpgData.length}');
+    debugLog('=== EPG MATCHING DEBUG ===');
+    debugLog('Total channels: ${channels.length}');
+    debugLog('Primary EPG channels: ${_epgData.length}');
+    debugLog('Secondary EPG channels: ${_secondaryEpgData.length}');
+    debugLog('Total EPG channels: ${_epgData.length + _secondaryEpgData.length}');
     
     // Check if EPG data is actually loaded
     if (_epgData.isEmpty && _secondaryEpgData.isEmpty) {
-      debugPrint('❌ NO EPG DATA LOADED!');
-      debugPrint('This is likely the root cause of the matching issue.');
+      debugLog('❌ NO EPG DATA LOADED!');
+      debugLog('This is likely the root cause of the matching issue.');
       return;
     }
     
     // Sample channel IDs
     final sampleChannels = channels.take(10).toList();
-    debugPrint('\nSample channel IDs:');
+    debugLog('\nSample channel IDs:');
     for (final channel in sampleChannels) {
       final tvgId = channel.tvgId ?? channel.id;
-      debugPrint('  "$tvgId" (name: "${channel.name}")');
+      debugLog('  "$tvgId" (name: "${channel.name}")');
     }
     
     // Sample EPG keys from both primary and secondary
     final allEpgKeys = {..._epgData.keys, ..._secondaryEpgData.keys};
     final sampleEpgKeys = allEpgKeys.take(10).toList();
-    debugPrint('\nSample EPG keys:');
+    debugLog('\nSample EPG keys:');
     for (final key in sampleEpgKeys) {
       final isPrimary = _epgData.containsKey(key);
-      debugPrint('  "$key" (${isPrimary ? "primary" : "secondary"})');
+      debugLog('  "$key" (${isPrimary ? "primary" : "secondary"})');
     }
     
     // Test exact matches
@@ -1434,7 +1435,7 @@ class EpgService with ChangeNotifier {
         exactMatches++;
       }
     }
-    debugPrint('\nExact matches: $exactMatches/${channels.length}');
+    debugLog('\nExact matches: $exactMatches/${channels.length}');
     
     // Test case-insensitive matches
     int caseInsensitiveMatches = 0;
@@ -1445,23 +1446,23 @@ class EpgService with ChangeNotifier {
         caseInsensitiveMatches++;
       }
     }
-    debugPrint('Case-insensitive matches: $caseInsensitiveMatches/${channels.length}');
+    debugLog('Case-insensitive matches: $caseInsensitiveMatches/${channels.length}');
     
     // Test fuzzy matching (using the actual service method)
     int fuzzyMatches = 0;
-    debugPrint('\nTesting fuzzy matches (first 5 channels):');
+    debugLog('\nTesting fuzzy matches (first 5 channels):');
     for (int i = 0; i < 5 && i < channels.length; i++) {
       final channel = channels[i];
       final tvgId = channel.tvgId ?? channel.id;
       final hasMatch = hasEpgData(tvgId, channelName: channel.name);
       if (hasMatch) fuzzyMatches++;
-      debugPrint('  "$tvgId" -> ${hasMatch ? "MATCH" : "NO MATCH"}');
+      debugLog('  "$tvgId" -> ${hasMatch ? "MATCH" : "NO MATCH"}');
     }
     
-    debugPrint('\n=== SUMMARY ===');
-    debugPrint('Exact matches: $exactMatches/${channels.length}');
-    debugPrint('Case-insensitive matches: $caseInsensitiveMatches/${channels.length}');
-    debugPrint('Fuzzy matches (sample): $fuzzyMatches/5');
-    debugPrint('=== END EPG DEBUG ===');
+    debugLog('\n=== SUMMARY ===');
+    debugLog('Exact matches: $exactMatches/${channels.length}');
+    debugLog('Case-insensitive matches: $caseInsensitiveMatches/${channels.length}');
+    debugLog('Fuzzy matches (sample): $fuzzyMatches/5');
+    debugLog('=== END EPG DEBUG ===');
   }
 }

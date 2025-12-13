@@ -1,3 +1,4 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -121,7 +122,7 @@ class WhisperTranscriptionService extends ChangeNotifier {
         await File(audioPath).delete();
       }
     } catch (e) {
-      debugPrint('Audio extraction error: $e');
+      debugLog('Audio extraction error: $e');
     }
   }
 
@@ -147,7 +148,7 @@ class WhisperTranscriptionService extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      debugPrint('Transcription error: $e');
+      debugLog('Transcription error: $e');
     }
   }
 

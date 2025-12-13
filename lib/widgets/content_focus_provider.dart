@@ -1,7 +1,8 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'package:flutter/widgets.dart';
 
 void _logContentFocus(String message) {
-  debugPrint('content_focus: $message');
+  debugLog('content_focus: $message');
 }
 
 /// Signature for callbacks that move focus into the active content area.

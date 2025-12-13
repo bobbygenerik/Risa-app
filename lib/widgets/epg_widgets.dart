@@ -102,6 +102,8 @@ class EPGChannelItem extends StatelessWidget {
                   child: CachedChannelLogo(
                     logoUrl: channel.logoUrl,
                     size: 48,
+                    cacheWidth: 96,
+                    cacheHeight: 96,
                     fallbackIcon: Icons.dvr,
                   ),
                 ),

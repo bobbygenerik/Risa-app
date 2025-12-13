@@ -1,3 +1,4 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -233,7 +234,7 @@ class ContentProvider with ChangeNotifier {
           .toList();
       await prefs.setString('series_history', jsonEncode(seriesWithProgress));
     } catch (e) {
-      debugPrint('Error saving watch history: $e');
+      debugLog('Error saving watch history: $e');
     }
   }
 
@@ -284,7 +285,7 @@ class ContentProvider with ChangeNotifier {
         }
       }
     } catch (e) {
-      debugPrint('Error loading watch history: $e');
+      debugLog('Error loading watch history: $e');
     }
   }
 

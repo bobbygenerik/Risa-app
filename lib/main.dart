@@ -13,6 +13,7 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/services/voice_search_service.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
+import 'package:iptv_player/utils/debug_helper.dart';
 
 import 'package:iptv_player/services/incremental_epg_service.dart';
 
@@ -137,7 +138,7 @@ void main() {
         // Suppress rate-limit errors from image loading (HTTP 429)
         final errorStr = details.exception.toString();
         if (_shouldSuppressError(errorStr)) {
-          debugPrint('Suppressed image error: ${details.exception}');
+          debugLog('Suppressed image error: ${details.exception}');
           return;
         }
         FlutterError.presentError(details);
@@ -181,7 +182,7 @@ class _StartupLoaderState extends State<StartupLoader> {
     unawaited(TMDBService.init().then((_) {
       StartupProbe.mark('StartupLoader: background TMDB init finished');
     }).catchError((error, stack) {
-      debugPrint('TMDBService.init() failed during startup: $error');
+      debugLog('TMDBService.init() failed during startup: $error');
     }));
     
     StartupProbe.mark('StartupLoader: continuing with background TMDB init');
@@ -230,12 +231,12 @@ class _ErrorHandler {
     // These are handled gracefully by error widgets, no need to show a global error
     final errorString = error.toString();
     if (_shouldSuppressError(errorString)) {
-      debugPrint('Suppressed network/image error: $error');
+      debugLog('Suppressed network/image error: $error');
       return;
     }
 
-    debugPrint('Unhandled app error: $error');
-    debugPrint(stack.toString());
+    debugLog('Unhandled app error: $error');
+    debugLog(stack.toString());
     _pendingError = _AppError(error, stack);
 
     final binding = WidgetsBinding.instance;
@@ -441,8 +442,8 @@ class _MyAppState extends State<MyApp> {
       await _profileProvider.loadProfiles();
       StartupProbe.mark('MyApp initialization: profiles loaded');
     } catch (error, stack) {
-      debugPrint('Initialization error: $error');
-      debugPrint('$stack');
+      debugLog('Initialization error: $error');
+      debugLog('$stack');
     } finally {
       if (mounted) {
         setState(() {
@@ -476,7 +477,7 @@ class _MyAppState extends State<MyApp> {
       // Save new version
       await prefs.setString('app_version', currentVersion);
 
-      debugPrint('Cleared cache data - preserved user settings - new version: $currentVersion');
+      debugLog('Cleared cache data - preserved user settings - new version: $currentVersion');
     }
   }
 
@@ -521,8 +522,8 @@ class _MyAppState extends State<MyApp> {
         });
       }
     } catch (error, stack) {
-      debugPrint('Failed to auto-load playlist: $error');
-      debugPrint('$stack');
+      debugLog('Failed to auto-load playlist: $error');
+      debugLog('$stack');
     }
   }
 
@@ -555,7 +556,10 @@ class _MyAppState extends State<MyApp> {
           ChangeNotifierProvider(
             create: (context) {
               final service = IncrementalEpgService();
-              unawaited(service.initialize());
+              // Initialize EPG service with URL from settings
+              _runDeferred(() async {
+                await service.initialize();
+              });
               return service;
             },
           ),
@@ -729,7 +733,7 @@ class _MyAppState extends State<MyApp> {
         builder: (context) => _ProfileSelectionDialog(),
       );
     } catch (e) {
-      debugPrint('Error showing profile dialog: $e');
+      debugLog('Error showing profile dialog: $e');
     } finally {
       _profileDialogScheduled = false;
     }
@@ -745,7 +749,7 @@ class _MyAppState extends State<MyApp> {
     }
 
     _creatingDefaultProfile = true;
-    debugPrint(
+    debugLog(
       'ProfileProvider empty; creating default profile for auto-setup',
     );
     // Use addPostFrameCallback instead of scheduleMicrotask to avoid zone mismatch
@@ -772,10 +776,10 @@ class _MyAppState extends State<MyApp> {
           return;
         }
         await provider.addProfile(profile);
-        debugPrint('Default profile created: ${profile.id}');
+        debugLog('Default profile created: ${profile.id}');
       } catch (error, stack) {
-        debugPrint('Failed to create default profile: $error');
-        debugPrint('$stack');
+        debugLog('Failed to create default profile: $error');
+        debugLog('$stack');
       } finally {
         if (mounted) {
           setState(() {});

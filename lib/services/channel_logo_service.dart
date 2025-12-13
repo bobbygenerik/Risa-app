@@ -1,6 +1,6 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
@@ -144,10 +144,10 @@ class ChannelLogoService {
         cached.forEach((key, value) {
           _logoCache[key] = value as String?;
         });
-        debugPrint('ChannelLogoService: Loaded ${_logoCache.length} cached logos');
+        debugLog('ChannelLogoService: Loaded ${_logoCache.length} cached logos');
       }
     } catch (e) {
-      debugPrint('ChannelLogoService: Error loading cache: $e');
+      debugLog('ChannelLogoService: Error loading cache: $e');
     }
   }
 
@@ -157,7 +157,7 @@ class ChannelLogoService {
       final file = File('${dir.path}/$_cacheFileName');
       await file.writeAsString(json.encode(_logoCache));
     } catch (e) {
-      debugPrint('ChannelLogoService: Error saving cache: $e');
+      debugLog('ChannelLogoService: Error saving cache: $e');
     }
   }
 

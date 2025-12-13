@@ -1,3 +1,4 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -84,14 +85,14 @@ class IncrementalEpgService with ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setStringList(_channelListCacheKey, channelIds.toList());
       
-      debugPrint('EPG: Found ${channelIds.length} channels');
+      debugLog('EPG: Found ${channelIds.length} channels');
       _error = null;
       break;
       } catch (e) {
         retryCount++;
         if (retryCount >= _maxRetries) {
           _error = e.toString();
-          debugPrint('EPG channel list error after $retryCount attempts: $e');
+          debugLog('EPG channel list error after $retryCount attempts: $e');
           
           // Try loading from cache
           final prefs = await SharedPreferences.getInstance();
@@ -189,14 +190,14 @@ class IncrementalEpgService with ChangeNotifier {
         _loadedChannels[entry.key] = entry.value;
       }
       
-      debugPrint('EPG: Loaded ${channelData.length} channels');
+      debugLog('EPG: Loaded ${channelData.length} channels');
       _error = null;
       break;
       } catch (e) {
         retryCount++;
         if (retryCount >= _maxRetries) {
           _error = e.toString();
-          debugPrint('EPG batch load error after $retryCount attempts: $e');
+          debugLog('EPG batch load error after $retryCount attempts: $e');
           break;
         } else {
           await Future.delayed(Duration(seconds: retryCount));
@@ -222,7 +223,7 @@ class IncrementalEpgService with ChangeNotifier {
         );
       }
     } catch (e) {
-      debugPrint('Error parsing EPG time: $e');
+      debugLog('Error parsing EPG time: $e');
     }
     return DateTime.now();
   }

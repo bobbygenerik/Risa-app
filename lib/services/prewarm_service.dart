@@ -1,3 +1,4 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -86,7 +87,7 @@ class PrewarmService {
         }
       } catch (_) {}
     } catch (e) {
-      debugPrint('PrewarmService failed: $e');
+      debugLog('PrewarmService failed: $e');
     }
   }
 
@@ -101,7 +102,7 @@ class PrewarmService {
       // Keep paused and ready
       await _prewarmedController!.pause();
     } catch (e) {
-      debugPrint('Prewarm video init failed: $e');
+      debugLog('Prewarm video init failed: $e');
       try {
         await _prewarmedController?.dispose();
       } catch (_) {}

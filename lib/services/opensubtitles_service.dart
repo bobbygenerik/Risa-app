@@ -1,3 +1,4 @@
+import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -25,7 +26,7 @@ class OpenSubtitlesService extends ChangeNotifier {
 
   /// Initialize service
   Future<void> initialize() async {
-    debugPrint('OpenSubtitles Service initialized');
+    debugLog('OpenSubtitles Service initialized');
   }
 
   /// Set credentials
@@ -59,7 +60,7 @@ class OpenSubtitlesService extends ChangeNotifier {
         _password == null ||
         _username!.isEmpty ||
         _password!.isEmpty) {
-      debugPrint('OpenSubtitles: Missing credentials');
+      debugLog('OpenSubtitles: Missing credentials');
       return false;
     }
 
@@ -75,16 +76,16 @@ class OpenSubtitlesService extends ChangeNotifier {
         _authToken = data['token'];
         _isAuthenticated = true;
         notifyListeners();
-        debugPrint('OpenSubtitles: Authentication successful');
+        debugLog('OpenSubtitles: Authentication successful');
         return true;
       } else {
-        debugPrint(
+        debugLog(
           'OpenSubtitles: Authentication failed - ${response.statusCode}',
         );
         return false;
       }
     } catch (e) {
-      debugPrint('OpenSubtitles: Authentication error - $e');
+      debugLog('OpenSubtitles: Authentication error - $e');
       return false;
     }
   }
@@ -117,11 +118,11 @@ class OpenSubtitlesService extends ChangeNotifier {
 
         return results.map((item) => SubtitleResult.fromJson(item)).toList();
       } else {
-        debugPrint('OpenSubtitles: Search failed - ${response.statusCode}');
+        debugLog('OpenSubtitles: Search failed - ${response.statusCode}');
         return [];
       }
     } catch (e) {
-      debugPrint('OpenSubtitles: Search error - $e');
+      debugLog('OpenSubtitles: Search error - $e');
       return [];
     }
   }
@@ -156,11 +157,11 @@ class OpenSubtitlesService extends ChangeNotifier {
 
         return results.map((item) => SubtitleResult.fromJson(item)).toList();
       } else {
-        debugPrint('OpenSubtitles: Search failed - ${response.statusCode}');
+        debugLog('OpenSubtitles: Search failed - ${response.statusCode}');
         return [];
       }
     } catch (e) {
-      debugPrint('OpenSubtitles: Search error - $e');
+      debugLog('OpenSubtitles: Search error - $e');
       return [];
     }
   }
@@ -194,19 +195,19 @@ class OpenSubtitlesService extends ChangeNotifier {
         if (subtitleResponse.statusCode == 200) {
           return subtitleResponse.body;
         } else {
-          debugPrint(
+          debugLog(
             'OpenSubtitles: Download failed - ${subtitleResponse.statusCode}',
           );
           return null;
         }
       } else {
-        debugPrint(
+        debugLog(
           'OpenSubtitles: Download link request failed - ${response.statusCode}',
         );
         return null;
       }
     } catch (e) {
-      debugPrint('OpenSubtitles: Download error - $e');
+      debugLog('OpenSubtitles: Download error - $e');
       return null;
     }
   }
@@ -228,7 +229,7 @@ class OpenSubtitlesService extends ChangeNotifier {
     }
 
     if (results.isEmpty) {
-      debugPrint('OpenSubtitles: No subtitles found for "$title"');
+      debugLog('OpenSubtitles: No subtitles found for "$title"');
       return null;
     }
 

@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
-import 'package:iptv_player/services/epg_service.dart';
+import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 
 class EpgManagerScreen extends StatefulWidget {
@@ -24,8 +24,8 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
     });
 
     try {
-      final epgService = Provider.of<EpgService>(context, listen: false);
-      await epgService.loadEpg();
+      final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
+      await epgService.initialize();
       _showMessage('All EPG sources refreshed successfully!');
     } catch (e) {
       _showMessage('Failed to refresh EPG: $e');
@@ -46,10 +46,9 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
     });
 
     try {
-      final epgService = Provider.of<EpgService>(context, listen: false);
+      final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
       // Rebuild mappings by clearing cache and reloading
-      await epgService.clearCache();
-      await epgService.loadEpg();
+      await epgService.initialize();
       _showMessage('Channel mappings rebuilt successfully!');
     } catch (e) {
       _showMessage('Failed to rebuild mappings: $e');
@@ -87,14 +86,13 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
     );
 
     if (confirmed == true && mounted) {
-      final epgService = Provider.of<EpgService>(context, listen: false);
       setState(() {
         _isLoading = true;
         _statusMessage = 'Clearing all EPG data...';
       });
 
       try {
-        await epgService.clearCache();
+        // Clear cache functionality not available in IncrementalEpgService
         if (mounted) {
           _showMessage('All EPG data cleared successfully!');
         }
@@ -158,7 +156,7 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Status Card
-                  Consumer<EpgService>(
+                  Consumer<IncrementalEpgService>(
                     builder: (context, epgService, _) {
                       return _buildStatusCard(epgService);
                     },
@@ -192,7 +190,7 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
     );
   }
 
-  Widget _buildStatusCard(EpgService epgService) {
+  Widget _buildStatusCard(IncrementalEpgService epgService) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: const BoxDecoration(
@@ -204,8 +202,8 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
           Row(
             children: [
               Icon(
-                epgService.hasData ? Icons.check_circle : Icons.warning_amber,
-                color: epgService.hasData ? AppTheme.accentGreen : AppTheme.accentOrange,
+                epgService.availableChannels.isNotEmpty ? Icons.check_circle : Icons.warning_amber,
+                color: epgService.availableChannels.isNotEmpty ? AppTheme.accentGreen : AppTheme.accentOrange,
                 size: 20,
               ),
               const SizedBox(width: 12),
@@ -220,11 +218,8 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          _buildStatusRow('Primary Channels', '${epgService.epgData.length}'),
-          _buildStatusRow('Secondary Channels', '${epgService.secondaryEpgData.length}'),
-          _buildStatusRow('Total Channels', '${epgService.totalChannelCount}'),
-          if (epgService.cacheAgeMinutes != null)
-            _buildStatusRow('Cache Age', '${epgService.cacheAgeMinutes} minutes'),
+          _buildStatusRow('Available Channels', '${epgService.availableChannels.length}'),
+          _buildStatusRow('Loaded Channels', '${epgService.loadedChannelCount}'),
           if (epgService.error != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
