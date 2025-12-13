@@ -392,12 +392,11 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
           ),
           Expanded(
-            child: Center(
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: menuItems.length,
-                itemBuilder: (context, index) {
-                final item = menuItems[index];
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: menuItems.asMap().entries.map((entry) {
+                final index = entry.key;
+                final item = entry.value;
                 final bool isSelected = _tabController.index == index;
                 return GestureDetector(
                   behavior: HitTestBehavior.opaque,
@@ -445,7 +444,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                                 color: isSelected
                                     ? AppTheme.primaryBlue
                                     : (isFocused ? AppTheme.textPrimary : AppTheme.textSecondary),
-                                size: 20,
+                                size: 18,
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -455,7 +454,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                                     color: isSelected
                                         ? AppTheme.primaryBlue
                                         : (isFocused ? AppTheme.textPrimary : AppTheme.textSecondary),
-                                    fontSize: 16,
+                                    fontSize: 14,
                                     fontWeight: isSelected
                                         ? FontWeight.w600
                                         : (isFocused ? FontWeight.w600 : FontWeight.w500),
@@ -469,8 +468,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     ),
                   ),
                 );
-              },
-            ),
+              }).toList(),
             ),
           ),
         ],
@@ -1214,6 +1212,8 @@ class _SettingsScreenState extends State<SettingsScreen>
       
       if (service.availableChannels.isNotEmpty) {
         _showMessage('EPG updated successfully! Found ${service.availableChannels.length} channels.');
+        _customEpgUrlController.clear();
+        _secondaryEpgUrlController.clear();
       } else {
         _showMessage('EPG update completed but no channels found. Check your EPG URL.');
       }
@@ -1225,6 +1225,8 @@ class _SettingsScreenState extends State<SettingsScreen>
   Future<void> _handleClearEpg() async {
     try {
       // Clear cache functionality not available in IncrementalEpgService
+      _customEpgUrlController.clear();
+      _secondaryEpgUrlController.clear();
       _showMessage('EPG cleared successfully!');
     } catch (e) {
       _showMessage('EPG clear failed: $e');

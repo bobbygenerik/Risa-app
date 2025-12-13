@@ -47,7 +47,10 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
       ),
       padding: EdgeInsets.symmetric(
         horizontal: context.tvSpacing(24),
-        vertical: context.tvSpacing(14),
+        vertical: context.tvSpacing(16).clamp(14.0, 20.0),
+      ),
+      constraints: BoxConstraints(
+        minHeight: context.tvSpacing(48).clamp(44.0, 56.0),
       ),
       child: Row(
         mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
@@ -59,13 +62,17 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
             SizedBox(width: context.tvSpacing(8)),
           ],
           Flexible(
-            child: Text(
-              widget.label,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: context.tvTextSize(16),
-                fontWeight: FontWeight.w600,
+            child: Center(
+              child: Text(
+                widget.label,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: context.tvTextSize(16).clamp(14.0, 18.0),
+                  fontWeight: FontWeight.w600,
+                  height: 1.2,
+                ),
               ),
             ),
           ),
@@ -176,7 +183,10 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
           ),
           padding: EdgeInsets.symmetric(
             horizontal: context.tvSpacing(20),
-            vertical: context.tvSpacing(12),
+            vertical: context.tvSpacing(14).clamp(12.0, 18.0),
+          ),
+          constraints: BoxConstraints(
+            minHeight: context.tvSpacing(44).clamp(40.0, 52.0),
           ),
           child: Row(
             mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
@@ -189,13 +199,17 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
                 SizedBox(width: context.tvSpacing(8)),
               ],
               Flexible(
-                child: Text(
-                  widget.label,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: context.tvTextSize(16),
-                    fontWeight: FontWeight.w600,
+                child: Center(
+                  child: Text(
+                    widget.label,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: context.tvTextSize(16).clamp(14.0, 18.0),
+                      fontWeight: FontWeight.w600,
+                      height: 1.2,
+                    ),
                   ),
                 ),
               ),

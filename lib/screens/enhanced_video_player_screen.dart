@@ -567,6 +567,14 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     
     try {
       if (mode == SubtitleMode.liveTranslation && _transcriptionService != null) {
+        // Ensure service is initialized
+        if (!_transcriptionService!.isInitialized) {
+          final initialized = await _transcriptionService!.initialize();
+          if (!initialized) {
+            throw Exception('Failed to initialize transcription service');
+          }
+        }
+        
         _transcriptionService!.setTranslationEnabled(true);
         final streamUrl = widget.videoUrl ?? widget.channel?.url;
         if (streamUrl != null) {
@@ -577,6 +585,14 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       }
     } catch (e) {
       debugLog('Transcription error: $e');
+      // Reset to off mode if transcription fails
+      setState(() => _subtitleMode = SubtitleMode.off);
+      if (mounted) {
+        showAppSnackBar(
+          context,
+          const SnackBar(content: Text('Live translation from video audio not yet implemented')),
+        );
+      }
     }
   }
 

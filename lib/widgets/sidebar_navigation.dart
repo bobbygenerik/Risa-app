@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -198,8 +199,8 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 140),
               curve: Curves.easeOut,
-              height: 34,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              height: 40,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
                 color: isFocused
@@ -214,14 +215,14 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                       Icon(
                         tab.icon,
                         color: isActive ? AppTheme.primaryBlue : Colors.white70,
-                        size: 18,
+                        size: 20,
                       ),
                       const SizedBox(width: 10),
                       Text(
                         tab.label,
                         style: TextStyle(
                           color: isActive ? AppTheme.primaryBlue : Colors.white70,
-                          fontSize: 13,
+                          fontSize: 14,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -230,7 +231,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                 : Icon(
                     tab.icon,
                     color: isActive ? AppTheme.primaryBlue : Colors.white70,
-                    size: 18,
+                    size: 20,
                   ),
             ),
           );
@@ -249,10 +250,16 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        color: const Color(0xFF050710).withValues(alpha: 0.95),
         width: _isExpanded ? 160 : 48,
-        child: Column(
-        children: [
+        child: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.85),
+              ),
+                    child: Column(
+              children: [
           Padding(
             padding: const EdgeInsets.only(top: 6, bottom: 6),
             child: Image(
@@ -308,8 +315,8 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 150),
                               curve: Curves.easeOut,
-                              height: 34,
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              height: 40,
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(8),
                                 color: isFocused
@@ -321,19 +328,19 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                                 ? const Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.search, color: Colors.white70, size: 18),
+                                      Icon(Icons.search, color: Colors.white70, size: 20),
                                       SizedBox(width: 10),
                                       Text(
                                         'Search',
                                         style: TextStyle(
                                           color: Colors.white70,
-                                          fontSize: 13,
+                                          fontSize: 14,
                                           fontWeight: FontWeight.w500,
                                         ),
                                       ),
                                     ],
                                   )
-                                : const Icon(Icons.search, color: Colors.white70, size: 18),
+                                : const Icon(Icons.search, color: Colors.white70, size: 20),
                             ),
                           );
                         },
@@ -343,7 +350,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                   ..._tabs.map((tab) {
                     final index = _tabs.indexOf(tab);
                     return Container(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
                       child: _buildTabButton(index),
                     );
                   }),
@@ -356,7 +363,10 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
               ),
             ),
           ),
-        ],
+              ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -401,8 +411,8 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
             },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 140),
-              height: 34,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              height: 40,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
                 color: isFocused ? AppTheme.primaryBlue.withValues(alpha: 0.15) : Colors.transparent,
@@ -415,14 +425,14 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                       Icon(
                         icon, 
                         color: isActive ? AppTheme.primaryBlue : Colors.white70, 
-                        size: 18
+                        size: 20
                       ),
                       const SizedBox(width: 10),
                       Text(
                         label,
                         style: TextStyle(
                           color: isActive ? AppTheme.primaryBlue : Colors.white70,
-                          fontSize: 13,
+                          fontSize: 14,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -431,7 +441,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                 : Icon(
                     icon, 
                     color: isActive ? AppTheme.primaryBlue : Colors.white70, 
-                    size: 18
+                    size: 20
                   ),
             ),
           );

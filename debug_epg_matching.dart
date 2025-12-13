@@ -1,117 +1,157 @@
-// Simple debug script to test EPG matching logic
+import 'dart:io';
+import 'package:xml/xml.dart';
+import 'package:http/http.dart' as http;
 
-void main() {
-  // Sample channel IDs from typical IPTV playlists
-  final sampleChannelIds = [
-    'bbc1.uk',
-    'itv1.uk', 
-    'channel4.uk',
-    'sky1.uk',
-    'discovery.uk',
-    'cnn.us',
-    'espn.us',
-    'fox.us',
-    'bbc-one',
-    'itv-1',
-    'channel-4',
-    'sky-one',
-    'BBC One',
-    'ITV1',
-    'Channel 4',
-    'Sky One',
-  ];
+/// Simple EPG diagnostic tool to debug channel matching issues
+void main(List<String> args) async {
+  if (args.isEmpty) {
+    print('Usage: dart debug_epg_matching.dart <epg_url> [m3u_url]');
+    print('Example: dart debug_epg_matching.dart https://example.com/epg.xml https://example.com/playlist.m3u');
+    exit(1);
+  }
 
-  // Sample EPG keys from typical EPG XML files
-  final sampleEpgKeys = [
-    'bbc1london.bbc.co.uk',
-    'itv1london.itv.com',
-    'channel4.channel4.com',
-    'sky1.sky.com',
-    'discoverychannel.discovery.com',
-    'cnn.cnn.com',
-    'espn.espn.com',
-    'fox.fox.com',
-    'bbc-one-hd',
-    'itv1-hd',
-    'channel4-hd',
-    'sky-one-hd',
-  ];
+  final epgUrl = args[0];
+  final m3uUrl = args.length > 1 ? args[1] : null;
 
-  print('=== EPG MATCHING DEBUG ===');
-  print('Channel IDs: ${sampleChannelIds.length}');
-  print('EPG Keys: ${sampleEpgKeys.length}');
-  
-  print('\nSample Channel IDs:');
-  for (final id in sampleChannelIds) {
-    print('  "$id"');
-  }
-  
-  print('\nSample EPG Keys:');
-  for (final key in sampleEpgKeys) {
-    print('  "$key"');
-  }
-  
-  // Test exact matches
-  int exactMatches = 0;
-  print('\n=== EXACT MATCHES ===');
-  for (final channelId in sampleChannelIds) {
-    for (final epgKey in sampleEpgKeys) {
-      if (channelId == epgKey) {
-        print('EXACT: "$channelId" == "$epgKey"');
-        exactMatches++;
+  print('🔍 EPG Diagnostic Tool');
+  print('EPG URL: $epgUrl');
+  if (m3uUrl != null) print('M3U URL: $m3uUrl');
+  print('');
+
+  // Download and analyze EPG
+  print('📡 Downloading EPG...');
+  try {
+    final epgResponse = await http.get(Uri.parse(epgUrl));
+    if (epgResponse.statusCode != 200) {
+      print('❌ EPG download failed: HTTP ${epgResponse.statusCode}');
+      exit(1);
+    }
+
+    final epgSize = (epgResponse.bodyBytes.length / 1024 / 1024).toStringAsFixed(2);
+    print('✅ EPG downloaded: $epgSize MB');
+
+    // Parse EPG
+    print('📊 Parsing EPG XML...');
+    final document = XmlDocument.parse(epgResponse.body);
+    final programmes = document.findAllElements('programme');
+    
+    // Extract unique channel IDs
+    final channelIds = <String>{};
+    for (final programme in programmes) {
+      final channelId = programme.getAttribute('channel');
+      if (channelId != null && channelId.isNotEmpty) {
+        channelIds.add(channelId);
       }
     }
-  }
-  print('Exact matches: $exactMatches');
-  
-  // Test case-insensitive matches
-  int caseMatches = 0;
-  print('\n=== CASE-INSENSITIVE MATCHES ===');
-  for (final channelId in sampleChannelIds) {
-    for (final epgKey in sampleEpgKeys) {
-      if (channelId.toLowerCase() == epgKey.toLowerCase()) {
-        print('CASE: "$channelId" == "$epgKey"');
-        caseMatches++;
+
+    print('✅ Found ${programmes.length} programmes for ${channelIds.length} channels');
+    print('');
+
+    // Show sample EPG channel IDs
+    print('📺 Sample EPG Channel IDs (first 20):');
+    final sortedChannelIds = channelIds.toList()..sort();
+    for (int i = 0; i < 20 && i < sortedChannelIds.length; i++) {
+      print('  ${i + 1}. "${sortedChannelIds[i]}"');
+    }
+    print('');
+
+    // If M3U URL provided, compare with M3U channel IDs
+    if (m3uUrl != null) {
+      print('📡 Downloading M3U playlist...');
+      final m3uResponse = await http.get(Uri.parse(m3uUrl));
+      if (m3uResponse.statusCode != 200) {
+        print('❌ M3U download failed: HTTP ${m3uResponse.statusCode}');
+        exit(1);
+      }
+
+      print('✅ M3U downloaded');
+      print('📊 Parsing M3U playlist...');
+
+      final m3uLines = m3uResponse.body.split('\n');
+      final m3uChannelIds = <String>{};
+      final m3uChannelNames = <String>[];
+
+      for (final line in m3uLines) {
+        if (line.startsWith('#EXTINF:')) {
+          // Extract tvg-id
+          final tvgIdMatch = RegExp(r'tvg-id="([^"]*)"').firstMatch(line);
+          if (tvgIdMatch != null && tvgIdMatch.group(1)!.isNotEmpty) {
+            m3uChannelIds.add(tvgIdMatch.group(1)!);
+          }
+
+          // Extract channel name
+          final nameMatch = RegExp(r',(.+)$').firstMatch(line);
+          if (nameMatch != null) {
+            m3uChannelNames.add(nameMatch.group(1)!.trim());
+          }
+        }
+      }
+
+      print('✅ Found ${m3uChannelIds.length} M3U channels with tvg-id');
+      print('');
+
+      // Show sample M3U channel IDs
+      print('📺 Sample M3U Channel IDs (first 20):');
+      final sortedM3uIds = m3uChannelIds.toList()..sort();
+      for (int i = 0; i < 20 && i < sortedM3uIds.length; i++) {
+        print('  ${i + 1}. "${sortedM3uIds[i]}"');
+      }
+      print('');
+
+      // Find exact matches
+      final exactMatches = m3uChannelIds.intersection(channelIds);
+      print('🎯 Exact Matches: ${exactMatches.length}/${m3uChannelIds.length}');
+      if (exactMatches.isNotEmpty) {
+        print('Sample exact matches:');
+        for (final match in exactMatches.take(10)) {
+          print('  ✅ "$match"');
+        }
+      }
+      print('');
+
+      // Find case-insensitive matches
+      final lowerEpgIds = channelIds.map((id) => id.toLowerCase()).toSet();
+      final lowerM3uIds = m3uChannelIds.map((id) => id.toLowerCase()).toSet();
+      final caseInsensitiveMatches = lowerM3uIds.intersection(lowerEpgIds);
+      print('🎯 Case-Insensitive Matches: ${caseInsensitiveMatches.length}/${m3uChannelIds.length}');
+      print('');
+
+      // Show unmatched channels
+      final unmatched = m3uChannelIds.where((id) => !channelIds.contains(id)).toList();
+      if (unmatched.isNotEmpty) {
+        print('❌ Unmatched M3U Channel IDs (first 10):');
+        for (int i = 0; i < 10 && i < unmatched.length; i++) {
+          print('  ${i + 1}. "${unmatched[i]}"');
+        }
+        print('');
+      }
+
+      // Analysis and recommendations
+      print('💡 Analysis & Recommendations:');
+      if (exactMatches.isEmpty && caseInsensitiveMatches.isEmpty) {
+        print('  ❌ No matches found! This indicates:');
+        print('     • EPG and M3U use completely different channel ID schemes');
+        print('     • You may need a different EPG source that matches your M3U');
+        print('     • Manual channel mapping may be required');
+      } else if (exactMatches.length < m3uChannelIds.length * 0.5) {
+        print('  ⚠️  Low match rate. Consider:');
+        print('     • Using fuzzy matching (app should handle this)');
+        print('     • Manual mapping for important channels');
+        print('     • Finding a better-matched EPG source');
+      } else {
+        print('  ✅ Good match rate! EPG should work well.');
       }
     }
+
+    print('');
+    print('🔧 Troubleshooting Tips:');
+    print('  1. Ensure your M3U has tvg-id attributes that match EPG channel IDs');
+    print('  2. Try different EPG sources that match your IPTV provider');
+    print('  3. Use the app\'s manual EPG mapping feature for important channels');
+    print('  4. Check if your IPTV provider offers their own EPG URL');
+
+  } catch (e) {
+    print('❌ Error: $e');
+    exit(1);
   }
-  print('Case-insensitive matches: $caseMatches');
-  
-  // Test normalized matches (remove non-alphanumeric)
-  int normalizedMatches = 0;
-  print('\n=== NORMALIZED MATCHES ===');
-  for (final channelId in sampleChannelIds) {
-    final normalizedChannel = channelId.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-    for (final epgKey in sampleEpgKeys) {
-      final normalizedEpg = epgKey.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-      if (normalizedChannel == normalizedEpg) {
-        print('NORMALIZED: "$channelId" ($normalizedChannel) == "$epgKey" ($normalizedEpg)');
-        normalizedMatches++;
-      }
-    }
-  }
-  print('Normalized matches: $normalizedMatches');
-  
-  // Test prefix matches
-  int prefixMatches = 0;
-  print('\n=== PREFIX MATCHES ===');
-  for (final channelId in sampleChannelIds) {
-    final normalizedChannel = channelId.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-    for (final epgKey in sampleEpgKeys) {
-      final normalizedEpg = epgKey.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-      if (normalizedEpg.startsWith(normalizedChannel) && normalizedChannel.length >= 4) {
-        print('PREFIX: "$channelId" ($normalizedChannel) starts "$epgKey" ($normalizedEpg)');
-        prefixMatches++;
-      }
-    }
-  }
-  print('Prefix matches: $prefixMatches');
-  
-  print('\n=== SUMMARY ===');
-  print('Total channel IDs: ${sampleChannelIds.length}');
-  print('Total EPG keys: ${sampleEpgKeys.length}');
-  print('Exact matches: $exactMatches');
-  print('Case-insensitive matches: $caseMatches');
-  print('Normalized matches: $normalizedMatches');
-  print('Prefix matches: $prefixMatches');
 }

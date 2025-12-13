@@ -78,27 +78,7 @@ class IntegratedTranscriptionService extends ChangeNotifier {
     if (_isInitialized) return true;
 
     try {
-      // Initialize speech recognition
-      final speechInitialized = await _speech.initialize(
-        onError: (error) {
-          debugLog('Speech recognition error: $error');
-          notifyListeners();
-        },
-        onStatus: (status) {
-          debugLog('Speech status: $status');
-          if (status == 'done' || status == 'notListening') {
-            _isTranscribing = false;
-            notifyListeners();
-          }
-        },
-      );
-
-      if (!speechInitialized) {
-        debugLog('Failed to initialize speech recognition');
-        return false;
-      }
-
-      // Initialize translator
+      // Initialize translator (no permissions needed)
       _translator = OnDeviceTranslator(
         sourceLanguage: _sourceLanguage,
         targetLanguage: _targetLanguage,
@@ -126,9 +106,10 @@ class IntegratedTranscriptionService extends ChangeNotifier {
     try {
       debugLog('Starting audio extraction from: $videoUrl');
       
-      // For now, use direct audio stream transcription
-      // Media Kit can be used for more complex audio processing if needed
-      await startTranscription();
+      // TODO: Implement actual video audio extraction and transcription
+      // This should extract audio from the video stream, not use microphone
+      // For now, show placeholder message
+      await _addSubtitle('Live translation from video audio not yet implemented');
       
     } catch (e) {
       debugLog('Video stream transcription error: $e');
@@ -151,23 +132,9 @@ class IntegratedTranscriptionService extends ChangeNotifier {
         // Use Whisper for audio file transcription
         await _transcribeWithWhisper(audioFilePath);
       } else {
-        // Fallback to speech recognition for live audio
-        await _speech.listen(
-          onResult: (result) async {
-            _currentText = result.recognizedWords;
-
-            if (result.finalResult && _currentText.isNotEmpty) {
-              await _addSubtitle(_currentText);
-              _currentText = '';
-            }
-
-            notifyListeners();
-          },
-          listenFor: const Duration(seconds: 30),
-          pauseFor: const Duration(seconds: 3),
-          partialResults: true,
-          listenMode: stt.ListenMode.dictation,
-        );
+        // For IPTV, we should transcribe video audio, not microphone
+        // This is a placeholder - proper implementation would extract audio from video stream
+        throw Exception('Live transcription from video audio not yet implemented');
       }
 
       debugLog('✅ Transcription started');

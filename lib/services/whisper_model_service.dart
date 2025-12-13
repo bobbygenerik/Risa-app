@@ -68,34 +68,21 @@ class WhisperModelService extends ChangeNotifier {
       final sink = file.openWrite();
       int downloaded = 0;
 
-      await response.stream.listen(
-        (chunk) {
-          sink.add(chunk);
-          downloaded += chunk.length;
-          if (contentLength > 0) {
-            _downloadProgress[modelName] = downloaded / contentLength;
-            notifyListeners();
-          }
-        },
-        onDone: () async {
-          await sink.close();
-          _downloadedModels.add(modelName);
-          await _saveDownloadedModels();
-          _isDownloading[modelName] = false;
-          _downloadProgress[modelName] = 1.0;
+      await for (final chunk in response.stream) {
+        sink.add(chunk);
+        downloaded += chunk.length;
+        if (contentLength > 0) {
+          _downloadProgress[modelName] = downloaded / contentLength;
           notifyListeners();
-        },
-        onError: (error) async {
-          await sink.close();
-          if (await file.exists()) {
-            await file.delete();
-          }
-          _isDownloading[modelName] = false;
-          _downloadProgress.remove(modelName);
-          notifyListeners();
-          throw error;
-        },
-      ).asFuture();
+        }
+      }
+      
+      await sink.close();
+      _downloadedModels.add(modelName);
+      await _saveDownloadedModels();
+      _isDownloading[modelName] = false;
+      _downloadProgress.remove(modelName);
+      notifyListeners();
 
       return true;
     } catch (e) {

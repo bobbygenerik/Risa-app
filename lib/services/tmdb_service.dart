@@ -405,33 +405,37 @@ class TMDBService {
 
     try {
       Map<String, dynamic>? details;
-      String? logoUrl;
+      String? companyLogoUrl;
 
-      // First, try to find a company with the same name
-      final companySearchUrl =
-          '$_baseUrl/search/company?api_key=$_apiKey&query=${Uri.encodeComponent(title)}';
-      final companyResponse = await http.get(Uri.parse(companySearchUrl));
-      if (companyResponse.statusCode == 200) {
-        final companyData = json.decode(companyResponse.body);
-        final companyResults = companyData['results'] as List;
-        if (companyResults.isNotEmpty) {
-          final company = companyResults.first;
-          if (company['logo_path'] != null) {
-            logoUrl =
-                'https://image.tmdb.org/t/p/w500${company['logo_path']}';
+      // Try TV/movie content first for better backdrop quality
+      if (title.length <= 4) {
+        details = await getTVDetails('$title channel', year: year);
+      } else {
+        details = await getTVDetails(title, year: year);
+      }
+      details ??= await getMovieDetails(title, year: year);
+      
+      // Only use company logos as last resort if no backdrop/poster found
+      if (details == null || (details['backdrop'] == null && details['poster'] == null)) {
+        final companySearchUrl =
+            '$_baseUrl/search/company?api_key=$_apiKey&query=${Uri.encodeComponent(title)}';
+        final companyResponse = await http.get(Uri.parse(companySearchUrl));
+        if (companyResponse.statusCode == 200) {
+          final companyData = json.decode(companyResponse.body);
+          final companyResults = companyData['results'] as List;
+          if (companyResults.isNotEmpty) {
+            final company = companyResults.first;
+            if (company['logo_path'] != null) {
+              companyLogoUrl =
+                  'https://image.tmdb.org/t/p/w500${company['logo_path']}';
+            }
           }
         }
-      }
-
-      if (logoUrl != null) {
-        details = {'backdrop': logoUrl};
-      } else {
-        if (title.length <= 4) {
-          details = await getTVDetails('$title channel', year: year);
-        } else {
-          details = await getTVDetails(title, year: year);
+        
+        // Only use company logo if no other artwork found
+        if (companyLogoUrl != null && (details == null || (details['backdrop'] == null && details['poster'] == null))) {
+          details = {'backdrop': companyLogoUrl};
         }
-        details ??= await getMovieDetails(title, year: year);
       }
       
       // If TMDB didn't find anything, try OMDb as fallback

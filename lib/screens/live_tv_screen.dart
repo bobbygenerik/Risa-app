@@ -1,5 +1,6 @@
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -401,77 +402,83 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         : '';
     final progress = program?.progressPercentage ?? 0.0;
 
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppColors.overlayLight,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Title - fixed height
-          SizedBox(
-            height: context.tvTextSize(24) * 1.3 * 2,
-            child: Text(
-              title,
-              style: AppTypography.heroTitle(context),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(12),
           ),
-          SizedBox(height: context.tvSpacing(8)),
-          // Description - fixed height
-          SizedBox(
-            height: context.tvTextSize(14) * 1.3 * 3,
-            child: Text(
-              description,
-              style: AppTypography.heroDescription(context),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          SizedBox(height: context.tvSpacing(8)),
-          // Progress bar - fixed height
-          SizedBox(
-            height: 6,
-            child: program != null
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      backgroundColor: AppColors.progressBackground,
-                      color: AppColors.progressForeground,
-                      minHeight: 6,
-                    ),
-                  )
-                : Container(),
-          ),
-          SizedBox(height: context.tvSpacing(4)),
-          // Time range with LIVE badge - fixed height
-          SizedBox(
-            height: context.tvTextSize(13) * 1.4,
-            child: Row(
-              children: [
-                if (program != null) ...[
-                  const BrandBadge.live(),
-                  const SizedBox(width: 8),
-                ],
-                Text(
-                  timeRange,
-                  style: AppTypography.smallText(context),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Title - fixed height
+              SizedBox(
+                height: context.tvTextSize(24) * 1.3 * 2,
+                child: Text(
+                  title,
+                  style: AppTypography.heroTitle(context),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ],
-            ),
+              ),
+              SizedBox(height: context.tvSpacing(8)),
+              // Description - fixed height
+              SizedBox(
+                height: context.tvTextSize(14) * 1.3 * 3,
+                child: Text(
+                  description,
+                  style: AppTypography.heroDescription(context),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              SizedBox(height: context.tvSpacing(8)),
+              // Progress bar - fixed height
+              SizedBox(
+                height: 6,
+                child: program != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          backgroundColor: AppColors.progressBackground,
+                          color: AppColors.progressForeground,
+                          minHeight: 6,
+                        ),
+                      )
+                    : Container(),
+              ),
+              SizedBox(height: context.tvSpacing(4)),
+              // Time range with LIVE badge - fixed height
+              SizedBox(
+                height: context.tvTextSize(13) * 1.4,
+                child: Row(
+                  children: [
+                    if (program != null) ...[
+                      const BrandBadge.live(),
+                      const SizedBox(width: 8),
+                    ],
+                    Text(
+                      timeRange,
+                      style: AppTypography.smallText(context),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              BrandPrimaryButton(
+                onPressed: () => context.push('/player', extra: channel),
+                icon: Icons.play_arrow,
+                label: 'Watch Live',
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          BrandPrimaryButton(
-            onPressed: () => context.push('/player', extra: channel),
-            icon: Icons.play_arrow,
-            label: 'Watch Live',
-          ),
-        ],
+        ),
       ),
     );
   }
