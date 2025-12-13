@@ -248,8 +248,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final heroImage = _resolveHeroImage(currentProgram);
     final screenSize = MediaQuery.of(context).size;
     final isTV = screenSize.width >= 1920 || screenSize.height >= 1080;
-    final heroHeight = screenSize.height * 0.75;
-    final sidebarWidth = AppSizes.sidebarCollapsedWidth + AppSizes.lg;
+    final heroHeight = screenSize.height * 0.55;
+    final sidebarWidth = AppSizes.sidebarCollapsedWidth + 16;
 
     return Focus(
       focusNode: _heroFocus,
@@ -348,18 +348,18 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         color: AppTheme.darkBackground,
                         padding: EdgeInsets.only(
                           left: sidebarWidth,
-                          right: AppSizes.xxl,
-                          bottom: AppSizes.xxl,
+                          right: 24,
+                          bottom: 24,
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            SizedBox(height: AppSizes.xxl),
+                            SizedBox(height: 16),
                             if (isGrouping && groupedChannels.isEmpty)
                               _buildCategoryLoadingIndicator()
                             else
                               ..._buildCategoryRows(context, groupedChannels, isTV),
-                            SizedBox(height: AppSizes.xxl),
+                            SizedBox(height: 16),
                           ],
                         ),
                       ),
@@ -663,15 +663,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final isLandscape = screenWidth > screenHeight;
-    final cardWidth = isLandscape ? (screenWidth / 5.5) : (screenWidth / 3.5);
+    final cardWidth = isLandscape ? (screenWidth / 7) : (screenWidth / 4.5);
     final cardHeight = cardWidth * 0.57;
-    final rowHeight = cardHeight + 120;
+    final rowHeight = cardHeight + 80;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.only(bottom: AppSizes.sm),
+          padding: EdgeInsets.only(bottom: 8),
           child: Text(
             title,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -693,7 +693,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             },
           ),
         ),
-        SizedBox(height: AppSizes.lg),
+        SizedBox(height: 12),
       ],
     );
   }

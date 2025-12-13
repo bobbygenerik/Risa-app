@@ -77,7 +77,7 @@ class BrandTextField extends StatelessWidget {
                   ),
                 ),
                 focusedBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: AppTheme.primaryBlue),
+                  borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
                 ),
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: 0, 

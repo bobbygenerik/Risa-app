@@ -374,20 +374,18 @@ class _SettingsScreenState extends State<SettingsScreen>
 
     return Container(
       width: 240,
-      decoration: const BoxDecoration(
-        color: Color(0xFF050710),
-      ),
       child: Column(
         children: [
           // Settings header - centered, no background
-          Container(
+          SizedBox(
             height: 80,
-            alignment: Alignment.center,
-            child: Text(
-              'Settings',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: AppTheme.textPrimary,
-                fontWeight: FontWeight.bold,
+            child: Center(
+              child: Text(
+                'Settings',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: AppTheme.textPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -416,56 +414,55 @@ class _SettingsScreenState extends State<SettingsScreen>
                         setState(() => _tabController.index = next);
                         return KeyEventResult.handled;
                       } else if (key == LogicalKeyboardKey.arrowUp) {
-                        if (index == 0) {
-                          return KeyEventResult.ignored;
-                        }
                         final prev = index - 1;
-                        _menuFocusNodes[prev].requestFocus();
-                        setState(() => _tabController.index = prev);
-                        return KeyEventResult.handled;
+                        if (prev >= 0) {
+                          _menuFocusNodes[prev].requestFocus();
+                          setState(() => _tabController.index = prev);
+                          return KeyEventResult.handled;
+                        }
+                        return KeyEventResult.ignored;
                       } else if (key == LogicalKeyboardKey.arrowRight) {
                         _focusFirstContentElement();
                         return KeyEventResult.handled;
                       }
                       return KeyEventResult.ignored;
                     },
-                    child: Builder(
-                      builder: (context) {
-                        final isFocused = Focus.of(context).hasFocus;
-                        return Container(
+                    child: Container(
                           margin: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 8),
+                              horizontal: 20, vertical: 4),
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
+                              horizontal: 16, vertical: 8),
+                          decoration: isSelected ? BoxDecoration(
+                            color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ) : null,
                           child: Row(
                             children: [
                               Icon(
                                 item['icon'] as IconData,
                                 color: isSelected
                                     ? AppTheme.primaryBlue
-                                    : (isFocused ? AppTheme.textPrimary : AppTheme.textSecondary),
-                                size: 18,
+                                    : Colors.white70,
+                                size: 16,
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   item['title'] as String,
                                   style: TextStyle(
                                     color: isSelected
                                         ? AppTheme.primaryBlue
-                                        : (isFocused ? AppTheme.textPrimary : AppTheme.textSecondary),
-                                    fontSize: 14,
+                                        : Colors.white70,
+                                    fontSize: 12,
                                     fontWeight: isSelected
                                         ? FontWeight.w600
-                                        : (isFocused ? FontWeight.w600 : FontWeight.w500),
+                                        : FontWeight.w500,
                                   ),
                                 ),
                               ),
                             ],
                           ),
-                        );
-                      },
-                    ),
+                        ),
                   ),
                 );
               }).toList(),
@@ -606,30 +603,27 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
             ],
             const SizedBox(height: 16),
-            SizedBox(
-              height: 40,
-              child: Row(
-                children: [
-                  Expanded(
+            Row(
+              children: [
+                Expanded(
+                  child: BrandSecondaryButton(
+                    label: 'Reload Playlist',
+                    onPressed: _reloadPlaylist,
+                    expand: true,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Focus(
+                    focusNode: _clearPlaylistCacheButtonFocusNode,
                     child: BrandSecondaryButton(
-                      label: 'Reload Playlist',
-                      onPressed: _reloadPlaylist,
+                      label: 'Clear Cache',
+                      onPressed: _clearPlaylistCache,
                       expand: true,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Focus(
-                      focusNode: _clearPlaylistCacheButtonFocusNode,
-                      child: BrandSecondaryButton(
-                        label: 'Clear Cache',
-                        onPressed: _clearPlaylistCache,
-                        expand: true,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ],
         ),
@@ -648,7 +642,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             _buildTVTextField(
               controller: _secondaryEpgUrlController,
               focusNode: _secondaryEpgUrlFocusNode,
-              isEditable: false,
+              isEditable: true,
               onEditableChanged: (value) {},
               hintText: 'Secondary EPG URL (backup)',
               prefixIcon: Icons.tv_outlined,
@@ -1038,19 +1032,19 @@ class _SettingsScreenState extends State<SettingsScreen>
     return Container(
       decoration: const BoxDecoration(color: Color(0xFF050710)),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.only(left: 68, top: 20, right: 20, bottom: 20),
+        padding: const EdgeInsets.only(left: 32, top: 16, right: 16, bottom: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               title,
               style: const TextStyle(
-                fontSize: 24,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: AppTheme.textPrimary,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             ...children,
           ],
         ),

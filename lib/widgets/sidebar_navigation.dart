@@ -183,30 +183,25 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
         }
         return KeyEventResult.ignored;
       },
-      child: Builder(
-        builder: (context) {
-          final isFocused = Focus.of(context).hasFocus;
-          return GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () {
-              if (!_isExpanded) {
-                setState(() => _isExpanded = true);
-              } else {
-                setState(() => _isExpanded = false);
-                context.go(tab.route);
-              }
-            },
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          if (!_isExpanded) {
+            setState(() => _isExpanded = true);
+          } else {
+            setState(() => _isExpanded = false);
+            context.go(tab.route);
+          }
+        },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 140),
               curve: Curves.easeOut,
-              height: 40,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                color: isFocused
-                  ? AppTheme.primaryBlue.withValues(alpha: 0.15)
-                  : Colors.transparent,
-              ),
+              height: 32,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              decoration: isActive ? BoxDecoration(
+                color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(4),
+              ) : null,
               alignment: Alignment.center,
               child: _isExpanded
                 ? Row(
@@ -215,14 +210,14 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                       Icon(
                         tab.icon,
                         color: isActive ? AppTheme.primaryBlue : Colors.white70,
-                        size: 20,
+                        size: 16,
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 8),
                       Text(
                         tab.label,
                         style: TextStyle(
                           color: isActive ? AppTheme.primaryBlue : Colors.white70,
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -231,12 +226,10 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                 : Icon(
                     tab.icon,
                     color: isActive ? AppTheme.primaryBlue : Colors.white70,
-                    size: 20,
+                    size: 16,
                   ),
             ),
-          );
-        },
-      ),
+          ),
     );
   }
 
@@ -250,23 +243,20 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        width: _isExpanded ? 160 : 48,
+        width: _isExpanded ? 140 : 40,
         child: ClipRect(
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: Container(
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.85),
-              ),
                     child: Column(
               children: [
           Padding(
-            padding: const EdgeInsets.only(top: 6, bottom: 6),
+            padding: const EdgeInsets.only(top: 4, bottom: 4),
             child: Image(
               image: AssetImage(_isExpanded 
                 ? 'assets/images/croppedlogo2.png'
                 : 'assets/images/lonelogo (1).png'),
-              height: _isExpanded ? 32 : 24,
+              height: _isExpanded ? 28 : 20,
             ),
           ),
           Expanded(
@@ -276,7 +266,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                 children: [
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Focus(
                       focusNode: _searchButtonFocusNode,
                       onFocusChange: (_) => setState(() {}),
@@ -315,10 +305,10 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 150),
                               curve: Curves.easeOut,
-                              height: 40,
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              height: 32,
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(6),
                                 color: isFocused
                                   ? AppTheme.primaryBlue.withValues(alpha: 0.15)
                                   : Colors.transparent,
@@ -328,19 +318,19 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                                 ? const Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.search, color: Colors.white70, size: 20),
-                                      SizedBox(width: 10),
+                                      Icon(Icons.search, color: Colors.white70, size: 16),
+                                      SizedBox(width: 8),
                                       Text(
                                         'Search',
                                         style: TextStyle(
                                           color: Colors.white70,
-                                          fontSize: 14,
+                                          fontSize: 12,
                                           fontWeight: FontWeight.w500,
                                         ),
                                       ),
                                     ],
                                   )
-                                : const Icon(Icons.search, color: Colors.white70, size: 20),
+                                : const Icon(Icons.search, color: Colors.white70, size: 16),
                             ),
                           );
                         },
@@ -350,13 +340,13 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                   ..._tabs.map((tab) {
                     final index = _tabs.indexOf(tab);
                     return Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      padding: const EdgeInsets.symmetric(vertical: 4),
                       child: _buildTabButton(index),
                     );
                   }),
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.only(bottom: 8),
                     child: _buildBottomButton(Icons.settings, 'Settings', '/settings'),
                   ),
                 ],
@@ -411,10 +401,10 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
             },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 140),
-              height: 40,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              height: 32,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(6),
                 color: isFocused ? AppTheme.primaryBlue.withValues(alpha: 0.15) : Colors.transparent,
               ),
               alignment: Alignment.center,
@@ -425,14 +415,14 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                       Icon(
                         icon, 
                         color: isActive ? AppTheme.primaryBlue : Colors.white70, 
-                        size: 20
+                        size: 16
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 8),
                       Text(
                         label,
                         style: TextStyle(
                           color: isActive ? AppTheme.primaryBlue : Colors.white70,
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -441,7 +431,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                 : Icon(
                     icon, 
                     color: isActive ? AppTheme.primaryBlue : Colors.white70, 
-                    size: 20
+                    size: 16
                   ),
             ),
           );
