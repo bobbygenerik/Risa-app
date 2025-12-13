@@ -136,11 +136,21 @@ class M3UParserService {
 
           channels.add(channel);
           channelCount++;
-          if (channelCount <= 3) {
+          if (channelCount <= 5) {
             debugLog('M3UParser: Added channel #$channelCount: $channelName');
+            debugLog('M3UParser: Channel URL: $line');
+            debugLog('M3UParser: URL valid: ${Uri.tryParse(line) != null}');
+            if (line.isEmpty) {
+              debugLog('M3UParser: WARNING - Empty URL for channel: $channelName');
+            }
           }
           currentInfo = null;
           currentAttributes = {};
+        } else if (!line.startsWith('#') && currentInfo == null) {
+          // Found a URL without EXTINF - this might be malformed M3U
+          if (channelCount < 3) {
+            debugLog('M3UParser: WARNING - Found URL without EXTINF: $line');
+          }
         }
       }
       

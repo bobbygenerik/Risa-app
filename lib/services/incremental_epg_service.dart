@@ -26,10 +26,13 @@ class IncrementalEpgService with ChangeNotifier {
 
   Future<void> initialize() async {
     final prefs = await SharedPreferences.getInstance();
-    _epgUrl = prefs.getString('epg_url');
+    _epgUrl = prefs.getString('custom_epg_url');
     
-    if (_epgUrl != null) {
+    if (_epgUrl != null && _epgUrl!.isNotEmpty) {
+      debugLog('EPG: Initializing with URL: $_epgUrl');
       await _loadChannelList();
+    } else {
+      debugLog('EPG: No URL configured');
     }
   }
 
@@ -42,52 +45,45 @@ class IncrementalEpgService with ChangeNotifier {
     int retryCount = 0;
     while (retryCount < _maxRetries) {
       try {
-      final client = HttpClient()
-        ..connectionTimeout = const Duration(seconds: 30)
-        ..badCertificateCallback = (cert, host, port) => true;
+        final client = HttpClient()
+          ..connectionTimeout = const Duration(seconds: 30)
+          ..badCertificateCallback = (cert, host, port) => true;
 
-      final request = await client.getUrl(Uri.parse(_epgUrl!));
-      final response = await request.close();
-      
-      if (response.statusCode != 200) {
-        throw Exception('HTTP ${response.statusCode}');
-      }
+        final request = await client.getUrl(Uri.parse(_epgUrl!));
+        final response = await request.close();
+        
+        if (response.statusCode != 200) {
+          throw Exception('HTTP ${response.statusCode}');
+        }
 
-      // Stream parse to extract only channel IDs
-      final channelIds = <String>{};
-      final buffer = StringBuffer();
-      
-      await for (final chunk in response.transform(utf8.decoder)) {
-        buffer.write(chunk);
+        // Download complete XML
+        final xmlData = await response.transform(utf8.decoder).join();
+        client.close();
         
-        // Process complete programme tags
-        final content = buffer.toString();
-        final programmeMatches = RegExp(r'<programme[^>]+channel="([^"]+)"').allMatches(content);
+        debugLog('EPG: Downloaded ${xmlData.length} characters');
         
-        for (final match in programmeMatches) {
-          channelIds.add(match.group(1)!);
+        // Parse XML document
+        final document = XmlDocument.parse(xmlData);
+        final channelIds = <String>{};
+        
+        // Extract channel IDs from programme elements
+        for (final programme in document.findAllElements('programme')) {
+          final channelId = programme.getAttribute('channel');
+          if (channelId != null && channelId.isNotEmpty) {
+            channelIds.add(channelId);
+          }
         }
         
-        // Keep only incomplete tags at end
-        final lastTagStart = content.lastIndexOf('<programme');
-        if (lastTagStart > 0) {
-          buffer.clear();
-          buffer.write(content.substring(lastTagStart));
-        }
-      }
-      
-      client.close();
-      
-      _availableChannels.clear();
-      _availableChannels.addAll(channelIds);
-      
-      // Cache channel list
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList(_channelListCacheKey, channelIds.toList());
-      
-      debugLog('EPG: Found ${channelIds.length} channels');
-      _error = null;
-      break;
+        _availableChannels.clear();
+        _availableChannels.addAll(channelIds);
+        
+        // Cache channel list
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setStringList(_channelListCacheKey, channelIds.toList());
+        
+        debugLog('EPG: Found ${channelIds.length} channels');
+        _error = null;
+        break;
       } catch (e) {
         retryCount++;
         if (retryCount >= _maxRetries) {
@@ -124,28 +120,26 @@ class IncrementalEpgService with ChangeNotifier {
     int retryCount = 0;
     while (retryCount < _maxRetries) {
       try {
-      final client = HttpClient()
-        ..connectionTimeout = const Duration(seconds: 30)
-        ..badCertificateCallback = (cert, host, port) => true;
+        final client = HttpClient()
+          ..connectionTimeout = const Duration(seconds: 30)
+          ..badCertificateCallback = (cert, host, port) => true;
 
-      final request = await client.getUrl(Uri.parse(_epgUrl!));
-      final response = await request.close();
-      
-      if (response.statusCode != 200) {
-        throw Exception('HTTP ${response.statusCode}');
-      }
+        final request = await client.getUrl(Uri.parse(_epgUrl!));
+        final response = await request.close();
+        
+        if (response.statusCode != 200) {
+          throw Exception('HTTP ${response.statusCode}');
+        }
 
-      final channelData = <String, List<Program>>{};
-      final buffer = StringBuffer();
-      
-      await for (final chunk in response.transform(utf8.decoder)) {
-        buffer.write(chunk);
+        // Download complete XML
+        final xmlData = await response.transform(utf8.decoder).join();
+        client.close();
         
-        // Process complete programme tags for target channels
-        final content = buffer.toString();
-        final doc = XmlDocument.parse('<root>$content</root>');
+        // Parse XML document
+        final document = XmlDocument.parse(xmlData);
+        final channelData = <String, List<Program>>{};
         
-        for (final programme in doc.findAllElements('programme')) {
+        for (final programme in document.findAllElements('programme')) {
           final channelId = programme.getAttribute('channel');
           if (channelId == null || !unloadedChannels.contains(channelId)) continue;
           
@@ -174,25 +168,15 @@ class IncrementalEpgService with ChangeNotifier {
           channelData.putIfAbsent(channelId, () => []).add(program);
         }
         
-        // Keep only incomplete tags
-        final lastTagStart = content.lastIndexOf('<programme');
-        if (lastTagStart > 0) {
-          buffer.clear();
-          buffer.write(content.substring(lastTagStart));
+        // Sort and store programs
+        for (final entry in channelData.entries) {
+          entry.value.sort((a, b) => a.startTime.compareTo(b.startTime));
+          _loadedChannels[entry.key] = entry.value;
         }
-      }
-      
-      client.close();
-      
-      // Sort and store programs
-      for (final entry in channelData.entries) {
-        entry.value.sort((a, b) => a.startTime.compareTo(b.startTime));
-        _loadedChannels[entry.key] = entry.value;
-      }
-      
-      debugLog('EPG: Loaded ${channelData.length} channels');
-      _error = null;
-      break;
+        
+        debugLog('EPG: Loaded ${channelData.length} channels with programs');
+        _error = null;
+        break;
       } catch (e) {
         retryCount++;
         if (retryCount >= _maxRetries) {

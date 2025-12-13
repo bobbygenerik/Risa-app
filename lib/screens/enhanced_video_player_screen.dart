@@ -333,10 +333,28 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     
     final rememberPosition = settings.rememberPlaybackPosition;
     
+    debugLog('Video Player: Initializing with URL: $url');
+    debugLog('Video Player: Channel name: ${widget.channel?.name ?? widget.title ?? 'Unknown'}');
+    debugLog('Video Player: Is live: ${widget.isLive}');
+    
+    if (url.isEmpty) {
+      debugLog('Video Player: ERROR - Empty URL provided');
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showErrorDialog('Invalid Stream', 'No stream URL provided for this channel.');
+      }
+      return;
+    }
+    
     try {
+      final headers = HttpClientService().isInitialized 
+          ? Map<String, String>.from(HttpClientService().videoHeaders) 
+          : <String, String>{};
+      debugLog('Video Player: Using headers: $headers');
+      
       _videoController = VideoPlayerController.networkUrl(
         Uri.parse(url),
-        httpHeaders: HttpClientService().isInitialized ? HttpClientService().videoHeaders : {},
+        httpHeaders: headers,
         videoPlayerOptions: VideoPlayerOptions(
           mixWithOthers: true,
           allowBackgroundPlayback: false,
@@ -346,12 +364,18 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         ),
         formatHint: VideoFormat.hls,
       );
+      
+      debugLog('Video Player: Starting initialization...');
       await _videoController!.initialize();
+      debugLog('Video Player: Initialization successful');
+      debugLog('Video Player: Video duration: ${_videoController!.value.duration}');
+      debugLog('Video Player: Video size: ${_videoController!.value.size}');
     } catch (e) {
-      debugLog('Video initialization error: $e');
+      debugLog('Video Player: Initialization error: $e');
+      debugLog('Video Player: Error type: ${e.runtimeType}');
       if (mounted) {
         setState(() => _isLoading = false);
-        _showErrorDialog('Failed to load stream', 'The video stream could not be loaded. Please check your connection and try again.');
+        _showErrorDialog('Failed to load stream', 'Stream URL: $url\n\nError: $e\n\nThis could be due to:\n• Invalid or expired stream URL\n• Network connectivity issues\n• Server authentication requirements\n• Unsupported stream format');
       }
       return;
     }
