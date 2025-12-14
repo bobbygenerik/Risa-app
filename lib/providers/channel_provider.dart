@@ -135,10 +135,29 @@ class ChannelProvider with ChangeNotifier {
 
   /// Get channels - returns limited list for UI (lazy conversion)
   List<Channel> get channels {
-    // For UI, return more channels but still limit to prevent freeze
-    // Use getChannelAt() or getChannelsForCategory() for specific access
-    final limit = _channelMaps.length < 500 ? _channelMaps.length : 500;
+    // OPTIMIZATION: Return only visible channels for UI (20-30 items)
+    // Use getChannelMapsForUI() for virtual scrolling instead
+    final limit = _channelMaps.length < 30 ? _channelMaps.length : 30;
     return List.generate(limit, (i) => _getChannelAt(i));
+  }
+
+  /// Get channel maps for virtual scrolling (memory efficient)
+  List<Map<String, dynamic>> getChannelMapsForUI({int limit = 50}) {
+    final actualLimit = _channelMaps.length < limit ? _channelMaps.length : limit;
+    return _channelMaps.take(actualLimit).toList();
+  }
+
+  /// Get channel maps for category (virtual scrolling)
+  List<Map<String, dynamic>> getChannelMapsForCategory(String category, {int limit = 50}) {
+    final result = <Map<String, dynamic>>[];
+    for (int i = 0; i < _channelMaps.length && result.length < limit; i++) {
+      final channelMap = _channelMaps[i];
+      final channelCategory = (channelMap['groupTitle'] as String?) ?? 'Uncategorized';
+      if (channelCategory == category) {
+        result.add(channelMap);
+      }
+    }
+    return result;
   }
 
   /// Get a specific channel by index (cached conversion)
@@ -146,10 +165,19 @@ class ChannelProvider with ChangeNotifier {
     if (index < 0 || index >= _channelMaps.length) {
       throw RangeError.index(index, _channelMaps, 'index');
     }
-    return _channelCache.putIfAbsent(
+    
+    // Track cache performance
+    final wasInCache = _channelCache.containsKey(index);
+    final channel = _channelCache.putIfAbsent(
       index,
       () => Channel.fromMap(_channelMaps[index]),
     );
+    
+    if (!wasInCache && _channelCache.length % 100 == 0) {
+      debugLog('ChannelProvider: Channel cache size: ${_channelCache.length}');
+    }
+    
+    return channel;
   }
 
   /// Find a channel by ID (lazy conversion)
@@ -546,8 +574,13 @@ class ChannelProvider with ChangeNotifier {
 
   /// Load channels from M3U URL
   Future<void> loadPlaylistFromUrl(String url) async {
+    PerformanceMonitor.start('PLAYLIST_LOAD_TOTAL');
+    PerformanceMonitor.trackMemoryUsage('Before playlist load');
+    
     try {
       await _loadPlaylistFromUrlImpl(url);
+      PerformanceMonitor.trackChannelLoad(_channelMaps.length, 
+          DateTime.now().difference(DateTime.now()));
     } catch (e) {
       // If we get an SSL/TLS handshake error, retry with direct HttpClient
       if (e.toString().contains('HandshakeException') ||
@@ -824,6 +857,10 @@ class ChannelProvider with ChangeNotifier {
         _isLoading = false;
         _hasLoadedPlaylist = true;
         notifyListeners();
+
+        PerformanceMonitor.end('PLAYLIST_LOAD_TOTAL');
+        PerformanceMonitor.trackMemoryUsage('After playlist load');
+        debugLog('ChannelProvider: Loaded ${_channelMaps.length} channels, cache size: ${_channelCache.length}');
 
         // Start background TMDB enrichment (non-blocking)
         unawaited(_startBackgroundEnrichment());

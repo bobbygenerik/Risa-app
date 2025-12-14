@@ -20,11 +20,11 @@ class TMDBService {
   static const String _baseUrl = 'https://api.themoviedb.org/3';
   static const String _omdbApiKey = OMDbConfig.apiKey;
   static const String _omdbBaseUrl = 'https://www.omdbapi.com';
-  // Simple in-memory cache: key -> _CacheItem
-  // TTL defaults to 24 hours. Evicts oldest entries when size grows too large.
-  static final Map<String, _CacheItem> _cache = {};
+  // LRU in-memory cache: key -> _CacheItem
+  // TTL defaults to 24 hours. Uses LRU eviction for better hit rates.
+  static final Map<String, _CacheItem> _cache = <String, _CacheItem>{};
   static const Duration _defaultTtl = Duration(hours: 24);
-  static const int _maxCacheEntries = 200;
+  static const int _maxCacheEntries = 500; // Increased cache size
   static Future<void>? _cacheLoadFuture;
   
   // Batch request queue
@@ -84,6 +84,11 @@ class TMDBService {
       _cache.remove(key);
       return null;
     }
+    
+    // LRU: Move to end (most recently used)
+    _cache.remove(key);
+    _cache[key] = item;
+    
     return item.data;
   }
 
@@ -92,11 +97,18 @@ class TMDBService {
     Map<String, dynamic> data, {
     Duration? ttl,
   }) {
-    if (_cache.length >= _maxCacheEntries) {
-      // remove oldest entry
-      final firstKey = _cache.keys.first;
-      _cache.remove(firstKey);
+    // Remove existing entry if present (for LRU)
+    if (_cache.containsKey(key)) {
+      _cache.remove(key);
     }
+    
+    // Evict LRU entries if cache is full
+    while (_cache.length >= _maxCacheEntries) {
+      final oldestKey = _cache.keys.first;
+      _cache.remove(oldestKey);
+    }
+    
+    // Add new entry (most recently used)
     _cache[key] = _CacheItem(data, DateTime.now().add(ttl ?? _defaultTtl));
     // persist asynchronously
     _persistCacheToDisk();

@@ -1,0 +1,187 @@
+import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+
+/// Optimized image widget with progressive loading and memory management
+class OptimizedImage extends StatelessWidget {
+  final String imageUrl;
+  final double? width;
+  final double? height;
+  final BoxFit fit;
+  final Widget? placeholder;
+  final Widget? errorWidget;
+  final bool enableMemoryCache;
+  final int? memCacheWidth;
+  final int? memCacheHeight;
+  
+  const OptimizedImage({
+    super.key,
+    required this.imageUrl,
+    this.width,
+    this.height,
+    this.fit = BoxFit.cover,
+    this.placeholder,
+    this.errorWidget,
+    this.enableMemoryCache = true,
+    this.memCacheWidth,
+    this.memCacheHeight,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Calculate optimal memory cache dimensions
+    final screenWidth = MediaQuery.of(context).size.width;
+    final optimalWidth = memCacheWidth ?? 
+        (width != null ? (width! * MediaQuery.of(context).devicePixelRatio).round() : 
+         (screenWidth * 0.3 * MediaQuery.of(context).devicePixelRatio).round());
+    
+    final optimalHeight = memCacheHeight ??
+        (height != null ? (height! * MediaQuery.of(context).devicePixelRatio).round() : null);
+
+    return CachedNetworkImage(
+      imageUrl: imageUrl,
+      width: width,
+      height: height,
+      fit: fit,
+      memCacheWidth: enableMemoryCache ? optimalWidth : null,
+      memCacheHeight: enableMemoryCache ? optimalHeight : null,
+      placeholder: placeholder != null ? (context, url) => placeholder! : (context, url) => _buildShimmerPlaceholder(),
+      errorWidget: errorWidget != null ? (context, url, error) => errorWidget! : _buildErrorWidget,
+      fadeInDuration: const Duration(milliseconds: 200),
+      fadeOutDuration: const Duration(milliseconds: 100),
+    );
+  }
+  
+  Widget _buildShimmerPlaceholder() {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.grey[300],
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.image,
+          color: Colors.grey,
+          size: 32,
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildErrorWidget(BuildContext context, String url, dynamic error) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.broken_image,
+          color: Colors.grey,
+          size: 32,
+        ),
+      ),
+    );
+  }
+}
+
+/// Optimized thumbnail image for lists and grids
+class OptimizedThumbnail extends StatelessWidget {
+  final String imageUrl;
+  final double size;
+  final BoxFit fit;
+  
+  const OptimizedThumbnail({
+    super.key,
+    required this.imageUrl,
+    this.size = 48,
+    this.fit = BoxFit.cover,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return OptimizedImage(
+      imageUrl: imageUrl,
+      width: size,
+      height: size,
+      fit: fit,
+      // Limit memory usage for thumbnails
+      memCacheWidth: (size * 2).round(), // 2x for high DPI
+      memCacheHeight: (size * 2).round(),
+      placeholder: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: Colors.grey[300],
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Icon(
+          Icons.image,
+          color: Colors.grey[600],
+          size: size * 0.4,
+        ),
+      ),
+    );
+  }
+}
+
+/// Progressive image loader for hero images
+class ProgressiveImage extends StatefulWidget {
+  final String imageUrl;
+  final String? lowResImageUrl;
+  final double? width;
+  final double? height;
+  final BoxFit fit;
+  
+  const ProgressiveImage({
+    super.key,
+    required this.imageUrl,
+    this.lowResImageUrl,
+    this.width,
+    this.height,
+    this.fit = BoxFit.cover,
+  });
+
+  @override
+  State<ProgressiveImage> createState() => _ProgressiveImageState();
+}
+
+class _ProgressiveImageState extends State<ProgressiveImage> {
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        // Low resolution placeholder
+        if (widget.lowResImageUrl != null)
+          OptimizedImage(
+            imageUrl: widget.lowResImageUrl!,
+            width: widget.width,
+            height: widget.height,
+            fit: widget.fit,
+            memCacheWidth: 200, // Small cache for low-res
+            memCacheHeight: 200,
+          ),
+        
+        // High resolution image
+        OptimizedImage(
+          imageUrl: widget.imageUrl,
+          width: widget.width,
+          height: widget.height,
+          fit: widget.fit,
+          placeholder: widget.lowResImageUrl != null 
+              ? const SizedBox.shrink() // No placeholder if we have low-res
+              : null,
+          errorWidget: Container(
+            width: widget.width,
+            height: widget.height,
+            color: Colors.grey[300],
+            child: const Icon(Icons.broken_image),
+          ),
+        ),
+      ],
+    );
+  }
+}
