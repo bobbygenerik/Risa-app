@@ -39,8 +39,19 @@ class BrandTextField extends StatelessWidget {
         focusNode: focusNode,
         child: Builder(
           builder: (context) {
-            return TextField(
-              controller: controller,
+            final isFocused = Focus.of(context).hasFocus;
+            return Container(
+              decoration: isFocused ? BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ) : null,
+              child: TextField(
+                controller: controller,
               obscureText: obscureText,
               keyboardType: keyboardType,
               onChanged: onChanged,
@@ -84,6 +95,7 @@ class BrandTextField extends StatelessWidget {
                   vertical: context.tvSpacing(14),
                 ),
               ),
+            ),
             );
           },
         ),

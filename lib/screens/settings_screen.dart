@@ -333,6 +333,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                     requestFirstSidebarFocus();
                     return KeyEventResult.handled;
                   }
+                  // Block down arrow from switching tabs
+                  if (key == LogicalKeyboardKey.arrowDown) {
+                    return KeyEventResult.handled;
+                  }
                   return KeyEventResult.ignored;
                 },
                 child: Builder(
@@ -390,11 +394,10 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
           ),
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 40), // Align with main sidebar icons
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: menuItems.asMap().entries.map((entry) {
+            child: Column(
+              children: [
+                const Spacer(),
+                ...menuItems.asMap().entries.map((entry) {
                 final index = entry.key;
                 final item = entry.value;
                 final bool isSelected = _tabController.index == index;
@@ -429,11 +432,23 @@ class _SettingsScreenState extends State<SettingsScreen>
                       }
                       return KeyEventResult.ignored;
                     },
-                    child: Container(
+                    child: Builder(
+                      builder: (context) {
+                        final isFocused = Focus.of(context).hasFocus;
+                        return Container(
                           margin: const EdgeInsets.symmetric(
                               horizontal: 20, vertical: 4),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 8),
+                          decoration: isFocused ? BoxDecoration(
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ) : null,
                           child: Row(
                             children: [
                               Icon(
@@ -460,11 +475,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                               ),
                             ],
                           ),
-                        ),
+                        );
+                      },
+                    ),
                   ),
                 );
-              }).toList(),
-              ),
+              }),
+                const Spacer(),
+              ],
             ),
           ),
         ],
@@ -523,21 +541,26 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
               const SizedBox(height: 6),
               Row(
-                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Focus(
-                    focusNode: _clearM3uButtonFocusNode,
-                    child: BrandSecondaryButton(
-                      label: 'Clear',
-                      onPressed: () => _m3uUrlController.clear(),
+                  Expanded(
+                    child: Focus(
+                      focusNode: _clearM3uButtonFocusNode,
+                      child: BrandSecondaryButton(
+                        label: 'Clear',
+                        onPressed: () => _m3uUrlController.clear(),
+                        expand: true,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Focus(
-                    focusNode: _loadM3uButtonFocusNode,
-                    child: BrandPrimaryButton(
-                      label: 'Load Playlist',
-                      onPressed: _loadM3uPlaylist,
+                  Expanded(
+                    child: Focus(
+                      focusNode: _loadM3uButtonFocusNode,
+                      child: BrandPrimaryButton(
+                        label: 'Load Playlist',
+                        onPressed: _loadM3uPlaylist,
+                        expand: true,
+                      ),
                     ),
                   ),
                 ],
@@ -581,49 +604,32 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
               const SizedBox(height: 6),
               Row(
-                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Focus(
-                    focusNode: _clearXtreamButtonFocusNode,
-                    child: BrandSecondaryButton(
-                      label: 'Clear',
-                      onPressed: _clearXtreamFields,
+                  Expanded(
+                    child: Focus(
+                      focusNode: _clearXtreamButtonFocusNode,
+                      child: BrandSecondaryButton(
+                        label: 'Clear',
+                        onPressed: _clearXtreamFields,
+                        expand: true,
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Focus(
-                    focusNode: _loadXtreamButtonFocusNode,
-                    child: BrandPrimaryButton(
-                      label: 'Load Playlist',
-                      onPressed: _loadXtreamPlaylist,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Focus(
+                      focusNode: _loadXtreamButtonFocusNode,
+                      child: BrandPrimaryButton(
+                        label: 'Load Playlist',
+                        onPressed: _loadXtreamPlaylist,
+                        expand: true,
+                      ),
                     ),
                   ),
                 ],
               ),
             ],
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: BrandSecondaryButton(
-                    label: 'Reload Playlist',
-                    onPressed: _reloadPlaylist,
-                    expand: true,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Focus(
-                    focusNode: _clearPlaylistCacheButtonFocusNode,
-                    child: BrandSecondaryButton(
-                      label: 'Clear Cache',
-                      onPressed: _clearPlaylistCache,
-                      expand: true,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+
           ],
         ),
         _buildSectionCard(
@@ -1031,19 +1037,19 @@ class _SettingsScreenState extends State<SettingsScreen>
     return Container(
       decoration: const BoxDecoration(color: Color(0xFF050710)),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.only(left: 16, top: 8, right: 12, bottom: 8),
+        padding: const EdgeInsets.only(left: 8, top: 2, right: 6, bottom: 2),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               title,
               style: const TextStyle(
-                fontSize: 16,
+                fontSize: 12,
                 fontWeight: FontWeight.bold,
                 color: AppTheme.textPrimary,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 2),
             ...children,
           ],
         ),
@@ -1080,6 +1086,18 @@ class _SettingsScreenState extends State<SettingsScreen>
   }) {
     return Focus(
       focusNode: focusNode,
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+          if (_playlistInputMethod == 0) {
+            _m3uUrlFocusNode.requestFocus();
+          } else {
+            _xtreamServerFocusNode.requestFocus();
+          }
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
       child: Builder(
         builder: (context) {
           final isFocused = Focus.of(context).hasFocus;
@@ -1091,6 +1109,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                 border: isSelected ? Border(
                   bottom: BorderSide(color: AppTheme.primaryBlue, width: 2),
                 ) : null,
+                boxShadow: isFocused ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ] : null,
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -1127,12 +1152,25 @@ class _SettingsScreenState extends State<SettingsScreen>
     IconData? prefixIcon,
     bool obscureText = false,
   }) {
-    return BrandTextField(
-      controller: controller,
+    return Focus(
       focusNode: focusNode,
-      hintText: hintText,
-      prefixIcon: prefixIcon,
-      obscureText: obscureText,
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+          return _navigateToNextField(focusNode);
+        }
+        if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+          return _navigateToPreviousField(focusNode);
+        }
+        return KeyEventResult.ignored;
+      },
+      child: BrandTextField(
+        controller: controller,
+        focusNode: focusNode,
+        hintText: hintText,
+        prefixIcon: prefixIcon,
+        obscureText: obscureText,
+      ),
     );
   }
 
@@ -1150,8 +1188,12 @@ class _SettingsScreenState extends State<SettingsScreen>
   // Helper methods
   void _loadM3uPlaylist() async {
     final url = _m3uUrlController.text.trim();
-    if (url.isEmpty) return;
+    if (url.isEmpty) {
+      _showMessage('Please enter a playlist URL');
+      return;
+    }
     
+    _showMessage('Loading playlist...');
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('m3u_url', url);
     await prefs.setString('playlist_type', 'm3u');
@@ -1160,6 +1202,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       final provider = Provider.of<ChannelProvider>(context, listen: false);
       await provider.loadPlaylistFromUrl(url);
       _m3uUrlController.clear();
+      _showMessage('Playlist loaded successfully!');
     }
   }
 
@@ -1168,8 +1211,12 @@ class _SettingsScreenState extends State<SettingsScreen>
     final username = _xtreamUsernameController.text.trim();
     final password = _xtreamPasswordController.text.trim();
     
-    if (server.isEmpty || username.isEmpty || password.isEmpty) return;
+    if (server.isEmpty || username.isEmpty || password.isEmpty) {
+      _showMessage('Please fill in all Xtream fields');
+      return;
+    }
     
+    _showMessage('Loading Xtream playlist...');
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('xtream_server', server);
     await prefs.setString('xtream_username', username);
@@ -1182,6 +1229,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       final playlistUrl = '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
       await provider.loadPlaylistFromUrl(playlistUrl);
       _clearXtreamFields();
+      _showMessage('Xtream playlist loaded successfully!');
     }
   }
 
@@ -1391,30 +1439,6 @@ class _SettingsScreenState extends State<SettingsScreen>
     }
   }
 
-  Future<void> _clearPlaylistCache() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('cached_playlist');
-      await prefs.remove('cache_timestamp');
-      
-      _showMessage('Playlist cache cleared successfully!');
-    } catch (e) {
-      _showMessage('Failed to clear cache: $e');
-    }
-  }
-
-  Future<void> _reloadPlaylist() async {
-    try {
-      if (mounted) {
-        final provider = Provider.of<ChannelProvider>(context, listen: false);
-        await provider.autoLoadPlaylist();
-        _showMessage('Playlist reloaded successfully!');
-      }
-    } catch (e) {
-      _showMessage('Failed to reload playlist: $e');
-    }
-  }
-
   Future<void> _exportBackup() async {
     try {
       final filePath = await BackupService.exportBackup();
@@ -1616,5 +1640,54 @@ class _SettingsScreenState extends State<SettingsScreen>
       context: context,
       builder: (context) => const LegalDisclaimerDialog(),
     );
+  }
+
+  KeyEventResult _navigateToNextField(FocusNode currentNode) {
+    if (_playlistInputMethod == 0) {
+      if (currentNode == _m3uUrlFocusNode) {
+        _clearM3uButtonFocusNode.requestFocus();
+        return KeyEventResult.handled;
+      }
+    } else {
+      if (currentNode == _xtreamServerFocusNode) {
+        _xtreamUsernameFocusNode.requestFocus();
+        return KeyEventResult.handled;
+      }
+      if (currentNode == _xtreamUsernameFocusNode) {
+        _xtreamPasswordFocusNode.requestFocus();
+        return KeyEventResult.handled;
+      }
+      if (currentNode == _xtreamPasswordFocusNode) {
+        _clearXtreamButtonFocusNode.requestFocus();
+        return KeyEventResult.handled;
+      }
+    }
+    if (currentNode == _customEpgUrlFocusNode) {
+      _secondaryEpgUrlFocusNode.requestFocus();
+      return KeyEventResult.handled;
+    }
+    if (currentNode == _secondaryEpgUrlFocusNode) {
+      _updateEpgButtonFocusNode.requestFocus();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  KeyEventResult _navigateToPreviousField(FocusNode currentNode) {
+    if (_playlistInputMethod == 1) {
+      if (currentNode == _xtreamPasswordFocusNode) {
+        _xtreamUsernameFocusNode.requestFocus();
+        return KeyEventResult.handled;
+      }
+      if (currentNode == _xtreamUsernameFocusNode) {
+        _xtreamServerFocusNode.requestFocus();
+        return KeyEventResult.handled;
+      }
+    }
+    if (currentNode == _secondaryEpgUrlFocusNode) {
+      _customEpgUrlFocusNode.requestFocus();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 }

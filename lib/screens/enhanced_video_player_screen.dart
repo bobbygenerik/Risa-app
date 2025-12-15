@@ -489,49 +489,64 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   Future<void> _retryWithFallback() async {
     final url = widget.videoUrl ?? widget.content?.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '';
     
-    try {
-      // Dispose current controller
-      await _videoController?.dispose();
-      _chewieController?.dispose();
-      
-      // Try with minimal headers
-      final fallbackHeaders = <String, String>{
-        'User-Agent': 'VLC/3.0.0 LibVLC/3.0.0',
-      };
-      
-      debugLog('Video Player: Retrying with fallback headers: $fallbackHeaders');
-      
-      _videoController = VideoPlayerController.networkUrl(
-        Uri.parse(url),
-        httpHeaders: fallbackHeaders,
-        videoPlayerOptions: VideoPlayerOptions(
-          mixWithOthers: true,
-          allowBackgroundPlayback: false,
-        ),
-      );
-      
-      await _videoController!.initialize();
-      
-      _chewieController = ChewieController(
-        videoPlayerController: _videoController!,
-        autoPlay: true,
-        looping: false,
-        showControls: false,
-        aspectRatio: _videoController!.value.aspectRatio,
-        allowFullScreen: false,
-        allowMuting: true,
-        allowPlaybackSpeedChanging: false,
-        autoInitialize: true,
-      );
-      
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-      
-    } catch (e) {
-      debugLog('Video Player: Fallback retry failed: $e');
-      if (mounted) {
-        _showErrorDialog('Stream Error', 'Unable to play this stream.\n\nURL: $url\n\nThis could be due to:\n• Stream requires authentication\n• Geo-blocked content\n• Server is offline\n• Unsupported stream format');
+    // Try multiple header combinations that work with different IPTV providers
+    final headerStrategies = [
+      // VLC-like headers
+      {'User-Agent': 'VLC/3.0.0 LibVLC/3.0.0'},
+      // Kodi-like headers
+      {'User-Agent': 'Kodi/20.0 (Linux; Android 10; SM-G973F)'},
+      // Generic media player
+      {'User-Agent': 'MediaPlayer/1.0'},
+      // No headers at all
+      <String, String>{},
+    ];
+    
+    for (int i = 0; i < headerStrategies.length; i++) {
+      try {
+        await _videoController?.dispose();
+        _chewieController?.dispose();
+        
+        final headers = headerStrategies[i];
+        debugLog('Video Player: Retry attempt ${i + 1} with headers: $headers');
+        
+        _videoController = VideoPlayerController.networkUrl(
+          Uri.parse(url),
+          httpHeaders: headers,
+          videoPlayerOptions: VideoPlayerOptions(
+            mixWithOthers: true,
+            allowBackgroundPlayback: false,
+          ),
+        );
+        
+        await _videoController!.initialize();
+        
+        _chewieController = ChewieController(
+          videoPlayerController: _videoController!,
+          autoPlay: true,
+          looping: false,
+          showControls: false,
+          aspectRatio: _videoController!.value.aspectRatio,
+          allowFullScreen: false,
+          allowMuting: true,
+          allowPlaybackSpeedChanging: false,
+          autoInitialize: true,
+        );
+        
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+        
+        debugLog('Video Player: Retry successful with strategy ${i + 1}');
+        return; // Success, exit retry loop
+        
+      } catch (e) {
+        debugLog('Video Player: Retry attempt ${i + 1} failed: $e');
+        if (i == headerStrategies.length - 1) {
+          // Last attempt failed
+          if (mounted) {
+            _showErrorDialog('Stream Error', 'Unable to play this stream after multiple attempts.\n\nURL: $url\n\nThis could be due to:\n• Stream requires authentication\n• Geo-blocked content\n• Server is offline\n• Unsupported stream format\n\nTry the stream in VLC or another player to verify it works.');
+          }
+        }
       }
     }
   }

@@ -46,11 +46,11 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
   late int _activeTabIndex;
 
 
-  late FocusNode _searchButtonFocusNode;
   late FocusNode _overflowButtonFocusNode;
   bool _isExpanded = false;
 
   final List<NavTab> _tabs = [
+    NavTab(id: 'search', label: 'Search', icon: Icons.search, route: '/search'),
     NavTab(id: 'epg', label: 'Guide', icon: Icons.dvr, route: '/epg'),
     NavTab(id: 'home', label: 'Live TV', icon: Icons.live_tv, route: '/home'),
     NavTab(id: 'movies', label: 'Movies', icon: Icons.movie, route: '/movies'),
@@ -63,7 +63,6 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
   void initState() {
     super.initState();
     _tabFocusNodes = List.generate(_tabs.length, (_) => FocusNode());
-    _searchButtonFocusNode = FocusNode(debugLabel: 'SideSearchButton');
     _overflowButtonFocusNode = FocusNode(debugLabel: 'SideOverflowButton');
     _activeTabIndex = _resolveActiveTabIndex(widget.activeTab);
 
@@ -99,7 +98,6 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
   void dispose() {
     widget.onNavFocusRegistration?.call(null);
     widget.onExpandRegistration?.call(null);
-    _searchButtonFocusNode.dispose();
     _overflowButtonFocusNode.dispose();
     for (var node in _tabFocusNodes) {
       node.dispose();
@@ -138,6 +136,107 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
       if (!mounted) return;
       _tabFocusNodes[targetIndex].requestFocus();
     });
+  }
+
+  Widget _buildSearchButton(int index) {
+    final tab = _tabs[index];
+    final isActive = widget.activeTab == tab.id;
+
+    return Focus(
+      focusNode: _tabFocusNodes[index],
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+          if (index > 0) {
+            _navigateToTab(index - 1);
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+          if (index < _tabs.length - 1) {
+            _navigateToTab(index + 1);
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+          if (_isExpanded) {
+            setState(() => _isExpanded = false);
+            widget.onFocusContent?.call();
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.arrowLeft && _isExpanded) {
+          setState(() => _isExpanded = false);
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.enter ||
+            event.logicalKey == LogicalKeyboardKey.select ||
+            event.logicalKey == LogicalKeyboardKey.space) {
+          widget.onSearch?.call();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Builder(
+        builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              if (!_isExpanded) {
+                setState(() => _isExpanded = true);
+              } else {
+                widget.onSearch?.call();
+              }
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 140),
+              curve: Curves.easeOut,
+              height: 32,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              decoration: isFocused ? BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ) : null,
+              alignment: Alignment.center,
+              child: _isExpanded
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        tab.icon,
+                        color: isActive ? AppTheme.primaryBlue : Colors.white70,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        tab.label,
+                        style: TextStyle(
+                          color: isActive ? AppTheme.primaryBlue : Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  )
+                : Icon(
+                    tab.icon,
+                    color: isActive ? AppTheme.primaryBlue : Colors.white70,
+                    size: 16,
+                  ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   Widget _buildTabButton(int index) {
@@ -184,21 +283,33 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
         }
         return KeyEventResult.ignored;
       },
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () {
-          if (!_isExpanded) {
-            setState(() => _isExpanded = true);
-          } else {
-            setState(() => _isExpanded = false);
-            context.go(tab.route);
-          }
-        },
+      child: Builder(
+        builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              if (!_isExpanded) {
+                setState(() => _isExpanded = true);
+              } else {
+                setState(() => _isExpanded = false);
+                context.go(tab.route);
+              }
+            },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 140),
               curve: Curves.easeOut,
               height: 32,
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              decoration: isFocused ? BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ) : null,
               alignment: Alignment.center,
               child: _isExpanded
                 ? Row(
@@ -226,7 +337,9 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                     size: 16,
                   ),
             ),
-          ),
+          );
+        },
+      ),
     );
   }
 
@@ -264,86 +377,17 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                       policy: WidgetOrderTraversalPolicy(),
                       child: Column(
                         children: [
+
                           const Spacer(),
                           ..._tabs.map((tab) {
                             final index = _tabs.indexOf(tab);
                             return Container(
                               padding: const EdgeInsets.symmetric(vertical: 4),
-                              child: _buildTabButton(index),
+                              child: tab.id == 'search' 
+                                ? _buildSearchButton(index)
+                                : _buildTabButton(index),
                             );
                           }),
-                          Container(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: Focus(
-                              focusNode: _searchButtonFocusNode,
-                              onFocusChange: (_) => setState(() {}),
-                              onKeyEvent: (node, event) {
-                                if (event is! KeyDownEvent) return KeyEventResult.ignored;
-                                if (event.logicalKey == LogicalKeyboardKey.enter ||
-                                    event.logicalKey == LogicalKeyboardKey.select ||
-                                    event.logicalKey == LogicalKeyboardKey.space) {
-                                  widget.onSearch?.call();
-                                  return KeyEventResult.handled;
-                                }
-                                if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-                                  if (_isExpanded) {
-                                    setState(() => _isExpanded = false);
-                                    return KeyEventResult.handled;
-                                  }
-                                  return KeyEventResult.ignored;
-                                }
-                                if (event.logicalKey == LogicalKeyboardKey.arrowLeft && _isExpanded) {
-                                  setState(() => _isExpanded = false);
-                                  return KeyEventResult.handled;
-                                }
-                                return KeyEventResult.ignored;
-                              },
-                              child: Builder(
-                                builder: (context) {
-                                  final isFocused = Focus.of(context).hasFocus;
-                                  return GestureDetector(
-                                    onTap: () {
-                                      if (!_isExpanded) {
-                                        setState(() => _isExpanded = true);
-                                      } else {
-                                        widget.onSearch?.call();
-                                      }
-                                    },
-                                    child: AnimatedContainer(
-                                      duration: const Duration(milliseconds: 150),
-                                      curve: Curves.easeOut,
-                                      height: 32,
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(6),
-                                        color: isFocused
-                                          ? AppTheme.primaryBlue.withValues(alpha: 0.15)
-                                          : Colors.transparent,
-                                      ),
-                                      alignment: Alignment.center,
-                                      child: _isExpanded
-                                        ? const Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(Icons.search, color: Colors.white70, size: 16),
-                                              SizedBox(width: 8),
-                                              Text(
-                                                'Search',
-                                                style: TextStyle(
-                                                  color: Colors.white70,
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                            ],
-                                          )
-                                        : const Icon(Icons.search, color: Colors.white70, size: 16),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
                           const Spacer(),
                           Container(
                             padding: const EdgeInsets.only(bottom: 8),
@@ -403,10 +447,15 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
               duration: const Duration(milliseconds: 140),
               height: 32,
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(6),
-                color: isFocused ? AppTheme.primaryBlue.withValues(alpha: 0.15) : Colors.transparent,
-              ),
+              decoration: isFocused ? BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ) : null,
               alignment: Alignment.center,
               child: _isExpanded
                 ? Row(

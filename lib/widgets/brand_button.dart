@@ -93,9 +93,9 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
             boxShadow: _focused
                 ? [
                     BoxShadow(
-                      color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
-                      blurRadius: 12,
-                      spreadRadius: 2,
+                      color: Colors.black.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
                   ]
                 : null,
@@ -180,6 +180,13 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
           decoration: BoxDecoration(
             color: Colors.transparent,
             borderRadius: BorderRadius.circular(widget.borderRadius - 2),
+            boxShadow: _focused ? [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ] : null,
           ),
           padding: EdgeInsets.symmetric(
             horizontal: context.tvSpacing(20),

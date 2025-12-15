@@ -208,11 +208,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           Program? currentProgram;
           try {
             final channelId = featuredChannel.tvgId ?? featuredChannel.id;
-            // Trigger EPG loading for this channel if not already loaded
-            if (epgService.hasEpgData(channelId) && epgService.getProgramsForChannel(channelId).isEmpty) {
+            // Always try to get current program
+            currentProgram = epgService.getCurrentProgram(channelId);
+            // If no program found, trigger EPG loading
+            if (currentProgram == null) {
               Future.microtask(() => epgService.ensureChannelLoaded(channelId));
             }
-            currentProgram = epgService.getCurrentProgram(channelId);
           } catch (e) {
             // Ignore EPG errors to prevent freezing
             currentProgram = null;
@@ -251,7 +252,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final heroImage = _resolveHeroImage(currentProgram);
     final screenSize = MediaQuery.of(context).size;
     final isTV = screenSize.width >= 1920 || screenSize.height >= 1080;
-    final heroHeight = screenSize.height * 0.55;
+    final heroHeight = screenSize.height;
     final sidebarWidth = AppSizes.sidebarCollapsedWidth + 16;
 
     return Focus(
@@ -277,20 +278,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 : KeyEventResult.ignored;
           }
           if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-            final screenHeight = MediaQuery.of(context).size.height;
-            final focusScope = FocusScope.of(context);
             _scrollController.animateTo(
-              screenHeight * 0.8,
+              screenSize.height * 0.8,
               duration: const Duration(milliseconds: 600),
               curve: Curves.easeOutCubic,
-            ).then((_) {
+            );
+            // Focus first channel card immediately
+            Future.delayed(const Duration(milliseconds: 100), () {
               if (!mounted) return;
-              // Focus first channel card after scroll completes
-              final firstFocusable = focusScope.children
-                  .where((node) => node.canRequestFocus && node.context != null)
-                  .where((node) => node != _heroFocus)
-                  .firstOrNull;
-              firstFocusable?.requestFocus();
+              _focusPrimaryAction();
             });
             return KeyEventResult.handled;
           }
@@ -737,6 +733,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               return KeyEventResult.handled;
             }
             if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+              _heroFocus.requestFocus();
               return KeyEventResult.handled;
             }
           }
@@ -1047,7 +1044,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         ? Positioned.fill(
             child: CachedNetworkImage(
               imageUrl: heroImage,
-              fit: BoxFit.fitWidth,
+              fit: BoxFit.cover,
               alignment: Alignment.center,
               width: double.infinity,
               height: double.infinity,
