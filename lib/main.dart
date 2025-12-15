@@ -581,6 +581,7 @@ class _MyAppState extends State<MyApp> {
             },
             update: (context, contentProvider, epgService, channelProvider) {
               channelProvider?.setContentProvider(contentProvider);
+              channelProvider?.setEpgService(epgService);
               return channelProvider ?? ChannelProvider();
             },
           ),

@@ -1345,7 +1345,26 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (mounted) {
       showAppSnackBar(
         context,
-        SnackBar(content: Text(message)),
+        SnackBar(
+          content: Text(
+            message,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          backgroundColor: const Color(0xFF1E2328),
+          elevation: 8,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: const BorderSide(
+              color: AppTheme.primaryBlue,
+              width: 1,
+            ),
+          ),
+          margin: const EdgeInsets.all(16),
+        ),
       );
     }
   }

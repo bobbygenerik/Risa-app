@@ -15,7 +15,7 @@ import '../providers/content_provider.dart';
 import '../utils/app_theme.dart';
 import '../utils/snackbar_helper.dart';
 import '../screens/epg_screen.dart';
-import '../services/http_client_service.dart';
+
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 enum SubtitleMode { off, regular, liveTranslation }

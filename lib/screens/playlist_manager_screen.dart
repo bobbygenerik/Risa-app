@@ -95,8 +95,24 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
         showAppSnackBar(
           context,
           SnackBar(
-            content: Text('Playlist "${playlist.name}" deleted'),
-            backgroundColor: AppTheme.accentGreen,
+            content: Text(
+              'Playlist "${playlist.name}" deleted',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            backgroundColor: const Color(0xFF1E2328),
+            elevation: 8,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+              side: const BorderSide(
+                color: AppTheme.accentGreen,
+                width: 1,
+              ),
+            ),
+            margin: const EdgeInsets.all(16),
           ),
         );
       }
@@ -137,8 +153,22 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
           SnackBar(
             content: Text(
               '✓ Loaded "${playlist.name}" - ${channelProvider.channelCount} channels',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-            backgroundColor: AppTheme.accentGreen,
+            backgroundColor: const Color(0xFF1E2328),
+            elevation: 8,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+              side: const BorderSide(
+                color: AppTheme.accentGreen,
+                width: 1,
+              ),
+            ),
+            margin: const EdgeInsets.all(16),
           ),
         );
         context.go('/home');
@@ -149,8 +179,24 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
         showAppSnackBar(
           context,
           SnackBar(
-            content: Text('Failed to load playlist: $e'),
-            backgroundColor: AppTheme.accentRed,
+            content: Text(
+              'Failed to load playlist: $e',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            backgroundColor: const Color(0xFF1E2328),
+            elevation: 8,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+              side: const BorderSide(
+                color: AppTheme.accentRed,
+                width: 1,
+              ),
+            ),
+            margin: const EdgeInsets.all(16),
           ),
         );
       }
@@ -217,8 +263,24 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
         showAppSnackBar(
           context,
           SnackBar(
-            content: Text('Playlist renamed to "$result"'),
-            backgroundColor: AppTheme.accentGreen,
+            content: Text(
+              'Playlist renamed to "$result"',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            backgroundColor: const Color(0xFF1E2328),
+            elevation: 8,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+              side: const BorderSide(
+                color: AppTheme.accentGreen,
+                width: 1,
+              ),
+            ),
+            margin: const EdgeInsets.all(16),
           ),
         );
       }

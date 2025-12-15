@@ -1,6 +1,6 @@
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
-import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -204,12 +204,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           if (_featuredIndex >= channels.length) _featuredIndex = 0;
 
           final featuredChannel = channels[_featuredIndex];
-          // Don't load EPG data synchronously - let it load lazily
+          // Ensure EPG data is loaded for featured channel
           Program? currentProgram;
           try {
-            currentProgram = epgService.getCurrentProgram(
-              featuredChannel.tvgId ?? featuredChannel.id,
-            );
+            final channelId = featuredChannel.tvgId ?? featuredChannel.id;
+            // Trigger EPG loading for this channel if not already loaded
+            if (epgService.hasEpgData(channelId) && epgService.getProgramsForChannel(channelId).isEmpty) {
+              Future.microtask(() => epgService.ensureChannelLoaded(channelId));
+            }
+            currentProgram = epgService.getCurrentProgram(channelId);
           } catch (e) {
             // Ignore EPG errors to prevent freezing
             currentProgram = null;
@@ -275,13 +278,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           }
           if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
             final screenHeight = MediaQuery.of(context).size.height;
+            final focusScope = FocusScope.of(context);
             _scrollController.animateTo(
               screenHeight * 0.8,
               duration: const Duration(milliseconds: 600),
               curve: Curves.easeOutCubic,
             ).then((_) {
+              if (!mounted) return;
               // Focus first channel card after scroll completes
-              final firstFocusable = FocusScope.of(context).children
+              final firstFocusable = focusScope.children
                   .where((node) => node.canRequestFocus && node.context != null)
                   .where((node) => node != _heroFocus)
                   .firstOrNull;
