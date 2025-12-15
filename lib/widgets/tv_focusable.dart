@@ -61,8 +61,6 @@ class TVFocusable extends StatefulWidget {
 }
 
 class _TVFocusableState extends State<TVFocusable> {
-  final bool _hasFocus = false;
-
   @override
   Widget build(BuildContext context) {
     Widget child = widget.child;
@@ -73,23 +71,29 @@ class _TVFocusableState extends State<TVFocusable> {
         child: child,
       );
     }
+    
     return Focus(
       focusNode: widget.focusNode,
       autofocus: widget.autofocus,
-      child: AnimatedScale(
-        scale: _hasFocus && widget.enableScale ? context.tvSpacing(widget.focusScale) : 1.0,
-        duration: TVFocusStyle.animationDuration,
-        curve: TVFocusStyle.animationCurve,
-        child: AnimatedContainer(
-          duration: TVFocusStyle.animationDuration,
-          curve: TVFocusStyle.animationCurve,
-          margin: widget.focusMargin,
-          decoration: BoxDecoration(
-            borderRadius: widget.borderRadius,
-            boxShadow: _hasFocus ? TVFocusStyle.focusedShadow : TVFocusStyle.defaultShadow,
-          ),
-          child: child,
-        ),
+      child: Builder(
+        builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
+          return AnimatedScale(
+            scale: isFocused && widget.enableScale ? widget.focusScale : 1.0,
+            duration: TVFocusStyle.animationDuration,
+            curve: TVFocusStyle.animationCurve,
+            child: AnimatedContainer(
+              duration: TVFocusStyle.animationDuration,
+              curve: TVFocusStyle.animationCurve,
+              margin: widget.focusMargin,
+              decoration: BoxDecoration(
+                borderRadius: widget.borderRadius,
+                boxShadow: isFocused ? TVFocusStyle.focusedShadow : TVFocusStyle.defaultShadow,
+              ),
+              child: child,
+            ),
+          );
+        },
       ),
     );
   }

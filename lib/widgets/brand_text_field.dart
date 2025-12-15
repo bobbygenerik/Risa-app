@@ -44,7 +44,7 @@ class BrandTextField extends StatelessWidget {
               decoration: isFocused ? BoxDecoration(
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
+                    color: AppTheme.primaryBlue.withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -52,50 +52,50 @@ class BrandTextField extends StatelessWidget {
               ) : null,
               child: TextField(
                 controller: controller,
-              obscureText: obscureText,
-              keyboardType: keyboardType,
-              onChanged: onChanged,
-              onTap: onTap,
-              readOnly: readOnly,
-              style: TextStyle(
-                color: AppTheme.textPrimary,
-                fontSize: context.tvTextSize(14),
-              ),
-              decoration: InputDecoration(
-                labelText: labelText,
-                hintText: hintText,
-                hintStyle: TextStyle(
-                  color: AppTheme.textSecondary,
+                obscureText: obscureText,
+                keyboardType: keyboardType,
+                onChanged: onChanged,
+                onTap: onTap,
+                readOnly: readOnly,
+                style: TextStyle(
+                  color: AppTheme.textPrimary,
                   fontSize: context.tvTextSize(14),
                 ),
-                labelStyle: TextStyle(
-                  color: AppTheme.textSecondary,
-                  fontSize: context.tvTextSize(12),
-                ),
-                prefixIcon: prefixIcon != null 
-                    ? Icon(
-                        prefixIcon, 
-                        size: context.tvIconSize(18), 
-                        color: AppTheme.textSecondary,
-                      ) 
-                    : null,
-                border: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.transparent),
-                ),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.2),
+                decoration: InputDecoration(
+                  labelText: labelText,
+                  hintText: hintText,
+                  hintStyle: TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: context.tvTextSize(14),
+                  ),
+                  labelStyle: TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: context.tvTextSize(12),
+                  ),
+                  prefixIcon: prefixIcon != null 
+                      ? Icon(
+                          prefixIcon, 
+                          size: context.tvIconSize(18), 
+                          color: AppTheme.textSecondary,
+                        ) 
+                      : null,
+                  border: const UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.transparent),
+                  ),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  focusedBorder: const UnderlineInputBorder(
+                    borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
+                  ),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 0, 
+                    vertical: context.tvSpacing(14),
                   ),
                 ),
-                focusedBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
-                ),
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 0, 
-                  vertical: context.tvSpacing(14),
-                ),
               ),
-            ),
             );
           },
         ),
