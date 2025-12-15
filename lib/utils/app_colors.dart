@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 
 /// Extended color system for consistent color usage across the app
+/// Updated with better contrast and color distinction for TV interfaces
 class AppColors {
   // Base colors from AppTheme
   static const Color primary = AppTheme.primaryBlue;
@@ -31,8 +32,8 @@ class AppColors {
   static const Color progressBackground = Color(0x4DFFFFFF);
   static const Color progressForeground = AppTheme.primaryBlue;
   
-  // Focus and interaction colors
-  static const Color focusBorder = AppTheme.primaryBlue;
+  // Focus and interaction colors - Updated for better contrast and distinction
+  static const Color focusBorder = Color(0xFF3B82F6); // Brighter blue for focus states
   static const Color focusGlow = Color(0x66FFFFFF);
   static const Color hoverOverlay = Color(0x1AFFFFFF);
   

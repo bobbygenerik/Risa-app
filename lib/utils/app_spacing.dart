@@ -3,15 +3,16 @@ import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 /// Comprehensive spacing system for consistent layout across the app
 /// Provides TV-optimized spacing with semantic naming
+/// Updated with cleaner rhythm (8px, 16px, 24px, 32px, 48px, 64px)
 class AppSpacing {
-  // Base spacing scale (TV-optimized)
-  static const double xs = 4.0;
-  static const double sm = 8.0;
-  static const double md = 12.0;
-  static const double lg = 16.0;
-  static const double xl = 24.0;
-  static const double xxl = 32.0;
-  static const double xxxl = 48.0;
+  // Base spacing scale (TV-optimized) - Simplified for cleaner rhythm
+  static const double xs = 8.0;
+  static const double sm = 16.0;
+  static const double md = 24.0;
+  static const double lg = 32.0;
+  static const double xl = 48.0;
+  static const double xxl = 64.0;
+  static const double xxxl = 80.0;
 
   // Semantic spacing for specific use cases
   static const double cardPadding = lg;
