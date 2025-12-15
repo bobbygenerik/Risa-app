@@ -263,10 +263,6 @@ class _MainShellState extends State<MainShell> {
 
   KeyEventResult _handleContentKeyEvent(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
-    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-      final handled = _requestNavFocus();
-      return handled ? KeyEventResult.handled : KeyEventResult.ignored;
-    }
     if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
       _sidebarExpander?.call(); // Expand sidebar
       final handled = _requestNavFocus(); // Move focus to sidebar

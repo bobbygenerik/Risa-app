@@ -279,7 +279,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               screenHeight * 0.8,
               duration: const Duration(milliseconds: 600),
               curve: Curves.easeOutCubic,
-            );
+            ).then((_) {
+              // Focus first channel card after scroll completes
+              final firstFocusable = FocusScope.of(context).children
+                  .where((node) => node.canRequestFocus && node.context != null)
+                  .where((node) => node != _heroFocus)
+                  .firstOrNull;
+              firstFocusable?.requestFocus();
+            });
             return KeyEventResult.handled;
           }
         }
@@ -369,7 +376,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               ),
               // Hero info overlay
               Positioned(
-                bottom: heroHeight * 0.45,
+                bottom: heroHeight * 0.25,
                 left: sidebarWidth,
                 width: screenSize.width * 0.4,
                 child: Opacity(
@@ -402,16 +409,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         : '';
     final progress = program?.progressPercentage ?? 0.0;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(12),
-          ),
+    return Container(
+      padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -478,8 +477,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               ),
             ],
           ),
-        ),
-      ),
     );
   }
 
@@ -1045,7 +1042,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         ? Positioned.fill(
             child: CachedNetworkImage(
               imageUrl: heroImage,
-              fit: BoxFit.cover,
+              fit: BoxFit.fitWidth,
+              alignment: Alignment.center,
               width: double.infinity,
               height: double.infinity,
               placeholder: (_, __) => _buildDefaultHeroBackground(),

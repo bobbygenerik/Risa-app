@@ -347,9 +347,13 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     }
     
     try {
-      final headers = HttpClientService().isInitialized 
-          ? Map<String, String>.from(HttpClientService().videoHeaders) 
-          : <String, String>{};
+      final headers = <String, String>{
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36',
+        'Accept': '*/*',
+        'Accept-Encoding': 'identity',
+        'Connection': 'keep-alive',
+        'Cache-Control': 'no-cache',
+      };
       debugLog('Video Player: Using headers: $headers');
       
       _videoController = VideoPlayerController.networkUrl(
@@ -467,14 +471,68 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   void _handleVideoError(String error) async {
     if (!mounted) return;
     
+    debugLog('Video Player: Error details: $error');
+    
     if (error.contains('Source error') || error.contains('ExoPlaybackException')) {
-      _showErrorDialog('Stream Error', 'The video stream encountered an error. This may be due to network issues or an invalid stream URL.');
+      // Try to retry with different approach
+      debugLog('Video Player: Source error detected, attempting retry...');
+      await _retryWithFallback();
     } else {
       unawaited(Future.delayed(const Duration(seconds: 2), () {
         if (mounted && _videoController != null && !_videoController!.value.hasError) {
           _videoController!.play();
         }
       }));
+    }
+  }
+  
+  Future<void> _retryWithFallback() async {
+    final url = widget.videoUrl ?? widget.content?.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '';
+    
+    try {
+      // Dispose current controller
+      await _videoController?.dispose();
+      _chewieController?.dispose();
+      
+      // Try with minimal headers
+      final fallbackHeaders = <String, String>{
+        'User-Agent': 'VLC/3.0.0 LibVLC/3.0.0',
+      };
+      
+      debugLog('Video Player: Retrying with fallback headers: $fallbackHeaders');
+      
+      _videoController = VideoPlayerController.networkUrl(
+        Uri.parse(url),
+        httpHeaders: fallbackHeaders,
+        videoPlayerOptions: VideoPlayerOptions(
+          mixWithOthers: true,
+          allowBackgroundPlayback: false,
+        ),
+      );
+      
+      await _videoController!.initialize();
+      
+      _chewieController = ChewieController(
+        videoPlayerController: _videoController!,
+        autoPlay: true,
+        looping: false,
+        showControls: false,
+        aspectRatio: _videoController!.value.aspectRatio,
+        allowFullScreen: false,
+        allowMuting: true,
+        allowPlaybackSpeedChanging: false,
+        autoInitialize: true,
+      );
+      
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+      
+    } catch (e) {
+      debugLog('Video Player: Fallback retry failed: $e');
+      if (mounted) {
+        _showErrorDialog('Stream Error', 'Unable to play this stream.\n\nURL: $url\n\nThis could be due to:\n• Stream requires authentication\n• Geo-blocked content\n• Server is offline\n• Unsupported stream format');
+      }
     }
   }
   

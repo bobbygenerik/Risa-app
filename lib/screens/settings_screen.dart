@@ -390,9 +390,11 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
           ),
           Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: menuItems.asMap().entries.map((entry) {
+            child: Padding(
+              padding: const EdgeInsets.only(top: 40), // Align with main sidebar icons
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: menuItems.asMap().entries.map((entry) {
                 final index = entry.key;
                 final item = entry.value;
                 final bool isSelected = _tabController.index == index;
@@ -432,10 +434,6 @@ class _SettingsScreenState extends State<SettingsScreen>
                               horizontal: 20, vertical: 4),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 8),
-                          decoration: isSelected ? BoxDecoration(
-                            color: AppTheme.primaryBlue.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ) : null,
                           child: Row(
                             children: [
                               Icon(
@@ -466,6 +464,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ),
                 );
               }).toList(),
+              ),
             ),
           ),
         ],
@@ -522,7 +521,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 hintText: 'http://example.com/playlist.m3u',
                 prefixIcon: Icons.link,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
@@ -533,7 +532,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       onPressed: () => _m3uUrlController.clear(),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   Focus(
                     focusNode: _loadM3uButtonFocusNode,
                     child: BrandPrimaryButton(
@@ -566,7 +565,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       prefixIcon: Icons.person,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: _buildTVTextField(
                       controller: _xtreamPasswordController,
@@ -580,7 +579,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
@@ -638,7 +637,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               hintText: 'Primary EPG URL (optional)',
               prefixIcon: Icons.tv_outlined,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
             _buildTVTextField(
               controller: _secondaryEpgUrlController,
               focusNode: _secondaryEpgUrlFocusNode,
@@ -647,7 +646,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               hintText: 'Secondary EPG URL (backup)',
               prefixIcon: Icons.tv_outlined,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
@@ -660,7 +659,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Focus(
                     focusNode: _clearEpgButtonFocusNode,
@@ -673,7 +672,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
@@ -1032,19 +1031,19 @@ class _SettingsScreenState extends State<SettingsScreen>
     return Container(
       decoration: const BoxDecoration(color: Color(0xFF050710)),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.only(left: 32, top: 16, right: 16, bottom: 16),
+        padding: const EdgeInsets.only(left: 16, top: 8, right: 12, bottom: 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               title,
               style: const TextStyle(
-                fontSize: 20,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: AppTheme.textPrimary,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             ...children,
           ],
         ),

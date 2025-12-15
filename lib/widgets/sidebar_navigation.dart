@@ -166,6 +166,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
         if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
           if (_isExpanded) {
             setState(() => _isExpanded = false);
+            widget.onFocusContent?.call();
             return KeyEventResult.handled;
           }
           return KeyEventResult.ignored;
@@ -198,10 +199,6 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
               curve: Curves.easeOut,
               height: 32,
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              decoration: isActive ? BoxDecoration(
-                color: AppTheme.primaryBlue.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(4),
-              ) : null,
               alignment: Alignment.center,
               child: _isExpanded
                 ? Row(
@@ -248,9 +245,8 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: Container(
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.3),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+              decoration: const BoxDecoration(
+                color: Colors.transparent,
               ),
               child: Column(
                 children: [
@@ -269,6 +265,13 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                       child: Column(
                         children: [
                           const Spacer(),
+                          ..._tabs.map((tab) {
+                            final index = _tabs.indexOf(tab);
+                            return Container(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: _buildTabButton(index),
+                            );
+                          }),
                           Container(
                             padding: const EdgeInsets.symmetric(vertical: 4),
                             child: Focus(
@@ -341,13 +344,6 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                               ),
                             ),
                           ),
-                          ..._tabs.map((tab) {
-                            final index = _tabs.indexOf(tab);
-                            return Container(
-                              padding: const EdgeInsets.symmetric(vertical: 4),
-                              child: _buildTabButton(index),
-                            );
-                          }),
                           const Spacer(),
                           Container(
                             padding: const EdgeInsets.only(bottom: 8),

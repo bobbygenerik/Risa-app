@@ -27,9 +27,15 @@ class BrandSwitchTile extends StatelessWidget {
       focusNode: focusNode,
       child: Builder(
         builder: (context) {
-          return Container(
+          final isFocused = Focus.of(context).hasFocus;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
             margin: margin ?? EdgeInsets.only(bottom: context.tvSpacing(16)),
-            padding: EdgeInsets.symmetric(vertical: context.tvSpacing(8)),
+            padding: EdgeInsets.symmetric(vertical: context.tvSpacing(8), horizontal: context.tvSpacing(8)),
+            decoration: BoxDecoration(
+              border: isFocused ? Border.all(color: AppTheme.primaryBlue, width: 2) : null,
+              borderRadius: BorderRadius.circular(4),
+            ),
             child: Row(
               children: [
                 Expanded(
