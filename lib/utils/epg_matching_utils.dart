@@ -1,5 +1,3 @@
-import 'dart:math';
-
 /// Utility class for EPG channel matching algorithms
 /// Extracted from EPGService to improve maintainability and testability
 class EPGMatchingUtils {

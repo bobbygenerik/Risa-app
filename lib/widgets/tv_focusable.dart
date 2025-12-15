@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 /// Modern Netflix-style focus effect constants
 class TVFocusStyle {
