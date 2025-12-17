@@ -2,7 +2,8 @@ import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:video_player/video_player.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/utils/app_theme.dart';
@@ -33,7 +34,8 @@ class MultiViewScreen extends StatefulWidget {
 
 class _MultiViewScreenState extends State<MultiViewScreen> {
   late List<Channel> _channelsList;
-  final List<VideoPlayerController?> _controllers = [null, null, null, null];
+  final List<Player?> _players = [null, null, null, null];
+  final List<VideoController?> _controllers = [null, null, null, null];
   final List<bool> _isInitialized = [false, false, false, false];
   final List<bool> _hasError = [false, false, false, false];
 
@@ -61,7 +63,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
   final TimerService _timerService = TimerService();
   
   // Memory optimization
-  final List<VideoPlayerController> _controllerPool = [];
+  final List<Player> _playerPool = [];
   final Set<int> _visibleTiles = {};
   final Set<int> _loadingTiles = {};
 
@@ -125,7 +127,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
   
   Future<void> _initializePlayer(int index) async {
     if (index >= _channelsList.length) return;
-    if (_controllers[index] != null) return;
+    if (_players[index] != null) return;
     if (_loadingTiles.contains(index)) return;
 
     _loadingTiles.add(index);
@@ -139,52 +141,45 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
     }
 
     try {
-      // Try to reuse controller from pool
-      VideoPlayerController? controller = _getPooledController();
-      
-      if (controller == null) {
-        // Use lower quality for non-focused players
-        final quality = index == _focusedPlayer ? 'high' : 'medium';
-        
-        controller = VideoPlayerController.networkUrl(
-          Uri.parse(channel.url),
-          httpHeaders: {
-            ...HttpClientService().videoHeaders,
-            'X-Quality-Hint': quality,
-          },
-          videoPlayerOptions: VideoPlayerOptions(
-            mixWithOthers: true,
-            allowBackgroundPlayback: false,
-          ),
-          formatHint: VideoFormat.hls,
-        );
-      } else {
-        // Reuse existing controller with new URL
-        await controller.dispose();
-        controller = VideoPlayerController.networkUrl(
-          Uri.parse(channel.url),
-          httpHeaders: {
-            ...HttpClientService().videoHeaders,
-            'X-Quality-Hint': index == _focusedPlayer ? 'high' : 'medium',
-          },
-          videoPlayerOptions: VideoPlayerOptions(
-            mixWithOthers: true,
-            allowBackgroundPlayback: false,
-          ),
-          formatHint: VideoFormat.hls,
-        );
+      // Try to reuse player from pool
+      Player? player = _getPooledPlayer();
+      VideoController? controller;
+
+      if (player == null) {
+        player = Player(
+            configuration: const PlayerConfiguration(
+          title: 'Risa MultiView',
+          vo: 'gpu',
+        ));
       }
-      
+
+      controller = VideoController(
+        player,
+        configuration: const VideoControllerConfiguration(
+          enableHardwareAcceleration: true,
+        ),
+      );
+
+      _players[index] = player;
       _controllers[index] = controller;
-      await controller.initialize();
-      await controller.setPlaybackSpeed(1.0);
-      await controller.play();
+
+      // Common headers for IPTV
+      final headers = <String, String>{
+        'User-Agent': 'VLC/3.0.0 LibVLC/3.0.0',
+        'Accept': '*/*',
+        'Connection': 'keep-alive',
+      };
+
+      await player.open(
+        Media(channel.url, httpHeaders: headers),
+        play: true,
+      );
 
       // Mute all except the active audio player
       if (index != _activeAudioPlayer) {
-        await controller.setVolume(0.0);
+        await player.setVolume(0.0);
       } else {
-        await controller.setVolume(1.0);
+        await player.setVolume(100.0);
       }
 
       setState(() {
@@ -200,30 +195,29 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
       _loadingTiles.remove(index);
     }
   }
-  
-  VideoPlayerController? _getPooledController() {
-    if (_controllerPool.isNotEmpty) {
-      return _controllerPool.removeLast();
+
+  Player? _getPooledPlayer() {
+    if (_playerPool.isNotEmpty) {
+      return _playerPool.removeLast();
     }
     return null;
   }
-  
+
   void _disposePlayer(int index) {
-    final controller = _controllers[index];
-    if (controller != null) {
+    final player = _players[index];
+    if (player != null) {
       // Stop playback before disposal
-      if (controller.value.isInitialized) {
-        unawaited(controller.pause());
-      }
-      
+      unawaited(player.stop());
+
       // Add to pool for reuse instead of disposing immediately
-      if (_controllerPool.length < 2) {
-        _controllerPool.add(controller);
+      if (_playerPool.length < 2) {
+        _playerPool.add(player);
       } else {
-        unawaited(controller.dispose());
+        unawaited(player.dispose());
       }
-      
-      _controllers[index] = null;
+
+      _players[index] = null;
+      _controllers[index] = null; // VideoController just wraps player, drop reference
       setState(() {
         _isInitialized[index] = false;
         _hasError[index] = false;
@@ -239,22 +233,23 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
       _focusPool.returnFocusNode('multi_view_player_$i');
     }
     _controlsFocusScope.dispose();
-    
-    // Dispose all active controllers
-    for (var controller in _controllers) {
-      if (controller != null) {
-        unawaited(controller.dispose());
+
+    // Dispose all active players
+    for (var player in _players) {
+      if (player != null) {
+        unawaited(player.dispose());
       }
     }
-    
-    // Dispose all pooled controllers
-    for (var controller in _controllerPool) {
-      unawaited(controller.dispose());
+
+    // Dispose all pooled players
+    for (var player in _playerPool) {
+      unawaited(player.dispose());
     }
-    
+
     // Clear collections
+    _players.clear();
     _controllers.clear();
-    _controllerPool.clear();
+    _playerPool.clear();
     _visibleTiles.clear();
     _loadingTiles.clear();
     
@@ -289,14 +284,14 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
   }
 
   void _switchAudioPlayer(int index) {
-    if (index < 0 || index >= _controllers.length) return;
-    if (_controllers[index] == null || !_isInitialized[index]) return;
+    if (index < 0 || index >= _players.length) return;
+    if (_players[index] == null || !_isInitialized[index]) return;
 
     // Mute old active player
-    unawaited(_controllers[_activeAudioPlayer]?.setVolume(0.0));
+    unawaited(_players[_activeAudioPlayer]?.setVolume(0.0));
 
     // Unmute new active player
-    unawaited(_controllers[index]?.setVolume(1.0));
+    unawaited(_players[index]?.setVolume(100.0));
 
     setState(() {
       _activeAudioPlayer = index;
@@ -314,14 +309,8 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
   }
 
   void _togglePlayPause(int index) {
-    if (_controllers[index] == null) return;
-
-    final isPlaying = _controllers[index]!.value.isPlaying;
-    if (isPlaying) {
-      unawaited(_controllers[index]!.pause());
-    } else {
-      unawaited(_controllers[index]!.play());
-    }
+    if (_players[index] == null) return;
+    _players[index]!.playOrPause();
     _startControlsTimer();
   }
 
@@ -403,8 +392,8 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
           break;
         case LogicalKeyboardKey.keyM:
           // Mute/unmute focused player
-          final volume = _controllers[_focusedPlayer]?.value.volume ?? 0.0;
-          unawaited(_controllers[_focusedPlayer]?.setVolume(volume > 0 ? 0.0 : 1.0));
+          final volume = _players[_focusedPlayer]?.state.volume ?? 0.0;
+          unawaited(_players[_focusedPlayer]?.setVolume(volume > 0 ? 0.0 : 100.0));
           _startControlsTimer();
           break;
         case LogicalKeyboardKey.select:
@@ -603,9 +592,10 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
             // Video player
             if (isInitialized && !hasError && controller != null)
               Center(
-                child: AspectRatio(
-                  aspectRatio: 16 / 9,
-                  child: VideoPlayer(controller),
+                child: Video(
+                  controller: controller,
+                  controls: NoVideoControls,
+                  fit: BoxFit.contain,
                 ),
               ),
 
@@ -814,7 +804,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
   }
 
   Widget _buildControlsOverlay() {
-    final isPlaying = _controllers[_focusedPlayer]?.value.isPlaying ?? false;
+    final isPlaying = _players[_focusedPlayer]?.state.playing ?? false;
     
     // Reset timer on any key activity within controls
     return KeyboardListener(
@@ -924,10 +914,10 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                         icon: Icons.replay_10,
                         label: '-10s',
                         onTap: () {
-                          final controller = _controllers[_focusedPlayer];
-                          if (controller != null) {
-                            final position = controller.value.position;
-                            unawaited(controller.seekTo(position - const Duration(seconds: 10)));
+                          final player = _players[_focusedPlayer];
+                          if (player != null) {
+                            final position = player.state.position;
+                            unawaited(player.seek(position - const Duration(seconds: 10)));
                           }
                           _startControlsTimer();
                         },
@@ -943,10 +933,10 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                         icon: Icons.forward_10,
                         label: '+10s',
                         onTap: () {
-                          final controller = _controllers[_focusedPlayer];
-                          if (controller != null) {
-                            final position = controller.value.position;
-                            unawaited(controller.seekTo(position + const Duration(seconds: 10)));
+                          final player = _players[_focusedPlayer];
+                          if (player != null) {
+                            final position = player.state.position;
+                            unawaited(player.seek(position + const Duration(seconds: 10)));
                           }
                           _startControlsTimer();
                         },

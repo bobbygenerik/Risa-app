@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 void main() async {
   // Test URLs from M3U playlist
   final testUrls = [
-    'http://xapi-ie.cc:80/bobbygenerik/@Ollivander1218/1', // Sample channel URL format
+    'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', // Reliable HLS test stream (Big Buck Bunny)
   ];
 
   print('=== IPTV Stream URL Validator ===\n');

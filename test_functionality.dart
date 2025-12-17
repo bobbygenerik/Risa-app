@@ -1,6 +1,7 @@
 #!/usr/bin/env dart
 
 import 'dart:io';
+import 'dart:convert';
 
 /// Comprehensive functionality test for IPTV Player
 /// Tests all services and features to ensure they work correctly
@@ -39,7 +40,7 @@ void main() async {
   
   // Test 4: Screen Files
   print('\n📱 Testing Screen Files...');
-  results['Home Screen'] = await testServiceFile('lib/screens/modern_home_screen.dart');
+  results['Live TV Screen'] = await testServiceFile('lib/screens/live_tv_screen.dart');
   results['Movies Screen'] = await testServiceFile('lib/screens/movies_screen.dart');
   results['Series Screen'] = await testServiceFile('lib/screens/series_screen.dart');
   results['Search Screen'] = await testServiceFile('lib/screens/search_screen.dart');
@@ -258,27 +259,15 @@ Future<bool> testWebBuild() async {
 
 Future<bool> testHTTPRequests() async {
   try {
-    final result = await Process.run('dart', ['-e', '''
-      import "dart:io";
-      void main() async {
-        try {
-          final client = HttpClient();
-          final request = await client.getUrl(Uri.parse("https://httpbin.org/get"));
-          final response = await request.close();
-          print("HTTP Status: \${response.statusCode}");
-          client.close();
-        } catch (e) {
-          print("HTTP Error: \$e");
-          exit(1);
-        }
-      }
-    ''']);
+    final client = HttpClient();
+    final request = await client.getUrl(Uri.parse("https://httpbin.org/get"));
+    final response = await request.close();
     
-    final success = result.exitCode == 0 && result.stdout.toString().contains('200');
+    final success = response.statusCode == 200;
     if (success) {
       print('  ✅ HTTP requests working');
     } else {
-      print('  ❌ HTTP requests failed');
+      print('  ❌ HTTP requests failed: Status ${response.statusCode}');
     }
     return success;
   } catch (e) {
@@ -289,37 +278,19 @@ Future<bool> testHTTPRequests() async {
 
 Future<bool> testTMDBAPI() async {
   try {
-    final result = await Process.run('dart', ['-e', '''
-      import "dart:io";
-      import "dart:convert";
-      void main() async {
-        try {
-          final client = HttpClient();
-          final request = await client.getUrl(Uri.parse("https://api.themoviedb.org/3/movie/550?api_key=d98ee3033187dff844095fcff7873e21"));
-          final response = await request.close();
-          final body = await response.transform(utf8.decoder).join();
-          final data = jsonDecode(body);
-          if (data["title"] == "Fight Club") {
-            print("TMDB API: Working");
-          } else {
-            print("TMDB API: Unexpected response");
-            exit(1);
-          }
-          client.close();
-        } catch (e) {
-          print("TMDB API Error: \$e");
-          exit(1);
-        }
-      }
-    ''']);
+    final client = HttpClient();
+    final request = await client.getUrl(Uri.parse("https://api.themoviedb.org/3/movie/550?api_key=d98ee3033187dff844095fcff7873e21"));
+    final response = await request.close();
+    final body = await response.transform(utf8.decoder).join();
+    final data = jsonDecode(body);
     
-    final success = result.exitCode == 0 && result.stdout.toString().contains('Working');
-    if (success) {
+    if (data["title"] == "Fight Club") {
       print('  ✅ TMDB API working');
+      return true;
     } else {
-      print('  ❌ TMDB API failed');
+      print('  ❌ TMDB API: Unexpected response');
+      return false;
     }
-    return success;
   } catch (e) {
     print('  ❌ TMDB API test failed: $e');
     return false;

@@ -377,7 +377,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     ];
 
     return SizedBox(
-      width: 240,
+      width: context.sidebarWidth(),
       child: Column(
         children: [
           // Settings header - centered, no background
@@ -539,7 +539,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 hintText: 'http://example.com/playlist.m3u',
                 prefixIcon: Icons.link,
               ),
-              const SizedBox(height: 6),
+              context.spacingSmBox,
               Row(
                 children: [
                   Expanded(
@@ -575,7 +575,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 hintText: 'http://example.com:8080',
                 prefixIcon: Icons.dns,
               ),
-              const SizedBox(height: 12),
+              context.spacingMdBox,
               Row(
                 children: [
                   Expanded(
@@ -588,7 +588,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       prefixIcon: Icons.person,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  context.spacingSmBox,
                   Expanded(
                     child: _buildTVTextField(
                       controller: _xtreamPasswordController,
@@ -602,7 +602,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
+              context.spacingSmBox,
               Row(
                 children: [
                   Expanded(
@@ -643,7 +643,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               hintText: 'Primary EPG URL (optional)',
               prefixIcon: Icons.tv_outlined,
             ),
-            const SizedBox(height: 6),
+            context.spacingSmBox,
             _buildTVTextField(
               controller: _secondaryEpgUrlController,
               focusNode: _secondaryEpgUrlFocusNode,
@@ -652,7 +652,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               hintText: 'Secondary EPG URL (backup)',
               prefixIcon: Icons.tv_outlined,
             ),
-            const SizedBox(height: 8),
+            context.spacingSmBox,
             Row(
               children: [
                 Expanded(

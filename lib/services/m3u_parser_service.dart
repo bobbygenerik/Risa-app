@@ -633,10 +633,7 @@ class M3UParserService {
 
   /// Extract genres from group title
   List<String>? _extractGenres(String? groupTitle) {
-    debugLog('M3U _extractGenres called with: "$groupTitle"');
-    
     if (groupTitle == null || groupTitle.isEmpty) {
-      debugLog('M3U _extractGenres returning null (empty groupTitle)');
       return null;
     }
     
@@ -682,13 +679,11 @@ class M3UParserService {
     // Check if the group-title matches any known genre
     for (final entry in genreMap.entries) {
       if (lower.contains(entry.key)) {
-        debugLog('M3U _extractGenres found genre "${entry.value}" from "$groupTitle"');
         return [entry.value];
       }
     }
     
     // If no match, use the group-title directly as the genre
-    debugLog('M3U _extractGenres returning: [$cleaned]');
     return [cleaned];
   }
 

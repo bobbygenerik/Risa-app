@@ -1,7 +1,7 @@
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+
 import 'package:go_router/go_router.dart';
 // import 'package:iptv_player/widgets/top_navigation_bar.dart'; // Removed
 
@@ -37,7 +37,7 @@ class _MainShellState extends State<MainShell> {
   int? _activeFocusToken;
   bool _autoSearchTriggered = false;
   bool Function()? _navFocusRequester;
-  VoidCallback? _sidebarExpander;
+
   final FocusScopeNode _contentFocusScope =
       FocusScopeNode(debugLabel: 'ContentScope');
 
@@ -196,7 +196,7 @@ class _MainShellState extends State<MainShell> {
                   onSearch: _showSearchDialog,
                   onFocusContent: _requestContentFocus,
                   onNavFocusRegistration: _setNavFocusRequester,
-                  onExpandRegistration: _setSidebarExpander,
+                  onExpandRegistration: (_) {},
                 ),
             ),
           ],
@@ -214,9 +214,7 @@ class _MainShellState extends State<MainShell> {
     _navFocusRequester = requester;
   }
 
-  void _setSidebarExpander(VoidCallback? expander) {
-    _sidebarExpander = expander;
-  }
+
 
   int _registerContentFocusCallback(ContentFocusCallback callback) {
     final token = ++_nextFocusToken;
@@ -262,15 +260,7 @@ class _MainShellState extends State<MainShell> {
     return true;
   }
 
-  KeyEventResult _handleContentKeyEvent(FocusNode node, KeyEvent event) {
-    if (event is! KeyDownEvent) return KeyEventResult.ignored;
-    if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-      _sidebarExpander?.call(); // Expand sidebar
-      final handled = _requestNavFocus(); // Move focus to sidebar
-      return handled ? KeyEventResult.handled : KeyEventResult.ignored;
-    }
-    return KeyEventResult.ignored;
-  }
+
 
   bool _focusFirstContentChild() {
     if (_contentFocusScope.children.isEmpty) return false;

@@ -93,7 +93,7 @@ class AppTheme {
       brightness: Brightness.dark,
       scaffoldBackgroundColor: darkBackground,
       primaryColor: primaryBlue,
-      visualDensity: VisualDensity.compact,
+      visualDensity: VisualDensity.standard,
       
       colorScheme: const ColorScheme.dark(
         primary: primaryBlue,
@@ -226,7 +226,7 @@ class AppTheme {
       
       iconTheme: const IconThemeData(
         color: textSecondary,
-        size: 24,
+        size: 28,
       ),
       
       dividerTheme: const DividerThemeData(
@@ -273,7 +273,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: tvFocusHighlight, width: 3),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       ),
 
       snackBarTheme: SnackBarThemeData(

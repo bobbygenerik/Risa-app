@@ -1,6 +1,6 @@
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
-import 'dart:convert';
+
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:xml/xml.dart';
@@ -257,7 +257,7 @@ class IncrementalEpgService with ChangeNotifier {
     return null;
   }
 
-  List<String> _pendingBatch = [];
+  final List<String> _pendingBatch = [];
   Timer? _batchTimer;
 
   // ... (previous code)

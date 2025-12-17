@@ -86,7 +86,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       _player, 
       configuration: const VideoControllerConfiguration(
         enableHardwareAcceleration: true,
-        androidAttachSurfaceAfterVideoOutput: true,
+
       ),
     );
     
@@ -471,7 +471,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   
   Future<void> _retryWithFallback() async {
     // MediaKit handles most fallbacks internally (protocols), but we can retry opening
-    _initializePlayer();
+    await _initializePlayer();
   }
   
   void _showErrorDialog(String title, String message) {

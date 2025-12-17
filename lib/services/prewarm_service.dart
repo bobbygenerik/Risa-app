@@ -2,7 +2,7 @@ import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:video_player/video_player.dart';
+import 'package:media_kit/media_kit.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/services/http_client_service.dart';
@@ -11,7 +11,7 @@ import 'package:iptv_player/services/http_client_service.dart';
 /// Lightweight prewarm service to preload hero/backdrop images and
 /// initialize a temporary video controller for the featured Live TV channel.
 class PrewarmService {
-  static VideoPlayerController? _prewarmedController;
+  static Player? _prewarmedPlayer;
 
   /// Precache a small set of images used on the main screens to reduce jank
   /// when the user first visits them.
@@ -78,12 +78,12 @@ class PrewarmService {
         }
       }
 
-      // Pre-initialize a small video controller for the featured Live TV channel
+      // Pre-initialize a small video player for the featured Live TV channel
       // Use the captured `featuredChannelUrl` to avoid using `context` after awaits.
       try {
         final url = featuredChannelUrl;
         if (url != null && url.isNotEmpty) {
-          await _initPrewarmController(url);
+          await _initPrewarmPlayer(url);
         }
       } catch (_) {}
     } catch (e) {
@@ -91,30 +91,38 @@ class PrewarmService {
     }
   }
 
-  static Future<void> _initPrewarmController(String url) async {
+  static Future<void> _initPrewarmPlayer(String url) async {
     try {
-      await _prewarmedController?.dispose();
-      _prewarmedController = VideoPlayerController.networkUrl(
-        Uri.parse(url),
-        httpHeaders: HttpClientService().videoHeaders,
+      await _prewarmedPlayer?.dispose();
+      _prewarmedPlayer = Player(
+        configuration: const PlayerConfiguration(
+          title: 'Risa Prewarm',
+          vo: 'gpu',
+        ),
       );
-      await _prewarmedController!.initialize();
-      // Keep paused and ready
-      await _prewarmedController!.pause();
+      
+      // Open stream but pause immediately (buffer only)
+      await _prewarmedPlayer!.open(
+        Media(
+          url,
+          httpHeaders: HttpClientService().videoHeaders,
+        ),
+        play: false, 
+      );
     } catch (e) {
       debugLog('Prewarm video init failed: $e');
       try {
-        await _prewarmedController?.dispose();
+        await _prewarmedPlayer?.dispose();
       } catch (_) {}
-      _prewarmedController = null;
+      _prewarmedPlayer = null;
     }
   }
 
   /// Dispose any prewarmed resources (call on app dispose)
   static Future<void> dispose() async {
     try {
-      await _prewarmedController?.dispose();
-      _prewarmedController = null;
+      await _prewarmedPlayer?.dispose();
+      _prewarmedPlayer = null;
     } catch (_) {}
   }
 }
