@@ -19,6 +19,7 @@ import 'package:provider/provider.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/models/profile_provider.dart';
 import 'package:iptv_player/widgets/legal_disclaimer_dialog.dart';
+import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {

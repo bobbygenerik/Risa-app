@@ -14,7 +14,7 @@ import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/providers/settings_provider.dart';
 import 'package:iptv_player/services/timer_service.dart';
 import 'package:iptv_player/services/focus_pool_service.dart';
-import 'package:iptv_player/services/http_client_service.dart';
+
 
 /// Multi-view screen for watching up to 4 streams simultaneously
 /// Supports 1, 2, or 4 player grid layouts with audio switching
@@ -145,13 +145,11 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
       Player? player = _getPooledPlayer();
       VideoController? controller;
 
-      if (player == null) {
-        player = Player(
+        player ??= Player(
             configuration: const PlayerConfiguration(
           title: 'Risa MultiView',
           vo: 'gpu',
         ));
-      }
 
       controller = VideoController(
         player,
