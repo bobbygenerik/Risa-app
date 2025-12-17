@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:xml/xml.dart';
 import 'package:iptv_player/models/program.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:path_provider/path_provider.dart';
 
 class IncrementalEpgService with ChangeNotifier {
   final Map<String, List<Program>> _loadedChannels = {};
@@ -18,6 +18,7 @@ class IncrementalEpgService with ChangeNotifier {
   static const String _channelListCacheKey = 'epg_channel_list';
   static const int _channelsPerBatch = 50;
   static const int _maxRetries = 3;
+  static const Duration _cacheDuration = Duration(hours: 6);
 
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -36,6 +37,53 @@ class IncrementalEpgService with ChangeNotifier {
     }
   }
 
+  Future<File> _getCacheFile() async {
+    final dir = await getApplicationSupportDirectory();
+    return File('${dir.path}/epg_cache.xml');
+  }
+
+  Future<bool> _isCacheValid() async {
+    try {
+      final file = await _getCacheFile();
+      if (!await file.exists()) return false;
+      
+      final modified = await file.lastModified();
+      final age = DateTime.now().difference(modified);
+      return age < _cacheDuration;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<void> _downloadEpgIfNeeded() async {
+    if (_epgUrl == null) return;
+    
+    if (await _isCacheValid()) {
+      debugLog('EPG: Using valid cached file');
+      return;
+    }
+
+    debugLog('EPG: Downloading fresh data...');
+    final client = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 30)
+      ..badCertificateCallback = (cert, host, port) => true;
+
+    try {
+      final request = await client.getUrl(Uri.parse(_epgUrl!));
+      final response = await request.close();
+      
+      if (response.statusCode != 200) {
+        throw Exception('HTTP ${response.statusCode}');
+      }
+
+      final file = await _getCacheFile();
+      await response.pipe(file.openWrite());
+      debugLog('EPG: Download complete. Saved to ${file.path}');
+    } finally {
+      client.close();
+    }
+  }
+
   Future<void> _loadChannelList() async {
     if (_epgUrl == null) return;
     
@@ -45,25 +93,14 @@ class IncrementalEpgService with ChangeNotifier {
     int retryCount = 0;
     while (retryCount < _maxRetries) {
       try {
-        final client = HttpClient()
-          ..connectionTimeout = const Duration(seconds: 30)
-          ..badCertificateCallback = (cert, host, port) => true;
+        await _downloadEpgIfNeeded();
+        
+        final file = await _getCacheFile();
+        if (!await file.exists()) throw Exception('Cache file missing');
 
-        final request = await client.getUrl(Uri.parse(_epgUrl!));
-        final response = await request.close();
-        
-        if (response.statusCode != 200) {
-          throw Exception('HTTP ${response.statusCode}');
-        }
-
-        // Download complete XML
-        final xmlData = await response.transform(utf8.decoder).join();
-        client.close();
-        
-        debugLog('EPG: Downloaded ${xmlData.length} characters');
-        
-        // Parse XML document
-        final document = XmlDocument.parse(xmlData);
+        // Parse XML document from file
+        final xmlContent = await file.readAsString();
+        final document = XmlDocument.parse(xmlContent);
         final channelIds = <String>{};
         
         // Extract channel IDs from programme elements
@@ -90,7 +127,7 @@ class IncrementalEpgService with ChangeNotifier {
           _error = e.toString();
           debugLog('EPG channel list error after $retryCount attempts: $e');
           
-          // Try loading from cache
+          // Try loading from preferences cache
           final prefs = await SharedPreferences.getInstance();
           final cached = prefs.getStringList(_channelListCacheKey);
           if (cached != null) {
@@ -117,76 +154,60 @@ class IncrementalEpgService with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     
-    int retryCount = 0;
-    while (retryCount < _maxRetries) {
-      try {
-        final client = HttpClient()
-          ..connectionTimeout = const Duration(seconds: 30)
-          ..badCertificateCallback = (cert, host, port) => true;
-
-        final request = await client.getUrl(Uri.parse(_epgUrl!));
-        final response = await request.close();
-        
-        if (response.statusCode != 200) {
-          throw Exception('HTTP ${response.statusCode}');
-        }
-
-        // Download complete XML
-        final xmlData = await response.transform(utf8.decoder).join();
-        client.close();
-        
-        // Parse XML document
-        final document = XmlDocument.parse(xmlData);
-        final channelData = <String, List<Program>>{};
-        
-        for (final programme in document.findAllElements('programme')) {
-          final channelId = programme.getAttribute('channel');
-          if (channelId == null || !unloadedChannels.contains(channelId)) continue;
-          
-          final startStr = programme.getAttribute('start');
-          final stopStr = programme.getAttribute('stop');
-          if (startStr == null || stopStr == null) continue;
-          
-          final title = programme.findElements('title').firstOrNull?.innerText ?? 'Unknown';
-          final description = programme.findElements('desc').firstOrNull?.innerText;
-          final category = programme.findElements('category').firstOrNull?.innerText;
-          final icon = programme.findElements('icon').firstOrNull?.getAttribute('src');
-          
-          final program = Program(
-            id: '${channelId}_$startStr',
-            channelId: channelId,
-            title: title,
-            description: description,
-            startTime: _parseEpgTime(startStr),
-            endTime: _parseEpgTime(stopStr),
-            imageUrl: icon,
-            category: category,
-            isLive: false,
-            canRecord: true,
-          );
-          
-          channelData.putIfAbsent(channelId, () => []).add(program);
-        }
-        
-        // Sort and store programs
-        for (final entry in channelData.entries) {
-          entry.value.sort((a, b) => a.startTime.compareTo(b.startTime));
-          _loadedChannels[entry.key] = entry.value;
-        }
-        
-        debugLog('EPG: Loaded ${channelData.length} channels with programs');
-        _error = null;
-        break;
-      } catch (e) {
-        retryCount++;
-        if (retryCount >= _maxRetries) {
-          _error = e.toString();
-          debugLog('EPG batch load error after $retryCount attempts: $e');
-          break;
-        } else {
-          await Future.delayed(Duration(seconds: retryCount));
-        }
+    try {
+      final file = await _getCacheFile();
+      if (!await file.exists()) {
+        await _loadChannelList(); // Will trigger download
       }
+
+      if (!await file.exists()) throw Exception('Cache file unavailable');
+
+      // Efficient parsing: In a real app with huge EPGs, we might want to use a streaming parser.
+      // For now, reading generic string is better than re-downloading.
+      final xmlData = await file.readAsString();
+      final document = XmlDocument.parse(xmlData);
+      final channelData = <String, List<Program>>{};
+      
+      for (final programme in document.findAllElements('programme')) {
+        final channelId = programme.getAttribute('channel');
+        if (channelId == null || !unloadedChannels.contains(channelId)) continue;
+        
+        final startStr = programme.getAttribute('start');
+        final stopStr = programme.getAttribute('stop');
+        if (startStr == null || stopStr == null) continue;
+        
+        final title = programme.findElements('title').firstOrNull?.innerText ?? 'Unknown';
+        final description = programme.findElements('desc').firstOrNull?.innerText;
+        final category = programme.findElements('category').firstOrNull?.innerText;
+        final icon = programme.findElements('icon').firstOrNull?.getAttribute('src');
+        
+        final program = Program(
+          id: '${channelId}_$startStr',
+          channelId: channelId,
+          title: title,
+          description: description,
+          startTime: _parseEpgTime(startStr),
+          endTime: _parseEpgTime(stopStr),
+          imageUrl: icon,
+          category: category,
+          isLive: false,
+          canRecord: true,
+        );
+        
+        channelData.putIfAbsent(channelId, () => []).add(program);
+      }
+      
+      // Sort and store programs
+      for (final entry in channelData.entries) {
+        entry.value.sort((a, b) => a.startTime.compareTo(b.startTime));
+        _loadedChannels[entry.key] = entry.value;
+      }
+      
+      debugLog('EPG: Loaded programs for ${channelData.length} channels from cache');
+      _error = null;
+    } catch (e) {
+      _error = e.toString();
+      debugLog('EPG batch processing error: $e');
     }
     
     _isLoading = false;
@@ -195,19 +216,23 @@ class IncrementalEpgService with ChangeNotifier {
 
   DateTime _parseEpgTime(String timeStr) {
     try {
-      final cleanTime = timeStr.replaceAll(RegExp(r'\s+\+\d{4}'), '');
+      // Handle "+0000" or " +0000" or no offset
+      // Standard format: YYYYMMDDhhmmss +0000
+      final cleanTime = timeStr.split(RegExp(r'\s|\+')).first;
+      
       if (cleanTime.length >= 14) {
-        return DateTime(
-          int.parse(cleanTime.substring(0, 4)),
-          int.parse(cleanTime.substring(4, 6)),
-          int.parse(cleanTime.substring(6, 8)),
-          int.parse(cleanTime.substring(8, 10)),
-          int.parse(cleanTime.substring(10, 12)),
-          int.parse(cleanTime.substring(12, 14)),
-        );
+        // Assume UTC if we strip offset, strictly speaking we should parse offset
+        final year = int.parse(cleanTime.substring(0, 4));
+        final month = int.parse(cleanTime.substring(4, 6));
+        final day = int.parse(cleanTime.substring(6, 8));
+        final hour = int.parse(cleanTime.substring(8, 10));
+        final minute = int.parse(cleanTime.substring(10, 12));
+        final second = int.parse(cleanTime.substring(12, 14));
+        
+        return DateTime.utc(year, month, day, hour, minute, second).toLocal();
       }
     } catch (e) {
-      debugLog('Error parsing EPG time: $e');
+      debugLog('Error parsing EPG time "$timeStr": $e');
     }
     return DateTime.now();
   }
@@ -232,9 +257,22 @@ class IncrementalEpgService with ChangeNotifier {
     return null;
   }
 
+  List<String> _pendingBatch = [];
+  Timer? _batchTimer;
+
+  // ... (previous code)
+
   Future<void> ensureChannelLoaded(String channelId) async {
-    if (_loadedChannels.containsKey(channelId)) return;
-    await loadChannelBatch([channelId]);
+    if (_loadedChannels.containsKey(channelId) || _pendingBatch.contains(channelId)) return;
+    
+    _pendingBatch.add(channelId);
+    
+    _batchTimer?.cancel();
+    _batchTimer = Timer(const Duration(milliseconds: 300), () {
+      final batch = List<String>.from(_pendingBatch);
+      _pendingBatch.clear();
+      loadChannelBatch(batch);
+    });
   }
 
   Future<void> loadChannelsForBatch(List<String> channelIds) async {
@@ -256,4 +294,10 @@ class IncrementalEpgService with ChangeNotifier {
   String? getChannelPreview(String epgChannelId) => null;
   Future<void> setManualMapping(String channelId, String epgChannelId) async {}
   Future<void> removeManualMapping(String channelId) async {}
+  
+  @override
+  void dispose() {
+    _batchTimer?.cancel();
+    super.dispose();
+  }
 }

@@ -129,11 +129,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       context,
       listen: false,
     );
-    final channels = channelProvider.channels;
-    if (channels.isEmpty) return;
+    if (!channelProvider.hasChannels) return;
     setState(() {
       // Simply cycle to next channel without EPG dependency
-      _featuredIndex = (_featuredIndex + 1) % channels.length;
+      _featuredIndex = (_featuredIndex + 1) % channelProvider.channelCount;
     });
   }
 
@@ -142,11 +141,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       context,
       listen: false,
     );
-    final channels = channelProvider.channels;
-    if (channels.isEmpty) return;
+    if (!channelProvider.hasChannels) return;
     setState(() {
       // Simply cycle to previous channel without EPG dependency
-      _featuredIndex = (_featuredIndex - 1 + channels.length) % channels.length;
+      _featuredIndex = (_featuredIndex - 1 + channelProvider.channelCount) % channelProvider.channelCount;
     });
   }
 
@@ -161,14 +159,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       ),
       child: Consumer2<ChannelProvider, IncrementalEpgService>(
         builder: (context, channelProvider, epgService, _) {
-          final channels = channelProvider.channels;
+          final hasChannels = channelProvider.hasChannels;
 
           // Show skeleton only when channels are loading
-          if (channels.isEmpty && channelProvider.isLoading) {
+          if (!hasChannels && channelProvider.isLoading) {
             return _buildSkeletonLoader();
           }
 
-          if (channels.isEmpty) {
+          if (!hasChannels) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -200,10 +198,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             );
           }
 
-          // Ensure index is valid for current channel list
-          if (_featuredIndex >= channels.length) _featuredIndex = 0;
+          // Ensure index is valid for current channel list (using full count)
+          final totalChannels = channelProvider.channelCount;
+          if (_featuredIndex >= totalChannels) _featuredIndex = 0;
 
-          final featuredChannel = channels[_featuredIndex];
+          final featuredChannel = channelProvider.getChannelAt(_featuredIndex);
+          
           // Ensure EPG data is loaded for featured channel
           Program? currentProgram;
           try {
@@ -222,13 +222,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           // Get grouped channels (may be empty while computing in background)
           final groupedChannels = channelProvider.getGroupedChannels();
           final isGrouping = channelProvider.isGroupingChannels;
+          
+          // Use preview list for "allChannels" param if implicitly used, 
+          // but the Hero builder doesn't really iterate it except maybe for matching? 
+          // Actually it passes it. Let's pass the preview list for safety or null if unused.
+          // Checking _buildFullScreenHero signature: it takes `List<Channel> allChannels`.
+          final previewList = channelProvider.channels;
 
           // Full-screen hero background with all content inside
           return _buildFullScreenHero(
             context,
             featuredChannel,
             currentProgram,
-            channels,
+            previewList,
             groupedChannels,
             isGrouping,
           );
@@ -687,7 +693,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             itemExtent: cardWidth + AppSizes.lg,
             itemBuilder: (context, index) {
               return _buildChannelCard(
-                  context, channels[index], cardWidth, cardHeight);
+                  context, channels[index], cardWidth, cardHeight, index, channels.length);
             },
           ),
         ),
@@ -719,7 +725,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   Widget _buildChannelCard(BuildContext context, Channel channel,
-      double cardWidth, double cardHeight) {
+      double cardWidth, double cardHeight, int index, int totalCount) {
     return SizedBox(
       width: cardWidth,
       child: Focus(
@@ -736,6 +742,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               _heroFocus.requestFocus();
               return KeyEventResult.handled;
             }
+            if (event.logicalKey == LogicalKeyboardKey.arrowLeft && index == 0) {
+               // Only open sidebar if we are at the start of the list
+               requestNavigationFocus();
+               return KeyEventResult.handled;
+            }
           }
           return KeyEventResult.ignored;
         },
@@ -744,11 +755,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             channel.tvgId ?? channel.id,
           ),
           builder: (context, currentProgram, _) {
-            final isFocused = Focus.of(context).hasFocus;
+            // Trigger lazy load
             if (currentProgram == null) {
-              debugLog('LiveTV Card: No EPG for "${channel.name}" (tvgId: ${channel.tvgId})');
+               epgService.ensureChannelLoaded(channel.tvgId ?? channel.id);
             }
+            final isFocused = Focus.of(context).hasFocus;
             final progress = currentProgram?.progressPercentage ?? 0.0;
+            final imageUrl = _getChannelCardImage(currentProgram, channel);
 
             return GestureDetector(
               onTap: () => context.push('/player', extra: channel),
@@ -785,11 +798,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         borderRadius: BorderRadius.circular(12),
                         child: Stack(
                           children: [
-                            if (_getChannelCardImage(currentProgram, channel) != null)
+                            if (imageUrl != null)
                               Positioned.fill(
                                 child: CachedNetworkImage(
-                                  imageUrl: _getChannelCardImage(currentProgram, channel)!,
-                                  fit: BoxFit.cover,
+                                  imageUrl: imageUrl,
+                                  fit: (imageUrl == channel.logoUrl) ? BoxFit.contain : BoxFit.cover,
                                   memCacheWidth: 400,
                                   placeholder: (_, __) => Container(
                                     decoration: const BoxDecoration(

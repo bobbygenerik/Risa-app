@@ -45,8 +45,8 @@ dependencies:
 
 
   # Optional/native media plugins referenced in the codebase
-  # media_kit: any  # DISABLED: causes CMake errors on Linux
-  # media_kit_video: any  # DISABLED: causes CMake errors on Linux
+  media_kit_video: ^1.2.4
+  media_kit_libs_video_android: ^1.2.0
   # video_player: ^2.7.2  # DISABLED: switched to VLC for better IPTV support
   # vosk_flutter: any  # OPTIONAL: removed to avoid forcing transitive downgrades
   

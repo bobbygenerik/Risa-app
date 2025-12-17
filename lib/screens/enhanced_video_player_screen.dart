@@ -2,8 +2,8 @@ import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:video_player/video_player.dart';
-import 'package:chewie/chewie.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 import '../models/channel.dart';
@@ -45,29 +45,108 @@ class EnhancedVideoPlayerScreen extends StatefulWidget {
 }
 
 class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
-  VideoPlayerController? _videoController;
-  ChewieController? _chewieController;
+  // MediaKit controllers
+  late final Player _player;
+  late final VideoController _controller;
+  
   bool _isLoading = true;
   bool _showControls = true;
   bool _isPlaying = false;
   bool _showGuide = false;
   double _progress = 0.0;
+  Duration _duration = Duration.zero;
+  Duration _position = Duration.zero;
+  
   SubtitleMode _subtitleMode = SubtitleMode.off;
   IntegratedTranscriptionService? _transcriptionService;
   Timer? _progressThrottle;
+  
+  // Stream subscriptions
+  StreamSubscription? _durationSubscription;
+  StreamSubscription? _positionSubscription;
+  StreamSubscription? _playingSubscription;
+  StreamSubscription? _errorSubscription;
+  StreamSubscription? _completedSubscription;
   
   @override
   void initState() {
     super.initState();
     _transcriptionService = Provider.of<IntegratedTranscriptionService>(context, listen: false);
+    
+    // Initialize MediaKit Player
+    _player = Player(
+      configuration: const PlayerConfiguration(
+        title: 'Risa IPTV Player',
+        // Enable hardware acceleration if possible
+        vo: 'gpu', 
+      ),
+    );
+    
+    _controller = VideoController(
+      _player, 
+      configuration: const VideoControllerConfiguration(
+        enableHardwareAcceleration: true,
+        androidAttachSurfaceAfterVideoOutput: true,
+      ),
+    );
+    
+    _setupListeners();
     unawaited(_initializePlayer());
     _hideControlsAfterDelay();
+  }
+
+  void _setupListeners() {
+    _durationSubscription = _player.stream.duration.listen((duration) {
+      if (mounted) {
+        setState(() => _duration = duration);
+      }
+    });
+
+    _positionSubscription = _player.stream.position.listen((position) {
+      if (mounted) {
+        _position = position;
+        // Throttled UI update
+        if (_progressThrottle == null || !_progressThrottle!.isActive) {
+           _progressThrottle = Timer(const Duration(milliseconds: 200), () {
+             if (mounted && _duration.inMilliseconds > 0) {
+              setState(() {
+                _progress = position.inMilliseconds / _duration.inMilliseconds;
+              });
+             }
+           });
+        }
+      }
+    });
+
+    _playingSubscription = _player.stream.playing.listen((playing) {
+      if (mounted) {
+        setState(() => _isPlaying = playing);
+      }
+    });
+    
+    _errorSubscription = _player.stream.error.listen((error) {
+       debugLog('MediaKit Error: $error');
+       _handleVideoError(error.toString());
+    });
+    
+    _completedSubscription = _player.stream.completed.listen((completed) {
+      if (completed) {
+         unawaited(_handleVideoEnded());
+      }
+    });
   }
 
   @override
   void dispose() {
     _progressThrottle?.cancel();
+    _durationSubscription?.cancel();
+    _positionSubscription?.cancel();
+    _playingSubscription?.cancel();
+    _errorSubscription?.cancel();
+    _completedSubscription?.cancel();
+    
     unawaited(_saveCurrentPosition());
+    
     try {
       if (_transcriptionService != null) {
         unawaited(_transcriptionService!.stopTranscription());
@@ -76,17 +155,19 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       debugLog('TTS cleanup error: $e');
     }
     unawaited(WakelockPlus.disable());
-    _chewieController?.dispose();
-    _videoController?.dispose();
+    
+    // Dispose MediaKit resources
+    unawaited(_player.dispose());
+    
     super.dispose();
   }
 
   Future<void> _saveCurrentPosition() async {
-    if (!widget.isLive && _videoController?.value.isInitialized == true) {
+    if (!widget.isLive) {
       final settings = Provider.of<SettingsProvider>(context, listen: false);
       
       if (settings.rememberPlaybackPosition) {
-        final position = _videoController!.value.position;
+        final position = _position;
         final key = widget.content?.id ?? widget.title ?? widget.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '';
         final prefs = await SharedPreferences.getInstance();
         await prefs.setInt('position_$key', position.inMilliseconds);
@@ -94,9 +175,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         // Update watch progress for content
         if (widget.content != null && mounted) {
           final contentProvider = Provider.of<ContentProvider>(context, listen: false);
-          final duration = _videoController!.value.duration;
-          if (duration.inMilliseconds > 0) {
-            final progress = position.inMilliseconds / duration.inMilliseconds;
+          if (_duration.inMilliseconds > 0) {
+            final progress = position.inMilliseconds / _duration.inMilliseconds;
             await contentProvider.updateWatchProgress(widget.content!.id, progress);
           }
         }
@@ -113,12 +193,14 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         child: Stack(
           children: [
             // Video player
-            if (_chewieController != null)
-              Positioned.fill(
-                child: Chewie(
-                  controller: _chewieController!,
-                ),
+            Positioned.fill(
+              child: Video(
+                controller: _controller,
+                controls: NoVideoControls,
+                pauseUponEnteringBackgroundMode: false,
+                resumeUponEnteringForegroundMode: true,
               ),
+            ),
             
             if (_isLoading)
               const Center(child: CircularProgressIndicator(color: Colors.white)),
@@ -263,7 +345,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                       height: 4,
                       width: double.infinity,
                       child: LinearProgressIndicator(
-                        value: _progress,
+                        value: _progress.clamp(0.0, 1.0),
                         backgroundColor: Colors.white.withValues(alpha: 0.3),
                         valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
                       ),
@@ -333,12 +415,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     
     final rememberPosition = settings.rememberPlaybackPosition;
     
-    debugLog('Video Player: Initializing with URL: $url');
-    debugLog('Video Player: Channel name: ${widget.channel?.name ?? widget.title ?? 'Unknown'}');
-    debugLog('Video Player: Is live: ${widget.isLive}');
+    debugLog('MediaKit Player: Initializing with URL: $url');
     
     if (url.isEmpty) {
-      debugLog('Video Player: ERROR - Empty URL provided');
       if (mounted) {
         setState(() => _isLoading = false);
         _showErrorDialog('Invalid Stream', 'No stream URL provided for this channel.');
@@ -347,208 +426,52 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     }
     
     try {
+      // Common headers for IPTV to avoid blocks (User-Agent is key)
       final headers = <String, String>{
-        'User-Agent': 'Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36',
+        'User-Agent': 'VLC/3.0.0 LibVLC/3.0.0', // Emulate VLC is usually safest for IPTV
         'Accept': '*/*',
-        'Accept-Encoding': 'identity',
         'Connection': 'keep-alive',
-        'Cache-Control': 'no-cache',
       };
-      debugLog('Video Player: Using headers: $headers');
       
-      _videoController = VideoPlayerController.networkUrl(
-        Uri.parse(url),
-        httpHeaders: headers,
-        videoPlayerOptions: VideoPlayerOptions(
-          mixWithOthers: true,
-          allowBackgroundPlayback: false,
-          webOptions: const VideoPlayerWebOptions(
-            controls: VideoPlayerWebOptionsControls.disabled(),
-          ),
+      debugLog('MediaKit Player: Opening stream...');
+
+      await _player.open(
+        Media(
+          url,
+          httpHeaders: headers,
         ),
-        formatHint: VideoFormat.hls,
+        play: true,
       );
+
+      setState(() => _isLoading = false);
+      unawaited(WakelockPlus.enable());
       
-      debugLog('Video Player: Starting initialization...');
-      await _videoController!.initialize();
-      debugLog('Video Player: Initialization successful');
-      debugLog('Video Player: Video duration: ${_videoController!.value.duration}');
-      debugLog('Video Player: Video size: ${_videoController!.value.size}');
+      if (!widget.isLive && rememberPosition) {
+        final prefs = await SharedPreferences.getInstance();
+        final key = widget.content?.id ?? widget.title ?? url;
+        final savedPosition = prefs.getInt('position_$key');
+        if (savedPosition != null && savedPosition > 0) {
+          await _player.seek(Duration(milliseconds: savedPosition));
+        }
+      }
     } catch (e) {
-      debugLog('Video Player: Initialization error: $e');
-      debugLog('Video Player: Error type: ${e.runtimeType}');
+      debugLog('MediaKit Player: Init Error: $e');
       if (mounted) {
         setState(() => _isLoading = false);
-        _showErrorDialog('Failed to load stream', 'Stream URL: $url\n\nError: $e\n\nThis could be due to:\n• Invalid or expired stream URL\n• Network connectivity issues\n• Server authentication requirements\n• Unsupported stream format');
-      }
-      return;
-    }
-    
-    _chewieController = ChewieController(
-      videoPlayerController: _videoController!,
-      autoPlay: true,
-      looping: false,
-      showControls: false,
-      aspectRatio: _videoController!.value.aspectRatio,
-      allowFullScreen: false,
-      allowMuting: true,
-      allowPlaybackSpeedChanging: false,
-      autoInitialize: true,
-      errorBuilder: (context, errorMessage) {
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error, color: Colors.red, size: 60),
-              const SizedBox(height: 16),
-              const Text('Stream Error', style: TextStyle(color: Colors.white, fontSize: 18)),
-              const SizedBox(height: 8),
-              Text(errorMessage, style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  _videoController?.seekTo(Duration.zero);
-                  _videoController?.play();
-                },
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
-        );
-      },
-      materialProgressColors: ChewieProgressColors(
-        playedColor: AppTheme.primaryBlue,
-        handleColor: AppTheme.primaryBlue,
-        backgroundColor: Colors.white.withValues(alpha: 0.3),
-        bufferedColor: Colors.white.withValues(alpha: 0.5),
-      ),
-    );
-    
-    setState(() => _isLoading = false);
-    
-    unawaited(WakelockPlus.enable());
-    
-    if (!widget.isLive && rememberPosition) {
-      final prefs = await SharedPreferences.getInstance();
-      final key = widget.content?.id ?? widget.title ?? url;
-      final savedPosition = prefs.getInt('position_$key');
-      if (savedPosition != null && savedPosition > 0) {
-        await _videoController!.seekTo(Duration(milliseconds: savedPosition));
+         _handleVideoError(e.toString());
       }
     }
-    
-    _videoController!.addListener(() {
-      if (mounted) {
-        final value = _videoController!.value;
-        final isPlaying = value.isPlaying;
-        final position = value.position;
-        final duration = value.duration;
-        
-        _progressThrottle?.cancel();
-        _progressThrottle = Timer(const Duration(milliseconds: 100), () {
-          if (mounted) {
-            setState(() {
-              _isPlaying = isPlaying;
-              if (duration.inMilliseconds > 0) {
-                _progress = position.inMilliseconds / duration.inMilliseconds;
-              }
-            });
-          }
-        });
-        
-        if (value.hasError) {
-          debugLog('Video error: ${value.errorDescription}');
-          _handleVideoError(value.errorDescription ?? 'Unknown error');
-        }
-        
-        if (!isPlaying && position == duration && duration.inMilliseconds > 0) {
-          unawaited(_handleVideoEnded());
-        }
-      }
-    });
   }
   
   void _handleVideoError(String error) async {
     if (!mounted) return;
-    
-    debugLog('Video Player: Error details: $error');
-    
-    if (error.contains('Source error') || error.contains('ExoPlaybackException')) {
-      // Try to retry with different approach
-      debugLog('Video Player: Source error detected, attempting retry...');
-      await _retryWithFallback();
-    } else {
-      unawaited(Future.delayed(const Duration(seconds: 2), () {
-        if (mounted && _videoController != null && !_videoController!.value.hasError) {
-          _videoController!.play();
-        }
-      }));
-    }
+    // Show error dialog
+    _showErrorDialog('Stream Error', 'Unable to play stream.\n\nError: $error');
   }
   
   Future<void> _retryWithFallback() async {
-    final url = widget.videoUrl ?? widget.content?.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '';
-    
-    // Try multiple header combinations that work with different IPTV providers
-    final headerStrategies = [
-      // VLC-like headers
-      {'User-Agent': 'VLC/3.0.0 LibVLC/3.0.0'},
-      // Kodi-like headers
-      {'User-Agent': 'Kodi/20.0 (Linux; Android 10; SM-G973F)'},
-      // Generic media player
-      {'User-Agent': 'MediaPlayer/1.0'},
-      // No headers at all
-      <String, String>{},
-    ];
-    
-    for (int i = 0; i < headerStrategies.length; i++) {
-      try {
-        await _videoController?.dispose();
-        _chewieController?.dispose();
-        
-        final headers = headerStrategies[i];
-        debugLog('Video Player: Retry attempt ${i + 1} with headers: $headers');
-        
-        _videoController = VideoPlayerController.networkUrl(
-          Uri.parse(url),
-          httpHeaders: headers,
-          videoPlayerOptions: VideoPlayerOptions(
-            mixWithOthers: true,
-            allowBackgroundPlayback: false,
-          ),
-        );
-        
-        await _videoController!.initialize();
-        
-        _chewieController = ChewieController(
-          videoPlayerController: _videoController!,
-          autoPlay: true,
-          looping: false,
-          showControls: false,
-          aspectRatio: _videoController!.value.aspectRatio,
-          allowFullScreen: false,
-          allowMuting: true,
-          allowPlaybackSpeedChanging: false,
-          autoInitialize: true,
-        );
-        
-        if (mounted) {
-          setState(() => _isLoading = false);
-        }
-        
-        debugLog('Video Player: Retry successful with strategy ${i + 1}');
-        return; // Success, exit retry loop
-        
-      } catch (e) {
-        debugLog('Video Player: Retry attempt ${i + 1} failed: $e');
-        if (i == headerStrategies.length - 1) {
-          // Last attempt failed
-          if (mounted) {
-            _showErrorDialog('Stream Error', 'Unable to play this stream after multiple attempts.\n\nURL: $url\n\nThis could be due to:\n• Stream requires authentication\n• Geo-blocked content\n• Server is offline\n• Unsupported stream format\n\nTry the stream in VLC or another player to verify it works.');
-          }
-        }
-      }
-    }
+    // MediaKit handles most fallbacks internally (protocols), but we can retry opening
+    _initializePlayer();
   }
   
   void _showErrorDialog(String title, String message) {
@@ -569,22 +492,13 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              unawaited(_retryStream());
+              unawaited(_retryWithFallback());
             },
             child: const Text('Retry'),
           ),
         ],
       ),
     );
-  }
-  
-  Future<void> _retryStream() async {
-    setState(() => _isLoading = true);
-    unawaited(_videoController?.dispose());
-    _chewieController?.dispose();
-    _videoController = null;
-    _chewieController = null;
-    await _initializePlayer();
   }
 
   Future<void> _handleVideoEnded() async {
@@ -613,43 +527,36 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   void _togglePlayPause() {
-    if (_videoController?.value.isInitialized == true) {
-      if (_isPlaying) {
-        _videoController?.pause();
-      } else {
-        _videoController?.play();
-      }
-    }
+    _player.playOrPause();
   }
 
   void _rewind() async {
-    if (_videoController?.value.isInitialized == true) {
-      final currentPos = _videoController!.value.position;
-      final newPos = currentPos - const Duration(seconds: 10);
-      if (newPos.inMilliseconds > 0) {
-        await _videoController!.seekTo(newPos);
-      }
-    }
+    final currentPos = _position;
+    final newPos = currentPos - const Duration(seconds: 10);
+    await _player.seek(newPos >= Duration.zero ? newPos : Duration.zero);
   }
 
   void _fastForward() async {
-    if (_videoController?.value.isInitialized == true) {
-      final currentPos = _videoController!.value.position;
-      final duration = _videoController!.value.duration;
-      final newPos = currentPos + const Duration(seconds: 10);
-      if (newPos < duration) {
-        await _videoController!.seekTo(newPos);
-      }
+    final currentPos = _position;
+    final newPos = currentPos + const Duration(seconds: 10);
+    if (newPos < _duration) {
+      await _player.seek(newPos);
     }
   }
 
   void _toggleAudio() async {
-    if (mounted) {
-      showAppSnackBar(
-        context,
-        const SnackBar(content: Text('Audio track selection not available')),
-      );
+    // MediaKit supports tracks!
+    final tracks = _player.state.tracks.audio;
+    if (tracks.isEmpty) {
+        showAppSnackBar(context, const SnackBar(content: Text('No alternative audio tracks')));
+        return;
     }
+    // Simple cycle through logic or dialog could be added here
+    // For now, just show info
+    showAppSnackBar(
+        context,
+        SnackBar(content: Text('Audio Tracks: ${tracks.length}')),
+    );
   }
 
   void _showSubtitleMenu() {
@@ -664,7 +571,6 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     
     try {
       if (mode == SubtitleMode.liveTranslation && _transcriptionService != null) {
-        // Ensure service is initialized
         if (!_transcriptionService!.isInitialized) {
           final initialized = await _transcriptionService!.initialize();
           if (!initialized) {
@@ -682,12 +588,11 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       }
     } catch (e) {
       debugLog('Transcription error: $e');
-      // Reset to off mode if transcription fails
       setState(() => _subtitleMode = SubtitleMode.off);
       if (mounted) {
         showAppSnackBar(
           context,
-          const SnackBar(content: Text('Live translation from video audio not yet implemented')),
+          const SnackBar(content: Text('Live translation error')),
         );
       }
     }

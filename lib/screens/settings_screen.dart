@@ -1036,22 +1036,28 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget _buildSettingsSection({required String title, required List<Widget> children}) {
     return Container(
       decoration: const BoxDecoration(color: Color(0xFF050710)),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.only(left: 8, top: 2, right: 6, bottom: 2),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimary,
-              ),
+      child: Align(
+        alignment: Alignment.topLeft,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.only(left: 8, top: 2, right: 6, bottom: 2),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                ...children,
+              ],
             ),
-            const SizedBox(height: 2),
-            ...children,
-          ],
+          ),
         ),
       ),
     );

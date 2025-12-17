@@ -14,6 +14,7 @@ import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/services/voice_search_service.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
+import 'package:media_kit/media_kit.dart';
 
 import 'package:iptv_player/services/incremental_epg_service.dart';
 
@@ -109,6 +110,9 @@ void main() {
       // different zone" error when the framework is used later.
       WidgetsFlutterBinding.ensureInitialized();
       StartupProbe.mark('Flutter bindings initialized');
+      
+      MediaKit.ensureInitialized();
+      StartupProbe.mark('MediaKit initialized');
 
       // Optimize image cache for IPTV with many channel logos
       final memoryInfo = await _getDeviceMemoryInfo();

@@ -134,7 +134,9 @@ class _MainShellState extends State<MainShell> {
                 child: Focus(
                   canRequestFocus: false,
                   skipTraversal: true,
-                  onKeyEvent: _handleContentKeyEvent,
+                  canRequestFocus: false,
+                  skipTraversal: true,
+                  // onKeyEvent: _handleContentKeyEvent, // Removed global handler
                   child: FocusScope(
                     node: _contentFocusScope,
                     autofocus: false,
