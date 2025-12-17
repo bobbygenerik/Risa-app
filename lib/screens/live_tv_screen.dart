@@ -757,7 +757,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           builder: (context, currentProgram, _) {
             // Trigger lazy load
             if (currentProgram == null) {
-               epgService.ensureChannelLoaded(channel.tvgId ?? channel.id);
+               Provider.of<IncrementalEpgService>(context, listen: false).ensureChannelLoaded(channel.tvgId ?? channel.id);
             }
             final isFocused = Focus.of(context).hasFocus;
             final progress = currentProgram?.progressPercentage ?? 0.0;

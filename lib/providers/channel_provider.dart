@@ -236,7 +236,7 @@ class ChannelProvider with ChangeNotifier {
     }
   }
 
-  }
+
 
   /// Get specific channel by index
   Channel _getChannelAt(int index) {
@@ -1554,6 +1554,7 @@ class ChannelProvider with ChangeNotifier {
     }
   }
 }
+
 
 /// Parse an entire playlist off the main isolate and return simple maps that
 /// can be reconstructed into Channel/Content objects.
