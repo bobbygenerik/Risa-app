@@ -7,7 +7,7 @@ import 'package:iptv_player/providers/channel_provider.dart';
 
 class MockIncrementalEpgService extends Fake with ChangeNotifier implements IncrementalEpgService {
   @override
-  Future<void> initialize() async {}
+  Future<void> initialize({bool forceRefresh = false}) async {}
 }
 
 class MockChannelProvider extends Fake with ChangeNotifier implements ChannelProvider {

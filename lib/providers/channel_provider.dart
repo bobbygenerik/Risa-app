@@ -487,6 +487,7 @@ class ChannelProvider with ChangeNotifier {
           final parseStart = DateTime.now();
           final parsed = await compute(parsePlaylistFromFile, cacheFilePath);
           final parseDuration = DateTime.now().difference(parseStart);
+          debugLog(
               'ChannelProvider: Cache isolate parsing took ${parseDuration.inMilliseconds}ms');
 
           // Extract and save EPG URL from cache if found
@@ -894,14 +895,7 @@ class ChannelProvider with ChangeNotifier {
         // Save to JSON cache for faster loading next time
         unawaited(_saveJsonCache(parsed));
 
-        // Auto-save EPG URL from M3U x-tvg-url attribute
-        final epgUrl = parsed['epgUrl'] as String?;
-        if (epgUrl != null && epgUrl.isNotEmpty) {
-          debugLog(
-              'ChannelProvider: Found EPG URL in M3U: $epgUrl (auto-saving)');
-          await prefs.setString('custom_epg_url', epgUrl);
-          unawaited(_epgService?.initialize()); // Trigger EPG loading
-        }
+
 
         unawaited(_loadXtreamVOD(url));
 
