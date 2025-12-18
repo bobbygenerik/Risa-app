@@ -18,8 +18,8 @@ import 'package:record/record.dart';
 /// All translation happens on-device after initial model download.
 class IntegratedTranscriptionService extends ChangeNotifier {
   // Speech recognition
-  final stt.SpeechToText _speech = stt.SpeechToText();
-  final AudioRecorder _recorder = AudioRecorder();
+  stt.SpeechToText? _speech;
+  AudioRecorder? _recorder;
 
   // Translation (ON-DEVICE)
   OnDeviceTranslator? _translator;
@@ -167,16 +167,10 @@ class IntegratedTranscriptionService extends ChangeNotifier {
     // Extract audio from video stream and transcribe in real-time
     debugLog('Starting live Whisper transcription');
     
-    // Simulate live transcription - replace with actual implementation
-    Timer.periodic(const Duration(seconds: 5), (timer) {
-      if (!_isTranscribing) {
-        timer.cancel();
-        return;
-      }
-      
-      // This would be replaced with actual Whisper transcription results
-      _addSubtitle('Live transcription segment ${DateTime.now().millisecondsSinceEpoch}');
-    });
+    // DEBUG LOOP REMOVED: Was causing UI updates and potential pauses/jank.
+    // Real implementation would attach to audio stream here.
+    _isTranscribing = true;
+    notifyListeners();
   }
   
   /// Transcribe an audio file with Whisper
@@ -194,7 +188,7 @@ class IntegratedTranscriptionService extends ChangeNotifier {
     if (!_isTranscribing) return;
 
     try {
-      await _speech.stop();
+      await _speech?.stop();
       _isTranscribing = false;
       _currentText = '';
       notifyListeners();
@@ -474,10 +468,10 @@ class IntegratedTranscriptionService extends ChangeNotifier {
   @override
   void dispose() {
     _cleanupTimer?.cancel();
-    _speech.cancel();
+    _speech?.cancel();
     _translator?.close();
     // TTS stop removed (not used)
-    _recorder.dispose();
+    _recorder?.dispose();
     super.dispose();
   }
 }

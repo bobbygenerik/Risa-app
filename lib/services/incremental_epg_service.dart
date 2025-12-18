@@ -143,6 +143,11 @@ class IncrementalEpgService with ChangeNotifier {
     }
     
     _isLoading = false;
+    // Don't clear error if we failed, so circuit breaker works. 
+    // Only clear error on success or explicit retry.
+    if (_availableChannels.isNotEmpty) {
+      _error = null;
+    }
     notifyListeners();
   }
 
@@ -158,6 +163,10 @@ class IncrementalEpgService with ChangeNotifier {
     try {
       final file = await _getCacheFile();
       if (!await file.exists()) {
+        // Circuit breaker: If we already failed to load the list, don't try to download inside a batch request
+        if (_error != null) {
+          throw Exception('Skipping download due to previous error: $_error');
+        }
         await _loadChannelList(); // Will trigger download
       }
 

@@ -28,7 +28,8 @@ class TimerService {
     _tickCount++;
     
     // Execute second callbacks
-    for (final callback in _secondCallbacks.values) {
+    // Iterate over a copy to avoid concurrent modification if a callback unregisters itself
+    for (final callback in List.of(_secondCallbacks.values)) {
       try {
         callback();
       } catch (e) {
@@ -38,7 +39,7 @@ class TimerService {
     
     // Execute minute callbacks every 60 seconds
     if (_tickCount % 60 == 0) {
-      for (final callback in _minuteCallbacks.values) {
+      for (final callback in List.of(_minuteCallbacks.values)) {
         try {
           callback();
         } catch (e) {
@@ -48,7 +49,7 @@ class TimerService {
     }
     
     // Execute custom interval callbacks
-    for (final entry in _customIntervals.entries) {
+    for (final entry in List.of(_customIntervals.entries)) {
       if (_tickCount % entry.value == 0) {
         final callback = _customCallbacks[entry.key];
         if (callback != null) {

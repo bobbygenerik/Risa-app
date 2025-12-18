@@ -733,6 +733,276 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                               SizedBox(width: 2),
                               Text(
                                 'AUDIO',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+
+            // Focus indicator number
+            if (isFocused && _showControls)
+              Positioned(
+                bottom: 8,
+                right: 8,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: AppTheme.primaryBlue,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    '${index + 1}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            
+            // Active audio indicator (always visible)
+            if (hasAudio && !_showControls)
+              Positioned(
+                bottom: 8,
+                right: 8,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryBlue,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primaryBlue.withValues(alpha: 0.5),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.volume_up,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+      );
+    }
+
+    final channel = _channelsList[index];
+    final controller = _controllers[index];
+    final isInitialized = _isInitialized[index];
+    final hasError = _hasError[index];
+    final isFocused = _focusedPlayer == index;
+    final hasAudio = _activeAudioPlayer == index;
+
+    return Focus(
+      focusNode: _playerFocusNodes[index],
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.select || 
+              event.logicalKey == LogicalKeyboardKey.enter) {
+            _setFocusedPlayer(index);
+            _startControlsTimer();
+            return KeyEventResult.handled;
+          } else if (event.logicalKey == LogicalKeyboardKey.keyF) {
+            _expandPlayer(index);
+            return KeyEventResult.handled;
+          } else if (event.logicalKey == LogicalKeyboardKey.keyA) {
+            _switchAudioPlayer(index);
+            return KeyEventResult.handled;
+          } else if (event.logicalKey == LogicalKeyboardKey.keyC) {
+            // Change channel on this slot
+            _selectChannelForSlot(index);
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: GestureDetector(
+        onTap: () {
+          _setFocusedPlayer(index);
+          _startControlsTimer();
+        },
+        onDoubleTap: () => _expandPlayer(index),
+        child: Container(
+        margin: const EdgeInsets.all(1),
+        decoration: BoxDecoration(
+          border: Border.all(
+            // Active audio player gets blue accent border, focused player gets lighter blue
+            color: hasAudio 
+                ? AppTheme.primaryBlue 
+                : (isFocused ? AppTheme.primaryBlue.withValues(alpha: 0.6) : Colors.transparent),
+            width: hasAudio ? 4 : (isFocused ? 3 : 0),
+          ),
+          // Add a subtle glow effect to the active audio player
+          boxShadow: hasAudio ? [
+            BoxShadow(
+              color: AppTheme.primaryBlue.withValues(alpha: 0.5),
+              blurRadius: 8,
+              spreadRadius: 2,
+            ),
+          ] : null,
+        ),
+        child: Stack(
+          children: [
+            // Video player
+            if (isInitialized && !hasError && controller != null)
+              Center(
+                child: Video(
+                  controller: controller,
+                  controls: NoVideoControls,
+                  fit: BoxFit.contain,
+                ),
+              ),
+
+            // Loading state
+            if (!isInitialized && !hasError)
+              Container(
+                color: Colors.black,
+                child: const Center(child: CircularProgressIndicator()),
+              ),
+
+            // Error state
+            if (hasError)
+              Container(
+                color: Colors.black,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        color: AppTheme.accentRed,
+                        size: 48,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Failed to load stream',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.titleMedium?.copyWith(color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+            // Channel info overlay
+            if (_showControls)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF050710),
+                  ),
+                  child: Row(
+                    children: [
+                      // Channel number
+                      if (channel.channelNumber != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryBlue,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            '${channel.channelNumber}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      const SizedBox(width: 8),
+                      // Channel name
+                      Expanded(
+                        child: Text(
+                          channel.name,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      // Change channel button (when focused)
+                      if (isFocused)
+                        GestureDetector(
+                          onTap: () => _selectChannelForSlot(index),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryBlue,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.swap_horiz,
+                                  size: 14,
+                                  color: Colors.white,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Change',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      const SizedBox(width: 8),
+                      // Audio indicator
+                      if (hasAudio)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.accentRed,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.volume_up,
+                                size: 12,
+                                color: Colors.white,
+                              ),
+                              SizedBox(width: 2),
+                              Text(
+                                'AUDIO',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 8,
@@ -797,8 +1067,8 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
           ],
         ),
       ),
-      ),
-    );
+      );
+    }
   }
 
   Widget _buildControlsOverlay() {
@@ -890,67 +1160,8 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                 ),
               ),
 
-              const Spacer(),
-
-              // Bottom bar - real control buttons that match video player overlay
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Left side button (Audio matches Fullscreen width)
-                      _buildOverlayButton(
-                        icon: Icons.multitrack_audio,
-                        label: 'Audio',
-                        onTap: () => _switchAudioPlayer(_focusedPlayer),
-                        minWidth: 130,  // Match Fullscreen
-                      ),
-                      const SizedBox(width: 16),
-                      // Center play controls
-                      _buildOverlayButton(
-                        icon: Icons.replay_10,
-                        label: '-10s',
-                        onTap: () {
-                          final player = _players[_focusedPlayer];
-                          if (player != null) {
-                            final position = player.state.position;
-                            unawaited(player.seek(position - const Duration(seconds: 10)));
-                          }
-                          _startControlsTimer();
-                        },
-                      ),
-                      const SizedBox(width: 8),
-                      _buildOverlayButton(
-                        icon: isPlaying ? Icons.pause : Icons.play_arrow,
-                        label: isPlaying ? 'Pause' : 'Play',
-                        onTap: () => _togglePlayPause(_focusedPlayer),
-                      ),
-                      const SizedBox(width: 8),
-                      _buildOverlayButton(
-                        icon: Icons.forward_10,
-                        label: '+10s',
-                        onTap: () {
-                          final player = _players[_focusedPlayer];
-                          if (player != null) {
-                            final position = player.state.position;
-                            unawaited(player.seek(position + const Duration(seconds: 10)));
-                          }
-                          _startControlsTimer();
-                        },
-                      ),
-                      const SizedBox(width: 16),
-                      // Right side button (Fullscreen matches Audio width)
-                      _buildOverlayButton(
-                        icon: Icons.fullscreen,
-                        label: 'Fullscreen',
-                        onTap: () => _expandPlayer(_focusedPlayer),
-                        minWidth: 130,  // Match Audio
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              // Bottom bar removed as per request (confusing in multi-view)
+              // Control is handled via D-pad/Remote directly on the focused tile
             ],
           ),
         ),

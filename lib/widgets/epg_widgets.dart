@@ -87,7 +87,7 @@ class EPGChannelItem extends StatelessWidget {
             onLongPress: onLongPress,
             child: Container(
               height: 64,
-              margin: const EdgeInsets.only(bottom: 4, right: 8),
+              margin: const EdgeInsets.only(bottom: 4, right: 4),
               decoration: BoxDecoration(
                 color: const Color(0xFF2a2a3e).withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(8),
@@ -198,7 +198,7 @@ class EPGProgramRow extends StatelessWidget {
     return Container(
       height: 64,
       width: totalWidth,
-      margin: const EdgeInsets.only(bottom: 4, left: 4),
+      margin: const EdgeInsets.only(bottom: 4, left: 0),
       child: dayPrograms.isEmpty
           ? Container(
               alignment: Alignment.centerLeft,

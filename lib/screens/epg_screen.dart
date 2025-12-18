@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
+import 'package:linked_scroll_controller/linked_scroll_controller.dart';
 
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/program.dart';
@@ -48,7 +49,9 @@ class _EPGScreenState extends State<EPGScreen>
 
   late final ScrollController _horizontalScrollController;
   late final ScrollController _timeHeaderScrollController;
-  late final ScrollController _verticalScrollController;
+  late final LinkedScrollControllerGroup _linkedScrollGroup;
+  late final ScrollController _sidebarController;
+  late final ScrollController _verticalScrollController; // Grid controller
 
   final TimerService _timerService = TimerService();
   final FocusPoolService _focusPool = FocusPoolService();
@@ -69,7 +72,9 @@ class _EPGScreenState extends State<EPGScreen>
     // Initialize scroll controllers
     _horizontalScrollController = ScrollController();
     _timeHeaderScrollController = ScrollController();
-    _verticalScrollController = ScrollController();
+    _linkedScrollGroup = LinkedScrollControllerGroup();
+    _sidebarController = _linkedScrollGroup.addAndGet();
+    _verticalScrollController = _linkedScrollGroup.addAndGet();
     
     // Get focus nodes from pool
     _refreshButtonFocus = _focusPool.getFocusNode('epg_refresh', debugLabel: 'EPG Refresh');
@@ -697,7 +702,7 @@ class _EPGScreenState extends State<EPGScreen>
                               context.push('/player', extra: channel);
                             },
                             onChannelLongPress: (channel) => _showChannelContextMenu(context, channel),
-                            controller: _verticalScrollController,
+                            controller: _sidebarController,
                           ),
                         ),
                       ],
