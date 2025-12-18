@@ -804,7 +804,7 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
 
 
   Widget _buildControlsOverlay() {
-    final isPlaying = _players[_focusedPlayer]?.state.playing ?? false;
+
     
     // Reset timer on any key activity within controls
     return KeyboardListener(

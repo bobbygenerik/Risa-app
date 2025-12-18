@@ -778,6 +778,16 @@ class _SeriesScreenState extends State<SeriesScreen>
                     ),
                   ),
                 ),
+                // Featured info overlay
+                Positioned(
+                  bottom: heroHeight * 0.15,
+                  left: sidebarWidth + AppSizes.lg,
+                  width: screenSize.width * 0.4,
+                  child: Opacity(
+                    opacity: 1.0 - fadeProgress,
+                    child: _buildFeaturedInfo(context, featuredSeries),
+                  ),
+                ),
                 // Scrollable content
                 Positioned.fill(
                   child: SingleChildScrollView(
@@ -811,16 +821,6 @@ class _SeriesScreenState extends State<SeriesScreen>
                         ),
                       ],
                     ),
-                  ),
-                ),
-                // Featured info overlay
-                Positioned(
-                  bottom: heroHeight * 0.15,
-                  left: sidebarWidth + AppSizes.lg,
-                  width: screenSize.width * 0.4,
-                  child: Opacity(
-                    opacity: 1.0 - fadeProgress,
-                    child: _buildFeaturedInfo(context, featuredSeries),
                   ),
                 ),
               ],

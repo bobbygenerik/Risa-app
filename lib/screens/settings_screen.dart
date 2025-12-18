@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter/services.dart';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:iptv_player/services/integrated_transcription_service.dart';
 import 'package:iptv_player/services/opensubtitles_service.dart';
@@ -11,7 +11,7 @@ import 'package:iptv_player/services/backup_service.dart';
 import 'package:iptv_player/services/whisper_model_service.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/app_theme.dart';
-import 'package:iptv_player/utils/tv_focus_helper.dart';
+
 import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/widgets/settings_layout.dart';
 import 'package:iptv_player/widgets/settings_tile_widgets.dart';
@@ -742,7 +742,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case 'Enable OpenSubtitles': 
         await prefs.setBool('opensubtitles_enabled', newValue);
         if (newValue && mounted) {
-           Provider.of<OpenSubtitlesService>(context, listen: false).initialize();
+           unawaited(Provider.of<OpenSubtitlesService>(context, listen: false).initialize());
         }
         break;
       case 'Enable Real-Debrid': 
@@ -822,7 +822,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   
   Future<void> _testOpenSubtitlesConnection() async {
      // Implementation kept simple for brevity as logic is identical, verifying connection
-     Provider.of<OpenSubtitlesService>(context, listen: false).initialize();
+     await Provider.of<OpenSubtitlesService>(context, listen: false).initialize();
      _showMessage('Testing connection...');
   }
   

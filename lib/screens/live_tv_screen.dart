@@ -322,6 +322,33 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   );
                 }),
               ),
+              // Hero info overlay
+              Positioned(
+                bottom: heroHeight * 0.15, // Lowered from 0.25 for better artwork exposure
+                left: sidebarWidth,
+                width: screenSize.width * 0.4,
+                child: Builder(builder: (context) {
+                  final scrollPos = _scrollController.hasClients ? _scrollController.offset : 0.0;
+                  final fadeProgress = (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
+                  return Opacity(
+                    opacity: 1.0 - fadeProgress,
+                    child: _buildFeaturedInfo(context, featuredChannel, currentProgram),
+                  );
+                }),
+              ),
+              // Channel logo
+              Positioned(
+                top: AppSizes.lg,
+                right: AppSizes.lg,
+                child: Builder(builder: (context) {
+                  final scrollPos = _scrollController.hasClients ? _scrollController.offset : 0.0;
+                  final fadeProgress = (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
+                  return Opacity(
+                    opacity: 1.0 - fadeProgress,
+                    child: _buildChannelLogo(context, featuredChannel),
+                  );
+                }),
+              ),
               // Scrollable content
               Positioned.fill(
                 child: SingleChildScrollView(
@@ -355,33 +382,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     ],
                   ),
                 ),
-              ),
-              // Hero info overlay
-              Positioned(
-                bottom: heroHeight * 0.15, // Lowered from 0.25 for better artwork exposure
-                left: sidebarWidth,
-                width: screenSize.width * 0.4,
-                child: Builder(builder: (context) {
-                  final scrollPos = _scrollController.hasClients ? _scrollController.offset : 0.0;
-                  final fadeProgress = (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
-                  return Opacity(
-                    opacity: 1.0 - fadeProgress,
-                    child: _buildFeaturedInfo(context, featuredChannel, currentProgram),
-                  );
-                }),
-              ),
-              // Channel logo
-              Positioned(
-                top: AppSizes.lg,
-                right: AppSizes.lg,
-                child: Builder(builder: (context) {
-                  final scrollPos = _scrollController.hasClients ? _scrollController.offset : 0.0;
-                  final fadeProgress = (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
-                  return Opacity(
-                    opacity: 1.0 - fadeProgress,
-                    child: _buildChannelLogo(context, featuredChannel),
-                  );
-                }),
               ),
             ],
           ),
@@ -1303,6 +1303,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         ),
       ],
     ),
-  ));
+  );
 }
 }

@@ -28,14 +28,14 @@ class IncrementalEpgService with ChangeNotifier {
   int get loadedChannelCount => _loadedChannels.length;
   bool get hasEpgUrl => _epgUrl != null && _epgUrl!.isNotEmpty;
 
-  Future<void> initialize() async {
+  Future<void> initialize({bool forceRefresh = false}) async {
     final prefs = await SharedPreferences.getInstance();
     // Try both keys - custom_epg_url (set by user) and epg_url (auto-found in M3U)
     _epgUrl = prefs.getString('custom_epg_url') ?? prefs.getString('epg_url');
     
     if (_epgUrl != null && _epgUrl!.isNotEmpty) {
       debugLog('EPG: Initializing with URL: $_epgUrl');
-      await _loadChannelList();
+      await _loadChannelList(forceRefresh: forceRefresh);
     } else {
       debugLog('EPG: No URL configured (checked custom_epg_url and epg_url)');
     }
@@ -59,10 +59,10 @@ class IncrementalEpgService with ChangeNotifier {
     }
   }
 
-  Future<void> _downloadEpgIfNeeded() async {
+  Future<void> _downloadEpgIfNeeded({bool forceRefresh = false}) async {
     if (_epgUrl == null) return;
     
-    if (await _isCacheValid()) {
+    if (!forceRefresh && await _isCacheValid()) {
       debugLog('EPG: Using valid cached file');
       return;
     }
@@ -88,7 +88,7 @@ class IncrementalEpgService with ChangeNotifier {
     }
   }
 
-  Future<void> _loadChannelList() async {
+  Future<void> _loadChannelList({bool forceRefresh = false}) async {
     if (_epgUrl == null) return;
     
     _isLoading = true;
@@ -97,7 +97,7 @@ class IncrementalEpgService with ChangeNotifier {
     int retryCount = 0;
     while (retryCount < _maxRetries) {
       try {
-        await _downloadEpgIfNeeded();
+        await _downloadEpgIfNeeded(forceRefresh: forceRefresh);
         
         final file = await _getCacheFile();
         if (!await file.exists()) throw Exception('Cache file missing');

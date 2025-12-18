@@ -95,7 +95,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     try {
       if (_player.platform is NativePlayer) {
         final platform = _player.platform as NativePlayer;
-        platform.setProperty('network-timeout', '60000');
+        platform.setProperty('network-timeout', '60');
         platform.setProperty('demuxer-max-bytes', '104857600'); // 100MB buffer
         platform.setProperty('demuxer-max-back-bytes', '52428800'); // 50MB back buffer
         platform.setProperty('cache', 'yes');

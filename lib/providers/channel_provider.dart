@@ -413,6 +413,20 @@ class ChannelProvider with ChangeNotifier {
               .toList();
           _channelCache.clear();
 
+          // Extract and save EPG URL from JSON cache
+          final epgUrl = parsed['epgUrl'] as String?;
+          if (epgUrl != null && epgUrl.isNotEmpty) {
+             final prefs = await SharedPreferences.getInstance();
+             final oldUrl = prefs.getString('epg_url');
+             final urlChanged = oldUrl != epgUrl;
+             
+             await prefs.setString('epg_url', epgUrl);
+             // Ensure EPG service is initialized
+             if (_epgService != null) {
+                unawaited(_epgService!.initialize(forceRefresh: urlChanged));
+             }
+          }
+
           // VOD content is now loaded on demand, so just set the cache paths
           final dir = await getApplicationDocumentsDirectory();
           _moviesCachePath = '${dir.path}/movies_cache.json';
@@ -473,8 +487,21 @@ class ChannelProvider with ChangeNotifier {
           final parseStart = DateTime.now();
           final parsed = await compute(parsePlaylistFromFile, cacheFilePath);
           final parseDuration = DateTime.now().difference(parseStart);
-          debugLog(
               'ChannelProvider: Cache isolate parsing took ${parseDuration.inMilliseconds}ms');
+
+          // Extract and save EPG URL from cache if found
+          final epgUrl = parsed['epgUrl'] as String?;
+          if (epgUrl != null && epgUrl.isNotEmpty) {
+             final prefs = await SharedPreferences.getInstance();
+             final oldUrl = prefs.getString('epg_url');
+             final urlChanged = oldUrl != epgUrl;
+             
+             await prefs.setString('epg_url', epgUrl);
+             // Ensure EPG service is initialized
+             if (_epgService != null) {
+                unawaited(_epgService!.initialize(forceRefresh: urlChanged));
+             }
+          }
 
           // Store raw maps - already in map format from optimized parser
           final mapStart = DateTime.now();
@@ -739,6 +766,20 @@ class ChannelProvider with ChangeNotifier {
         PerformanceMonitor.end('PLAYLIST_PARSE_ISOLATE');
         debugLog(
             'ChannelProvider: Isolate parsing took ${parseDuration.inMilliseconds}ms');
+
+        // Extract and save EPG URL if found
+        final epgUrl = parsed['epgUrl'] as String?;
+        if (epgUrl != null && epgUrl.isNotEmpty) {
+          final oldUrl = prefs.getString('epg_url');
+          final urlChanged = oldUrl != epgUrl;
+          debugLog('ChannelProvider: Found EPG URL in playlist: $epgUrl (changed: $urlChanged)');
+          await prefs.setString('epg_url', epgUrl);
+          
+          // Trigger EPG refresh if service is available
+          if (_epgService != null) {
+             unawaited(_epgService!.initialize(forceRefresh: urlChanged));
+          }
+        }
 
         _loadingStatus = 'Processing channels...';
         _loadingProgress = 0.7;

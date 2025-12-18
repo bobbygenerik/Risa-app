@@ -677,6 +677,16 @@ class _MoviesScreenState extends State<MoviesScreen>
                     ),
                   ),
                 ),
+                // Featured info overlay
+                Positioned(
+                  bottom: heroHeight * 0.15,
+                  left: sidebarWidth + AppSizes.lg,
+                  width: screenSize.width * 0.4,
+                  child: Opacity(
+                    opacity: 1.0 - fadeProgress,
+                    child: _buildFeaturedInfo(context, featuredMovie),
+                  ),
+                ),
                 // Scrollable content
                 Positioned.fill(
                   child: SingleChildScrollView(
@@ -710,16 +720,6 @@ class _MoviesScreenState extends State<MoviesScreen>
                         ),
                       ],
                     ),
-                  ),
-                ),
-                // Featured info overlay
-                Positioned(
-                  bottom: heroHeight * 0.15,
-                  left: sidebarWidth + AppSizes.lg,
-                  width: screenSize.width * 0.4,
-                  child: Opacity(
-                    opacity: 1.0 - fadeProgress,
-                    child: _buildFeaturedInfo(context, featuredMovie),
                   ),
                 ),
               ],
