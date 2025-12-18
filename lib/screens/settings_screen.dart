@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
@@ -17,7 +18,6 @@ import 'package:iptv_player/widgets/settings_tile_widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/models/profile_provider.dart';
-import 'package:iptv_player/widgets/legal_disclaimer_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -56,7 +56,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _rememberPlaybackPosition = true;
   bool _realDebridEnabled = false;
   bool _openSubtitlesEnabled = false;
-  bool _autoDownloadSubtitles = true;
   bool _transcriptionEnabled = false;
   bool _translationEnabled = false;
 
@@ -134,7 +133,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _hardwareDecoding = prefs.getBool('hardware_decoding') ?? true;
       _realDebridEnabled = prefs.getBool('realdebrid_enabled') ?? false;
       _openSubtitlesEnabled = prefs.getBool('opensubtitles_enabled') ?? false;
-      _autoDownloadSubtitles = prefs.getBool('auto_download_subtitles') ?? true;
       _transcriptionEnabled = prefs.getBool('transcription_enabled') ?? false;
       _translationEnabled = prefs.getBool('translation_enabled') ?? false;
       _rememberPlaybackPosition = prefs.getBool('remember_playback_position') ?? true;
@@ -726,7 +724,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         case 'Auto-play Next Episode': _autoPlayNextEpisode = newValue; break;
         case 'Remember Position VOD': _rememberPlaybackPosition = newValue; break;
         case 'Enable OpenSubtitles': _openSubtitlesEnabled = newValue; break;
-        case 'Auto-download Subtitles': _autoDownloadSubtitles = newValue; break;
         case 'Enable Real-Debrid': _realDebridEnabled = newValue; break;
         case 'Enable Live Transcription': _transcriptionEnabled = newValue; break;
         case 'Enable Translation': _translationEnabled = newValue; break;
@@ -748,17 +745,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
            Provider.of<OpenSubtitlesService>(context, listen: false).initialize();
         }
         break;
-      case 'Auto-download Subtitles': await prefs.setBool('auto_download_subtitles', newValue); break;
       case 'Enable Real-Debrid': 
         await prefs.setBool('realdebrid_enabled', newValue);
         if (newValue && mounted) {
-           Provider.of<RealDebridService>(context, listen: false).initialize();
+           unawaited(Provider.of<RealDebridService>(context, listen: false).initialize());
         }
         break;
       case 'Enable Live Transcription': 
         await prefs.setBool('transcription_enabled', newValue);
         if (newValue && mounted) {
-           Provider.of<IntegratedTranscriptionService>(context, listen: false).initialize();
+           unawaited(Provider.of<IntegratedTranscriptionService>(context, listen: false).initialize());
         }
         break;
       case 'Enable Translation': 
@@ -831,7 +827,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
   
   Future<void> _testRealDebridConnection() async {
-     Provider.of<RealDebridService>(context, listen: false).initialize();
+     unawaited(Provider.of<RealDebridService>(context, listen: false).initialize());
      _showMessage('Testing API Key...');
   }
 

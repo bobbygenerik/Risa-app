@@ -357,7 +357,7 @@ class _MoviesScreenState extends State<MoviesScreen>
                 context.push('/content/$encodedId', extra: movie);
               },
               child: AnimatedScale(
-                scale: isFocused ? 1.05 : 1.0,
+                scale: isFocused ? 1.1 : 1.0,
                 duration: TVFocusStyle.animationDuration,
                 curve: TVFocusStyle.animationCurve,
                 child: Column(
@@ -588,7 +588,7 @@ class _MoviesScreenState extends State<MoviesScreen>
   ) {
     final heroImage = featuredMovie.backdropUrl;
     final screenSize = MediaQuery.of(context).size;
-    final heroHeight = screenSize.height * 0.75;
+    final heroHeight = screenSize.height * 0.85;
     final sidebarWidth = AppSizes.sidebarCollapsedWidth + AppSizes.lg;
 
     return Focus(
@@ -603,7 +603,14 @@ class _MoviesScreenState extends State<MoviesScreen>
           
           return Container(
             decoration: const BoxDecoration(
-              color: AppTheme.darkBackground,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF080808), // Rich Black
+                  AppTheme.darkBackground, // True Black
+                ],
+              ),
             ),
             child: Stack(
               children: [
@@ -707,7 +714,7 @@ class _MoviesScreenState extends State<MoviesScreen>
                 ),
                 // Featured info overlay
                 Positioned(
-                  bottom: heroHeight * 0.45,
+                  bottom: heroHeight * 0.15,
                   left: sidebarWidth + AppSizes.lg,
                   width: screenSize.width * 0.4,
                   child: Opacity(
@@ -843,7 +850,7 @@ class _MoviesScreenState extends State<MoviesScreen>
 
   Widget _buildSkeletonLoader() {
     final screenSize = MediaQuery.of(context).size;
-    final heroHeight = screenSize.height * 0.75;
+    final heroHeight = screenSize.height * 0.85;
     final sidebarWidth = AppSizes.sidebarCollapsedWidth + AppSizes.lg;
     final cardWidth = screenSize.width / 6.5;
     final cardHeight = cardWidth * 1.5;

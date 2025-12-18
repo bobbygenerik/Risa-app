@@ -14,6 +14,7 @@ import '../providers/settings_provider.dart';
 import '../providers/content_provider.dart';
 import '../utils/app_theme.dart';
 import '../utils/snackbar_helper.dart';
+import '../utils/tv_focus_helper.dart';
 import '../screens/epg_screen.dart';
 
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -92,11 +93,14 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
     // Optimize player for IPTV streams
     try {
-      _player.setProperty('network-timeout', '60000');
-      _player.setProperty('demuxer-max-bytes', '104857600'); // 100MB buffer
-      _player.setProperty('demuxer-max-back-bytes', '52428800'); // 50MB back buffer
-      _player.setProperty('cache', 'yes');
-      _player.setProperty('cache-secs', '30');
+      if (_player.platform is NativePlayer) {
+        final platform = _player.platform as NativePlayer;
+        platform.setProperty('network-timeout', '60000');
+        platform.setProperty('demuxer-max-bytes', '104857600'); // 100MB buffer
+        platform.setProperty('demuxer-max-back-bytes', '52428800'); // 50MB back buffer
+        platform.setProperty('cache', 'yes');
+        platform.setProperty('cache-secs', '30');
+      }
     } catch (e) {
       debugLog('MediaKit properties error: $e');
     }
@@ -149,7 +153,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
     _player.stream.log.listen((log) {
       if (log.level != 'debug') {
-        debugLog('MediaKit Log: [${log.level}] ${log.message}');
+        debugLog('MediaKit Log: [${log.level}] ${log.text}');
       }
     });
   }

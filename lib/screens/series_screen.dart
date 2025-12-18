@@ -459,7 +459,7 @@ class _SeriesScreenState extends State<SeriesScreen>
                 context.push('/content/$encodedId', extra: firstEpisode);
               },
               child: AnimatedScale(
-                scale: isFocused ? 1.05 : 1.0,
+                scale: isFocused ? 1.1 : 1.0,
                 duration: TVFocusStyle.animationDuration,
                 curve: TVFocusStyle.animationCurve,
                 child: Column(
@@ -689,7 +689,7 @@ class _SeriesScreenState extends State<SeriesScreen>
   ) {
     final heroImage = featuredSeries.backdropUrl;
     final screenSize = MediaQuery.of(context).size;
-    final heroHeight = screenSize.height * 0.75;
+    final heroHeight = screenSize.height * 0.85;
     final sidebarWidth = AppSizes.sidebarCollapsedWidth + AppSizes.lg;
 
     return Focus(
@@ -704,7 +704,14 @@ class _SeriesScreenState extends State<SeriesScreen>
           
           return Container(
             decoration: const BoxDecoration(
-              color: AppTheme.darkBackground,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF080808), // Rich Black
+                  AppTheme.darkBackground, // True Black
+                ],
+              ),
             ),
             child: Stack(
               children: [
@@ -808,7 +815,7 @@ class _SeriesScreenState extends State<SeriesScreen>
                 ),
                 // Featured info overlay
                 Positioned(
-                  bottom: heroHeight * 0.45,
+                  bottom: heroHeight * 0.15,
                   left: sidebarWidth + AppSizes.lg,
                   width: screenSize.width * 0.4,
                   child: Opacity(
@@ -937,14 +944,21 @@ class _SeriesScreenState extends State<SeriesScreen>
   Widget _buildBannerPlaceholder() {
     return Container(
       decoration: const BoxDecoration(
-        color: AppTheme.darkBackground,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF080808), // Rich Black
+            AppTheme.darkBackground, // True Black
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildSkeletonLoader() {
     final screenSize = MediaQuery.of(context).size;
-    final heroHeight = screenSize.height * 0.75;
+    final heroHeight = screenSize.height * 0.85;
     final sidebarWidth = AppSizes.sidebarCollapsedWidth + AppSizes.lg;
     final cardWidth = screenSize.width / 6.5;
     final cardHeight = cardWidth * 1.5;

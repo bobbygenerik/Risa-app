@@ -308,7 +308,14 @@ class _EPGScreenState extends State<EPGScreen>
 
             return Container(
               decoration: const BoxDecoration(
-                color: AppTheme.darkBackground,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF080808), // Rich Black
+                    AppTheme.darkBackground, // True Black
+                  ],
+                ),
               ),
               child: Stack(
                 children: [

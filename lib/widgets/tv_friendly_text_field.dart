@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:iptv_player/utils/app_theme.dart';
-import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/widgets/brand_text_field.dart';
 
 /// A wrapper around BrandTextField that handles TV focus navigation logic

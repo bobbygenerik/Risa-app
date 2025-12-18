@@ -238,105 +238,89 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     Map<String, List<Channel>> groupedChannels,
     bool isGrouping,
   ) {
-    final heroImage = _resolveHeroImage(currentProgram);
     final screenSize = MediaQuery.of(context).size;
     final isTV = screenSize.width >= 1920 || screenSize.height >= 1080;
     final heroHeight = screenSize.height * 0.85; // 85% height for content peek
     final sidebarWidth = AppSizes.sidebarCollapsedWidth + 16;
 
-    return Focus(
-      focusNode: _heroFocus,
-      onKeyEvent: (node, event) {
-        if (event is KeyDownEvent) {
-          if (event.logicalKey == LogicalKeyboardKey.select ||
-              event.logicalKey == LogicalKeyboardKey.enter) {
-            context.push('/player', extra: featuredChannel);
-            return KeyEventResult.handled;
-          }
-          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-            _previousHero();
-            return KeyEventResult.handled;
-          }
-          if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-            _nextHero();
-            return KeyEventResult.handled;
-          }
-          if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-            return requestNavigationFocus()
-                ? KeyEventResult.handled
-                : KeyEventResult.ignored;
-          }
-          if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-            _scrollController.animateTo(
-              screenSize.height * 0.8,
-              duration: const Duration(milliseconds: 600),
-              curve: Curves.easeOutCubic,
-            );
-            // Focus first channel card immediately
-            Future.delayed(const Duration(milliseconds: 100), () {
-              if (!mounted) return;
-              _focusPrimaryAction();
-            });
-            return KeyEventResult.handled;
-          }
-        }
-        return KeyEventResult.ignored;
-      },
-      child: AnimatedBuilder(
-        animation: _scrollController,
-        builder: (context, child) {
-          final scrollOffset = _scrollController.hasClients ? _scrollController.offset : 0.0;
-          final fadeProgress = (scrollOffset / (heroHeight * 0.5)).clamp(0.0, 1.0);
-          
-          return Stack(
+    // Use a Selector to get the current program for the featured channel
+    return Selector<IncrementalEpgService, Program?>(
+      selector: (_, epg) => epg.getCurrentProgram(
+        featuredChannel.tvgId ?? featuredChannel.id,
+        channelName: featuredChannel.name,
+      ),
+      builder: (context, currentProgram, _) {
+        final heroImage = _resolveHeroImage(currentProgram);
+
+        return Focus(
+          focusNode: _heroFocus,
+          onKeyEvent: (node, event) {
+            if (event is KeyDownEvent) {
+              if (event.logicalKey == LogicalKeyboardKey.select ||
+                  event.logicalKey == LogicalKeyboardKey.enter) {
+                context.push('/player', extra: featuredChannel);
+                return KeyEventResult.handled;
+              }
+              if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                _previousHero();
+                return KeyEventResult.handled;
+              }
+              if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                _nextHero();
+                return KeyEventResult.handled;
+              }
+              if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                // Focus will automatically move to first row
+              }
+            }
+            return KeyEventResult.ignored;
+          },
+          child: Stack(
             children: [
-              // Fixed hero background
+              // Hero Background & Gradient
               Positioned(
                 top: 0,
                 left: 0,
                 right: 0,
                 height: heroHeight,
-                child: Opacity(
-                  opacity: 1.0 - fadeProgress,
-                  child: Stack(
-                    children: [
-                      Selector<IncrementalEpgService, (Program?, String?)>(
-                        selector: (_, epg) {
-                          final p = epg.getCurrentProgram(featuredChannel.tvgId ?? featuredChannel.id, channelName: featuredChannel.name);
-                          return (p, _resolveHeroImage(p));
-                        },
-                        builder: (context, data, _) {
-                          return _buildHeroContent(
-                            featuredChannel,
-                            data.$1,
-                            data.$2,
-                            0.0,
-                          );
-                        },
-                      ),
-                      // Gradient fade at bottom
-                      Positioned(
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        height: 120,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.transparent,
-                                AppTheme.darkBackground.withAlpha((0.8 * 255).round()),
-                                AppTheme.darkBackground,
-                              ],
+                child: Builder(builder: (context) {
+                  final scrollPos = _scrollController.hasClients ? _scrollController.offset : 0.0;
+                  final fadeProgress = (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
+                  
+                  return Opacity(
+                    opacity: 1.0 - fadeProgress,
+                    child: Stack(
+                      children: [
+                        _buildHeroContent(
+                          featuredChannel,
+                          currentProgram,
+                          heroImage,
+                          0.0,
+                        ),
+                        // Gradient fade at bottom
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          height: 120,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  AppTheme.darkBackground.withAlpha((0.8 * 255).round()),
+                                  AppTheme.darkBackground,
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
+                      ],
+                    ),
+                  );
+                }),
               ),
               // Scrollable content
               Positioned.fill(
@@ -377,29 +361,32 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 bottom: heroHeight * 0.15, // Lowered from 0.25 for better artwork exposure
                 left: sidebarWidth,
                 width: screenSize.width * 0.4,
-                child: Opacity(
-                  opacity: 1.0 - fadeProgress,
-                  child: Selector<IncrementalEpgService, Program?>(
-                    selector: (_, epg) => epg.getCurrentProgram(featuredChannel.tvgId ?? featuredChannel.id, channelName: featuredChannel.name),
-                    builder: (context, currentProgram, _) {
-                      return _buildFeaturedInfo(context, featuredChannel, currentProgram);
-                    },
-                  ),
-                ),
+                child: Builder(builder: (context) {
+                  final scrollPos = _scrollController.hasClients ? _scrollController.offset : 0.0;
+                  final fadeProgress = (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
+                  return Opacity(
+                    opacity: 1.0 - fadeProgress,
+                    child: _buildFeaturedInfo(context, featuredChannel, currentProgram),
+                  );
+                }),
               ),
               // Channel logo
               Positioned(
                 top: AppSizes.lg,
                 right: AppSizes.lg,
-                child: Opacity(
-                  opacity: 1.0 - fadeProgress,
-                  child: _buildChannelLogo(context, featuredChannel),
-                ),
+                child: Builder(builder: (context) {
+                  final scrollPos = _scrollController.hasClients ? _scrollController.offset : 0.0;
+                  final fadeProgress = (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
+                  return Opacity(
+                    opacity: 1.0 - fadeProgress,
+                    child: _buildChannelLogo(context, featuredChannel),
+                  );
+                }),
               ),
             ],
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -1071,6 +1058,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         : _buildDefaultHeroBackground();
   }
 
+
   Widget _buildSkeletonLoader() {
     final screenSize = MediaQuery.of(context).size;
     final heroHeight = screenSize.height * 0.85; // Matches real height
@@ -1190,23 +1178,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             ),
           ),
         ),
-        // Scrollable content skeleton - matches exact layout
-        Positioned(
-          top: heroHeight,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: Container(
-            color: AppTheme.darkBackground,
-            padding: EdgeInsets.only(
-              left: sidebarWidth,
-              right: AppSizes.xxl,
-              top: AppSizes.xxl,
-              bottom: AppSizes.xxl,
-            ),
+        // Rows skeleton - scrollable to matching position
+        Positioned.fill(
+          child: SingleChildScrollView(
+            physics: const NeverScrollableScrollPhysics(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                SizedBox(height: heroHeight),
                 SizedBox(height: AppSizes.xxl),
                 ...List.generate(3, (rowIndex) => Padding(
                   padding: EdgeInsets.only(bottom: AppSizes.lg),
@@ -1323,6 +1302,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           ),
         ),
       ],
-    );
-  }
+    ),
+  ));
+}
 }

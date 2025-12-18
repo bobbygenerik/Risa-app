@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/app_theme.dart';
-import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 /// A premium Split-Pane layout for TV Settings.
 /// 
@@ -74,8 +73,19 @@ class _SettingsLayoutState extends State<SettingsLayout> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground, 
-      body: Row(
+      backgroundColor: Colors.transparent, 
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF080808), // Rich Black
+              AppTheme.darkBackground, // True Black
+            ],
+          ),
+        ),
+        child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Left Pane: Sidebar
@@ -126,6 +136,7 @@ class _SettingsLayoutState extends State<SettingsLayout> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

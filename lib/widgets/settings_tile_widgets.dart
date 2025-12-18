@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/app_theme.dart';
-import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 // -----------------------------------------------------------------------------
 // SECTIONS & HEADERS
@@ -262,7 +261,7 @@ class SettingsSwitchTile extends StatelessWidget {
                       child: Switch(
                         value: value,
                         onChanged: onChanged,
-                        activeColor: isFocused ? AppTheme.primaryBlue : AppTheme.primaryBlue,
+                        activeThumbColor: isFocused ? AppTheme.primaryBlue : AppTheme.primaryBlue,
                         activeTrackColor: isFocused ? AppTheme.primaryBlue.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.2),
                         inactiveThumbColor: isFocused ? Colors.grey : Colors.grey[400],
                         inactiveTrackColor: isFocused ? Colors.grey[300] : Colors.grey[800],
