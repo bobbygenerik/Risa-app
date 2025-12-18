@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 """
-Simple HTTP server to serve Flutter APK files for download.
-Usage: python3 serve_apk.py [port]
-Default port: 8000
+Simple HTTP server to serve Flutter APK files for download on port 8080.
 """
 
 import os
 import sys
 import urllib.parse
-import socket
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 
@@ -65,7 +62,7 @@ class FlutterAPKServerHandler(SimpleHTTPRequestHandler):
             <body>
                 <div class="container">
                     <h1>🚀 Flutter APK Download Server</h1>
-                    <div class="status">Server running on port {self.server.server_port}</div>
+                    <div class="status">Server running on port 8080</div>
                     
                     <div class="build-info">
                         <strong>Build Directory:</strong> build/app/outputs/flutter-apk/<br>
@@ -98,7 +95,7 @@ class FlutterAPKServerHandler(SimpleHTTPRequestHandler):
                     </div>
                 """
             
-            html_content += f"""
+            html_content += """
                     </div>
                     
                     <div style="margin-top: 30px; padding: 20px; background: #2c3e50; color: white; border-radius: 5px;">
@@ -112,7 +109,7 @@ class FlutterAPKServerHandler(SimpleHTTPRequestHandler):
                     </div>
                     
                     <p style="text-align: center; margin-top: 30px; color: #7f8c8d;">
-                        <small>Flutter APK Server | Port {self.server.server_port} | Build Output Directory</small>
+                        <small>Flutter APK Server | Port 8080 | Build Output Directory</small>
                     </p>
                 </div>
             </body>
@@ -128,29 +125,8 @@ class FlutterAPKServerHandler(SimpleHTTPRequestHandler):
         # Custom logging with timestamp
         print(f"[{self.log_date_time_string()}] [APK Server] {self.address_string()} - {format % args}")
 
-def get_local_ip():
-    """Get the local IP address"""
-    try:
-        # Connect to an external server to get local IP
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
-        s.close()
-        return ip
-    except:
-        return "127.0.0.1"
-
 def main():
-    # Parse command line arguments
-    if len(sys.argv) > 1:
-        try:
-            port = int(sys.argv[1])
-        except ValueError:
-            print("❌ Error: Port must be a number")
-            print("Usage: python3 serve_apk.py [port]")
-            sys.exit(1)
-    else:
-        port = 8000  # Default port
+    port = 8080
     
     # Check if APK directory exists
     apk_dir = Path("/home/devuser/repos/Risa-app/build/app/outputs/flutter-apk")
@@ -169,19 +145,15 @@ def main():
             file_size = apk_file.stat().st_size / (1024 * 1024)
             print(f"   📱 {apk_file.name} ({file_size:.2f} MB)")
     
-    local_ip = get_local_ip()
     print(f"\n🚀 Starting Flutter APK download server on port {port}...")
     print(f"📁 APK directory: {apk_dir}")
-    print(f"🌐 Local access: http://localhost:{port}")
-    print(f"🌍 Network access: http://{local_ip}:{port}")
+    print(f"🌐 Access the server at: http://localhost:{port}")
     print("⏹️  Press Ctrl+C to stop the server")
     print("=" * 60)
     
     try:
         httpd = HTTPServer(("0.0.0.0", port), FlutterAPKServerHandler)
-        print(f"✅ Server is running!")
-        print(f"   📍 Local: http://localhost:{port}")
-        print(f"   🌐 Network: http://{local_ip}:{port}")
+        print(f"✅ Server is running! Visit http://localhost:{port} to download APK files")
         httpd.serve_forever()
     except KeyboardInterrupt:
         print("\n🛑 Shutting down server...")

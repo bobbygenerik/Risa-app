@@ -41,11 +41,6 @@ public final class GeneratedPluginRegistrant {
       Log.e(TAG, "Error registering plugin google_mlkit_translation, com.google_mlkit_translation.GoogleMlKitTranslationPlugin", e);
     }
     try {
-      flutterEngine.getPlugins().add(new com.alexmercerind.media_kit_libs_android_audio.MediaKitLibsAndroidAudioPlugin());
-    } catch (Exception e) {
-      Log.e(TAG, "Error registering plugin media_kit_libs_android_audio, com.alexmercerind.media_kit_libs_android_audio.MediaKitLibsAndroidAudioPlugin", e);
-    }
-    try {
       flutterEngine.getPlugins().add(new com.alexmercerind.media_kit_libs_android_video.MediaKitLibsAndroidVideoPlugin());
     } catch (Exception e) {
       Log.e(TAG, "Error registering plugin media_kit_libs_android_video, com.alexmercerind.media_kit_libs_android_video.MediaKitLibsAndroidVideoPlugin", e);

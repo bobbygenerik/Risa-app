@@ -29,7 +29,7 @@ dependencies:
   intl: ^0.20.2
   wakelock_plus: ^1.2.8
   media_kit: ^1.1.10+1  # Modern media processing library
-  media_kit_libs_audio: ^1.0.4  # Audio-only libraries for smaller footprint
+  # media_kit_libs_audio: ^1.0.4  # Audio-only libraries (conflicts with video libs)
 
 
   animations: ^2.0.11

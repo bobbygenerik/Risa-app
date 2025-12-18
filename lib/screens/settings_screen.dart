@@ -15,6 +15,7 @@ import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/widgets/brand_card.dart';
 import 'package:iptv_player/widgets/brand_switch.dart';
 import 'package:iptv_player/widgets/brand_text_field.dart';
+import 'package:iptv_player/widgets/tv_friendly_text_field.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/models/profile_provider.dart';
@@ -110,15 +111,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   final FocusNode _aiFirstFocusNode = FocusNode();
 
   // Editable state for text fields
-  bool _m3uUrlEditable = false;
-  bool _xtreamServerEditable = false;
-  bool _xtreamUsernameEditable = false;
-  bool _xtreamPasswordEditable = false;
-  bool _customEpgUrlEditable = false;
 
-  bool _realDebridApiKeyEditable = false;
-  bool _openSubtitlesUsernameEditable = false;
-  bool _openSubtitlesPasswordEditable = false;
 
   // Focus node listeners map
   final Map<FocusNode, VoidCallback> _focusNodeListeners = {};
@@ -532,11 +525,9 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             const SizedBox(height: 16),
             if (_playlistInputMethod == 0) ...[
-              _buildTVTextField(
+              TVFriendlyTextField(
                 controller: _m3uUrlController,
                 focusNode: _m3uUrlFocusNode,
-                isEditable: _m3uUrlEditable,
-                onEditableChanged: (value) => setState(() => _m3uUrlEditable = value),
                 hintText: 'http://example.com/playlist.m3u',
                 prefixIcon: Icons.link,
               ),
@@ -568,11 +559,9 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
             ],
             if (_playlistInputMethod == 1) ...[
-              _buildTVTextField(
+              TVFriendlyTextField(
                 controller: _xtreamServerController,
                 focusNode: _xtreamServerFocusNode,
-                isEditable: _xtreamServerEditable,
-                onEditableChanged: (value) => setState(() => _xtreamServerEditable = value),
                 hintText: 'http://example.com:8080',
                 prefixIcon: Icons.dns,
               ),
@@ -580,22 +569,18 @@ class _SettingsScreenState extends State<SettingsScreen>
               Row(
                 children: [
                   Expanded(
-                    child: _buildTVTextField(
+                    child: TVFriendlyTextField(
                       controller: _xtreamUsernameController,
                       focusNode: _xtreamUsernameFocusNode,
-                      isEditable: _xtreamUsernameEditable,
-                      onEditableChanged: (value) => setState(() => _xtreamUsernameEditable = value),
                       hintText: 'Username',
                       prefixIcon: Icons.person,
                     ),
                   ),
                   context.spacingSmBox,
                   Expanded(
-                    child: _buildTVTextField(
+                    child: TVFriendlyTextField(
                       controller: _xtreamPasswordController,
                       focusNode: _xtreamPasswordFocusNode,
-                      isEditable: _xtreamPasswordEditable,
-                      onEditableChanged: (value) => setState(() => _xtreamPasswordEditable = value),
                       hintText: 'Password',
                       prefixIcon: Icons.lock,
                       obscureText: true,
@@ -636,20 +621,16 @@ class _SettingsScreenState extends State<SettingsScreen>
         _buildSectionCard(
           title: 'EPG Configuration',
           children: [
-            _buildTVTextField(
+            TVFriendlyTextField(
               controller: _customEpgUrlController,
               focusNode: _customEpgUrlFocusNode,
-              isEditable: _customEpgUrlEditable,
-              onEditableChanged: (value) => setState(() => _customEpgUrlEditable = value),
               hintText: 'Primary EPG URL (optional)',
               prefixIcon: Icons.tv_outlined,
             ),
             context.spacingSmBox,
-            _buildTVTextField(
+            TVFriendlyTextField(
               controller: _secondaryEpgUrlController,
               focusNode: _secondaryEpgUrlFocusNode,
-              isEditable: true,
-              onEditableChanged: (value) {},
               hintText: 'Secondary EPG URL (backup)',
               prefixIcon: Icons.tv_outlined,
             ),
@@ -915,20 +896,16 @@ class _SettingsScreenState extends State<SettingsScreen>
             _buildSwitchTile('Auto-download Subtitles', _autoDownloadSubtitles),
             if (_openSubtitlesEnabled) ...[
               const SizedBox(height: 12),
-              _buildTVTextField(
+              TVFriendlyTextField(
                 controller: _openSubtitlesUsernameController,
                 focusNode: _openSubtitlesUsernameFocusNode,
-                isEditable: _openSubtitlesUsernameEditable,
-                onEditableChanged: (value) => setState(() => _openSubtitlesUsernameEditable = value),
                 hintText: 'Username',
                 prefixIcon: Icons.person,
               ),
               const SizedBox(height: 12),
-              _buildTVTextField(
+              TVFriendlyTextField(
                 controller: _openSubtitlesPasswordController,
                 focusNode: _openSubtitlesPasswordFocusNode,
-                isEditable: _openSubtitlesPasswordEditable,
-                onEditableChanged: (value) => setState(() => _openSubtitlesPasswordEditable = value),
                 hintText: 'Password',
                 prefixIcon: Icons.lock,
                 obscureText: true,
@@ -947,11 +924,9 @@ class _SettingsScreenState extends State<SettingsScreen>
             _buildSwitchTile('Enable Real-Debrid', _realDebridEnabled),
             if (_realDebridEnabled) ...[
               const SizedBox(height: 12),
-              _buildTVTextField(
+              TVFriendlyTextField(
                 controller: _realDebridApiKeyController,
                 focusNode: _realDebridApiKeyFocusNode,
-                isEditable: _realDebridApiKeyEditable,
-                onEditableChanged: (value) => setState(() => _realDebridApiKeyEditable = value),
                 hintText: 'API Key',
                 prefixIcon: Icons.vpn_key,
               ),
@@ -1150,36 +1125,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildTVTextField({
-    required TextEditingController controller,
-    required FocusNode focusNode,
-    required bool isEditable,
-    required Function(bool) onEditableChanged,
-    String? hintText,
-    IconData? prefixIcon,
-    bool obscureText = false,
-  }) {
-    return Focus(
-      focusNode: focusNode,
-      onKeyEvent: (node, event) {
-        if (event is! KeyDownEvent) return KeyEventResult.ignored;
-        if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-          return _navigateToNextField(focusNode);
-        }
-        if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-          return _navigateToPreviousField(focusNode);
-        }
-        return KeyEventResult.ignored;
-      },
-      child: BrandTextField(
-        controller: controller,
-        focusNode: focusNode,
-        hintText: hintText,
-        prefixIcon: prefixIcon,
-        obscureText: obscureText,
-      ),
-    );
-  }
+
 
 
 
