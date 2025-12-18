@@ -53,6 +53,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   bool _showControls = true;
   bool _isPlaying = false;
   bool _showGuide = false;
+  BoxFit _videoFit = BoxFit.contain; // Added for aspect ratio control
   double _progress = 0.0;
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
@@ -214,6 +215,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
               child: Video(
                 controller: _controller,
                 controls: NoVideoControls,
+                fit: _videoFit,
                 pauseUponEnteringBackgroundMode: false,
                 resumeUponEnteringForegroundMode: true,
               ),
@@ -356,6 +358,12 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                         _buildControlButton(
                           icon: Icons.grid_view,
                           onPressed: _toggleMultiView,
+                        ),
+                        const SizedBox(width: 12),
+                        // Aspect Ratio Toggle
+                        _buildControlButton(
+                          icon: Icons.aspect_ratio,
+                          onPressed: _toggleVideoFit,
                         ),
                       ],
                     ),
@@ -544,10 +552,37 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   void _toggleControls() {
-    setState(() => _showControls = !_showControls);
-    if (_showControls) _hideControlsAfterDelay();
+    setState(() {
+      _showControls = !_showControls;
+    });
+    if (_showControls) {
+      _hideControlsAfterDelay();
+    }
   }
 
+  void _toggleVideoFit() {
+    setState(() {
+      if (_videoFit == BoxFit.contain) {
+        _videoFit = BoxFit.cover; // Zoom to fill (crops edges)
+      } else if (_videoFit == BoxFit.cover) {
+        _videoFit = BoxFit.fill; // Stretch to fill (distorts)
+      } else {
+        _videoFit = BoxFit.contain; // Original aspect ratio
+      }
+    });
+
+    // Provide visual feedback via snackbar
+    final label = _videoFit == BoxFit.contain 
+        ? 'Fit' 
+        : (_videoFit == BoxFit.cover ? 'Zoom' : 'Stretch');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Scale: $label'),
+        duration: const Duration(seconds: 1),
+        backgroundColor: Colors.black87,
+      ),
+    );
+  }
   void _togglePlayPause() {
     _player.playOrPause();
   }

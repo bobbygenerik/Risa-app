@@ -26,6 +26,7 @@ import 'package:iptv_player/utils/app_colors.dart';
 import 'package:iptv_player/utils/app_icons.dart';
 import 'package:iptv_player/services/timer_service.dart';
 import 'package:iptv_player/services/focus_pool_service.dart';
+import 'package:iptv_player/widgets/shimmer.dart';
 
 /// A focused Live TV screen. Shows a hero for the currently airing program
 /// on a featured channel, plus channel rows below.
@@ -240,7 +241,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final heroImage = _resolveHeroImage(currentProgram);
     final screenSize = MediaQuery.of(context).size;
     final isTV = screenSize.width >= 1920 || screenSize.height >= 1080;
-    final heroHeight = screenSize.height;
+    final heroHeight = screenSize.height * 0.85; // 85% height for content peek
     final sidebarWidth = AppSizes.sidebarCollapsedWidth + 16;
 
     return Focus(
@@ -373,7 +374,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               ),
               // Hero info overlay
               Positioned(
-                bottom: heroHeight * 0.25,
+                bottom: heroHeight * 0.15, // Lowered from 0.25 for better artwork exposure
                 left: sidebarWidth,
                 width: screenSize.width * 0.4,
                 child: Opacity(
@@ -665,7 +666,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final isLandscape = screenWidth > screenHeight;
-    final cardWidth = isLandscape ? (screenWidth / 7) : (screenWidth / 4.5);
+    final cardWidth = isLandscape ? (screenWidth / 6) : (screenWidth / 4); // 6 cards per row for premium look
     final cardHeight = cardWidth * 0.57;
     final rowHeight = cardHeight + 80;
 
@@ -768,7 +769,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             return GestureDetector(
               onTap: () => context.push('/player', extra: channel),
               child: AnimatedScale(
-                scale: isFocused ? 1.05 : 1.0,
+                scale: isFocused ? TVFocusStyle.focusScale : 1.0,
                 duration: TVFocusStyle.animationDuration,
                 curve: TVFocusStyle.animationCurve,
                 child: Column(
@@ -1072,35 +1073,39 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Widget _buildSkeletonLoader() {
     final screenSize = MediaQuery.of(context).size;
-    final heroHeight = screenSize.height * 0.75;
+    final heroHeight = screenSize.height * 0.85; // Matches real height
     final sidebarWidth = AppSizes.sidebarCollapsedWidth + AppSizes.lg;
     final isLandscape = screenSize.width > screenSize.height;
     final cardWidth = isLandscape ? (screenSize.width / 5.5) : (screenSize.width / 3.5);
     final cardHeight = cardWidth * 0.57;
     final rowHeight = cardHeight + 120;
 
-    return Stack(
-      children: [
-        // Hero background skeleton - matches your gradient background
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          height: heroHeight,
-          child: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF1a1a2e), AppTheme.cardBackground],
+    return Shimmer(
+      child: Stack(
+        children: [
+          // Hero background skeleton - Rich Black base
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: heroHeight,
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF080808), // Rich Black
+                    AppTheme.darkBackground, // True Black
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-        // Featured info skeleton - exact position as real content
-        Positioned(
-          bottom: heroHeight * 0.35,
-          left: sidebarWidth,
+          // Featured info skeleton
+          Positioned(
+            bottom: heroHeight * 0.35,
+            left: sidebarWidth,
           width: screenSize.width * 0.4,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
