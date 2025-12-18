@@ -33,7 +33,7 @@ class _SSLSettingsScreenState extends State<SSLSettingsScreen> {
     double vScale(double value) => value * (screenHeight / 1080);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF050710),
+      backgroundColor: AppTheme.darkBackground,
       appBar: AppBar(
         title: const Text('SSL Certificate Settings'),
         backgroundColor: Colors.transparent,

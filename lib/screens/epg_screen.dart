@@ -308,7 +308,7 @@ class _EPGScreenState extends State<EPGScreen>
 
             return Container(
               decoration: const BoxDecoration(
-                color: Color(0xFF050710),
+                color: AppTheme.darkBackground,
               ),
               child: Stack(
                 children: [
@@ -357,7 +357,7 @@ class _EPGScreenState extends State<EPGScreen>
   Widget _buildEmptyState(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFF050710),
+        color: AppTheme.darkBackground,
       ),
       child: Center(
         child: ConstrainedBox(
@@ -670,7 +670,7 @@ class _EPGScreenState extends State<EPGScreen>
                         // Today header
                         Container(
                           height: 64,
-                          margin: const EdgeInsets.only(bottom: 4, right: 8),
+                          margin: const EdgeInsets.only(bottom: 4, right: 4),
                           decoration: BoxDecoration(
                             color: const Color(0xFF2a2a3e).withValues(alpha: 0.4),
                             borderRadius: BorderRadius.circular(8),
@@ -839,7 +839,7 @@ class _EPGScreenState extends State<EPGScreen>
                   errorWidget: Container(
                     height: 200,
                     decoration: const BoxDecoration(
-                      color: Color(0xFF050710),
+                      color: AppTheme.darkBackground,
                     ),
                     child: const Icon(Icons.dvr, size: 64),
                   ),
@@ -1131,7 +1131,7 @@ class _EPGScreenState extends State<EPGScreen>
           }
 
           return AlertDialog(
-            backgroundColor: const Color(0xFF050710),
+            backgroundColor: AppTheme.darkBackground,
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

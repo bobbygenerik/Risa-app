@@ -190,7 +190,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
         backgroundColor: Colors.transparent,
         body: Container(
           decoration: const BoxDecoration(
-            color: Color(0xFF050710),
+            color: AppTheme.darkBackground,
           ),
           child: Column(
           children: [

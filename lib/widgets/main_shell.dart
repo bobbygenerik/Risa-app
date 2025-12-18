@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
 import 'package:iptv_player/widgets/sidebar_navigation.dart';
 import 'package:iptv_player/services/timer_service.dart';
+import 'package:iptv_player/utils/app_theme.dart';
 
 const bool kForceSearchPopup = bool.fromEnvironment(
   'FORCE_SEARCH_POPUP',
@@ -117,14 +118,8 @@ class _MainShellState extends State<MainShell> {
         backgroundColor: Colors.transparent,
       body: Container(
         decoration: const BoxDecoration(
-            gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF050710),
-            Color(0xFF0d1140),
-          ],
-        )),
+          color: AppTheme.darkBackground,
+        ),
         child: Stack(
           children: [
             // Content area - fills entire screen, content can show behind nav bar

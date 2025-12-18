@@ -7,10 +7,10 @@ class AppTheme {
   // Brand Colors (updated to match croppedlogo2.jpg dominant blue)
   // Using deep blue from logo palette
   static const Color primaryBlue = Color(0xFF2E3192);
-  static const Color darkBackground = Color(0xFF050710);
+  static const Color darkBackground = Color(0xFF000000); // Unified Premium Black
   static const Color cardBackground = Color(0x00000000); // fully transparent
   static const Color dialogBackground = Color(0xFF1E1E2E); // Solid dark for dialogs/popups
-  static const Color sidebarBackground = Color(0xFF141414);
+  static const Color sidebarBackground = Color(0xFF08090C); // Slightly lighter black for sidebar contrast
   static const Color textPrimary = Color(0xFFE8E8E8); // Softer off-white for better theme cohesion
   static const Color textSecondary = Color(0xFFB3B3B3);
   static const Color textTertiary = Color(0xFF808080);

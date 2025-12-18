@@ -67,7 +67,7 @@ class AppColors {
   static const LinearGradient fadeGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [Colors.transparent, Color(0xCC050710), AppTheme.darkBackground],
+    colors: [Colors.transparent, Color(0xCC000000), AppTheme.darkBackground],
   );
   
   // Opacity helpers

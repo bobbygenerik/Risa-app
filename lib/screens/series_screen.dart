@@ -325,10 +325,10 @@ class _SeriesScreenState extends State<SeriesScreen>
 
   Widget _buildEmptyState(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF050710),
+      backgroundColor: AppTheme.darkBackground,
       body: Container(
         decoration: const BoxDecoration(
-          color: Color(0xFF050710),
+          color: AppTheme.darkBackground,
         ),
         child: Center(
           child: Column(
@@ -937,7 +937,7 @@ class _SeriesScreenState extends State<SeriesScreen>
   Widget _buildBannerPlaceholder() {
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFF050710),
+        color: AppTheme.darkBackground,
       ),
     );
   }

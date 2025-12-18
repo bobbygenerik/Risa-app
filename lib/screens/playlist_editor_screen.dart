@@ -345,7 +345,7 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
         backgroundColor: Colors.transparent,
         body: Container(
           decoration: const BoxDecoration(
-            color: Color(0xFF050710),
+          color: AppTheme.darkBackground,
           ),
           child: const Center(
             child: CircularProgressIndicator(color: AppTheme.primaryBlue),
@@ -379,7 +379,7 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
       ),
       body: Container(
         decoration: const BoxDecoration(
-          color: Color(0xFF050710),
+          color: AppTheme.darkBackground,
         ),
         child: SingleChildScrollView(
           padding: EdgeInsets.all(context.tvSpacing(32)),

@@ -858,7 +858,7 @@ class ChannelProvider with ChangeNotifier {
         if (epgUrl != null && epgUrl.isNotEmpty) {
           debugLog(
               'ChannelProvider: Found EPG URL in M3U: $epgUrl (auto-saving)');
-          await prefs.setString('epg_url', epgUrl);
+          await prefs.setString('custom_epg_url', epgUrl);
           unawaited(_epgService?.initialize()); // Trigger EPG loading
         }
 
@@ -1045,7 +1045,7 @@ class ChannelProvider with ChangeNotifier {
       final epgUrl = parsed['epgUrl'] as String?;
       if (epgUrl != null && epgUrl.isNotEmpty) {
         debugLog('ChannelProvider: Found EPG URL: $epgUrl (auto-saving)');
-        await prefs.setString('epg_url', epgUrl);
+        await prefs.setString('custom_epg_url', epgUrl);
         unawaited(_epgService?.initialize()); // Trigger EPG loading
       }
 
@@ -1117,7 +1117,7 @@ class ChannelProvider with ChangeNotifier {
         debugLog(
             'ChannelProvider: Found EPG URL in M3U: $epgUrl (auto-saving)');
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('epg_url', epgUrl);
+        await prefs.setString('custom_epg_url', epgUrl);
         unawaited(_epgService?.initialize()); // Trigger EPG loading
       }
 

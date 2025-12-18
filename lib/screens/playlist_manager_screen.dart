@@ -55,7 +55,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF050710),
+        backgroundColor: AppTheme.darkBackground,
         title: const Text('Delete Playlist'),
         content: Text('Are you sure you want to delete "${playlist.name}"?'),
         actions: [
@@ -209,7 +209,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF050710),
+        backgroundColor: AppTheme.darkBackground,
         title: const Text('Edit Playlist Name'),
         content: TextField(
           controller: nameController,
@@ -306,7 +306,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
       ),
       body: Container(
         decoration: const BoxDecoration(
-          color: Color(0xFF050710),
+          color: AppTheme.darkBackground,
         ),
         child: _isLoading
             ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryBlue))
@@ -426,7 +426,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
             ),
             trailing: PopupMenuButton(
               icon: const Icon(Icons.more_vert, color: AppTheme.textPrimary),
-              color: const Color(0xFF050710),
+              color: AppTheme.darkBackground,
               itemBuilder: (context) => [
                 if (!isActive)
                   PopupMenuItem(

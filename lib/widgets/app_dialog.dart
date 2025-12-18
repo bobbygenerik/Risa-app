@@ -22,7 +22,7 @@ class AppDialog extends StatelessWidget {
       child: Container(
         constraints: const BoxConstraints(maxWidth: 400),
         decoration: BoxDecoration(
-          color: const Color(0xFF050710),
+          color: AppTheme.darkBackground,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(

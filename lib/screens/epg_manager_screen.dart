@@ -66,7 +66,7 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF050710),
+        backgroundColor: AppTheme.darkBackground,
         title: const Text('Clear All EPG Data', style: TextStyle(color: AppTheme.textPrimary)),
         content: const Text(
           'This will remove all EPG data and channel mappings. You will need to reload EPG from settings.',
@@ -123,7 +123,7 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF050710),
+      backgroundColor: AppTheme.darkBackground,
       body: Column(
         children: [
           // Header

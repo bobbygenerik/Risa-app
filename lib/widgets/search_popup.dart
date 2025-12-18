@@ -110,7 +110,7 @@ class _SearchPopupState extends State<SearchPopup> {
             width: 600,
             constraints: const BoxConstraints(maxHeight: 700),
             decoration: BoxDecoration(
-              color: const Color(0xFF050710).withValues(alpha: 0.95),
+              color: AppTheme.darkBackground.withValues(alpha: 0.95),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
             ),

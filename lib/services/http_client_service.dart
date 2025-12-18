@@ -16,15 +16,15 @@ class HttpClientService {
     // Configure HttpClient with connection pooling
     _httpClient = HttpClient()
       ..maxConnectionsPerHost = 6
-      ..connectionTimeout = const Duration(seconds: 10)
-      ..idleTimeout = const Duration(seconds: 30);
+      ..connectionTimeout = const Duration(seconds: 20)
+      ..idleTimeout = const Duration(minutes: 10);
 
     // Configure Dio with connection pooling
     _dio = Dio(BaseOptions(
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 30),
+      connectTimeout: const Duration(seconds: 20),
+      receiveTimeout: const Duration(minutes: 10),
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36',
+        'User-Agent': 'VLC/3.0.0 LibVLC/3.0.0',
         'Connection': 'keep-alive',
         'Accept': '*/*',
       },
@@ -34,6 +34,7 @@ class HttpClientService {
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) {
         options.headers['Connection'] = 'keep-alive';
+        options.headers['User-Agent'] = 'VLC/3.0.0 LibVLC/3.0.0';
         handler.next(options);
       },
     ));
@@ -46,7 +47,7 @@ class HttpClientService {
   bool get isInitialized => _isInitialized;
 
   Map<String, String> get videoHeaders => {
-    'User-Agent': 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36',
+    'User-Agent': 'VLC/3.0.0 LibVLC/3.0.0',
     'Connection': 'keep-alive',
     'Accept': '*/*',
     'Cache-Control': 'no-cache',

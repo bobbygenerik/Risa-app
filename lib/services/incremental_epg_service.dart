@@ -11,6 +11,8 @@ import 'package:path_provider/path_provider.dart';
 class IncrementalEpgService with ChangeNotifier {
   final Map<String, List<Program>> _loadedChannels = {};
   final Set<String> _availableChannels = {};
+  final Map<String, String> _internalToEpgIdMapping = {}; // channelId -> best epgChannelId
+  final Map<String, String> _normalizedAvailableChannels = {}; // normalizedId -> originalId
   bool _isLoading = false;
   String? _error;
   String? _epgUrl;
@@ -28,13 +30,14 @@ class IncrementalEpgService with ChangeNotifier {
 
   Future<void> initialize() async {
     final prefs = await SharedPreferences.getInstance();
-    _epgUrl = prefs.getString('custom_epg_url');
+    // Try both keys - custom_epg_url (set by user) and epg_url (auto-found in M3U)
+    _epgUrl = prefs.getString('custom_epg_url') ?? prefs.getString('epg_url');
     
     if (_epgUrl != null && _epgUrl!.isNotEmpty) {
       debugLog('EPG: Initializing with URL: $_epgUrl');
       await _loadChannelList();
     } else {
-      debugLog('EPG: No URL configured');
+      debugLog('EPG: No URL configured (checked custom_epg_url and epg_url)');
     }
   }
 
@@ -115,6 +118,16 @@ class IncrementalEpgService with ChangeNotifier {
         _availableChannels.clear();
         _availableChannels.addAll(channelIds);
         
+        // Build normalized map for fuzzy matching
+        _normalizedAvailableChannels.clear();
+        for (final id in channelIds) {
+          final normalized = _normalize(id);
+          if (normalized.isNotEmpty) {
+            _normalizedAvailableChannels[normalized] = id;
+          }
+        }
+        _internalToEpgIdMapping.clear();
+        
         // Cache channel list
         final prefs = await SharedPreferences.getInstance();
         await prefs.setStringList(_channelListCacheKey, channelIds.toList());
@@ -133,6 +146,16 @@ class IncrementalEpgService with ChangeNotifier {
           final cached = prefs.getStringList(_channelListCacheKey);
           if (cached != null) {
             _availableChannels.addAll(cached);
+            
+            _normalizedAvailableChannels.clear();
+            for (final id in cached) {
+              final normalized = _normalize(id);
+              if (normalized.isNotEmpty) {
+                _normalizedAvailableChannels[normalized] = id;
+              }
+            }
+            _internalToEpgIdMapping.clear();
+            
             _error = 'Using cached channel list';
           }
           break;
@@ -224,22 +247,69 @@ class IncrementalEpgService with ChangeNotifier {
     notifyListeners();
   }
 
+  String _normalize(String text) {
+    return text.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+  }
+
+  String? _findBestEpgId(String channelId, String? channelName) {
+    // 1. Exact match
+    if (_availableChannels.contains(channelId)) return channelId;
+    
+    // 2. Normalized ID match
+    final normalizedId = _normalize(channelId);
+    if (_normalizedAvailableChannels.containsKey(normalizedId)) {
+      return _normalizedAvailableChannels[normalizedId];
+    }
+    
+    // 3. Name match (if provided)
+    if (channelName != null && channelName.isNotEmpty) {
+      final normalizedName = _normalize(channelName);
+      if (_normalizedAvailableChannels.containsKey(normalizedName)) {
+        return _normalizedAvailableChannels[normalizedName];
+      }
+      
+      // Try stripping common suffixes from name
+      final strippedName = normalizedName.replaceAll(RegExp(r'(hd|fhd|uhd|4k|sd|1080p|720p)$'), '');
+      if (strippedName != normalizedName && _normalizedAvailableChannels.containsKey(strippedName)) {
+        return _normalizedAvailableChannels[strippedName];
+      }
+    }
+    
+    return null;
+  }
+
   DateTime _parseEpgTime(String timeStr) {
     try {
-      // Handle "+0000" or " +0000" or no offset
       // Standard format: YYYYMMDDhhmmss +0000
-      final cleanTime = timeStr.split(RegExp(r'\s|\+')).first;
+      // Example: 20231027120000 +0200
+      final parts = timeStr.trim().split(RegExp(r'\s+'));
+      final mainPart = parts[0];
       
-      if (cleanTime.length >= 14) {
-        // Assume UTC if we strip offset, strictly speaking we should parse offset
-        final year = int.parse(cleanTime.substring(0, 4));
-        final month = int.parse(cleanTime.substring(4, 6));
-        final day = int.parse(cleanTime.substring(6, 8));
-        final hour = int.parse(cleanTime.substring(8, 10));
-        final minute = int.parse(cleanTime.substring(10, 12));
-        final second = int.parse(cleanTime.substring(12, 14));
+      if (mainPart.length >= 14) {
+        final year = int.parse(mainPart.substring(0, 4));
+        final month = int.parse(mainPart.substring(4, 6));
+        final day = int.parse(mainPart.substring(6, 8));
+        final hour = int.parse(mainPart.substring(8, 10));
+        final minute = int.parse(mainPart.substring(10, 12));
+        final second = int.parse(mainPart.substring(12, 14));
         
-        return DateTime.utc(year, month, day, hour, minute, second).toLocal();
+        DateTime utcTime = DateTime.utc(year, month, day, hour, minute, second);
+        
+        // Handle offset if present (e.g., +0200)
+        if (parts.length > 1) {
+          final offsetStr = parts[1];
+          if (offsetStr.length >= 5) {
+            final sign = offsetStr.startsWith('+') ? 1 : -1;
+            final offsetHours = int.parse(offsetStr.substring(1, 3));
+            final offsetMins = int.parse(offsetStr.substring(3, 5));
+            
+            // Subtract offset from the given local time to get UTC
+            // e.g., 12:00 +0200 -> 12:00 - 2 hours = 10:00 UTC
+            utcTime = utcTime.subtract(Duration(hours: sign * offsetHours, minutes: sign * offsetMins));
+          }
+        }
+        
+        return utcTime.toLocal();
       }
     } catch (e) {
       debugLog('Error parsing EPG time "$timeStr": $e');
@@ -247,7 +317,13 @@ class IncrementalEpgService with ChangeNotifier {
     return DateTime.now();
   }
 
-  List<Program> getProgramsForChannel(String channelId) {
+  List<Program> getProgramsForChannel(String channelId, {String? channelName}) {
+    final epgId = _internalToEpgIdMapping[channelId] ?? _findBestEpgId(channelId, channelName);
+    if (epgId != null) {
+      // Update mapping for future direct access
+      _internalToEpgIdMapping[channelId] = epgId;
+      return _loadedChannels[epgId] ?? [];
+    }
     return _loadedChannels[channelId] ?? [];
   }
 
@@ -255,8 +331,14 @@ class IncrementalEpgService with ChangeNotifier {
     return _availableChannels.contains(channelId);
   }
 
-  Program? getCurrentProgram(String channelId) {
-    final programs = getProgramsForChannel(channelId);
+  Program? getCurrentProgram(String channelId, {String? channelName}) {
+    final epgId = _internalToEpgIdMapping[channelId] ?? _findBestEpgId(channelId, channelName);
+    if (epgId == null) return null;
+    
+    // Cache the mapping
+    _internalToEpgIdMapping[channelId] = epgId;
+    
+    final programs = getProgramsForChannel(epgId);
     final now = DateTime.now();
     
     for (final program in programs) {
@@ -272,10 +354,16 @@ class IncrementalEpgService with ChangeNotifier {
 
   // ... (previous code)
 
-  Future<void> ensureChannelLoaded(String channelId) async {
-    if (_loadedChannels.containsKey(channelId) || _pendingBatch.contains(channelId)) return;
+  Future<void> ensureChannelLoaded(String channelId, {String? channelName}) async {
+    final epgId = _internalToEpgIdMapping[channelId] ?? _findBestEpgId(channelId, channelName);
+    if (epgId == null) return;
     
-    _pendingBatch.add(channelId);
+    // Cache the mapping
+    _internalToEpgIdMapping[channelId] = epgId;
+
+    if (_loadedChannels.containsKey(epgId) || _pendingBatch.contains(epgId)) return;
+    
+    _pendingBatch.add(epgId);
     
     _batchTimer?.cancel();
     _batchTimer = Timer(const Duration(milliseconds: 300), () {

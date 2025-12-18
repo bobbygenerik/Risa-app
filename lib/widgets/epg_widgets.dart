@@ -39,7 +39,7 @@ class EPGChannelSidebar extends StatelessWidget {
         controller: controller,
         physics: const ClampingScrollPhysics(),
         itemCount: channels.length + (isLoadingMore ? 1 : 0),
-        itemExtent: 64,
+        itemExtent: 68,
         itemBuilder: (context, index) {
           if (index >= channels.length) {
             return const Center(
@@ -149,7 +149,7 @@ class EPGProgramsGrid extends StatelessWidget {
           controller: verticalController,
           physics: const ClampingScrollPhysics(),
           itemCount: channels.length + (isLoadingMore ? 1 : 0),
-          itemExtent: 64,
+          itemExtent: 68,
           itemBuilder: (context, index) {
             if (index >= channels.length) {
               return const SizedBox(height: 64);
@@ -181,7 +181,7 @@ class EPGProgramRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final channelKey = channel.tvgId ?? channel.id;
-    final programs = epgService.getProgramsForChannel(channelKey);
+    final programs = epgService.getProgramsForChannel(channelKey, channelName: channel.name);
 
     final now = DateTime.now();
     final startHour = now.hour;

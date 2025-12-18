@@ -86,9 +86,19 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       _player, 
       configuration: const VideoControllerConfiguration(
         enableHardwareAcceleration: true,
-
       ),
     );
+
+    // Optimize player for IPTV streams
+    try {
+      _player.setProperty('network-timeout', '60000');
+      _player.setProperty('demuxer-max-bytes', '104857600'); // 100MB buffer
+      _player.setProperty('demuxer-max-back-bytes', '52428800'); // 50MB back buffer
+      _player.setProperty('cache', 'yes');
+      _player.setProperty('cache-secs', '30');
+    } catch (e) {
+      debugLog('MediaKit properties error: $e');
+    }
     
     _setupListeners();
     unawaited(_initializePlayer());
@@ -131,7 +141,14 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     
     _completedSubscription = _player.stream.completed.listen((completed) {
       if (completed) {
+         debugLog('MediaKit: Playback completed');
          unawaited(_handleVideoEnded());
+      }
+    });
+
+    _player.stream.log.listen((log) {
+      if (log.level != 'debug') {
+        debugLog('MediaKit Log: [${log.level}] ${log.message}');
       }
     });
   }
@@ -207,7 +224,12 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
             
             // Subtitle overlay
             if (_subtitleMode == SubtitleMode.liveTranslation)
-              const LiveSubtitleOverlay(showSubtitles: true),
+              Positioned(
+                bottom: context.tvSpacing(80),
+                left: context.tvSpacing(20),
+                right: context.tvSpacing(20),
+                child: const LiveSubtitleOverlay(showSubtitles: true),
+              ),
             
             // Modern streaming controls
             if (_showControls && !_isLoading)

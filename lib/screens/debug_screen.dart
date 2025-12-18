@@ -16,10 +16,10 @@ class _DebugScreenState extends State<DebugScreen> {
     final logs = PerformanceMonitor.getLogs();
     
     return Scaffold(
-      backgroundColor: const Color(0xFF050710),
+      backgroundColor: AppTheme.darkBackground,
       appBar: AppBar(
         title: const Text('Debug Performance'),
-        backgroundColor: const Color(0xFF050710),
+        backgroundColor: AppTheme.darkBackground,
         actions: [
           IconButton(
             icon: const Icon(Icons.clear),

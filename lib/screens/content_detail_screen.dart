@@ -46,7 +46,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF050710),
+      backgroundColor: AppTheme.darkBackground,
       body: Focus(
         onKeyEvent: (node, event) {
           if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.goBack) {
@@ -95,7 +95,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [Colors.transparent, Color(0xFF050710)],
+                          colors: [Colors.transparent, AppTheme.darkBackground],
                         ),
                       ),
                     ),
@@ -286,7 +286,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
   Widget _buildHeroPlaceholder() {
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFF050710),
+        color: AppTheme.darkBackground,
       ),
       child: Center(
         child: Icon(

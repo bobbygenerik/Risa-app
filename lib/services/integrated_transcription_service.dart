@@ -7,6 +7,7 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 import 'package:google_mlkit_language_id/google_mlkit_language_id.dart';
 import 'package:record/record.dart';
+import 'whisper_transcription_service.dart';
 
 /// Integrated On-Device Transcription and Translation Service
 ///
@@ -20,6 +21,8 @@ class IntegratedTranscriptionService extends ChangeNotifier {
   // Speech recognition
   stt.SpeechToText? _speech;
   AudioRecorder? _recorder;
+  WhisperTranscriptionService? _whisperService;
+  String? _lastVideoUrl;
 
   // Translation (ON-DEVICE)
   OnDeviceTranslator? _translator;
@@ -84,8 +87,8 @@ class IntegratedTranscriptionService extends ChangeNotifier {
         targetLanguage: _targetLanguage,
       );
 
-      // Start cleanup timer
-      _cleanupTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      // Start cleanup timer (extended to 300s to avoid interference with playback)
+      _cleanupTimer = Timer.periodic(const Duration(seconds: 300), (_) {
         _cleanupOldSubtitles();
       });
 
@@ -107,20 +110,43 @@ class IntegratedTranscriptionService extends ChangeNotifier {
       debugLog('Starting audio extraction from: $videoUrl');
       
       // Start transcription from video stream audio
-      await startTranscription();
+      await startTranscription(videoUrl: videoUrl);
       
     } catch (e) {
       debugLog('Video stream transcription error: $e');
     }
   }
 
+  /// Attach Whisper service for delegation
+  void attachWhisperService(WhisperTranscriptionService service) {
+    if (_whisperService == service) return;
+    
+    // Remove old listener if exists
+    _whisperService?.removeListener(_onWhisperUpdate);
+    
+    _whisperService = service;
+    _whisperService?.addListener(_onWhisperUpdate);
+    debugLog('Joined IntegratedTranscriptionService with WhisperTranscriptionService');
+  }
+
+  void _onWhisperUpdate() {
+    if (_whisperService == null) return;
+    
+    final newText = _whisperService!.currentText;
+    if (newText.isNotEmpty && newText != _currentText) {
+      _currentText = newText;
+      _addSubtitle(newText);
+    }
+  }
+
   /// Start live transcription from audio stream
-  Future<void> startTranscription({String? audioFilePath}) async {
+  Future<void> startTranscription({String? audioFilePath, String? videoUrl}) async {
     if (!_isInitialized) {
       await initialize();
     }
 
     if (_isTranscribing) return;
+    _lastVideoUrl = videoUrl;
 
     try {
       _isTranscribing = true;
@@ -131,7 +157,6 @@ class IntegratedTranscriptionService extends ChangeNotifier {
         await _transcribeWithWhisper(audioFilePath);
       } else {
         // Use Whisper for live audio transcription from video stream
-        // This will use the downloaded Whisper models for transcription
         await _transcribeWithWhisper('live_stream');
       }
 
@@ -163,12 +188,16 @@ class IntegratedTranscriptionService extends ChangeNotifier {
   
   /// Start live Whisper transcription from video stream
   Future<void> _startLiveWhisperTranscription() async {
-    // This integrates with your Whisper model service
-    // Extract audio from video stream and transcribe in real-time
-    debugLog('Starting live Whisper transcription');
+    debugLog('Delegating live transcription to WhisperTranscriptionService');
     
-    // DEBUG LOOP REMOVED: Was causing UI updates and potential pauses/jank.
-    // Real implementation would attach to audio stream here.
+    if (_whisperService != null && _lastVideoUrl != null) {
+      await _whisperService!.startTranscription(streamUrl: _lastVideoUrl!);
+    } else {
+      debugLog('⚠️ Cannot start live transcription: Whisper service or Video URL missing');
+      // For now, keep _isTranscribing = true so UI doesn't flicker, 
+      // but results won't come in until whisper starts.
+    }
+    
     _isTranscribing = true;
     notifyListeners();
   }
@@ -189,8 +218,12 @@ class IntegratedTranscriptionService extends ChangeNotifier {
 
     try {
       await _speech?.stop();
+      if (_whisperService != null) {
+        await _whisperService!.stopTranscription();
+      }
       _isTranscribing = false;
       _currentText = '';
+      _lastVideoUrl = null;
       notifyListeners();
       debugLog('✅ Transcription stopped');
     } catch (e) {

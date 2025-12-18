@@ -36,35 +36,30 @@ class LiveSubtitleOverlay extends StatelessWidget {
           return const SizedBox.shrink();
         }
 
-        return Positioned(
-          bottom: context.tvSpacing(80),
-          left: context.tvSpacing(20),
-          right: context.tvSpacing(20),
-          child: Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: context.tvSpacing(AppSizes.md),
-              vertical: context.tvSpacing(AppSizes.sm),
-            ),
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(context.tvSpacing(AppSizes.radiusMd)),
-            ),
-            child: Text(
-              subtitles,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: textColor,
-                fontSize: context.tvTextSize(fontSize),
-                fontWeight: FontWeight.w600,
-                height: 1.4,
-                shadows: const [
-                  Shadow(
-                    offset: Offset(1, 1),
-                    blurRadius: 2,
-                    color: Colors.black,
-                  ),
-                ],
-              ),
+        return Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: context.tvSpacing(AppSizes.md),
+            vertical: context.tvSpacing(AppSizes.sm),
+          ),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(context.tvSpacing(AppSizes.radiusMd)),
+          ),
+          child: Text(
+            subtitles,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: textColor,
+              fontSize: context.tvTextSize(fontSize),
+              fontWeight: FontWeight.w600,
+              height: 1.4,
+              shadows: const [
+                Shadow(
+                  offset: Offset(1, 1),
+                  blurRadius: 2,
+                  color: Colors.black,
+                ),
+              ],
             ),
           ),
         );

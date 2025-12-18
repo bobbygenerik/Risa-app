@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
+import 'package:iptv_player/utils/app_theme.dart';
 
 class EpgDiagnosticScreen extends StatelessWidget {
   const EpgDiagnosticScreen({super.key});
@@ -19,10 +20,10 @@ class EpgDiagnosticScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF050710),
+      backgroundColor: AppTheme.darkBackground,
       appBar: AppBar(
         title: const Text('EPG Diagnostic'),
-        backgroundColor: const Color(0xFF050710),
+        backgroundColor: AppTheme.darkBackground,
       ),
       body: Consumer2<IncrementalEpgService, ChannelProvider>(
         builder: (context, epgService, channelProvider, _) {

@@ -22,7 +22,7 @@ class _LegalDisclaimerDialogState extends State<LegalDisclaimerDialog> {
         width: 520,
         padding: const EdgeInsets.all(AppSizes.xl),
         decoration: BoxDecoration(
-          color: const Color(0xFF050710),
+          color: AppTheme.darkBackground,
           borderRadius: BorderRadius.circular(AppSizes.radiusXl),
           border: Border.all(
             color: Colors.white.withValues(alpha: 0.12),

@@ -645,10 +645,16 @@ class _MyAppState extends State<MyApp> {
               return service;
             },
           ),
-          ChangeNotifierProvider(
+          ChangeNotifierProxyProvider<WhisperTranscriptionService,
+              IntegratedTranscriptionService>(
             create: (_) {
               final service = IntegratedTranscriptionService();
               _runDeferred(service.initialize);
+              return service;
+            },
+            update: (_, whisperService, integratedService) {
+              final service = integratedService ?? IntegratedTranscriptionService();
+              service.attachWhisperService(whisperService);
               return service;
             },
           ),

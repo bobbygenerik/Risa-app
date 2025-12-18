@@ -62,6 +62,7 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
     // Get current program from EPG
     final currentProgram = epgService.getCurrentProgram(
       widget.channel.tvgId ?? widget.channel.id,
+      channelName: widget.channel.name,
     );
     
     // Determine the search title

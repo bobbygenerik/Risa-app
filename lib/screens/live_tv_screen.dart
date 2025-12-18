@@ -157,15 +157,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       decoration: const BoxDecoration(
         color: AppColors.background,
       ),
-      child: Consumer2<ChannelProvider, IncrementalEpgService>(
-        builder: (context, channelProvider, epgService, _) {
+      child: Consumer<ChannelProvider>(
+        builder: (context, channelProvider, _) {
           final hasChannels = channelProvider.hasChannels;
 
-          // Show skeleton until channels are loaded AND EPG is loaded (if configured)
-          final shouldShowSkeleton = (!hasChannels && channelProvider.isLoading) || 
-                                     (hasChannels && epgService.hasEpgUrl && epgService.loadedChannelCount == 0 && epgService.isLoading);
-
-          if (shouldShowSkeleton) {
+          if (!hasChannels && channelProvider.isLoading) {
             return _buildSkeletonLoader();
           }
 
@@ -207,36 +203,20 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
           final featuredChannel = channelProvider.getChannelAt(_featuredIndex);
           
-          // Ensure EPG data is loaded for featured channel
-          Program? currentProgram;
-          try {
-            final channelId = featuredChannel.tvgId ?? featuredChannel.id;
-            // Always try to get current program
-            currentProgram = epgService.getCurrentProgram(channelId);
-            // If no program found, trigger EPG loading
-            if (currentProgram == null) {
-              Future.microtask(() => epgService.ensureChannelLoaded(channelId));
-            }
-          } catch (e) {
-            // Ignore EPG errors to prevent freezing
-            currentProgram = null;
-          }
+          // Trigger EPG load for featured channel (quietly)
+          final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
+          final channelId = featuredChannel.tvgId ?? featuredChannel.id;
+          Future.microtask(() => epgService.ensureChannelLoaded(channelId, channelName: featuredChannel.name));
 
           // Get grouped channels (may be empty while computing in background)
           final groupedChannels = channelProvider.getGroupedChannels();
           final isGrouping = channelProvider.isGroupingChannels;
-          
-          // Use preview list for "allChannels" param if implicitly used, 
-          // but the Hero builder doesn't really iterate it except maybe for matching? 
-          // Actually it passes it. Let's pass the preview list for safety or null if unused.
-          // Checking _buildFullScreenHero signature: it takes `List<Channel> allChannels`.
           final previewList = channelProvider.channels;
 
           // Full-screen hero background with all content inside
           return _buildFullScreenHero(
             context,
             featuredChannel,
-            currentProgram,
             previewList,
             groupedChannels,
             isGrouping,
@@ -253,7 +233,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Widget _buildFullScreenHero(
     BuildContext context,
     Channel featuredChannel,
-    Program? currentProgram,
     List<Channel> allChannels,
     Map<String, List<Channel>> groupedChannels,
     bool isGrouping,
@@ -320,11 +299,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   opacity: 1.0 - fadeProgress,
                   child: Stack(
                     children: [
-                      _buildHeroContent(
-                        featuredChannel,
-                        currentProgram,
-                        heroImage,
-                        0.0,
+                      Selector<IncrementalEpgService, (Program?, String?)>(
+                        selector: (_, epg) {
+                          final p = epg.getCurrentProgram(featuredChannel.tvgId ?? featuredChannel.id, channelName: featuredChannel.name);
+                          return (p, _resolveHeroImage(p));
+                        },
+                        builder: (context, data, _) {
+                          return _buildHeroContent(
+                            featuredChannel,
+                            data.$1,
+                            data.$2,
+                            0.0,
+                          );
+                        },
                       ),
                       // Gradient fade at bottom
                       Positioned(
@@ -391,7 +378,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 width: screenSize.width * 0.4,
                 child: Opacity(
                   opacity: 1.0 - fadeProgress,
-                  child: _buildFeaturedInfo(context, featuredChannel, currentProgram),
+                  child: Selector<IncrementalEpgService, Program?>(
+                    selector: (_, epg) => epg.getCurrentProgram(featuredChannel.tvgId ?? featuredChannel.id, channelName: featuredChannel.name),
+                    builder: (context, currentProgram, _) {
+                      return _buildFeaturedInfo(context, featuredChannel, currentProgram);
+                    },
+                  ),
                 ),
               ),
               // Channel logo
@@ -759,11 +751,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         child: Selector<IncrementalEpgService, Program?>(
           selector: (_, epgService) => epgService.getCurrentProgram(
             channel.tvgId ?? channel.id,
+            channelName: channel.name,
           ),
           builder: (context, currentProgram, _) {
             // Trigger lazy load
             if (currentProgram == null) {
-               Provider.of<IncrementalEpgService>(context, listen: false).ensureChannelLoaded(channel.tvgId ?? channel.id);
+               Provider.of<IncrementalEpgService>(context, listen: false).ensureChannelLoaded(
+                 channel.tvgId ?? channel.id,
+                 channelName: channel.name,
+               );
             }
             final isFocused = Focus.of(context).hasFocus;
             final progress = currentProgram?.progressPercentage ?? 0.0;

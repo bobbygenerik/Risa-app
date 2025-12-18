@@ -124,7 +124,7 @@ class M3UParserService {
         } else if (!line.startsWith('#') && currentInfo != null) {
           final channelName = _extractChannelName(currentInfo);
           final channel = Channel(
-            id: DateTime.now().millisecondsSinceEpoch.toString() + i.toString(),
+            id: currentAttributes['tvg-id'] ?? '${channelName}_${line.hashCode.abs()}',
             name: channelName,
             url: line,
             logoUrl: currentAttributes['tvg-logo'],
@@ -233,9 +233,7 @@ class M3UParserService {
         } else {
           // Only add to channels if NOT a movie and NOT a series (i.e., live TV)
           final channel = Channel(
-            id:
-                DateTime.now().millisecondsSinceEpoch.toString() +
-                logicalIndex.toString(),
+            id: currentAttributes['tvg-id'] ?? '${channelName}_${line.hashCode.abs()}_$logicalIndex',
             name: channelName,
             url: line,
             logoUrl: currentAttributes['tvg-logo'],
@@ -305,7 +303,6 @@ class M3UParserService {
     int channelCount = 0;
     int logicalIndex = 0;
     bool headerProcessed = false;
-    final baseTimestamp = DateTime.now().millisecondsSinceEpoch;
 
     void processLogicalLine(String line) {
       if (line.isEmpty) return;
@@ -334,7 +331,7 @@ class M3UParserService {
 
         if (isSeries) {
           seriesMaps.add({
-            'id': '$baseTimestamp$logicalIndex',
+            'id': 'series_${channelName.hashCode.abs()}_$logicalIndex',
             'title': channelName,
             'streamUrl': line,
             'posterUrl': currentAttributes['tvg-logo'],
@@ -344,7 +341,7 @@ class M3UParserService {
           });
         } else if (isMovie) {
           movieMaps.add({
-            'id': '$baseTimestamp$logicalIndex',
+            'id': 'movie_${channelName.hashCode.abs()}_$logicalIndex',
             'title': channelName,
             'streamUrl': line,
             'posterUrl': currentAttributes['tvg-logo'],
@@ -355,7 +352,7 @@ class M3UParserService {
         } else {
           // Live TV channel
           channelMaps.add({
-            'id': '$baseTimestamp$logicalIndex',
+            'id': currentAttributes['tvg-id'] ?? '${channelName}_${line.hashCode.abs()}_$logicalIndex',
             'name': channelName,
             'url': line,
             'logoUrl': currentAttributes['tvg-logo'],
@@ -570,13 +567,12 @@ class M3UParserService {
     }
     
     return Content(
-      id: 'movie_${DateTime.now().millisecondsSinceEpoch}_$index',
+      id: 'movie_${title.hashCode.abs()}_$index',
       title: title,
       type: ContentType.movie,
       videoUrl: url,
       imageUrl: imageUrl,
       genres: genres,
-      addedDate: DateTime.now(),
     );
   }
 
@@ -597,7 +593,7 @@ class M3UParserService {
     }
 
     return Content(
-      id: 'series_${DateTime.now().millisecondsSinceEpoch}_$index',
+      id: 'series_${_cleanSeriesTitle(title).hashCode.abs()}_$index',
       title: _cleanSeriesTitle(title),
       type: ContentType.series,
       videoUrl: url,
