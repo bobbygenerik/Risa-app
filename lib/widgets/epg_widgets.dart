@@ -94,6 +94,7 @@ class EPGChannelItem extends StatelessWidget {
                 border: isFocused
                     ? Border.all(color: AppTheme.primaryBlue, width: 2)
                     : Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
+                // Optimization: No shadow here
               ),
               child: Center(
                 child: SizedBox(

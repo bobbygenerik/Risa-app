@@ -24,6 +24,7 @@ class IncrementalEpgService with ChangeNotifier {
   String? get error => _error;
   Set<String> get availableChannels => _availableChannels;
   int get loadedChannelCount => _loadedChannels.length;
+  bool get hasEpgUrl => _epgUrl != null && _epgUrl!.isNotEmpty;
 
   Future<void> initialize() async {
     final prefs = await SharedPreferences.getInstance();

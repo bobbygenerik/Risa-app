@@ -161,8 +161,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         builder: (context, channelProvider, epgService, _) {
           final hasChannels = channelProvider.hasChannels;
 
-          // Show skeleton only when channels are loading
-          if (!hasChannels && channelProvider.isLoading) {
+          // Show skeleton until channels are loaded AND EPG is loaded (if configured)
+          final shouldShowSkeleton = (!hasChannels && channelProvider.isLoading) || 
+                                     (hasChannels && epgService.hasEpgUrl && epgService.loadedChannelCount == 0 && epgService.isLoading);
+
+          if (shouldShowSkeleton) {
             return _buildSkeletonLoader();
           }
 
@@ -437,8 +440,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               SizedBox(
                 height: context.tvTextSize(14) * 1.3 * 3,
                 child: Text(
-                  description,
-                  style: AppTypography.heroDescription(context),
+                  description.isNotEmpty ? description : 'No description available',
+                  style: AppTypography.heroDescription(context).copyWith(
+                    fontStyle: description.isEmpty ? FontStyle.italic : FontStyle.normal,
+                    color: description.isEmpty ? Colors.white60 : null,
+                  ),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -479,8 +485,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               const SizedBox(height: 16),
               BrandPrimaryButton(
                 onPressed: () => context.push('/player', extra: channel),
-                icon: Icons.play_arrow,
-                label: 'Watch Live',
+                label: 'Watch',
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               ),
             ],
           ),
@@ -792,7 +798,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                   spreadRadius: 2,
                                 ),
                               ]
-                            : TVFocusStyle.defaultShadow,
+                            : null, // Optimization: No shadow when unfocused
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12),
@@ -802,7 +808,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                               Positioned.fill(
                                 child: CachedNetworkImage(
                                   imageUrl: imageUrl,
-                                  fit: (imageUrl == channel.logoUrl) ? BoxFit.contain : BoxFit.cover,
+                                  fit: BoxFit.contain,
                                   memCacheWidth: 400,
                                   placeholder: (_, __) => Container(
                                     decoration: const BoxDecoration(

@@ -103,7 +103,7 @@ class CachedChannelLogo extends StatelessWidget {
       height: size,
       fit: BoxFit.contain,
       memCacheWidth: cacheWidth ?? (size * 2).toInt(),
-      memCacheHeight: cacheHeight ?? (size * 2).toInt(),
+      // memCacheHeight removed to preserve aspect ratio
       placeholder: (context, url) => Container(
         width: size,
         height: size,
