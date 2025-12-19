@@ -38,7 +38,7 @@ android {
         minSdkVersion 26
         targetSdk 36
         versionCode 20
-        versionName "1.9.1"
+        versionName "1.9.6"
     }
     
     // splits {

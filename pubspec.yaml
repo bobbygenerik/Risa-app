@@ -2,7 +2,7 @@ name: iptv_player
 description: "A modern IPTV streaming player application built with Flutter - Stream Hub."
 publish_to: 'none'
 # Version format: MAJOR.MINOR.PATCH+BUILD_NUMBER
-version: 1.0.0+1
+version: 1.9.6+1
 
 # Environment constraints - validated by Flutter tooling
 # SDK constraint format: ">=MIN_VERSION <MAX_VERSION"
