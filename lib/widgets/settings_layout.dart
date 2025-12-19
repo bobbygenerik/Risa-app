@@ -75,6 +75,7 @@ class _SettingsLayoutState extends State<SettingsLayout> {
     return Scaffold(
       backgroundColor: Colors.transparent, 
       body: Container(
+        margin: const EdgeInsets.only(left: 80), // Prevent main sidebar overlap
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,

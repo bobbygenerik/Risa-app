@@ -327,8 +327,8 @@ class _EPGScreenState extends State<EPGScreen>
                       Expanded(
                         child: Row(
                           children: [
-                            // Spacer for main navigation sidebar (48px collapsed)
-                            const SizedBox(width: 48),
+                            // Spacer for main navigation sidebar (80px collapsed)
+                            const SizedBox(width: 80),
                             // Category sidebar
                             _buildCategorySidebar(categoryNames),
                             const SizedBox(width: 16),
