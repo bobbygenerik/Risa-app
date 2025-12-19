@@ -406,27 +406,24 @@ class _PremiumTextFieldState extends State<_PremiumTextField> {
               const SizedBox(width: 12),
             ],
             Expanded(
-              child: IgnorePointer(
-                ignoring: !_isEditing, // Prevent keyboard unless explicitly editing
-                child: TextField(
-                  controller: widget.controller,
-                  focusNode: _isEditing ? null : FocusNode(skipTraversal: true), // Dummy node when not editing
-                  style: TextStyle(
-                    color: _isFocused ? Colors.black : Colors.white,
-                    fontSize: 16,
-                  ),
-                  obscureText: widget.obscureText,
-                  decoration: InputDecoration.collapsed(
-                    hintText: widget.hint,
-                    hintStyle: TextStyle(
-                      color: _isFocused ? Colors.black38 : Colors.white30,
-                    ),
-                  ),
-                  onSubmitted: (_) {
-                    setState(() => _isEditing = false);
-                    widget.focusNode.requestFocus(); // Return focus to container
-                  },
+              child: TextField(
+                controller: widget.controller,
+                focusNode: widget.focusNode,
+                style: TextStyle(
+                  color: _isFocused ? Colors.black : Colors.white,
+                  fontSize: 16,
                 ),
+                obscureText: widget.obscureText,
+                decoration: InputDecoration.collapsed(
+                  hintText: widget.hint,
+                  hintStyle: TextStyle(
+                    color: _isFocused ? Colors.black38 : Colors.white30,
+                  ),
+                ),
+                onSubmitted: (_) {
+                  setState(() => _isEditing = false);
+                  widget.focusNode.unfocus(); // Return focus to container
+                },
               ),
             ),
              if (_isFocused && !_isEditing)

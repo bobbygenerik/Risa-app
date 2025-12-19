@@ -129,9 +129,22 @@ class _SettingsLayoutState extends State<SettingsLayout> {
           // Right Pane: Content
           Expanded(
             child: FocusScope(
-              child: Container(
-                color: AppTheme.darkBackground, 
-                child: widget.content,
+              autofocus: true,
+              child: Focus(
+                onKeyEvent: (node, event) {
+                  if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                  
+                  if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                    // Return focus to sidebar - go back to currently selected menu item
+                    _menuFocusNodes[widget.selectedIndex].requestFocus();
+                    return KeyEventResult.handled;
+                  }
+                  return KeyEventResult.ignored;
+                },
+                child: Container(
+                  color: AppTheme.darkBackground, 
+                  child: widget.content,
+                ),
               ),
             ),
           ),
@@ -163,8 +176,8 @@ class _SettingsLayoutState extends State<SettingsLayout> {
             return KeyEventResult.handled;
           }
         } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-          // Pass focus to content area
-          FocusScope.of(context).nextFocus(); 
+          // Pass focus to content area - let FocusScope handle finding the first focusable element
+          FocusScope.of(context).nextFocus();
           return KeyEventResult.handled;
         } else if (event.logicalKey == LogicalKeyboardKey.goBack) {
             if (widget.onBackToHome != null) {
