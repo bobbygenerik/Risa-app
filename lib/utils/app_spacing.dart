@@ -45,7 +45,8 @@ class AppSpacing {
   // Card dimensions
   static const double cardAspectRatio = 0.57; // 16:9 landscape
   static const double cardPortraitRatio = 1.5; // Portrait cards
-  static const double cardRowHeightMultiplier = 1.8; // Card height + title space
+  static const double cardRowHeightMultiplier =
+      1.8; // Card height + title space
 
   // Border radius
   static const double radiusXs = 4.0;
@@ -95,19 +96,22 @@ extension AppSpacingExtension on BuildContext {
   double cardSpacing() => tvSpacing(AppSpacing.cardSpacing);
   double rowSpacing() => tvSpacing(AppSpacing.rowSpacing);
 
-  // Responsive card dimensions
+  // Responsive card dimensions - increased for better streaming app feel
   double cardWidth() {
     final screenWidth = MediaQuery.of(this).size.width;
     final isLandscape = screenWidth > MediaQuery.of(this).size.height;
-    return isLandscape ? (screenWidth / 6.5) : (screenWidth / 3.5);
+    // Show fewer cards per row (larger cards) like major streaming apps
+    return isLandscape ? (screenWidth / 5.0) : (screenWidth / 3.0);
   }
 
   double cardHeight() => cardWidth() * AppSpacing.cardPortraitRatio;
   double rowHeight() => cardWidth() * AppSpacing.cardRowHeightMultiplier;
 
   // Hero section dimensions
-  double heroHeight() => MediaQuery.of(this).size.height * AppSpacing.heroHeightRatio;
-  double heroInfoWidth() => MediaQuery.of(this).size.width * AppSpacing.heroInfoWidth;
+  double heroHeight() =>
+      MediaQuery.of(this).size.height * AppSpacing.heroHeightRatio;
+  double heroInfoWidth() =>
+      MediaQuery.of(this).size.width * AppSpacing.heroInfoWidth;
 
   // Sidebar dimensions with TV scaling
   double sidebarWidth() => AppSpacing.sidebarWidth;
@@ -120,9 +124,9 @@ extension AppSpacingExtension on BuildContext {
   EdgeInsets get cardPaddingInsets => EdgeInsets.all(cardPadding());
   EdgeInsets get dialogPaddingInsets => EdgeInsets.all(dialogPadding());
   EdgeInsets get buttonPaddingInsets => EdgeInsets.symmetric(
-    horizontal: spacingLg(),
-    vertical: spacingMd(),
-  );
+        horizontal: spacingLg(),
+        vertical: spacingMd(),
+      );
 
   // Common margin patterns
   EdgeInsets get sectionMargin => EdgeInsets.only(bottom: sectionSpacing());
@@ -131,8 +135,10 @@ extension AppSpacingExtension on BuildContext {
 
   // Border radius with TV scaling
   BorderRadius get cardRadius => BorderRadius.circular(AppSpacing.radiusCard);
-  BorderRadius get buttonRadius => BorderRadius.circular(AppSpacing.radiusButton);
-  BorderRadius get dialogRadius => BorderRadius.circular(AppSpacing.radiusDialog);
+  BorderRadius get buttonRadius =>
+      BorderRadius.circular(AppSpacing.radiusButton);
+  BorderRadius get dialogRadius =>
+      BorderRadius.circular(AppSpacing.radiusDialog);
 
   // Common SizedBox widgets
   Widget get spacingXsBox => SizedBox(height: spacingXs(), width: spacingXs());
@@ -140,7 +146,8 @@ extension AppSpacingExtension on BuildContext {
   Widget get spacingMdBox => SizedBox(height: spacingMd(), width: spacingMd());
   Widget get spacingLgBox => SizedBox(height: spacingLg(), width: spacingLg());
   Widget get spacingXlBox => SizedBox(height: spacingXl(), width: spacingXl());
-  Widget get spacingXxlBox => SizedBox(height: spacingXxl(), width: spacingXxl());
+  Widget get spacingXxlBox =>
+      SizedBox(height: spacingXxl(), width: spacingXxl());
 
   Widget spacingVertical(double value) => SizedBox(height: spacing(value));
   Widget spacingHorizontal(double value) => SizedBox(width: spacing(value));

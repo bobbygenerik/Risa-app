@@ -16,8 +16,8 @@ class BrandPrimaryButton extends StatefulWidget {
     required this.label,
     required this.onPressed,
     this.icon,
-    this.padding = const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-    this.borderRadius = 10,
+    this.padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+    this.borderRadius = 8,
     this.expand = false,
   });
 
@@ -43,14 +43,15 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
       duration: AppDurations.fast,
       decoration: BoxDecoration(
         color: pressedColor,
-        borderRadius: BorderRadius.circular(context.tvSpacing(widget.borderRadius)),
+        borderRadius:
+            BorderRadius.circular(context.tvSpacing(widget.borderRadius)),
       ),
       padding: EdgeInsets.symmetric(
-        horizontal: context.tvSpacing(24),
-        vertical: context.tvSpacing(16).clamp(14.0, 20.0),
+        horizontal: context.tvSpacing(16),
+        vertical: context.tvSpacing(12).clamp(10.0, 16.0),
       ),
       constraints: BoxConstraints(
-        minHeight: context.tvSpacing(48).clamp(44.0, 56.0),
+        minHeight: context.tvSpacing(36).clamp(32.0, 44.0),
       ),
       child: Row(
         mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
@@ -69,7 +70,7 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: context.tvTextSize(16).clamp(14.0, 18.0),
+                  fontSize: context.tvTextSize(14).clamp(12.0, 16.0),
                   fontWeight: FontWeight.w600,
                   height: 1.2,
                 ),
@@ -150,8 +151,8 @@ class BrandSecondaryButton extends StatefulWidget {
     required this.label,
     required this.onPressed,
     this.icon,
-    this.padding = const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-    this.borderRadius = 10,
+    this.padding = const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+    this.borderRadius = 8,
     this.expand = false,
   });
 
@@ -170,7 +171,10 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
         gradient: LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
-          colors: [AppTheme.primaryBlue, AppTheme.primaryBlue.withAlpha((0.9 * 255).round())],
+          colors: [
+            AppTheme.primaryBlue,
+            AppTheme.primaryBlue.withAlpha((0.9 * 255).round())
+          ],
         ),
         borderRadius: BorderRadius.circular(widget.borderRadius),
       ),
@@ -180,20 +184,22 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
           decoration: BoxDecoration(
             color: Colors.transparent,
             borderRadius: BorderRadius.circular(widget.borderRadius - 2),
-            boxShadow: _focused ? [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ] : null,
+            boxShadow: _focused
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
           ),
           padding: EdgeInsets.symmetric(
-            horizontal: context.tvSpacing(20),
-            vertical: context.tvSpacing(14).clamp(12.0, 18.0),
+            horizontal: context.tvSpacing(14),
+            vertical: context.tvSpacing(10).clamp(8.0, 14.0),
           ),
           constraints: BoxConstraints(
-            minHeight: context.tvSpacing(44).clamp(40.0, 52.0),
+            minHeight: context.tvSpacing(32).clamp(28.0, 40.0),
           ),
           child: Row(
             mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
@@ -213,7 +219,7 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: context.tvTextSize(16).clamp(14.0, 18.0),
+                      fontSize: context.tvTextSize(14).clamp(12.0, 16.0),
                       fontWeight: FontWeight.w600,
                       height: 1.2,
                     ),

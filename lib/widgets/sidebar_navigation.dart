@@ -45,7 +45,6 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
   late List<FocusNode> _tabFocusNodes;
   late int _activeTabIndex;
 
-
   late FocusNode _overflowButtonFocusNode;
   bool _isExpanded = false;
 
@@ -55,8 +54,16 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
     NavTab(id: 'home', label: 'Live TV', icon: Icons.live_tv, route: '/home'),
     NavTab(id: 'movies', label: 'Movies', icon: Icons.movie, route: '/movies'),
     NavTab(id: 'series', label: 'Series', icon: Icons.tv, route: '/series'),
-    NavTab(id: 'favorites', label: 'Favorites', icon: Icons.favorite, route: '/favorites'),
-    NavTab(id: 'downloads', label: 'Downloads', icon: Icons.download, route: '/downloads'),
+    NavTab(
+        id: 'favorites',
+        label: 'Favorites',
+        icon: Icons.favorite,
+        route: '/favorites'),
+    NavTab(
+        id: 'downloads',
+        label: 'Downloads',
+        icon: Icons.download,
+        route: '/downloads'),
   ];
 
   @override
@@ -124,6 +131,10 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
     if (_tabs.isNotEmpty) {
       final index = _activeTabIndex.clamp(0, _tabs.length - 1);
       _tabFocusNodes[index].requestFocus();
+      // Auto-expand when sidebar gets focus
+      if (!_isExpanded) {
+        setState(() => _isExpanded = true);
+      }
       return true;
     }
     return false;
@@ -131,7 +142,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
 
   void _navigateToTab(int targetIndex) {
     if (targetIndex < 0 || targetIndex >= _tabs.length) return;
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _tabFocusNodes[targetIndex].requestFocus();
@@ -197,41 +208,46 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
               curve: Curves.easeOut,
               height: 32,
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              decoration: isFocused ? BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ) : null,
+              decoration: isFocused
+                  ? BoxDecoration(
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    )
+                  : null,
               alignment: Alignment.center,
               child: _isExpanded
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        tab.icon,
-                        color: isActive ? AppTheme.primaryBlue : Colors.white70,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        tab.label,
-                        style: TextStyle(
-                          color: isActive ? AppTheme.primaryBlue : Colors.white70,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          tab.icon,
+                          color:
+                              isActive ? AppTheme.primaryBlue : Colors.white70,
+                          size: 16,
                         ),
-                      ),
-                    ],
-                  )
-                : Icon(
-                    tab.icon,
-                    color: isActive ? AppTheme.primaryBlue : Colors.white70,
-                    size: 16,
-                  ),
+                        const SizedBox(width: 8),
+                        Text(
+                          tab.label,
+                          style: TextStyle(
+                            color: isActive
+                                ? AppTheme.primaryBlue
+                                : Colors.white70,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Icon(
+                      tab.icon,
+                      color: isActive ? AppTheme.primaryBlue : Colors.white70,
+                      size: 16,
+                    ),
             ),
           );
         },
@@ -245,7 +261,6 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
 
     return Focus(
       focusNode: _tabFocusNodes[index],
-
       onKeyEvent: (node, event) {
         if (event is! KeyDownEvent) return KeyEventResult.ignored;
         if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
@@ -301,41 +316,46 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
               curve: Curves.easeOut,
               height: 32,
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              decoration: isFocused ? BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ) : null,
+              decoration: isFocused
+                  ? BoxDecoration(
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    )
+                  : null,
               alignment: Alignment.center,
               child: _isExpanded
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        tab.icon,
-                        color: isActive ? AppTheme.primaryBlue : Colors.white70,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        tab.label,
-                        style: TextStyle(
-                          color: isActive ? AppTheme.primaryBlue : Colors.white70,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          tab.icon,
+                          color:
+                              isActive ? AppTheme.primaryBlue : Colors.white70,
+                          size: 16,
                         ),
-                      ),
-                    ],
-                  )
-                : Icon(
-                    tab.icon,
-                    color: isActive ? AppTheme.primaryBlue : Colors.white70,
-                    size: 16,
-                  ),
+                        const SizedBox(width: 8),
+                        Text(
+                          tab.label,
+                          style: TextStyle(
+                            color: isActive
+                                ? AppTheme.primaryBlue
+                                : Colors.white70,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Icon(
+                      tab.icon,
+                      color: isActive ? AppTheme.primaryBlue : Colors.white70,
+                      size: 16,
+                    ),
             ),
           );
         },
@@ -366,9 +386,9 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                   Padding(
                     padding: const EdgeInsets.only(top: 4, bottom: 4),
                     child: Image(
-                      image: AssetImage(_isExpanded 
-                        ? 'assets/images/croppedlogo2.png'
-                        : 'assets/images/lonelogo (1).png'),
+                      image: AssetImage(_isExpanded
+                          ? 'assets/images/croppedlogo2.png'
+                          : 'assets/images/lonelogo (1).png'),
                       height: _isExpanded ? 28 : 20,
                     ),
                   ),
@@ -377,21 +397,21 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                       policy: WidgetOrderTraversalPolicy(),
                       child: Column(
                         children: [
-
                           const Spacer(),
                           ..._tabs.map((tab) {
                             final index = _tabs.indexOf(tab);
                             return Container(
                               padding: const EdgeInsets.symmetric(vertical: 4),
-                              child: tab.id == 'search' 
-                                ? _buildSearchButton(index)
-                                : _buildTabButton(index),
+                              child: tab.id == 'search'
+                                  ? _buildSearchButton(index)
+                                  : _buildTabButton(index),
                             );
                           }),
                           const Spacer(),
                           Container(
                             padding: const EdgeInsets.only(bottom: 8),
-                            child: _buildBottomButton(Icons.settings, 'Settings', '/settings'),
+                            child: _buildBottomButton(
+                                Icons.settings, 'Settings', '/settings'),
                           ),
                         ],
                       ),
@@ -447,41 +467,43 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
               duration: const Duration(milliseconds: 140),
               height: 32,
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              decoration: isFocused ? BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ) : null,
+              decoration: isFocused
+                  ? BoxDecoration(
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    )
+                  : null,
               alignment: Alignment.center,
               child: _isExpanded
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        icon, 
-                        color: isActive ? AppTheme.primaryBlue : Colors.white70, 
-                        size: 16
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        label,
-                        style: TextStyle(
-                          color: isActive ? AppTheme.primaryBlue : Colors.white70,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(icon,
+                            color: isActive
+                                ? AppTheme.primaryBlue
+                                : Colors.white70,
+                            size: 16),
+                        const SizedBox(width: 8),
+                        Text(
+                          label,
+                          style: TextStyle(
+                            color: isActive
+                                ? AppTheme.primaryBlue
+                                : Colors.white70,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
-                    ],
-                  )
-                : Icon(
-                    icon, 
-                    color: isActive ? AppTheme.primaryBlue : Colors.white70, 
-                    size: 16
-                  ),
+                      ],
+                    )
+                  : Icon(icon,
+                      color: isActive ? AppTheme.primaryBlue : Colors.white70,
+                      size: 16),
             ),
           );
         },

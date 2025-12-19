@@ -17,6 +17,7 @@ import 'package:iptv_player/widgets/settings_layout.dart';
 import 'package:iptv_player/widgets/settings_tile_widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
+import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/profile_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -235,31 +236,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         
         // Playlist Status
-        Consumer<ChannelProvider>(
-          builder: (context, provider, _) {
-            final hasChannels = provider.hasChannels;
+        Consumer2<ChannelProvider, ContentProvider>(
+          builder: (context, channelProvider, contentProvider, _) {
+            final hasChannels = channelProvider.hasChannels;
+            final totalContent = channelProvider.channelCount + contentProvider.movies.length + contentProvider.series.length;
+            final hasContent = hasChannels || contentProvider.movies.isNotEmpty || contentProvider.series.isNotEmpty;
+            
             return Container(
               padding: const EdgeInsets.all(16),
               margin: const EdgeInsets.only(bottom: 24),
               decoration: BoxDecoration(
-                color: hasChannels ? AppTheme.accentGreen.withValues(alpha: 0.1) : AppTheme.accentRed.withValues(alpha: 0.1),
+                color: hasContent ? AppTheme.accentGreen.withValues(alpha: 0.1) : AppTheme.accentRed.withValues(alpha: 0.1),
                 border: Border.all(
-                  color: hasChannels ? AppTheme.accentGreen.withValues(alpha: 0.3) : AppTheme.accentRed.withValues(alpha: 0.3),
+                  color: hasContent ? AppTheme.accentGreen.withValues(alpha: 0.3) : AppTheme.accentRed.withValues(alpha: 0.3),
                 ),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 children: [
                   Icon(
-                    hasChannels ? Icons.check_circle : Icons.error_outline,
-                    color: hasChannels ? AppTheme.accentGreen : AppTheme.accentRed,
+                    hasContent ? Icons.check_circle : Icons.error_outline,
+                    color: hasContent ? AppTheme.accentGreen : AppTheme.accentRed,
                   ),
                   const SizedBox(width: 16),
-                  Text(
-                    hasChannels ? '${provider.channelCount} channels loaded' : 'No playlist loaded',
-                    style: TextStyle(
-                      color: hasChannels ? AppTheme.accentGreen : AppTheme.accentRed,
-                      fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          hasContent ? '$totalContent items loaded' : 'No playlist loaded',
+                          style: TextStyle(
+                            color: hasContent ? AppTheme.accentGreen : AppTheme.accentRed,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        if (hasContent) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            '${channelProvider.channelCount} channels • ${contentProvider.movies.length} movies • ${contentProvider.series.length} series',
+                            style: TextStyle(
+                              color: hasContent ? AppTheme.accentGreen : AppTheme.accentRed,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ]
+                      ],
                     ),
                   ),
                 ],
@@ -269,7 +290,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
 
         SettingsGroup(
-          title: 'Playlist Source',
+          title: 'Playlists',
           children: [
             SettingsActionTile(
               title: _playlistInputMethod == 0 ? 'Input Method: M3U URL' : 'Input Method: Xtream Codes',
@@ -298,6 +319,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 icon: Icons.clear,
                 focusNode: _clearM3uButtonFocusNode,
                 onTap: () => _m3uUrlController.clear(),
+              ),
+              SettingsActionTile(
+                title: 'Manage Playlists',
+                icon: Icons.playlist_add_check,
+                onTap: _showManagePlaylistsDialog,
               ),
             ] else ...[
               SettingsInputTile(
@@ -336,12 +362,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 focusNode: _clearXtreamButtonFocusNode,
                 onTap: _clearXtreamFields,
               ),
+              SettingsActionTile(
+                title: 'Manage Playlists',
+                icon: Icons.playlist_add_check,
+                onTap: _showManagePlaylistsDialog,
+              ),
             ],
           ],
         ),
 
         SettingsGroup(
-          title: 'EPG Configuration',
+          title: 'EPG',
           children: [
             SettingsInputTile(
               label: 'Primary EPG URL',
@@ -857,5 +888,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
         ),
       ));
+  }
+
+  void _showManagePlaylistsDialog() {
+    context.push('/playlist-management');
   }
 }

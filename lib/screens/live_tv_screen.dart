@@ -43,7 +43,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   final TimerService _timerService = TimerService();
   final FocusPoolService _focusPool = FocusPoolService();
   late final ScrollController _scrollController;
-  
+
   late final FocusNode _heroFocus;
   late final FocusNode _settingsButtonFocus;
   final Map<String, String?> _programArtwork = {};
@@ -56,13 +56,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   void initState() {
     super.initState();
     _tmdbEnabled = ServiceValidator.isTmdbAvailable;
-    
+
     // Initialize scroll controller
     _scrollController = ScrollController();
-    
+
     // Get focus nodes from pool
-    _heroFocus = _focusPool.getFocusNode('live_tv_hero', debugLabel: 'Live TV Hero');
-    _settingsButtonFocus = _focusPool.getFocusNode('live_tv_settings', debugLabel: 'Live TV Settings');
+    _heroFocus =
+        _focusPool.getFocusNode('live_tv_hero', debugLabel: 'Live TV Hero');
+    _settingsButtonFocus = _focusPool.getFocusNode('live_tv_settings',
+        debugLabel: 'Live TV Settings');
     // Start carousel once the widget is built - will be updated when channels load
     WidgetsBinding.instance.addPostFrameCallback(
       (_) {
@@ -71,12 +73,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       },
     );
   }
-
-
-
-
-
-
 
   @override
   void dispose() {
@@ -145,15 +141,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (!channelProvider.hasChannels) return;
     setState(() {
       // Simply cycle to previous channel without EPG dependency
-      _featuredIndex = (_featuredIndex - 1 + channelProvider.channelCount) % channelProvider.channelCount;
+      _featuredIndex = (_featuredIndex - 1 + channelProvider.channelCount) %
+          channelProvider.channelCount;
     });
   }
 
-
-
   @override
   Widget build(BuildContext context) {
-
     final body = Container(
       decoration: const BoxDecoration(
         color: AppColors.background,
@@ -203,11 +197,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           if (_featuredIndex >= totalChannels) _featuredIndex = 0;
 
           final featuredChannel = channelProvider.getChannelAt(_featuredIndex);
-          
+
           // Trigger EPG load for featured channel (quietly)
-          final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
+          final epgService =
+              Provider.of<IncrementalEpgService>(context, listen: false);
           final channelId = featuredChannel.tvgId ?? featuredChannel.id;
-          Future.microtask(() => epgService.ensureChannelLoaded(channelId, channelName: featuredChannel.name));
+          Future.microtask(() => epgService.ensureChannelLoaded(channelId,
+              channelName: featuredChannel.name));
 
           // Get grouped channels (may be empty while computing in background)
           final groupedChannels = channelProvider.getGroupedChannels();
@@ -228,8 +224,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     return body;
   }
-
-
 
   Widget _buildFullScreenHero(
     BuildContext context,
@@ -284,9 +278,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 right: 0,
                 height: heroHeight,
                 child: Builder(builder: (context) {
-                  final scrollPos = _scrollController.hasClients ? _scrollController.offset : 0.0;
-                  final fadeProgress = (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
-                  
+                  final scrollPos = _scrollController.hasClients
+                      ? _scrollController.offset
+                      : 0.0;
+                  final fadeProgress =
+                      (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
+
                   return Opacity(
                     opacity: 1.0 - fadeProgress,
                     child: Stack(
@@ -310,7 +307,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                 end: Alignment.bottomCenter,
                                 colors: [
                                   Colors.transparent,
-                                  AppTheme.darkBackground.withAlpha((0.8 * 255).round()),
+                                  AppTheme.darkBackground
+                                      .withAlpha((0.8 * 255).round()),
                                   AppTheme.darkBackground,
                                 ],
                               ),
@@ -324,15 +322,20 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               ),
               // Hero info overlay
               Positioned(
-                bottom: heroHeight * 0.15, // Lowered from 0.25 for better artwork exposure
+                bottom: heroHeight *
+                    0.15, // Lowered from 0.25 for better artwork exposure
                 left: sidebarWidth,
                 width: screenSize.width * 0.4,
                 child: Builder(builder: (context) {
-                  final scrollPos = _scrollController.hasClients ? _scrollController.offset : 0.0;
-                  final fadeProgress = (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
+                  final scrollPos = _scrollController.hasClients
+                      ? _scrollController.offset
+                      : 0.0;
+                  final fadeProgress =
+                      (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
                   return Opacity(
                     opacity: 1.0 - fadeProgress,
-                    child: _buildFeaturedInfo(context, featuredChannel, currentProgram),
+                    child: _buildFeaturedInfo(
+                        context, featuredChannel, currentProgram),
                   );
                 }),
               ),
@@ -341,8 +344,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 top: AppSizes.lg,
                 right: AppSizes.lg,
                 child: Builder(builder: (context) {
-                  final scrollPos = _scrollController.hasClients ? _scrollController.offset : 0.0;
-                  final fadeProgress = (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
+                  final scrollPos = _scrollController.hasClients
+                      ? _scrollController.offset
+                      : 0.0;
+                  final fadeProgress =
+                      (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
                   return Opacity(
                     opacity: 1.0 - fadeProgress,
                     child: _buildChannelLogo(context, featuredChannel),
@@ -374,7 +380,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                             if (isGrouping && groupedChannels.isEmpty)
                               _buildCategoryLoadingIndicator()
                             else
-                              ..._buildCategoryRows(context, groupedChannels, isTV),
+                              ..._buildCategoryRows(
+                                  context, groupedChannels, isTV),
                             SizedBox(height: 16),
                           ],
                         ),
@@ -401,75 +408,76 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     return Container(
       padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Title - fixed height
-              SizedBox(
-                height: context.tvTextSize(24) * 1.3 * 2,
-                child: Text(
-                  title,
-                  style: AppTypography.heroTitle(context),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              SizedBox(height: context.tvSpacing(8)),
-              // Description - fixed height
-              SizedBox(
-                height: context.tvTextSize(14) * 1.3 * 3,
-                child: Text(
-                  description.isNotEmpty ? description : 'No description available',
-                  style: AppTypography.heroDescription(context).copyWith(
-                    fontStyle: description.isEmpty ? FontStyle.italic : FontStyle.normal,
-                    color: description.isEmpty ? Colors.white60 : null,
-                  ),
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              SizedBox(height: context.tvSpacing(8)),
-              // Progress bar - fixed height
-              SizedBox(
-                height: 6,
-                child: program != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: LinearProgressIndicator(
-                          value: progress,
-                          backgroundColor: AppColors.progressBackground,
-                          color: AppColors.progressForeground,
-                          minHeight: 6,
-                        ),
-                      )
-                    : Container(),
-              ),
-              SizedBox(height: context.tvSpacing(4)),
-              // Time range with LIVE badge - fixed height
-              SizedBox(
-                height: context.tvTextSize(13) * 1.4,
-                child: Row(
-                  children: [
-                    if (program != null) ...[
-                      const BrandBadge.live(),
-                      const SizedBox(width: 8),
-                    ],
-                    Text(
-                      timeRange,
-                      style: AppTypography.smallText(context),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              BrandPrimaryButton(
-                onPressed: () => context.push('/player', extra: channel),
-                label: 'Watch',
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              ),
-            ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Title - fixed height
+          SizedBox(
+            height: context.tvTextSize(24) * 1.3 * 2,
+            child: Text(
+              title,
+              style: AppTypography.heroTitle(context),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
+          SizedBox(height: context.tvSpacing(8)),
+          // Description - fixed height
+          SizedBox(
+            height: context.tvTextSize(14) * 1.3 * 3,
+            child: Text(
+              description.isNotEmpty ? description : 'No description available',
+              style: AppTypography.heroDescription(context).copyWith(
+                fontStyle:
+                    description.isEmpty ? FontStyle.italic : FontStyle.normal,
+                color: description.isEmpty ? Colors.white60 : null,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          SizedBox(height: context.tvSpacing(8)),
+          // Progress bar - fixed height
+          SizedBox(
+            height: 6,
+            child: program != null
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      backgroundColor: AppColors.progressBackground,
+                      color: AppColors.progressForeground,
+                      minHeight: 6,
+                    ),
+                  )
+                : Container(),
+          ),
+          SizedBox(height: context.tvSpacing(4)),
+          // Time range with LIVE badge - fixed height
+          SizedBox(
+            height: context.tvTextSize(13) * 1.4,
+            child: Row(
+              children: [
+                if (program != null) ...[
+                  const BrandBadge.live(),
+                  const SizedBox(width: 8),
+                ],
+                Text(
+                  timeRange,
+                  style: AppTypography.smallText(context),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          BrandPrimaryButton(
+            onPressed: () => context.push('/player', extra: channel),
+            label: 'Watch',
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          ),
+        ],
+      ),
     );
   }
 
@@ -491,8 +499,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
-
-
   String? _getChannelCardImage(Program? program, Channel? channel) {
     // Try program artwork first
     if (program != null) {
@@ -501,18 +507,18 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       if (cached != null && cached.isNotEmpty) {
         return cached;
       }
-      
+
       // Try direct program image
       if (program.imageUrl != null && program.imageUrl!.isNotEmpty) {
         return program.imageUrl;
       }
-      
+
       // Fetch TMDB image if enabled and not already cached
       if (_tmdbEnabled && !_programArtwork.containsKey(program.id)) {
         _fetchProgramArtwork(program);
       }
     }
-    
+
     // Only use channel-based TMDB artwork if no program artwork found
     // Don't fall back to channel logos for cards
     if (channel != null && program != null) {
@@ -521,13 +527,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       if (cachedChannelArt != null && cachedChannelArt.isNotEmpty) {
         return cachedChannelArt;
       }
-      
+
       // Fetch TMDB artwork based on channel name if enabled
       if (_tmdbEnabled && !_artworkRequests.contains(channelKey)) {
         _fetchChannelArtwork(channel);
       }
     }
-    
+
     // Return null instead of falling back to channel logo
     return null;
   }
@@ -653,7 +659,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final isLandscape = screenWidth > screenHeight;
-    final cardWidth = isLandscape ? (screenWidth / 6) : (screenWidth / 4); // 6 cards per row for premium look
+    final cardWidth = isLandscape
+        ? (screenWidth / 5)
+        : (screenWidth / 3); // 5 cards per row for premium look
     final cardHeight = cardWidth * 0.57;
     final rowHeight = cardHeight + 80;
 
@@ -665,9 +673,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           child: Text(
             title,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: AppTheme.textPrimary,
-              fontWeight: FontWeight.w700,
-            ),
+                  color: AppTheme.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
           ),
         ),
         SizedBox(
@@ -678,8 +686,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             itemCount: channels.length,
             itemExtent: cardWidth + AppSizes.lg,
             itemBuilder: (context, index) {
-              return _buildChannelCard(
-                  context, channels[index], cardWidth, cardHeight, index, channels.length);
+              return _buildChannelCard(context, channels[index], cardWidth,
+                  cardHeight, index, channels.length);
             },
           ),
         ),
@@ -728,10 +736,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               _heroFocus.requestFocus();
               return KeyEventResult.handled;
             }
-            if (event.logicalKey == LogicalKeyboardKey.arrowLeft && index == 0) {
-               // Only open sidebar if we are at the start of the list
-               requestNavigationFocus();
-               return KeyEventResult.handled;
+            if (event.logicalKey == LogicalKeyboardKey.arrowLeft &&
+                index == 0) {
+              // Only open sidebar if we are at the start of the list
+              requestNavigationFocus();
+              return KeyEventResult.handled;
             }
           }
           return KeyEventResult.ignored;
@@ -744,10 +753,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           builder: (context, currentProgram, _) {
             // Trigger lazy load
             if (currentProgram == null) {
-               Provider.of<IncrementalEpgService>(context, listen: false).ensureChannelLoaded(
-                 channel.tvgId ?? channel.id,
-                 channelName: channel.name,
-               );
+              Provider.of<IncrementalEpgService>(context, listen: false)
+                  .ensureChannelLoaded(
+                channel.tvgId ?? channel.id,
+                channelName: channel.name,
+              );
             }
             final isFocused = Focus.of(context).hasFocus;
             final progress = currentProgram?.progressPercentage ?? 0.0;
@@ -809,7 +819,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                     child: Center(
                                       child: Icon(
                                         Icons.tv,
-                                        color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
+                                        color: AppTheme.primaryBlue
+                                            .withAlpha((0.4 * 255).round()),
                                         size: 32,
                                       ),
                                     ),
@@ -829,7 +840,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                     child: Center(
                                       child: Icon(
                                         Icons.tv,
-                                        color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
+                                        color: AppTheme.primaryBlue
+                                            .withAlpha((0.4 * 255).round()),
                                         size: 32,
                                       ),
                                     ),
@@ -852,7 +864,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                 child: Center(
                                   child: Icon(
                                     Icons.tv,
-                                    color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
+                                    color: AppTheme.primaryBlue
+                                        .withAlpha((0.4 * 255).round()),
                                     size: 32,
                                   ),
                                 ),
@@ -912,7 +925,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                     ),
                                     child: LinearProgressIndicator(
                                       value: progress,
-                                      backgroundColor: Colors.black.withAlpha((0.4 * 255).round()),
+                                      backgroundColor: Colors.black
+                                          .withAlpha((0.4 * 255).round()),
                                       color: AppTheme.primaryBlue,
                                       minHeight: 4,
                                     ),
@@ -980,10 +994,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       ),
     );
   }
-
-
-
-
 
   Widget _buildDefaultHeroBackground() {
     return Container(
@@ -1058,15 +1068,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         : _buildDefaultHeroBackground();
   }
 
-
   Widget _buildSkeletonLoader() {
     final screenSize = MediaQuery.of(context).size;
     final heroHeight = screenSize.height * 0.85; // Matches real height
     final sidebarWidth = AppSizes.sidebarCollapsedWidth + AppSizes.lg;
     final isLandscape = screenSize.width > screenSize.height;
-    final cardWidth = isLandscape ? (screenSize.width / 5.5) : (screenSize.width / 3.5);
+    final cardWidth = isLandscape ? (screenSize.width / 4.0) : (screenSize.width / 3.0);
     final cardHeight = cardWidth * 0.57;
-    final rowHeight = cardHeight + 120;
+    final rowHeight = cardWidth * 1.8;
 
     return Shimmer(
       child: Stack(
@@ -1094,215 +1103,236 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           Positioned(
             bottom: heroHeight * 0.35,
             left: sidebarWidth,
-          width: screenSize.width * 0.4,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Title skeleton - matches 2-line height
-              Container(
-                height: context.tvTextSize(24) * 1.3 * 2,
-                width: screenSize.width * 0.3,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-              SizedBox(height: context.tvSpacing(8)),
-              // Description skeleton - matches 3-line height
-              Container(
-                height: context.tvTextSize(14) * 1.3 * 3,
-                width: screenSize.width * 0.35,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-              SizedBox(height: context.tvSpacing(8)),
-              // Progress bar skeleton - exact height
-              Container(
-                height: 6,
-                width: screenSize.width * 0.25,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              ),
-              SizedBox(height: context.tvSpacing(4)),
-              // Time range with LIVE badge skeleton
-              SizedBox(
-                height: context.tvTextSize(13) * 1.4,
-                child: Row(
-                  children: [
-                    Container(
-                      width: 32,
-                      height: 16,
-                      decoration: BoxDecoration(
-                        color: AppTheme.accentRed.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      width: 100,
-                      height: 13,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        // Channel logo skeleton - exact position
-        Positioned(
-          top: AppSizes.lg,
-          right: AppSizes.lg,
-          child: Container(
-            height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppTheme.cardBackground,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Container(
-              width: 48,
-              height: 24,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-          ),
-        ),
-        // Rows skeleton - scrollable to matching position
-        Positioned.fill(
-          child: SingleChildScrollView(
-            physics: const NeverScrollableScrollPhysics(),
+            width: screenSize.width * 0.4,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(height: heroHeight),
-                SizedBox(height: AppSizes.xxl),
-                ...List.generate(3, (rowIndex) => Padding(
-                  padding: EdgeInsets.only(bottom: AppSizes.lg),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                // Title skeleton - matches 2-line height
+                Container(
+                  height: context.tvTextSize(24) * 1.3 * 2,
+                  width: screenSize.width * 0.3,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                SizedBox(height: context.tvSpacing(8)),
+                // Description skeleton - matches 3-line height
+                Container(
+                  height: context.tvTextSize(14) * 1.3 * 3,
+                  width: screenSize.width * 0.35,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                SizedBox(height: context.tvSpacing(8)),
+                // Progress bar skeleton - exact height
+                Container(
+                  height: 6,
+                  width: screenSize.width * 0.25,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+                SizedBox(height: context.tvSpacing(4)),
+                // Time range with LIVE badge skeleton
+                SizedBox(
+                  height: context.tvTextSize(13) * 1.4,
+                  child: Row(
                     children: [
-                      // Category title skeleton - matches headlineSmall
-                      Padding(
-                        padding: EdgeInsets.only(bottom: AppSizes.sm),
-                        child: Container(
-                          height: 24,
-                          width: [180, 140, 160][rowIndex % 3].toDouble(),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
+                      Container(
+                        width: 32,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          color: AppTheme.accentRed.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(4),
                         ),
                       ),
-                      // Channel cards row skeleton
-                      SizedBox(
-                        height: rowHeight,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          padding: EdgeInsets.zero,
-                          itemCount: 5,
-                          itemExtent: cardWidth + AppSizes.lg,
-                          itemBuilder: (context, cardIndex) => SizedBox(
-                            width: cardWidth,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                // Card skeleton - matches exact styling
-                                Container(
-                                  width: cardWidth,
-                                  height: cardHeight,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(12),
-                                    color: AppTheme.cardBackground,
-                                    gradient: const LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        Color(0xFF2a2a3e),
-                                        Color(0xFF1a1a2e),
-                                        AppTheme.cardBackground
-                                      ],
-                                    ),
-                                  ),
-                                  child: Stack(
-                                    children: [
-                                      // Channel logo placeholder
-                                      Positioned(
-                                        top: 8,
-                                        left: 8,
-                                        child: Container(
-                                          width: 40,
-                                          height: 24,
-                                          decoration: BoxDecoration(
-                                            color: Colors.white.withValues(alpha: 0.1),
-                                            borderRadius: BorderRadius.circular(4),
-                                          ),
-                                        ),
-                                      ),
-                                      // Progress bar overlay skeleton
-                                      Positioned(
-                                        bottom: 0,
-                                        left: 0,
-                                        right: 0,
-                                        child: Container(
-                                          height: 4,
-                                          decoration: BoxDecoration(
-                                            color: Colors.white.withValues(alpha: 0.1),
-                                            borderRadius: const BorderRadius.only(
-                                              bottomLeft: Radius.circular(12),
-                                              bottomRight: Radius.circular(12),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                // Program title skeleton
-                                Container(
-                                  width: cardWidth,
-                                  height: 14,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                // Time range skeleton
-                                Container(
-                                  width: cardWidth * 0.8,
-                                  height: 11,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                      const SizedBox(width: 8),
+                      Container(
+                        width: 100,
+                        height: 13,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
                         ),
                       ),
-                      SizedBox(height: AppSizes.lg),
                     ],
                   ),
-                )),
+                ),
               ],
             ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+          // Channel logo skeleton - exact position
+          Positioned(
+            top: AppSizes.lg,
+            right: AppSizes.lg,
+            child: Container(
+              height: 40,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppTheme.cardBackground,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Container(
+                width: 48,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+          ),
+          // Rows skeleton - scrollable to matching position
+          Positioned.fill(
+            child: SingleChildScrollView(
+              physics: const NeverScrollableScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(height: heroHeight),
+                  SizedBox(height: AppSizes.xxl),
+                  ...List.generate(
+                      3,
+                      (rowIndex) => Padding(
+                            padding: EdgeInsets.only(bottom: AppSizes.lg),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Category title skeleton - matches headlineSmall
+                                Padding(
+                                  padding: EdgeInsets.only(bottom: AppSizes.sm),
+                                  child: Container(
+                                    height: 24,
+                                    width: [180, 140, 160][rowIndex % 3]
+                                        .toDouble(),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          Colors.white.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                ),
+                                // Channel cards row skeleton
+                                SizedBox(
+                                  height: rowHeight,
+                                  child: ListView.builder(
+                                    scrollDirection: Axis.horizontal,
+                                    padding: EdgeInsets.zero,
+                                    itemCount: 5,
+                                    itemExtent: cardWidth + AppSizes.lg,
+                                    itemBuilder: (context, cardIndex) =>
+                                        SizedBox(
+                                      width: cardWidth,
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.center,
+                                        children: [
+                                          // Card skeleton - matches exact styling
+                                          Container(
+                                            width: cardWidth,
+                                            height: cardHeight,
+                                            decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              color: AppTheme.cardBackground,
+                                              gradient: const LinearGradient(
+                                                begin: Alignment.topLeft,
+                                                end: Alignment.bottomRight,
+                                                colors: [
+                                                  Color(0xFF2a2a3e),
+                                                  Color(0xFF1a1a2e),
+                                                  AppTheme.cardBackground
+                                                ],
+                                              ),
+                                            ),
+                                            child: Stack(
+                                              children: [
+                                                // Channel logo placeholder
+                                                Positioned(
+                                                  top: 8,
+                                                  left: 8,
+                                                  child: Container(
+                                                    width: 40,
+                                                    height: 24,
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.white
+                                                          .withValues(
+                                                              alpha: 0.1),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              4),
+                                                    ),
+                                                  ),
+                                                ),
+                                                // Progress bar overlay skeleton
+                                                Positioned(
+                                                  bottom: 0,
+                                                  left: 0,
+                                                  right: 0,
+                                                  child: Container(
+                                                    height: 4,
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.white
+                                                          .withValues(
+                                                              alpha: 0.1),
+                                                      borderRadius:
+                                                          const BorderRadius
+                                                              .only(
+                                                        bottomLeft:
+                                                            Radius.circular(12),
+                                                        bottomRight:
+                                                            Radius.circular(12),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          // Program title skeleton
+                                          Container(
+                                            width: cardWidth,
+                                            height: 14,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white
+                                                  .withValues(alpha: 0.15),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          // Time range skeleton
+                                          Container(
+                                            width: cardWidth * 0.8,
+                                            height: 11,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white
+                                                  .withValues(alpha: 0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(height: AppSizes.lg),
+                              ],
+                            ),
+                          )),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
