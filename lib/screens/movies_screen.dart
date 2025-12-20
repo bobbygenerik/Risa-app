@@ -107,34 +107,6 @@ class _MoviesScreenState extends State<MoviesScreen>
     }
   }
 
-  void _previousHero() {
-    final provider = Provider.of<ContentProvider>(context, listen: false);
-    final movies = _curatedMovies.isNotEmpty
-        ? _curatedMovies
-        : provider.movies;
-    if (movies.isEmpty) return;
-    if (mounted) {
-      setState(() {
-        // Find previous item with artwork
-        int attempts = 0;
-        int prevIndex = (_featuredIndex - 1 + movies.length) % movies.length;
-        while (attempts < movies.length) {
-          final movie = movies[prevIndex];
-          if (movie.backdropUrl != null || movie.imageUrl != null) {
-            _featuredIndex = prevIndex;
-            break;
-          }
-          prevIndex = (prevIndex - 1 + movies.length) % movies.length;
-          attempts++;
-        }
-        // If no items with artwork found, just use previous index
-        if (attempts >= movies.length) {
-          _featuredIndex = (_featuredIndex - 1 + movies.length) % movies.length;
-        }
-      });
-    }
-  }
-
   @override
   void initState() {
     super.initState();
@@ -322,13 +294,13 @@ class _MoviesScreenState extends State<MoviesScreen>
         itemCount: movies.length,
         itemExtent: cardWidth + AppSizes.lg,
         itemBuilder: (context, index) {
-          return _buildMovieCard(context, movies[index]);
+          return _buildMovieCard(context, movies[index], index);
         },
       ),
     );
   }
 
-  Widget _buildMovieCard(BuildContext context, Content movie) {
+  Widget _buildMovieCard(BuildContext context, Content movie, int index) {
     final cardWidth = context.cardWidth();
     final cardHeight = context.cardHeight();
     
@@ -343,6 +315,11 @@ class _MoviesScreenState extends State<MoviesScreen>
                 event.logicalKey == LogicalKeyboardKey.space) {
               final encodedId = Uri.encodeComponent(movie.id);
               context.push('/content/$encodedId', extra: movie);
+              return KeyEventResult.handled;
+            }
+            if (event.logicalKey == LogicalKeyboardKey.arrowLeft &&
+                index == 0) {
+              requestNavigationFocus();
               return KeyEventResult.handled;
             }
           }
@@ -375,13 +352,7 @@ class _MoviesScreenState extends State<MoviesScreen>
                             ? Border.all(color: AppTheme.primaryBlue, width: 3)
                             : null,
                         boxShadow: isFocused
-                            ? [
-                                BoxShadow(
-                                  color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
-                                  blurRadius: 16,
-                                  spreadRadius: 2,
-                                ),
-                              ]
+                            ? TVFocusStyle.focusedShadow
                             : TVFocusStyle.defaultShadow,
                       ),
                       child: ClipRRect(
@@ -589,7 +560,12 @@ class _MoviesScreenState extends State<MoviesScreen>
     final heroImage = featuredMovie.backdropUrl;
     final screenSize = MediaQuery.of(context).size;
     final heroHeight = screenSize.height * 0.85;
-    final sidebarWidth = AppSizes.sidebarCollapsedWidth + AppSizes.lg;
+    final sidebarWidth =
+        context.sidebarCollapsedWidth() + context.spacingLg();
+    final heroInfoWidth = min(
+      screenSize.width * 0.4,
+      screenSize.width >= 1920 ? 640.0 : 520.0,
+    );
 
     return Focus(
       canRequestFocus: false,
@@ -633,12 +609,9 @@ class _MoviesScreenState extends State<MoviesScreen>
                             return KeyEventResult.handled;
                           }
                           if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                            _previousHero();
-                            return KeyEventResult.handled;
-                          }
-                          if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-                            _nextHero();
-                            return KeyEventResult.handled;
+                            return requestNavigationFocus()
+                                ? KeyEventResult.handled
+                                : KeyEventResult.ignored;
                           }
                         }
                         return KeyEventResult.ignored;
@@ -680,8 +653,8 @@ class _MoviesScreenState extends State<MoviesScreen>
                 // Featured info overlay
                 Positioned(
                   bottom: heroHeight * 0.15,
-                  left: sidebarWidth + AppSizes.lg,
-                  width: screenSize.width * 0.4,
+                  left: sidebarWidth + context.spacingLg(),
+                  width: heroInfoWidth,
                   child: Opacity(
                     opacity: 1.0 - fadeProgress,
                     child: _buildFeaturedInfo(context, featuredMovie),
@@ -699,22 +672,22 @@ class _MoviesScreenState extends State<MoviesScreen>
                         Container(
                           color: AppTheme.darkBackground,
                           padding: EdgeInsets.only(
-                            left: sidebarWidth + AppSizes.lg,
-                            right: AppSizes.xxl,
-                            bottom: AppSizes.xxl,
+                            left: sidebarWidth + context.spacingLg(),
+                            right: context.spacingXxl(),
+                            bottom: context.spacingXxl(),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              SizedBox(height: AppSizes.xxl),
+                              SizedBox(height: context.sectionSpacing()),
                               if (recentMovies.isNotEmpty) ...[
                                 _buildSectionHeader(context, 'Recently Added'),
-                                SizedBox(height: AppSizes.sm),
+                                SizedBox(height: context.spacingSm()),
                                 _buildMoviesRow(context, recentMovies),
-                                SizedBox(height: AppSizes.lg),
+                                SizedBox(height: context.sectionSpacing()),
                               ],
                               ..._buildGenreSections(context, allMovies),
-                              SizedBox(height: AppSizes.xxl),
+                              SizedBox(height: context.sectionSpacing()),
                             ],
                           ),
                         ),
@@ -819,6 +792,10 @@ class _MoviesScreenState extends State<MoviesScreen>
                 BrandPrimaryButton(
                   label: 'Play',
                   icon: AppIcons.play,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   onPressed: () {
                     final encodedId = Uri.encodeComponent(featuredMovie.id);
                     context.push('/content/$encodedId', extra: featuredMovie);
@@ -828,6 +805,10 @@ class _MoviesScreenState extends State<MoviesScreen>
                 BrandSecondaryButton(
                   label: 'More Info',
                   icon: AppIcons.info,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   onPressed: () {
                     final encodedId = Uri.encodeComponent(featuredMovie.id);
                     context.push('/content/$encodedId', extra: featuredMovie);
@@ -851,7 +832,12 @@ class _MoviesScreenState extends State<MoviesScreen>
   Widget _buildSkeletonLoader() {
     final screenSize = MediaQuery.of(context).size;
     final heroHeight = screenSize.height * 0.85;
-    final sidebarWidth = AppSizes.sidebarCollapsedWidth + AppSizes.lg;
+    final sidebarWidth =
+        context.sidebarCollapsedWidth() + context.spacingLg();
+    final heroInfoWidth = min(
+      screenSize.width * 0.4,
+      screenSize.width >= 1920 ? 640.0 : 520.0,
+    );
     final cardWidth = screenSize.width / 6.5;
     final cardHeight = cardWidth * 1.5;
     final rowHeight = cardWidth * 1.8;
@@ -875,8 +861,8 @@ class _MoviesScreenState extends State<MoviesScreen>
           // Featured info skeleton
           Positioned(
             bottom: heroHeight * 0.35,
-            left: sidebarWidth + AppSizes.lg,
-            width: screenSize.width * 0.4,
+            left: sidebarWidth + context.spacingLg(),
+            width: heroInfoWidth,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -910,17 +896,17 @@ class _MoviesScreenState extends State<MoviesScreen>
             child: Container(
               color: AppTheme.darkBackground,
               padding: EdgeInsets.only(
-                left: sidebarWidth + AppSizes.lg,
-                right: AppSizes.xxl,
-                top: AppSizes.xxl,
-                bottom: AppSizes.xxl,
+                left: sidebarWidth + context.spacingLg(),
+                right: context.spacingXxl(),
+                top: context.spacingXxl(),
+                bottom: context.spacingXxl(),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(height: AppSizes.xxl),
+                  SizedBox(height: context.sectionSpacing()),
                   ...List.generate(3, (rowIndex) => Padding(
-                    padding: const EdgeInsets.only(bottom: 32),
+                    padding: EdgeInsets.only(bottom: context.sectionSpacing()),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

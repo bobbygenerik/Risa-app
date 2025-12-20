@@ -171,34 +171,6 @@ class _SeriesScreenState extends State<SeriesScreen>
     }
   }
 
-  void _previousHero() {
-    final provider = Provider.of<ContentProvider>(context, listen: false);
-    final series = _curatedSeries.isNotEmpty
-        ? _curatedSeries
-        : provider.series;
-    if (series.isEmpty) return;
-    if (mounted) {
-      setState(() {
-        // Find previous item with artwork
-        int attempts = 0;
-        int prevIndex = (_featuredIndex - 1 + series.length) % series.length;
-        while (attempts < series.length) {
-          final show = series[prevIndex];
-          if (show.backdropUrl != null || show.imageUrl != null) {
-            _featuredIndex = prevIndex;
-            break;
-          }
-          prevIndex = (prevIndex - 1 + series.length) % series.length;
-          attempts++;
-        }
-        // If no items with artwork found, just use previous index
-        if (attempts >= series.length) {
-          _featuredIndex = (_featuredIndex - 1 + series.length) % series.length;
-        }
-      });
-    }
-  }
-
   Future<void> _prepareCuratedSeriesList() async {
     try {
       final provider = Provider.of<ContentProvider>(context, listen: false);
@@ -419,7 +391,7 @@ class _SeriesScreenState extends State<SeriesScreen>
         itemExtent: cardWidth + AppSizes.lg,
         itemBuilder: (context, index) {
           final entry = seriesMap.entries.elementAt(index);
-          return _buildSeriesCard(context, entry.key, entry.value);
+          return _buildSeriesCard(context, entry.key, entry.value, index);
         },
       ),
     );
@@ -429,6 +401,7 @@ class _SeriesScreenState extends State<SeriesScreen>
     BuildContext context,
     String title,
     List<Content> episodes,
+    int index,
   ) {
     final firstEpisode = episodes.first;
     final cardWidth = context.cardWidth();
@@ -445,6 +418,11 @@ class _SeriesScreenState extends State<SeriesScreen>
                 event.logicalKey == LogicalKeyboardKey.space) {
               final encodedId = Uri.encodeComponent(firstEpisode.id);
               context.push('/content/$encodedId', extra: firstEpisode);
+              return KeyEventResult.handled;
+            }
+            if (event.logicalKey == LogicalKeyboardKey.arrowLeft &&
+                index == 0) {
+              requestNavigationFocus();
               return KeyEventResult.handled;
             }
           }
@@ -477,13 +455,7 @@ class _SeriesScreenState extends State<SeriesScreen>
                             ? Border.all(color: AppTheme.primaryBlue, width: 3)
                             : null,
                         boxShadow: isFocused
-                            ? [
-                                BoxShadow(
-                                  color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
-                                  blurRadius: 16,
-                                  spreadRadius: 2,
-                                ),
-                              ]
+                            ? TVFocusStyle.focusedShadow
                             : TVFocusStyle.defaultShadow,
                       ),
                       child: ClipRRect(
@@ -690,7 +662,12 @@ class _SeriesScreenState extends State<SeriesScreen>
     final heroImage = featuredSeries.backdropUrl;
     final screenSize = MediaQuery.of(context).size;
     final heroHeight = screenSize.height * 0.85;
-    final sidebarWidth = AppSizes.sidebarCollapsedWidth + AppSizes.lg;
+    final sidebarWidth =
+        context.sidebarCollapsedWidth() + context.spacingLg();
+    final heroInfoWidth = min(
+      screenSize.width * 0.4,
+      screenSize.width >= 1920 ? 640.0 : 520.0,
+    );
 
     return Focus(
       canRequestFocus: false,
@@ -734,12 +711,9 @@ class _SeriesScreenState extends State<SeriesScreen>
                             return KeyEventResult.handled;
                           }
                           if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                            _previousHero();
-                            return KeyEventResult.handled;
-                          }
-                          if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-                            _nextHero();
-                            return KeyEventResult.handled;
+                            return requestNavigationFocus()
+                                ? KeyEventResult.handled
+                                : KeyEventResult.ignored;
                           }
                         }
                         return KeyEventResult.ignored;
@@ -781,8 +755,8 @@ class _SeriesScreenState extends State<SeriesScreen>
                 // Featured info overlay
                 Positioned(
                   bottom: heroHeight * 0.15,
-                  left: sidebarWidth + AppSizes.lg,
-                  width: screenSize.width * 0.4,
+                  left: sidebarWidth + context.spacingLg(),
+                  width: heroInfoWidth,
                   child: Opacity(
                     opacity: 1.0 - fadeProgress,
                     child: _buildFeaturedInfo(context, featuredSeries),
@@ -800,22 +774,22 @@ class _SeriesScreenState extends State<SeriesScreen>
                         Container(
                           color: AppTheme.darkBackground,
                           padding: EdgeInsets.only(
-                            left: sidebarWidth + AppSizes.lg,
-                            right: AppSizes.xxl,
-                            bottom: AppSizes.xxl,
+                            left: sidebarWidth + context.spacingLg(),
+                            right: context.spacingXxl(),
+                            bottom: context.spacingXxl(),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              SizedBox(height: AppSizes.xxl),
+                              SizedBox(height: context.sectionSpacing()),
                               if (recentSeries.isNotEmpty) ...[
                                 _buildSectionHeader(context, 'Recently Added Series'),
-                                SizedBox(height: AppSizes.sm),
+                                SizedBox(height: context.spacingSm()),
                                 _buildSeriesRow(context, recentSeries),
-                                SizedBox(height: AppSizes.lg),
+                                SizedBox(height: context.sectionSpacing()),
                               ],
                               ..._buildGenreSections(context, allSeries),
-                              SizedBox(height: AppSizes.xxl),
+                              SizedBox(height: context.sectionSpacing()),
                             ],
                           ),
                         ),
@@ -848,7 +822,10 @@ class _SeriesScreenState extends State<SeriesScreen>
 
   Widget _buildFeaturedInfo(BuildContext context, Content featuredSeries) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.symmetric(
+        horizontal: context.spacingXl(),
+        vertical: context.spacingLg(),
+      ),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(12),
@@ -920,6 +897,10 @@ class _SeriesScreenState extends State<SeriesScreen>
                 BrandPrimaryButton(
                   label: 'Watch',
                   icon: AppIcons.play,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   onPressed: () {
                     final encodedId = Uri.encodeComponent(featuredSeries.id);
                     context.push('/content/$encodedId', extra: featuredSeries);
@@ -929,6 +910,10 @@ class _SeriesScreenState extends State<SeriesScreen>
                 BrandSecondaryButton(
                   label: 'More Info',
                   icon: AppIcons.info,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   onPressed: () {
                     final encodedId = Uri.encodeComponent(featuredSeries.id);
                     context.push('/content/$encodedId', extra: featuredSeries);
@@ -959,7 +944,12 @@ class _SeriesScreenState extends State<SeriesScreen>
   Widget _buildSkeletonLoader() {
     final screenSize = MediaQuery.of(context).size;
     final heroHeight = screenSize.height * 0.85;
-    final sidebarWidth = AppSizes.sidebarCollapsedWidth + AppSizes.lg;
+    final sidebarWidth =
+        context.sidebarCollapsedWidth() + context.spacingLg();
+    final heroInfoWidth = min(
+      screenSize.width * 0.4,
+      screenSize.width >= 1920 ? 640.0 : 520.0,
+    );
     final cardWidth = screenSize.width / 6.5;
     final cardHeight = cardWidth * 1.5;
     final rowHeight = cardWidth * 1.8;
@@ -983,8 +973,8 @@ class _SeriesScreenState extends State<SeriesScreen>
           // Featured info skeleton - exact position as real content
           Positioned(
             bottom: heroHeight * 0.35,
-            left: sidebarWidth + AppSizes.lg,
-            width: screenSize.width * 0.4,
+            left: sidebarWidth + context.spacingLg(),
+            width: heroInfoWidth,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -1052,17 +1042,17 @@ class _SeriesScreenState extends State<SeriesScreen>
             child: Container(
               color: AppTheme.darkBackground,
               padding: EdgeInsets.only(
-                left: sidebarWidth + AppSizes.lg,
-                right: AppSizes.xxl,
-                top: AppSizes.xxl,
-                bottom: AppSizes.xxl,
+                left: sidebarWidth + context.spacingLg(),
+                right: context.spacingXxl(),
+                top: context.spacingXxl(),
+                bottom: context.spacingXxl(),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(height: AppSizes.xxl),
+                  SizedBox(height: context.sectionSpacing()),
                   ...List.generate(3, (rowIndex) => Padding(
-                    padding: const EdgeInsets.only(bottom: 32),
+                    padding: EdgeInsets.only(bottom: context.sectionSpacing()),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

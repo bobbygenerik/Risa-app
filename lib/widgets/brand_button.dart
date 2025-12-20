@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/utils/app_icons.dart';
@@ -39,6 +40,15 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
             .toColor()
         : baseColor;
 
+    final resolvedPadding =
+        widget.padding.resolve(Directionality.of(context));
+    final scaledPadding = EdgeInsets.fromLTRB(
+      context.tvSpacing(resolvedPadding.left),
+      context.tvSpacing(resolvedPadding.top),
+      context.tvSpacing(resolvedPadding.right),
+      context.tvSpacing(resolvedPadding.bottom),
+    );
+
     final innerButton = AnimatedContainer(
       duration: AppDurations.fast,
       decoration: BoxDecoration(
@@ -46,9 +56,11 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
         borderRadius:
             BorderRadius.circular(context.tvSpacing(widget.borderRadius)),
       ),
-      padding: EdgeInsets.symmetric(
-        horizontal: context.tvSpacing(16),
-        vertical: context.tvSpacing(12).clamp(10.0, 16.0),
+      padding: EdgeInsets.only(
+        left: scaledPadding.left,
+        right: scaledPadding.right,
+        top: scaledPadding.top,
+        bottom: scaledPadding.bottom,
       ),
       constraints: BoxConstraints(
         minHeight: context.tvSpacing(36).clamp(32.0, 44.0),
@@ -106,25 +118,42 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
       ],
     );
 
-    final button = FocusableActionDetector(
-      onShowFocusHighlight: (v) => setState(() => _focused = v),
-      onShowHoverHighlight: (_) {},
-      mouseCursor: SystemMouseCursors.click,
-      onFocusChange: (v) => setState(() => _focused = v),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(widget.borderRadius),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(widget.borderRadius),
-          splashColor: Colors.white.withAlpha((0.2 * 255).round()),
-          highlightColor: Colors.white.withAlpha((0.1 * 255).round()),
-          onTapDown: (_) => setState(() => _pressed = true),
-          onTapCancel: () => setState(() => _pressed = false),
-          onTap: () {
-            setState(() => _pressed = false);
-            widget.onPressed();
-          },
-          child: content,
+    final button = Shortcuts(
+      shortcuts: const {
+        SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
+      },
+      child: Actions(
+        actions: {
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (intent) {
+              widget.onPressed();
+              return null;
+            },
+          ),
+        },
+        child: FocusableActionDetector(
+          onShowFocusHighlight: (v) => setState(() => _focused = v),
+          onShowHoverHighlight: (_) {},
+          mouseCursor: SystemMouseCursors.click,
+          onFocusChange: (v) => setState(() => _focused = v),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(widget.borderRadius),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(widget.borderRadius),
+              splashColor: Colors.white.withAlpha((0.2 * 255).round()),
+              highlightColor: Colors.white.withAlpha((0.1 * 255).round()),
+              onTapDown: (_) => setState(() => _pressed = true),
+              onTapCancel: () => setState(() => _pressed = false),
+              onTap: () {
+                setState(() => _pressed = false);
+                widget.onPressed();
+              },
+              child: content,
+            ),
+          ),
         ),
       ),
     );
@@ -165,6 +194,15 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
 
   @override
   Widget build(BuildContext context) {
+    final resolvedPadding =
+        widget.padding.resolve(Directionality.of(context));
+    final scaledPadding = EdgeInsets.fromLTRB(
+      context.tvSpacing(resolvedPadding.left),
+      context.tvSpacing(resolvedPadding.top),
+      context.tvSpacing(resolvedPadding.right),
+      context.tvSpacing(resolvedPadding.bottom),
+    );
+
     final content = AnimatedContainer(
       duration: AppDurations.fast,
       decoration: BoxDecoration(
@@ -194,9 +232,11 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
                   ]
                 : null,
           ),
-          padding: EdgeInsets.symmetric(
-            horizontal: context.tvSpacing(14),
-            vertical: context.tvSpacing(10).clamp(8.0, 14.0),
+          padding: EdgeInsets.only(
+            left: scaledPadding.left,
+            right: scaledPadding.right,
+            top: scaledPadding.top,
+            bottom: scaledPadding.bottom,
           ),
           constraints: BoxConstraints(
             minHeight: context.tvSpacing(32).clamp(28.0, 40.0),
@@ -232,20 +272,37 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
       ),
     );
 
-    final button = FocusableActionDetector(
-      onShowFocusHighlight: (v) => setState(() => _focused = v),
-      onShowHoverHighlight: (_) {},
-      mouseCursor: SystemMouseCursors.click,
-      onFocusChange: (v) => setState(() => _focused = v),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(widget.borderRadius),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(widget.borderRadius),
-          splashColor: Colors.white.withAlpha((0.15 * 255).round()),
-          highlightColor: Colors.white.withAlpha((0.08 * 255).round()),
-          onTap: widget.onPressed,
-          child: content,
+    final button = Shortcuts(
+      shortcuts: const {
+        SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
+      },
+      child: Actions(
+        actions: {
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (intent) {
+              widget.onPressed();
+              return null;
+            },
+          ),
+        },
+        child: FocusableActionDetector(
+          onShowFocusHighlight: (v) => setState(() => _focused = v),
+          onShowHoverHighlight: (_) {},
+          mouseCursor: SystemMouseCursors.click,
+          onFocusChange: (v) => setState(() => _focused = v),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(widget.borderRadius),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(widget.borderRadius),
+              splashColor: Colors.white.withAlpha((0.15 * 255).round()),
+              highlightColor: Colors.white.withAlpha((0.08 * 255).round()),
+              onTap: widget.onPressed,
+              child: content,
+            ),
+          ),
         ),
       ),
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:iptv_player/utils/app_theme.dart';
 
 /// Modern Netflix-style focus effect constants
 class TVFocusStyle {
@@ -6,12 +7,18 @@ class TVFocusStyle {
   static const Duration animationDuration = Duration(milliseconds: 150);
   static const Curve animationCurve = Curves.easeOutCubic;
   static const Color glowColor = Color(0x40FFFFFF);
+  static const Color focusRingColor = AppTheme.primaryBlue;
   static List<BoxShadow> get focusedShadow => [
     BoxShadow(
       color: Colors.black.withAlpha((0.4 * 255).round()),
       blurRadius: 20,
       spreadRadius: 2,
       offset: const Offset(0, 8),
+    ),
+    BoxShadow(
+      color: focusRingColor.withAlpha((0.35 * 255).round()),
+      blurRadius: 16,
+      spreadRadius: 0,
     ),
     const BoxShadow(
       color: glowColor,
@@ -81,17 +88,20 @@ class _TVFocusableState extends State<TVFocusable> {
             scale: isFocused && widget.enableScale ? widget.focusScale : 1.0,
             duration: TVFocusStyle.animationDuration,
             curve: TVFocusStyle.animationCurve,
-            child: AnimatedContainer(
-              duration: TVFocusStyle.animationDuration,
-              curve: TVFocusStyle.animationCurve,
-              margin: widget.focusMargin,
-              decoration: BoxDecoration(
-                borderRadius: widget.borderRadius,
-                boxShadow: isFocused ? TVFocusStyle.focusedShadow : TVFocusStyle.defaultShadow,
-              ),
-              child: child,
+          child: AnimatedContainer(
+            duration: TVFocusStyle.animationDuration,
+            curve: TVFocusStyle.animationCurve,
+            margin: widget.focusMargin,
+            decoration: BoxDecoration(
+              borderRadius: widget.borderRadius,
+              border: isFocused
+                  ? Border.all(color: TVFocusStyle.focusRingColor, width: 2)
+                  : null,
+              boxShadow: isFocused ? TVFocusStyle.focusedShadow : TVFocusStyle.defaultShadow,
             ),
-          );
+            child: child,
+          ),
+        );
         },
       ),
     );

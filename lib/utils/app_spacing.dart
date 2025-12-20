@@ -101,7 +101,7 @@ extension AppSpacingExtension on BuildContext {
     final screenWidth = MediaQuery.of(this).size.width;
     final isLandscape = screenWidth > MediaQuery.of(this).size.height;
     // Show fewer cards per row (larger cards) like major streaming apps
-    return isLandscape ? (screenWidth / 5.0) : (screenWidth / 3.0);
+    return isLandscape ? (screenWidth / 4.5) : (screenWidth / 2.6);
   }
 
   double cardHeight() => cardWidth() * AppSpacing.cardPortraitRatio;

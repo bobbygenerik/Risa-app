@@ -1,5 +1,6 @@
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -24,6 +25,7 @@ import 'package:iptv_player/widgets/brand_badge.dart';
 import 'package:iptv_player/utils/app_typography.dart';
 import 'package:iptv_player/utils/app_colors.dart';
 import 'package:iptv_player/utils/app_icons.dart';
+import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:iptv_player/services/timer_service.dart';
 import 'package:iptv_player/services/focus_pool_service.dart';
 import 'package:iptv_player/widgets/shimmer.dart';
@@ -133,19 +135,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     });
   }
 
-  void _previousHero() {
-    final channelProvider = Provider.of<ChannelProvider>(
-      context,
-      listen: false,
-    );
-    if (!channelProvider.hasChannels) return;
-    setState(() {
-      // Simply cycle to previous channel without EPG dependency
-      _featuredIndex = (_featuredIndex - 1 + channelProvider.channelCount) %
-          channelProvider.channelCount;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final body = Container(
@@ -235,7 +224,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final screenSize = MediaQuery.of(context).size;
     final isTV = screenSize.width >= 1920 || screenSize.height >= 1080;
     final heroHeight = screenSize.height * 0.85; // 85% height for content peek
-    final sidebarWidth = AppSizes.sidebarCollapsedWidth + 16;
+    final sidebarWidth =
+        context.sidebarCollapsedWidth() + context.spacingLg();
+    final heroInfoWidth = min(
+      screenSize.width * 0.4,
+      screenSize.width >= 1920 ? 640.0 : 520.0,
+    );
 
     // Use a Selector to get the current program for the featured channel
     return Selector<IncrementalEpgService, Program?>(
@@ -256,12 +250,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 return KeyEventResult.handled;
               }
               if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                _previousHero();
-                return KeyEventResult.handled;
-              }
-              if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-                _nextHero();
-                return KeyEventResult.handled;
+                return requestNavigationFocus()
+                    ? KeyEventResult.handled
+                    : KeyEventResult.ignored;
               }
               if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
                 // Focus will automatically move to first row
@@ -325,7 +316,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 bottom: heroHeight *
                     0.15, // Lowered from 0.25 for better artwork exposure
                 left: sidebarWidth,
-                width: screenSize.width * 0.4,
+                width: heroInfoWidth,
                 child: Builder(builder: (context) {
                   final scrollPos = _scrollController.hasClients
                       ? _scrollController.offset
@@ -370,19 +361,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         color: AppTheme.darkBackground,
                         padding: EdgeInsets.only(
                           left: sidebarWidth,
-                          right: 24,
-                          bottom: 24,
+                          right: context.spacingXl(),
+                          bottom: context.spacingXl(),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            SizedBox(height: 16),
+                            SizedBox(height: context.sectionSpacing()),
                             if (isGrouping && groupedChannels.isEmpty)
                               _buildCategoryLoadingIndicator()
                             else
                               ..._buildCategoryRows(
                                   context, groupedChannels, isTV),
-                            SizedBox(height: 16),
+                            SizedBox(height: context.sectionSpacing()),
                           ],
                         ),
                       ),
@@ -407,7 +398,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final progress = program?.progressPercentage ?? 0.0;
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.symmetric(
+        horizontal: context.spacingXl(),
+        vertical: context.spacingLg(),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -656,20 +650,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   ) {
     if (channels.isEmpty) return const SizedBox.shrink();
 
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-    final isLandscape = screenWidth > screenHeight;
-    final cardWidth = isLandscape
-        ? (screenWidth / 5)
-        : (screenWidth / 3); // 5 cards per row for premium look
-    final cardHeight = cardWidth * 0.57;
-    final rowHeight = cardHeight + 80;
+    final cardWidth = context.cardWidth();
+    final cardHeight = cardWidth * 0.6;
+    final rowHeight = cardHeight + context.spacingXl();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.only(bottom: 8),
+          padding: EdgeInsets.only(bottom: context.spacingSm()),
           child: Text(
             title,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -684,14 +673,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             scrollDirection: Axis.horizontal,
             padding: EdgeInsets.zero,
             itemCount: channels.length,
-            itemExtent: cardWidth + AppSizes.lg,
+            itemExtent: cardWidth + context.spacingLg(),
             itemBuilder: (context, index) {
               return _buildChannelCard(context, channels[index], cardWidth,
                   cardHeight, index, channels.length);
             },
           ),
         ),
-        SizedBox(height: 12),
+        SizedBox(height: context.spacingSm()),
       ],
     );
   }
@@ -784,15 +773,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                             ? Border.all(color: AppTheme.primaryBlue, width: 3)
                             : null,
                         boxShadow: isFocused
-                            ? [
-                                BoxShadow(
-                                  color: AppTheme.primaryBlue
-                                      .withAlpha((0.4 * 255).round()),
-                                  blurRadius: 16,
-                                  spreadRadius: 2,
-                                ),
-                              ]
-                            : null, // Optimization: No shadow when unfocused
+                            ? TVFocusStyle.focusedShadow
+                            : TVFocusStyle.defaultShadow,
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12),
@@ -1071,7 +1053,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Widget _buildSkeletonLoader() {
     final screenSize = MediaQuery.of(context).size;
     final heroHeight = screenSize.height * 0.85; // Matches real height
-    final sidebarWidth = AppSizes.sidebarCollapsedWidth + AppSizes.lg;
+    final sidebarWidth =
+        context.sidebarCollapsedWidth() + context.spacingLg();
+    final heroInfoWidth = min(
+      screenSize.width * 0.4,
+      screenSize.width >= 1920 ? 640.0 : 520.0,
+    );
     final isLandscape = screenSize.width > screenSize.height;
     final cardWidth = isLandscape ? (screenSize.width / 4.0) : (screenSize.width / 3.0);
     final cardHeight = cardWidth * 0.57;
@@ -1103,7 +1090,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           Positioned(
             bottom: heroHeight * 0.35,
             left: sidebarWidth,
-            width: screenSize.width * 0.4,
+            width: heroInfoWidth,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,

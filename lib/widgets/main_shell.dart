@@ -309,8 +309,12 @@ class _MainShellState extends State<MainShell> {
       // If we're focused on content (not sidebar), try to open sidebar
       if (currentFocus != null &&
           !_isFocusInSidebar(currentFocus) &&
-          _isContentFocused()) {
-        _expandSidebarFromContent();
+          _isFocusInContent(currentFocus)) {
+        final moved =
+            currentFocus.focusInDirection(TraversalDirection.left);
+        if (!moved) {
+          _expandSidebarFromContent();
+        }
         return KeyEventResult.handled;
       }
       return KeyEventResult.ignored;
@@ -323,15 +327,6 @@ class _MainShellState extends State<MainShell> {
         return KeyEventResult.handled;
       }
       return KeyEventResult.ignored;
-    }
-
-    // Handle up/down arrows for navigation between main screens
-    if (event.logicalKey == LogicalKeyboardKey.arrowUp ||
-        event.logicalKey == LogicalKeyboardKey.arrowDown) {
-      if (currentFocus != null && !_isFocusInSidebar(currentFocus)) {
-        _navigateBetweenScreens(event.logicalKey == LogicalKeyboardKey.arrowUp);
-        return KeyEventResult.handled;
-      }
     }
 
     return KeyEventResult.ignored;
@@ -347,11 +342,9 @@ class _MainShellState extends State<MainShell> {
     return true;
   }
 
-  bool _isContentFocused() {
-    final currentFocus = FocusManager.instance.primaryFocus;
-    return currentFocus != null &&
-        (currentFocus == _contentFocusScope ||
-            _contentFocusScope.children.contains(currentFocus));
+  bool _isFocusInContent(FocusNode node) {
+    return node == _contentFocusScope ||
+        node.ancestors.contains(_contentFocusScope);
   }
 
   void _expandSidebarFromContent() {
@@ -364,21 +357,4 @@ class _MainShellState extends State<MainShell> {
     _requestContentFocus();
   }
 
-  void _navigateBetweenScreens(bool navigateUp) {
-    // Navigate between Live TV, Movies, Series screens
-    final currentLocation = GoRouterState.of(context).uri.path;
-    String targetRoute;
-
-    if (currentLocation == '/home') {
-      targetRoute = navigateUp ? '/series' : '/movies';
-    } else if (currentLocation == '/movies') {
-      targetRoute = navigateUp ? '/home' : '/series';
-    } else if (currentLocation == '/series') {
-      targetRoute = navigateUp ? '/movies' : '/home';
-    } else {
-      targetRoute = '/home';
-    }
-
-    context.go(targetRoute);
-  }
 }

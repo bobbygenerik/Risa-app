@@ -327,8 +327,8 @@ class _EPGScreenState extends State<EPGScreen>
                       Expanded(
                         child: Row(
                           children: [
-                            // Spacer for main navigation sidebar (80px collapsed)
-                            const SizedBox(width: 80),
+                            // Spacer for main navigation sidebar
+                            SizedBox(width: context.sidebarCollapsedWidth()),
                             // Category sidebar
                             _buildCategorySidebar(categoryNames),
                             const SizedBox(width: 16),
@@ -555,7 +555,7 @@ class _EPGScreenState extends State<EPGScreen>
 
   Widget _buildCategorySidebar(List<String> categories) {
     return Container(
-      width: 140,
+      width: context.categoryBarWidth(),
       child: ListView.builder(
         itemCount: categories.length,
         itemBuilder: (context, index) {
@@ -595,6 +595,10 @@ class _EPGScreenState extends State<EPGScreen>
             _firstChannelFocus.requestFocus();
             return KeyEventResult.handled;
           }
+          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+            requestNavigationFocus();
+            return KeyEventResult.handled;
+          }
         }
         return KeyEventResult.ignored;
       },
@@ -605,8 +609,14 @@ class _EPGScreenState extends State<EPGScreen>
           onTap: onTap,
           behavior: HitTestBehavior.opaque,
           child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            margin: EdgeInsets.symmetric(
+              horizontal: context.spacingSm(),
+              vertical: context.spacingXs(),
+            ),
+            padding: EdgeInsets.symmetric(
+              horizontal: context.spacingSm(),
+              vertical: context.spacingSm(),
+            ),
             child: Text(
               name,
               style: TextStyle(

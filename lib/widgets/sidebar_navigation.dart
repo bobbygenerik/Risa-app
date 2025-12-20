@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/app_spacing.dart';
 
 /// Represents a navigation tab in the sidebar
 class NavTab {
@@ -373,7 +374,9 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        width: _isExpanded ? 140 : 40,
+        width: _isExpanded
+            ? AppSpacing.sidebarWidth
+            : AppSpacing.sidebarCollapsedWidth,
         child: ClipRect(
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
