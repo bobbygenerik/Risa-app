@@ -33,6 +33,9 @@ class BrandSwitchTile extends StatelessWidget {
             margin: margin ?? EdgeInsets.only(bottom: context.tvSpacing(16)),
             padding: EdgeInsets.symmetric(vertical: context.tvSpacing(8), horizontal: context.tvSpacing(8)),
             decoration: BoxDecoration(
+              color: isFocused
+                  ? Colors.white.withValues(alpha: 0.2)
+                  : Colors.transparent,
               border: isFocused ? Border.all(color: AppTheme.primaryBlue, width: 2) : null,
               borderRadius: BorderRadius.circular(4),
             ),

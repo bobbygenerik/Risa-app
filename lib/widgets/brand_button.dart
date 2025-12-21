@@ -45,10 +45,7 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
                 .clamp(0.0, 1.0))
             .toColor()
         : baseColor;
-    final focusColor = HSLColor.fromColor(baseColor)
-        .withLightness((HSLColor.fromColor(baseColor).lightness + 0.12)
-            .clamp(0.0, 1.0))
-        .toColor();
+    final focusColor = Color.lerp(baseColor, Colors.white, 0.25) ?? baseColor;
     final resolvedColor = _focused ? focusColor : pressedColor;
 
     final resolvedPadding =
@@ -217,7 +214,8 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
       context.tvSpacing(resolvedPadding.bottom),
     );
 
-    final focusFill = Colors.white.withValues(alpha: 0.16);
+    final focusFill = Color.lerp(AppTheme.primaryBlue, Colors.white, 0.25) ??
+        AppTheme.primaryBlue;
     final content = AnimatedContainer(
       duration: AppDurations.fast,
       decoration: BoxDecoration(

@@ -2,6 +2,7 @@ import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/painting.dart';
 
 import 'package:go_router/go_router.dart';
 // import 'package:iptv_player/widgets/top_navigation_bar.dart'; // Removed
@@ -41,6 +42,8 @@ class _MainShellState extends State<MainShell> {
   bool Function()? _navFocusRequester;
   final GlobalKey<SidebarNavigationState> _sidebarKey =
       GlobalKey<SidebarNavigationState>();
+  RouteInformationProvider? _routeInfoProvider;
+  String? _lastLocation;
 
   final FocusScopeNode _contentFocusScope =
       FocusScopeNode(debugLabel: 'ContentScope');
@@ -71,6 +74,13 @@ class _MainShellState extends State<MainShell> {
       });
     });
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _routeInfoProvider = GoRouter.of(context).routeInformationProvider;
+      _lastLocation = _routeInfoProvider?.value.location;
+      _routeInfoProvider?.addListener(_handleRouteChange);
+    });
+
     if (kForceSearchPopup) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || _autoSearchTriggered) return;
@@ -85,6 +95,7 @@ class _MainShellState extends State<MainShell> {
     _timerService.unregister('main_shell_time');
     _contentFocusScope.dispose();
     _globalFocusNode.dispose();
+    _routeInfoProvider?.removeListener(_handleRouteChange);
     super.dispose();
   }
 
@@ -232,6 +243,18 @@ class _MainShellState extends State<MainShell> {
 
   void _showSearchDialog() {
     context.go('/search');
+  }
+
+  void _handleRouteChange() {
+    if (!mounted) return;
+    final location = _routeInfoProvider?.value.location;
+    if (location == null || location == _lastLocation) return;
+    _lastLocation = location;
+    _sidebarKey.currentState?.collapse();
+    if (location.startsWith('/settings')) {
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
+    }
   }
 
   void _setNavFocusRequester(bool Function()? requester) {

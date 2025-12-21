@@ -145,7 +145,9 @@ class SettingsActionTile extends StatelessWidget {
         builder: (context) {
           final isFocused = Focus.of(context).hasFocus;
           return Material(
-            color: isFocused ? Colors.white : Colors.transparent,
+            color: isFocused
+                ? Colors.white.withValues(alpha: 0.18)
+                : Colors.transparent,
             child: InkWell(
               onTap: onTap,
               child: Padding(
@@ -156,7 +158,7 @@ class SettingsActionTile extends StatelessWidget {
                       Icon(
                         icon,
                         size: 24,
-                        color: isFocused ? Colors.black : (iconColor ?? Colors.white70),
+                        color: iconColor ?? Colors.white70,
                       ),
                       const SizedBox(width: 16),
                     ],
@@ -169,7 +171,7 @@ class SettingsActionTile extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
-                              color: isFocused ? Colors.black : (titleColor ?? Colors.white),
+                              color: titleColor ?? Colors.white,
                             ),
                           ),
                           if (subtitle != null) ...[
@@ -178,7 +180,7 @@ class SettingsActionTile extends StatelessWidget {
                               subtitle!,
                               style: TextStyle(
                                 fontSize: 13,
-                                color: isFocused ? Colors.black54 : Colors.white54,
+                                color: Colors.white54,
                               ),
                             ),
                           ],
@@ -190,7 +192,7 @@ class SettingsActionTile extends StatelessWidget {
                     else if (onTap != null)
                       Icon(
                         Icons.chevron_right,
-                        color: isFocused ? Colors.black54 : Colors.white24,
+                        color: Colors.white24,
                       ),
                   ],
                 ),
@@ -243,7 +245,9 @@ class SettingsSwitchTile extends StatelessWidget {
         builder: (context) {
           final isFocused = Focus.of(context).hasFocus;
           return Material(
-            color: isFocused ? Colors.white : Colors.transparent,
+            color: isFocused
+                ? Colors.white.withValues(alpha: 0.18)
+                : Colors.transparent,
             child: InkWell(
               onTap: () => onChanged(!value),
               child: Padding(
@@ -259,7 +263,7 @@ class SettingsSwitchTile extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
-                              color: isFocused ? Colors.black : Colors.white,
+                              color: Colors.white,
                             ),
                           ),
                           if (subtitle != null) ...[
@@ -268,7 +272,7 @@ class SettingsSwitchTile extends StatelessWidget {
                               subtitle!,
                               style: TextStyle(
                                 fontSize: 13,
-                                color: isFocused ? Colors.black54 : Colors.white54,
+                                color: Colors.white54,
                               ),
                             ),
                           ],

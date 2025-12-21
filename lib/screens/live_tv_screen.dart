@@ -119,6 +119,18 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     });
   }
 
+  void _scrollToHeroPeekOnFocus() {
+    if (!mounted || !_scrollController.hasClients) return;
+    final heroHeight = context.heroHeight();
+    final targetOffset = heroHeight * 0.2;
+    if (_scrollController.offset >= targetOffset) return;
+    _scrollController.animateTo(
+      targetOffset,
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
   void _startCarouselIfNeeded() {
     // Register carousel timer (8 seconds)
     _timerService.registerCustomCallback('live_tv_carousel', 8, () {
@@ -263,48 +275,60 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 left: -AppSpacing.sidebarCollapsedWidth,
                 right: -AppSpacing.sidebarCollapsedWidth,
                 height: heroHeight,
-                child: Builder(builder: (context) {
-                  final scrollPos = _scrollController.hasClients
-                      ? _scrollController.offset
-                      : 0.0;
-                  final fadeProgress =
-                      (scrollPos / (heroHeight * 0.3)).clamp(0.0, 1.0);
+                child: AnimatedBuilder(
+                  animation: _scrollController,
+                  child: Builder(builder: (context) {
+                    final scrollPos = _scrollController.hasClients
+                        ? _scrollController.offset
+                        : 0.0;
+                    final fadeProgress =
+                        (scrollPos / (heroHeight * 0.3)).clamp(0.0, 1.0);
 
-                  return Opacity(
-                    opacity: 1.0 - fadeProgress,
-                    child: Stack(
-                      children: [
-                        _buildHeroContent(
-                          featuredChannel,
-                          currentProgram,
-                          heroImage,
-                          0.0,
-                        ),
-                        // Gradient fade at bottom
-                        Positioned(
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
-                          height: 120,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  Colors.transparent,
-                                  AppTheme.darkBackground
-                                      .withAlpha((0.8 * 255).round()),
-                                  AppTheme.darkBackground,
-                                ],
+                    return Opacity(
+                      opacity: 1.0 - fadeProgress,
+                      child: Stack(
+                        children: [
+                          _buildHeroContent(
+                            featuredChannel,
+                            currentProgram,
+                            heroImage,
+                            0.0,
+                          ),
+                          // Gradient fade at bottom
+                          Positioned(
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            height: 120,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.transparent,
+                                    AppTheme.darkBackground
+                                        .withAlpha((0.8 * 255).round()),
+                                    AppTheme.darkBackground,
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
+                        ],
+                      ),
+                    );
+                  }),
+                  builder: (context, child) {
+                    final scrollPos = _scrollController.hasClients
+                        ? _scrollController.offset
+                        : 0.0;
+                    return Transform.translate(
+                      offset: Offset(0, -scrollPos),
+                      child: child,
+                    );
+                  },
+                ),
               ),
               // Scrollable content
               Positioned.fill(
@@ -347,22 +371,34 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     0.15, // Lowered from 0.25 for better artwork exposure
                 left: contentInset,
                 width: heroInfoWidth,
-                child: Builder(builder: (context) {
-                  final scrollPos = _scrollController.hasClients
-                      ? _scrollController.offset
-                      : 0.0;
-                  final fadeProgress =
-                      (scrollPos / (heroHeight * 0.12)).clamp(0.0, 1.0);
-                  final opacity = 1.0 - fadeProgress;
-                  if (opacity <= 0.01) {
-                    return const SizedBox.shrink();
-                  }
-                  return Opacity(
-                    opacity: opacity,
-                    child: _buildFeaturedInfo(
-                        context, featuredChannel, currentProgram),
-                  );
-                }),
+                child: AnimatedBuilder(
+                  animation: _scrollController,
+                  child: Builder(builder: (context) {
+                    final scrollPos = _scrollController.hasClients
+                        ? _scrollController.offset
+                        : 0.0;
+                    final fadeProgress =
+                        (scrollPos / (heroHeight * 0.12)).clamp(0.0, 1.0);
+                    final opacity = 1.0 - fadeProgress;
+                    if (opacity <= 0.01) {
+                      return const SizedBox.shrink();
+                    }
+                    return Opacity(
+                      opacity: opacity,
+                      child: _buildFeaturedInfo(
+                          context, featuredChannel, currentProgram),
+                    );
+                  }),
+                  builder: (context, child) {
+                    final scrollPos = _scrollController.hasClients
+                        ? _scrollController.offset
+                        : 0.0;
+                    return Transform.translate(
+                      offset: Offset(0, -scrollPos),
+                      child: child,
+                    );
+                  },
+                ),
               ),
               // Channel logo
               Positioned(
@@ -682,7 +718,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final maxCardWidth = screenWidth < 800 ? screenWidth / 2.8 : screenWidth / 5.5;
     final cardWidth = min(context.cardWidth(), maxCardWidth);
     final cardHeight = cardWidth * 0.6;
-    final rowHeight = cardHeight + context.spacingXl();
+    final focusExtra = cardHeight * (TVFocusStyle.focusScale - 1);
+    final rowHeight = cardHeight + context.spacingXl() + focusExtra;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -706,6 +743,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     padding: EdgeInsets.zero,
+                    clipBehavior: Clip.none,
                     itemCount: channels.length,
                     itemBuilder: (context, index) {
                       final focusNode =
@@ -772,6 +810,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       child: Focus(
         focusNode: focusNode,
         canRequestFocus: true,
+        onFocusChange: (hasFocus) {
+          if (hasFocus) {
+            _scrollToHeroPeekOnFocus();
+          }
+        },
         onKeyEvent: (node, event) {
           if (event is KeyDownEvent) {
             if (event.logicalKey == LogicalKeyboardKey.select ||
@@ -819,6 +862,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 scale: isFocused ? TVFocusStyle.focusScale : 1.0,
                 duration: TVFocusStyle.animationDuration,
                 curve: TVFocusStyle.animationCurve,
+                alignment: index == 0
+                    ? Alignment.topLeft
+                    : index == totalCount - 1
+                        ? Alignment.topRight
+                        : Alignment.topCenter,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [

@@ -653,55 +653,58 @@ class _MoviesScreenState extends State<MoviesScreen>
                   left: -AppSpacing.sidebarCollapsedWidth,
                   right: -AppSpacing.sidebarCollapsedWidth,
                   height: heroHeight,
-                  child: Opacity(
-                    opacity: 1.0 - fadeProgress,
-                    child: Focus(
-                      focusNode: _heroFocus,
-                      onKeyEvent: (node, event) {
-                        if (event is KeyDownEvent) {
-                          if (event.logicalKey == LogicalKeyboardKey.select ||
-                              event.logicalKey == LogicalKeyboardKey.enter) {
+                  child: Transform.translate(
+                    offset: Offset(0, -scrollOffset),
+                    child: Opacity(
+                      opacity: 1.0 - fadeProgress,
+                      child: Focus(
+                        focusNode: _heroFocus,
+                        onKeyEvent: (node, event) {
+                          if (event is KeyDownEvent) {
+                            if (event.logicalKey == LogicalKeyboardKey.select ||
+                                event.logicalKey == LogicalKeyboardKey.enter) {
+                              final encodedId = Uri.encodeComponent(featuredMovie.id);
+                              context.push('/content/$encodedId', extra: featuredMovie);
+                              return KeyEventResult.handled;
+                            }
+                            if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                              return requestNavigationFocus()
+                                  ? KeyEventResult.handled
+                                  : KeyEventResult.ignored;
+                            }
+                          }
+                          return KeyEventResult.ignored;
+                        },
+                        child: GestureDetector(
+                          onTap: () {
                             final encodedId = Uri.encodeComponent(featuredMovie.id);
                             context.push('/content/$encodedId', extra: featuredMovie);
-                            return KeyEventResult.handled;
-                          }
-                          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                            return requestNavigationFocus()
-                                ? KeyEventResult.handled
-                                : KeyEventResult.ignored;
-                          }
-                        }
-                        return KeyEventResult.ignored;
-                      },
-                      child: GestureDetector(
-                        onTap: () {
-                          final encodedId = Uri.encodeComponent(featuredMovie.id);
-                          context.push('/content/$encodedId', extra: featuredMovie);
-                        },
-                        child: Stack(
-                          children: [
-                            _buildHeroContent(featuredMovie, heroImage, 0.0),
-                            // Gradient fade at bottom
-                            Positioned(
-                              bottom: 0,
-                              left: 0,
-                              right: 0,
-                              height: 120,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      Colors.transparent,
-                                      AppTheme.darkBackground.withAlpha((0.8 * 255).round()),
-                                      AppTheme.darkBackground,
-                                    ],
+                          },
+                          child: Stack(
+                            children: [
+                              _buildHeroContent(featuredMovie, heroImage, 0.0),
+                              // Gradient fade at bottom
+                              Positioned(
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                height: 120,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Colors.transparent,
+                                        AppTheme.darkBackground.withAlpha((0.8 * 255).round()),
+                                        AppTheme.darkBackground,
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -717,9 +720,12 @@ class _MoviesScreenState extends State<MoviesScreen>
                       if (opacity <= 0.01) {
                         return const SizedBox.shrink();
                       }
-                      return Opacity(
-                        opacity: opacity,
-                        child: _buildHeroInfo(context, featuredMovie),
+                      return Transform.translate(
+                        offset: Offset(0, -scrollOffset),
+                        child: Opacity(
+                          opacity: opacity,
+                          child: _buildHeroInfo(context, featuredMovie),
+                        ),
                       );
                     },
                   ),

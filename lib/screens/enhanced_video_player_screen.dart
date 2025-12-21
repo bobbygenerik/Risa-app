@@ -100,8 +100,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       configuration: VideoControllerConfiguration(
         enableHardwareAcceleration: resolvedHwAccel,
         vo: isTv ? 'gpu' : null,
-        hwdec: isTv ? 'mediacodec' : null,
-        androidAttachSurfaceAfterVideoParameters: isTv ? false : null,
+        hwdec: isTv ? 'mediacodec-copy' : null,
+        androidAttachSurfaceAfterVideoParameters: isTv ? true : null,
       ),
     );
 
@@ -110,7 +110,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       if (_player.platform is NativePlayer) {
         final platform = _player.platform as NativePlayer;
         final hwDecoding = useHwDecoding || isTv;
-        platform.setProperty('hwdec', hwDecoding ? 'mediacodec' : 'no');
+        final hwdecValue = isTv
+            ? 'mediacodec-copy'
+            : (hwDecoding ? 'mediacodec' : 'no');
+        platform.setProperty('hwdec', hwdecValue);
         platform.setProperty('network-timeout', '60');
         platform.setProperty('demuxer-max-bytes', '104857600'); // 100MB buffer
         platform.setProperty('demuxer-max-back-bytes', '52428800'); // 50MB back buffer
