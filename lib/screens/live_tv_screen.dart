@@ -226,6 +226,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final screenSize = MediaQuery.of(context).size;
     final isTV = screenSize.width >= 1920 || screenSize.height >= 1080;
     final heroHeight = context.heroHeight();
+    final cardPeek = context.spacingLg();
     final contentInset = context.spacingSm();
     final rightInset = context.spacingLg();
     
@@ -314,7 +315,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Hero spacer
-                      SizedBox(height: heroHeight),
+                      SizedBox(height: (heroHeight - cardPeek).clamp(0.0, heroHeight)),
                       // Content with sidebar alignment
                       Container(
                         color: AppTheme.darkBackground,
@@ -326,7 +327,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            SizedBox(height: context.spacingSm()),
+                            SizedBox(height: context.spacingMd()),
                             if (isGrouping && groupedChannels.isEmpty)
                               _buildCategoryLoadingIndicator()
                             else
@@ -351,7 +352,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       ? _scrollController.offset
                       : 0.0;
                   final fadeProgress =
-                      (scrollPos / (heroHeight * 0.18)).clamp(0.0, 1.0);
+                      (scrollPos / (heroHeight * 0.12)).clamp(0.0, 1.0);
                   final opacity = 1.0 - fadeProgress;
                   if (opacity <= 0.01) {
                     return const SizedBox.shrink();
@@ -500,8 +501,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Widget _buildChannelLogo(BuildContext context, Channel channel) {
     return Container(
-      height: 40,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
       decoration: BoxDecoration(
         color: AppTheme.cardBackground,
         borderRadius: BorderRadius.circular(8),
@@ -509,7 +510,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       child: Center(
         child: CachedChannelLogo(
           logoUrl: channel.logoUrl,
-          size: 24,
+          size: 32,
           fallbackIcon: Icons.tv,
         ),
       ),

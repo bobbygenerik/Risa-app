@@ -619,6 +619,7 @@ class _MoviesScreenState extends State<MoviesScreen>
     final heroImage = _resolveHeroImage(featuredMovie);
     final screenSize = MediaQuery.of(context).size;
     final heroHeight = context.heroHeight();
+    final cardPeek = context.spacingLg();
     final contentInset = context.spacingSm();
 
     return Focus(
@@ -632,7 +633,7 @@ class _MoviesScreenState extends State<MoviesScreen>
           final fadeProgress =
               (scrollOffset / (heroHeight * 0.3)).clamp(0.0, 1.0);
           final overlayFadeProgress =
-              (scrollOffset / (heroHeight * 0.18)).clamp(0.0, 1.0);
+              (scrollOffset / (heroHeight * 0.12)).clamp(0.0, 1.0);
           
           return Container(
             decoration: const BoxDecoration(
@@ -733,7 +734,7 @@ class _MoviesScreenState extends State<MoviesScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SizedBox(height: heroHeight),
+                        SizedBox(height: (heroHeight - cardPeek).clamp(0.0, heroHeight)),
                         Container(
                           color: AppTheme.darkBackground,
                           padding: EdgeInsets.only(
@@ -744,7 +745,7 @@ class _MoviesScreenState extends State<MoviesScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              SizedBox(height: context.spacingSm()),
+                              SizedBox(height: context.spacingMd()),
                               if (recentMovies.isNotEmpty) ...[
                                 _buildSectionHeader(context, 'Recently Added'),
                                 SizedBox(height: context.spacingSm()),

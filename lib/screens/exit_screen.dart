@@ -150,9 +150,36 @@ class _ExitScreenState extends State<ExitScreen> {
                       }
                       return KeyEventResult.ignored;
                     },
-                    child: BrandSecondaryButton(
-                      onPressed: () => context.go('/home'),
-                      label: 'Go Back',
+                    child: Builder(
+                      builder: (context) {
+                        final isFocused = Focus.of(context).hasFocus;
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 120),
+                          curve: Curves.easeOut,
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            border: isFocused
+                                ? Border.all(
+                                    color: AppTheme.primaryBlue, width: 2)
+                                : null,
+                            boxShadow: isFocused
+                                ? [
+                                    BoxShadow(
+                                      color: AppTheme.primaryBlue
+                                          .withValues(alpha: 0.4),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          child: BrandSecondaryButton(
+                            onPressed: () => context.go('/home'),
+                            label: 'Go Back',
+                          ),
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(width: 24),
@@ -172,9 +199,36 @@ class _ExitScreenState extends State<ExitScreen> {
                       }
                       return KeyEventResult.ignored;
                     },
-                    child: BrandPrimaryButton(
-                      onPressed: () => SystemNavigator.pop(),
-                      label: 'Exit App',
+                    child: Builder(
+                      builder: (context) {
+                        final isFocused = Focus.of(context).hasFocus;
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 120),
+                          curve: Curves.easeOut,
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            border: isFocused
+                                ? Border.all(
+                                    color: AppTheme.primaryBlue, width: 2)
+                                : null,
+                            boxShadow: isFocused
+                                ? [
+                                    BoxShadow(
+                                      color: AppTheme.primaryBlue
+                                          .withValues(alpha: 0.4),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          child: BrandPrimaryButton(
+                            onPressed: () => SystemNavigator.pop(),
+                            label: 'Exit App',
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],

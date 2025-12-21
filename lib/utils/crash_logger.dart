@@ -10,8 +10,11 @@ class CrashLogger {
 
   Future<void> init() async {
     if (_initialized) return;
-    final directory = await getApplicationDocumentsDirectory();
+    final directory = await getApplicationSupportDirectory();
     _logFile = File('${directory.path}/crash.log');
+    if (!await _logFile!.exists()) {
+      await _logFile!.writeAsString('');
+    }
     _initialized = true;
   }
 

@@ -40,6 +40,7 @@ class HeroInfoBox extends StatelessWidget {
   Widget build(BuildContext context) {
     final compactButtonPadding =
         const EdgeInsets.symmetric(horizontal: 10, vertical: 6);
+    final actionWidth = context.cardWidth() * 0.5;
     return Container(
       constraints: BoxConstraints(
         maxWidth: context.heroInfoWidth(),
@@ -122,14 +123,17 @@ class HeroInfoBox extends StatelessWidget {
                   }
                   return KeyEventResult.ignored;
                 },
-                child: BrandPrimaryButton(
-                  onPressed: onWatchPressed,
-                  label: 'Watch Now',
-                  icon: Icons.play_arrow_rounded,
-                  padding: compactButtonPadding,
-                  fontSize: 12,
-                  minHeight: 24,
-                  focusNode: primaryButtonFocusNode,
+                child: SizedBox(
+                  width: actionWidth,
+                  child: BrandPrimaryButton(
+                    onPressed: onWatchPressed,
+                    label: 'Watch Now',
+                    icon: Icons.play_arrow_rounded,
+                    padding: compactButtonPadding,
+                    fontSize: 12,
+                    minHeight: 24,
+                    focusNode: primaryButtonFocusNode,
+                  ),
                 ),
               ),
               if (onMoreInfoPressed != null) ...[
@@ -146,14 +150,17 @@ class HeroInfoBox extends StatelessWidget {
                     }
                     return KeyEventResult.ignored;
                   },
-                  child: BrandSecondaryButton(
-                    onPressed: onMoreInfoPressed!,
-                    label: 'More Info',
-                    icon: Icons.info_outline_rounded,
-                    padding: compactButtonPadding,
-                    fontSize: 12,
-                    minHeight: 24,
-                    focusNode: secondaryButtonFocusNode,
+                  child: SizedBox(
+                    width: actionWidth,
+                    child: BrandSecondaryButton(
+                      onPressed: onMoreInfoPressed!,
+                      label: 'More Info',
+                      icon: Icons.info_outline_rounded,
+                      padding: compactButtonPadding,
+                      fontSize: 12,
+                      minHeight: 24,
+                      focusNode: secondaryButtonFocusNode,
+                    ),
                   ),
                 ),
               ],
