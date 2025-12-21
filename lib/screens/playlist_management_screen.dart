@@ -8,6 +8,7 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/no_text_selection_controls.dart';
 
 import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/widgets/settings_layout.dart';
@@ -734,52 +735,75 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        GestureDetector(
-          onTap: () => focusNode.requestFocus(),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              color: Colors.black26,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.white10,
-                width: 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  icon,
-                  size: 20,
-                  color: Colors.white54,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextField(
-                    controller: controller,
-                    focusNode: focusNode,
-                    enableInteractiveSelection: false,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                    ),
-                    onTap: () {
-                      final text = controller.text;
-                      controller.selection =
-                          TextSelection.collapsed(offset: text.length);
-                    },
-                    obscureText: obscureText,
-                    decoration: InputDecoration.collapsed(
-                      hintText: hint,
-                      hintStyle: const TextStyle(
-                        color: Colors.white30,
-                      ),
+        Focus(
+          focusNode: focusNode,
+          onFocusChange: (hasFocus) {
+            if (hasFocus) {
+              final text = controller.text;
+              controller.selection =
+                  TextSelection.collapsed(offset: text.length);
+            }
+          },
+          child: Builder(
+            builder: (context) {
+              final isFocused = Focus.of(context).hasFocus;
+              return GestureDetector(
+                onTap: () => focusNode.requestFocus(),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: isFocused
+                        ? AppTheme.highlight
+                        : Colors.black26,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isFocused
+                          ? AppTheme.primaryBlue
+                          : Colors.white10,
+                      width: isFocused ? 2 : 1,
                     ),
                   ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        icon,
+                        size: 20,
+                        color: Colors.white54,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: controller,
+                          focusNode: focusNode,
+                          enableInteractiveSelection: false,
+                          selectionControls: NoTextSelectionControls(),
+                          showCursor: false,
+                          cursorColor: Colors.transparent,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                          ),
+                          onTap: () {
+                            final text = controller.text;
+                            controller.selection =
+                                TextSelection.collapsed(offset: text.length);
+                          },
+                          obscureText: obscureText,
+                          decoration: InputDecoration.collapsed(
+                            hintText: hint,
+                            hintStyle: const TextStyle(
+                              color: Colors.white30,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ],

@@ -56,7 +56,8 @@ class M3UParserService {
   /// Parses M3U playlist content and returns a list of channels with chunked processing
   List<Channel> parseM3U(String content) {
     final List<Channel> channels = [];
-    final rawLines = content.split('\n');
+    final seenUrls = <String>{};
+    final rawLines = content.split(RegExp(r'\r\n|\n|\r'));
 
     _epgUrl = null; // Reset EPG URL
 
@@ -108,6 +109,47 @@ class M3UParserService {
     Map<String, String> currentAttributes = {};
     int channelCount = 0;
 
+    void processExtinfSegment(String segment) {
+      final urlMatch = _lastUrlMatch(segment);
+      final infoPart = urlMatch != null
+          ? segment.substring(0, urlMatch.start).trimRight()
+          : segment;
+      currentInfo = _extractExtinfPayload(infoPart);
+      if (currentInfo == null) return;
+      currentAttributes = _parseAttributes(currentInfo!);
+      if (channelCount < 3) {
+        debugLog(
+          'M3UParser: Found EXTINF: ${currentInfo!.length > 100 ? '${currentInfo!.substring(0, 100)}...' : currentInfo}',
+        );
+      }
+      if (urlMatch != null) {
+        final inlineUrl = urlMatch.group(0) ?? '';
+        if (inlineUrl.isNotEmpty) {
+          if (!seenUrls.add(inlineUrl)) {
+            currentInfo = null;
+            currentAttributes = {};
+            return;
+          }
+          final channelName = _extractChannelName(currentInfo!);
+          final channel = Channel(
+            id: currentAttributes['tvg-id'] ??
+                '${channelName}_${inlineUrl.hashCode.abs()}',
+            name: channelName,
+            url: inlineUrl,
+            logoUrl: currentAttributes['tvg-logo'],
+            groupTitle: currentAttributes['group-title'],
+            tvgId: currentAttributes['tvg-id'],
+            attributes: currentAttributes,
+            sortOrder: channelCount,
+          );
+          channels.add(channel);
+          channelCount++;
+          currentInfo = null;
+          currentAttributes = {};
+        }
+      }
+    }
+
     // Parse logical lines in chunks
     for (int chunkStart = 0; chunkStart < lines.length; chunkStart += chunkSize) {
       final chunkEnd = (chunkStart + chunkSize).clamp(0, lines.length);
@@ -117,45 +159,33 @@ class M3UParserService {
         if (line.isEmpty) continue;
 
         if (line.contains('EXTINF:')) {
-          final urlMatch = _urlRegex.firstMatch(line);
-          final infoPart = urlMatch != null
-              ? line.substring(0, urlMatch.start).trimRight()
-              : line;
-          currentInfo = _extractExtinfPayload(infoPart);
-          if (currentInfo == null) continue;
-          currentAttributes = _parseAttributes(currentInfo);
-          if (channelCount < 3) {
-            debugLog(
-              'M3UParser: Found EXTINF: ${currentInfo.length > 100 ? '${currentInfo.substring(0, 100)}...' : currentInfo}',
-            );
-          }
-          if (urlMatch != null) {
-            final inlineUrl = urlMatch.group(0) ?? '';
-            if (inlineUrl.isNotEmpty) {
-              final channelName = _extractChannelName(currentInfo);
-              final channel = Channel(
-                id: currentAttributes['tvg-id'] ??
-                    '${channelName}_${inlineUrl.hashCode.abs()}',
-                name: channelName,
-                url: inlineUrl,
-                logoUrl: currentAttributes['tvg-logo'],
-                groupTitle: currentAttributes['group-title'],
-                tvgId: currentAttributes['tvg-id'],
-                attributes: currentAttributes,
-                sortOrder: channelCount,
-              );
-              channels.add(channel);
-              channelCount++;
-              currentInfo = null;
-              currentAttributes = {};
-            }
+          for (final segment in _splitExtinfSegments(line)) {
+            processExtinfSegment(segment);
           }
         } else if (!line.startsWith('#') && currentInfo != null) {
-          final channelName = _extractChannelName(currentInfo);
+          final urlMatch = _lastUrlMatch(line);
+          if (urlMatch == null) {
+            currentInfo = null;
+            currentAttributes = {};
+            continue;
+          }
+          final channelUrl = urlMatch.group(0) ?? '';
+          if (channelUrl.isEmpty) {
+            currentInfo = null;
+            currentAttributes = {};
+            continue;
+          }
+          if (!seenUrls.add(channelUrl)) {
+            currentInfo = null;
+            currentAttributes = {};
+            continue;
+          }
+          final channelName = _extractChannelName(currentInfo!);
           final channel = Channel(
-            id: currentAttributes['tvg-id'] ?? '${channelName}_${line.hashCode.abs()}',
+            id: currentAttributes['tvg-id'] ??
+                '${channelName}_${channelUrl.hashCode.abs()}',
             name: channelName,
-            url: line,
+            url: channelUrl,
             logoUrl: currentAttributes['tvg-logo'],
             groupTitle: currentAttributes['group-title'],
             tvgId: currentAttributes['tvg-id'],
@@ -199,9 +229,32 @@ class M3UParserService {
     return line.substring(idx + 'EXTINF:'.length);
   }
 
+  RegExpMatch? _lastUrlMatch(String line) {
+    RegExpMatch? lastMatch;
+    for (final match in _urlRegex.allMatches(line)) {
+      lastMatch = match;
+    }
+    return lastMatch;
+  }
+
+  List<String> _splitExtinfSegments(String line) {
+    final segments = <String>[];
+    var index = line.indexOf('EXTINF:');
+    if (index == -1) return [line];
+    while (index != -1) {
+      final next = line.indexOf('EXTINF:', index + 1);
+      final segment =
+          line.substring(index, next == -1 ? line.length : next).trim();
+      if (segment.isNotEmpty) segments.add(segment);
+      index = next;
+    }
+    return segments;
+  }
+
   /// Parses an M3U playlist from a byte stream without buffering the entire
   /// payload into memory (prevents OOM on very large playlists).
   Future<M3UParseResult> parseM3UStream(Stream<List<int>> byteStream) async {
+    debugLog('M3UParser: (stream) Starting M3U stream parsing...');
     final List<Channel> channels = [];
     final List<Content> movies = [];
     final List<Content> series = [];
@@ -216,6 +269,7 @@ class M3UParserService {
     int channelCount = 0;
     int logicalIndex = 0;
     bool headerProcessed = false;
+    final seenUrls = <String>{};
 
     void processLogicalLine(String line) {
       if (line.isEmpty) return;
@@ -228,14 +282,21 @@ class M3UParserService {
             _epgUrl = urlMatch.group(1);
             debugLog('M3UParser: (stream) Found EPG URL: $_epgUrl');
           }
+        } else {
+          debugLog('M3UParser: (stream) EPG URL not found in header line.');
         }
       }
 
-      if (line.contains('EXTINF:')) {
-        final urlMatch = _urlRegex.firstMatch(line);
+      // Log every 100th line for progress tracking
+      if (logicalIndex % 100 == 0) {
+        debugLog('M3UParser: (stream) Processing line ${logicalIndex}: $line');
+      }
+
+      void processExtinfSegment(String segment) {
+        final urlMatch = _lastUrlMatch(segment);
         final infoPart = urlMatch != null
-            ? line.substring(0, urlMatch.start).trimRight()
-            : line;
+            ? segment.substring(0, urlMatch.start).trimRight()
+            : segment;
         currentInfo = _extractExtinfPayload(infoPart);
         if (currentInfo == null) {
           return;
@@ -249,6 +310,11 @@ class M3UParserService {
         if (urlMatch != null) {
           final inlineUrl = urlMatch.group(0) ?? '';
           if (inlineUrl.isNotEmpty) {
+            if (!seenUrls.add(inlineUrl)) {
+              currentInfo = null;
+              currentAttributes = {};
+              return;
+            }
             final channelName = _extractChannelName(currentInfo!);
             final groupTitle =
                 currentAttributes['group-title']?.toLowerCase() ?? '';
@@ -297,19 +363,43 @@ class M3UParserService {
             logicalIndex++;
           }
         }
+      }
+
+      if (line.contains('EXTINF:')) {
+        for (final segment in _splitExtinfSegments(line)) {
+          processExtinfSegment(segment);
+        }
       } else if (!line.startsWith('#') && currentInfo != null) {
+        final urlMatch = _lastUrlMatch(line);
+        if (urlMatch == null) {
+          currentInfo = null;
+          currentAttributes = {};
+          return;
+        }
+        final channelUrl = urlMatch.group(0) ?? '';
+        if (channelUrl.isEmpty) {
+          currentInfo = null;
+          currentAttributes = {};
+          return;
+        }
+        if (!seenUrls.add(channelUrl)) {
+          currentInfo = null;
+          currentAttributes = {};
+          return;
+        }
         final channelName = _extractChannelName(currentInfo!);
         
         final groupTitle =
             currentAttributes['group-title']?.toLowerCase() ?? '';
-        final looksSeries = _looksLikeSeries(channelName, groupTitle, line);
-        final looksMovie = !looksSeries && _looksLikeMovie(groupTitle, line);
+        final looksSeries =
+            _looksLikeSeries(channelName, groupTitle, channelUrl);
+        final looksMovie = !looksSeries && _looksLikeMovie(groupTitle, channelUrl);
 
         if (looksSeries) {
           series.add(
             _createSeriesContent(
               channelName,
-              line,
+              channelUrl,
               currentAttributes,
               logicalIndex,
             ),
@@ -318,7 +408,7 @@ class M3UParserService {
           movies.add(
             _createMovieContent(
               channelName,
-              line,
+              channelUrl,
               currentAttributes,
               logicalIndex,
             ),
@@ -326,9 +416,10 @@ class M3UParserService {
         } else {
           // Only add to channels if NOT a movie and NOT a series (i.e., live TV)
           final channel = Channel(
-            id: currentAttributes['tvg-id'] ?? '${channelName}_${line.hashCode.abs()}_$logicalIndex',
+            id: currentAttributes['tvg-id'] ??
+                '${channelName}_${channelUrl.hashCode.abs()}_$logicalIndex',
             name: channelName,
-            url: line,
+            url: channelUrl,
             logoUrl: currentAttributes['tvg-logo'],
             groupTitle: currentAttributes['group-title'],
             tvgId: currentAttributes['tvg-id'],
@@ -346,25 +437,32 @@ class M3UParserService {
 
         currentInfo = null;
         currentAttributes = {};
+        logicalIndex++;
       }
-
-      logicalIndex++;
     }
-
+    int lineCount = 0;
     await for (final rawLine in lineStream) {
-      final line = rawLine.trimRight();
-      if (line.isEmpty) continue;
-      final trimmed = line.trim();
+      if(lineCount < 5) {
+        debugLog('M3UParser: (stream) Raw line ${lineCount++}: $rawLine');
+      }
+      final parts = rawLine.split('\r');
+      for (final part in parts) {
+        final line = part.trimRight();
+        if (line.isEmpty) continue;
+        final trimmed = line.trim();
 
-      if (trimmed.startsWith('#') || trimmed.startsWith('http')) {
-        if (pendingLine != null) {
-          processLogicalLine(pendingLine.trim());
+        if (trimmed.startsWith('#') ||
+            trimmed.startsWith('http') ||
+            trimmed.contains('EXTINF:')) {
+          if (pendingLine != null) {
+            processLogicalLine(pendingLine.trim());
+          }
+          pendingLine = trimmed;
+        } else if (pendingLine != null) {
+          pendingLine = pendingLine + trimmed;
+        } else {
+          pendingLine = trimmed;
         }
-        pendingLine = trimmed;
-      } else if (pendingLine != null) {
-        pendingLine = pendingLine + trimmed;
-      } else {
-        pendingLine = trimmed;
       }
     }
 
@@ -376,6 +474,9 @@ class M3UParserService {
     debugLog(
       'M3UParser: (stream) Movies detected: ${movies.length}, Series detected: ${series.length}',
     );
+    if (channels.isEmpty && movies.isEmpty && series.isEmpty) {
+      debugLog('M3UParser: (stream) WARNING: No content parsed from the M3U stream.');
+    }
     return M3UParseResult(channels: channels, movies: movies, series: series);
   }
 
@@ -396,6 +497,7 @@ class M3UParserService {
     int channelCount = 0;
     int logicalIndex = 0;
     bool headerProcessed = false;
+    final seenUrls = <String>{};
 
     void processLogicalLine(String line) {
       if (line.isEmpty) return;
@@ -410,11 +512,11 @@ class M3UParserService {
         }
       }
 
-      if (line.contains('EXTINF:')) {
-        final urlMatch = _urlRegex.firstMatch(line);
+      void processExtinfSegment(String segment) {
+        final urlMatch = _lastUrlMatch(segment);
         final infoPart = urlMatch != null
-            ? line.substring(0, urlMatch.start).trimRight()
-            : line;
+            ? segment.substring(0, urlMatch.start).trimRight()
+            : segment;
         currentInfo = _extractExtinfPayload(infoPart);
         if (currentInfo == null) return;
         currentAttributes = _parseAttributes(currentInfo!);
@@ -422,6 +524,11 @@ class M3UParserService {
         if (urlMatch != null) {
           final inlineUrl = urlMatch.group(0) ?? '';
           if (inlineUrl.isNotEmpty) {
+            if (!seenUrls.add(inlineUrl)) {
+              currentInfo = null;
+              currentAttributes = {};
+              return;
+            }
             final channelName = _extractChannelName(currentInfo!);
             final groupTitle = currentAttributes['group-title'] ?? '';
             final isVod = _isVodUrl(inlineUrl);
@@ -467,14 +574,38 @@ class M3UParserService {
             }
             currentInfo = null;
             currentAttributes = {};
+            logicalIndex++;
           }
         }
+      }
+
+      if (line.contains('EXTINF:')) {
+        for (final segment in _splitExtinfSegments(line)) {
+          processExtinfSegment(segment);
+        }
       } else if (!line.startsWith('#') && currentInfo != null) {
+        final urlMatch = _lastUrlMatch(line);
+        if (urlMatch == null) {
+          currentInfo = null;
+          currentAttributes = {};
+          return;
+        }
+        final channelUrl = urlMatch.group(0) ?? '';
+        if (channelUrl.isEmpty) {
+          currentInfo = null;
+          currentAttributes = {};
+          return;
+        }
+        if (!seenUrls.add(channelUrl)) {
+          currentInfo = null;
+          currentAttributes = {};
+          return;
+        }
         final channelName = _extractChannelName(currentInfo!);
         final groupTitle = currentAttributes['group-title'] ?? '';
         
         // Fast classification - check URL patterns first (most reliable)
-        final isVod = _isVodUrl(line);
+        final isVod = _isVodUrl(channelUrl);
         final isSeries = isVod && _looksLikeSeriesFast(channelName, groupTitle);
         final isMovie = isVod && !isSeries;
 
@@ -482,7 +613,7 @@ class M3UParserService {
           seriesMaps.add({
             'id': 'series_${channelName.hashCode.abs()}_$logicalIndex',
             'title': channelName,
-            'streamUrl': line,
+            'streamUrl': channelUrl,
             'posterUrl': currentAttributes['tvg-logo'],
             'type': 'series',
             'category': groupTitle,
@@ -492,7 +623,7 @@ class M3UParserService {
           movieMaps.add({
             'id': 'movie_${channelName.hashCode.abs()}_$logicalIndex',
             'title': channelName,
-            'streamUrl': line,
+            'streamUrl': channelUrl,
             'posterUrl': currentAttributes['tvg-logo'],
             'type': 'movie',
             'category': groupTitle,
@@ -501,9 +632,10 @@ class M3UParserService {
         } else {
           // Live TV channel
           channelMaps.add({
-            'id': currentAttributes['tvg-id'] ?? '${channelName}_${line.hashCode.abs()}_$logicalIndex',
+            'id': currentAttributes['tvg-id'] ??
+                '${channelName}_${channelUrl.hashCode.abs()}_$logicalIndex',
             'name': channelName,
-            'url': line,
+            'url': channelUrl,
             'logoUrl': currentAttributes['tvg-logo'],
             'groupTitle': groupTitle,
             'tvgId': currentAttributes['tvg-id'],
@@ -516,26 +648,29 @@ class M3UParserService {
         }
         currentInfo = null;
         currentAttributes = {};
+        logicalIndex++;
       }
-      logicalIndex++;
     }
 
     await for (final rawLine in lineStream) {
-      final line = rawLine.trimRight();
-      if (line.isEmpty) continue;
-      final trimmed = line.trim();
+      final parts = rawLine.split('\r');
+      for (final part in parts) {
+        final line = part.trimRight();
+        if (line.isEmpty) continue;
+        final trimmed = line.trim();
 
-      if (trimmed.startsWith('#') ||
-          trimmed.startsWith('http') ||
-          trimmed.contains('EXTINF:')) {
-        if (pendingLine != null) {
-          processLogicalLine(pendingLine.trim());
+        if (trimmed.startsWith('#') ||
+            trimmed.startsWith('http') ||
+            trimmed.contains('EXTINF:')) {
+          if (pendingLine != null) {
+            processLogicalLine(pendingLine.trim());
+          }
+          pendingLine = trimmed;
+        } else if (pendingLine != null) {
+          pendingLine = pendingLine + trimmed;
+        } else {
+          pendingLine = trimmed;
         }
-        pendingLine = trimmed;
-      } else if (pendingLine != null) {
-        pendingLine = pendingLine + trimmed;
-      } else {
-        pendingLine = trimmed;
       }
     }
 

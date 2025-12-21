@@ -803,8 +803,133 @@ class ChannelProvider with ChangeNotifier {
           throw Exception('Parsed playlist is empty or invalid');
         }
 
-        // ...existing code...
-        // (rest of the function remains unchanged)
+        final prefs = await SharedPreferences.getInstance();
+
+        // Extract and save EPG URL if found
+        final epgUrl = parsed['epgUrl'] as String?;
+        if (epgUrl != null && epgUrl.isNotEmpty) {
+          final oldUrl = prefs.getString('epg_url');
+          final urlChanged = oldUrl != epgUrl;
+          debugLog(
+              'ChannelProvider: Found EPG URL in playlist: $epgUrl (changed: $urlChanged)');
+          await prefs.setString('epg_url', epgUrl);
+          if (_epgService != null) {
+            unawaited(_epgService!.initialize(forceRefresh: urlChanged));
+          }
+        }
+
+        _loadingStatus = 'Processing channels...';
+        _loadingProgress = 0.7;
+        notifyListeners();
+
+        final mapStart = DateTime.now();
+        final rawChannels = parsed['channels'] as List<dynamic>;
+        _channelMaps.clear();
+        _channelCache.clear();
+
+        const chunkSize = 1000;
+        for (int i = 0; i < rawChannels.length; i += chunkSize) {
+          final end = (i + chunkSize).clamp(0, rawChannels.length);
+          final chunk = rawChannels.sublist(i, end);
+
+          for (final c in chunk) {
+            _channelMaps.add(Map<String, dynamic>.from(c));
+          }
+
+          if (rawChannels.length > 5000 && i % (chunkSize * 2) == 0) {
+            _loadingStatus =
+                'Processing channels... ${i + end}/${rawChannels.length}';
+            _loadingProgress = 0.7 + (0.1 * (i + end) / rawChannels.length);
+            notifyListeners();
+            await Future.delayed(Duration.zero);
+          }
+        }
+
+        try {
+          final playlistJson = json.encode(_channelMaps);
+          await prefs.setString('flutter.cached_playlist', playlistJson);
+          debugLog(
+              'ChannelProvider: Saved playlist to flutter.cached_playlist for Android Auto');
+          debugLog(
+              'ChannelProvider: flutter.cached_playlist contents: ${playlistJson.substring(0, playlistJson.length > 500 ? 500 : playlistJson.length)}');
+        } catch (e) {
+          debugLog('ChannelProvider: Failed to save playlist for Android Auto: $e');
+        }
+
+        final List<Content> movies = (parsed['movies'] as List<dynamic>)
+            .map((m) => Content.fromMap(Map<String, dynamic>.from(m)))
+            .toList();
+        final List<Content> series = (parsed['series'] as List<dynamic>)
+            .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
+            .toList();
+
+        _moviesCount = movies.length;
+        _seriesCount = series.length;
+
+        _loadingStatus = 'Saving VOD content...';
+        _loadingProgress = 0.8;
+        notifyListeners();
+
+        _moviesCachePath = '${dir.path}/movies_cache.json';
+        _seriesCachePath = '${dir.path}/series_cache.json';
+        await File(_moviesCachePath!)
+            .writeAsString(json.encode(movies.map((m) => m.toMap()).toList()));
+        await File(_seriesCachePath!)
+            .writeAsString(json.encode(series.map((s) => s.toMap()).toList()));
+        final mapDuration = DateTime.now().difference(mapStart);
+        debugLog(
+            'ChannelProvider: Map conversion took ${mapDuration.inMilliseconds}ms');
+
+        _cachedCategories = null;
+        unawaited(_computeCategoriesAsync());
+
+        debugLog(
+            'ChannelProvider: Parsed ${_channelMaps.length} channels (isolate)');
+        debugLog(
+            'ChannelProvider: Parsed $_moviesCount movies, $_seriesCount series (isolate)');
+
+        _loadingStatus = 'Loading initial VOD content...';
+        _loadingProgress = 0.9;
+        notifyListeners();
+
+        if (_contentProvider != null) {
+          _contentProvider!.loadMovies(movies.take(100).toList());
+          _contentProvider!.loadSeries(series.take(100).toList());
+        }
+
+        _loadingStatus = 'Finalizing...';
+        _loadingProgress = 0.95;
+        notifyListeners();
+
+        final now = DateTime.now().millisecondsSinceEpoch;
+        final cacheFile = File('${dir.path}/$_playlistCacheFileName');
+        if (await tempFile.exists()) {
+          if (await cacheFile.exists()) {
+            await cacheFile.delete();
+          }
+          await tempFile.rename(cacheFile.path);
+          await prefs.setString(_playlistCacheFilePathKey, cacheFile.path);
+          await prefs.setInt('cache_timestamp', now);
+          await prefs.remove('cached_playlist');
+          debugLog(
+              'ChannelProvider: Playlist cached to file (${cacheFile.path}, $totalBytes bytes)');
+        }
+
+        unawaited(_saveJsonCache(parsed));
+        unawaited(_loadXtreamVOD(url));
+
+        _loadingProgress = 1.0;
+        _loadingStatus = 'Complete!';
+        _isLoading = false;
+        _hasLoadedPlaylist = true;
+        notifyListeners();
+
+        PerformanceMonitor.end('PLAYLIST_LOAD_TOTAL');
+        PerformanceMonitor.trackMemoryUsage('After playlist load');
+        debugLog(
+            'ChannelProvider: Loaded ${_channelMaps.length} channels, cache size: ${_channelCache.length}');
+
+        unawaited(_startBackgroundEnrichment());
       } finally {
         client.close();
       }

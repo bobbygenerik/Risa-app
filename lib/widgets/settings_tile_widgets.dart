@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/no_text_selection_controls.dart';
 
 // -----------------------------------------------------------------------------
 // SECTIONS & HEADERS
@@ -422,7 +423,9 @@ class _PremiumTextFieldState extends State<_PremiumTextField> {
                   controller: widget.controller,
                   focusNode: widget.focusNode,
                   enableInteractiveSelection: false,
-                  cursorColor: AppTheme.primaryBlue,
+                  selectionControls: NoTextSelectionControls(),
+                  showCursor: false,
+                  cursorColor: Colors.transparent,
                   style: const TextStyle(
                     color: AppTheme.textPrimary,
                     fontSize: 16,

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/no_text_selection_controls.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/channel.dart';
@@ -113,6 +114,13 @@ class _SearchScreenState extends State<SearchScreen>
                 Expanded(
                   child: Focus(
                     focusNode: _textFieldFocusNode,
+                    onFocusChange: (hasFocus) {
+                      if (hasFocus) {
+                        final text = _searchController.text;
+                        _searchController.selection =
+                            TextSelection.collapsed(offset: text.length);
+                      }
+                    },
                     onKeyEvent: (node, event) {
                       if (event is KeyDownEvent) {
                         if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
@@ -125,6 +133,9 @@ class _SearchScreenState extends State<SearchScreen>
                     child: TextField(
                       controller: _searchController,
                       enableInteractiveSelection: false,
+                      selectionControls: NoTextSelectionControls(),
+                      showCursor: false,
+                      cursorColor: Colors.transparent,
                       style: const TextStyle(fontSize: 18, color: Colors.white),
                       onTap: () {
                         final text = _searchController.text;

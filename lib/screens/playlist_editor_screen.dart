@@ -9,6 +9,7 @@ import '../utils/app_theme.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
+import 'package:iptv_player/utils/no_text_selection_controls.dart';
 
 class PlaylistEditorScreen extends StatefulWidget {
   const PlaylistEditorScreen({super.key});
@@ -268,6 +269,10 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
     return Focus(
       focusNode: focusNode,
       onFocusChange: (hasFocus) {
+        if (hasFocus) {
+          final text = controller.text;
+          controller.selection = TextSelection.collapsed(offset: text.length);
+        }
         if (!hasFocus && isEditable) {
           onEditableChange(false);
         }
@@ -297,11 +302,14 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
             });
           }));
         },
-            child: TextField(
+        child: TextField(
           controller: controller,
           readOnly: !isEditable,
           obscureText: obscureText,
           enableInteractiveSelection: false,
+          selectionControls: NoTextSelectionControls(),
+          showCursor: false,
+          cursorColor: Colors.transparent,
           onTap: () {
             final text = controller.text;
             controller.selection =

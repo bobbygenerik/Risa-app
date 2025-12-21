@@ -6,6 +6,7 @@ import 'package:iptv_player/models/saved_playlist.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
+import 'package:iptv_player/widgets/brand_text_field.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:go_router/go_router.dart';
 
@@ -211,26 +212,10 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.darkBackground,
         title: const Text('Edit Playlist Name'),
-        content: TextField(
+        content: BrandTextField(
           controller: nameController,
-          enableInteractiveSelection: false,
-          style: const TextStyle(color: Colors.white),
-          onTap: () {
-            final text = nameController.text;
-            nameController.selection =
-                TextSelection.collapsed(offset: text.length);
-          },
-          decoration: InputDecoration(
-            labelText: 'Playlist Name',
-            labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
-            enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
-            ),
-            focusedBorder: const UnderlineInputBorder(
-              borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
-            ),
-          ),
-          autofocus: true,
+          labelText: 'Playlist Name',
+          hintText: 'Enter playlist name',
         ),
         actions: [
           BrandSecondaryButton(

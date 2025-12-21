@@ -671,6 +671,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _showPlaylistResponsePreview(String content) {
     final preview = content.trim().isEmpty ? '<empty response>' : content;
+    final extinfCount =
+        RegExp(r'EXTINF:', caseSensitive: false).allMatches(content).length;
+    final extinfHashCount =
+        RegExp(r'#EXTINF:', caseSensitive: false).allMatches(content).length;
+    final urlCount =
+        RegExp(r'https?://', caseSensitive: false).allMatches(content).length;
+    final lfCount = RegExp('\n').allMatches(content).length;
+    final crCount = RegExp('\r').allMatches(content).length;
+    final hasM3uHeader = content.contains('#EXTM3U');
+    final diagnostics = [
+      'Diagnostics',
+      'length: ${content.length}',
+      'EXTINF: $extinfCount',
+      '#EXTINF: $extinfHashCount',
+      'http(s)://: $urlCount',
+      '\\n: $lfCount',
+      '\\r: $crCount',
+      'has #EXTM3U: $hasM3uHeader',
+    ].join('\n');
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
@@ -679,13 +698,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
         content: ConstrainedBox(
           constraints: const BoxConstraints(maxHeight: 360),
           child: SingleChildScrollView(
-            child: Text(
-              preview,
-              style: const TextStyle(
-                color: AppTheme.textPrimary,
-                fontFamily: 'monospace',
-                fontSize: 12,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  diagnostics,
+                  style: const TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontFamily: 'monospace',
+                    fontSize: 11,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Divider(color: AppTheme.divider),
+                const SizedBox(height: 12),
+                Text(
+                  preview,
+                  style: const TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontFamily: 'monospace',
+                    fontSize: 12,
+                  ),
+                ),
+              ],
             ),
           ),
         ),

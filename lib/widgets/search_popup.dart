@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/no_text_selection_controls.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/channel.dart';
@@ -118,28 +119,41 @@ class _SearchPopupState extends State<SearchPopup> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(
-                  controller: _searchController,
+                Focus(
                   focusNode: _textFieldFocusNode,
-                  enableInteractiveSelection: false,
-                  style: const TextStyle(fontSize: 15, color: Colors.white),
-                  onTap: () {
-                    final text = _searchController.text;
-                    _searchController.selection =
-                        TextSelection.collapsed(offset: text.length);
+                  onFocusChange: (hasFocus) {
+                    if (hasFocus) {
+                      final text = _searchController.text;
+                      _searchController.selection =
+                          TextSelection.collapsed(offset: text.length);
+                    }
                   },
-                  decoration: InputDecoration(
-                    hintText: 'Search...',
-                    hintStyle: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.5)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.05),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide.none,
+                  child: TextField(
+                    controller: _searchController,
+                    focusNode: _textFieldFocusNode,
+                    enableInteractiveSelection: false,
+                    selectionControls: NoTextSelectionControls(),
+                    showCursor: false,
+                    cursorColor: Colors.transparent,
+                    style: const TextStyle(fontSize: 15, color: Colors.white),
+                    onTap: () {
+                      final text = _searchController.text;
+                      _searchController.selection =
+                          TextSelection.collapsed(offset: text.length);
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Search...',
+                      hintStyle: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.5)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.05),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
+                    onSubmitted: _performSearch,
                   ),
-                  onSubmitted: _performSearch,
                 ),
                 const SizedBox(height: 12),
                 Expanded(

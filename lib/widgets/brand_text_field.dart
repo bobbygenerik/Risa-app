@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/no_text_selection_controls.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 /// Standard text field widget for consistent styling across the app
@@ -70,8 +71,8 @@ class BrandTextField extends StatelessWidget {
                 onTap?.call();
               },
               readOnly: readOnly,
-              enableInteractiveSelection: false,
-              cursorColor: AppTheme.primaryBlue,
+              showCursor: false,
+              cursorColor: Colors.transparent,
               style: TextStyle(
                 color: AppTheme.textPrimary,
                 fontSize: context.tvTextSize(14),
@@ -131,6 +132,12 @@ class BrandTextField extends StatelessWidget {
     if (focusNode != null) {
       field = Focus(
         focusNode: focusNode,
+        onFocusChange: (hasFocus) {
+          if (hasFocus) {
+            final text = controller.text;
+            controller.selection = TextSelection.collapsed(offset: text.length);
+          }
+        },
         child: field,
       );
     }

@@ -5,6 +5,7 @@ import '../providers/channel_provider.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/no_text_selection_controls.dart';
 
 class ChannelSelectionDialog extends StatefulWidget {
   const ChannelSelectionDialog({super.key});
@@ -16,6 +17,15 @@ class ChannelSelectionDialog extends StatefulWidget {
 class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
   String _searchQuery = '';
   String? _selectedCategory;
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -92,27 +102,51 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
                 const SizedBox(height: 16),
                 
                 // Search bar
-                TextField(
-                  enableInteractiveSelection: false,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    hintText: 'Search channels...',
-                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
-                    prefixIcon: const Icon(Icons.search, color: Colors.white54),
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.05),
-                    border: UnderlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
-                    ),
-                    focusedBorder: UnderlineInputBorder(
-                      borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 2),
-                    ),
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      _searchQuery = value;
-                    });
+                Focus(
+                  focusNode: _searchFocusNode,
+                  onFocusChange: (hasFocus) {
+                    if (hasFocus) {
+                      final text = _searchController.text;
+                      _searchController.selection =
+                          TextSelection.collapsed(offset: text.length);
+                    }
                   },
+                  child: TextField(
+                    controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    enableInteractiveSelection: false,
+                    selectionControls: NoTextSelectionControls(),
+                    showCursor: false,
+                    cursorColor: Colors.transparent,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: 'Search channels...',
+                      hintStyle:
+                          TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+                      prefixIcon:
+                          const Icon(Icons.search, color: Colors.white54),
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.05),
+                      border: UnderlineInputBorder(
+                        borderSide:
+                            BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                      ),
+                      focusedBorder: UnderlineInputBorder(
+                        borderSide:
+                            const BorderSide(color: AppTheme.primaryBlue, width: 2),
+                      ),
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        _searchQuery = value;
+                      });
+                    },
+                    onTap: () {
+                      final text = _searchController.text;
+                      _searchController.selection =
+                          TextSelection.collapsed(offset: text.length);
+                    },
+                  ),
                 ),
                 const SizedBox(height: 16),
                 

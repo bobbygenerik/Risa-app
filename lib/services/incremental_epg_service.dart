@@ -29,6 +29,7 @@ class IncrementalEpgService with ChangeNotifier {
   bool get hasEpgUrl => _epgUrl != null && _epgUrl!.isNotEmpty;
 
   Future<void> initialize({bool forceRefresh = false}) async {
+    debugLog('EPG: Initializing...');
     final prefs = await SharedPreferences.getInstance();
     // Try both keys - custom_epg_url (set by user) and epg_url (auto-found in M3U)
     _epgUrl = prefs.getString('custom_epg_url') ?? prefs.getString('epg_url');
@@ -49,25 +50,34 @@ class IncrementalEpgService with ChangeNotifier {
   Future<bool> _isCacheValid() async {
     try {
       final file = await _getCacheFile();
-      if (!await file.exists()) return false;
+      if (!await file.exists()) {
+        debugLog('EPG: Cache file does not exist.');
+        return false;
+      }
       
       final modified = await file.lastModified();
       final age = DateTime.now().difference(modified);
-      return age < _cacheDuration;
+      final isValid = age < _cacheDuration;
+      debugLog('EPG: Cache is ${isValid ? 'valid' : 'stale'}. Age: ${age.inMinutes} minutes.');
+      return isValid;
     } catch (e) {
+      debugLog('EPG: Error checking cache validity: $e');
       return false;
     }
   }
 
   Future<void> _downloadEpgIfNeeded({bool forceRefresh = false}) async {
-    if (_epgUrl == null) return;
+    if (_epgUrl == null) {
+      debugLog('EPG: Download skipped, no EPG URL.');
+      return;
+    }
     
     if (!forceRefresh && await _isCacheValid()) {
-      debugLog('EPG: Using valid cached file');
+      debugLog('EPG: Using valid cached file, skipping download.');
       return;
     }
 
-    debugLog('EPG: Downloading fresh data...');
+    debugLog('EPG: Starting EPG download from $_epgUrl...');
     final client = HttpClient()
       ..connectionTimeout = const Duration(seconds: 30)
       ..badCertificateCallback = (cert, host, port) => true;
@@ -77,13 +87,32 @@ class IncrementalEpgService with ChangeNotifier {
       final response = await request.close();
       
       if (response.statusCode != 200) {
-        throw Exception('HTTP ${response.statusCode}');
+        throw Exception('HTTP ${response.statusCode} while downloading EPG.');
       }
 
       final file = await _getCacheFile();
-      await response.pipe(file.openWrite());
+      var received = 0;
+      var total = response.contentLength;
+      final sink = file.openWrite();
+
+      await response.listen((data) {
+        sink.add(data);
+        received += data.length;
+        if(total > 0) {
+            final progress = (received / total * 100).toStringAsFixed(2);
+            // To avoid spamming logs, maybe report every 10%
+            // This is a simple implementation, a more robust one would throttle logging.
+            debugLog('EPG: Download progress: $progress%');
+        }
+      }).asFuture();
+
+      await sink.close();
       debugLog('EPG: Download complete. Saved to ${file.path}');
-    } finally {
+    } catch (e) {
+      debugLog('EPG: Download failed: $e');
+      rethrow;
+    }
+    finally {
       client.close();
     }
   }
@@ -100,14 +129,16 @@ class IncrementalEpgService with ChangeNotifier {
         await _downloadEpgIfNeeded(forceRefresh: forceRefresh);
         
         final file = await _getCacheFile();
-        if (!await file.exists()) throw Exception('Cache file missing');
+        if (!await file.exists()) throw Exception('Cache file missing after download attempt.');
 
-        // Parse XML document from file
+        debugLog('EPG: Parsing channel list from XML...');
         final xmlContent = await file.readAsString();
+        if (xmlContent.isEmpty) {
+          throw Exception('EPG XML file is empty.');
+        }
         final document = XmlDocument.parse(xmlContent);
         final channelIds = <String>{};
         
-        // Extract channel IDs from programme elements
         for (final programme in document.findAllElements('programme')) {
           final channelId = programme.getAttribute('channel');
           if (channelId != null && channelId.isNotEmpty) {
@@ -118,7 +149,6 @@ class IncrementalEpgService with ChangeNotifier {
         _availableChannels.clear();
         _availableChannels.addAll(channelIds);
         
-        // Build normalized map for fuzzy matching
         _normalizedAvailableChannels.clear();
         for (final id in channelIds) {
           final normalized = _normalize(id);
@@ -128,23 +158,22 @@ class IncrementalEpgService with ChangeNotifier {
         }
         _internalToEpgIdMapping.clear();
         
-        // Cache channel list
         final prefs = await SharedPreferences.getInstance();
         await prefs.setStringList(_channelListCacheKey, channelIds.toList());
         
-        debugLog('EPG: Found ${channelIds.length} channels');
+        debugLog('EPG: Found ${channelIds.length} channels with programs in EPG data.');
         _error = null;
         break;
       } catch (e) {
         retryCount++;
+        debugLog('EPG: Error loading channel list (attempt $retryCount): $e');
         if (retryCount >= _maxRetries) {
           _error = e.toString();
           debugLog('EPG channel list error after $retryCount attempts: $e');
           
-          // Try loading from preferences cache
           final prefs = await SharedPreferences.getInstance();
           final cached = prefs.getStringList(_channelListCacheKey);
-          if (cached != null) {
+          if (cached != null && cached.isNotEmpty) {
             _availableChannels.addAll(cached);
             
             _normalizedAvailableChannels.clear();
@@ -156,18 +185,17 @@ class IncrementalEpgService with ChangeNotifier {
             }
             _internalToEpgIdMapping.clear();
             
-            _error = 'Using cached channel list';
+            _error = null; // We have a fallback
+            debugLog('EPG: Using cached channel list of ${cached.length} channels as a fallback.');
           }
           break;
         } else {
-          await Future.delayed(Duration(seconds: retryCount));
+          await Future.delayed(Duration(seconds: retryCount * 2));
         }
       }
     }
     
     _isLoading = false;
-    // Don't clear error if we failed, so circuit breaker works. 
-    // Only clear error on success or explicit retry.
     if (_availableChannels.isNotEmpty) {
       _error = null;
     }
@@ -182,61 +210,58 @@ class IncrementalEpgService with ChangeNotifier {
     
     _isLoading = true;
     notifyListeners();
+    debugLog('EPG: Loading batch of ${unloadedChannels.length} channels: ${unloadedChannels.join(', ')}');
     
     try {
       final file = await _getCacheFile();
       if (!await file.exists()) {
-        // Circuit breaker: If we already failed to load the list, don't try to download inside a batch request
         if (_error != null) {
           throw Exception('Skipping download due to previous error: $_error');
         }
-        await _loadChannelList(); // Will trigger download
+        await _loadChannelList();
       }
 
-      if (!await file.exists()) throw Exception('Cache file unavailable');
+      if (!await file.exists()) throw Exception('Cache file unavailable for batch load.');
 
-      // Efficient parsing: In a real app with huge EPGs, we might want to use a streaming parser.
-      // For now, reading generic string is better than re-downloading.
       final xmlData = await file.readAsString();
       final document = XmlDocument.parse(xmlData);
       final channelData = <String, List<Program>>{};
       
       for (final programme in document.findAllElements('programme')) {
         final channelId = programme.getAttribute('channel');
-        if (channelId == null || !unloadedChannels.contains(channelId)) continue;
+        final epgId = _findBestEpgId(channelId ?? '', null);
+
+        if (epgId == null || !unloadedChannels.contains(epgId)) continue;
         
         final startStr = programme.getAttribute('start');
         final stopStr = programme.getAttribute('stop');
         if (startStr == null || stopStr == null) continue;
         
         final title = programme.findElements('title').firstOrNull?.innerText ?? 'Unknown';
-        final description = programme.findElements('desc').firstOrNull?.innerText;
-        final category = programme.findElements('category').firstOrNull?.innerText;
-        final icon = programme.findElements('icon').firstOrNull?.getAttribute('src');
         
         final program = Program(
-          id: '${channelId}_$startStr',
-          channelId: channelId,
+          id: '${epgId}_$startStr',
+          channelId: epgId,
           title: title,
-          description: description,
+          description: programme.findElements('desc').firstOrNull?.innerText,
           startTime: _parseEpgTime(startStr),
           endTime: _parseEpgTime(stopStr),
-          imageUrl: icon,
-          category: category,
+          imageUrl: programme.findElements('icon').firstOrNull?.getAttribute('src'),
+          category: programme.findElements('category').firstOrNull?.innerText,
           isLive: false,
           canRecord: true,
         );
         
-        channelData.putIfAbsent(channelId, () => []).add(program);
+        channelData.putIfAbsent(epgId, () => []).add(program);
       }
       
-      // Sort and store programs
       for (final entry in channelData.entries) {
         entry.value.sort((a, b) => a.startTime.compareTo(b.startTime));
         _loadedChannels[entry.key] = entry.value;
+        debugLog('EPG: Parsed ${entry.value.length} programs for channel ${entry.key}');
       }
       
-      debugLog('EPG: Loaded programs for ${channelData.length} channels from cache');
+      debugLog('EPG: Loaded programs for ${channelData.length} channels from cache.');
       _error = null;
     } catch (e) {
       _error = e.toString();
@@ -252,29 +277,40 @@ class IncrementalEpgService with ChangeNotifier {
   }
 
   String? _findBestEpgId(String channelId, String? channelName) {
+    if (_internalToEpgIdMapping.containsKey(channelId)) {
+      return _internalToEpgIdMapping[channelId];
+    }
     // 1. Exact match
-    if (_availableChannels.contains(channelId)) return channelId;
+    if (_availableChannels.contains(channelId)) {
+      _internalToEpgIdMapping[channelId] = channelId;
+      return channelId;
+    }
     
     // 2. Normalized ID match
     final normalizedId = _normalize(channelId);
     if (_normalizedAvailableChannels.containsKey(normalizedId)) {
-      return _normalizedAvailableChannels[normalizedId];
+      final foundId = _normalizedAvailableChannels[normalizedId]!;
+      _internalToEpgIdMapping[channelId] = foundId;
+      return foundId;
     }
     
     // 3. Name match (if provided)
     if (channelName != null && channelName.isNotEmpty) {
       final normalizedName = _normalize(channelName);
       if (_normalizedAvailableChannels.containsKey(normalizedName)) {
-        return _normalizedAvailableChannels[normalizedName];
+        final foundId = _normalizedAvailableChannels[normalizedName]!;
+        _internalToEpgIdMapping[channelId] = foundId;
+        return foundId;
       }
       
-      // Try stripping common suffixes from name
       final strippedName = normalizedName.replaceAll(RegExp(r'(hd|fhd|uhd|4k|sd|1080p|720p)$'), '');
       if (strippedName != normalizedName && _normalizedAvailableChannels.containsKey(strippedName)) {
-        return _normalizedAvailableChannels[strippedName];
+        final foundId = _normalizedAvailableChannels[strippedName]!;
+        _internalToEpgIdMapping[channelId] = foundId;
+        return foundId;
       }
     }
-    
+    debugLog('EPG: Could not find matching EPG ID for channelId="$channelId", name="$channelName"');
     return null;
   }
 
@@ -282,39 +318,35 @@ class IncrementalEpgService with ChangeNotifier {
     try {
       // Standard format: YYYYMMDDhhmmss +0000
       // Example: 20231027120000 +0200
-      final parts = timeStr.trim().split(RegExp(r'\s+'));
-      final mainPart = parts[0];
-      
-      if (mainPart.length >= 14) {
-        final year = int.parse(mainPart.substring(0, 4));
-        final month = int.parse(mainPart.substring(4, 6));
-        final day = int.parse(mainPart.substring(6, 8));
-        final hour = int.parse(mainPart.substring(8, 10));
-        final minute = int.parse(mainPart.substring(10, 12));
-        final second = int.parse(mainPart.substring(12, 14));
-        
-        DateTime utcTime = DateTime.utc(year, month, day, hour, minute, second);
-        
-        // Handle offset if present (e.g., +0200)
-        if (parts.length > 1) {
-          final offsetStr = parts[1];
-          if (offsetStr.length >= 5) {
-            final sign = offsetStr.startsWith('+') ? 1 : -1;
-            final offsetHours = int.parse(offsetStr.substring(1, 3));
-            final offsetMins = int.parse(offsetStr.substring(3, 5));
-            
-            // Subtract offset from the given local time to get UTC
-            // e.g., 12:00 +0200 -> 12:00 - 2 hours = 10:00 UTC
-            utcTime = utcTime.subtract(Duration(hours: sign * offsetHours, minutes: sign * offsetMins));
-          }
-        }
-        
-        return utcTime.toLocal();
+      if (timeStr.length < 14) {
+        throw FormatException("Time string too short");
       }
+      final mainPart = timeStr.substring(0, 14);
+      
+      final year = int.parse(mainPart.substring(0, 4));
+      final month = int.parse(mainPart.substring(4, 6));
+      final day = int.parse(mainPart.substring(6, 8));
+      final hour = int.parse(mainPart.substring(8, 10));
+      final minute = int.parse(mainPart.substring(10, 12));
+      final second = int.parse(mainPart.substring(12, 14));
+      
+      DateTime utcTime = DateTime.utc(year, month, day, hour, minute, second);
+      
+      if (timeStr.length > 14) {
+        final offsetStr = timeStr.substring(15);
+        if (offsetStr.length >= 5) {
+          final sign = offsetStr.startsWith('+') ? 1 : -1;
+          final offsetHours = int.parse(offsetStr.substring(1, 3));
+          final offsetMins = int.parse(offsetStr.substring(3, 5));
+          utcTime = utcTime.subtract(Duration(hours: sign * offsetHours, minutes: sign * offsetMins));
+        }
+      }
+      
+      return utcTime.toLocal();
     } catch (e) {
       debugLog('Error parsing EPG time "$timeStr": $e');
+      return DateTime.now();
     }
-    return DateTime.now();
   }
 
   List<Program> getProgramsForChannel(String channelId, {String? channelName}) {
