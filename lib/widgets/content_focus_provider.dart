@@ -49,6 +49,7 @@ mixin ContentFocusRegistrant<T extends StatefulWidget> on State<T> {
 
   /// Request that the shell move focus back to the top navigation bar.
   bool requestNavigationFocus() {
+    if (!mounted) return false;
     final provider = ContentFocusProvider.maybeOf(context);
     return provider?.requestNavFocus?.call() ?? false;
   }

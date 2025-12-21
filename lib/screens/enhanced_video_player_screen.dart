@@ -96,9 +96,12 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     );
     
     _controller = VideoController(
-      _player, 
+      _player,
       configuration: VideoControllerConfiguration(
         enableHardwareAcceleration: resolvedHwAccel,
+        vo: isTv ? 'gpu' : null,
+        hwdec: isTv ? 'mediacodec' : null,
+        androidAttachSurfaceAfterVideoParameters: isTv ? false : null,
       ),
     );
 
@@ -426,10 +429,34 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     required VoidCallback onPressed,
     double size = 20,
   }) {
-    return IconButton(
-      onPressed: onPressed,
-      icon: Icon(icon, color: Colors.white, size: size),
-      padding: const EdgeInsets.all(8),
+    return FocusableActionDetector(
+      actions: <Type, Action<Intent>>{
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (intent) {
+            onPressed();
+            return null;
+          },
+        ),
+      },
+      child: Builder(
+        builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOutCubic,
+            decoration: BoxDecoration(
+              color:
+                  isFocused ? Colors.white.withAlpha((0.22 * 255).round()) : null,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: IconButton(
+              onPressed: onPressed,
+              icon: Icon(icon, color: Colors.white, size: size),
+              padding: const EdgeInsets.all(8),
+            ),
+          );
+        },
+      ),
     );
   }
 

@@ -66,7 +66,7 @@ class HeroInfoBox extends StatelessWidget {
           Text(
             title,
             style: AppTypography.heroTitle(context),
-            maxLines: 2,
+            maxLines: 3,
             overflow: TextOverflow.ellipsis,
           ),
           
@@ -88,7 +88,7 @@ class HeroInfoBox extends StatelessWidget {
             Text(
               description!,
               style: AppTypography.heroDescription(context),
-              maxLines: 2,
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             SizedBox(height: context.spacingMd()),

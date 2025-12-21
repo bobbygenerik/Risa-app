@@ -388,11 +388,9 @@ class _SeriesScreenState extends State<SeriesScreen>
   Widget _buildSectionHeader(BuildContext context, String title) {
     return Text(
       title,
-      style: const TextStyle(
+      style: AppTypography.caption(context).copyWith(
         color: AppTheme.textPrimary,
-        fontSize: 16,
         fontWeight: FontWeight.w600,
-        letterSpacing: 0.3,
       ),
     );
   }
@@ -667,7 +665,7 @@ class _SeriesScreenState extends State<SeriesScreen>
       
       sections.addAll([
         _buildSectionHeader(context, genre),
-        const SizedBox(height: 8),
+        SizedBox(height: context.spacingXs()),
         _buildSeriesRow(context, displaySeries, firstCardFocusNode: rowFocusNode),
         if (allSeries.length > displayCount)
           Center(
@@ -705,7 +703,7 @@ class _SeriesScreenState extends State<SeriesScreen>
               ),
             ),
           ),
-        const SizedBox(height: 16),
+        SizedBox(height: context.spacingSm()),
       ]);
     }
 
@@ -721,7 +719,7 @@ class _SeriesScreenState extends State<SeriesScreen>
     final heroImage = _resolveHeroImage(featuredSeries);
     final screenSize = MediaQuery.of(context).size;
     final heroHeight = context.heroHeight();
-    final cardPeek = context.spacingLg();
+    final cardPeek = context.spacingXl();
     final contentInset = context.spacingSm();
 
     return Focus(
@@ -755,7 +753,7 @@ class _SeriesScreenState extends State<SeriesScreen>
                 Positioned(
                   top: 0,
                   left: -AppSpacing.sidebarCollapsedWidth,
-                  right: 0,
+                  right: -AppSpacing.sidebarCollapsedWidth,
                   height: heroHeight,
                   child: Opacity(
                     opacity: 1.0 - fadeProgress,
@@ -847,10 +845,10 @@ class _SeriesScreenState extends State<SeriesScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              SizedBox(height: context.spacingMd()),
+                              const SizedBox(height: 0),
                               if (recentSeries.isNotEmpty) ...[
                                 _buildSectionHeader(context, 'Recently Added Series'),
-                                SizedBox(height: context.spacingSm()),
+                                SizedBox(height: context.spacingXs()),
                                 _buildSeriesRow(
                                   context,
                                   recentSeries,
@@ -964,7 +962,7 @@ class _SeriesScreenState extends State<SeriesScreen>
           Positioned(
             top: 0,
             left: -AppSpacing.sidebarCollapsedWidth,
-            right: 0,
+            right: -AppSpacing.sidebarCollapsedWidth,
             height: heroHeight,
             child: Container(
               color: AppTheme.cardBackground,

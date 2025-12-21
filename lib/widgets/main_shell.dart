@@ -61,11 +61,13 @@ class _MainShellState extends State<MainShell> {
     // Initialize global focus node
     _globalFocusNode = FocusNode(debugLabel: 'GlobalFocus');
 
-    // Ensure navbar gets focus on initial load (after a short delay to let content build)
+    // Start collapsed and focus content on initial load.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       Future.delayed(const Duration(milliseconds: 100), () {
-        if (mounted) _requestNavFocus();
+        if (!mounted) return;
+        _sidebarKey.currentState?.collapse();
+        _requestContentFocus();
       });
     });
 

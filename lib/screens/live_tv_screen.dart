@@ -226,7 +226,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final screenSize = MediaQuery.of(context).size;
     final isTV = screenSize.width >= 1920 || screenSize.height >= 1080;
     final heroHeight = context.heroHeight();
-    final cardPeek = context.spacingLg();
+    final cardPeek = context.spacingXl();
     final contentInset = context.spacingSm();
     final rightInset = context.spacingLg();
     
@@ -261,7 +261,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               Positioned(
                 top: 0,
                 left: -AppSpacing.sidebarCollapsedWidth,
-                right: 0,
+                right: -AppSpacing.sidebarCollapsedWidth,
                 height: heroHeight,
                 child: Builder(builder: (context) {
                   final scrollPos = _scrollController.hasClients
@@ -327,7 +327,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            SizedBox(height: context.spacingMd()),
+                            const SizedBox(height: 0),
                             if (isGrouping && groupedChannels.isEmpty)
                               _buildCategoryLoadingIndicator()
                             else
@@ -485,13 +485,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               }
               return KeyEventResult.ignored;
             },
-            child: BrandPrimaryButton(
-              onPressed: () => context.push('/player', extra: channel),
-              label: 'Watch',
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              fontSize: 12,
-              minHeight: 24,
-              focusNode: _watchButtonFocus,
+            child: SizedBox(
+              width: context.cardWidth() * 0.5,
+              child: BrandPrimaryButton(
+                onPressed: () => context.push('/player', extra: channel),
+                label: 'Watch',
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                fontSize: 12,
+                minHeight: 24,
+                focusNode: _watchButtonFocus,
+              ),
             ),
           ),
         ],
@@ -501,8 +504,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Widget _buildChannelLogo(BuildContext context, Channel channel) {
     return Container(
-      height: 52,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+      height: 64,
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
       decoration: BoxDecoration(
         color: AppTheme.cardBackground,
         borderRadius: BorderRadius.circular(8),
@@ -510,7 +513,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       child: Center(
         child: CachedChannelLogo(
           logoUrl: channel.logoUrl,
-          size: 32,
+          size: 40,
           fallbackIcon: Icons.tv,
         ),
       ),
@@ -685,13 +688,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.only(bottom: context.spacingSm()),
+          padding: EdgeInsets.only(bottom: context.spacingXs()),
           child: Text(
             title,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: AppTheme.textPrimary,
-                  fontWeight: FontWeight.w700,
-                ),
+            style: AppTypography.caption(context).copyWith(
+              color: AppTheme.textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
         SizedBox(

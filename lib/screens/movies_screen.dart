@@ -275,11 +275,9 @@ class _MoviesScreenState extends State<MoviesScreen>
   Widget _buildSectionHeader(BuildContext context, String title) {
     return Text(
       title,
-      style: const TextStyle(
+      style: AppTypography.caption(context).copyWith(
         color: AppTheme.textPrimary,
-        fontSize: 16,
         fontWeight: FontWeight.w600,
-        letterSpacing: 0.3,
       ),
     );
   }
@@ -565,7 +563,7 @@ class _MoviesScreenState extends State<MoviesScreen>
       
       sections.addAll([
         _buildSectionHeader(context, genre),
-        const SizedBox(height: 8),
+        SizedBox(height: context.spacingXs()),
         _buildMoviesRow(context, displayMovies, firstCardFocusNode: rowFocusNode),
         if (allMovies.length > displayCount)
           Center(
@@ -619,7 +617,7 @@ class _MoviesScreenState extends State<MoviesScreen>
     final heroImage = _resolveHeroImage(featuredMovie);
     final screenSize = MediaQuery.of(context).size;
     final heroHeight = context.heroHeight();
-    final cardPeek = context.spacingLg();
+    final cardPeek = context.spacingXl();
     final contentInset = context.spacingSm();
 
     return Focus(
@@ -653,7 +651,7 @@ class _MoviesScreenState extends State<MoviesScreen>
                 Positioned(
                   top: 0,
                   left: -AppSpacing.sidebarCollapsedWidth,
-                  right: 0,
+                  right: -AppSpacing.sidebarCollapsedWidth,
                   height: heroHeight,
                   child: Opacity(
                     opacity: 1.0 - fadeProgress,
@@ -745,10 +743,10 @@ class _MoviesScreenState extends State<MoviesScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              SizedBox(height: context.spacingMd()),
+                              const SizedBox(height: 0),
                               if (recentMovies.isNotEmpty) ...[
                                 _buildSectionHeader(context, 'Recently Added'),
-                                SizedBox(height: context.spacingSm()),
+                                SizedBox(height: context.spacingXs()),
                                 _buildMoviesRow(
                                   context,
                                   recentMovies,
@@ -855,7 +853,7 @@ class _MoviesScreenState extends State<MoviesScreen>
           Positioned(
             top: 0,
             left: -AppSpacing.sidebarCollapsedWidth,
-            right: 0,
+            right: -AppSpacing.sidebarCollapsedWidth,
             height: heroHeight,
             child: Container(
               color: AppTheme.cardBackground,
