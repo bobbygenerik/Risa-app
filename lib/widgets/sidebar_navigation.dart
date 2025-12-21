@@ -124,6 +124,12 @@ class SidebarNavigationState extends State<SidebarNavigation> {
     }
   }
 
+  void expand() {
+    if (!_isExpanded) {
+      setState(() => _isExpanded = true);
+    }
+  }
+
   void collapse() {
     if (_isExpanded) {
       setState(() => _isExpanded = false);
@@ -160,10 +166,6 @@ class SidebarNavigationState extends State<SidebarNavigation> {
     if (_tabs.isNotEmpty) {
       final index = _activeTabIndex.clamp(0, _tabs.length - 1);
       _tabFocusNodes[index].requestFocus();
-      // Auto-expand when sidebar gets focus
-      if (!_isExpanded) {
-        setState(() => _isExpanded = true);
-      }
       return true;
     }
     return false;

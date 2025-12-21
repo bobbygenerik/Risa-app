@@ -256,6 +256,7 @@ class _MainShellState extends State<MainShell> {
 
   bool _requestContentFocus() {
     debugLog('content_focus: Shell requesting content focus');
+    _sidebarKey.currentState?.collapse();
 
     // Try callback first
     final callback = _contentFocusCallback;
@@ -363,6 +364,7 @@ class _MainShellState extends State<MainShell> {
 
   void _expandSidebarFromContent() {
     // Force focus to sidebar to trigger expansion
+    _sidebarKey.currentState?.expand();
     _requestNavFocus();
   }
 

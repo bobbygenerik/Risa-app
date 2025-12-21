@@ -33,90 +33,96 @@ class BrandTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: margin,
-      child: Focus(
-        focusNode: focusNode,
-        child: Builder(
-          builder: (context) {
-            final isFocused = Focus.of(context).hasFocus;
-            final borderRadius = BorderRadius.circular(12);
-            return Container(
-              decoration: isFocused
-                  ? BoxDecoration(
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppTheme.primaryBlue.withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
+    Widget field = Builder(
+      builder: (context) {
+        final isFocused = Focus.of(context).hasFocus;
+        final borderRadius = BorderRadius.circular(12);
+        return Container(
+          decoration: isFocused
+              ? BoxDecoration(
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primaryBlue.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                )
+              : null,
+          child: TextField(
+            controller: controller,
+            obscureText: obscureText,
+            keyboardType: keyboardType,
+            onChanged: onChanged,
+            onTap: onTap,
+            readOnly: readOnly,
+            enableInteractiveSelection: false,
+            cursorColor: AppTheme.primaryBlue,
+            style: TextStyle(
+              color: AppTheme.textPrimary,
+              fontSize: context.tvTextSize(14),
+            ),
+            decoration: InputDecoration(
+              labelText: labelText,
+              hintText: hintText,
+              filled: true,
+              fillColor: isFocused
+                  ? AppTheme.highlight
+                  : AppTheme.highlight.withValues(alpha: 0.75),
+              hintStyle: TextStyle(
+                color: AppTheme.textSecondary,
+                fontSize: context.tvTextSize(14),
+              ),
+              labelStyle: TextStyle(
+                color: AppTheme.textSecondary,
+                fontSize: context.tvTextSize(12),
+              ),
+              prefixIcon: prefixIcon != null
+                  ? Icon(
+                      prefixIcon,
+                      size: context.tvIconSize(18),
+                      color: AppTheme.textSecondary,
                     )
                   : null,
-              child: TextField(
-                controller: controller,
-                obscureText: obscureText,
-                keyboardType: keyboardType,
-                onChanged: onChanged,
-                onTap: onTap,
-                readOnly: readOnly,
-                enableInteractiveSelection: false,
-                cursorColor: AppTheme.primaryBlue,
-                style: TextStyle(
-                  color: AppTheme.textPrimary,
-                  fontSize: context.tvTextSize(14),
-                ),
-                decoration: InputDecoration(
-                  labelText: labelText,
-                  hintText: hintText,
-                  filled: true,
-                  fillColor: isFocused
-                      ? AppTheme.highlight
-                      : AppTheme.highlight.withValues(alpha: 0.75),
-                  hintStyle: TextStyle(
-                    color: AppTheme.textSecondary,
-                    fontSize: context.tvTextSize(14),
-                  ),
-                  labelStyle: TextStyle(
-                    color: AppTheme.textSecondary,
-                    fontSize: context.tvTextSize(12),
-                  ),
-                  prefixIcon: prefixIcon != null 
-                      ? Icon(
-                          prefixIcon, 
-                          size: context.tvIconSize(18), 
-                          color: AppTheme.textSecondary,
-                        ) 
-                      : null,
-                  border: OutlineInputBorder(
-                    borderRadius: borderRadius,
-                    borderSide: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: borderRadius,
-                    borderSide: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: borderRadius,
-                    borderSide: const BorderSide(
-                      color: AppTheme.primaryBlue,
-                      width: 2,
-                    ),
-                  ),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: context.tvSpacing(14),
-                  ),
+              border: OutlineInputBorder(
+                borderRadius: borderRadius,
+                borderSide: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.2),
                 ),
               ),
-            );
-          },
-        ),
-      ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: borderRadius,
+                borderSide: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.2),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: borderRadius,
+                borderSide: const BorderSide(
+                  color: AppTheme.primaryBlue,
+                  width: 2,
+                ),
+              ),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: context.tvSpacing(14),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    if (focusNode != null) {
+      field = Focus(
+        focusNode: focusNode,
+        child: field,
+      );
+    }
+
+    return Container(
+      margin: margin,
+      child: field,
     );
   }
 }
