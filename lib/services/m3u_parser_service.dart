@@ -48,6 +48,7 @@ class M3UParserService {
 
   static final RegExp _epgUrlRegex = RegExp(r'x-tvg-url="([^"]+)"');
   static final RegExp _seriesEpisodeRegex = RegExp(r'S\d+E\d+', caseSensitive: false);
+  static final RegExp _urlRegex = RegExp(r'https?://\S+');
 
   /// Gets the EPG URL extracted from the last parsed M3U
   String? get epgUrl => _epgUrl;
@@ -86,7 +87,9 @@ class M3UParserService {
         final line = rawLines[i].trimRight();
         if (line.isEmpty) continue;
 
-        if (line.startsWith('#') || line.startsWith('http')) {
+        if (line.startsWith('#') ||
+            line.startsWith('http') ||
+            line.contains('EXTINF:')) {
           lines.add(line.trim());
         } else if (lines.isNotEmpty) {
           lines[lines.length - 1] += line.trim();
@@ -113,13 +116,39 @@ class M3UParserService {
         final line = lines[i].trim();
         if (line.isEmpty) continue;
 
-        if (line.startsWith('#EXTINF:')) {
-          currentInfo = line.substring(8);
+        if (line.contains('EXTINF:')) {
+          final urlMatch = _urlRegex.firstMatch(line);
+          final infoPart = urlMatch != null
+              ? line.substring(0, urlMatch.start).trimRight()
+              : line;
+          currentInfo = _extractExtinfPayload(infoPart);
+          if (currentInfo == null) continue;
           currentAttributes = _parseAttributes(currentInfo);
           if (channelCount < 3) {
             debugLog(
               'M3UParser: Found EXTINF: ${currentInfo.length > 100 ? '${currentInfo.substring(0, 100)}...' : currentInfo}',
             );
+          }
+          if (urlMatch != null) {
+            final inlineUrl = urlMatch.group(0) ?? '';
+            if (inlineUrl.isNotEmpty) {
+              final channelName = _extractChannelName(currentInfo);
+              final channel = Channel(
+                id: currentAttributes['tvg-id'] ??
+                    '${channelName}_${inlineUrl.hashCode.abs()}',
+                name: channelName,
+                url: inlineUrl,
+                logoUrl: currentAttributes['tvg-logo'],
+                groupTitle: currentAttributes['group-title'],
+                tvgId: currentAttributes['tvg-id'],
+                attributes: currentAttributes,
+                sortOrder: channelCount,
+              );
+              channels.add(channel);
+              channelCount++;
+              currentInfo = null;
+              currentAttributes = {};
+            }
           }
         } else if (!line.startsWith('#') && currentInfo != null) {
           final channelName = _extractChannelName(currentInfo);
@@ -164,6 +193,12 @@ class M3UParserService {
     return channels;
   }
 
+  String? _extractExtinfPayload(String line) {
+    final idx = line.indexOf('EXTINF:');
+    if (idx == -1) return null;
+    return line.substring(idx + 'EXTINF:'.length);
+  }
+
   /// Parses an M3U playlist from a byte stream without buffering the entire
   /// payload into memory (prevents OOM on very large playlists).
   Future<M3UParseResult> parseM3UStream(Stream<List<int>> byteStream) async {
@@ -196,13 +231,71 @@ class M3UParserService {
         }
       }
 
-      if (line.startsWith('#EXTINF:')) {
-        currentInfo = line.substring(8);
+      if (line.contains('EXTINF:')) {
+        final urlMatch = _urlRegex.firstMatch(line);
+        final infoPart = urlMatch != null
+            ? line.substring(0, urlMatch.start).trimRight()
+            : line;
+        currentInfo = _extractExtinfPayload(infoPart);
+        if (currentInfo == null) {
+          return;
+        }
         currentAttributes = _parseAttributes(currentInfo!);
         if (channelCount < 3) {
           debugLog(
             'M3UParser: (stream) Found EXTINF: ${currentInfo!.length > 100 ? '${currentInfo!.substring(0, 100)}...' : currentInfo}',
           );
+        }
+        if (urlMatch != null) {
+          final inlineUrl = urlMatch.group(0) ?? '';
+          if (inlineUrl.isNotEmpty) {
+            final channelName = _extractChannelName(currentInfo!);
+            final groupTitle =
+                currentAttributes['group-title']?.toLowerCase() ?? '';
+            final looksSeries = _looksLikeSeries(
+              channelName,
+              groupTitle,
+              inlineUrl,
+            );
+            final looksMovie = !looksSeries && _looksLikeMovie(groupTitle, inlineUrl);
+
+            if (looksSeries) {
+              series.add(
+                _createSeriesContent(
+                  channelName,
+                  inlineUrl,
+                  currentAttributes,
+                  logicalIndex,
+                ),
+              );
+            } else if (looksMovie) {
+              movies.add(
+                _createMovieContent(
+                  channelName,
+                  inlineUrl,
+                  currentAttributes,
+                  logicalIndex,
+                ),
+              );
+            } else {
+              final channel = Channel(
+                id: currentAttributes['tvg-id'] ??
+                    '${channelName}_${inlineUrl.hashCode.abs()}_$logicalIndex',
+                name: channelName,
+                url: inlineUrl,
+                logoUrl: currentAttributes['tvg-logo'],
+                groupTitle: currentAttributes['group-title'],
+                tvgId: currentAttributes['tvg-id'],
+                attributes: currentAttributes,
+                sortOrder: channelCount,
+              );
+              channels.add(channel);
+              channelCount++;
+            }
+            currentInfo = null;
+            currentAttributes = {};
+            logicalIndex++;
+          }
         }
       } else if (!line.startsWith('#') && currentInfo != null) {
         final channelName = _extractChannelName(currentInfo!);
