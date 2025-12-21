@@ -48,6 +48,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   late final FocusNode _watchButtonFocus;
   late final FocusNode _settingsButtonFocus;
+  late final FocusNode _firstChannelFocus;
   final Map<String, String?> _programArtwork = {};
   final Set<String> _artworkRequests = {};
   late final bool _tmdbEnabled;
@@ -69,6 +70,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
     _settingsButtonFocus = _focusPool.getFocusNode('live_tv_settings',
         debugLabel: 'Live TV Settings');
+    _firstChannelFocus = _focusPool.getFocusNode(
+      'live_tv_first_card',
+      debugLabel: 'Live TV First Card',
+    );
     // Start carousel once the widget is built - will be updated when channels load
     WidgetsBinding.instance.addPostFrameCallback(
       (_) {
@@ -82,7 +87,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   void dispose() {
     _timerService.unregister('live_tv_carousel');
     _scrollController.dispose();
-    _focusPool.returnFocusNodes(['live_tv_watch', 'live_tv_settings']);
+    _focusPool.returnFocusNodes(
+      ['live_tv_watch', 'live_tv_settings', 'live_tv_first_card'],
+    );
     super.dispose();
   }
 
@@ -218,20 +225,21 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   ) {
     final screenSize = MediaQuery.of(context).size;
     final isTV = screenSize.width >= 1920 || screenSize.height >= 1080;
-    final heroHeight = screenSize.height * 0.85; // 85% height for content peek
-    final sidebarWidth = context.spacingLg();
+    final heroHeight = context.heroHeight();
+    final contentInset = context.spacingSm();
+    final rightInset = context.spacingLg();
     
     // Calculate available width for content
-    final availableWidth = screenSize.width - sidebarWidth - context.spacingLg();
+    final availableWidth = screenSize.width - contentInset - rightInset;
     
     // Responsive width calculation
     final desiredInfoWidth = screenSize.width < 800 
         ? availableWidth 
-        : screenSize.width * 0.4;
+        : screenSize.width * AppSpacing.heroInfoWidth;
 
     final heroInfoWidth = min(
       desiredInfoWidth,
-      screenSize.width >= 1920 ? 640.0 : 520.0,
+      screenSize.width >= 1920 ? 480.0 : 420.0,
     );
 
     // Use a Selector to get the current program for the featured channel
@@ -250,7 +258,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               // Hero Background & Gradient
               Positioned(
                 top: 0,
-                left: 0,
+                left: -AppSpacing.sidebarCollapsedWidth,
                 right: 0,
                 height: heroHeight,
                 child: Builder(builder: (context) {
@@ -258,7 +266,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       ? _scrollController.offset
                       : 0.0;
                   final fadeProgress =
-                      (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
+                      (scrollPos / (heroHeight * 0.3)).clamp(0.0, 1.0);
 
                   return Opacity(
                     opacity: 1.0 - fadeProgress,
@@ -310,8 +318,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       Container(
                         color: AppTheme.darkBackground,
                         padding: EdgeInsets.only(
-                          left: sidebarWidth,
-                          right: context.spacingXl(),
+                          left: contentInset,
+                          right: rightInset,
                           bottom: context.spacingXl(),
                         ),
                         child: Column(
@@ -335,14 +343,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               Positioned(
                 bottom: heroHeight *
                     0.15, // Lowered from 0.25 for better artwork exposure
-                left: sidebarWidth,
+                left: contentInset,
                 width: heroInfoWidth,
                 child: Builder(builder: (context) {
                   final scrollPos = _scrollController.hasClients
                       ? _scrollController.offset
                       : 0.0;
                   final fadeProgress =
-                      (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
+                      (scrollPos / (heroHeight * 0.3)).clamp(0.0, 1.0);
                   return Opacity(
                     opacity: 1.0 - fadeProgress,
                     child: _buildFeaturedInfo(
@@ -359,7 +367,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       ? _scrollController.offset
                       : 0.0;
                   final fadeProgress =
-                      (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
+                      (scrollPos / (heroHeight * 0.3)).clamp(0.0, 1.0);
                   return Opacity(
                     opacity: 1.0 - fadeProgress,
                     child: _buildChannelLogo(context, featuredChannel),
@@ -460,11 +468,23 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             ),
           ),
           const SizedBox(height: 16),
-          BrandPrimaryButton(
-            onPressed: () => context.push('/player', extra: channel),
-            label: 'Watch',
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            focusNode: _watchButtonFocus,
+          Focus(
+            canRequestFocus: false,
+            skipTraversal: true,
+            onKeyEvent: (node, event) {
+              if (event is KeyDownEvent &&
+                  event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                _firstChannelFocus.requestFocus();
+                return KeyEventResult.handled;
+              }
+              return KeyEventResult.ignored;
+            },
+            child: BrandPrimaryButton(
+              onPressed: () => context.push('/player', extra: channel),
+              label: 'Watch',
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              focusNode: _watchButtonFocus,
+            ),
           ),
         ],
       ),
@@ -643,6 +663,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     BuildContext context,
     String title,
     List<Channel> channels,
+    {bool isFirstRow = false}
   ) {
     if (channels.isEmpty) return const SizedBox.shrink();
 
@@ -675,10 +696,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     scrollDirection: Axis.horizontal,
                     padding: EdgeInsets.zero,
                     itemCount: channels.length,
-                    itemExtent: cardWidth + context.spacingLg(),
+                    itemExtent: cardWidth + context.cardGap(),
                     itemBuilder: (context, index) {
+                      final focusNode =
+                          isFirstRow && index == 0 ? _firstChannelFocus : null;
                       return _buildChannelCard(context, channels[index], cardWidth,
-                          cardHeight, index, channels.length);
+                          cardHeight, index, channels.length,
+                          focusNode: focusNode);
                     },
                   ),
                 );
@@ -702,21 +726,33 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         ? groupedChannels.entries.toList()
         : groupedChannels.entries.take(3).toList();
 
-    return categoriesToShow.map((entry) {
+    final sections = <Widget>[];
+    for (var i = 0; i < categoriesToShow.length; i++) {
+      final entry = categoriesToShow[i];
       final channels = entry.value;
-      if (channels.isEmpty) return const SizedBox.shrink();
-      return FocusTraversalGroup(
-        policy: WidgetOrderTraversalPolicy(),
-        child: _buildChannelSection(context, entry.key, channels),
+      if (channels.isEmpty) continue;
+      sections.add(
+        FocusTraversalGroup(
+          policy: WidgetOrderTraversalPolicy(),
+          child: _buildChannelSection(
+            context,
+            entry.key,
+            channels,
+            isFirstRow: i == 0,
+          ),
+        ),
       );
-    }).toList();
+    }
+    return sections;
   }
 
   Widget _buildChannelCard(BuildContext context, Channel channel,
-      double cardWidth, double cardHeight, int index, int totalCount) {
+      double cardWidth, double cardHeight, int index, int totalCount,
+      {FocusNode? focusNode}) {
     return SizedBox(
       width: cardWidth,
       child: Focus(
+        focusNode: focusNode,
         canRequestFocus: true,
         onKeyEvent: (node, event) {
           if (event is KeyDownEvent) {
@@ -733,8 +769,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             if (event.logicalKey == LogicalKeyboardKey.arrowLeft &&
                 index == 0) {
               // Only open sidebar if we are at the start of the list
-              requestNavigationFocus();
-              return KeyEventResult.handled;
+              final moved = requestNavigationFocus();
+              return moved
+                  ? KeyEventResult.handled
+                  : KeyEventResult.ignored;
             }
           }
           return KeyEventResult.ignored;

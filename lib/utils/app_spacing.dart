@@ -36,10 +36,11 @@ class AppSpacing {
   static const double gridSpacing = md;
   static const double cardSpacing = lg;
   static const double rowSpacing = lg;
+  static const double cardGap = 12.0;
 
   // Hero section dimensions
   static const double heroHeightRatio = 0.75;
-  static const double heroInfoWidth = 0.4;
+  static const double heroInfoWidth = 0.3;
   static const double heroInfoBottom = 0.35;
 
   // Card dimensions
@@ -95,6 +96,7 @@ extension AppSpacingExtension on BuildContext {
   double gridSpacing() => tvSpacing(AppSpacing.gridSpacing);
   double cardSpacing() => tvSpacing(AppSpacing.cardSpacing);
   double rowSpacing() => tvSpacing(AppSpacing.rowSpacing);
+  double cardGap() => tvSpacing(AppSpacing.cardGap);
 
   // Responsive card dimensions - increased for better streaming app feel
   double cardWidth() {

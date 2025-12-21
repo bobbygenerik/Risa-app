@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -225,6 +224,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
       child: Builder(
         builder: (context) {
           final isFocused = Focus.of(context).hasFocus;
+          final lift = isFocused ? -2.0 : 0.0;
           return GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () {
@@ -239,50 +239,47 @@ class SidebarNavigationState extends State<SidebarNavigation> {
               curve: Curves.easeOut,
               height: 32,
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              decoration: isFocused
-                  ? BoxDecoration(
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    )
-                  : null,
+              transform: Matrix4.translationValues(0, lift, 0),
+              transformAlignment: Alignment.center,
               alignment: Alignment.center,
-              child: _isExpanded
-                  ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          tab.icon,
-                          color:
-                              isActive ? AppTheme.primaryBlue : Colors.white70,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Text(
-                            tab.label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: isActive
-                                  ? AppTheme.primaryBlue
-                                  : Colors.white70,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
+              child: AnimatedScale(
+                duration: const Duration(milliseconds: 140),
+                curve: Curves.easeOut,
+                scale: isFocused ? 1.06 : 1.0,
+                child: _isExpanded
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            tab.icon,
+                            color: isActive
+                                ? AppTheme.primaryBlue
+                                : Colors.white70,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              tab.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: isActive
+                                    ? AppTheme.primaryBlue
+                                    : Colors.white70,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    )
-                  : Icon(
-                      tab.icon,
-                      color: isActive ? AppTheme.primaryBlue : Colors.white70,
-                      size: 16,
-                    ),
+                        ],
+                      )
+                    : Icon(
+                        tab.icon,
+                        color: isActive ? AppTheme.primaryBlue : Colors.white70,
+                        size: 16,
+                      ),
+              ),
             ),
           );
         },
@@ -336,6 +333,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
       child: Builder(
         builder: (context) {
           final isFocused = Focus.of(context).hasFocus;
+          final lift = isFocused ? -2.0 : 0.0;
           return GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () {
@@ -351,50 +349,47 @@ class SidebarNavigationState extends State<SidebarNavigation> {
               curve: Curves.easeOut,
               height: 32,
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              decoration: isFocused
-                  ? BoxDecoration(
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    )
-                  : null,
+              transform: Matrix4.translationValues(0, lift, 0),
+              transformAlignment: Alignment.center,
               alignment: Alignment.center,
-              child: _isExpanded
-                  ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          tab.icon,
-                          color:
-                              isActive ? AppTheme.primaryBlue : Colors.white70,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Text(
-                            tab.label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: isActive
-                                  ? AppTheme.primaryBlue
-                                  : Colors.white70,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
+              child: AnimatedScale(
+                duration: const Duration(milliseconds: 140),
+                curve: Curves.easeOut,
+                scale: isFocused ? 1.06 : 1.0,
+                child: _isExpanded
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            tab.icon,
+                            color: isActive
+                                ? AppTheme.primaryBlue
+                                : Colors.white70,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              tab.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: isActive
+                                    ? AppTheme.primaryBlue
+                                    : Colors.white70,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    )
-                  : Icon(
-                      tab.icon,
-                      color: isActive ? AppTheme.primaryBlue : Colors.white70,
-                      size: 16,
-                    ),
+                        ],
+                      )
+                    : Icon(
+                        tab.icon,
+                        color: isActive ? AppTheme.primaryBlue : Colors.white70,
+                        size: 16,
+                      ),
+              ),
             ),
           );
         },
@@ -413,52 +408,47 @@ class SidebarNavigationState extends State<SidebarNavigation> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: _isExpanded ? _expandedWidth : AppSpacing.sidebarCollapsedWidth,
-        child: ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.1),
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 4),
+                child: Image(
+                  image: AssetImage(_isExpanded
+                      ? 'assets/images/croppedlogo2.png'
+                      : 'assets/images/lonelogo (1).png'),
+                  height: _isExpanded ? 28 : 20,
+                ),
               ),
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4, bottom: 4),
-                    child: Image(
-                      image: AssetImage(_isExpanded
-                          ? 'assets/images/croppedlogo2.png'
-                          : 'assets/images/lonelogo (1).png'),
-                      height: _isExpanded ? 28 : 20,
-                    ),
-                  ),
-                  Expanded(
-                    child: FocusTraversalGroup(
-                      policy: WidgetOrderTraversalPolicy(),
-                      child: Column(
-                        children: [
-                          const Spacer(),
-                          ..._tabs.map((tab) {
-                            final index = _tabs.indexOf(tab);
-                            return Container(
-                              padding: const EdgeInsets.symmetric(vertical: 4),
-                              child: tab.id == 'search'
-                                  ? _buildSearchButton(index)
-                                  : _buildTabButton(index),
-                            );
-                          }),
-                          const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: _buildBottomButton(
-                                Icons.settings, 'Settings', '/settings'),
-                          ),
-                        ],
+              Expanded(
+                child: FocusTraversalGroup(
+                  policy: WidgetOrderTraversalPolicy(),
+                  child: Column(
+                    children: [
+                      const Spacer(),
+                      ..._tabs.map((tab) {
+                        final index = _tabs.indexOf(tab);
+                        return Container(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: tab.id == 'search'
+                              ? _buildSearchButton(index)
+                              : _buildTabButton(index),
+                        );
+                      }),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: _buildBottomButton(
+                            Icons.settings, 'Settings', '/settings'),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -493,6 +483,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
       child: Builder(
         builder: (context) {
           final isFocused = Focus.of(context).hasFocus;
+          final lift = isFocused ? -2.0 : 0.0;
           return GestureDetector(
             onTap: () {
               if (!_isExpanded) {
@@ -506,47 +497,43 @@ class SidebarNavigationState extends State<SidebarNavigation> {
               duration: const Duration(milliseconds: 140),
               height: 32,
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              decoration: isFocused
-                  ? BoxDecoration(
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    )
-                  : null,
+              transform: Matrix4.translationValues(0, lift, 0),
+              transformAlignment: Alignment.center,
               alignment: Alignment.center,
-              child: _isExpanded
-                  ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(icon,
-                            color: isActive
-                                ? AppTheme.primaryBlue
-                                : Colors.white70,
-                            size: 16),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Text(
-                            label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
+              child: AnimatedScale(
+                duration: const Duration(milliseconds: 140),
+                curve: Curves.easeOut,
+                scale: isFocused ? 1.06 : 1.0,
+                child: _isExpanded
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(icon,
                               color: isActive
                                   ? AppTheme.primaryBlue
                                   : Colors.white70,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
+                              size: 16),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: isActive
+                                    ? AppTheme.primaryBlue
+                                    : Colors.white70,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    )
-                  : Icon(icon,
-                      color: isActive ? AppTheme.primaryBlue : Colors.white70,
-                      size: 16),
+                        ],
+                      )
+                    : Icon(icon,
+                        color: isActive ? AppTheme.primaryBlue : Colors.white70,
+                        size: 16),
+              ),
             ),
           );
         },

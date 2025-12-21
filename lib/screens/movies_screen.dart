@@ -37,6 +37,7 @@ class _MoviesScreenState extends State<MoviesScreen>
   final FocusNode _playFocus = FocusNode();
   final FocusNode _heroFocus = FocusNode();
   final FocusNode _settingsFocus = FocusNode();
+  final FocusNode _firstRowFocus = FocusNode();
   List<Content> _curatedMovies = [];
   final Map<String, String?> _tmdbArtCache = {};
   
@@ -52,6 +53,7 @@ class _MoviesScreenState extends State<MoviesScreen>
     _playFocus.dispose();
     _heroFocus.dispose();
     _settingsFocus.dispose();
+    _firstRowFocus.dispose();
     super.dispose();
   }
 
@@ -304,7 +306,11 @@ class _MoviesScreenState extends State<MoviesScreen>
     return KeyEventResult.ignored;
   }
 
-  Widget _buildMoviesRow(BuildContext context, List<Content> movies) {
+  Widget _buildMoviesRow(
+    BuildContext context,
+    List<Content> movies, {
+    FocusNode? firstCardFocusNode,
+  }) {
     if (movies.isEmpty) return const SizedBox.shrink();
     
     final cardWidth = context.cardWidth();
@@ -316,21 +322,32 @@ class _MoviesScreenState extends State<MoviesScreen>
         scrollDirection: Axis.horizontal,
         padding: EdgeInsets.zero,
         itemCount: movies.length,
-        itemExtent: cardWidth + AppSizes.lg,
+        itemExtent: cardWidth + context.cardGap(),
         itemBuilder: (context, index) {
-          return _buildMovieCard(context, movies[index], index);
+          return _buildMovieCard(
+            context,
+            movies[index],
+            index,
+            focusNode: index == 0 ? firstCardFocusNode : null,
+          );
         },
       ),
     );
   }
 
-  Widget _buildMovieCard(BuildContext context, Content movie, int index) {
+  Widget _buildMovieCard(
+    BuildContext context,
+    Content movie,
+    int index, {
+    FocusNode? focusNode,
+  }) {
     final cardWidth = context.cardWidth();
     final cardHeight = context.cardHeight();
     
-    return Padding(
-      padding: const EdgeInsets.only(right: 12),
+    return SizedBox(
+      width: cardWidth,
       child: Focus(
+        focusNode: focusNode,
         canRequestFocus: true,
         onKeyEvent: (node, event) {
           if (event is KeyDownEvent) {
@@ -343,8 +360,10 @@ class _MoviesScreenState extends State<MoviesScreen>
             }
             if (event.logicalKey == LogicalKeyboardKey.arrowLeft &&
                 index == 0) {
-              requestNavigationFocus();
-              return KeyEventResult.handled;
+              final moved = requestNavigationFocus();
+              return moved
+                  ? KeyEventResult.handled
+                  : KeyEventResult.ignored;
             }
           }
           return KeyEventResult.ignored;
@@ -486,7 +505,11 @@ class _MoviesScreenState extends State<MoviesScreen>
     );
   }
 
-  List<Widget> _buildGenreSections(BuildContext context, List<Content> movies) {
+  List<Widget> _buildGenreSections(
+    BuildContext context,
+    List<Content> movies, {
+    FocusNode? firstRowFocusNode,
+  }) {
     // Filter out movies without proper info
     final validMovies = movies.where((movie) {
       // Skip movies with generic/placeholder titles
@@ -529,16 +552,20 @@ class _MoviesScreenState extends State<MoviesScreen>
 
     // Build section for each genre with pagination
     final sections = <Widget>[];
+    var usedFocusNode = false;
     for (final entry in genreMap.entries) {
       final genre = entry.key;
       final allMovies = entry.value;
       final displayCount = _genreDisplayCounts[genre] ?? _itemsPerPage;
       final displayMovies = allMovies.take(displayCount).toList();
+      final rowFocusNode =
+          !usedFocusNode ? firstRowFocusNode : null;
+      usedFocusNode = usedFocusNode || rowFocusNode != null;
       
       sections.addAll([
         _buildSectionHeader(context, genre),
         const SizedBox(height: 8),
-        _buildMoviesRow(context, displayMovies),
+        _buildMoviesRow(context, displayMovies, firstCardFocusNode: rowFocusNode),
         if (allMovies.length > displayCount)
           Center(
             child: Padding(
@@ -590,8 +617,8 @@ class _MoviesScreenState extends State<MoviesScreen>
   ) {
     final heroImage = _resolveHeroImage(featuredMovie);
     final screenSize = MediaQuery.of(context).size;
-    final heroHeight = screenSize.height * 0.85;
-    final sidebarPadding = context.spacingLg();
+    final heroHeight = context.heroHeight();
+    final contentInset = context.spacingSm();
 
     return Focus(
       canRequestFocus: false,
@@ -601,7 +628,7 @@ class _MoviesScreenState extends State<MoviesScreen>
         animation: _scrollController,
         builder: (context, child) {
           final scrollOffset = _scrollController.hasClients ? _scrollController.offset : 0.0;
-          final fadeProgress = (scrollOffset / (heroHeight * 0.5)).clamp(0.0, 1.0);
+          final fadeProgress = (scrollOffset / (heroHeight * 0.3)).clamp(0.0, 1.0);
           
           return Container(
             decoration: const BoxDecoration(
@@ -619,7 +646,7 @@ class _MoviesScreenState extends State<MoviesScreen>
                 // Fixed hero background
                 Positioned(
                   top: 0,
-                  left: 0,
+                  left: -AppSpacing.sidebarCollapsedWidth,
                   right: 0,
                   height: heroHeight,
                   child: Opacity(
@@ -678,8 +705,8 @@ class _MoviesScreenState extends State<MoviesScreen>
                 ),
                 // Featured info overlay
                 Positioned(
-                  bottom: context.spacingXxl(),
-                  left: context.spacingLg(),
+                  bottom: context.spacingXl(),
+                  left: contentInset,
                   child: Opacity(
                     opacity: 1.0 - fadeProgress,
                     child: _buildHeroInfo(context, featuredMovie),
@@ -697,7 +724,7 @@ class _MoviesScreenState extends State<MoviesScreen>
                         Container(
                           color: AppTheme.darkBackground,
                           padding: EdgeInsets.only(
-                            left: sidebarPadding,
+                            left: contentInset,
                             right: context.spacingLg(),
                             bottom: context.spacingXxl(),
                           ),
@@ -708,10 +735,19 @@ class _MoviesScreenState extends State<MoviesScreen>
                               if (recentMovies.isNotEmpty) ...[
                                 _buildSectionHeader(context, 'Recently Added'),
                                 SizedBox(height: context.spacingSm()),
-                                _buildMoviesRow(context, recentMovies),
+                                _buildMoviesRow(
+                                  context,
+                                  recentMovies,
+                                  firstCardFocusNode: _firstRowFocus,
+                                ),
                                 SizedBox(height: context.sectionSpacing()),
                               ],
-                              ..._buildGenreSections(context, allMovies),
+                              ..._buildGenreSections(
+                                context,
+                                allMovies,
+                                firstRowFocusNode:
+                                    recentMovies.isEmpty ? _firstRowFocus : null,
+                              ),
                               SizedBox(height: context.sectionSpacing()),
                             ],
                           ),
@@ -770,6 +806,8 @@ class _MoviesScreenState extends State<MoviesScreen>
         final encodedId = Uri.encodeComponent(featuredMovie.id);
         context.push('/content/$encodedId', extra: featuredMovie);
       },
+      primaryButtonFocusNode: _playFocus,
+      nextFocusOnRight: _firstRowFocus,
     );
   }
 
@@ -783,11 +821,11 @@ class _MoviesScreenState extends State<MoviesScreen>
 
   Widget _buildSkeletonLoader() {
     final screenSize = MediaQuery.of(context).size;
-    final heroHeight = screenSize.height * 0.85;
-    final sidebarWidth = context.spacingLg();
+    final heroHeight = context.heroHeight();
+    final contentInset = context.spacingSm();
     final heroInfoWidth = min(
-      screenSize.width * 0.4,
-      screenSize.width >= 1920 ? 640.0 : 520.0,
+      screenSize.width * AppSpacing.heroInfoWidth,
+      screenSize.width >= 1920 ? 480.0 : 420.0,
     );
     final cardWidth = screenSize.width / 6.5;
     final cardHeight = cardWidth * 1.5;
@@ -802,7 +840,7 @@ class _MoviesScreenState extends State<MoviesScreen>
           // Hero skeleton
           Positioned(
             top: 0,
-            left: 0,
+            left: -AppSpacing.sidebarCollapsedWidth,
             right: 0,
             height: heroHeight,
             child: Container(
@@ -812,15 +850,15 @@ class _MoviesScreenState extends State<MoviesScreen>
           // Featured info skeleton
           Positioned(
             bottom: heroHeight * 0.35,
-            left: sidebarWidth + context.spacingLg(),
+            left: contentInset,
             width: heroInfoWidth,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  height: 40,
-                  width: screenSize.width * 0.3,
+                  height: 28,
+                  width: screenSize.width * 0.24,
                   decoration: BoxDecoration(
                     color: Colors.white.withAlpha((0.15 * 255).round()),
                     borderRadius: BorderRadius.circular(4),
@@ -828,8 +866,8 @@ class _MoviesScreenState extends State<MoviesScreen>
                 ),
                 const SizedBox(height: AppSizes.sm),
                 Container(
-                  height: 60,
-                  width: screenSize.width * 0.35,
+                  height: 42,
+                  width: screenSize.width * 0.28,
                   decoration: BoxDecoration(
                     color: Colors.white.withAlpha((0.1 * 255).round()),
                     borderRadius: BorderRadius.circular(4),
@@ -847,7 +885,7 @@ class _MoviesScreenState extends State<MoviesScreen>
             child: Container(
               color: AppTheme.darkBackground,
               padding: EdgeInsets.only(
-                left: sidebarWidth + context.spacingLg(),
+                left: contentInset,
                 right: context.spacingXxl(),
                 top: context.spacingXxl(),
                 bottom: context.spacingXxl(),
@@ -876,7 +914,7 @@ class _MoviesScreenState extends State<MoviesScreen>
                             scrollDirection: Axis.horizontal,
                             itemCount: 5,
                             itemBuilder: (context, cardIndex) => Padding(
-                              padding: const EdgeInsets.only(right: 12),
+                              padding: EdgeInsets.only(right: context.cardGap()),
                               child: Container(
                                 width: cardWidth,
                                 height: cardHeight,

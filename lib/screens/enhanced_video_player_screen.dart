@@ -79,20 +79,21 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     final useHwAccel = settings.hardwareAcceleration;
     final useHwDecoding = settings.hardwareDecoding;
     final isTv = TVFocusHelper.isAndroidTV;
+    final resolvedHwAccel = isTv ? true : useHwAccel;
     
     // Initialize MediaKit Player
     _player = Player(
       configuration: PlayerConfiguration(
         title: 'Risa IPTV Player',
-        // Use a TV-friendly video output path to avoid audio-only playback.
-        vo: isTv ? 'mediacodec' : 'gpu',
+        // Use GPU output on TV to avoid audio-only playback.
+        vo: 'gpu',
       ),
     );
     
     _controller = VideoController(
       _player, 
       configuration: VideoControllerConfiguration(
-        enableHardwareAcceleration: useHwAccel,
+        enableHardwareAcceleration: resolvedHwAccel,
       ),
     );
 
@@ -100,7 +101,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     try {
       if (_player.platform is NativePlayer) {
         final platform = _player.platform as NativePlayer;
-        platform.setProperty('hwdec', useHwDecoding ? 'mediacodec' : 'no');
+        final hwDecoding = useHwDecoding || isTv;
+        platform.setProperty('hwdec', hwDecoding ? 'mediacodec' : 'no');
         platform.setProperty('network-timeout', '60');
         platform.setProperty('demuxer-max-bytes', '104857600'); // 100MB buffer
         platform.setProperty('demuxer-max-back-bytes', '52428800'); // 50MB back buffer

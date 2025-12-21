@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/app_typography.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
@@ -16,6 +17,9 @@ class HeroInfoBox extends StatelessWidget {
   final VoidCallback? onMoreInfoPressed;
   final String? channelLogoUrl;
   final Widget? trailing;
+  final FocusNode? primaryButtonFocusNode;
+  final FocusNode? secondaryButtonFocusNode;
+  final FocusNode? nextFocusOnRight;
 
   const HeroInfoBox({
     super.key,
@@ -27,10 +31,15 @@ class HeroInfoBox extends StatelessWidget {
     this.onMoreInfoPressed,
     this.channelLogoUrl,
     this.trailing,
+    this.primaryButtonFocusNode,
+    this.secondaryButtonFocusNode,
+    this.nextFocusOnRight,
   });
 
   @override
   Widget build(BuildContext context) {
+    final compactButtonPadding =
+        const EdgeInsets.symmetric(horizontal: 10, vertical: 6);
     return Container(
       constraints: BoxConstraints(
         maxWidth: context.heroInfoWidth(),
@@ -42,11 +51,11 @@ class HeroInfoBox extends StatelessWidget {
           // Channel/Brand Identifier if provided
           if (channelLogoUrl != null) ...[
             Container(
-              height: context.spacingLg(),
-              margin: EdgeInsets.only(bottom: context.spacingMd()),
+              height: context.spacingMd(),
+              margin: EdgeInsets.only(bottom: context.spacingSm()),
               child: CachedChannelLogo(
                 logoUrl: channelLogoUrl!,
-                size: context.spacingLg(),
+                size: context.spacingMd(),
                 fallbackIcon: Icons.tv,
               ),
             ),
@@ -60,17 +69,17 @@ class HeroInfoBox extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
           
-          SizedBox(height: context.spacingMd()),
+          SizedBox(height: context.spacingSm()),
 
           // Metadata Row (Year, Rating, Tags, etc.)
           if (metadata != null && metadata!.isNotEmpty) ...[
             Wrap(
-              spacing: context.spacingSm(),
+              spacing: context.spacingXs(),
               runSpacing: context.spacingXs(),
               crossAxisAlignment: WrapCrossAlignment.center,
               children: metadata!,
             ),
-            SizedBox(height: context.spacingMd()),
+            SizedBox(height: context.spacingSm()),
           ],
 
           // Description
@@ -78,10 +87,10 @@ class HeroInfoBox extends StatelessWidget {
             Text(
               description!,
               style: AppTypography.heroDescription(context),
-              maxLines: 3,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            SizedBox(height: context.spacingLg()),
+            SizedBox(height: context.spacingMd()),
           ],
 
           // Progress Bar (for Live/Continue Watching)
@@ -92,26 +101,60 @@ class HeroInfoBox extends StatelessWidget {
                 value: progress,
                 backgroundColor: Colors.white.withValues(alpha: 0.1),
                 color: AppTheme.primaryBlue,
-                minHeight: 4,
+                minHeight: 3,
               ),
             ),
-            SizedBox(height: context.spacingLg()),
+            SizedBox(height: context.spacingMd()),
           ],
 
           // Action Buttons
           Row(
             children: [
-              BrandPrimaryButton(
-                onPressed: onWatchPressed,
-                label: 'Watch Now',
-                icon: Icons.play_arrow_rounded,
+              Focus(
+                canRequestFocus: false,
+                skipTraversal: true,
+                onKeyEvent: (node, event) {
+                  if (event is KeyDownEvent &&
+                      event.logicalKey == LogicalKeyboardKey.arrowRight &&
+                      nextFocusOnRight != null) {
+                    nextFocusOnRight!.requestFocus();
+                    return KeyEventResult.handled;
+                  }
+                  return KeyEventResult.ignored;
+                },
+                child: BrandPrimaryButton(
+                  onPressed: onWatchPressed,
+                  label: 'Watch Now',
+                  icon: Icons.play_arrow_rounded,
+                  padding: compactButtonPadding,
+                  fontSize: 12,
+                  minHeight: 24,
+                  focusNode: primaryButtonFocusNode,
+                ),
               ),
               if (onMoreInfoPressed != null) ...[
-                SizedBox(width: context.spacingMd()),
-                BrandSecondaryButton(
-                  onPressed: onMoreInfoPressed!,
-                  label: 'More Info',
-                  icon: Icons.info_outline_rounded,
+                SizedBox(width: context.spacingSm()),
+              Focus(
+                canRequestFocus: false,
+                skipTraversal: true,
+                onKeyEvent: (node, event) {
+                  if (event is KeyDownEvent &&
+                      event.logicalKey == LogicalKeyboardKey.arrowRight &&
+                      nextFocusOnRight != null) {
+                    nextFocusOnRight!.requestFocus();
+                      return KeyEventResult.handled;
+                    }
+                    return KeyEventResult.ignored;
+                  },
+                  child: BrandSecondaryButton(
+                    onPressed: onMoreInfoPressed!,
+                    label: 'More Info',
+                    icon: Icons.info_outline_rounded,
+                    padding: compactButtonPadding,
+                    fontSize: 12,
+                    minHeight: 24,
+                    focusNode: secondaryButtonFocusNode,
+                  ),
                 ),
               ],
               if (trailing != null) ...[

@@ -12,6 +12,8 @@ class BrandPrimaryButton extends StatefulWidget {
   final double borderRadius;
   final bool expand;
   final FocusNode? focusNode;
+  final double? fontSize;
+  final double? minHeight;
 
   const BrandPrimaryButton({
     super.key,
@@ -22,6 +24,8 @@ class BrandPrimaryButton extends StatefulWidget {
     this.borderRadius = 8,
     this.expand = false,
     this.focusNode,
+    this.fontSize,
+    this.minHeight,
   });
 
   @override
@@ -65,7 +69,9 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
         bottom: scaledPadding.bottom,
       ),
       constraints: BoxConstraints(
-        minHeight: context.tvSpacing(36).clamp(32.0, 44.0),
+        minHeight: context
+            .tvSpacing(widget.minHeight ?? 36)
+            .clamp(20.0, 44.0),
       ),
       child: Row(
         mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
@@ -84,7 +90,9 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: context.tvTextSize(14).clamp(12.0, 16.0),
+                  fontSize: context
+                      .tvTextSize(widget.fontSize ?? 14)
+                      .clamp(10.0, 16.0),
                   fontWeight: FontWeight.w600,
                   height: 1.2,
                 ),
@@ -178,6 +186,8 @@ class BrandSecondaryButton extends StatefulWidget {
   final double borderRadius;
   final bool expand;
   final FocusNode? focusNode;
+  final double? fontSize;
+  final double? minHeight;
 
   const BrandSecondaryButton({
     super.key,
@@ -188,6 +198,8 @@ class BrandSecondaryButton extends StatefulWidget {
     this.borderRadius = 8,
     this.expand = false,
     this.focusNode,
+    this.fontSize,
+    this.minHeight,
   });
 
   @override
@@ -244,7 +256,9 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
             bottom: scaledPadding.bottom,
           ),
           constraints: BoxConstraints(
-            minHeight: context.tvSpacing(32).clamp(28.0, 40.0),
+            minHeight: context
+                .tvSpacing(widget.minHeight ?? 32)
+                .clamp(20.0, 40.0),
           ),
           child: Row(
             mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
@@ -264,7 +278,9 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: context.tvTextSize(14).clamp(12.0, 16.0),
+                      fontSize: context
+                          .tvTextSize(widget.fontSize ?? 14)
+                          .clamp(10.0, 16.0),
                       fontWeight: FontWeight.w600,
                       height: 1.2,
                     ),

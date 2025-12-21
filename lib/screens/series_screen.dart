@@ -38,6 +38,7 @@ class _SeriesScreenState extends State<SeriesScreen>
   final FocusNode _watchFocus = FocusNode();
   final FocusNode _heroFocus = FocusNode();
   final FocusNode _settingsFocus = FocusNode();
+  final FocusNode _firstRowFocus = FocusNode();
   List<Content> _curatedSeries = [];
   final Map<String, String?> _tmdbArtCache = {};
   
@@ -53,6 +54,7 @@ class _SeriesScreenState extends State<SeriesScreen>
     _watchFocus.dispose();
     _heroFocus.dispose();
     _settingsFocus.dispose();
+    _firstRowFocus.dispose();
     super.dispose();
   }
 
@@ -395,7 +397,11 @@ class _SeriesScreenState extends State<SeriesScreen>
     );
   }
 
-  Widget _buildSeriesRow(BuildContext context, List<Content> series) {
+  Widget _buildSeriesRow(
+    BuildContext context,
+    List<Content> series, {
+    FocusNode? firstCardFocusNode,
+  }) {
     final seriesMap = <String, List<Content>>{};
     for (final episode in series) {
       seriesMap.putIfAbsent(episode.title, () => []).add(episode);
@@ -412,10 +418,16 @@ class _SeriesScreenState extends State<SeriesScreen>
         scrollDirection: Axis.horizontal,
         padding: EdgeInsets.zero,
         itemCount: seriesMap.length,
-        itemExtent: cardWidth + AppSizes.lg,
+        itemExtent: cardWidth + context.cardGap(),
         itemBuilder: (context, index) {
           final entry = seriesMap.entries.elementAt(index);
-          return _buildSeriesCard(context, entry.key, entry.value, index);
+          return _buildSeriesCard(
+            context,
+            entry.key,
+            entry.value,
+            index,
+            focusNode: index == 0 ? firstCardFocusNode : null,
+          );
         },
       ),
     );
@@ -425,15 +437,17 @@ class _SeriesScreenState extends State<SeriesScreen>
     BuildContext context,
     String title,
     List<Content> episodes,
-    int index,
-  ) {
+    int index, {
+    FocusNode? focusNode,
+  }) {
     final firstEpisode = episodes.first;
     final cardWidth = context.cardWidth();
     final cardHeight = context.cardHeight();
 
-    return Padding(
-      padding: const EdgeInsets.only(right: 12),
+    return SizedBox(
+      width: cardWidth,
       child: Focus(
+        focusNode: focusNode,
         canRequestFocus: true,
         onKeyEvent: (node, event) {
           if (event is KeyDownEvent) {
@@ -446,8 +460,10 @@ class _SeriesScreenState extends State<SeriesScreen>
             }
             if (event.logicalKey == LogicalKeyboardKey.arrowLeft &&
                 index == 0) {
-              requestNavigationFocus();
-              return KeyEventResult.handled;
+              final moved = requestNavigationFocus();
+              return moved
+                  ? KeyEventResult.handled
+                  : KeyEventResult.ignored;
             }
           }
           return KeyEventResult.ignored;
@@ -601,7 +617,11 @@ class _SeriesScreenState extends State<SeriesScreen>
     );
   }
 
-  List<Widget> _buildGenreSections(BuildContext context, List<Content> series) {
+  List<Widget> _buildGenreSections(
+    BuildContext context,
+    List<Content> series, {
+    FocusNode? firstRowFocusNode,
+  }) {
     // Filter out series without proper info
     final validSeries = series.where((show) {
       // Skip shows with generic/placeholder titles
@@ -634,16 +654,20 @@ class _SeriesScreenState extends State<SeriesScreen>
 
     // Build section for each genre with pagination
     final sections = <Widget>[];
+    var usedFocusNode = false;
     for (final entry in genreMap.entries) {
       final genre = entry.key;
       final allSeries = entry.value;
       final displayCount = _genreDisplayCounts[genre] ?? _itemsPerPage;
       final displaySeries = allSeries.take(displayCount).toList();
+      final rowFocusNode =
+          !usedFocusNode ? firstRowFocusNode : null;
+      usedFocusNode = usedFocusNode || rowFocusNode != null;
       
       sections.addAll([
         _buildSectionHeader(context, genre),
         const SizedBox(height: 8),
-        _buildSeriesRow(context, displaySeries),
+        _buildSeriesRow(context, displaySeries, firstCardFocusNode: rowFocusNode),
         if (allSeries.length > displayCount)
           Center(
             child: Padding(
@@ -695,8 +719,8 @@ class _SeriesScreenState extends State<SeriesScreen>
   ) {
     final heroImage = _resolveHeroImage(featuredSeries);
     final screenSize = MediaQuery.of(context).size;
-    final heroHeight = screenSize.height * 0.85;
-    final sidebarPadding = context.spacingLg();
+    final heroHeight = context.heroHeight();
+    final contentInset = context.spacingSm();
 
     return Focus(
       canRequestFocus: false,
@@ -706,7 +730,7 @@ class _SeriesScreenState extends State<SeriesScreen>
         animation: _scrollController,
         builder: (context, child) {
           final scrollOffset = _scrollController.hasClients ? _scrollController.offset : 0.0;
-          final fadeProgress = (scrollOffset / (heroHeight * 0.5)).clamp(0.0, 1.0);
+          final fadeProgress = (scrollOffset / (heroHeight * 0.3)).clamp(0.0, 1.0);
           
           return Container(
             decoration: const BoxDecoration(
@@ -724,7 +748,7 @@ class _SeriesScreenState extends State<SeriesScreen>
                 // Fixed hero background
                 Positioned(
                   top: 0,
-                  left: 0,
+                  left: -AppSpacing.sidebarCollapsedWidth,
                   right: 0,
                   height: heroHeight,
                   child: Opacity(
@@ -783,8 +807,8 @@ class _SeriesScreenState extends State<SeriesScreen>
                 ),
                 // Featured info overlay
                 Positioned(
-                  bottom: context.spacingXxl(),
-                  left: sidebarPadding,
+                  bottom: context.spacingXl(),
+                  left: contentInset,
                   child: Opacity(
                     opacity: 1.0 - fadeProgress,
                     child: _buildHeroInfo(context, featuredSeries),
@@ -802,7 +826,7 @@ class _SeriesScreenState extends State<SeriesScreen>
                         Container(
                           color: AppTheme.darkBackground,
                           padding: EdgeInsets.only(
-                            left: sidebarPadding,
+                            left: contentInset,
                             right: context.spacingLg(),
                             bottom: context.spacingXxl(),
                           ),
@@ -813,10 +837,19 @@ class _SeriesScreenState extends State<SeriesScreen>
                               if (recentSeries.isNotEmpty) ...[
                                 _buildSectionHeader(context, 'Recently Added Series'),
                                 SizedBox(height: context.spacingSm()),
-                                _buildSeriesRow(context, recentSeries),
+                                _buildSeriesRow(
+                                  context,
+                                  recentSeries,
+                                  firstCardFocusNode: _firstRowFocus,
+                                ),
                                 SizedBox(height: context.sectionSpacing()),
                               ],
-                              ..._buildGenreSections(context, allSeries),
+                              ..._buildGenreSections(
+                                context,
+                                allSeries,
+                                firstRowFocusNode:
+                                    recentSeries.isEmpty ? _firstRowFocus : null,
+                              ),
                               SizedBox(height: context.sectionSpacing()),
                             ],
                           ),
@@ -874,6 +907,8 @@ class _SeriesScreenState extends State<SeriesScreen>
         final encodedId = Uri.encodeComponent(featuredSeries.id);
         context.push('/content/$encodedId', extra: featuredSeries);
       },
+      primaryButtonFocusNode: _watchFocus,
+      nextFocusOnRight: _firstRowFocus,
     );
   }
 
@@ -895,11 +930,11 @@ class _SeriesScreenState extends State<SeriesScreen>
 
   Widget _buildSkeletonLoader() {
     final screenSize = MediaQuery.of(context).size;
-    final heroHeight = screenSize.height * 0.85;
-    final sidebarWidth = context.spacingLg();
+    final heroHeight = context.heroHeight();
+    final contentInset = context.spacingSm();
     final heroInfoWidth = min(
-      screenSize.width * 0.4,
-      screenSize.width >= 1920 ? 640.0 : 520.0,
+      screenSize.width * AppSpacing.heroInfoWidth,
+      screenSize.width >= 1920 ? 480.0 : 420.0,
     );
     final cardWidth = screenSize.width / 6.5;
     final cardHeight = cardWidth * 1.5;
@@ -914,7 +949,7 @@ class _SeriesScreenState extends State<SeriesScreen>
           // Hero skeleton
           Positioned(
             top: 0,
-            left: 0,
+            left: -AppSpacing.sidebarCollapsedWidth,
             right: 0,
             height: heroHeight,
             child: Container(
@@ -924,7 +959,7 @@ class _SeriesScreenState extends State<SeriesScreen>
           // Featured info skeleton - exact position as real content
           Positioned(
             bottom: heroHeight * 0.35,
-            left: sidebarWidth + context.spacingLg(),
+            left: contentInset,
             width: heroInfoWidth,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -932,8 +967,8 @@ class _SeriesScreenState extends State<SeriesScreen>
               children: [
                 // Title skeleton - matches displaySmall height
                 Container(
-                  height: 40,
-                  width: screenSize.width * 0.3,
+                  height: 28,
+                  width: screenSize.width * 0.24,
                   decoration: BoxDecoration(
                     color: Colors.white.withAlpha((0.15 * 255).round()),
                     borderRadius: BorderRadius.circular(4),
@@ -942,8 +977,8 @@ class _SeriesScreenState extends State<SeriesScreen>
                 const SizedBox(height: AppSizes.sm),
                 // Description skeleton - 3 lines
                 Container(
-                  height: 60,
-                  width: screenSize.width * 0.35,
+                  height: 42,
+                  width: screenSize.width * 0.28,
                   decoration: BoxDecoration(
                     color: Colors.white.withAlpha((0.1 * 255).round()),
                     borderRadius: BorderRadius.circular(4),
@@ -993,7 +1028,7 @@ class _SeriesScreenState extends State<SeriesScreen>
             child: Container(
               color: AppTheme.darkBackground,
               padding: EdgeInsets.only(
-                left: sidebarWidth + context.spacingLg(),
+                left: contentInset,
                 right: context.spacingXxl(),
                 top: context.spacingXxl(),
                 bottom: context.spacingXxl(),
@@ -1024,9 +1059,9 @@ class _SeriesScreenState extends State<SeriesScreen>
                             scrollDirection: Axis.horizontal,
                             padding: EdgeInsets.zero,
                             itemCount: 5,
-                            itemExtent: cardWidth + AppSizes.lg,
+                            itemExtent: cardWidth + context.cardGap(),
                             itemBuilder: (context, cardIndex) => Padding(
-                              padding: const EdgeInsets.only(right: 12),
+                              padding: EdgeInsets.only(right: context.cardGap()),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [

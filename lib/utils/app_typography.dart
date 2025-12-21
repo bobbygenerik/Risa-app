@@ -78,17 +78,17 @@ class AppTypography {
     color: AppTheme.textSecondary,
   );
 
-  /// Hero title (48px, w700) - Increased from 24px for full-screen hero impact
+  /// Hero title (34px, w700) - Compact for streaming-style hero layouts
   static TextStyle heroTitle(BuildContext context) => TextStyle(
-    fontSize: context.tvTextSize(48),
+    fontSize: context.tvTextSize(34),
     fontWeight: FontWeight.w700,
     color: AppTheme.textPrimary,
     height: 1.2,
   );
 
-  /// Hero description (16px, secondary, line height) - Increased from 14px
+  /// Hero description (14px, secondary, line height) - Compact for hero overlays
   static TextStyle heroDescription(BuildContext context) => TextStyle(
-    fontSize: context.tvTextSize(16),
+    fontSize: context.tvTextSize(14),
     color: AppTheme.textSecondary,
     height: 1.4,
   );
