@@ -164,7 +164,14 @@ class SidebarNavigationState extends State<SidebarNavigation> {
   bool _requestActiveTabFocus() {
     if (_tabs.isNotEmpty) {
       final index = _activeTabIndex.clamp(0, _tabs.length - 1);
-      _tabFocusNodes[index].requestFocus();
+      if (!_isExpanded) {
+        setState(() => _isExpanded = true);
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _tabFocusNodes[index].requestFocus();
+        }
+      });
       return true;
     }
     return false;
@@ -209,17 +216,30 @@ class SidebarNavigationState extends State<SidebarNavigation> {
           }
           return KeyEventResult.ignored;
         }
-        if (event.logicalKey == LogicalKeyboardKey.arrowLeft && _isExpanded) {
+        if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+          if (!_isExpanded) {
+            setState(() => _isExpanded = true);
+            return KeyEventResult.handled;
+          }
           setState(() => _isExpanded = false);
           return KeyEventResult.handled;
         }
         if (event.logicalKey == LogicalKeyboardKey.enter ||
             event.logicalKey == LogicalKeyboardKey.select ||
             event.logicalKey == LogicalKeyboardKey.space) {
+          if (!_isExpanded) {
+            setState(() => _isExpanded = true);
+            return KeyEventResult.handled;
+          }
           widget.onSearch?.call();
           return KeyEventResult.handled;
         }
         return KeyEventResult.ignored;
+      },
+      onFocusChange: (hasFocus) {
+        if (hasFocus && !_isExpanded) {
+          setState(() => _isExpanded = true);
+        }
       },
       child: Builder(
         builder: (context) {
@@ -317,18 +337,31 @@ class SidebarNavigationState extends State<SidebarNavigation> {
           }
           return KeyEventResult.ignored;
         }
-        if (event.logicalKey == LogicalKeyboardKey.arrowLeft && _isExpanded) {
+        if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+          if (!_isExpanded) {
+            setState(() => _isExpanded = true);
+            return KeyEventResult.handled;
+          }
           setState(() => _isExpanded = false);
           return KeyEventResult.handled;
         }
         if (event.logicalKey == LogicalKeyboardKey.enter ||
             event.logicalKey == LogicalKeyboardKey.select ||
             event.logicalKey == LogicalKeyboardKey.space) {
+          if (!_isExpanded) {
+            setState(() => _isExpanded = true);
+            return KeyEventResult.handled;
+          }
           setState(() => _isExpanded = false);
           context.go(tab.route);
           return KeyEventResult.handled;
         }
         return KeyEventResult.ignored;
+      },
+      onFocusChange: (hasFocus) {
+        if (hasFocus && !_isExpanded) {
+          setState(() => _isExpanded = true);
+        }
       },
       child: Builder(
         builder: (context) {
@@ -467,18 +500,31 @@ class SidebarNavigationState extends State<SidebarNavigation> {
           }
           return KeyEventResult.ignored;
         }
-        if (event.logicalKey == LogicalKeyboardKey.arrowLeft && _isExpanded) {
+        if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+          if (!_isExpanded) {
+            setState(() => _isExpanded = true);
+            return KeyEventResult.handled;
+          }
           setState(() => _isExpanded = false);
           return KeyEventResult.handled;
         }
         if (event.logicalKey == LogicalKeyboardKey.enter ||
             event.logicalKey == LogicalKeyboardKey.select ||
             event.logicalKey == LogicalKeyboardKey.space) {
+          if (!_isExpanded) {
+            setState(() => _isExpanded = true);
+            return KeyEventResult.handled;
+          }
           setState(() => _isExpanded = false);
           context.go(route);
           return KeyEventResult.handled;
         }
         return KeyEventResult.ignored;
+      },
+      onFocusChange: (hasFocus) {
+        if (hasFocus && !_isExpanded) {
+          setState(() => _isExpanded = true);
+        }
       },
       child: Builder(
         builder: (context) {

@@ -14,6 +14,7 @@ import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/services/voice_search_service.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
+import 'package:iptv_player/utils/crash_logger.dart';
 import 'package:media_kit/media_kit.dart';
 
 import 'package:iptv_player/services/incremental_epg_service.dart';
@@ -110,6 +111,7 @@ void main() {
       // different zone" error when the framework is used later.
       WidgetsFlutterBinding.ensureInitialized();
       StartupProbe.mark('Flutter bindings initialized');
+      unawaited(CrashLogger.instance.init());
       
       MediaKit.ensureInitialized();
       StartupProbe.mark('MediaKit initialized');
@@ -145,11 +147,26 @@ void main() {
           debugLog('Suppressed image error: ${details.exception}');
           return;
         }
+        unawaited(CrashLogger.instance.logError(
+          details.exception,
+          details.stack,
+          source: 'flutter',
+        ));
         FlutterError.presentError(details);
         Zone.current.handleUncaughtError(
           details.exception,
           details.stack ?? StackTrace.current,
         );
+      };
+      
+      PlatformDispatcher.instance.onError = (error, stack) {
+        unawaited(CrashLogger.instance.logError(
+          error,
+          stack,
+          source: 'platform',
+        ));
+        _ErrorHandler.reportError(error, stack);
+        return true;
       };
 
       // Show a short startup loader while TMDB disk cache loads
@@ -158,6 +175,11 @@ void main() {
     },
     (error, stack) {
       // Optionally log error to a service
+      unawaited(CrashLogger.instance.logError(
+        error,
+        stack,
+        source: 'zone',
+      ));
       _ErrorHandler.reportError(error, stack);
     },
   );

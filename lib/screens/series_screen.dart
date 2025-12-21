@@ -414,11 +414,10 @@ class _SeriesScreenState extends State<SeriesScreen>
 
     return SizedBox(
       height: rowHeight,
-      child: ListView.builder(
+      child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: EdgeInsets.zero,
         itemCount: seriesMap.length,
-        itemExtent: cardWidth + context.cardGap(),
         itemBuilder: (context, index) {
           final entry = seriesMap.entries.elementAt(index);
           return _buildSeriesCard(
@@ -429,6 +428,8 @@ class _SeriesScreenState extends State<SeriesScreen>
             focusNode: index == 0 ? firstCardFocusNode : null,
           );
         },
+        separatorBuilder: (context, index) =>
+            SizedBox(width: context.cardGap()),
       ),
     );
   }
@@ -730,7 +731,10 @@ class _SeriesScreenState extends State<SeriesScreen>
         animation: _scrollController,
         builder: (context, child) {
           final scrollOffset = _scrollController.hasClients ? _scrollController.offset : 0.0;
-          final fadeProgress = (scrollOffset / (heroHeight * 0.3)).clamp(0.0, 1.0);
+          final fadeProgress =
+              (scrollOffset / (heroHeight * 0.3)).clamp(0.0, 1.0);
+          final overlayFadeProgress =
+              (scrollOffset / (heroHeight * 0.18)).clamp(0.0, 1.0);
           
           return Container(
             decoration: const BoxDecoration(
@@ -744,6 +748,7 @@ class _SeriesScreenState extends State<SeriesScreen>
               ),
             ),
             child: Stack(
+              clipBehavior: Clip.none,
               children: [
                 // Fixed hero background
                 Positioned(
@@ -809,9 +814,17 @@ class _SeriesScreenState extends State<SeriesScreen>
                 Positioned(
                   bottom: context.spacingXl(),
                   left: contentInset,
-                  child: Opacity(
-                    opacity: 1.0 - fadeProgress,
-                    child: _buildHeroInfo(context, featuredSeries),
+                  child: Builder(
+                    builder: (context) {
+                      final opacity = 1.0 - overlayFadeProgress;
+                      if (opacity <= 0.01) {
+                        return const SizedBox.shrink();
+                      }
+                      return Opacity(
+                        opacity: opacity,
+                        child: _buildHeroInfo(context, featuredSeries),
+                      );
+                    },
                   ),
                 ),
                 // Scrollable content
@@ -833,7 +846,7 @@ class _SeriesScreenState extends State<SeriesScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              SizedBox(height: context.sectionSpacing()),
+                              SizedBox(height: context.spacingSm()),
                               if (recentSeries.isNotEmpty) ...[
                                 _buildSectionHeader(context, 'Recently Added Series'),
                                 SizedBox(height: context.spacingSm()),
@@ -1055,94 +1068,92 @@ class _SeriesScreenState extends State<SeriesScreen>
                         // Series cards row skeleton
                         SizedBox(
                           height: rowHeight,
-                          child: ListView.builder(
+                          child: ListView.separated(
                             scrollDirection: Axis.horizontal,
                             padding: EdgeInsets.zero,
                             itemCount: 5,
-                            itemExtent: cardWidth + context.cardGap(),
-                            itemBuilder: (context, cardIndex) => Padding(
-                              padding: EdgeInsets.only(right: context.cardGap()),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Series poster skeleton with episode badge
-                                  Stack(
-                                    children: [
-                                      Container(
-                                        width: cardWidth,
-                                        height: cardHeight,
+                            itemBuilder: (context, cardIndex) => Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Series poster skeleton with episode badge
+                                Stack(
+                                  children: [
+                                    Container(
+                                      width: cardWidth,
+                                      height: cardHeight,
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.cardBackground,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    // Episode count badge skeleton
+                                    Positioned(
+                                      top: 8,
+                                      right: 8,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                         decoration: BoxDecoration(
-                                          color: AppTheme.cardBackground,
+                                          color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
                                           borderRadius: BorderRadius.circular(12),
                                         ),
-                                      ),
-                                      // Episode count badge skeleton
-                                      Positioned(
-                                        top: 8,
-                                        right: 8,
                                         child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          width: 30,
+                                          height: 10,
                                           decoration: BoxDecoration(
-                                            color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                          child: Container(
-                                            width: 30,
-                                            height: 10,
-                                            decoration: BoxDecoration(
-                                              color: Colors.white.withAlpha((0.3 * 255).round()),
-                                              borderRadius: BorderRadius.circular(2),
-                                            ),
+                                            color: Colors.white.withAlpha((0.3 * 255).round()),
+                                            borderRadius: BorderRadius.circular(2),
                                           ),
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  // Title skeleton
-                                  Container(
-                                    width: cardWidth,
-                                    height: 14,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withAlpha((0.15 * 255).round()),
-                                      borderRadius: BorderRadius.circular(4),
                                     ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                // Title skeleton
+                                Container(
+                                  width: cardWidth,
+                                  height: 14,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withAlpha((0.15 * 255).round()),
+                                    borderRadius: BorderRadius.circular(4),
                                   ),
-                                  const SizedBox(height: 4),
-                                  // Year and rating skeleton
-                                  Row(
-                                    children: [
-                                      Container(
-                                        width: 30,
-                                        height: 11,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withAlpha((0.1 * 255).round()),
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
+                                ),
+                                const SizedBox(height: 4),
+                                // Year and rating skeleton
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 30,
+                                      height: 11,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withAlpha((0.1 * 255).round()),
+                                        borderRadius: BorderRadius.circular(4),
                                       ),
-                                      const SizedBox(width: 8),
-                                      Container(
-                                        width: 8,
-                                        height: 8,
-                                        decoration: BoxDecoration(
-                                          color: Colors.amber.withAlpha((0.3 * 255).round()),
-                                          borderRadius: BorderRadius.circular(2),
-                                        ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        color: Colors.amber.withAlpha((0.3 * 255).round()),
+                                        borderRadius: BorderRadius.circular(2),
                                       ),
-                                      const SizedBox(width: 4),
-                                      Container(
-                                        width: 20,
-                                        height: 11,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withAlpha((0.1 * 255).round()),
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Container(
+                                      width: 20,
+                                      height: 11,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withAlpha((0.1 * 255).round()),
+                                        borderRadius: BorderRadius.circular(4),
                                       ),
-                                    ],
-                                  ),
-                                ],
-                              ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
+                            separatorBuilder: (context, index) =>
+                                SizedBox(width: context.cardGap()),
                           ),
                         ),
                       ],

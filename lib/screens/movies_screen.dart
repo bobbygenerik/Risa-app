@@ -318,11 +318,10 @@ class _MoviesScreenState extends State<MoviesScreen>
 
     return SizedBox(
       height: rowHeight,
-      child: ListView.builder(
+      child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: EdgeInsets.zero,
         itemCount: movies.length,
-        itemExtent: cardWidth + context.cardGap(),
         itemBuilder: (context, index) {
           return _buildMovieCard(
             context,
@@ -331,6 +330,8 @@ class _MoviesScreenState extends State<MoviesScreen>
             focusNode: index == 0 ? firstCardFocusNode : null,
           );
         },
+        separatorBuilder: (context, index) =>
+            SizedBox(width: context.cardGap()),
       ),
     );
   }
@@ -628,7 +629,10 @@ class _MoviesScreenState extends State<MoviesScreen>
         animation: _scrollController,
         builder: (context, child) {
           final scrollOffset = _scrollController.hasClients ? _scrollController.offset : 0.0;
-          final fadeProgress = (scrollOffset / (heroHeight * 0.3)).clamp(0.0, 1.0);
+          final fadeProgress =
+              (scrollOffset / (heroHeight * 0.3)).clamp(0.0, 1.0);
+          final overlayFadeProgress =
+              (scrollOffset / (heroHeight * 0.18)).clamp(0.0, 1.0);
           
           return Container(
             decoration: const BoxDecoration(
@@ -642,6 +646,7 @@ class _MoviesScreenState extends State<MoviesScreen>
               ),
             ),
             child: Stack(
+              clipBehavior: Clip.none,
               children: [
                 // Fixed hero background
                 Positioned(
@@ -707,9 +712,17 @@ class _MoviesScreenState extends State<MoviesScreen>
                 Positioned(
                   bottom: context.spacingXl(),
                   left: contentInset,
-                  child: Opacity(
-                    opacity: 1.0 - fadeProgress,
-                    child: _buildHeroInfo(context, featuredMovie),
+                  child: Builder(
+                    builder: (context) {
+                      final opacity = 1.0 - overlayFadeProgress;
+                      if (opacity <= 0.01) {
+                        return const SizedBox.shrink();
+                      }
+                      return Opacity(
+                        opacity: opacity,
+                        child: _buildHeroInfo(context, featuredMovie),
+                      );
+                    },
                   ),
                 ),
                 // Scrollable content
@@ -731,7 +744,7 @@ class _MoviesScreenState extends State<MoviesScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              SizedBox(height: context.sectionSpacing()),
+                              SizedBox(height: context.spacingSm()),
                               if (recentMovies.isNotEmpty) ...[
                                 _buildSectionHeader(context, 'Recently Added'),
                                 SizedBox(height: context.spacingSm()),
@@ -910,20 +923,19 @@ class _MoviesScreenState extends State<MoviesScreen>
                         const SizedBox(height: 8),
                         SizedBox(
                           height: rowHeight,
-                          child: ListView.builder(
+                          child: ListView.separated(
                             scrollDirection: Axis.horizontal,
                             itemCount: 5,
-                            itemBuilder: (context, cardIndex) => Padding(
-                              padding: EdgeInsets.only(right: context.cardGap()),
-                              child: Container(
-                                width: cardWidth,
-                                height: cardHeight,
-                                decoration: BoxDecoration(
-                                  color: AppTheme.cardBackground,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
+                            itemBuilder: (context, cardIndex) => Container(
+                              width: cardWidth,
+                              height: cardHeight,
+                              decoration: BoxDecoration(
+                                color: AppTheme.cardBackground,
+                                borderRadius: BorderRadius.circular(12),
                               ),
                             ),
+                            separatorBuilder: (context, index) =>
+                                SizedBox(width: context.cardGap()),
                           ),
                         ),
                       ],

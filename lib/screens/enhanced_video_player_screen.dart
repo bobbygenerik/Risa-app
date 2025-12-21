@@ -12,6 +12,7 @@ import '../widgets/live_subtitle_overlay.dart';
 import '../services/integrated_transcription_service.dart';
 import '../providers/settings_provider.dart';
 import '../providers/content_provider.dart';
+import '../services/incremental_epg_service.dart';
 import '../utils/app_theme.dart';
 import '../utils/snackbar_helper.dart';
 import '../utils/tv_focus_helper.dart';
@@ -56,12 +57,15 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   bool _showGuide = false;
   BoxFit _videoFit = BoxFit.contain; // Added for aspect ratio control
   double _progress = 0.0;
+  double _liveProgress = 0.0;
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
   
   SubtitleMode _subtitleMode = SubtitleMode.off;
   IntegratedTranscriptionService? _transcriptionService;
   Timer? _progressThrottle;
+  Timer? _controlsHideTimer;
+  Timer? _liveProgressTimer;
   
   // Stream subscriptions
   StreamSubscription? _durationSubscription;
@@ -115,6 +119,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     
     _setupListeners();
     unawaited(_initializePlayer());
+    _startLiveProgressTimer();
     _hideControlsAfterDelay();
   }
 
@@ -169,6 +174,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   @override
   void dispose() {
     _progressThrottle?.cancel();
+    _controlsHideTimer?.cancel();
+    _liveProgressTimer?.cancel();
     _durationSubscription?.cancel();
     _positionSubscription?.cancel();
     _playingSubscription?.cancel();
@@ -216,49 +223,59 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final progressValue = widget.isLive ? _liveProgress : _progress;
     return Scaffold(
       backgroundColor: Colors.black,
-      body: GestureDetector(
-        onTap: _toggleControls,
-        child: Stack(
-          children: [
-            // Video player
-            Positioned.fill(
-              child: Video(
-                controller: _controller,
-                controls: NoVideoControls,
-                fit: _videoFit,
-                pauseUponEnteringBackgroundMode: false,
-                resumeUponEnteringForegroundMode: true,
+      body: Focus(
+        autofocus: true,
+        onKeyEvent: (node, event) {
+          if (event is KeyDownEvent) {
+            _showControlsAndAutoHide();
+          }
+          return KeyEventResult.ignored;
+        },
+        child: GestureDetector(
+          onTap: _toggleControls,
+          child: Stack(
+            children: [
+              // Video player
+              Positioned.fill(
+                child: Video(
+                  controller: _controller,
+                  controls: NoVideoControls,
+                  fit: _videoFit,
+                  pauseUponEnteringBackgroundMode: false,
+                  resumeUponEnteringForegroundMode: true,
+                ),
               ),
-            ),
-            
-            if (_isLoading)
-              const Center(child: CircularProgressIndicator(color: Colors.white)),
-            
-            // Subtitle overlay
-            if (_subtitleMode == SubtitleMode.liveTranslation)
-              Positioned(
-                bottom: context.tvSpacing(80),
-                left: context.tvSpacing(20),
-                right: context.tvSpacing(20),
-                child: const LiveSubtitleOverlay(showSubtitles: true),
-              ),
-            
-            // Modern streaming controls
-            if (_showControls && !_isLoading)
-              _buildModernControls(),
               
-            // Guide overlay
-            if (_showGuide)
-              _buildGuideOverlay(),
-          ],
+              if (_isLoading)
+                const Center(child: CircularProgressIndicator(color: Colors.white)),
+              
+              // Subtitle overlay
+              if (_subtitleMode == SubtitleMode.liveTranslation)
+                Positioned(
+                  bottom: context.tvSpacing(80),
+                  left: context.tvSpacing(20),
+                  right: context.tvSpacing(20),
+                  child: const LiveSubtitleOverlay(showSubtitles: true),
+                ),
+              
+              // Modern streaming controls
+              if (_showControls && !_isLoading)
+                _buildModernControls(progressValue),
+                
+              // Guide overlay
+              if (_showGuide)
+                _buildGuideOverlay(),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildModernControls() {
+  Widget _buildModernControls(double progressValue) {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -387,7 +404,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                       height: 4,
                       width: double.infinity,
                       child: LinearProgressIndicator(
-                        value: _progress.clamp(0.0, 1.0),
+                        value: progressValue.clamp(0.0, 1.0),
                         backgroundColor: Colors.white.withValues(alpha: 0.3),
                         valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
                       ),
@@ -558,9 +575,17 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   void _hideControlsAfterDelay() {
-    unawaited(Future.delayed(const Duration(seconds: 4), () {
+    _controlsHideTimer?.cancel();
+    _controlsHideTimer = Timer(const Duration(seconds: 4), () {
       if (mounted) setState(() => _showControls = false);
-    }));
+    });
+  }
+
+  void _showControlsAndAutoHide() {
+    if (mounted && !_showControls) {
+      setState(() => _showControls = true);
+    }
+    _hideControlsAfterDelay();
   }
 
   void _toggleControls() {
@@ -569,6 +594,28 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     });
     if (_showControls) {
       _hideControlsAfterDelay();
+    }
+  }
+
+  void _startLiveProgressTimer() {
+    if (!widget.isLive || widget.channel == null) return;
+    _liveProgressTimer?.cancel();
+    _updateLiveProgress();
+    _liveProgressTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      _updateLiveProgress();
+    });
+  }
+
+  void _updateLiveProgress() {
+    if (!mounted || widget.channel == null) return;
+    final epg = Provider.of<IncrementalEpgService>(context, listen: false);
+    final program = epg.getCurrentProgram(
+      widget.channel!.tvgId ?? widget.channel!.id,
+      channelName: widget.channel!.name,
+    );
+    final nextProgress = program?.progressPercentage ?? 0.0;
+    if (mounted) {
+      setState(() => _liveProgress = nextProgress);
     }
   }
 

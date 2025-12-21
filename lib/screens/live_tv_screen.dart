@@ -254,6 +254,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         return FocusTraversalGroup(
           policy: WidgetOrderTraversalPolicy(),
           child: Stack(
+            clipBehavior: Clip.none,
             children: [
               // Hero Background & Gradient
               Positioned(
@@ -325,7 +326,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            SizedBox(height: context.sectionSpacing()),
+                            SizedBox(height: context.spacingSm()),
                             if (isGrouping && groupedChannels.isEmpty)
                               _buildCategoryLoadingIndicator()
                             else
@@ -350,9 +351,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       ? _scrollController.offset
                       : 0.0;
                   final fadeProgress =
-                      (scrollPos / (heroHeight * 0.3)).clamp(0.0, 1.0);
+                      (scrollPos / (heroHeight * 0.18)).clamp(0.0, 1.0);
+                  final opacity = 1.0 - fadeProgress;
+                  if (opacity <= 0.01) {
+                    return const SizedBox.shrink();
+                  }
                   return Opacity(
-                    opacity: 1.0 - fadeProgress,
+                    opacity: opacity,
                     child: _buildFeaturedInfo(
                         context, featuredChannel, currentProgram),
                   );
@@ -482,7 +487,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             child: BrandPrimaryButton(
               onPressed: () => context.push('/player', extra: channel),
               label: 'Watch',
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              fontSize: 12,
+              minHeight: 24,
               focusNode: _watchButtonFocus,
             ),
           ),
@@ -692,18 +699,25 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               builder: (context, constraints) {
                 return SizedBox(
                   width: constraints.maxWidth,
-                  child: ListView.builder(
+                  child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     padding: EdgeInsets.zero,
                     itemCount: channels.length,
-                    itemExtent: cardWidth + context.cardGap(),
                     itemBuilder: (context, index) {
                       final focusNode =
                           isFirstRow && index == 0 ? _firstChannelFocus : null;
-                      return _buildChannelCard(context, channels[index], cardWidth,
-                          cardHeight, index, channels.length,
-                          focusNode: focusNode);
+                      return _buildChannelCard(
+                        context,
+                        channels[index],
+                        cardWidth,
+                        cardHeight,
+                        index,
+                        channels.length,
+                        focusNode: focusNode,
+                      );
                     },
+                    separatorBuilder: (context, index) =>
+                        SizedBox(width: context.cardGap()),
                   ),
                 );
               },

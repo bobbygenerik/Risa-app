@@ -60,6 +60,8 @@ class _EPGScreenState extends State<EPGScreen>
   late final FocusNode _refreshButtonFocus;
   late final FocusNode _firstCategoryFocus;
   late final FocusNode _firstChannelFocus;
+  late final FocusNode _firstProgramFocus;
+  bool _refreshPressed = false;
 
   @override
   void initState() {
@@ -81,6 +83,7 @@ class _EPGScreenState extends State<EPGScreen>
     _refreshButtonFocus = _focusPool.getFocusNode('epg_refresh', debugLabel: 'EPG Refresh');
     _firstCategoryFocus = _focusPool.getFocusNode('epg_first_category', debugLabel: 'EPG First Category');
     _firstChannelFocus = _focusPool.getFocusNode('epg_first_channel', debugLabel: 'EPG First Channel');
+    _firstProgramFocus = _focusPool.getFocusNode('epg_first_program', debugLabel: 'EPG First Program');
     
     // Sync scroll controllers
     _horizontalScrollController.addListener(_syncHorizontalScroll);
@@ -142,25 +145,14 @@ class _EPGScreenState extends State<EPGScreen>
 
   @override
   bool handleContentFocusRequest() {
-    requestFirstContentFocus();
+    _firstCategoryFocus.requestFocus();
     return true;
   }
 
   void requestFirstContentFocus() {
-    // Find first focusable channel in the list
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      // Try to find a channel sidebar item to focus
-      FocusNode? firstChannel;
-      for (final node in FocusScope.of(context).children) {
-        if (node.canRequestFocus && node.context != null) {
-          firstChannel = node;
-          break;
-        }
-      }
-      if (firstChannel != null) {
-        firstChannel.requestFocus();
-      }
+      _firstCategoryFocus.requestFocus();
     });
   }
 
@@ -191,7 +183,9 @@ class _EPGScreenState extends State<EPGScreen>
     _timeHeaderScrollController.dispose();
     _verticalScrollController.dispose();
 
-    _focusPool.returnFocusNodes(['epg_refresh', 'epg_first_category', 'epg_first_channel']);
+    _focusPool.returnFocusNodes(
+      ['epg_refresh', 'epg_first_category', 'epg_first_channel', 'epg_first_program'],
+    );
     _timerService.unregister('epg_auto_refresh');
     _epgState.dispose();
     super.dispose();
@@ -495,13 +489,17 @@ class _EPGScreenState extends State<EPGScreen>
                 focusNode: _refreshButtonFocus,
                 onKeyEvent: (node, event) {
                   if (event is KeyDownEvent) {
-                    if (event.logicalKey == LogicalKeyboardKey.select ||
-                        event.logicalKey == LogicalKeyboardKey.enter) {
-                      if (!epgService.isLoading) {
-                        unawaited(_triggerEpgRefresh());
-                      }
-                      return KeyEventResult.handled;
+                  if (event.logicalKey == LogicalKeyboardKey.select ||
+                      event.logicalKey == LogicalKeyboardKey.enter) {
+                    if (!epgService.isLoading) {
+                      setState(() => _refreshPressed = true);
+                      unawaited(_triggerEpgRefresh());
+                      Future.delayed(const Duration(milliseconds: 150), () {
+                        if (mounted) setState(() => _refreshPressed = false);
+                      });
                     }
+                    return KeyEventResult.handled;
+                  }
                     if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
                       _firstCategoryFocus.requestFocus();
                       return KeyEventResult.handled;
@@ -512,34 +510,43 @@ class _EPGScreenState extends State<EPGScreen>
                 child: Builder(
                   builder: (context) {
                     final isFocused = Focus.of(context).hasFocus;
-                    return Container(
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(8),
-                        border: isFocused
-                            ? Border.all(color: AppTheme.primaryBlue, width: 2)
-                            : null,
-                      ),
-                      child: IconButton(
-                        icon: AnimatedBuilder(
-                          animation: _refreshAnimationController,
-                          builder: (context, child) {
-                            return Transform.rotate(
-                              angle: epgService.isLoading
-                                  ? _refreshAnimationController.value * 2 * 3.14159
-                                  : 0,
-                              child: Icon(
-                                AppIcons.refresh,
-                                size: 18,
-                                color: epgService.isLoading
-                                    ? AppTheme.primaryBlue
-                                    : Colors.white.withValues(alpha: 0.8),
-                              ),
-                            );
-                          },
+                    return GestureDetector(
+                      onTapDown: (_) => setState(() => _refreshPressed = true),
+                      onTapCancel: () => setState(() => _refreshPressed = false),
+                      onTapUp: (_) => setState(() => _refreshPressed = false),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: _refreshPressed
+                              ? AppTheme.primaryBlue.withValues(alpha: 0.2)
+                              : Colors.black.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(8),
+                          border: isFocused
+                              ? Border.all(color: AppTheme.primaryBlue, width: 2)
+                              : null,
                         ),
-                        onPressed: epgService.isLoading ? null : () => unawaited(_triggerEpgRefresh()),
-                        tooltip: 'Refresh EPG Data',
+                        child: IconButton(
+                          icon: AnimatedBuilder(
+                            animation: _refreshAnimationController,
+                            builder: (context, child) {
+                              return Transform.rotate(
+                                angle: epgService.isLoading
+                                    ? _refreshAnimationController.value * 2 * 3.14159
+                                    : 0,
+                                child: Icon(
+                                  AppIcons.refresh,
+                                  size: 18,
+                                  color: epgService.isLoading
+                                      ? AppTheme.primaryBlue
+                                      : Colors.white.withValues(alpha: 0.8),
+                                ),
+                              );
+                            },
+                          ),
+                          onPressed: epgService.isLoading
+                              ? null
+                              : () => unawaited(_triggerEpgRefresh()),
+                          tooltip: 'Refresh EPG Data',
+                        ),
                       ),
                     );
                   },
@@ -718,6 +725,10 @@ class _EPGScreenState extends State<EPGScreen>
                               context.push('/player', extra: channel);
                             },
                             onChannelLongPress: (channel) => _showChannelContextMenu(context, channel),
+                            firstChannelFocusNode: _firstChannelFocus,
+                            onFocusCategories: () => _firstCategoryFocus.requestFocus(),
+                            onFocusRefresh: () => _refreshButtonFocus.requestFocus(),
+                            onFocusPrograms: () => _firstProgramFocus.requestFocus(),
                             controller: _sidebarController,
                           ),
                         ),
@@ -752,6 +763,7 @@ class _EPGScreenState extends State<EPGScreen>
                             verticalController: _verticalScrollController,
                             gridWidth: _epgState.calculateProgramsGridWidth(),
                             onProgramTap: _showProgramDetails,
+                            firstProgramFocusNode: _firstProgramFocus,
                           ),
                         ),
                       ],

@@ -39,7 +39,7 @@ class AppSpacing {
   static const double cardGap = 12.0;
 
   // Hero section dimensions
-  static const double heroHeightRatio = 0.75;
+  static const double heroHeightRatio = 0.65;
   static const double heroInfoWidth = 0.3;
   static const double heroInfoBottom = 0.35;
 
