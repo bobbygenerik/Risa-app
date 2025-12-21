@@ -39,6 +39,11 @@ class BrandTextField extends StatelessWidget {
       builder: (context) {
         final isFocused = isFocusedOverride ?? Focus.of(context).hasFocus;
         final borderRadius = BorderRadius.circular(12);
+        final theme = Theme.of(context);
+        final selectionTheme = theme.textSelectionTheme.copyWith(
+          selectionColor: Colors.transparent,
+          selectionHandleColor: Colors.transparent,
+        );
         return Container(
           decoration: isFocused
               ? BoxDecoration(
@@ -51,63 +56,66 @@ class BrandTextField extends StatelessWidget {
                   ],
                 )
               : null,
-          child: TextField(
-            controller: controller,
-            obscureText: obscureText,
-            keyboardType: keyboardType,
-            onChanged: onChanged,
-            onTap: onTap,
-            readOnly: readOnly,
-            enableInteractiveSelection: false,
-            cursorColor: AppTheme.primaryBlue,
-            style: TextStyle(
-              color: AppTheme.textPrimary,
-              fontSize: context.tvTextSize(14),
-            ),
-            decoration: InputDecoration(
-              labelText: labelText,
-              hintText: hintText,
-              filled: true,
-              fillColor: isFocused
-                  ? AppTheme.highlight
-                  : AppTheme.highlight.withValues(alpha: 0.75),
-              hintStyle: TextStyle(
-                color: AppTheme.textSecondary,
+          child: Theme(
+            data: theme.copyWith(textSelectionTheme: selectionTheme),
+            child: TextField(
+              controller: controller,
+              obscureText: obscureText,
+              keyboardType: keyboardType,
+              onChanged: onChanged,
+              onTap: onTap,
+              readOnly: readOnly,
+              enableInteractiveSelection: false,
+              cursorColor: AppTheme.primaryBlue,
+              style: TextStyle(
+                color: AppTheme.textPrimary,
                 fontSize: context.tvTextSize(14),
               ),
-              labelStyle: TextStyle(
-                color: AppTheme.textSecondary,
-                fontSize: context.tvTextSize(12),
-              ),
-              prefixIcon: prefixIcon != null
-                  ? Icon(
-                      prefixIcon,
-                      size: context.tvIconSize(18),
-                      color: AppTheme.textSecondary,
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                borderRadius: borderRadius,
-                borderSide: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.2),
+              decoration: InputDecoration(
+                labelText: labelText,
+                hintText: hintText,
+                filled: true,
+                fillColor: isFocused
+                    ? AppTheme.highlight
+                    : AppTheme.highlight.withValues(alpha: 0.75),
+                hintStyle: TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: context.tvTextSize(14),
                 ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: borderRadius,
-                borderSide: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.2),
+                labelStyle: TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: context.tvTextSize(12),
                 ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: borderRadius,
-                borderSide: const BorderSide(
-                  color: AppTheme.primaryBlue,
-                  width: 2,
+                prefixIcon: prefixIcon != null
+                    ? Icon(
+                        prefixIcon,
+                        size: context.tvIconSize(18),
+                        color: AppTheme.textSecondary,
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: borderRadius,
+                  borderSide: BorderSide(
+                    color: Colors.white.withValues(alpha: 0.2),
+                  ),
                 ),
-              ),
-              contentPadding: EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: context.tvSpacing(14),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: borderRadius,
+                  borderSide: BorderSide(
+                    color: Colors.white.withValues(alpha: 0.2),
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: borderRadius,
+                  borderSide: const BorderSide(
+                    color: AppTheme.primaryBlue,
+                    width: 2,
+                  ),
+                ),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: context.tvSpacing(14),
+                ),
               ),
             ),
           ),

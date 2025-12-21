@@ -1,7 +1,6 @@
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
@@ -13,6 +12,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
+import 'package:iptv_player/widgets/tv_friendly_text_field.dart';
 // import 'dart:convert';
 
 /// Playlist login screen - allows users to choose between M3U URL or Xtream Codes
@@ -27,12 +27,6 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _isLoading = false;
-
-  // Editable state for text fields (prevent auto-keyboard on Android TV)
-  bool _m3uUrlEditable = false;
-  bool _xtreamServerEditable = false;
-  bool _xtreamUsernameEditable = false;
-  bool _xtreamPasswordEditable = false;
 
   // Focus nodes for text fields
   final FocusNode _m3uUrlFocusNode = FocusNode();
@@ -555,7 +549,6 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                               ConstrainedBox(
                                 constraints: BoxConstraints(
                                   minHeight: context.tvSpacing(220),
-                                  maxHeight: context.tvSpacing(280),
                                 ),
                                 child: TabBarView(
                                   controller: _tabController,
@@ -614,67 +607,11 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: AppSizes.sm),
-        Focus(
+        TVFriendlyTextField(
+          controller: _m3uUrlController,
           focusNode: _m3uUrlFocusNode,
-          onFocusChange: (hasFocus) {
-            if (!hasFocus && _m3uUrlEditable) {
-              setState(() => _m3uUrlEditable = false);
-            } else {
-              setState(() {}); // Trigger rebuild for focus indicator
-            }
-          },
-          onKeyEvent: (node, event) {
-            if (event is! KeyDownEvent) return KeyEventResult.ignored;
-            final key = event.logicalKey;
-            if (key == LogicalKeyboardKey.select ||
-                key == LogicalKeyboardKey.enter) {
-              setState(() => _m3uUrlEditable = true);
-              Future.microtask(() => _m3uUrlFocusNode.requestFocus());
-              return KeyEventResult.handled;
-            }
-            return KeyEventResult.ignored;
-          },
-          child: Builder(
-            builder: (context) {
-              final bool isFocused = Focus.of(context).hasFocus;
-              return AnimatedContainer(
-                duration: AppDurations.fast,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                  border: isFocused
-                      ? Border.all(color: AppTheme.primaryBlue, width: 3)
-                      : null,
-                  boxShadow: isFocused
-                      ? [
-                          BoxShadow(
-                            color: AppTheme.primaryBlue
-                                .withAlpha((0.4 * 255).round()),
-                            blurRadius: 12,
-                            spreadRadius: 2,
-                          ),
-                        ]
-                      : null,
-                ),
-                child: TextField(
-                  controller: _m3uUrlController,
-                  autofocus: false,
-                  readOnly: !_m3uUrlEditable,
-                  enableInteractiveSelection: false,
-                  decoration: InputDecoration(
-                    hintText: 'http://example.com/playlist.m3u',
-                    prefixIcon: const Icon(Icons.link),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                    ),
-                    filled: true,
-                    fillColor: AppTheme.highlight,
-                  ),
-                  keyboardType: TextInputType.url,
-                  enabled: !_isLoading,
-                ),
-              );
-            },
-          ),
+          hintText: 'http://example.com/playlist.m3u',
+          prefixIcon: Icons.link,
         ),
         const SizedBox(height: AppSizes.sm),
         Container(
@@ -698,7 +635,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
             ],
           ),
         ),
-        const Spacer(),
+        SizedBox(height: context.tvSpacing(16)),
         BrandPrimaryButton(
           expand: true,
           icon: Icons.download,
@@ -719,234 +656,31 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: AppSizes.sm),
-        Focus(
+        TVFriendlyTextField(
+          controller: _xtreamServerController,
           focusNode: _xtreamServerFocusNode,
-          onFocusChange: (hasFocus) {
-            if (!hasFocus && _xtreamServerEditable) {
-              setState(() => _xtreamServerEditable = false);
-            } else {
-              setState(() {}); // Trigger rebuild for focus indicator
-            }
-          },
-          onKeyEvent: (node, event) {
-            if (event is! KeyDownEvent) return KeyEventResult.ignored;
-            final key = event.logicalKey;
-            if (key == LogicalKeyboardKey.select ||
-                key == LogicalKeyboardKey.enter) {
-              setState(() => _xtreamServerEditable = true);
-              Future.microtask(() => _xtreamServerFocusNode.requestFocus());
-              return KeyEventResult.handled;
-            }
-            return KeyEventResult.ignored;
-          },
-          child: Builder(
-            builder: (context) {
-              final bool isFocused = Focus.of(context).hasFocus;
-              return AnimatedContainer(
-                duration: AppDurations.fast,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                  border: isFocused
-                      ? Border.all(color: AppTheme.primaryBlue, width: 3)
-                      : null,
-                  boxShadow: isFocused
-                      ? [
-                          BoxShadow(
-                            color: AppTheme.primaryBlue
-                                .withAlpha((0.4 * 255).round()),
-                            blurRadius: 12,
-                            spreadRadius: 2,
-                          ),
-                        ]
-                      : null,
-                ),
-                child: TextField(
-                  controller: _xtreamServerController,
-                  autofocus: false,
-                  readOnly: !_xtreamServerEditable,
-                  enableInteractiveSelection: false,
-                  decoration: InputDecoration(
-                    labelText: 'Server URL',
-                    hintText: 'http://example.com:8080',
-                    helperText:
-                        'Enter server, username, password and click Load',
-                    prefixIcon: const Icon(Icons.dns),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                    ),
-                    filled: true,
-                    fillColor: AppTheme.highlight,
-                  ),
-                  keyboardType: TextInputType.url,
-                  enabled: !_isLoading,
-                ),
-              );
-            },
-          ),
+          hintText: 'http://example.com:8080',
+          prefixIcon: Icons.dns,
         ),
         const SizedBox(height: AppSizes.sm),
         Row(
           children: [
             Expanded(
-              child: Focus(
+              child: TVFriendlyTextField(
+                controller: _xtreamUsernameController,
                 focusNode: _xtreamUsernameFocusNode,
-                onFocusChange: (hasFocus) {
-                  if (!hasFocus && _xtreamUsernameEditable) {
-                    setState(() => _xtreamUsernameEditable = false);
-                  } else {
-                    setState(() {}); // Trigger rebuild for focus indicator
-                  }
-                },
-                onKeyEvent: (node, event) {
-                  if (event is! KeyDownEvent) return KeyEventResult.ignored;
-                  final key = event.logicalKey;
-
-                  // When editing, only allow regular text input
-                  if (_xtreamUsernameEditable) {
-                    return KeyEventResult.ignored;
-                  }
-
-                  // Right arrow: go to password field
-                  if (key == LogicalKeyboardKey.arrowRight) {
-                    _xtreamPasswordFocusNode.requestFocus();
-                    return KeyEventResult.handled;
-                  }
-
-                  // Enter/Select: start editing
-                  if (key == LogicalKeyboardKey.select ||
-                      key == LogicalKeyboardKey.enter) {
-                    setState(() => _xtreamUsernameEditable = true);
-                    Future.microtask(
-                      () => _xtreamUsernameFocusNode.requestFocus(),
-                    );
-                    return KeyEventResult.handled;
-                  }
-                  return KeyEventResult.ignored;
-                },
-                child: Builder(
-                  builder: (context) {
-                    final bool isFocused = Focus.of(context).hasFocus;
-                    return AnimatedContainer(
-                      duration: AppDurations.fast,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                        border: isFocused
-                            ? Border.all(color: AppTheme.primaryBlue, width: 3)
-                            : null,
-                        boxShadow: isFocused
-                            ? [
-                                BoxShadow(
-                                  color: AppTheme.primaryBlue
-                                      .withAlpha((0.4 * 255).round()),
-                                  blurRadius: 12,
-                                  spreadRadius: 2,
-                                ),
-                              ]
-                            : null,
-                      ),
-                      child: TextField(
-                        controller: _xtreamUsernameController,
-                        autofocus: false,
-                        readOnly: !_xtreamUsernameEditable,
-                        enableInteractiveSelection: false,
-                        decoration: InputDecoration(
-                          labelText: 'Username',
-                          prefixIcon: const Icon(Icons.person),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppSizes.radiusMd,
-                            ),
-                          ),
-                          filled: true,
-                          fillColor: AppTheme.highlight,
-                        ),
-                        enabled: !_isLoading,
-                      ),
-                    );
-                  },
-                ),
+                hintText: 'Username',
+                prefixIcon: Icons.person,
               ),
             ),
             const SizedBox(width: AppSizes.sm),
             Expanded(
-              child: Focus(
+              child: TVFriendlyTextField(
+                controller: _xtreamPasswordController,
                 focusNode: _xtreamPasswordFocusNode,
-                onFocusChange: (hasFocus) {
-                  if (!hasFocus && _xtreamPasswordEditable) {
-                    setState(() => _xtreamPasswordEditable = false);
-                  } else {
-                    setState(() {}); // Trigger rebuild for focus indicator
-                  }
-                },
-                onKeyEvent: (node, event) {
-                  if (event is! KeyDownEvent) return KeyEventResult.ignored;
-                  final key = event.logicalKey;
-
-                  // When editing, only allow regular text input
-                  if (_xtreamPasswordEditable) {
-                    return KeyEventResult.ignored;
-                  }
-
-                  // Left arrow: go back to username field
-                  if (key == LogicalKeyboardKey.arrowLeft) {
-                    _xtreamUsernameFocusNode.requestFocus();
-                    return KeyEventResult.handled;
-                  }
-
-                  // Enter/Select: start editing
-                  if (key == LogicalKeyboardKey.select ||
-                      key == LogicalKeyboardKey.enter) {
-                    setState(() => _xtreamPasswordEditable = true);
-                    Future.microtask(
-                      () => _xtreamPasswordFocusNode.requestFocus(),
-                    );
-                    return KeyEventResult.handled;
-                  }
-                  return KeyEventResult.ignored;
-                },
-                child: Builder(
-                  builder: (context) {
-                    final bool isFocused = Focus.of(context).hasFocus;
-                    return AnimatedContainer(
-                      duration: AppDurations.fast,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                        border: isFocused
-                            ? Border.all(color: AppTheme.primaryBlue, width: 3)
-                            : null,
-                        boxShadow: isFocused
-                            ? [
-                                BoxShadow(
-                                  color: AppTheme.primaryBlue
-                                      .withAlpha((0.4 * 255).round()),
-                                  blurRadius: 12,
-                                  spreadRadius: 2,
-                                ),
-                              ]
-                            : null,
-                      ),
-                      child: TextField(
-                        controller: _xtreamPasswordController,
-                        autofocus: false,
-                        readOnly: !_xtreamPasswordEditable,
-                        enableInteractiveSelection: false,
-                        obscureText: true,
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          prefixIcon: const Icon(Icons.lock),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppSizes.radiusMd,
-                            ),
-                          ),
-                          filled: true,
-                          fillColor: AppTheme.highlight,
-                        ),
-                        enabled: !_isLoading,
-                      ),
-                    );
-                  },
-                ),
+                hintText: 'Password',
+                prefixIcon: Icons.lock,
+                obscureText: true,
               ),
             ),
           ],

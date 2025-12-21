@@ -11,6 +11,7 @@ import 'package:iptv_player/services/backup_service.dart';
 import 'package:iptv_player/services/whisper_model_service.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/widgets/brand_button.dart';
 
 import 'package:iptv_player/widgets/settings_layout.dart';
 import 'package:iptv_player/widgets/settings_tile_widgets.dart';
@@ -235,6 +236,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             final totalContent = channelProvider.channelCount + contentProvider.movies.length + contentProvider.series.length;
             final hasContent = hasChannels || contentProvider.movies.isNotEmpty || contentProvider.series.isNotEmpty;
             final errorMessage = channelProvider.errorMessage;
+            final responsePreview = channelProvider.lastM3UContent;
             
             return Container(
               padding: const EdgeInsets.all(16),
@@ -281,6 +283,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             style: const TextStyle(
                               color: AppTheme.textSecondary,
                               fontSize: 12,
+                            ),
+                          ),
+                        ],
+                        if (!hasContent &&
+                            responsePreview != null &&
+                            responsePreview.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          BrandSecondaryButton(
+                            label: 'View Response',
+                            onPressed: () =>
+                                _showPlaylistResponsePreview(responsePreview),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
                             ),
                           ),
                         ],
@@ -653,6 +669,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return prefs.getString('recording_storage_path') ?? '/storage/recordings';
   }
 
+  void _showPlaylistResponsePreview(String content) {
+    final preview = content.trim().isEmpty ? '<empty response>' : content;
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.darkBackground,
+        title: const Text('Playlist Response Preview'),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 360),
+          child: SingleChildScrollView(
+            child: Text(
+              preview,
+              style: const TextStyle(
+                color: AppTheme.textPrimary,
+                fontFamily: 'monospace',
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ),
+        actions: [
+          BrandSecondaryButton(
+            label: 'Close',
+            onPressed: () => Navigator.pop(context),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _normalizeHttpUrl(String input) {
     final trimmed = input.trim();
     if (trimmed.isEmpty) return '';
@@ -679,10 +726,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
           provider.moviesCount > 0 ||
           provider.seriesCount > 0;
       final error = provider.errorMessage;
+      final responsePreview = provider.lastM3UContent;
       if (error != null && error.trim().isNotEmpty) {
         _showMessage(error);
+        if (responsePreview != null && responsePreview.isNotEmpty) {
+          _showPlaylistResponsePreview(responsePreview);
+        }
       } else if (!hasContent) {
         _showMessage('No channels found in this playlist.');
+        if (responsePreview != null && responsePreview.isNotEmpty) {
+          _showPlaylistResponsePreview(responsePreview);
+        }
       } else {
         _m3uUrlController.clear();
         _showMessage('Playlist loaded successfully!');
@@ -709,10 +763,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
           provider.moviesCount > 0 ||
           provider.seriesCount > 0;
       final error = provider.errorMessage;
+      final responsePreview = provider.lastM3UContent;
       if (error != null && error.trim().isNotEmpty) {
         _showMessage(error);
+        if (responsePreview != null && responsePreview.isNotEmpty) {
+          _showPlaylistResponsePreview(responsePreview);
+        }
       } else if (!hasContent) {
         _showMessage('No channels found in this playlist.');
+        if (responsePreview != null && responsePreview.isNotEmpty) {
+          _showPlaylistResponsePreview(responsePreview);
+        }
       } else {
         _clearXtreamFields();
         _showMessage('Xtream playlist loaded successfully!');

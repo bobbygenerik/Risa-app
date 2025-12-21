@@ -265,8 +265,8 @@ class AppTheme {
 
       textSelectionTheme: TextSelectionThemeData(
         cursorColor: primaryBlue,
-        selectionColor: primaryBlue.withValues(alpha: 0.3),
-        selectionHandleColor: primaryBlue,
+        selectionColor: Colors.transparent,
+        selectionHandleColor: Colors.transparent,
       ),
       
       inputDecorationTheme: InputDecorationTheme(
