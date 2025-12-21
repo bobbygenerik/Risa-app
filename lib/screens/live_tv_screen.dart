@@ -150,6 +150,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           }
 
           if (!hasChannels) {
+            final errorMessage = channelProvider.errorMessage;
             return Center(
               child: SingleChildScrollView(
                 child: Column(
@@ -166,7 +167,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     ),
                     SizedBox(height: context.tvSpacing(8)),
                     Text(
-                      'Load a playlist with Live TV channels from Settings',
+                      errorMessage != null && errorMessage.isNotEmpty
+                          ? errorMessage
+                          : 'Load a playlist with Live TV channels from Settings',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: AppTheme.textSecondary,
                           ),

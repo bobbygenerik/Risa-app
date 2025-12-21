@@ -234,14 +234,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
             final hasChannels = channelProvider.hasChannels;
             final totalContent = channelProvider.channelCount + contentProvider.movies.length + contentProvider.series.length;
             final hasContent = hasChannels || contentProvider.movies.isNotEmpty || contentProvider.series.isNotEmpty;
+            final errorMessage = channelProvider.errorMessage;
             
             return Container(
               padding: const EdgeInsets.all(16),
               margin: const EdgeInsets.only(bottom: 24),
               decoration: BoxDecoration(
-                color: hasContent ? AppTheme.accentGreen.withValues(alpha: 0.1) : AppTheme.accentRed.withValues(alpha: 0.1),
+                color: hasContent
+                    ? AppTheme.accentGreen.withValues(alpha: 0.1)
+                    : AppTheme.accentRed.withValues(alpha: 0.1),
                 border: Border.all(
-                  color: hasContent ? AppTheme.accentGreen.withValues(alpha: 0.3) : AppTheme.accentRed.withValues(alpha: 0.3),
+                  color: hasContent
+                      ? AppTheme.accentGreen.withValues(alpha: 0.3)
+                      : AppTheme.accentRed.withValues(alpha: 0.3),
                 ),
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -257,12 +262,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          hasContent ? '$totalContent items loaded' : 'No playlist loaded',
+                          hasContent
+                              ? '$totalContent items loaded'
+                              : (errorMessage != null && errorMessage.isNotEmpty
+                                  ? 'Playlist error'
+                                  : 'No playlist loaded'),
                           style: TextStyle(
                             color: hasContent ? AppTheme.accentGreen : AppTheme.accentRed,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+                        if (!hasContent &&
+                            errorMessage != null &&
+                            errorMessage.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            errorMessage,
+                            style: const TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
                         if (hasContent) ...[
                           const SizedBox(height: 4),
                           Text(
@@ -632,8 +653,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return prefs.getString('recording_storage_path') ?? '/storage/recordings';
   }
 
+  String _normalizeHttpUrl(String input) {
+    final trimmed = input.trim();
+    if (trimmed.isEmpty) return '';
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    return 'http://$trimmed';
+  }
+
   void _loadM3uPlaylist() async {
-    final url = _m3uUrlController.text.trim();
+    final url = _normalizeHttpUrl(_m3uUrlController.text);
     if (url.isEmpty) {
       _showMessage('Please enter a playlist URL');
       return;
@@ -645,13 +675,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (mounted) {
       final provider = Provider.of<ChannelProvider>(context, listen: false);
       await provider.loadPlaylistFromUrl(url);
-      _m3uUrlController.clear();
-      _showMessage('Playlist loaded successfully!');
+      final hasContent = provider.channelCount > 0 ||
+          provider.moviesCount > 0 ||
+          provider.seriesCount > 0;
+      final error = provider.errorMessage;
+      if (error != null && error.trim().isNotEmpty) {
+        _showMessage(error);
+      } else if (!hasContent) {
+        _showMessage('No channels found in this playlist.');
+      } else {
+        _m3uUrlController.clear();
+        _showMessage('Playlist loaded successfully!');
+      }
     }
   }
 
   void _loadXtreamPlaylist() async {
-    final server = _xtreamServerController.text.trim();
+    final server = _normalizeHttpUrl(_xtreamServerController.text);
     final username = _xtreamUsernameController.text.trim();
     final password = _xtreamPasswordController.text.trim();
     if (server.isEmpty || username.isEmpty || password.isEmpty) return;
@@ -665,8 +705,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final provider = Provider.of<ChannelProvider>(context, listen: false);
       final playlistUrl = '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
       await provider.loadPlaylistFromUrl(playlistUrl);
-      _clearXtreamFields();
-      _showMessage('Xtream playlist loaded successfully!');
+      final hasContent = provider.channelCount > 0 ||
+          provider.moviesCount > 0 ||
+          provider.seriesCount > 0;
+      final error = provider.errorMessage;
+      if (error != null && error.trim().isNotEmpty) {
+        _showMessage(error);
+      } else if (!hasContent) {
+        _showMessage('No channels found in this playlist.');
+      } else {
+        _clearXtreamFields();
+        _showMessage('Xtream playlist loaded successfully!');
+      }
     }
   }
 

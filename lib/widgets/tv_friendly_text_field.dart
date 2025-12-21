@@ -170,19 +170,23 @@ class _TVFriendlyTextFieldState extends State<TVFriendlyTextField> {
           // BrandTextField's build method checks `Focus.of(context).hasFocus`.
           // Since BrandTextField is a child of Focus, `Focus.of(brandContext)` will find our Focus.
           
-          return BrandTextField(
-            controller: widget.controller,
-            focusNode: null, // CRITICAL: Do not double-attach the FocusNode!
-            hintText: widget.hintText,
-            prefixIcon: widget.prefixIcon,
-            obscureText: widget.obscureText,
-            readOnly: !_isEditing, // Only writable when in edit mode
-            onChanged: widget.onChanged,
-            // We want to show the "Edit" icon when we are focused but NOT editing
-            // BrandTextField doesn't natively support a distinct "suffix icon" param for this state 
-            // without modification, but we can rely on standard verified visual for now.
-            // If strictly needed, we can wrap or modify BrandTextField later.
-            // For now, the crash fix is the priority.
+          return SizedBox(
+            width: double.infinity,
+            child: BrandTextField(
+              controller: widget.controller,
+              focusNode: null, // CRITICAL: Do not double-attach the FocusNode!
+              hintText: widget.hintText,
+              prefixIcon: widget.prefixIcon,
+              obscureText: widget.obscureText,
+              readOnly: !_isEditing, // Only writable when in edit mode
+              onChanged: widget.onChanged,
+              isFocusedOverride: widget.focusNode.hasFocus || _isEditing,
+              // We want to show the "Edit" icon when we are focused but NOT editing
+              // BrandTextField doesn't natively support a distinct "suffix icon" param for this state 
+              // without modification, but we can rely on standard verified visual for now.
+              // If strictly needed, we can wrap or modify BrandTextField later.
+              // For now, the crash fix is the priority.
+            ),
           );
         },
       ),

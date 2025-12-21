@@ -15,6 +15,7 @@ class BrandTextField extends StatelessWidget {
   final VoidCallback? onTap;
   final bool readOnly;
   final EdgeInsetsGeometry? margin;
+  final bool? isFocusedOverride;
 
   const BrandTextField({
     super.key,
@@ -29,13 +30,14 @@ class BrandTextField extends StatelessWidget {
     this.onTap,
     this.readOnly = false,
     this.margin,
+    this.isFocusedOverride,
   });
 
   @override
   Widget build(BuildContext context) {
     Widget field = Builder(
       builder: (context) {
-        final isFocused = Focus.of(context).hasFocus;
+        final isFocused = isFocusedOverride ?? Focus.of(context).hasFocus;
         final borderRadius = BorderRadius.circular(12);
         return Container(
           decoration: isFocused
