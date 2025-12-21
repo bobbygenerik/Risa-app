@@ -137,64 +137,75 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: AppColors.background,
-          ),
-          width: constraints.maxWidth,
-          height: constraints.maxHeight,
-          child: Consumer<ChannelProvider>(
-            builder: (context, channelProvider, _) {
-              final hasChannels = channelProvider.hasChannels;
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.background,
+      ),
+      child: Consumer<ChannelProvider>(
+        builder: (context, channelProvider, _) {
+          final hasChannels = channelProvider.hasChannels;
 
-              if (!hasChannels && channelProvider.isLoading) {
-                return _buildSkeletonLoader();
-              }
+          if (!hasChannels && channelProvider.isLoading) {
+            return _buildSkeletonLoader();
+          }
 
-              if (!hasChannels) {
-                return Center(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        context.iconXxl(
-                          AppIcons.liveTV,
-                          color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
-                        ),
-                        SizedBox(height: context.tvSpacing(24)),
-                        Text(
-                          'No Live TV Available',
-                          style: Theme.of(context).textTheme.headlineMedium,
-                        ),
-                        SizedBox(height: context.tvSpacing(8)),
-                        Text(
-                          'Load a playlist with Live TV channels from Settings',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppTheme.textSecondary,
-                              ),
-                          textAlign: TextAlign.center,
-                        ),
-                        SizedBox(height: context.tvSpacing(32)),
-                        GoToSettingsButton(
-                          onPressed: _goToSettings,
-                          focusNode: _settingsButtonFocus,
-                        ),
-                      ],
+          if (!hasChannels) {
+            return Center(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    context.iconXxl(
+                      AppIcons.liveTV,
+                      color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
                     ),
-                  ),
-                );
-              }
+                    SizedBox(height: context.tvSpacing(24)),
+                    Text(
+                      'No Live TV Available',
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                    SizedBox(height: context.tvSpacing(8)),
+                    Text(
+                      'Load a playlist with Live TV channels from Settings',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.textSecondary,
+                          ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: context.tvSpacing(32)),
+                    GoToSettingsButton(
+                      onPressed: _goToSettings,
+                      focusNode: _settingsButtonFocus,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
 
-              // Main content rendering placeholder
-              return Center(
-                child: Text('Live TV content goes here'),
-              );
-            },
-          ),
-        );
-      },
+          final totalChannels = channelProvider.channelCount;
+          if (_featuredIndex >= totalChannels) _featuredIndex = 0;
+          final featuredChannel = channelProvider.getChannelAt(_featuredIndex);
+
+          final epgService =
+              Provider.of<IncrementalEpgService>(context, listen: false);
+          final channelId = featuredChannel.tvgId ?? featuredChannel.id;
+          Future.microtask(() => epgService.ensureChannelLoaded(channelId,
+              channelName: featuredChannel.name));
+
+          final groupedChannels = channelProvider.getGroupedChannels();
+          final isGrouping = channelProvider.isGroupingChannels;
+          final previewList = channelProvider.channels;
+
+          return _buildFullScreenHero(
+            context,
+            featuredChannel,
+            previewList,
+            groupedChannels,
+            isGrouping,
+          );
+        },
+      ),
     );
   }
 

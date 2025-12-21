@@ -48,6 +48,8 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
 
   late FocusNode _overflowButtonFocusNode;
   bool _isExpanded = false;
+  String? _lastRoutePath;
+  static const double _expandedWidth = 180.0;
 
   final List<NavTab> _tabs = [
     NavTab(id: 'search', label: 'Search', icon: Icons.search, route: '/search'),
@@ -93,6 +95,26 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
     if (oldWidget.onNavFocusRegistration != widget.onNavFocusRegistration &&
         widget.onNavFocusRegistration != null) {
       widget.onNavFocusRegistration?.call(_requestActiveTabFocus);
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final routePath = GoRouterState.of(context).uri.path;
+    if (_lastRoutePath == null) {
+      _lastRoutePath = routePath;
+      return;
+    }
+    if (_lastRoutePath != routePath) {
+      _lastRoutePath = routePath;
+      if (_isExpanded) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() => _isExpanded = false);
+          }
+        });
+      }
     }
   }
 
@@ -382,9 +404,7 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        width: _isExpanded
-            ? AppSpacing.sidebarWidth
-            : AppSpacing.sidebarCollapsedWidth,
+        width: _isExpanded ? _expandedWidth : AppSpacing.sidebarCollapsedWidth,
         child: ClipRect(
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
