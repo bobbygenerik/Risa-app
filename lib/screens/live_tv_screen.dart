@@ -45,6 +45,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   final TimerService _timerService = TimerService();
   final FocusPoolService _focusPool = FocusPoolService();
   late final ScrollController _scrollController;
+  String? _lastRoutePath;
 
   late final FocusNode _watchButtonFocus;
   late final FocusNode _settingsButtonFocus;
@@ -77,6 +78,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     // Start carousel once the widget is built - will be updated when channels load
     WidgetsBinding.instance.addPostFrameCallback(
       (_) {
+        if (_scrollController.hasClients) {
+          _scrollController.jumpTo(0);
+        }
         _startCarouselIfNeeded();
         _loadHeroVideoPreferenceSetting();
       },
@@ -91,6 +95,21 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       ['live_tv_watch', 'live_tv_settings', 'live_tv_first_card'],
     );
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final routePath = GoRouterState.of(context).uri.path;
+    if (_lastRoutePath == routePath) return;
+    _lastRoutePath = routePath;
+    if (routePath == '/home') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          _scrollController.jumpTo(0);
+        }
+      });
+    }
   }
 
   @override
@@ -239,7 +258,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final isTV = screenSize.width >= 1920 || screenSize.height >= 1080;
     final heroHeight = context.heroHeight();
     final cardPeek = context.spacingXl();
-    final contentInset = context.spacingSm();
+    final contentInset =
+        context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
     final rightInset = context.spacingLg();
     
     // Calculate available width for content
@@ -272,8 +292,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               // Hero Background & Gradient
               Positioned(
                 top: 0,
-                left: -AppSpacing.sidebarCollapsedWidth,
-                right: -AppSpacing.sidebarCollapsedWidth,
+                left: 0,
+                right: 0,
                 height: heroHeight,
                 child: AnimatedBuilder(
                   animation: _scrollController,
@@ -342,9 +362,20 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       SizedBox(height: (heroHeight - cardPeek).clamp(0.0, heroHeight)),
                       // Content with sidebar alignment
                       Container(
-                        color: AppTheme.darkBackground,
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent,
+                              AppTheme.darkBackground,
+                              AppTheme.darkBackground,
+                            ],
+                            stops: [0.0, 0.2, 1.0],
+                          ),
+                        ),
                         padding: EdgeInsets.only(
-                          left: contentInset,
+                          left: 0,
                           right: rightInset,
                           bottom: context.spacingXl(),
                         ),
@@ -717,15 +748,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final screenWidth = MediaQuery.of(context).size.width;
     final maxCardWidth = screenWidth < 800 ? screenWidth / 2.8 : screenWidth / 5.5;
     final cardWidth = min(context.cardWidth(), maxCardWidth);
+    const cardFocusScale = 1.02;
     final cardHeight = cardWidth * 0.6;
-    final focusExtra = cardHeight * (TVFocusStyle.focusScale - 1);
+    final focusExtra = cardHeight * (cardFocusScale - 1);
     final rowHeight = cardHeight + context.spacingXl() + focusExtra;
+    final rowInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.only(bottom: context.spacingXs()),
+          padding: EdgeInsets.only(left: rowInset, bottom: context.spacingXs()),
           child: Text(
             title,
             style: AppTypography.caption(context).copyWith(
@@ -742,7 +775,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   width: constraints.maxWidth,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
-                    padding: EdgeInsets.zero,
+                    padding: EdgeInsets.only(
+                      left: rowInset,
+                      right: context.spacingLg(),
+                    ),
                     clipBehavior: Clip.none,
                     itemCount: channels.length,
                     itemBuilder: (context, index) {
@@ -856,10 +892,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             final progress = currentProgram?.progressPercentage ?? 0.0;
             final imageUrl = _getChannelCardImage(currentProgram, channel);
 
+            const cardFocusScale = 1.02;
             return GestureDetector(
               onTap: () => context.push('/player', extra: channel),
               child: AnimatedScale(
-                scale: isFocused ? TVFocusStyle.focusScale : 1.0,
+                scale: isFocused ? cardFocusScale : 1.0,
                 duration: TVFocusStyle.animationDuration,
                 curve: TVFocusStyle.animationCurve,
                 alignment: index == 0

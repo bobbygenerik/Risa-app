@@ -45,8 +45,8 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
                 .clamp(0.0, 1.0))
             .toColor()
         : baseColor;
-    final focusColor = Color.lerp(baseColor, Colors.white, 0.25) ?? baseColor;
-    final resolvedColor = _focused ? focusColor : pressedColor;
+    final resolvedColor = _focused ? Colors.white : pressedColor;
+    final labelColor = _focused ? AppTheme.darkBackground : Colors.white;
 
     final resolvedPadding =
         widget.padding.resolve(Directionality.of(context));
@@ -81,7 +81,7 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
             widget.expand ? MainAxisAlignment.center : MainAxisAlignment.start,
         children: [
           if (widget.icon != null) ...[
-            context.iconSm(widget.icon!, color: Colors.white),
+            context.iconSm(widget.icon!, color: labelColor),
             SizedBox(width: context.tvSpacing(8)),
           ],
           Flexible(
@@ -91,7 +91,7 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.white,
+                  color: labelColor,
                   fontSize: context
                       .tvTextSize(widget.fontSize ?? 14)
                       .clamp(10.0, 16.0),
@@ -214,8 +214,7 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
       context.tvSpacing(resolvedPadding.bottom),
     );
 
-    final focusFill = Color.lerp(AppTheme.primaryBlue, Colors.white, 0.25) ??
-        AppTheme.primaryBlue;
+    final focusFill = Colors.white;
     final content = AnimatedContainer(
       duration: AppDurations.fast,
       decoration: BoxDecoration(
@@ -263,7 +262,10 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
                 : MainAxisAlignment.start,
             children: [
               if (widget.icon != null) ...[
-                context.iconSm(widget.icon!, color: Colors.white),
+                context.iconSm(
+                  widget.icon!,
+                  color: _focused ? AppTheme.darkBackground : Colors.white,
+                ),
                 SizedBox(width: context.tvSpacing(8)),
               ],
               Flexible(
@@ -273,7 +275,7 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.white,
+                      color: _focused ? AppTheme.darkBackground : Colors.white,
                       fontSize: context
                           .tvTextSize(widget.fontSize ?? 14)
                           .clamp(10.0, 16.0),

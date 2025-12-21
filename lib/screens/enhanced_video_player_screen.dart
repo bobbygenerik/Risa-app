@@ -67,6 +67,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   Timer? _progressThrottle;
   Timer? _controlsHideTimer;
   Timer? _liveProgressTimer;
+  Timer? _videoFallbackTimer;
+  bool _hasVideo = false;
+  bool _fallbackAttempted = false;
+  late final FocusNode _playPauseFocus;
   
   // Stream subscriptions
   StreamSubscription? _durationSubscription;
@@ -74,6 +78,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   StreamSubscription? _playingSubscription;
   StreamSubscription? _errorSubscription;
   StreamSubscription? _completedSubscription;
+  StreamSubscription? _videoParamsSubscription;
   
   @override
   void initState() {
@@ -104,6 +109,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         androidAttachSurfaceAfterVideoParameters: isTv ? true : null,
       ),
     );
+    _playPauseFocus = FocusNode(debugLabel: 'PlayerPlayPause');
 
     // Optimize player for IPTV streams
     try {
@@ -128,6 +134,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     unawaited(_initializePlayer());
     _startLiveProgressTimer();
     _hideControlsAfterDelay();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _playPauseFocus.requestFocus();
+    });
   }
 
   void _setupListeners() {
@@ -171,6 +180,12 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       }
     });
 
+    _videoParamsSubscription = _player.stream.videoParams.listen((params) {
+      if ((params.w ?? 0) > 0 && (params.h ?? 0) > 0) {
+        _hasVideo = true;
+      }
+    });
+
     _player.stream.log.listen((log) {
       if (log.level != 'debug') {
         debugLog('MediaKit Log: [${log.level}] ${log.text}');
@@ -183,11 +198,14 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     _progressThrottle?.cancel();
     _controlsHideTimer?.cancel();
     _liveProgressTimer?.cancel();
+    _videoFallbackTimer?.cancel();
     _durationSubscription?.cancel();
     _positionSubscription?.cancel();
     _playingSubscription?.cancel();
     _errorSubscription?.cancel();
     _completedSubscription?.cancel();
+    _videoParamsSubscription?.cancel();
+    _playPauseFocus.dispose();
     
     unawaited(_saveCurrentPosition());
     
@@ -356,52 +374,57 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                   // Control buttons
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                    child: Row(
-                      children: [
-                        // Rewind
-                        _buildControlButton(
-                          icon: Icons.replay_10,
-                          onPressed: _rewind,
-                        ),
-                        const SizedBox(width: 12),
-                        // Play/Pause
-                        _buildControlButton(
-                          icon: _isPlaying ? Icons.pause : Icons.play_arrow,
-                          onPressed: _togglePlayPause,
-                        ),
-                        const SizedBox(width: 12),
-                        // Fast Forward
-                        _buildControlButton(
-                          icon: Icons.forward_10,
-                          onPressed: _fastForward,
-                        ),
-                        const SizedBox(width: 24),
-                        // Audio
-                        _buildControlButton(
-                          icon: Icons.audiotrack,
-                          onPressed: _toggleAudio,
-                        ),
-                        const SizedBox(width: 12),
-                        // Subtitles Menu
-                        _buildControlButton(
-                          icon: _subtitleMode == SubtitleMode.off 
-                            ? Icons.subtitles_outlined
-                            : Icons.subtitles,
-                          onPressed: _showSubtitleMenu,
-                        ),
-                        const SizedBox(width: 12),
-                        // Multi-view
-                        _buildControlButton(
-                          icon: Icons.grid_view,
-                          onPressed: _toggleMultiView,
-                        ),
-                        const SizedBox(width: 12),
-                        // Aspect Ratio Toggle
-                        _buildControlButton(
-                          icon: Icons.aspect_ratio,
-                          onPressed: _toggleVideoFit,
-                        ),
-                      ],
+                    child: FocusTraversalGroup(
+                      policy: WidgetOrderTraversalPolicy(),
+                      child: Row(
+                        children: [
+                          // Rewind
+                          _buildControlButton(
+                            icon: Icons.replay_10,
+                            onPressed: _rewind,
+                          ),
+                          const SizedBox(width: 12),
+                          // Play/Pause
+                          _buildControlButton(
+                            icon: _isPlaying ? Icons.pause : Icons.play_arrow,
+                            onPressed: _togglePlayPause,
+                            focusNode: _playPauseFocus,
+                            autofocus: true,
+                          ),
+                          const SizedBox(width: 12),
+                          // Fast Forward
+                          _buildControlButton(
+                            icon: Icons.forward_10,
+                            onPressed: _fastForward,
+                          ),
+                          const SizedBox(width: 24),
+                          // Audio
+                          _buildControlButton(
+                            icon: Icons.audiotrack,
+                            onPressed: _toggleAudio,
+                          ),
+                          const SizedBox(width: 12),
+                          // Subtitles Menu
+                          _buildControlButton(
+                            icon: _subtitleMode == SubtitleMode.off 
+                              ? Icons.subtitles_outlined
+                              : Icons.subtitles,
+                            onPressed: _showSubtitleMenu,
+                          ),
+                          const SizedBox(width: 12),
+                          // Multi-view
+                          _buildControlButton(
+                            icon: Icons.grid_view,
+                            onPressed: _toggleMultiView,
+                          ),
+                          const SizedBox(width: 12),
+                          // Aspect Ratio Toggle
+                          _buildControlButton(
+                            icon: Icons.aspect_ratio,
+                            onPressed: _toggleVideoFit,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   // Progress bar
@@ -431,8 +454,12 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     required IconData icon,
     required VoidCallback onPressed,
     double size = 20,
+    FocusNode? focusNode,
+    bool autofocus = false,
   }) {
     return FocusableActionDetector(
+      focusNode: focusNode,
+      autofocus: autofocus,
       actions: <Type, Action<Intent>>{
         ActivateIntent: CallbackAction<ActivateIntent>(
           onInvoke: (intent) {
@@ -448,13 +475,16 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
             duration: const Duration(milliseconds: 150),
             curve: Curves.easeOutCubic,
             decoration: BoxDecoration(
-              color:
-                  isFocused ? Colors.white.withAlpha((0.22 * 255).round()) : null,
+              color: isFocused ? Colors.white : null,
               borderRadius: BorderRadius.circular(10),
             ),
             child: IconButton(
               onPressed: onPressed,
-              icon: Icon(icon, color: Colors.white, size: size),
+              icon: Icon(
+                icon,
+                color: isFocused ? Colors.black : Colors.white,
+                size: size,
+              ),
               padding: const EdgeInsets.all(8),
             ),
           );
@@ -535,6 +565,12 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
       setState(() => _isLoading = false);
       unawaited(WakelockPlus.enable());
+
+      _videoFallbackTimer?.cancel();
+      _videoFallbackTimer = Timer(const Duration(seconds: 3), () {
+        if (!mounted || _hasVideo || _fallbackAttempted) return;
+        unawaited(_attemptVideoFallback(url, headers));
+      });
       
       if (!widget.isLive && rememberPosition) {
         final prefs = await SharedPreferences.getInstance();
@@ -550,6 +586,28 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         setState(() => _isLoading = false);
          _handleVideoError(e.toString());
       }
+    }
+  }
+
+  Future<void> _attemptVideoFallback(
+    String url,
+    Map<String, String> headers,
+  ) async {
+    if (_fallbackAttempted) return;
+    _fallbackAttempted = true;
+    debugLog('MediaKit Player: No video detected, retrying with hwdec=no');
+    try {
+      if (_player.platform is NativePlayer) {
+        final platform = _player.platform as NativePlayer;
+        unawaited(platform.setProperty('hwdec', 'no'));
+        unawaited(platform.setProperty('vo', 'gpu'));
+      }
+      await _player.open(
+        Media(url, httpHeaders: headers),
+        play: true,
+      );
+    } catch (e) {
+      debugLog('MediaKit Player: Fallback failed: $e');
     }
   }
   
@@ -615,6 +673,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   void _showControlsAndAutoHide() {
     if (mounted && !_showControls) {
       setState(() => _showControls = true);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _playPauseFocus.requestFocus();
+      });
     }
     _hideControlsAfterDelay();
   }
@@ -625,6 +686,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     });
     if (_showControls) {
       _hideControlsAfterDelay();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _playPauseFocus.requestFocus();
+      });
     }
   }
 

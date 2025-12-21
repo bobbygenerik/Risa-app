@@ -386,11 +386,15 @@ class _SeriesScreenState extends State<SeriesScreen>
   }
 
   Widget _buildSectionHeader(BuildContext context, String title) {
-    return Text(
-      title,
-      style: AppTypography.caption(context).copyWith(
-        color: AppTheme.textPrimary,
-        fontWeight: FontWeight.w600,
+    final inset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
+    return Padding(
+      padding: EdgeInsets.only(left: inset),
+      child: Text(
+        title,
+        style: AppTypography.caption(context).copyWith(
+          color: AppTheme.textPrimary,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -407,14 +411,18 @@ class _SeriesScreenState extends State<SeriesScreen>
 
     if (seriesMap.isEmpty) return const SizedBox.shrink();
     
-    final cardWidth = context.cardWidth();
-    final rowHeight = context.rowHeight();
+    const cardFocusScale = 1.02;
+    final inset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
+    final cardHeight = context.cardHeight();
+    final rowHeight =
+        context.rowHeight() + (cardHeight * (cardFocusScale - 1));
 
     return SizedBox(
       height: rowHeight,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: EdgeInsets.zero,
+        padding: EdgeInsets.only(left: inset, right: context.spacingLg()),
+        clipBehavior: Clip.none,
         itemCount: seriesMap.length,
         itemBuilder: (context, index) {
           final entry = seriesMap.entries.elementAt(index);
@@ -470,15 +478,17 @@ class _SeriesScreenState extends State<SeriesScreen>
         child: Builder(
           builder: (context) {
             final isFocused = Focus.of(context).hasFocus;
+            const cardFocusScale = 1.02;
             return GestureDetector(
               onTap: () {
                 final encodedId = Uri.encodeComponent(firstEpisode.id);
                 context.push('/content/$encodedId', extra: firstEpisode);
               },
               child: AnimatedScale(
-                scale: isFocused ? 1.1 : 1.0,
+                scale: isFocused ? cardFocusScale : 1.0,
                 duration: TVFocusStyle.animationDuration,
                 curve: TVFocusStyle.animationCurve,
+                alignment: Alignment.topCenter,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -717,10 +727,10 @@ class _SeriesScreenState extends State<SeriesScreen>
     List<Content> recentSeries,
   ) {
     final heroImage = _resolveHeroImage(featuredSeries);
-    final screenSize = MediaQuery.of(context).size;
     final heroHeight = context.heroHeight();
     final cardPeek = context.spacingXl();
-    final contentInset = context.spacingSm();
+    final contentInset =
+        context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
 
     return Focus(
       canRequestFocus: false,
@@ -752,8 +762,8 @@ class _SeriesScreenState extends State<SeriesScreen>
                 // Fixed hero background
                 Positioned(
                   top: 0,
-                  left: -AppSpacing.sidebarCollapsedWidth,
-                  right: -AppSpacing.sidebarCollapsedWidth,
+                  left: 0,
+                  right: 0,
                   height: heroHeight,
                   child: Transform.translate(
                     offset: Offset(0, -scrollOffset),
@@ -842,9 +852,20 @@ class _SeriesScreenState extends State<SeriesScreen>
                       children: [
                         SizedBox(height: (heroHeight - cardPeek).clamp(0.0, heroHeight)),
                         Container(
-                          color: AppTheme.darkBackground,
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                AppTheme.darkBackground,
+                                AppTheme.darkBackground,
+                              ],
+                              stops: [0.0, 0.2, 1.0],
+                            ),
+                          ),
                           padding: EdgeInsets.only(
-                            left: contentInset,
+                            left: 0,
                             right: context.spacingLg(),
                             bottom: context.spacingXxl(),
                           ),
@@ -949,7 +970,8 @@ class _SeriesScreenState extends State<SeriesScreen>
   Widget _buildSkeletonLoader() {
     final screenSize = MediaQuery.of(context).size;
     final heroHeight = context.heroHeight();
-    final contentInset = context.spacingSm();
+    final contentInset =
+        context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
     final heroInfoWidth = min(
       screenSize.width * AppSpacing.heroInfoWidth,
       screenSize.width >= 1920 ? 480.0 : 420.0,
@@ -967,8 +989,8 @@ class _SeriesScreenState extends State<SeriesScreen>
           // Hero skeleton
           Positioned(
             top: 0,
-            left: -AppSpacing.sidebarCollapsedWidth,
-            right: -AppSpacing.sidebarCollapsedWidth,
+            left: 0,
+            right: 0,
             height: heroHeight,
             child: Container(
               color: AppTheme.cardBackground,

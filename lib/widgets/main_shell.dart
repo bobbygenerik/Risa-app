@@ -2,7 +2,6 @@ import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/painting.dart';
 
 import 'package:go_router/go_router.dart';
 // import 'package:iptv_player/widgets/top_navigation_bar.dart'; // Removed
@@ -64,20 +63,19 @@ class _MainShellState extends State<MainShell> {
     // Initialize global focus node
     _globalFocusNode = FocusNode(debugLabel: 'GlobalFocus');
 
-    // Start collapsed and focus content on initial load.
+    // Start collapsed on initial load.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       Future.delayed(const Duration(milliseconds: 100), () {
         if (!mounted) return;
         _sidebarKey.currentState?.collapse();
-        _requestContentFocus();
       });
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _routeInfoProvider = GoRouter.of(context).routeInformationProvider;
-      _lastLocation = _routeInfoProvider?.value.location;
+      _lastLocation = _routeInfoProvider?.value.uri.toString();
       _routeInfoProvider?.addListener(_handleRouteChange);
     });
 
@@ -114,10 +112,9 @@ class _MainShellState extends State<MainShell> {
   void didUpdateWidget(MainShell oldWidget) {
     super.didUpdateWidget(oldWidget);
     // If the active tab changes (e.g. returning from a full-screen page like Settings),
-    // we want to ensure focus is restored to the navigation bar, specifically the active tab.
+    // keep the sidebar collapsed.
     if (widget.activeTab != oldWidget.activeTab) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _requestContentFocus();
         _sidebarKey.currentState?.collapse();
       });
     }
@@ -171,12 +168,7 @@ class _MainShellState extends State<MainShell> {
                         unregisterFocusCallback:
                             _unregisterContentFocusCallback,
                         requestNavFocus: _requestNavFocus,
-                        child: Padding(
-                          padding: const EdgeInsets.only(
-                            left: AppSizes.sidebarCollapsedWidth,
-                          ),
-                          child: widget.child,
-                        ),
+                        child: widget.child,
                       ),
                     ),
                   ),
@@ -247,10 +239,11 @@ class _MainShellState extends State<MainShell> {
 
   void _handleRouteChange() {
     if (!mounted) return;
-    final location = _routeInfoProvider?.value.location;
+    final location = _routeInfoProvider?.value.uri.toString();
     if (location == null || location == _lastLocation) return;
     _lastLocation = location;
     _sidebarKey.currentState?.collapse();
+    _globalFocusNode.requestFocus();
     if (location.startsWith('/settings')) {
       PaintingBinding.instance.imageCache.clear();
       PaintingBinding.instance.imageCache.clearLiveImages();
