@@ -12,13 +12,11 @@ import 'package:iptv_player/services/whisper_model_service.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 
-import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/widgets/settings_layout.dart';
 import 'package:iptv_player/widgets/settings_tile_widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
-import 'package:iptv_player/models/profile_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -85,7 +83,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final FocusNode _clearXtreamButtonFocusNode = FocusNode();
   final FocusNode _updateEpgButtonFocusNode = FocusNode();
   final FocusNode _clearEpgButtonFocusNode = FocusNode();
-  final FocusNode _editProfileButtonFocusNode = FocusNode();
   final FocusNode _browseStorageButtonFocusNode = FocusNode();
 
   // Toggles Focus Nodes (for first items in sections)
@@ -182,7 +179,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _clearXtreamButtonFocusNode.dispose();
     _updateEpgButtonFocusNode.dispose();
     _clearEpgButtonFocusNode.dispose();
-    _editProfileButtonFocusNode.dispose();
     _browseStorageButtonFocusNode.dispose();
     _playbackFirstFocusNode.dispose();
     _aiFirstFocusNode.dispose();
@@ -200,7 +196,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       onBackToHome: () => context.go('/home'),
       categories: const [
         SettingsCategory(title: 'General', icon: Icons.settings),
-        SettingsCategory(title: 'Account', icon: Icons.person),
         SettingsCategory(title: 'Playback', icon: Icons.play_circle),
         SettingsCategory(title: 'AI Features', icon: Icons.auto_awesome),
         SettingsCategory(title: 'Recordings', icon: Icons.fiber_manual_record),
@@ -214,12 +209,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case 0:
         return _buildGeneralSettings();
       case 1:
-        return _buildAccountSettings();
-      case 2:
         return _buildPlaybackSettings();
-      case 3:
+      case 2:
         return _buildAISettings();
-      case 4:
+      case 3:
         return _buildRecordingsSettings();
       default:
         return _buildGeneralSettings();
@@ -462,43 +455,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: () => context.push('/debug'),
             ),
           ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAccountSettings() {
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
-      children: [
-        const SettingsSectionHeader(title: 'Account', subtitle: 'Manage profile and subscriptions'),
-        
-        Consumer<ProfileProvider>(
-          builder: (context, profileProvider, _) {
-            final profile = profileProvider.activeProfile;
-            return Center(
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor: Colors.white10,
-                    backgroundImage: profile?.avatarUrl.isNotEmpty == true ? NetworkImage(profile!.avatarUrl) : null,
-                    child: profile?.avatarUrl.isEmpty != false ? const Icon(Icons.person, size: 50, color: Colors.white70) : null,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(profile?.name ?? 'User', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: 200,
-                    child: BrandPrimaryButton(
-                      label: 'Edit Profile',
-                      onPressed: () => context.push('/edit-profile'),
-                    ),
-                  )
-                ],
-              ),
-            );
-          },
         ),
       ],
     );

@@ -9,6 +9,7 @@ import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/widgets/voice_search_button.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
+import 'package:iptv_player/utils/app_spacing.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -103,8 +104,10 @@ class _SearchScreenState extends State<SearchScreen>
       decoration: const BoxDecoration(
         color: AppTheme.darkBackground,
       ),
-      child: Column(
-        children: [
+      child: Padding(
+        padding: EdgeInsets.only(left: context.sidebarCollapsedWidth()),
+        child: Column(
+          children: [
           // Search bar
           Padding(
             padding: const EdgeInsets.fromLTRB(120, 24, 120, 16),
@@ -165,7 +168,8 @@ class _SearchScreenState extends State<SearchScreen>
                 ? const Center(child: CircularProgressIndicator())
                 : _buildResultsList(),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

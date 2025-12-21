@@ -35,7 +35,6 @@ import 'package:iptv_player/screens/playlist_editor_screen.dart';
 import 'package:iptv_player/screens/playlist_manager_screen.dart';
 import 'package:iptv_player/screens/playlist_management_screen.dart';
 import 'package:iptv_player/screens/ssl_settings_screen.dart';
-import 'package:iptv_player/screens/edit_profile_screen.dart';
 import 'package:iptv_player/screens/recordings_screen.dart';
 import 'package:iptv_player/screens/ai_models_screen.dart';
 import 'package:iptv_player/screens/epg_diagnostic_screen.dart';
@@ -574,16 +573,10 @@ class _MyAppState extends State<MyApp> {
             create: (context) {
               final provider = ChannelProvider();
               // Defer playlist loading until after first frame is rendered
-              if (_hasPlaylist) {
-                _runDeferred(
-                  provider.autoLoadPlaylist,
-                  delay: const Duration(milliseconds: 1500),
-                );
-              } else {
-                StartupProbe.mark(
-                  'ChannelProvider.autoLoadPlaylist skipped (no saved playlist)',
-                );
-              }
+              _runDeferred(
+                provider.autoLoadPlaylist,
+                delay: const Duration(milliseconds: 1500),
+              );
               return provider;
             },
             update: (context, contentProvider, epgService, channelProvider) {
@@ -1011,11 +1004,6 @@ final _router = GoRouter(
         key: state.pageKey,
         child: const SSLSettingsScreen(),
       ),
-    ),
-    GoRoute(
-      path: '/edit-profile',
-      pageBuilder: (context, state) =>
-          _fadeSlidePage(key: state.pageKey, child: const EditProfileScreen()),
     ),
     GoRoute(
       path: '/ai-models',

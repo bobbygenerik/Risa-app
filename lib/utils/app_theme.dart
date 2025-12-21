@@ -262,6 +262,12 @@ class AppTheme {
         thumbColor: textPrimary,
         overlayColor: Color(0x2900A8E8),
       ),
+
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: primaryBlue,
+        selectionColor: primaryBlue.withValues(alpha: 0.3),
+        selectionHandleColor: primaryBlue,
+      ),
       
       inputDecorationTheme: InputDecorationTheme(
         filled: true,

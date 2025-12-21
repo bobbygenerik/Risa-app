@@ -659,6 +659,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                   controller: _m3uUrlController,
                   autofocus: false,
                   readOnly: !_m3uUrlEditable,
+                  enableInteractiveSelection: false,
                   decoration: InputDecoration(
                     hintText: 'http://example.com/playlist.m3u',
                     prefixIcon: const Icon(Icons.link),
@@ -763,6 +764,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                   controller: _xtreamServerController,
                   autofocus: false,
                   readOnly: !_xtreamServerEditable,
+                  enableInteractiveSelection: false,
                   decoration: InputDecoration(
                     labelText: 'Server URL',
                     hintText: 'http://example.com:8080',
@@ -846,6 +848,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                         controller: _xtreamUsernameController,
                         autofocus: false,
                         readOnly: !_xtreamUsernameEditable,
+                        enableInteractiveSelection: false,
                         decoration: InputDecoration(
                           labelText: 'Username',
                           prefixIcon: const Icon(Icons.person),
@@ -926,6 +929,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                         controller: _xtreamPasswordController,
                         autofocus: false,
                         readOnly: !_xtreamPasswordEditable,
+                        enableInteractiveSelection: false,
                         obscureText: true,
                         decoration: InputDecoration(
                           labelText: 'Password',

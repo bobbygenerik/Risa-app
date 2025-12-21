@@ -102,7 +102,7 @@ class _MainShellState extends State<MainShell> {
     // we want to ensure focus is restored to the navigation bar, specifically the active tab.
     if (widget.activeTab != oldWidget.activeTab) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _requestNavFocus();
+        _requestContentFocus();
       });
     }
   }
@@ -119,7 +119,12 @@ class _MainShellState extends State<MainShell> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
-          context.go('/exit');
+          final location = GoRouterState.of(context).uri.path;
+          if (location != '/home') {
+            context.go('/home');
+          } else {
+            context.go('/exit');
+          }
         }
       },
       child: Focus(

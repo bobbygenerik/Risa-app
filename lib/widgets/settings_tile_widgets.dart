@@ -388,7 +388,7 @@ class _PremiumTextFieldState extends State<_PremiumTextField> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: _isFocused ? Colors.white : Colors.black26,
+          color: AppTheme.highlight,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: _isFocused ? AppTheme.primaryBlue : Colors.white10,
@@ -399,9 +399,9 @@ class _PremiumTextFieldState extends State<_PremiumTextField> {
           children: [
             if (widget.icon != null) ...[
               Icon(
-                widget.icon, 
-                size: 20, 
-                color: _isFocused ? Colors.black87 : Colors.white54
+                widget.icon,
+                size: 20,
+                color: _isFocused ? Colors.white : Colors.white54,
               ),
               const SizedBox(width: 12),
             ],
@@ -409,15 +409,17 @@ class _PremiumTextFieldState extends State<_PremiumTextField> {
               child: TextField(
                 controller: widget.controller,
                 focusNode: widget.focusNode,
-                style: TextStyle(
-                  color: _isFocused ? Colors.black : Colors.white,
+                enableInteractiveSelection: false,
+                cursorColor: AppTheme.primaryBlue,
+                style: const TextStyle(
+                  color: AppTheme.textPrimary,
                   fontSize: 16,
                 ),
                 obscureText: widget.obscureText,
                 decoration: InputDecoration.collapsed(
                   hintText: widget.hint,
-                  hintStyle: TextStyle(
-                    color: _isFocused ? Colors.black38 : Colors.white30,
+                  hintStyle: const TextStyle(
+                    color: AppTheme.textSecondary,
                   ),
                 ),
                 onSubmitted: (_) {
@@ -426,8 +428,8 @@ class _PremiumTextFieldState extends State<_PremiumTextField> {
                 },
               ),
             ),
-             if (_isFocused && !_isEditing)
-              const Icon(Icons.edit, size: 18, color: Colors.black54),
+            if (_isFocused && !_isEditing)
+              const Icon(Icons.edit, size: 18, color: Colors.white70),
           ],
         ),
       ),

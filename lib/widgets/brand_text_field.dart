@@ -57,6 +57,8 @@ class BrandTextField extends StatelessWidget {
                 onChanged: onChanged,
                 onTap: onTap,
                 readOnly: readOnly,
+                enableInteractiveSelection: false,
+                cursorColor: AppTheme.primaryBlue,
                 style: TextStyle(
                   color: AppTheme.textPrimary,
                   fontSize: context.tvTextSize(14),
