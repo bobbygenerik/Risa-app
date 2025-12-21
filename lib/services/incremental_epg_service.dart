@@ -8,14 +8,16 @@ import 'package:iptv_player/models/program.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 
-class IncrementalEpgService with ChangeNotifier {
-  final Map<String, List<Program>> _loadedChannels = {};
-  final Set<String> _availableChannels = {};
-  final Map<String, String> _internalToEpgIdMapping = {}; // channelId -> best epgChannelId
-  final Map<String, String> _normalizedAvailableChannels = {}; // normalizedId -> originalId
+  Map<String, String>? _normalizedAvailableChannels; // normalizedId -> originalId
   bool _isLoading = false;
+  bool _isDownloading = false;
+  bool _isParsing = false;
   String? _error;
   String? _epgUrl;
+  bool _hasParsed = false;
+  
+  // Storage for all parsed programs
+  final Map<String, List<Program>> _programsByChannel = {};
   
   static const String _channelListCacheKey = 'epg_channel_list';
   static const int _channelsPerBatch = 50;
@@ -118,9 +120,10 @@ class IncrementalEpgService with ChangeNotifier {
   }
 
   Future<void> _loadChannelList({bool forceRefresh = false}) async {
-    if (_epgUrl == null) return;
+    if (_epgUrl == null || _epgUrl!.isEmpty) return;
     
     _isLoading = true;
+    _error = null;
     notifyListeners();
     
     int retryCount = 0;
@@ -129,147 +132,146 @@ class IncrementalEpgService with ChangeNotifier {
         await _downloadEpgIfNeeded(forceRefresh: forceRefresh);
         
         final file = await _getCacheFile();
-        if (!await file.exists()) throw Exception('Cache file missing after download attempt.');
+        if (!await file.exists()) throw Exception('Cache file missing after download');
 
-        debugLog('EPG: Parsing channel list from XML...');
+        debugLog('EPG: Starting background parsing...');
+        _isParsing = true;
+        notifyListeners();
+
         final xmlContent = await file.readAsString();
-        if (xmlContent.isEmpty) {
-          throw Exception('EPG XML file is empty.');
-        }
-        final document = XmlDocument.parse(xmlContent);
-        final channelIds = <String>{};
+        if (xmlContent.isEmpty) throw Exception('EPG XML is empty');
+
+        // Use isolate to parse entire XML and return a map of programs
+        final parseResult = await compute(_parseEpgInIsolate, xmlContent);
         
-        for (final programme in document.findAllElements('programme')) {
-          final channelId = programme.getAttribute('channel');
-          if (channelId != null && channelId.isNotEmpty) {
-            channelIds.add(channelId);
-          }
-        }
-        
+        _programsByChannel.clear();
+        final rawData = parseResult['programsByChannel'] as Map<String, List<Program>>;
+        _programsByChannel.addAll(rawData);
+
         _availableChannels.clear();
-        _availableChannels.addAll(channelIds);
+        _availableChannels.addAll(parseResult['channelIds'] as Set<String>);
         
-        _normalizedAvailableChannels.clear();
-        for (final id in channelIds) {
-          final normalized = _normalize(id);
-          if (normalized.isNotEmpty) {
-            _normalizedAvailableChannels[normalized] = id;
-          }
-        }
+        _normalizedAvailableChannels = parseResult['normalizedChannels'] as Map<String, String>;
         _internalToEpgIdMapping.clear();
         
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setStringList(_channelListCacheKey, channelIds.toList());
-        
-        debugLog('EPG: Found ${channelIds.length} channels with programs in EPG data.');
+        _hasParsed = true;
+        _isParsing = false;
         _error = null;
+        
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setStringList(_channelListCacheKey, _availableChannels.toList());
+        
+        debugLog('EPG: Successfully parsed ${_programsByChannel.length} channels and ${_availableChannels.length} IDs');
         break;
       } catch (e) {
         retryCount++;
-        debugLog('EPG: Error loading channel list (attempt $retryCount): $e');
+        debugLog('EPG: Error loading (attempt $retryCount): $e');
         if (retryCount >= _maxRetries) {
           _error = e.toString();
-          debugLog('EPG channel list error after $retryCount attempts: $e');
+          _isParsing = false;
+          _isLoading = false;
           
+          // Fallback to cache list if available
           final prefs = await SharedPreferences.getInstance();
           final cached = prefs.getStringList(_channelListCacheKey);
           if (cached != null && cached.isNotEmpty) {
             _availableChannels.addAll(cached);
-            
-            _normalizedAvailableChannels.clear();
-            for (final id in cached) {
-              final normalized = _normalize(id);
-              if (normalized.isNotEmpty) {
-                _normalizedAvailableChannels[normalized] = id;
-              }
-            }
-            _internalToEpgIdMapping.clear();
-            
-            _error = null; // We have a fallback
-            debugLog('EPG: Using cached channel list of ${cached.length} channels as a fallback.');
+            _error = null;
           }
           break;
-        } else {
-          await Future.delayed(Duration(seconds: retryCount * 2));
         }
+        await Future.delayed(Duration(seconds: retryCount * 2));
       }
     }
     
     _isLoading = false;
-    if (_availableChannels.isNotEmpty) {
-      _error = null;
-    }
     notifyListeners();
   }
 
-  Future<void> loadChannelBatch(List<String> channelIds) async {
-    if (_epgUrl == null || channelIds.isEmpty) return;
-    
-    final unloadedChannels = channelIds.where((id) => !_loadedChannels.containsKey(id)).toList();
-    if (unloadedChannels.isEmpty) return;
-    
-    _isLoading = true;
-    notifyListeners();
-    debugLog('EPG: Loading batch of ${unloadedChannels.length} channels: ${unloadedChannels.join(', ')}');
-    
-    try {
-      final file = await _getCacheFile();
-      if (!await file.exists()) {
-        if (_error != null) {
-          throw Exception('Skipping download due to previous error: $_error');
-        }
-        await _loadChannelList();
+  // Top-level function for background parsing
+  static Map<String, dynamic> _parseEpgInIsolate(String xmlData) {
+    final document = XmlDocument.parse(xmlData);
+    final programmes = document.findAllElements('programme');
+    final Map<String, List<Program>> programsByChannel = {};
+    final Set<String> channelIds = {};
+    final Map<String, String> normalizedChannels = {};
+
+    for (final programme in programmes) {
+      final channelId = programme.getAttribute('channel');
+      if (channelId == null || channelId.isEmpty) continue;
+
+      channelIds.add(channelId);
+      final normalized = channelId.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+      if (normalized.isNotEmpty) {
+        normalizedChannels[normalized] = channelId;
       }
 
-      if (!await file.exists()) throw Exception('Cache file unavailable for batch load.');
+      final startStr = programme.getAttribute('start');
+      final stopStr = programme.getAttribute('stop');
+      if (startStr == null || stopStr == null) continue;
 
-      final xmlData = await file.readAsString();
-      final document = XmlDocument.parse(xmlData);
-      final channelData = <String, List<Program>>{};
-      
-      for (final programme in document.findAllElements('programme')) {
-        final channelId = programme.getAttribute('channel');
-        final epgId = _findBestEpgId(channelId ?? '', null);
+      final program = Program(
+        id: '${channelId}_$startStr',
+        channelId: channelId,
+        title: programme.findElements('title').firstOrNull?.innerText ?? 'Unknown',
+        description: programme.findElements('desc').firstOrNull?.innerText,
+        startTime: _staticParseTime(startStr),
+        endTime: _staticParseTime(stopStr),
+        imageUrl: programme.findElements('icon').firstOrNull?.getAttribute('src'),
+        category: programme.findElements('category').firstOrNull?.innerText,
+        isLive: false,
+        canRecord: true,
+      );
 
-        if (epgId == null || !unloadedChannels.contains(epgId)) continue;
-        
-        final startStr = programme.getAttribute('start');
-        final stopStr = programme.getAttribute('stop');
-        if (startStr == null || stopStr == null) continue;
-        
-        final title = programme.findElements('title').firstOrNull?.innerText ?? 'Unknown';
-        
-        final program = Program(
-          id: '${epgId}_$startStr',
-          channelId: epgId,
-          title: title,
-          description: programme.findElements('desc').firstOrNull?.innerText,
-          startTime: _parseEpgTime(startStr),
-          endTime: _parseEpgTime(stopStr),
-          imageUrl: programme.findElements('icon').firstOrNull?.getAttribute('src'),
-          category: programme.findElements('category').firstOrNull?.innerText,
-          isLive: false,
-          canRecord: true,
-        );
-        
-        channelData.putIfAbsent(epgId, () => []).add(program);
-      }
-      
-      for (final entry in channelData.entries) {
-        entry.value.sort((a, b) => a.startTime.compareTo(b.startTime));
-        _loadedChannels[entry.key] = entry.value;
-        debugLog('EPG: Parsed ${entry.value.length} programs for channel ${entry.key}');
-      }
-      
-      debugLog('EPG: Loaded programs for ${channelData.length} channels from cache.');
-      _error = null;
-    } catch (e) {
-      _error = e.toString();
-      debugLog('EPG batch processing error: $e');
+      programsByChannel.putIfAbsent(channelId, () => []).add(program);
     }
-    
-    _isLoading = false;
-    notifyListeners();
+
+    // Sort programs once after parsing
+    for (final channelId in programsByChannel.keys) {
+      programsByChannel[channelId]!.sort((a, b) => a.startTime.compareTo(b.startTime));
+    }
+
+    return {
+      'programsByChannel': programsByChannel,
+      'channelIds': channelIds,
+      'normalizedChannels': normalizedChannels,
+    };
+  }
+
+  static DateTime _staticParseTime(String timeStr) {
+    try {
+      if (timeStr.length < 14) return DateTime.now();
+      final mainPart = timeStr.substring(0, 14);
+      final year = int.parse(mainPart.substring(0, 4));
+      final month = int.parse(mainPart.substring(4, 6));
+      final day = int.parse(mainPart.substring(6, 8));
+      final hour = int.parse(mainPart.substring(8, 10));
+      final minute = int.parse(mainPart.substring(10, 12));
+      final second = int.parse(mainPart.substring(12, 14));
+      
+      DateTime utcTime = DateTime.utc(year, month, day, hour, minute, second);
+      
+      if (timeStr.length > 15) {
+        final offset = timeStr.substring(15).trim();
+        if (offset.length >= 4) {
+          final sign = offset.startsWith('+') ? 1 : -1;
+          final h = int.parse(offset.substring(1, 3));
+          final m = int.parse(offset.substring(3, 5));
+          utcTime = utcTime.subtract(Duration(hours: sign * h, minutes: sign * m));
+        }
+      }
+      return utcTime.toLocal();
+    } catch (e) {
+      return DateTime.now();
+    }
+  }
+
+  Future<void> loadChannelBatch(List<String> channelIds) async {
+    // No-op in optimized version as all programs are loaded during init
+    // but we can ensure they are available in _programsByChannel
+    if (!_hasParsed) {
+      await initialize();
+    }
   }
 
   String _normalize(String text) {
@@ -288,8 +290,8 @@ class IncrementalEpgService with ChangeNotifier {
     
     // 2. Normalized ID match
     final normalizedId = _normalize(channelId);
-    if (_normalizedAvailableChannels.containsKey(normalizedId)) {
-      final foundId = _normalizedAvailableChannels[normalizedId]!;
+    if (_normalizedAvailableChannels != null && _normalizedAvailableChannels!.containsKey(normalizedId)) {
+      final foundId = _normalizedAvailableChannels![normalizedId]!;
       _internalToEpgIdMapping[channelId] = foundId;
       return foundId;
     }
@@ -297,15 +299,15 @@ class IncrementalEpgService with ChangeNotifier {
     // 3. Name match (if provided)
     if (channelName != null && channelName.isNotEmpty) {
       final normalizedName = _normalize(channelName);
-      if (_normalizedAvailableChannels.containsKey(normalizedName)) {
-        final foundId = _normalizedAvailableChannels[normalizedName]!;
+      if (_normalizedAvailableChannels != null && _normalizedAvailableChannels!.containsKey(normalizedName)) {
+        final foundId = _normalizedAvailableChannels![normalizedName]!;
         _internalToEpgIdMapping[channelId] = foundId;
         return foundId;
       }
       
       final strippedName = normalizedName.replaceAll(RegExp(r'(hd|fhd|uhd|4k|sd|1080p|720p)$'), '');
-      if (strippedName != normalizedName && _normalizedAvailableChannels.containsKey(strippedName)) {
-        final foundId = _normalizedAvailableChannels[strippedName]!;
+      if (strippedName != normalizedName && _normalizedAvailableChannels != null && _normalizedAvailableChannels!.containsKey(strippedName)) {
+        final foundId = _normalizedAvailableChannels![strippedName]!;
         _internalToEpgIdMapping[channelId] = foundId;
         return foundId;
       }
@@ -352,11 +354,9 @@ class IncrementalEpgService with ChangeNotifier {
   List<Program> getProgramsForChannel(String channelId, {String? channelName}) {
     final epgId = _internalToEpgIdMapping[channelId] ?? _findBestEpgId(channelId, channelName);
     if (epgId != null) {
-      // Update mapping for future direct access
-      _internalToEpgIdMapping[channelId] = epgId;
-      return _loadedChannels[epgId] ?? [];
+      return _programsByChannel[epgId] ?? [];
     }
-    return _loadedChannels[channelId] ?? [];
+    return _programsByChannel[channelId] ?? [];
   }
 
   bool hasEpgData(String channelId) {
@@ -393,7 +393,7 @@ class IncrementalEpgService with ChangeNotifier {
     // Cache the mapping
     _internalToEpgIdMapping[channelId] = epgId;
 
-    if (_loadedChannels.containsKey(epgId) || _pendingBatch.contains(epgId)) return;
+    if (_programsByChannel.containsKey(epgId) || _pendingBatch.contains(epgId)) return;
     
     _pendingBatch.add(epgId);
     

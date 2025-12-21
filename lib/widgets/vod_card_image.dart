@@ -77,11 +77,27 @@ class _VodCardImageState extends State<VodCardImage> {
         width: double.infinity,
         height: double.infinity,
         placeholder: (context, url) => widget.placeholder,
-        errorWidget: (context, url, error) => widget.placeholder,
+        errorWidget: (context, url, error) => _buildOriginalImageFallback(),
       );
     }
     
-    // No images available - don't show original M3U image
+    // Fallback to original image
+    return _buildOriginalImageFallback();
+  }
+
+  Widget _buildOriginalImageFallback() {
+    final originalUrl = widget.content.imageUrl ?? widget.content.backdropUrl;
+    if (originalUrl != null && originalUrl.isNotEmpty) {
+      return CachedNetworkImage(
+        imageUrl: originalUrl,
+        fit: widget.fit,
+        width: double.infinity,
+        height: double.infinity,
+        placeholder: (context, url) => widget.placeholder,
+        errorWidget: (context, url, error) => widget.placeholder,
+      );
+    }
     return widget.placeholder;
   }
 }
+

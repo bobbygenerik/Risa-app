@@ -29,6 +29,8 @@ import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:iptv_player/services/timer_service.dart';
 import 'package:iptv_player/services/focus_pool_service.dart';
 import 'package:iptv_player/widgets/shimmer.dart';
+import 'package:iptv_player/widgets/hero_info_box.dart';
+import 'package:iptv_player/widgets/brand_badge.dart';
 
 /// A focused Live TV screen. Shows a hero for the currently airing program
 /// on a featured channel, plus channel rows below.
@@ -222,7 +224,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final screenSize = MediaQuery.of(context).size;
     final isTV = screenSize.width >= 1920 || screenSize.height >= 1080;
     final heroHeight = screenSize.height * 0.85; // 85% height for content peek
-    final sidebarWidth = context.spacingLg();
+    final sidebarPadding = context.spacingLg(); // 32px standard gutter
     
     // Calculate available width for content
     final availableWidth = screenSize.width - sidebarWidth - context.spacingLg();
@@ -319,10 +321,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               ),
               // Hero info overlay
               Positioned(
-                bottom: heroHeight *
-                    0.15, // Lowered from 0.25 for better artwork exposure
-                left: sidebarWidth,
-                width: heroInfoWidth,
+                bottom: heroHeight * 0.15,
+                left: sidebarPadding,
                 child: Builder(builder: (context) {
                   final scrollPos = _scrollController.hasClients
                       ? _scrollController.offset
@@ -331,8 +331,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
                   return Opacity(
                     opacity: 1.0 - fadeProgress,
-                    child: _buildFeaturedInfo(
-                        context, featuredChannel, currentProgram),
+                    child: _buildHeroInfo(context, featuredChannel, currentProgram),
                   );
                 }),
               ),
@@ -366,8 +365,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       Container(
                         color: AppTheme.darkBackground,
                         padding: EdgeInsets.only(
-                          left: sidebarWidth,
-                          right: context.spacingXl(),
+                          left: sidebarPadding,
+                          right: context.spacingLg(),
                           bottom: context.spacingXl(),
                         ),
                         child: Column(
@@ -394,100 +393,32 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
-  Widget _buildFeaturedInfo(
+  Widget _buildHeroInfo(
       BuildContext context, Channel channel, Program? program) {
     final title = program?.title ?? channel.name;
     final description = program?.description ?? '';
     final timeRange = program != null
         ? '${_formatTime(program.startTime)} - ${_formatTime(program.endTime)}'
         : '';
-    final progress = program?.progressPercentage ?? 0.0;
+    final progress = program?.progressPercentage;
 
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: context.spacingXl(),
-        vertical: context.spacingLg(),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Title - flexible height with max limit
-          Container(
-            constraints: BoxConstraints(
-              maxHeight: context.tvTextSize(24) * 1.3 * 2,
-            ),
-            child: Text(
-              title,
-              style: AppTypography.heroTitle(context),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          SizedBox(height: context.tvSpacing(8)),
-          // Description - flexible height with max limit
-          Container(
-            constraints: BoxConstraints(
-              maxHeight: context.tvTextSize(14) * 1.3 * 3,
-            ),
-            child: Text(
-              description.isNotEmpty ? description : 'No description available',
-              style: AppTypography.heroDescription(context).copyWith(
-                fontStyle:
-                    description.isEmpty ? FontStyle.italic : FontStyle.normal,
-                color: description.isEmpty ? Colors.white60 : null,
-              ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          SizedBox(height: context.tvSpacing(8)),
-          // Progress bar - fixed height
-          SizedBox(
-            height: 6,
-            child: program != null
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      backgroundColor: AppColors.progressBackground,
-                      color: AppColors.progressForeground,
-                      minHeight: 6,
-                    ),
-                  )
-                : Container(),
-          ),
-          SizedBox(height: context.tvSpacing(4)),
-          // Time range with LIVE badge - flexible height
-          Container(
-            constraints: BoxConstraints(
-              maxHeight: context.tvTextSize(13) * 1.5,
-            ),
-            child: Row(
-              children: [
-                if (program != null) ...[
-                  const BrandBadge.live(),
-                  const SizedBox(width: 8),
-                ],
-                Expanded(
-                  child: Text(
-                    timeRange,
-                    style: AppTypography.smallText(context),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          BrandPrimaryButton(
-            onPressed: () => context.push('/player', extra: channel),
-            label: 'Watch',
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          ),
-        ],
-      ),
+    return HeroInfoBox(
+      title: title,
+      description: description,
+      channelLogoUrl: channel.logoUrl,
+      progress: progress,
+      metadata: [
+        if (program != null) const BrandBadge.live(),
+        if (timeRange.isNotEmpty) 
+          Text(timeRange, style: AppTypography.smallText(context)),
+        if (channel.groupTitle != null)
+           BrandBadge(
+             text: channel.groupTitle!.toUpperCase(),
+             backgroundColor: Colors.white10,
+             textColor: Colors.white70,
+           ),
+      ],
+      onWatchPressed: () => context.push('/player', extra: channel),
     );
   }
 
@@ -880,6 +811,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                             Positioned(
                               top: 8,
                               left: 8,
+
                               child: Container(
                                 width: 40,
                                 height: 24,
@@ -910,7 +842,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                 child: BrandBadge.noEpg(
                                   fontSize: 8,
                                 ),
+                              )
+                            else 
+                              const Positioned(
+                                top: 8,
+                                right: 8,
+                                child: BrandBadge.live(
+                                  fontSize: 8,
+                                ),
                               ),
+
                             // Progress bar overlay at bottom
                             if (currentProgram != null)
                               Positioned(

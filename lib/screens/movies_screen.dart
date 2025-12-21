@@ -18,6 +18,9 @@ import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/widgets/vod_card_image.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:iptv_player/utils/app_icons.dart';
+import 'package:iptv_player/widgets/shimmer.dart';
+import 'package:iptv_player/widgets/hero_info_box.dart';
+import 'package:iptv_player/widgets/brand_badge.dart';
 
 class MoviesScreen extends StatefulWidget {
   const MoviesScreen({super.key});
@@ -127,6 +130,27 @@ class _MoviesScreenState extends State<MoviesScreen>
       // Focus is managed by navigation bar - don't auto-focus content
     });
   }
+
+  String? _resolveHeroImage(Content movie) {
+    // 1. Try pre-fetched TMDB cache (usually higher quality backdrops)
+    if (_tmdbArtCache.containsKey(movie.title)) {
+      final cached = _tmdbArtCache[movie.title];
+      if (cached != null && cached.isNotEmpty) return cached;
+    }
+
+    // 2. Try content's own backdrop URL
+    if (movie.backdropUrl != null && movie.backdropUrl!.isNotEmpty) {
+      return movie.backdropUrl;
+    }
+
+    // 3. Try content's image URL (poster) as a last resort
+    if (movie.imageUrl != null && movie.imageUrl!.isNotEmpty) {
+      return movie.imageUrl;
+    }
+
+    return null;
+  }
+
 
   /// Find the newest content (from end of list) that has artwork for hero banner
   int _findNewestContentWithArtwork(List<Content> items) {
@@ -363,10 +387,17 @@ class _MoviesScreenState extends State<MoviesScreen>
                                 color: AppTheme.cardBackground,
                                 child: VodCardImage(
                                   content: movie,
-                                  fit: BoxFit.cover,
+                                  fit: BoxFit.fill,
                                   placeholder: _buildPlaceholder(movie.title),
                                 ),
                               ),
+                              if (movie.addedDate != null &&
+                                  DateTime.now().difference(movie.addedDate!).inDays < 14)
+                                const Positioned(
+                                  top: 8,
+                                  right: 8,
+                                  child: BrandBadge.newContent(fontSize: 8),
+                                ),
                               if (movie.watchProgress != null &&
                                   movie.watchProgress! > 0)
                                 Positioned(
@@ -557,14 +588,10 @@ class _MoviesScreenState extends State<MoviesScreen>
     List<Content> allMovies,
     List<Content> recentMovies,
   ) {
-    final heroImage = featuredMovie.backdropUrl;
+    final heroImage = _resolveHeroImage(featuredMovie);
     final screenSize = MediaQuery.of(context).size;
     final heroHeight = screenSize.height * 0.85;
-    final sidebarWidth = context.spacingLg();
-    final heroInfoWidth = min(
-      screenSize.width * 0.4,
-      screenSize.width >= 1920 ? 640.0 : 520.0,
-    );
+    final sidebarPadding = context.spacingLg();
 
     return Focus(
       canRequestFocus: false,
@@ -651,12 +678,11 @@ class _MoviesScreenState extends State<MoviesScreen>
                 ),
                 // Featured info overlay
                 Positioned(
-                  bottom: heroHeight * 0.15,
-                  left: sidebarWidth + context.spacingLg(),
-                  width: heroInfoWidth,
+                  bottom: context.spacingXxl(),
+                  left: context.spacingLg(),
                   child: Opacity(
                     opacity: 1.0 - fadeProgress,
-                    child: _buildFeaturedInfo(context, featuredMovie),
+                    child: _buildHeroInfo(context, featuredMovie),
                   ),
                 ),
                 // Scrollable content
@@ -671,8 +697,8 @@ class _MoviesScreenState extends State<MoviesScreen>
                         Container(
                           color: AppTheme.darkBackground,
                           padding: EdgeInsets.only(
-                            left: sidebarWidth + context.spacingLg(),
-                            right: context.spacingXxl(),
+                            left: sidebarPadding,
+                            right: context.spacingLg(),
                             bottom: context.spacingXxl(),
                           ),
                           child: Column(
@@ -717,107 +743,33 @@ class _MoviesScreenState extends State<MoviesScreen>
         : _buildBannerPlaceholder();
   }
 
-  Widget _buildFeaturedInfo(BuildContext context, Content featuredMovie) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(12),
-      ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-            Text(
-              featuredMovie.title,
-              style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: AppTheme.textPrimary,
-                shadows: [
-                  Shadow(
-                    offset: const Offset(1, 1),
-                    blurRadius: 3,
-                    color: Colors.black.withValues(alpha: 0.8),
-                  ),
-                ],
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            SizedBox(height: AppSizes.sm),
-            Text(
-              featuredMovie.description ?? '',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: AppTheme.textSecondary,
-                shadows: [
-                  Shadow(
-                    offset: const Offset(1, 1),
-                    blurRadius: 2,
-                    color: Colors.black.withValues(alpha: 0.7),
-                  ),
-                ],
-              ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-            SizedBox(height: AppSizes.sm),
-            if (featuredMovie.rating != null || featuredMovie.year != null)
-              Row(
-                children: [
-                  if (featuredMovie.rating != null) ...[
-                    context.starIcon(color: Colors.amber),
-                    SizedBox(width: AppSizes.xs),
-                    Text(
-                      featuredMovie.ratingDisplay,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                  ],
-                  if (featuredMovie.year != null) ...[
-                    if (featuredMovie.rating != null) SizedBox(width: AppSizes.md),
-                    Text(
-                      featuredMovie.year.toString(),
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 12,
-              runSpacing: 8,
-              children: [
-                BrandPrimaryButton(
-                  label: 'Play',
-                  icon: AppIcons.play,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 8,
-                  ),
-                  onPressed: () {
-                    final encodedId = Uri.encodeComponent(featuredMovie.id);
-                    context.push('/content/$encodedId', extra: featuredMovie);
-                  },
-                ),
-                BrandSecondaryButton(
-                  label: 'More Info',
-                  icon: AppIcons.info,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  onPressed: () {
-                    final encodedId = Uri.encodeComponent(featuredMovie.id);
-                    context.push('/content/$encodedId', extra: featuredMovie);
-                  },
-                ),
-              ],
-            ),
-        ],
-      ),
+  Widget _buildHeroInfo(BuildContext context, Content featuredMovie) {
+    return HeroInfoBox(
+      title: featuredMovie.title,
+      description: featuredMovie.description,
+      metadata: [
+        if (featuredMovie.rating != null)
+           BrandBadge(
+             text: '★ ${featuredMovie.rating!.toStringAsFixed(1)}',
+             backgroundColor: Colors.amber.withValues(alpha: 0.2),
+             textColor: Colors.amber,
+           ),
+        if (featuredMovie.year != null)
+           Text('${featuredMovie.year}', style: AppTypography.smallText(context)),
+        const BrandBadge.hd(),
+        if (featuredMovie.genres != null && featuredMovie.genres!.isNotEmpty)
+          ...featuredMovie.genres!.take(2).map((g) => 
+            BrandBadge(
+              text: g.toUpperCase(),
+              backgroundColor: Colors.white10,
+              textColor: Colors.white70,
+            )
+          ),
+      ],
+      onWatchPressed: () {
+        final encodedId = Uri.encodeComponent(featuredMovie.id);
+        context.push('/content/$encodedId', extra: featuredMovie);
+      },
     );
   }
 

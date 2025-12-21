@@ -54,6 +54,40 @@ class BrandBadge extends StatelessWidget {
     this.borderRadius,
   });
 
+  /// 4K resolution badge
+  const BrandBadge.fourK({
+    super.key,
+    this.text = '4K',
+    this.backgroundColor = Colors.white24,
+    this.textColor = Colors.white,
+    this.fontSize,
+    this.padding,
+    this.borderRadius,
+  });
+
+  /// HD resolution badge
+  const BrandBadge.hd({
+    super.key,
+    this.text = 'HD',
+    this.backgroundColor = Colors.white24,
+    this.textColor = Colors.white,
+    this.fontSize,
+    this.padding,
+    this.borderRadius,
+  });
+
+  /// New content badge
+  const BrandBadge.newContent({
+    super.key,
+    this.text = 'NEW',
+    this.backgroundColor = AppTheme.primaryBlue,
+    this.textColor = Colors.white,
+    this.fontSize,
+    this.padding,
+    this.borderRadius,
+  });
+
+
   @override
   Widget build(BuildContext context) {
     return Container(

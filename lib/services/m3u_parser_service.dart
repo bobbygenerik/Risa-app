@@ -48,7 +48,7 @@ class M3UParserService {
 
   static final RegExp _epgUrlRegex = RegExp(r'x-tvg-url="([^"]+)"');
   static final RegExp _seriesEpisodeRegex = RegExp(r'S\d+E\d+', caseSensitive: false);
-  static final RegExp _urlRegex = RegExp(r'https?://\S+');
+  static final RegExp _urlRegex = RegExp(r'(?:[a-z0-9+.-]+)://\S+', caseSensitive: false);
 
   /// Gets the EPG URL extracted from the last parsed M3U
   String? get epgUrl => _epgUrl;
@@ -87,13 +87,16 @@ class M3UParserService {
       for (int i = chunkStart; i < chunkEnd; i++) {
         final line = rawLines[i].trimRight();
         if (line.isEmpty) continue;
+        final trimmed = line.trim();
 
-        if (line.startsWith('#') ||
-            line.startsWith('http') ||
-            line.contains('EXTINF:')) {
-          lines.add(line.trim());
+        if (trimmed.startsWith('#') ||
+            trimmed.contains('://') ||
+            trimmed.contains('EXTINF:')) {
+          lines.add(trimmed);
         } else if (lines.isNotEmpty) {
-          lines[lines.length - 1] += line.trim();
+          lines[lines.length - 1] += trimmed;
+        } else {
+          lines.add(trimmed); // Fallback for files not starting with #
         }
       }
       
@@ -232,6 +235,25 @@ class M3UParserService {
   RegExpMatch? _lastUrlMatch(String line) {
     RegExpMatch? lastMatch;
     for (final match in _urlRegex.allMatches(line)) {
+      final url = match.group(0) ?? '';
+      
+      // SKIP if this URL appears to be an attribute value (e.g., tvg-logo="http://...")
+      // We look for a quote or equals sign immediately preceding the match
+      if (match.start > 0) {
+        final prevChar = line[match.start - 1];
+        if (prevChar == '"' || prevChar == "'" || prevChar == '=') {
+          continue;
+        }
+        
+        // Also check for leading =" or =' if match starts at index 2+
+        if (match.start >= 2) {
+          final prefix = line.substring(match.start - 2, match.start);
+          if (prefix == '="' || prefix == "='") {
+            continue;
+          }
+        }
+      }
+      
       lastMatch = match;
     }
     return lastMatch;
@@ -445,24 +467,21 @@ class M3UParserService {
       if(lineCount < 5) {
         debugLog('M3UParser: (stream) Raw line ${lineCount++}: $rawLine');
       }
-      final parts = rawLine.split('\r');
-      for (final part in parts) {
-        final line = part.trimRight();
-        if (line.isEmpty) continue;
-        final trimmed = line.trim();
+      // Trim rawLine but keep interior content
+      final trimmedRaw = rawLine.trim();
+      if (trimmedRaw.isEmpty) continue;
 
-        if (trimmed.startsWith('#') ||
-            trimmed.startsWith('http') ||
-            trimmed.contains('EXTINF:')) {
-          if (pendingLine != null) {
-            processLogicalLine(pendingLine.trim());
-          }
-          pendingLine = trimmed;
-        } else if (pendingLine != null) {
-          pendingLine = pendingLine + trimmed;
-        } else {
-          pendingLine = trimmed;
+      if (trimmedRaw.startsWith('#') ||
+          trimmedRaw.contains('://') ||
+          trimmedRaw.contains('EXTINF:')) {
+        if (pendingLine != null) {
+          processLogicalLine(pendingLine.trim());
         }
+        pendingLine = trimmedRaw;
+      } else if (pendingLine != null) {
+        pendingLine = pendingLine + trimmedRaw;
+      } else {
+        pendingLine = trimmedRaw;
       }
     }
 
@@ -653,24 +672,20 @@ class M3UParserService {
     }
 
     await for (final rawLine in lineStream) {
-      final parts = rawLine.split('\r');
-      for (final part in parts) {
-        final line = part.trimRight();
-        if (line.isEmpty) continue;
-        final trimmed = line.trim();
+      final trimmedRaw = rawLine.trim();
+      if (trimmedRaw.isEmpty) continue;
 
-        if (trimmed.startsWith('#') ||
-            trimmed.startsWith('http') ||
-            trimmed.contains('EXTINF:')) {
-          if (pendingLine != null) {
-            processLogicalLine(pendingLine.trim());
-          }
-          pendingLine = trimmed;
-        } else if (pendingLine != null) {
-          pendingLine = pendingLine + trimmed;
-        } else {
-          pendingLine = trimmed;
+      if (trimmedRaw.startsWith('#') ||
+          trimmedRaw.contains('://') ||
+          trimmedRaw.contains('EXTINF:')) {
+        if (pendingLine != null) {
+          processLogicalLine(pendingLine.trim());
         }
+        pendingLine = trimmedRaw;
+      } else if (pendingLine != null) {
+        pendingLine = pendingLine + trimmedRaw;
+      } else {
+        pendingLine = trimmedRaw;
       }
     }
 
@@ -1001,9 +1016,11 @@ class M3UParserService {
     final len = url.length;
     if (len < 5) return false;
     
+    final lowerUrl = url.toLowerCase();
+    
     // Check last 4-5 chars for extensions
-    final last5 = len >= 5 ? url.substring(len - 5).toLowerCase() : '';
-    final last4 = url.substring(len - 4).toLowerCase();
+    final last5 = len >= 5 ? lowerUrl.substring(len - 5) : '';
+    final last4 = lowerUrl.substring(len - 4);
     
     if (last4 == '.mp4' || last4 == '.mkv' || last4 == '.avi' || 
         last4 == '.mov' || last4 == '.wmv' || last4 == '.flv' ||
@@ -1011,11 +1028,16 @@ class M3UParserService {
       return true;
     }
     
+    // Check for query parameters common in VOD
+    if (lowerUrl.contains('type=movie') || lowerUrl.contains('type=series') || 
+        lowerUrl.contains('type=vod')) {
+      return true;
+    }
+
     // Check for /movie/ /series/ /vod/ in URL
-    if (url.contains('/movie/') || url.contains('/Movie/') ||
-        url.contains('/movies/') || url.contains('/Movies/') ||
-        url.contains('/series/') || url.contains('/Series/') ||
-        url.contains('/vod/') || url.contains('/VOD/')) {
+    if (lowerUrl.contains('/movie/') || lowerUrl.contains('/movies/') ||
+        lowerUrl.contains('/series/') || lowerUrl.contains('/vod/') ||
+        lowerUrl.contains('/film/')) {
       return true;
     }
     

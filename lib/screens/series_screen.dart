@@ -9,6 +9,9 @@ import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/go_to_settings_button.dart';
+import 'package:iptv_player/widgets/shimmer.dart';
+import 'package:iptv_player/widgets/hero_info_box.dart';
+import 'package:iptv_player/widgets/brand_badge.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/service_validator.dart';
@@ -135,6 +138,27 @@ class _SeriesScreenState extends State<SeriesScreen>
       debugLog('SeriesScreen: Error batch-fetching TMDB art: $e');
     }
   }
+
+  String? _resolveHeroImage(Content movie) {
+    // 1. Try pre-fetched TMDB cache (usually higher quality backdrops)
+    if (_tmdbArtCache.containsKey(movie.title)) {
+      final cached = _tmdbArtCache[movie.title];
+      if (cached != null && cached.isNotEmpty) return cached;
+    }
+
+    // 2. Try content's own backdrop URL
+    if (movie.backdropUrl != null && movie.backdropUrl!.isNotEmpty) {
+      return movie.backdropUrl;
+    }
+
+    // 3. Try content's image URL (poster) as a last resort
+    if (movie.imageUrl != null && movie.imageUrl!.isNotEmpty) {
+      return movie.imageUrl;
+    }
+
+    return null;
+  }
+
 
   void _startCarousel() {
     _carouselTimer?.cancel();
@@ -470,28 +494,38 @@ class _SeriesScreenState extends State<SeriesScreen>
                                   placeholder: _buildPlaceholder(title),
                                 ),
                               ),
-                              Positioned(
-                                top: 8,
-                                right: 8,
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: context.tvSpacing(8),
-                                    vertical: context.tvSpacing(4),
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.primaryBlue,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    '${episodes.length} EP',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: context.tvTextSize(10),
-                                      fontWeight: FontWeight.bold,
+                                Positioned(
+                                  top: 8,
+                                  right: 8,
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: context.tvSpacing(8),
+                                      vertical: context.tvSpacing(4),
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.darkBackground.withAlpha((0.6 * 255).round()),
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: Colors.white24, width: 1),
+                                    ),
+                                    child: Text(
+                                      '${episodes.length} EPISODES',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: context.tvTextSize(9),
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.5,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
+                                if (firstEpisode.addedDate != null &&
+                                    DateTime.now().difference(firstEpisode.addedDate!).inDays < 14)
+                                  const Positioned(
+                                    top: 8,
+                                    left: 8,
+                                    child: BrandBadge.newContent(fontSize: 8),
+                                  ),
+
                             ],
                           ),
                       ),
@@ -659,14 +693,10 @@ class _SeriesScreenState extends State<SeriesScreen>
     List<Content> allSeries,
     List<Content> recentSeries,
   ) {
-    final heroImage = featuredSeries.backdropUrl;
+    final heroImage = _resolveHeroImage(featuredSeries);
     final screenSize = MediaQuery.of(context).size;
     final heroHeight = screenSize.height * 0.85;
-    final sidebarWidth = context.spacingLg();
-    final heroInfoWidth = min(
-      screenSize.width * 0.4,
-      screenSize.width >= 1920 ? 640.0 : 520.0,
-    );
+    final sidebarPadding = context.spacingLg();
 
     return Focus(
       canRequestFocus: false,
@@ -753,12 +783,11 @@ class _SeriesScreenState extends State<SeriesScreen>
                 ),
                 // Featured info overlay
                 Positioned(
-                  bottom: heroHeight * 0.15,
-                  left: sidebarWidth + context.spacingLg(),
-                  width: heroInfoWidth,
+                  bottom: context.spacingXxl(),
+                  left: sidebarPadding,
                   child: Opacity(
                     opacity: 1.0 - fadeProgress,
-                    child: _buildFeaturedInfo(context, featuredSeries),
+                    child: _buildHeroInfo(context, featuredSeries),
                   ),
                 ),
                 // Scrollable content
@@ -773,8 +802,8 @@ class _SeriesScreenState extends State<SeriesScreen>
                         Container(
                           color: AppTheme.darkBackground,
                           padding: EdgeInsets.only(
-                            left: sidebarWidth + context.spacingLg(),
-                            right: context.spacingXxl(),
+                            left: sidebarPadding,
+                            right: context.spacingLg(),
                             bottom: context.spacingXxl(),
                           ),
                           child: Column(
@@ -818,113 +847,36 @@ class _SeriesScreenState extends State<SeriesScreen>
           )
         : _buildBannerPlaceholder();
   }
-
-  Widget _buildFeaturedInfo(BuildContext context, Content featuredSeries) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: context.spacingXl(),
-        vertical: context.spacingLg(),
-      ),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(12),
-      ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-            Text(
-              featuredSeries.title,
-              style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: AppTheme.textPrimary,
-                shadows: [
-                  Shadow(
-                    offset: const Offset(1, 1),
-                    blurRadius: 3,
-                    color: Colors.black.withValues(alpha: 0.8),
-                  ),
-                ],
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            SizedBox(height: AppSizes.sm),
-            Text(
-              featuredSeries.description ?? '',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: AppTheme.textSecondary,
-                shadows: [
-                  Shadow(
-                    offset: const Offset(1, 1),
-                    blurRadius: 2,
-                    color: Colors.black.withValues(alpha: 0.7),
-                  ),
-                ],
-              ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-            SizedBox(height: AppSizes.sm),
-            if (featuredSeries.rating != null || featuredSeries.year != null)
-              Row(
-                children: [
-                  if (featuredSeries.rating != null) ...[
-                    context.starIcon(color: Colors.amber),
-                    SizedBox(width: AppSizes.xs),
-                    Text(
-                      featuredSeries.ratingDisplay,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                  ],
-                  if (featuredSeries.year != null) ...[
-                    if (featuredSeries.rating != null) SizedBox(width: AppSizes.md),
-                    Text(
-                      featuredSeries.year.toString(),
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 12,
-              runSpacing: 8,
-              children: [
-                BrandPrimaryButton(
-                  label: 'Watch',
-                  icon: AppIcons.play,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 8,
-                  ),
-                  onPressed: () {
-                    final encodedId = Uri.encodeComponent(featuredSeries.id);
-                    context.push('/content/$encodedId', extra: featuredSeries);
-                  },
-                ),
-                BrandSecondaryButton(
-                  label: 'More Info',
-                  icon: AppIcons.info,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  onPressed: () {
-                    final encodedId = Uri.encodeComponent(featuredSeries.id);
-                    context.push('/content/$encodedId', extra: featuredSeries);
-                  },
-                ),
-              ],
-            ),
-        ],
-      ),
+  Widget _buildHeroInfo(BuildContext context, Content featuredSeries) {
+    return HeroInfoBox(
+      title: featuredSeries.title,
+      description: featuredSeries.description,
+      metadata: [
+        if (featuredSeries.rating != null)
+           BrandBadge(
+             text: '★ ${featuredSeries.rating!.toStringAsFixed(1)}',
+             backgroundColor: Colors.amber.withValues(alpha: 0.2),
+             textColor: Colors.amber,
+           ),
+        if (featuredSeries.year != null)
+           Text('${featuredSeries.year}', style: AppTypography.smallText(context)),
+        const BrandBadge.hd(),
+        if (featuredSeries.genres != null && featuredSeries.genres!.isNotEmpty)
+          ...featuredSeries.genres!.take(2).map((g) => 
+            BrandBadge(
+              text: g.toUpperCase(),
+              backgroundColor: Colors.white10,
+              textColor: Colors.white70,
+            )
+          ),
+      ],
+      onWatchPressed: () {
+        final encodedId = Uri.encodeComponent(featuredSeries.id);
+        context.push('/content/$encodedId', extra: featuredSeries);
+      },
     );
   }
+
 
   Widget _buildBannerPlaceholder() {
     return Container(
