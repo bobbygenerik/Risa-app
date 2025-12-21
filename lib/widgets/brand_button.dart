@@ -45,6 +45,11 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
                 .clamp(0.0, 1.0))
             .toColor()
         : baseColor;
+    final focusColor = HSLColor.fromColor(baseColor)
+        .withLightness((HSLColor.fromColor(baseColor).lightness + 0.12)
+            .clamp(0.0, 1.0))
+        .toColor();
+    final resolvedColor = _focused ? focusColor : pressedColor;
 
     final resolvedPadding =
         widget.padding.resolve(Directionality.of(context));
@@ -58,7 +63,7 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
     final innerButton = AnimatedContainer(
       duration: AppDurations.fast,
       decoration: BoxDecoration(
-        color: pressedColor,
+        color: resolvedColor,
         borderRadius:
             BorderRadius.circular(context.tvSpacing(widget.borderRadius)),
       ),
@@ -103,29 +108,21 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
       ),
     );
 
-    final content = Stack(
-      children: [
-        // Blue border on focus for consistency with app theme
-        AnimatedContainer(
-          duration: AppDurations.fast,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(widget.borderRadius),
-            border: _focused
-                ? Border.all(color: AppTheme.primaryBlue, width: 3)
-                : null,
-            boxShadow: _focused
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                : null,
-          ),
-          child: innerButton,
-        ),
-      ],
+    final content = AnimatedContainer(
+      duration: AppDurations.fast,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(widget.borderRadius),
+        boxShadow: _focused
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : null,
+      ),
+      child: innerButton,
     );
 
     final button = Shortcuts(
@@ -220,6 +217,7 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
       context.tvSpacing(resolvedPadding.bottom),
     );
 
+    final focusFill = Colors.white.withValues(alpha: 0.16);
     final content = AnimatedContainer(
       duration: AppDurations.fast,
       decoration: BoxDecoration(
@@ -237,13 +235,13 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
         padding: EdgeInsets.all(_focused ? 2.5 : 1.5),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.transparent,
+            color: _focused ? focusFill : Colors.transparent,
             borderRadius: BorderRadius.circular(widget.borderRadius - 2),
             boxShadow: _focused
                 ? [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      blurRadius: 8,
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
                   ]
