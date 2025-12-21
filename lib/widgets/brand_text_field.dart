@@ -40,16 +40,19 @@ class BrandTextField extends StatelessWidget {
         child: Builder(
           builder: (context) {
             final isFocused = Focus.of(context).hasFocus;
+            final borderRadius = BorderRadius.circular(12);
             return Container(
-              decoration: isFocused ? BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primaryBlue.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ) : null,
+              decoration: isFocused
+                  ? BoxDecoration(
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primaryBlue.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    )
+                  : null,
               child: TextField(
                 controller: controller,
                 obscureText: obscureText,
@@ -66,6 +69,10 @@ class BrandTextField extends StatelessWidget {
                 decoration: InputDecoration(
                   labelText: labelText,
                   hintText: hintText,
+                  filled: true,
+                  fillColor: isFocused
+                      ? AppTheme.highlight
+                      : AppTheme.highlight.withValues(alpha: 0.75),
                   hintStyle: TextStyle(
                     color: AppTheme.textSecondary,
                     fontSize: context.tvTextSize(14),
@@ -81,19 +88,27 @@ class BrandTextField extends StatelessWidget {
                           color: AppTheme.textSecondary,
                         ) 
                       : null,
-                  border: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.transparent),
-                  ),
-                  enabledBorder: UnderlineInputBorder(
+                  border: OutlineInputBorder(
+                    borderRadius: borderRadius,
                     borderSide: BorderSide(
                       color: Colors.white.withValues(alpha: 0.2),
                     ),
                   ),
-                  focusedBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: borderRadius,
+                    borderSide: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: borderRadius,
+                    borderSide: const BorderSide(
+                      color: AppTheme.primaryBlue,
+                      width: 2,
+                    ),
                   ),
                   contentPadding: EdgeInsets.symmetric(
-                    horizontal: 0, 
+                    horizontal: 16,
                     vertical: context.tvSpacing(14),
                   ),
                 ),

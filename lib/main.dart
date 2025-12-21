@@ -27,7 +27,6 @@ import 'package:iptv_player/services/real_debrid_service.dart';
 import 'package:iptv_player/services/whisper_model_service.dart';
 import 'package:iptv_player/widgets/main_shell.dart';
 
-import 'package:iptv_player/widgets/app_dialog.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/screens/epg_screen.dart';
 import 'package:iptv_player/screens/settings_screen.dart';
@@ -57,7 +56,6 @@ import 'package:iptv_player/screens/search_screen.dart';
 
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/models/channel.dart';
-import 'package:iptv_player/models/profile_provider.dart';
 import 'package:iptv_player/providers/settings_provider.dart';
 import 'package:iptv_player/services/background_task_manager.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
@@ -367,10 +365,6 @@ class _MyAppState extends State<MyApp> {
   bool _loading = true;
   // ignore: unused_field
   bool _hasPlaylist = false;
-  bool _profileReady = false;
-  bool _profileDialogScheduled = false;
-  bool _creatingDefaultProfile = false;
-  late final ProfileProvider _profileProvider;
 
   void _runDeferred(
     FutureOr<void> Function() action, {
@@ -389,7 +383,6 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    _profileProvider = ProfileProvider();
     _setupAndroidAutoListener();
     StartupProbe.mark('MyAppState initState');
     _initialize();
@@ -444,16 +437,12 @@ class _MyAppState extends State<MyApp> {
       await _checkAndLoadPlaylist();
       StartupProbe.mark('MyApp initialization: playlist check finished');
 
-      StartupProbe.mark('MyApp initialization: load profiles');
-      await _profileProvider.loadProfiles();
-      StartupProbe.mark('MyApp initialization: profiles loaded');
     } catch (error, stack) {
       debugLog('Initialization error: $error');
       debugLog('$stack');
     } finally {
       if (mounted) {
         setState(() {
-          _profileReady = true;
           _loading = false;
         });
         StartupProbe.mark('MyApp initialization: complete');
@@ -537,7 +526,7 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading || !_profileReady) {
+    if (_loading) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: AppTheme.darkTheme,
@@ -548,7 +537,6 @@ class _MyAppState extends State<MyApp> {
     return _ErrorHandler.wrapWithErrorListener(
       MultiProvider(
         providers: [
-          ChangeNotifierProvider.value(value: _profileProvider),
           ChangeNotifierProvider(
             create: (_) {
               final provider = SettingsProvider();
@@ -668,7 +656,6 @@ class _MyAppState extends State<MyApp> {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               BackgroundTaskManager.start(context);
             });
-            final profileProvider = Provider.of<ProfileProvider>(context);
             return MaterialApp.router(
               title: 'RISA IPTV Player',
               debugShowCheckedModeBanner: false,
@@ -678,7 +665,6 @@ class _MyAppState extends State<MyApp> {
               builder: (context, child) {
                 final media = MediaQuery.of(context);
                 final resolvedChild = child ?? const SizedBox.shrink();
-                _maybePromptForProfile(profileProvider);
                 // No scaling - use native screen size
                 return MediaQuery(data: media, child: resolvedChild);
               },
@@ -689,191 +675,15 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  void _maybePromptForProfile(ProfileProvider profileProvider) {
-    final shouldPrompt = profileProvider.activeProfile == null;
-    if (!shouldPrompt) {
-      _profileDialogScheduled = false;
-      return;
-    }
-
-    if (profileProvider.profiles.isEmpty) {
-      _ensureDefaultProfile(profileProvider);
-      return;
-    }
-
-    if (_profileDialogScheduled) {
-      return;
-    }
-
-    _profileDialogScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // Avoid using the widget BuildContext across async gaps. Use the
-      // ProfileProvider instance passed into this method (already captured
-      // from the widget tree) instead of calling Provider.of(context).
-      final profileProviderRef = profileProvider;
-      try {
-        await _showProfileDialog();
-      } finally {
-        // Ensure the scheduled flag is cleared regardless of mounted state.
-        _profileDialogScheduled = false;
-        if (mounted && !profileProviderRef.isDisposed) {
-          final stillMissingProfile = profileProviderRef.activeProfile == null;
-          if (stillMissingProfile) {
-            setState(() {});
-          }
-        }
-      }
-    });
-  }
-
-  Future<void> _showProfileDialog() async {
-    final navigatorContext = _rootNavigatorKey.currentContext;
-    if (navigatorContext == null || !mounted) {
-      _profileDialogScheduled = false;
-      return;
-    }
-
-    try {
-      await showDialog(
-        context: navigatorContext,
-        barrierDismissible: false,
-        builder: (context) => _ProfileSelectionDialog(),
-      );
-    } catch (e) {
-      debugLog('Error showing profile dialog: $e');
-    } finally {
-      _profileDialogScheduled = false;
-    }
-  }
-
-  void _ensureDefaultProfile(ProfileProvider provider) {
-    if (_creatingDefaultProfile) {
-      return;
-    }
-
-    if (provider.profiles.isNotEmpty) {
-      return;
-    }
-
-    _creatingDefaultProfile = true;
-    debugLog(
-      'ProfileProvider empty; creating default profile for auto-setup',
-    );
-    // Use addPostFrameCallback instead of scheduleMicrotask to avoid zone mismatch
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) {
-        _creatingDefaultProfile = false;
-        return;
-      }
-
-      if (provider.isDisposed) {
-        _creatingDefaultProfile = false;
-        return;
-      }
-
-      try {
-        final id = DateTime.now().millisecondsSinceEpoch.toString();
-        final profile = UserProfile(
-          id: id,
-          name: 'Default Profile',
-          avatarUrl: '',
-        );
-        if (provider.isDisposed) {
-          _creatingDefaultProfile = false;
-          return;
-        }
-        await provider.addProfile(profile);
-        debugLog('Default profile created: ${profile.id}');
-      } catch (error, stack) {
-        debugLog('Failed to create default profile: $error');
-        debugLog('$stack');
-      } finally {
-        if (mounted) {
-          setState(() {});
-        }
-        _creatingDefaultProfile = false;
-      }
-    });
-  }
-
   @override
   void dispose() {
     BackgroundTaskManager.stop();
-    _profileProvider.dispose();
     // Cancel any pending deferred operations
     _pendingDeferredOperations.clear();
     super.dispose();
   }
   
   final Set<Future> _pendingDeferredOperations = {};
-}
-
-class _ProfileSelectionDialog extends StatefulWidget {
-  @override
-  State<_ProfileSelectionDialog> createState() =>
-      _ProfileSelectionDialogState();
-}
-
-class _ProfileSelectionDialogState extends State<_ProfileSelectionDialog> {
-  final TextEditingController _nameController = TextEditingController();
-  @override
-  Widget build(BuildContext context) {
-    final provider = Provider.of<ProfileProvider>(context);
-    return AppDialog(
-      title: 'Select Profile',
-      content: provider.profiles.isEmpty
-          ? Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('No profiles found. Create a new profile:'),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(labelText: 'Profile Name'),
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ],
-            )
-          : Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ...provider.profiles.map(
-                  (p) => ListTile(
-                    leading: CircleAvatar(child: Text(p.name[0])),
-                    title: Text(p.name, style: const TextStyle(color: Colors.white)),
-                    onTap: () {
-                      unawaited(provider.setActiveProfile(p.id));
-                      Navigator.of(context).pop();
-                    },
-                  ),
-                ),
-                const Divider(color: Colors.white12),
-                TextField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(labelText: 'New Profile Name'),
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ],
-            ),
-      actions: [
-        AppDialogButton(
-          text: 'Create',
-          isPrimary: true,
-          onPressed: () async {
-            final name = _nameController.text.trim();
-            if (name.isNotEmpty) {
-              final id = DateTime.now().millisecondsSinceEpoch.toString();
-              final profile = UserProfile(id: id, name: name, avatarUrl: '');
-              final rootNav = _rootNavigatorKey.currentState;
-              await provider.addProfile(profile);
-              unawaited(provider.setActiveProfile(profile.id));
-              rootNav?.pop();
-            }
-          },
-        ),
-      ],
-    );
-  }
 }
 
 // Deep linking: GoRouter will handle incoming URIs (e.g., myapp://content/123 or https://risa.app/content/123)

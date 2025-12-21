@@ -219,8 +219,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final screenSize = MediaQuery.of(context).size;
     final isTV = screenSize.width >= 1920 || screenSize.height >= 1080;
     final heroHeight = screenSize.height * 0.85; // 85% height for content peek
-    final sidebarWidth =
-        context.sidebarCollapsedWidth() + context.spacingLg();
+    final sidebarWidth = context.spacingLg();
     
     // Calculate available width for content
     final availableWidth = screenSize.width - sidebarWidth - context.spacingLg();

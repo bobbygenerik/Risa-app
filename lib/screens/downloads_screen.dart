@@ -6,7 +6,6 @@ import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:path/path.dart' as path;
-import 'package:iptv_player/utils/app_spacing.dart';
 
 class DownloadsScreen extends StatefulWidget {
   const DownloadsScreen({super.key});
@@ -173,10 +172,8 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
           decoration: const BoxDecoration(
             color: AppTheme.darkBackground,
           ),
-          child: Padding(
-            padding: EdgeInsets.only(left: context.sidebarCollapsedWidth()),
-            child: Column(
-              children: [
+          child: Column(
+            children: [
             // Glass app bar
             // Top bar - make fully transparent (only text/icons visible)
             Container(
@@ -376,8 +373,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                               },
                             ),
             ),
-              ],
-            ),
+            ],
           ),
       ),
     ),

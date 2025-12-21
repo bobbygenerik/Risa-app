@@ -662,8 +662,7 @@ class _SeriesScreenState extends State<SeriesScreen>
     final heroImage = featuredSeries.backdropUrl;
     final screenSize = MediaQuery.of(context).size;
     final heroHeight = screenSize.height * 0.85;
-    final sidebarWidth =
-        context.sidebarCollapsedWidth() + context.spacingLg();
+    final sidebarWidth = context.spacingLg();
     final heroInfoWidth = min(
       screenSize.width * 0.4,
       screenSize.width >= 1920 ? 640.0 : 520.0,
@@ -945,8 +944,7 @@ class _SeriesScreenState extends State<SeriesScreen>
   Widget _buildSkeletonLoader() {
     final screenSize = MediaQuery.of(context).size;
     final heroHeight = screenSize.height * 0.85;
-    final sidebarWidth =
-        context.sidebarCollapsedWidth() + context.spacingLg();
+    final sidebarWidth = context.spacingLg();
     final heroInfoWidth = min(
       screenSize.width * 0.4,
       screenSize.width >= 1920 ? 640.0 : 520.0,

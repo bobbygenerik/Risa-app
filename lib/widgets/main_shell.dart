@@ -39,6 +39,8 @@ class _MainShellState extends State<MainShell> {
   int? _activeFocusToken;
   bool _autoSearchTriggered = false;
   bool Function()? _navFocusRequester;
+  final GlobalKey<SidebarNavigationState> _sidebarKey =
+      GlobalKey<SidebarNavigationState>();
 
   final FocusScopeNode _contentFocusScope =
       FocusScopeNode(debugLabel: 'ContentScope');
@@ -103,6 +105,7 @@ class _MainShellState extends State<MainShell> {
     if (widget.activeTab != oldWidget.activeTab) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _requestContentFocus();
+        _sidebarKey.currentState?.collapse();
       });
     }
   }
@@ -147,19 +150,24 @@ class _MainShellState extends State<MainShell> {
                       skipTraversal: true,
 
                       // onKeyEvent: _handleContentKeyEvent, // Removed global handler
-                      child: FocusScope(
-                        node: _contentFocusScope,
-                        autofocus: false,
-                        child: ContentFocusProvider(
-                          registerFocusCallback: _registerContentFocusCallback,
-                          unregisterFocusCallback:
-                              _unregisterContentFocusCallback,
-                          requestNavFocus: _requestNavFocus,
+                    child: FocusScope(
+                      node: _contentFocusScope,
+                      autofocus: false,
+                      child: ContentFocusProvider(
+                        registerFocusCallback: _registerContentFocusCallback,
+                        unregisterFocusCallback:
+                            _unregisterContentFocusCallback,
+                        requestNavFocus: _requestNavFocus,
+                        child: Padding(
+                          padding: const EdgeInsets.only(
+                            left: AppSizes.sidebarCollapsedWidth,
+                          ),
                           child: widget.child,
                         ),
                       ),
                     ),
                   ),
+                ),
                 ),
                 // Navigation bar overlayed on top - completely transparent
                 // Removed TopNavigationBar
@@ -203,6 +211,7 @@ class _MainShellState extends State<MainShell> {
                   bottom: 0,
                   left: 0,
                   child: SidebarNavigation(
+                    key: _sidebarKey,
                     activeTab: widget.activeTab,
                     currentTime: _currentTime,
                     onSearch: _showSearchDialog,

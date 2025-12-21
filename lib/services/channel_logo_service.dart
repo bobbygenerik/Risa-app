@@ -140,6 +140,10 @@ class ChannelLogoService {
       final file = File('${dir.path}/$_cacheFileName');
       if (await file.exists()) {
         final content = await file.readAsString();
+        if (content.trim().isEmpty) {
+          await file.delete();
+          return;
+        }
         final Map<String, dynamic> cached = json.decode(content);
         cached.forEach((key, value) {
           _logoCache[key] = value as String?;

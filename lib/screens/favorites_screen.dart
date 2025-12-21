@@ -9,7 +9,6 @@ import 'package:go_router/go_router.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
-import 'package:iptv_player/utils/app_spacing.dart';
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -51,9 +50,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> with ContentFocusRegi
               decoration: const BoxDecoration(
                 color: AppTheme.darkBackground,
               ),
-              child: Padding(
-                padding: EdgeInsets.only(left: context.sidebarCollapsedWidth()),
-                child: Column(
+              child: Column(
               children: [
                 _buildGlassAppBar(favorites.length),
                 Expanded(
@@ -66,7 +63,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> with ContentFocusRegi
                 ),
               ],
             ),
-              ),
           ),
           );
         },

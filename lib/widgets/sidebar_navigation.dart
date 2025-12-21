@@ -39,10 +39,10 @@ class SidebarNavigation extends StatefulWidget {
   });
 
   @override
-  State<SidebarNavigation> createState() => _SidebarNavigationState();
+  State<SidebarNavigation> createState() => SidebarNavigationState();
 }
 
-class _SidebarNavigationState extends State<SidebarNavigation> {
+class SidebarNavigationState extends State<SidebarNavigation> {
   late List<FocusNode> _tabFocusNodes;
   late int _activeTabIndex;
 
@@ -121,6 +121,12 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
   void _expandSidebar() {
     if (!_isExpanded) {
       setState(() => _isExpanded = true);
+    }
+  }
+
+  void collapse() {
+    if (_isExpanded) {
+      setState(() => _isExpanded = false);
     }
   }
 
