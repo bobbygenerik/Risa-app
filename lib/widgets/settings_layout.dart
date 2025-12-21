@@ -14,6 +14,7 @@ class SettingsLayout extends StatefulWidget {
   final ValueChanged<int> onCategorySelected;
   final Widget content;
   final VoidCallback? onBackToHome;
+  final VoidCallback? onRequestContentFocus;
 
   const SettingsLayout({
     super.key,
@@ -22,6 +23,7 @@ class SettingsLayout extends StatefulWidget {
     required this.onCategorySelected,
     required this.content,
     this.onBackToHome,
+    this.onRequestContentFocus,
   });
 
   @override
@@ -176,8 +178,12 @@ class _SettingsLayoutState extends State<SettingsLayout> {
             return KeyEventResult.handled;
           }
         } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-          // Pass focus to content area - let FocusScope handle finding the first focusable element
-          FocusScope.of(context).nextFocus();
+          // Pass focus to content area - use explicit target when available
+          if (widget.onRequestContentFocus != null) {
+            widget.onRequestContentFocus!();
+          } else {
+            FocusScope.of(context).nextFocus();
+          }
           return KeyEventResult.handled;
         } else if (event.logicalKey == LogicalKeyboardKey.goBack) {
             if (widget.onBackToHome != null) {

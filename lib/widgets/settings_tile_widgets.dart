@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/no_text_selection_controls.dart';
+import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 // -----------------------------------------------------------------------------
 // SECTIONS & HEADERS
@@ -124,6 +125,15 @@ class SettingsActionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Focus(
       focusNode: focusNode,
+      onFocusChange: (focused) {
+        if (focused) {
+          Scrollable.ensureVisible(
+            context,
+            alignment: 0.2,
+            duration: const Duration(milliseconds: 150),
+          );
+        }
+      },
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent && (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter)) {
           onTap?.call();
@@ -213,6 +223,15 @@ class SettingsSwitchTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Focus(
       focusNode: focusNode,
+      onFocusChange: (focused) {
+        if (focused) {
+          Scrollable.ensureVisible(
+            context,
+            alignment: 0.2,
+            duration: const Duration(milliseconds: 150),
+          );
+        }
+      },
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent && (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter)) {
           onChanged(!value);
@@ -385,68 +404,107 @@ class _PremiumTextFieldState extends State<_PremiumTextField> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        widget.focusNode.requestFocus();
-        setState(() => _isEditing = true);
+    return Focus(
+      focusNode: widget.focusNode,
+      onFocusChange: (focused) {
+        if (focused) {
+          Scrollable.ensureVisible(
+            context,
+            alignment: 0.2,
+            duration: const Duration(milliseconds: 150),
+          );
+        }
       },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: AppTheme.highlight,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: _isFocused ? AppTheme.primaryBlue : Colors.white10,
-            width: _isFocused ? 2 : 1,
+      onKeyEvent: (node, event) {
+        if (!context.isTV || event is! KeyDownEvent) {
+          return KeyEventResult.ignored;
+        }
+        final scope = FocusScope.of(context);
+        if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+          _isEditing = false;
+          scope.focusInDirection(TraversalDirection.down);
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+          _isEditing = false;
+          scope.focusInDirection(TraversalDirection.up);
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+          _isEditing = false;
+          scope.focusInDirection(TraversalDirection.left);
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+          _isEditing = false;
+          scope.focusInDirection(TraversalDirection.right);
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: GestureDetector(
+        onTap: () {
+          widget.focusNode.requestFocus();
+          setState(() => _isEditing = true);
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: AppTheme.highlight,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: _isFocused ? AppTheme.primaryBlue : Colors.white10,
+              width: _isFocused ? 2 : 1,
+            ),
           ),
-        ),
-        child: Row(
-          children: [
-            if (widget.icon != null) ...[
-              Icon(
-                widget.icon,
-                size: 20,
-                color: _isFocused ? Colors.white : Colors.white54,
-              ),
-              const SizedBox(width: 12),
-            ],
-            Expanded(
-              child: Theme(
-                data: Theme.of(context).copyWith(
-                  textSelectionTheme: const TextSelectionThemeData(
-                    selectionColor: Colors.transparent,
-                    selectionHandleColor: Colors.transparent,
-                  ),
+          child: Row(
+            children: [
+              if (widget.icon != null) ...[
+                Icon(
+                  widget.icon,
+                  size: 20,
+                  color: _isFocused ? Colors.white : Colors.white54,
                 ),
-                child: TextField(
-                  controller: widget.controller,
-                  focusNode: widget.focusNode,
-                  enableInteractiveSelection: false,
-                  selectionControls: NoTextSelectionControls(),
-                  showCursor: false,
-                  cursorColor: Colors.transparent,
-                  style: const TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: 16,
-                  ),
-                  obscureText: widget.obscureText,
-                  decoration: InputDecoration.collapsed(
-                    hintText: widget.hint,
-                    hintStyle: const TextStyle(
-                      color: AppTheme.textSecondary,
+                const SizedBox(width: 12),
+              ],
+              Expanded(
+                child: Theme(
+                  data: Theme.of(context).copyWith(
+                    textSelectionTheme: const TextSelectionThemeData(
+                      selectionColor: Colors.transparent,
+                      selectionHandleColor: Colors.transparent,
                     ),
                   ),
-                  onSubmitted: (_) {
-                    setState(() => _isEditing = false);
-                    widget.focusNode.unfocus(); // Return focus to container
-                  },
+                  child: TextField(
+                    controller: widget.controller,
+                    focusNode: widget.focusNode,
+                    enableInteractiveSelection: false,
+                    selectionControls: NoTextSelectionControls(),
+                    showCursor: false,
+                    cursorColor: Colors.transparent,
+                    style: const TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontSize: 16,
+                    ),
+                    obscureText: widget.obscureText,
+                    decoration: InputDecoration.collapsed(
+                      hintText: widget.hint,
+                      hintStyle: const TextStyle(
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                    onSubmitted: (_) {
+                      setState(() => _isEditing = false);
+                      widget.focusNode.unfocus(); // Return focus to container
+                    },
+                  ),
                 ),
               ),
-            ),
-            if (_isFocused && !_isEditing)
-              const Icon(Icons.edit, size: 18, color: Colors.white70),
-          ],
+              if (_isFocused && !_isEditing)
+                const Icon(Icons.edit, size: 18, color: Colors.white70),
+            ],
+          ),
         ),
       ),
     );

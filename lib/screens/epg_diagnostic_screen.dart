@@ -27,25 +27,36 @@ class EpgDiagnosticScreen extends StatelessWidget {
       ),
       body: Consumer2<IncrementalEpgService, ChannelProvider>(
         builder: (context, epgService, channelProvider, _) {
-          final channels = channelProvider.channels;
+          final totalChannels = channelProvider.channelCount;
+          final previewCount = totalChannels < 10 ? totalChannels : 10;
           final epgChannels = epgService.getEpgChannelIds();
-          // Calculate basic stats since getMatchingStats doesn't exist
-          final matched = channels.where((c) => epgService.hasEpgData(c.tvgId ?? c.id)).length;
-          final stats = {'matched': matched, 'total': channels.length};
+          // Calculate basic stats using full channel list
+          var matched = 0;
+          for (var i = 0; i < totalChannels; i++) {
+            final channel = channelProvider.getChannelAt(i);
+            if (epgService.hasEpgMatch(
+              channel.tvgId ?? channel.id,
+              channelName: channel.name,
+            )) {
+              matched++;
+            }
+          }
+          final stats = {'matched': matched, 'total': totalChannels};
           
           // Debug info for IncrementalEpgService
-          if (channels.isNotEmpty && epgService.availableChannels.isNotEmpty) {
+          if (totalChannels > 0 && epgService.availableChannels.isNotEmpty) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               print('=== INCREMENTAL EPG DEBUG ===');
               print('EPG available channels: ${epgService.availableChannels.length}');
               print('EPG loaded channels: ${epgService.loadedChannelCount}');
-              print('Channel provider channels count: ${channels.length}');
+              print('Channel provider channels count: $totalChannels');
               
               // Test first few channels manually
-              for (int i = 0; i < 5 && i < channels.length; i++) {
-                final channel = channels[i];
+              for (int i = 0; i < 5 && i < totalChannels; i++) {
+                final channel = channelProvider.getChannelAt(i);
                 final tvgId = channel.tvgId ?? channel.id;
-                final hasEpg = epgService.hasEpgData(tvgId);
+                final hasEpg =
+                    epgService.hasEpgMatch(tvgId, channelName: channel.name);
                 print('Channel $i: "${channel.name}" (ID: "$tvgId") -> EPG: $hasEpg');
               }
               print('=== END INCREMENTAL EPG DEBUG ===');
@@ -70,11 +81,11 @@ class EpgDiagnosticScreen extends StatelessWidget {
                   style: const TextStyle(color: Colors.white70, fontSize: 16),
                 ),
                 Text(
-                  'Playlist Channels: ${channels.length}',
+                  'Playlist Channels: $totalChannels',
                   style: const TextStyle(color: Colors.white70, fontSize: 16),
                 ),
                 Text(
-                  'Matched: ${stats['matched']}/${stats['total']} (${((stats['matched']! / stats['total']!) * 100).toStringAsFixed(1)}%)',
+                  'Matched: ${stats['matched']}/${stats['total']} (${stats['total']! == 0 ? '0.0' : ((stats['matched']! / stats['total']!) * 100).toStringAsFixed(1)}%)',
                   style: TextStyle(
                     color: stats['matched']! > stats['total']! * 0.5 ? Colors.green : Colors.orange,
                     fontSize: 16,
@@ -171,9 +182,11 @@ class EpgDiagnosticScreen extends StatelessWidget {
                   style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                ...channels.take(10).map((channel) {
-                  final hasEpg = epgService.hasEpgData(
+                ...List.generate(previewCount, (index) {
+                  final channel = channelProvider.getChannelAt(index);
+                  final hasEpg = epgService.hasEpgMatch(
                     channel.tvgId ?? channel.id,
+                    channelName: channel.name,
                   );
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),

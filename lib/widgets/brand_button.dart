@@ -11,6 +11,7 @@ class BrandPrimaryButton extends StatefulWidget {
   final EdgeInsetsGeometry padding;
   final double borderRadius;
   final bool expand;
+  final FocusNode? focusNode;
 
   const BrandPrimaryButton({
     super.key,
@@ -20,6 +21,7 @@ class BrandPrimaryButton extends StatefulWidget {
     this.padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
     this.borderRadius = 8,
     this.expand = false,
+    this.focusNode,
   });
 
   @override
@@ -134,6 +136,7 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
           ),
         },
         child: FocusableActionDetector(
+          focusNode: widget.focusNode,
           onShowFocusHighlight: (v) => setState(() => _focused = v),
           onShowHoverHighlight: (_) {},
           mouseCursor: SystemMouseCursors.click,
@@ -174,6 +177,7 @@ class BrandSecondaryButton extends StatefulWidget {
   final EdgeInsetsGeometry padding;
   final double borderRadius;
   final bool expand;
+  final FocusNode? focusNode;
 
   const BrandSecondaryButton({
     super.key,
@@ -183,6 +187,7 @@ class BrandSecondaryButton extends StatefulWidget {
     this.padding = const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
     this.borderRadius = 8,
     this.expand = false,
+    this.focusNode,
   });
 
   @override
@@ -288,6 +293,7 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
           ),
         },
         child: FocusableActionDetector(
+          focusNode: widget.focusNode,
           onShowFocusHighlight: (v) => setState(() => _focused = v),
           onShowHoverHighlight: (_) {},
           mouseCursor: SystemMouseCursors.click,

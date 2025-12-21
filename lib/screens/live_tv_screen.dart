@@ -46,7 +46,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   final FocusPoolService _focusPool = FocusPoolService();
   late final ScrollController _scrollController;
 
-  late final FocusNode _heroFocus;
+  late final FocusNode _watchButtonFocus;
   late final FocusNode _settingsButtonFocus;
   final Map<String, String?> _programArtwork = {};
   final Set<String> _artworkRequests = {};
@@ -63,8 +63,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _scrollController = ScrollController();
 
     // Get focus nodes from pool
-    _heroFocus =
-        _focusPool.getFocusNode('live_tv_hero', debugLabel: 'Live TV Hero');
+    _watchButtonFocus = _focusPool.getFocusNode(
+      'live_tv_watch',
+      debugLabel: 'Live TV Watch',
+    );
     _settingsButtonFocus = _focusPool.getFocusNode('live_tv_settings',
         debugLabel: 'Live TV Settings');
     // Start carousel once the widget is built - will be updated when channels load
@@ -80,7 +82,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   void dispose() {
     _timerService.unregister('live_tv_carousel');
     _scrollController.dispose();
-    _focusPool.returnFocusNodes(['live_tv_hero', 'live_tv_settings']);
+    _focusPool.returnFocusNodes(['live_tv_watch', 'live_tv_settings']);
     super.dispose();
   }
 
@@ -99,12 +101,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       _settingsButtonFocus.requestFocus();
       return true;
     }
-    // Find first focusable channel card
-    final firstFocusable = FocusScope.of(context).children.firstWhere(
-          (node) => node.canRequestFocus && node.context != null,
-          orElse: () => _heroFocus,
-        );
-    firstFocusable.requestFocus();
+    _watchButtonFocus.requestFocus();
     return true;
   }
 
@@ -246,26 +243,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       builder: (context, currentProgram, _) {
         final heroImage = _resolveHeroImage(currentProgram);
 
-        return Focus(
-          focusNode: _heroFocus,
-          onKeyEvent: (node, event) {
-            if (event is KeyDownEvent) {
-              if (event.logicalKey == LogicalKeyboardKey.select ||
-                  event.logicalKey == LogicalKeyboardKey.enter) {
-                context.push('/player', extra: featuredChannel);
-                return KeyEventResult.handled;
-              }
-              if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                return requestNavigationFocus()
-                    ? KeyEventResult.handled
-                    : KeyEventResult.ignored;
-              }
-              if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                // Focus will automatically move to first row
-              }
-            }
-            return KeyEventResult.ignored;
-          },
+        return FocusTraversalGroup(
+          policy: WidgetOrderTraversalPolicy(),
           child: Stack(
             children: [
               // Hero Background & Gradient
@@ -317,41 +296,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   );
                 }),
               ),
-              // Hero info overlay
-              Positioned(
-                bottom: heroHeight *
-                    0.15, // Lowered from 0.25 for better artwork exposure
-                left: sidebarWidth,
-                width: heroInfoWidth,
-                child: Builder(builder: (context) {
-                  final scrollPos = _scrollController.hasClients
-                      ? _scrollController.offset
-                      : 0.0;
-                  final fadeProgress =
-                      (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
-                  return Opacity(
-                    opacity: 1.0 - fadeProgress,
-                    child: _buildFeaturedInfo(
-                        context, featuredChannel, currentProgram),
-                  );
-                }),
-              ),
-              // Channel logo
-              Positioned(
-                top: AppSizes.lg,
-                right: AppSizes.lg,
-                child: Builder(builder: (context) {
-                  final scrollPos = _scrollController.hasClients
-                      ? _scrollController.offset
-                      : 0.0;
-                  final fadeProgress =
-                      (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
-                  return Opacity(
-                    opacity: 1.0 - fadeProgress,
-                    child: _buildChannelLogo(context, featuredChannel),
-                  );
-                }),
-              ),
               // Scrollable content
               Positioned.fill(
                 child: SingleChildScrollView(
@@ -387,11 +331,46 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   ),
                 ),
               ),
+              // Hero info overlay
+              Positioned(
+                bottom: heroHeight *
+                    0.15, // Lowered from 0.25 for better artwork exposure
+                left: sidebarWidth,
+                width: heroInfoWidth,
+                child: Builder(builder: (context) {
+                  final scrollPos = _scrollController.hasClients
+                      ? _scrollController.offset
+                      : 0.0;
+                  final fadeProgress =
+                      (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
+                  return Opacity(
+                    opacity: 1.0 - fadeProgress,
+                    child: _buildFeaturedInfo(
+                        context, featuredChannel, currentProgram),
+                  );
+                }),
+              ),
+              // Channel logo
+              Positioned(
+                top: AppSizes.lg,
+                right: AppSizes.lg,
+                child: Builder(builder: (context) {
+                  final scrollPos = _scrollController.hasClients
+                      ? _scrollController.offset
+                      : 0.0;
+                  final fadeProgress =
+                      (scrollPos / (heroHeight * 0.5)).clamp(0.0, 1.0);
+                  return Opacity(
+                    opacity: 1.0 - fadeProgress,
+                    child: _buildChannelLogo(context, featuredChannel),
+                  );
+                }),
+              ),
             ],
           ),
         );
-      },
-    );
+    },
+  );
   }
 
   Widget _buildFeaturedInfo(
@@ -405,7 +384,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: context.spacingXl(),
+        horizontal: 0,
         vertical: context.spacingLg(),
       ),
       child: Column(
@@ -485,6 +464,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             onPressed: () => context.push('/player', extra: channel),
             label: 'Watch',
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            focusNode: _watchButtonFocus,
           ),
         ],
       ),
@@ -747,7 +727,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               return KeyEventResult.handled;
             }
             if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-              _heroFocus.requestFocus();
+              _watchButtonFocus.requestFocus();
               return KeyEventResult.handled;
             }
             if (event.logicalKey == LogicalKeyboardKey.arrowLeft &&

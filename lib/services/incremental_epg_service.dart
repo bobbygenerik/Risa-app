@@ -288,7 +288,11 @@ class IncrementalEpgService extends ChangeNotifier {
     return text.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
   }
 
-  String? _findBestEpgId(String channelId, String? channelName) {
+  String? _findBestEpgId(
+    String channelId,
+    String? channelName, {
+    bool logIfMissing = true,
+  }) {
     if (_internalToEpgIdMapping.containsKey(channelId)) {
       return _internalToEpgIdMapping[channelId];
     }
@@ -322,12 +326,17 @@ class IncrementalEpgService extends ChangeNotifier {
         return foundId;
       }
     }
-    debugLog('EPG: Could not find matching EPG ID for channelId="$channelId", name="$channelName"');
+    if (logIfMissing) {
+      debugLog(
+        'EPG: Could not find matching EPG ID for channelId="$channelId", name="$channelName"',
+      );
+    }
     return null;
   }
 
   List<Program> getProgramsForChannel(String channelId, {String? channelName}) {
-    final epgId = _internalToEpgIdMapping[channelId] ?? _findBestEpgId(channelId, channelName);
+    final epgId = _internalToEpgIdMapping[channelId] ??
+        _findBestEpgId(channelId, channelName);
     if (epgId != null) {
       return _programsByChannel[epgId] ?? [];
     }
@@ -336,6 +345,15 @@ class IncrementalEpgService extends ChangeNotifier {
 
   bool hasEpgData(String channelId) {
     return _availableChannels.contains(channelId);
+  }
+
+  bool hasEpgMatch(String channelId, {String? channelName}) {
+    return _findBestEpgId(
+          channelId,
+          channelName,
+          logIfMissing: false,
+        ) !=
+        null;
   }
 
   Program? getCurrentProgram(String channelId, {String? channelName}) {

@@ -193,8 +193,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return SettingsLayout(
       selectedIndex: _selectedIndex,
-      onCategorySelected: (index) => setState(() => _selectedIndex = index),
+      onCategorySelected: _handleCategorySelected,
       onBackToHome: () => context.go('/home'),
+      onRequestContentFocus: _requestContentFocus,
       categories: const [
         SettingsCategory(title: 'General', icon: Icons.settings),
         SettingsCategory(title: 'Playback', icon: Icons.play_circle),
@@ -203,6 +204,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ],
       content: _buildActiveContent(),
     );
+  }
+
+  void _handleCategorySelected(int index) {
+    if (_selectedIndex == index) return;
+    setState(() => _selectedIndex = index);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _requestContentFocus();
+    });
+  }
+
+  void _requestContentFocus() {
+    FocusNode? target;
+    switch (_selectedIndex) {
+      case 0:
+        target = _playlistInputMethod == 0
+            ? _m3uUrlFocusNode
+            : _xtreamServerFocusNode;
+        break;
+      case 1:
+        target = _playbackFirstFocusNode;
+        break;
+      case 2:
+        target = _aiFirstFocusNode;
+        break;
+      case 3:
+        target = _browseStorageButtonFocusNode;
+        break;
+    }
+    target?.requestFocus();
   }
 
   Widget _buildActiveContent() {
@@ -325,7 +355,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             SettingsActionTile(
               title: _playlistInputMethod == 0 ? 'Input Method: M3U URL' : 'Input Method: Xtream Codes',
               icon: Icons.swap_horiz,
-              onTap: () => setState(() => _playlistInputMethod = _playlistInputMethod == 0 ? 1 : 0),
+              onTap: () {
+                setState(
+                  () => _playlistInputMethod = _playlistInputMethod == 0 ? 1 : 0,
+                );
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _requestContentFocus();
+                });
+              },
             ),
             
             if (_playlistInputMethod == 0) ...[
