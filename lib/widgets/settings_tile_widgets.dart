@@ -375,6 +375,11 @@ class _PremiumTextFieldState extends State<_PremiumTextField> {
       _isFocused = widget.focusNode.hasFocus;
       if (!_isFocused) _isEditing = false;
     });
+    if (_isFocused) {
+      final text = widget.controller.text;
+      widget.controller.selection =
+          TextSelection.collapsed(offset: text.length);
+    }
   }
 
   @override

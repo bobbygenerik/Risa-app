@@ -93,6 +93,7 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
                 
                 // Search bar
                 TextField(
+                  enableInteractiveSelection: false,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
                     hintText: 'Search channels...',

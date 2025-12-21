@@ -410,9 +410,65 @@ class M3UParserService {
         }
       }
 
-      if (line.startsWith('#EXTINF:')) {
-        currentInfo = line.substring(8);
+      if (line.contains('EXTINF:')) {
+        final urlMatch = _urlRegex.firstMatch(line);
+        final infoPart = urlMatch != null
+            ? line.substring(0, urlMatch.start).trimRight()
+            : line;
+        currentInfo = _extractExtinfPayload(infoPart);
+        if (currentInfo == null) return;
         currentAttributes = _parseAttributes(currentInfo!);
+
+        if (urlMatch != null) {
+          final inlineUrl = urlMatch.group(0) ?? '';
+          if (inlineUrl.isNotEmpty) {
+            final channelName = _extractChannelName(currentInfo!);
+            final groupTitle = currentAttributes['group-title'] ?? '';
+            final isVod = _isVodUrl(inlineUrl);
+            final isSeries =
+                isVod && _looksLikeSeriesFast(channelName, groupTitle);
+            final isMovie = isVod && !isSeries;
+
+            if (isSeries) {
+              seriesMaps.add({
+                'id': 'series_${channelName.hashCode.abs()}_$logicalIndex',
+                'title': channelName,
+                'streamUrl': inlineUrl,
+                'posterUrl': currentAttributes['tvg-logo'],
+                'type': 'series',
+                'category': groupTitle,
+                'sortOrder': logicalIndex,
+              });
+            } else if (isMovie) {
+              movieMaps.add({
+                'id': 'movie_${channelName.hashCode.abs()}_$logicalIndex',
+                'title': channelName,
+                'streamUrl': inlineUrl,
+                'posterUrl': currentAttributes['tvg-logo'],
+                'type': 'movie',
+                'category': groupTitle,
+                'sortOrder': logicalIndex,
+              });
+            } else {
+              channelMaps.add({
+                'id': currentAttributes['tvg-id'] ??
+                    '${channelName}_${inlineUrl.hashCode.abs()}_$logicalIndex',
+                'name': channelName,
+                'url': inlineUrl,
+                'logoUrl': currentAttributes['tvg-logo'],
+                'groupTitle': groupTitle,
+                'tvgId': currentAttributes['tvg-id'],
+                'attributes': currentAttributes,
+                'sortOrder': channelCount,
+                'isFavorite': false,
+                'isHidden': false,
+              });
+              channelCount++;
+            }
+            currentInfo = null;
+            currentAttributes = {};
+          }
+        }
       } else if (!line.startsWith('#') && currentInfo != null) {
         final channelName = _extractChannelName(currentInfo!);
         final groupTitle = currentAttributes['group-title'] ?? '';
@@ -469,7 +525,9 @@ class M3UParserService {
       if (line.isEmpty) continue;
       final trimmed = line.trim();
 
-      if (trimmed.startsWith('#') || trimmed.startsWith('http')) {
+      if (trimmed.startsWith('#') ||
+          trimmed.startsWith('http') ||
+          trimmed.contains('EXTINF:')) {
         if (pendingLine != null) {
           processLogicalLine(pendingLine.trim());
         }

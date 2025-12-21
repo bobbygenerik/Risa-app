@@ -759,10 +759,16 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
                   child: TextField(
                     controller: controller,
                     focusNode: focusNode,
+                    enableInteractiveSelection: false,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
                     ),
+                    onTap: () {
+                      final text = controller.text;
+                      controller.selection =
+                          TextSelection.collapsed(offset: text.length);
+                    },
                     obscureText: obscureText,
                     decoration: InputDecoration.collapsed(
                       hintText: hint,

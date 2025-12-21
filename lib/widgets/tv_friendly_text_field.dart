@@ -55,6 +55,11 @@ class _TVFriendlyTextFieldState extends State<TVFriendlyTextField> {
         _isEditing = false;
       });
     }
+    if (widget.focusNode.hasFocus) {
+      final text = widget.controller.text;
+      widget.controller.selection =
+          TextSelection.collapsed(offset: text.length);
+    }
   }
 
   void _toggleEditMode(bool enable) {
@@ -78,6 +83,9 @@ class _TVFriendlyTextFieldState extends State<TVFriendlyTextField> {
     } else {
       // Started editing
       widget.focusNode.requestFocus();
+      final text = widget.controller.text;
+      widget.controller.selection =
+          TextSelection.collapsed(offset: text.length);
     }
   }
 

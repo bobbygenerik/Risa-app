@@ -124,7 +124,13 @@ class _SearchScreenState extends State<SearchScreen>
                     },
                     child: TextField(
                       controller: _searchController,
+                      enableInteractiveSelection: false,
                       style: const TextStyle(fontSize: 18, color: Colors.white),
+                      onTap: () {
+                        final text = _searchController.text;
+                        _searchController.selection =
+                            TextSelection.collapsed(offset: text.length);
+                      },
                       decoration: InputDecoration(
                         hintText: 'Search for channels, movies, or series...',
                         hintStyle: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.5)),

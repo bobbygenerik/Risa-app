@@ -63,7 +63,12 @@ class BrandTextField extends StatelessWidget {
               obscureText: obscureText,
               keyboardType: keyboardType,
               onChanged: onChanged,
-              onTap: onTap,
+              onTap: () {
+                final text = controller.text;
+                controller.selection =
+                    TextSelection.collapsed(offset: text.length);
+                onTap?.call();
+              },
               readOnly: readOnly,
               enableInteractiveSelection: false,
               cursorColor: AppTheme.primaryBlue,

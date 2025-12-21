@@ -213,7 +213,13 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
         title: const Text('Edit Playlist Name'),
         content: TextField(
           controller: nameController,
+          enableInteractiveSelection: false,
           style: const TextStyle(color: Colors.white),
+          onTap: () {
+            final text = nameController.text;
+            nameController.selection =
+                TextSelection.collapsed(offset: text.length);
+          },
           decoration: InputDecoration(
             labelText: 'Playlist Name',
             labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.7)),

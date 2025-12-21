@@ -1159,7 +1159,13 @@ class _EPGScreenState extends State<EPGScreen>
                 const SizedBox(height: 8),
                 TextField(
                   controller: searchController,
+                  enableInteractiveSelection: false,
                   style: const TextStyle(color: Colors.white),
+                  onTap: () {
+                    final text = searchController.text;
+                    searchController.selection =
+                        TextSelection.collapsed(offset: text.length);
+                  },
                   decoration: InputDecoration(
                     hintText: 'Search EPG channels...',
                     hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),

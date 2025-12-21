@@ -301,6 +301,12 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
           controller: controller,
           readOnly: !isEditable,
           obscureText: obscureText,
+          enableInteractiveSelection: false,
+          onTap: () {
+            final text = controller.text;
+            controller.selection =
+                TextSelection.collapsed(offset: text.length);
+          },
             decoration: InputDecoration(
             labelText: label,
             hintText: hint,
