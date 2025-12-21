@@ -406,26 +406,34 @@ class _PremiumTextFieldState extends State<_PremiumTextField> {
               const SizedBox(width: 12),
             ],
             Expanded(
-              child: TextField(
-                controller: widget.controller,
-                focusNode: widget.focusNode,
-                enableInteractiveSelection: false,
-                cursorColor: AppTheme.primaryBlue,
-                style: const TextStyle(
-                  color: AppTheme.textPrimary,
-                  fontSize: 16,
-                ),
-                obscureText: widget.obscureText,
-                decoration: InputDecoration.collapsed(
-                  hintText: widget.hint,
-                  hintStyle: const TextStyle(
-                    color: AppTheme.textSecondary,
+              child: Theme(
+                data: Theme.of(context).copyWith(
+                  textSelectionTheme: const TextSelectionThemeData(
+                    selectionColor: Colors.transparent,
+                    selectionHandleColor: Colors.transparent,
                   ),
                 ),
-                onSubmitted: (_) {
-                  setState(() => _isEditing = false);
-                  widget.focusNode.unfocus(); // Return focus to container
-                },
+                child: TextField(
+                  controller: widget.controller,
+                  focusNode: widget.focusNode,
+                  enableInteractiveSelection: false,
+                  cursorColor: AppTheme.primaryBlue,
+                  style: const TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 16,
+                  ),
+                  obscureText: widget.obscureText,
+                  decoration: InputDecoration.collapsed(
+                    hintText: widget.hint,
+                    hintStyle: const TextStyle(
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                  onSubmitted: (_) {
+                    setState(() => _isEditing = false);
+                    widget.focusNode.unfocus(); // Return focus to container
+                  },
+                ),
               ),
             ),
             if (_isFocused && !_isEditing)

@@ -767,6 +767,12 @@ class ChannelProvider with ChangeNotifier {
         final downloadDuration = DateTime.now().difference(downloadStart);
         debugLog(
             'ChannelProvider: Downloaded $totalBytes bytes in ${downloadDuration.inMilliseconds}ms');
+        if (debugBuilder.length > 0) {
+          _lastM3UContent = utf8.decode(
+            debugBuilder.takeBytes(),
+            allowMalformed: true,
+          );
+        }
 
         // Check for empty playlist file
         if (!await tempFile.exists() || await tempFile.length() == 0) {
