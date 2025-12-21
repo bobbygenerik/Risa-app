@@ -787,7 +787,9 @@ class _MoviesScreenState extends State<MoviesScreen>
                 ],
               ),
             const SizedBox(height: 16),
-            Row(
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
               children: [
                 BrandPrimaryButton(
                   label: 'Play',
@@ -801,7 +803,6 @@ class _MoviesScreenState extends State<MoviesScreen>
                     context.push('/content/$encodedId', extra: featuredMovie);
                   },
                 ),
-                const SizedBox(width: 12),
                 BrandSecondaryButton(
                   label: 'More Info',
                   icon: AppIcons.info,

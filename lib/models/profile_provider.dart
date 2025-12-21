@@ -38,7 +38,7 @@ class ProfileProvider extends ChangeNotifier {
   Future<void> loadProfiles() async {
     final prefs = await SharedPreferences.getInstance();
     final profilesJson = prefs.getString(_profilesKey);
-    if (profilesJson != null) {
+    if (profilesJson != null && profilesJson.trim().isNotEmpty) {
       final List<dynamic> list = jsonDecode(profilesJson);
       _profiles = list.map((e) => UserProfile.fromJson(e)).toList();
     } else {

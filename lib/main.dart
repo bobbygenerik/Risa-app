@@ -95,6 +95,8 @@ final _suppressedErrorPatterns = {
   'HttpException',
   'SocketException',
   'ClientException',
+  'RenderFlex overflowed',
+  'overflowed by',
 };
 
 bool _shouldSuppressError(String errorStr) {

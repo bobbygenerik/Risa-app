@@ -245,7 +245,7 @@ class ContentProvider with ChangeNotifier {
 
       // Load movies history
       final moviesJson = prefs.getString('movies_history');
-      if (moviesJson != null) {
+      if (moviesJson != null && moviesJson.trim().isNotEmpty) {
         final List<dynamic> moviesList = jsonDecode(moviesJson);
         final moviesWithProgress = moviesList
             .map((m) => Content.fromMap(m as Map<String, dynamic>))
@@ -266,7 +266,7 @@ class ContentProvider with ChangeNotifier {
 
       // Load series history
       final seriesJson = prefs.getString('series_history');
-      if (seriesJson != null) {
+      if (seriesJson != null && seriesJson.trim().isNotEmpty) {
         final List<dynamic> seriesList = jsonDecode(seriesJson);
         final seriesWithProgress = seriesList
             .map((s) => Content.fromMap(s as Map<String, dynamic>))

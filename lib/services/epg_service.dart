@@ -1313,7 +1313,7 @@ class EpgService with ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final json = prefs.getString(_manualMappingsKey);
-      if (json != null) {
+      if (json != null && json.trim().isNotEmpty) {
         final Map<String, dynamic> decoded = jsonDecode(json);
         _manualMappings.clear();
         decoded.forEach((key, value) {

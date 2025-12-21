@@ -892,7 +892,9 @@ class _SeriesScreenState extends State<SeriesScreen>
                 ],
               ),
             const SizedBox(height: 16),
-            Row(
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
               children: [
                 BrandPrimaryButton(
                   label: 'Watch',
@@ -906,7 +908,6 @@ class _SeriesScreenState extends State<SeriesScreen>
                     context.push('/content/$encodedId', extra: featuredSeries);
                   },
                 ),
-                const SizedBox(width: 12),
                 BrandSecondaryButton(
                   label: 'More Info',
                   icon: AppIcons.info,

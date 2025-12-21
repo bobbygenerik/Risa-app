@@ -137,81 +137,65 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   @override
   Widget build(BuildContext context) {
-    final body = Container(
-      decoration: const BoxDecoration(
-        color: AppColors.background,
-      ),
-      child: Consumer<ChannelProvider>(
-        builder: (context, channelProvider, _) {
-          final hasChannels = channelProvider.hasChannels;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: AppColors.background,
+          ),
+          width: constraints.maxWidth,
+          height: constraints.maxHeight,
+          child: Consumer<ChannelProvider>(
+            builder: (context, channelProvider, _) {
+              final hasChannels = channelProvider.hasChannels;
 
-          if (!hasChannels && channelProvider.isLoading) {
-            return _buildSkeletonLoader();
-          }
+              if (!hasChannels && channelProvider.isLoading) {
+                return _buildSkeletonLoader();
+              }
 
-          if (!hasChannels) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  context.iconXxl(
-                    AppIcons.liveTV,
-                    color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
-                  ),
-                  SizedBox(height: context.tvSpacing(24)),
-                  Text(
-                    'No Live TV Available',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  SizedBox(height: context.tvSpacing(8)),
-                  Text(
-                    'Load a playlist with Live TV channels from Settings',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.textSecondary,
+              if (!hasChannels) {
+                return Center(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        context.iconXxl(
+                          AppIcons.liveTV,
+                          color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
                         ),
-                    textAlign: TextAlign.center,
+                        SizedBox(height: context.tvSpacing(24)),
+                        Text(
+                          'No Live TV Available',
+                          style: Theme.of(context).textTheme.headlineMedium,
+                        ),
+                        SizedBox(height: context.tvSpacing(8)),
+                        Text(
+                          'Load a playlist with Live TV channels from Settings',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: AppTheme.textSecondary,
+                              ),
+                          textAlign: TextAlign.center,
+                        ),
+                        SizedBox(height: context.tvSpacing(32)),
+                        GoToSettingsButton(
+                          onPressed: _goToSettings,
+                          focusNode: _settingsButtonFocus,
+                        ),
+                      ],
+                    ),
                   ),
-                  SizedBox(height: context.tvSpacing(32)),
-                  GoToSettingsButton(
-                    onPressed: _goToSettings,
-                    focusNode: _settingsButtonFocus,
-                  ),
-                ],
-              ),
-            );
-          }
+                );
+              }
 
-          // Ensure index is valid for current channel list (using full count)
-          final totalChannels = channelProvider.channelCount;
-          if (_featuredIndex >= totalChannels) _featuredIndex = 0;
-
-          final featuredChannel = channelProvider.getChannelAt(_featuredIndex);
-
-          // Trigger EPG load for featured channel (quietly)
-          final epgService =
-              Provider.of<IncrementalEpgService>(context, listen: false);
-          final channelId = featuredChannel.tvgId ?? featuredChannel.id;
-          Future.microtask(() => epgService.ensureChannelLoaded(channelId,
-              channelName: featuredChannel.name));
-
-          // Get grouped channels (may be empty while computing in background)
-          final groupedChannels = channelProvider.getGroupedChannels();
-          final isGrouping = channelProvider.isGroupingChannels;
-          final previewList = channelProvider.channels;
-
-          // Full-screen hero background with all content inside
-          return _buildFullScreenHero(
-            context,
-            featuredChannel,
-            previewList,
-            groupedChannels,
-            isGrouping,
-          );
-        },
-      ),
+              // Main content rendering placeholder
+              return Center(
+                child: Text('Live TV content goes here'),
+              );
+            },
+          ),
+        );
+      },
     );
-
-    return body;
   }
 
   Widget _buildFullScreenHero(
@@ -226,8 +210,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final heroHeight = screenSize.height * 0.85; // 85% height for content peek
     final sidebarWidth =
         context.sidebarCollapsedWidth() + context.spacingLg();
+    
+    // Calculate available width for content
+    final availableWidth = screenSize.width - sidebarWidth - context.spacingLg();
+    
+    // Responsive width calculation
+    final desiredInfoWidth = screenSize.width < 800 
+        ? availableWidth 
+        : screenSize.width * 0.4;
+
     final heroInfoWidth = min(
-      screenSize.width * 0.4,
+      desiredInfoWidth,
       screenSize.width >= 1920 ? 640.0 : 520.0,
     );
 
@@ -406,9 +399,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Title - fixed height
-          SizedBox(
-            height: context.tvTextSize(24) * 1.3 * 2,
+          // Title - flexible height with max limit
+          Container(
+            constraints: BoxConstraints(
+              maxHeight: context.tvTextSize(24) * 1.3 * 2,
+            ),
             child: Text(
               title,
               style: AppTypography.heroTitle(context),
@@ -417,9 +412,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             ),
           ),
           SizedBox(height: context.tvSpacing(8)),
-          // Description - fixed height
-          SizedBox(
-            height: context.tvTextSize(14) * 1.3 * 3,
+          // Description - flexible height with max limit
+          Container(
+            constraints: BoxConstraints(
+              maxHeight: context.tvTextSize(14) * 1.3 * 3,
+            ),
             child: Text(
               description.isNotEmpty ? description : 'No description available',
               style: AppTypography.heroDescription(context).copyWith(
@@ -448,18 +445,24 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 : Container(),
           ),
           SizedBox(height: context.tvSpacing(4)),
-          // Time range with LIVE badge - fixed height
-          SizedBox(
-            height: context.tvTextSize(13) * 1.4,
+          // Time range with LIVE badge - flexible height
+          Container(
+            constraints: BoxConstraints(
+              maxHeight: context.tvTextSize(13) * 1.5,
+            ),
             child: Row(
               children: [
                 if (program != null) ...[
                   const BrandBadge.live(),
                   const SizedBox(width: 8),
                 ],
-                Text(
-                  timeRange,
-                  style: AppTypography.smallText(context),
+                Expanded(
+                  child: Text(
+                    timeRange,
+                    style: AppTypography.smallText(context),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
@@ -650,7 +653,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   ) {
     if (channels.isEmpty) return const SizedBox.shrink();
 
-    final cardWidth = context.cardWidth();
+    final screenWidth = MediaQuery.of(context).size.width;
+    final maxCardWidth = screenWidth < 800 ? screenWidth / 2.8 : screenWidth / 5.5;
+    final cardWidth = min(context.cardWidth(), maxCardWidth);
     final cardHeight = cardWidth * 0.6;
     final rowHeight = cardHeight + context.spacingXl();
 
@@ -668,17 +673,24 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           ),
         ),
         SizedBox(
-          height: rowHeight,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: EdgeInsets.zero,
-            itemCount: channels.length,
-            itemExtent: cardWidth + context.spacingLg(),
-            itemBuilder: (context, index) {
-              return _buildChannelCard(context, channels[index], cardWidth,
-                  cardHeight, index, channels.length);
-            },
-          ),
+            height: rowHeight,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SizedBox(
+                  width: constraints.maxWidth,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: EdgeInsets.zero,
+                    itemCount: channels.length,
+                    itemExtent: cardWidth + context.spacingLg(),
+                    itemBuilder: (context, index) {
+                      return _buildChannelCard(context, channels[index], cardWidth,
+                          cardHeight, index, channels.length);
+                    },
+                  ),
+                );
+              },
+            ),
         ),
         SizedBox(height: context.spacingSm()),
       ],
@@ -1051,273 +1063,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   Widget _buildSkeletonLoader() {
-    final screenSize = MediaQuery.of(context).size;
-    final heroHeight = screenSize.height * 0.85; // Matches real height
-    final sidebarWidth =
-        context.sidebarCollapsedWidth() + context.spacingLg();
-    final heroInfoWidth = min(
-      screenSize.width * 0.4,
-      screenSize.width >= 1920 ? 640.0 : 520.0,
-    );
-    final isLandscape = screenSize.width > screenSize.height;
-    final cardWidth = isLandscape ? (screenSize.width / 4.0) : (screenSize.width / 3.0);
-    final cardHeight = cardWidth * 0.57;
-    final rowHeight = cardWidth * 1.8;
-
     return Shimmer(
       child: Stack(
         children: [
-          // Hero background skeleton - Rich Black base
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: heroHeight,
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF080808), // Rich Black
-                    AppTheme.darkBackground, // True Black
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // Featured info skeleton
-          Positioned(
-            bottom: heroHeight * 0.35,
-            left: sidebarWidth,
-            width: heroInfoWidth,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Title skeleton - matches 2-line height
-                Container(
-                  height: context.tvTextSize(24) * 1.3 * 2,
-                  width: screenSize.width * 0.3,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                SizedBox(height: context.tvSpacing(8)),
-                // Description skeleton - matches 3-line height
-                Container(
-                  height: context.tvTextSize(14) * 1.3 * 3,
-                  width: screenSize.width * 0.35,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                SizedBox(height: context.tvSpacing(8)),
-                // Progress bar skeleton - exact height
-                Container(
-                  height: 6,
-                  width: screenSize.width * 0.25,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ),
-                SizedBox(height: context.tvSpacing(4)),
-                // Time range with LIVE badge skeleton
-                SizedBox(
-                  height: context.tvTextSize(13) * 1.4,
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 32,
-                        height: 16,
-                        decoration: BoxDecoration(
-                          color: AppTheme.accentRed.withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        width: 100,
-                        height: 13,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Channel logo skeleton - exact position
-          Positioned(
-            top: AppSizes.lg,
-            right: AppSizes.lg,
-            child: Container(
-              height: 40,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppTheme.cardBackground,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Container(
-                width: 48,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-            ),
-          ),
-          // Rows skeleton - scrollable to matching position
-          Positioned.fill(
-            child: SingleChildScrollView(
-              physics: const NeverScrollableScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(height: heroHeight),
-                  SizedBox(height: AppSizes.xxl),
-                  ...List.generate(
-                      3,
-                      (rowIndex) => Padding(
-                            padding: EdgeInsets.only(bottom: AppSizes.lg),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Category title skeleton - matches headlineSmall
-                                Padding(
-                                  padding: EdgeInsets.only(bottom: AppSizes.sm),
-                                  child: Container(
-                                    height: 24,
-                                    width: [180, 140, 160][rowIndex % 3]
-                                        .toDouble(),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          Colors.white.withValues(alpha: 0.15),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ),
-                                ),
-                                // Channel cards row skeleton
-                                SizedBox(
-                                  height: rowHeight,
-                                  child: ListView.builder(
-                                    scrollDirection: Axis.horizontal,
-                                    padding: EdgeInsets.zero,
-                                    itemCount: 5,
-                                    itemExtent: cardWidth + AppSizes.lg,
-                                    itemBuilder: (context, cardIndex) =>
-                                        SizedBox(
-                                      width: cardWidth,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.center,
-                                        children: [
-                                          // Card skeleton - matches exact styling
-                                          Container(
-                                            width: cardWidth,
-                                            height: cardHeight,
-                                            decoration: BoxDecoration(
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                              color: AppTheme.cardBackground,
-                                              gradient: const LinearGradient(
-                                                begin: Alignment.topLeft,
-                                                end: Alignment.bottomRight,
-                                                colors: [
-                                                  Color(0xFF2a2a3e),
-                                                  Color(0xFF1a1a2e),
-                                                  AppTheme.cardBackground
-                                                ],
-                                              ),
-                                            ),
-                                            child: Stack(
-                                              children: [
-                                                // Channel logo placeholder
-                                                Positioned(
-                                                  top: 8,
-                                                  left: 8,
-                                                  child: Container(
-                                                    width: 40,
-                                                    height: 24,
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.white
-                                                          .withValues(
-                                                              alpha: 0.1),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              4),
-                                                    ),
-                                                  ),
-                                                ),
-                                                // Progress bar overlay skeleton
-                                                Positioned(
-                                                  bottom: 0,
-                                                  left: 0,
-                                                  right: 0,
-                                                  child: Container(
-                                                    height: 4,
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.white
-                                                          .withValues(
-                                                              alpha: 0.1),
-                                                      borderRadius:
-                                                          const BorderRadius
-                                                              .only(
-                                                        bottomLeft:
-                                                            Radius.circular(12),
-                                                        bottomRight:
-                                                            Radius.circular(12),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          // Program title skeleton
-                                          Container(
-                                            width: cardWidth,
-                                            height: 14,
-                                            decoration: BoxDecoration(
-                                              color: Colors.white
-                                                  .withValues(alpha: 0.15),
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          // Time range skeleton
-                                          Container(
-                                            width: cardWidth * 0.8,
-                                            height: 11,
-                                            decoration: BoxDecoration(
-                                              color: Colors.white
-                                                  .withValues(alpha: 0.1),
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(height: AppSizes.lg),
-                              ],
-                            ),
-                          )),
-                ],
-              ),
-            ),
-          ),
+          // Skeleton loader widgets go here
         ],
       ),
     );

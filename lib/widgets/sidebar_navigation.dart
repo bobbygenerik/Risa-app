@@ -232,14 +232,18 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                           size: 16,
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          tab.label,
-                          style: TextStyle(
-                            color: isActive
-                                ? AppTheme.primaryBlue
-                                : Colors.white70,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
+                        Flexible(
+                          child: Text(
+                            tab.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: isActive
+                                  ? AppTheme.primaryBlue
+                                  : Colors.white70,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
                       ],
@@ -340,14 +344,18 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                           size: 16,
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          tab.label,
-                          style: TextStyle(
-                            color: isActive
-                                ? AppTheme.primaryBlue
-                                : Colors.white70,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
+                        Flexible(
+                          child: Text(
+                            tab.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: isActive
+                                  ? AppTheme.primaryBlue
+                                  : Colors.white70,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
                       ],
@@ -492,14 +500,18 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
                                 : Colors.white70,
                             size: 16),
                         const SizedBox(width: 8),
-                        Text(
-                          label,
-                          style: TextStyle(
-                            color: isActive
-                                ? AppTheme.primaryBlue
-                                : Colors.white70,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
+                        Flexible(
+                          child: Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: isActive
+                                  ? AppTheme.primaryBlue
+                                  : Colors.white70,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
                       ],
