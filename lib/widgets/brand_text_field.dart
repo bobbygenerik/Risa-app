@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:iptv_player/utils/app_theme.dart';
-import 'package:iptv_player/utils/no_text_selection_controls.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 
 /// Standard text field widget for consistent styling across the app

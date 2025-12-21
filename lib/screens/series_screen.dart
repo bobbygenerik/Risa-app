@@ -9,7 +9,6 @@ import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/go_to_settings_button.dart';
-import 'package:iptv_player/widgets/shimmer.dart';
 import 'package:iptv_player/widgets/hero_info_box.dart';
 import 'package:iptv_player/widgets/brand_badge.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
@@ -22,6 +21,7 @@ import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/widgets/vod_card_image.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:iptv_player/utils/app_icons.dart';
+import 'package:iptv_player/utils/app_typography.dart';
 
 class SeriesScreen extends StatefulWidget {
   const SeriesScreen({super.key});

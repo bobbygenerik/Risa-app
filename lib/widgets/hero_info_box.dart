@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/app_typography.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
-import 'package:iptv_player/widgets/brand_badge.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/widgets/cached_image.dart';
 
@@ -43,11 +42,11 @@ class HeroInfoBox extends StatelessWidget {
           // Channel/Brand Identifier if provided
           if (channelLogoUrl != null) ...[
             Container(
-              height: context.tvSpacing(32),
+              height: context.spacingLg(),
               margin: EdgeInsets.only(bottom: context.spacingMd()),
               child: CachedChannelLogo(
                 logoUrl: channelLogoUrl!,
-                size: context.tvSpacing(32),
+                size: context.spacingLg(),
                 fallbackIcon: Icons.tv,
               ),
             ),
@@ -122,48 +121,6 @@ class HeroInfoBox extends StatelessWidget {
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-class BrandSecondaryButton extends StatelessWidget {
-  final VoidCallback onPressed;
-  final String label;
-  final IconData? icon;
-
-  const BrandSecondaryButton({
-    super.key,
-    required this.onPressed,
-    required this.label,
-    this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Focus(
-      child: Builder(
-        builder: (context) {
-          final isFocused = Focus.of(context).hasFocus;
-          return TextButton.icon(
-            onPressed: onPressed,
-            icon: icon != null ? Icon(icon, size: 20) : const SizedBox.shrink(),
-            label: Text(label),
-            style: TextButton.styleFrom(
-              backgroundColor: isFocused 
-                  ? Colors.white.withValues(alpha: 0.2) 
-                  : Colors.white.withValues(alpha: 0.1),
-              foregroundColor: Colors.white,
-              padding: context.buttonPaddingInsets,
-              shape: RoundedRectangleBorder(
-                borderRadius: context.buttonRadius,
-                side: isFocused 
-                    ? BorderSide(color: Colors.white, width: 2) 
-                    : BorderSide.none,
-              ),
-            ),
-          );
-        }
       ),
     );
   }

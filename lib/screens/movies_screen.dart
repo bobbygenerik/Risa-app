@@ -18,7 +18,7 @@ import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/widgets/vod_card_image.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:iptv_player/utils/app_icons.dart';
-import 'package:iptv_player/widgets/shimmer.dart';
+import 'package:iptv_player/utils/app_typography.dart';
 import 'package:iptv_player/widgets/hero_info_box.dart';
 import 'package:iptv_player/widgets/brand_badge.dart';
 

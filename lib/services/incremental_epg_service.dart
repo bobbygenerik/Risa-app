@@ -8,6 +8,10 @@ import 'package:iptv_player/models/program.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 
+class IncrementalEpgService extends ChangeNotifier {
+  final Set<String> _availableChannels = {};
+  final Set<String> _loadedChannels = {};
+  final Map<String, String> _internalToEpgIdMapping = {};
   Map<String, String>? _normalizedAvailableChannels; // normalizedId -> originalId
   bool _isLoading = false;
   bool _isDownloading = false;
@@ -25,6 +29,8 @@ import 'package:path_provider/path_provider.dart';
   static const Duration _cacheDuration = Duration(hours: 6);
 
   bool get isLoading => _isLoading;
+  bool get isDownloading => _isDownloading;
+  bool get isParsing => _isParsing;
   String? get error => _error;
   Set<String> get availableChannels => _availableChannels;
   int get loadedChannelCount => _loadedChannels.length;
@@ -79,6 +85,8 @@ import 'package:path_provider/path_provider.dart';
       return;
     }
 
+    _isDownloading = true;
+    notifyListeners();
     debugLog('EPG: Starting EPG download from $_epgUrl...');
     final client = HttpClient()
       ..connectionTimeout = const Duration(seconds: 30)
@@ -116,6 +124,8 @@ import 'package:path_provider/path_provider.dart';
     }
     finally {
       client.close();
+      _isDownloading = false;
+      notifyListeners();
     }
   }
 
@@ -314,41 +324,6 @@ import 'package:path_provider/path_provider.dart';
     }
     debugLog('EPG: Could not find matching EPG ID for channelId="$channelId", name="$channelName"');
     return null;
-  }
-
-  DateTime _parseEpgTime(String timeStr) {
-    try {
-      // Standard format: YYYYMMDDhhmmss +0000
-      // Example: 20231027120000 +0200
-      if (timeStr.length < 14) {
-        throw FormatException("Time string too short");
-      }
-      final mainPart = timeStr.substring(0, 14);
-      
-      final year = int.parse(mainPart.substring(0, 4));
-      final month = int.parse(mainPart.substring(4, 6));
-      final day = int.parse(mainPart.substring(6, 8));
-      final hour = int.parse(mainPart.substring(8, 10));
-      final minute = int.parse(mainPart.substring(10, 12));
-      final second = int.parse(mainPart.substring(12, 14));
-      
-      DateTime utcTime = DateTime.utc(year, month, day, hour, minute, second);
-      
-      if (timeStr.length > 14) {
-        final offsetStr = timeStr.substring(15);
-        if (offsetStr.length >= 5) {
-          final sign = offsetStr.startsWith('+') ? 1 : -1;
-          final offsetHours = int.parse(offsetStr.substring(1, 3));
-          final offsetMins = int.parse(offsetStr.substring(3, 5));
-          utcTime = utcTime.subtract(Duration(hours: sign * offsetHours, minutes: sign * offsetMins));
-        }
-      }
-      
-      return utcTime.toLocal();
-    } catch (e) {
-      debugLog('Error parsing EPG time "$timeStr": $e');
-      return DateTime.now();
-    }
   }
 
   List<Program> getProgramsForChannel(String channelId, {String? channelName}) {

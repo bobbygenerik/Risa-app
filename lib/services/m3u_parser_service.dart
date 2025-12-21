@@ -235,8 +235,6 @@ class M3UParserService {
   RegExpMatch? _lastUrlMatch(String line) {
     RegExpMatch? lastMatch;
     for (final match in _urlRegex.allMatches(line)) {
-      final url = match.group(0) ?? '';
-      
       // SKIP if this URL appears to be an attribute value (e.g., tvg-logo="http://...")
       // We look for a quote or equals sign immediately preceding the match
       if (match.start > 0) {
@@ -311,7 +309,7 @@ class M3UParserService {
 
       // Log every 100th line for progress tracking
       if (logicalIndex % 100 == 0) {
-        debugLog('M3UParser: (stream) Processing line ${logicalIndex}: $line');
+        debugLog('M3UParser: (stream) Processing line $logicalIndex: $line');
       }
 
       void processExtinfSegment(String segment) {
@@ -325,8 +323,11 @@ class M3UParserService {
         }
         currentAttributes = _parseAttributes(currentInfo!);
         if (channelCount < 3) {
+          final preview = currentInfo!.length > 100
+              ? '${currentInfo!.substring(0, 100)}...'
+              : currentInfo!;
           debugLog(
-            'M3UParser: (stream) Found EXTINF: ${currentInfo!.length > 100 ? '${currentInfo!.substring(0, 100)}...' : currentInfo}',
+            'M3UParser: (stream) Found EXTINF: $preview',
           );
         }
         if (urlMatch != null) {
