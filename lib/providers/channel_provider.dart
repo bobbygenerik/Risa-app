@@ -1576,6 +1576,57 @@ class ChannelProvider with ChangeNotifier {
               }
             }
           }
+            // If still not accepted, and we have Xtream credentials, try probing
+            // same-host candidates with username/password appended (some providers
+            // require auth parameters on the XMLTV endpoint).
+            if (accepted == null) {
+              try {
+                final prefs2 = await SharedPreferences.getInstance();
+                final xtUser = prefs2.getString('xtream_username') ?? prefs2.getString('xtream_user') ?? username;
+                final xtPass = prefs2.getString('xtream_password') ?? prefs2.getString('xtream_pass') ?? password;
+                if ((xtUser != null && xtUser.isNotEmpty) && (xtPass != null && xtPass.isNotEmpty)) {
+                  debugLog('ChannelProvider: Attempting credentialed probes using Xtream creds');
+                  final baseUri = Uri.parse(serverUrl);
+                  for (final candidate in epgUrls) {
+                    try {
+                      final uri = Uri.parse(candidate);
+                      if (uri.host == baseUri.host) {
+                        final newQuery = StringBuffer();
+                        if (uri.query != null && uri.query.isNotEmpty) {
+                          newQuery.write(uri.query);
+                          newQuery.write('&');
+                        }
+                        newQuery.write('username=${Uri.encodeComponent(xtUser)}&password=${Uri.encodeComponent(xtPass)}');
+                        final credUri = uri.replace(query: newQuery.toString()).toString();
+                        debugLog('ChannelProvider: Probing credentialed URL: $credUri');
+                        final req = http.Request('GET', Uri.parse(credUri));
+                        req.headers.addAll({
+                          'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
+                          'Accept': '*/*',
+                        });
+                        final streamed = await client.send(req).timeout(const Duration(seconds: 15));
+                        if (streamed.statusCode == 200) {
+                          final preview = <int>[];
+                          await for (final chunk in streamed.stream) {
+                            preview.addAll(chunk);
+                            if (preview.length >= 4096) break;
+                          }
+                          final textPreview = utf8.decode(preview, allowMalformed: true).trimLeft();
+                          if (textPreview.startsWith('<?xml') || textPreview.startsWith('<tv') || streamed.headers['content-type']?.contains('xml') == true) {
+                            accepted = credUri;
+                            break;
+                          }
+                        }
+                      }
+                    } catch (e) {
+                      debugLog('ChannelProvider: Credentialed probe failed: $e');
+                    }
+                  }
+                }
+              } catch (e) {
+                debugLog('ChannelProvider: Error during credentialed probes: $e');
+              }
+            }
 
           // If we found per-stream epg ids, map them into channel maps by matching stream id or name
           if (streamIdToEpgId.isNotEmpty && _channelMaps.isNotEmpty) {
