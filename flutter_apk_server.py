@@ -62,7 +62,7 @@ class FlutterAPKServerHandler(SimpleHTTPRequestHandler):
             <body>
                 <div class="container">
                     <h1>🚀 Flutter APK Download Server</h1>
-                    <div class="status">Server running on port 8080</div>
+                    <div class="status">Server running on port 7575</div>
                     
                     <div class="build-info">
                         <strong>Build Directory:</strong> build/app/outputs/flutter-apk/<br>
@@ -109,7 +109,7 @@ class FlutterAPKServerHandler(SimpleHTTPRequestHandler):
                     </div>
                     
                     <p style="text-align: center; margin-top: 30px; color: #7f8c8d;">
-                        <small>Flutter APK Server | Port 8080 | Build Output Directory</small>
+                        <small>Flutter APK Server | Port 7575 | Build Output Directory</small>
                     </p>
                 </div>
             </body>
@@ -126,7 +126,7 @@ class FlutterAPKServerHandler(SimpleHTTPRequestHandler):
         print(f"[{self.log_date_time_string()}] [APK Server] {self.address_string()} - {format % args}")
 
 def main():
-    port = 8080
+    port = 7575
     
     # Check if APK directory exists
     apk_dir = Path("/home/devuser/repos/Risa-app/build/app/outputs/flutter-apk")

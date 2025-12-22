@@ -254,29 +254,51 @@ class IncrementalEpgService extends ChangeNotifier {
     final channelIds = <String>{};
     final normalizedChannels = <String, String>{};
     
-    // Use lenient decoder for Latin-1/Windows-1252 support often found in EPGs
-    // Fallback to UTF-8 if possible, but allowMalformed helps.
-    final stream = file.openRead()
-        .transform(utf8.decoder);
-    
-    // Use XmlEventDecoder to stream events
-    final events = stream.toXmlEvents().withParentEvents();
-    
-    // Select subtrees for <programme> and <channel> elements
-    // This parses only one element at a time, keeping memory usage low
-    final elements = events.selectSubtreeEvents((event) => event.name == 'programme' || event.name == 'channel');
-    
-    await for (final subtreeEvents in elements) {
-      if (subtreeEvents.isEmpty) continue;
-      
-      final startEvent = subtreeEvents.first;
-      if (startEvent is! XmlStartElementEvent) continue;
-      
-      if (startEvent.name == 'programme') {
-        _processProgramme(subtreeEvents, programsByChannel);
-      } else if (startEvent.name == 'channel') {
-        _processChannel(subtreeEvents, channelIds, normalizedChannels);
+    // Try parsing using UTF-8 but allow malformed sequences (many EPGs
+    // contain stray bytes). If that fails with a FormatException from the
+    // XML parser, retry with Latin1 which is more permissive for single-byte
+    // encodings commonly found in XMLTV feeds.
+    Stream<List<int>> rawStreamProvider() => file.openRead();
+
+    Future<void> runParseWithDecoder(StreamTransformer<List<int>, String> decoder) async {
+      final charStream = rawStreamProvider().transform(decoder);
+      final events = charStream.toXmlEvents().withParentEvents();
+      final elements = events.selectSubtreeEvents((event) => event.name == 'programme' || event.name == 'channel');
+
+      await for (final subtreeEvents in elements) {
+        if (subtreeEvents.isEmpty) continue;
+        final startEvent = subtreeEvents.first;
+        if (startEvent is! XmlStartElementEvent) continue;
+
+        if (startEvent.name == 'programme') {
+          _processProgramme(subtreeEvents, programsByChannel);
+        } else if (startEvent.name == 'channel') {
+          _processChannel(subtreeEvents, channelIds, normalizedChannels);
+        }
       }
+    }
+
+    try {
+      // First attempt: UTF-8 but be lenient about malformed sequences
+      await runParseWithDecoder(const Utf8Decoder(allowMalformed: true));
+    } on FormatException catch (e) {
+      debugLog('EPG: UTF-8 parse failed (will retry with Latin1): $e');
+      // Clear any partial results and retry with latin1
+      programsByChannel.clear();
+      channelIds.clear();
+      normalizedChannels.clear();
+
+      try {
+        await runParseWithDecoder(latin1.decoder);
+      } catch (e2, s2) {
+        debugLog('EPG: Latin1 retry also failed: $e2');
+        debugLog(s2.toString());
+        // Re-throw the original to preserve context for callers
+        throw FormatException('EPG parsing failed after UTF8 and Latin1 attempts: $e2');
+      }
+    } catch (e) {
+      // Pass through any other failures
+      rethrow;
     }
 
     // Sort programs

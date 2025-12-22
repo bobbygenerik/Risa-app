@@ -107,10 +107,11 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
     // Load M3U playlists
     final m3uUrls = prefs.getStringList('saved_m3u_playlists') ?? [];
     for (String url in m3uUrls) {
-      final name = prefs.getString('m3u_playlist_name_$url') ?? 'M3U Playlist';
-      final epgUrl = prefs.getString('m3u_epg_url_$url') ?? '';
-      final secondaryEpg = prefs.getString('m3u_secondary_epg_$url') ?? '';
-      final updateFreq = prefs.getInt('m3u_update_freq_$url') ?? 6;
+      final enc = base64Url.encode(utf8.encode(url));
+      final name = prefs.getString('m3u_playlist_name_$enc') ?? prefs.getString('m3u_playlist_name_$url') ?? 'M3U Playlist';
+      final epgUrl = prefs.getString('m3u_epg_url_$enc') ?? prefs.getString('m3u_epg_url_$url') ?? '';
+      final secondaryEpg = prefs.getString('m3u_secondary_epg_$enc') ?? prefs.getString('m3u_secondary_epg_$url') ?? '';
+      final updateFreq = prefs.getInt('m3u_update_freq_$enc') ?? prefs.getInt('m3u_update_freq_$url') ?? 6;
 
       savedPlaylists.add(PlaylistInfo(
         id: url.hashCode.toString(),
@@ -126,14 +127,13 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
     // Load Xtream playlists
     final xtreamServers = prefs.getStringList('saved_xtream_servers') ?? [];
     for (String server in xtreamServers) {
-      final username = prefs.getString('xtream_username_$server') ?? '';
-      final password = prefs.getString('xtream_password_$server') ?? '';
-      final name =
-          prefs.getString('xtream_playlist_name_$server') ?? 'Xtream Playlist';
-      final epgUrl = prefs.getString('xtream_epg_url_$server') ?? '';
-      final secondaryEpg =
-          prefs.getString('xtream_secondary_epg_$server') ?? '';
-      final updateFreq = prefs.getInt('xtream_update_freq_$server') ?? 6;
+      final enc = base64Url.encode(utf8.encode(server));
+      final username = prefs.getString('xtream_username_$enc') ?? prefs.getString('xtream_username_$server') ?? '';
+      final password = prefs.getString('xtream_password_$enc') ?? prefs.getString('xtream_password_$server') ?? '';
+      final name = prefs.getString('xtream_playlist_name_$enc') ?? prefs.getString('xtream_playlist_name_$server') ?? 'Xtream Playlist';
+      final epgUrl = prefs.getString('xtream_epg_url_$enc') ?? prefs.getString('xtream_epg_url_$server') ?? '';
+      final secondaryEpg = prefs.getString('xtream_secondary_epg_$enc') ?? prefs.getString('xtream_secondary_epg_$server') ?? '';
+      final updateFreq = prefs.getInt('xtream_update_freq_$enc') ?? prefs.getInt('xtream_update_freq_$server') ?? 6;
 
       savedPlaylists.add(PlaylistInfo(
         id: server.hashCode.toString(),
@@ -564,10 +564,13 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
     final newFreq = (playlist.updateFrequency + delta).clamp(1, 24);
     if (newFreq != playlist.updateFrequency) {
       final prefs = await SharedPreferences.getInstance();
+      final enc = base64Url.encode(utf8.encode(playlist.url));
       if (playlist.type == 'm3u') {
-        await prefs.setInt('m3u_update_freq_${playlist.url}', newFreq);
+        await prefs.setInt('m3u_update_freq_$enc', newFreq);
+        await prefs.remove('m3u_update_freq_${playlist.url}');
       } else {
-        await prefs.setInt('xtream_update_freq_${playlist.url}', newFreq);
+        await prefs.setInt('xtream_update_freq_$enc', newFreq);
+        await prefs.remove('xtream_update_freq_${playlist.url}');
       }
 
       setState(() {
@@ -626,6 +629,7 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
       ),
     );
 
+
     if (confirmed == true) {
       final prefs = await SharedPreferences.getInstance();
 
@@ -633,6 +637,12 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
         final savedM3u = prefs.getStringList('saved_m3u_playlists') ?? [];
         savedM3u.remove(playlist.url);
         await prefs.setStringList('saved_m3u_playlists', savedM3u);
+        final enc = base64Url.encode(utf8.encode(playlist.url));
+        await prefs.remove('m3u_playlist_name_$enc');
+        await prefs.remove('m3u_epg_url_$enc');
+        await prefs.remove('m3u_secondary_epg_$enc');
+        await prefs.remove('m3u_update_freq_$enc');
+        // legacy keys cleanup
         await prefs.remove('m3u_playlist_name_${playlist.url}');
         await prefs.remove('m3u_epg_url_${playlist.url}');
         await prefs.remove('m3u_secondary_epg_${playlist.url}');
@@ -641,6 +651,14 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
         final savedXtream = prefs.getStringList('saved_xtream_servers') ?? [];
         savedXtream.remove(playlist.url);
         await prefs.setStringList('saved_xtream_servers', savedXtream);
+        final enc = base64Url.encode(utf8.encode(playlist.url));
+        await prefs.remove('xtream_playlist_name_$enc');
+        await prefs.remove('xtream_epg_url_$enc');
+        await prefs.remove('xtream_secondary_epg_$enc');
+        await prefs.remove('xtream_update_freq_$enc');
+        await prefs.remove('xtream_username_$enc');
+        await prefs.remove('xtream_password_$enc');
+        // legacy keys cleanup
         await prefs.remove('xtream_playlist_name_${playlist.url}');
         await prefs.remove('xtream_epg_url_${playlist.url}');
         await prefs.remove('xtream_secondary_epg_${playlist.url}');
@@ -868,12 +886,13 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
   // Save methods
   Future<void> _savePlaylistName(PlaylistInfo playlist) async {
     final prefs = await SharedPreferences.getInstance();
+    final enc = base64Url.encode(utf8.encode(playlist.url));
     if (playlist.type == 'm3u') {
-      await prefs.setString(
-          'm3u_playlist_name_${playlist.url}', _playlistNameController.text);
+      await prefs.setString('m3u_playlist_name_$enc', _playlistNameController.text);
+      await prefs.remove('m3u_playlist_name_${playlist.url}');
     } else {
-      await prefs.setString(
-          'xtream_playlist_name_${playlist.url}', _playlistNameController.text);
+      await prefs.setString('xtream_playlist_name_$enc', _playlistNameController.text);
+      await prefs.remove('xtream_playlist_name_${playlist.url}');
     }
 
     if (mounted) {
@@ -891,10 +910,12 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
     final newUrl = _playlistUrlController.text;
 
     if (playlist.type == 'm3u') {
-      await prefs.setString('m3u_playlist_url_$newUrl', newUrl);
+      final enc = base64Url.encode(utf8.encode(newUrl));
+      await prefs.setString('m3u_playlist_url_$enc', newUrl);
       await prefs.remove('m3u_playlist_url_${playlist.url}');
     } else {
-      await prefs.setString('xtream_playlist_url_$newUrl', newUrl);
+      final enc = base64Url.encode(utf8.encode(newUrl));
+      await prefs.setString('xtream_playlist_url_$enc', newUrl);
       await prefs.remove('xtream_playlist_url_${playlist.url}');
     }
 
@@ -912,10 +933,13 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
     final prefs = await SharedPreferences.getInstance();
     final epgUrl = _epgUrlController.text;
 
+    final enc = base64Url.encode(utf8.encode(playlist.url));
     if (playlist.type == 'm3u') {
-      await prefs.setString('m3u_epg_url_${playlist.url}', epgUrl);
+      await prefs.setString('m3u_epg_url_$enc', epgUrl);
+      await prefs.remove('m3u_epg_url_${playlist.url}');
     } else {
-      await prefs.setString('xtream_epg_url_${playlist.url}', epgUrl);
+      await prefs.setString('xtream_epg_url_$enc', epgUrl);
+      await prefs.remove('xtream_epg_url_${playlist.url}');
     }
 
     if (mounted) {
@@ -932,12 +956,13 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
     final prefs = await SharedPreferences.getInstance();
     final secondaryEpgUrl = _secondaryEpgUrlController.text;
 
+    final enc = base64Url.encode(utf8.encode(playlist.url));
     if (playlist.type == 'm3u') {
-      await prefs.setString(
-          'm3u_secondary_epg_${playlist.url}', secondaryEpgUrl);
+      await prefs.setString('m3u_secondary_epg_$enc', secondaryEpgUrl);
+      await prefs.remove('m3u_secondary_epg_${playlist.url}');
     } else {
-      await prefs.setString(
-          'xtream_secondary_epg_${playlist.url}', secondaryEpgUrl);
+      await prefs.setString('xtream_secondary_epg_$enc', secondaryEpgUrl);
+      await prefs.remove('xtream_secondary_epg_${playlist.url}');
     }
 
     if (mounted) {
@@ -955,18 +980,23 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
       _showMessage('Please fill in all fields');
       return;
     }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedM3u = prefs.getStringList('saved_m3u_playlists') ?? [];
+      if (!savedM3u.contains(url)) savedM3u.add(url);
+      await prefs.setStringList('saved_m3u_playlists', savedM3u);
+      final enc = base64Url.encode(utf8.encode(url));
+      await prefs.setString('m3u_playlist_name_$enc', name);
+      await prefs.setInt('m3u_update_freq_$enc', 6);
 
-    final prefs = await SharedPreferences.getInstance();
-    final savedM3u = prefs.getStringList('saved_m3u_playlists') ?? [];
-    savedM3u.add(url);
-    await prefs.setStringList('saved_m3u_playlists', savedM3u);
-    await prefs.setString('m3u_playlist_name_$url', name);
-    await prefs.setInt('m3u_update_freq_$url', 6);
-
-    if (mounted) {
-      Navigator.of(context).pop();
-      await _loadSavedPlaylists();
-      _showMessage('M3U playlist added successfully');
+      if (mounted) {
+        Navigator.of(context).pop();
+        await _loadSavedPlaylists();
+        _showMessage('M3U playlist added successfully');
+      }
+    } catch (e, st) {
+      debugPrint('Failed to add M3U playlist: $e\n$st');
+      _showMessage('Failed to add playlist');
     }
   }
 
@@ -979,20 +1009,25 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
       _showMessage('Please fill in all fields');
       return;
     }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedXtream = prefs.getStringList('saved_xtream_servers') ?? [];
+      if (!savedXtream.contains(server)) savedXtream.add(server);
+      await prefs.setStringList('saved_xtream_servers', savedXtream);
+      final enc = base64Url.encode(utf8.encode(server));
+      await prefs.setString('xtream_playlist_name_$enc', name);
+      await prefs.setString('xtream_username_$enc', username);
+      await prefs.setString('xtream_password_$enc', password);
+      await prefs.setInt('xtream_update_freq_$enc', 6);
 
-    final prefs = await SharedPreferences.getInstance();
-    final savedXtream = prefs.getStringList('saved_xtream_servers') ?? [];
-    savedXtream.add(server);
-    await prefs.setStringList('saved_xtream_servers', savedXtream);
-    await prefs.setString('xtream_playlist_name_$server', name);
-    await prefs.setString('xtream_username_$server', username);
-    await prefs.setString('xtream_password_$server', password);
-    await prefs.setInt('xtream_update_freq_$server', 6);
-
-    if (mounted) {
-      Navigator.of(context).pop();
-      await _loadSavedPlaylists();
-      _showMessage('Xtream playlist added successfully');
+      if (mounted) {
+        Navigator.of(context).pop();
+        await _loadSavedPlaylists();
+        _showMessage('Xtream playlist added successfully');
+      }
+    } catch (e, st) {
+      debugPrint('Failed to add Xtream playlist: $e\n$st');
+      _showMessage('Failed to add playlist');
     }
   }
 

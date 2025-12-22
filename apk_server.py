@@ -72,7 +72,7 @@ class APKServerHandler(SimpleHTTPRequestHandler):
             
             html_content += """
                 </div>
-                <p><small>Server running on port 8000</small></p>
+                <p><small>Server running on port 7575</small></p>
             </body>
             </html>
             """
@@ -87,7 +87,7 @@ class APKServerHandler(SimpleHTTPRequestHandler):
         print(f"[APK Server] {self.address_string()} - {format % args}")
 
 def main():
-    port = 8000
+    port = 7575
     
     # Check if apk_downloads directory exists
     apk_dir = Path("/home/devuser/repos/Risa-app/apk_downloads")

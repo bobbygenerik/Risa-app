@@ -146,6 +146,66 @@ class XtreamCodesService {
     }
   }
 
+  /// Fetch live (TV) categories if the provider supports it
+  Future<List<Map<String, dynamic>>> getLiveCategories() async {
+    try {
+      final url = '$_apiBase?username=$username&password=$password&action=get_live_categories';
+      final response = await _makeRequest(url);
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map((e) => e as Map<String, dynamic>).toList();
+      }
+      return [];
+    } catch (e) {
+      debugLog('XtreamCodes: Error fetching live categories: $e');
+      return [];
+    }
+  }
+
+  /// Fetch live streams for a specific category
+  Future<List<Map<String, dynamic>>> getLiveStreams(String categoryId) async {
+    try {
+      final url = '$_apiBase?username=$username&password=$password&action=get_live_streams&category_id=$categoryId';
+      final response = await _makeRequest(url);
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map((e) => e as Map<String, dynamic>).toList();
+      }
+      return [];
+    } catch (e) {
+      debugLog('XtreamCodes: Error fetching live streams for $categoryId: $e');
+      return [];
+    }
+  }
+
+  /// Fetch all live streams across categories (best-effort)
+  Future<List<Map<String, dynamic>>> getAllLiveStreams() async {
+    try {
+      final categories = await getLiveCategories();
+      final List<Map<String, dynamic>> all = [];
+      if (categories.isEmpty) {
+        // Some providers may return streams without categories via get_live_streams with no category
+        final url = '$_apiBase?username=$username&password=$password&action=get_live_streams';
+        final response = await _makeRequest(url);
+        if (response.statusCode == 200) {
+          final List<dynamic> data = json.decode(response.body);
+          return data.map((e) => e as Map<String, dynamic>).toList();
+        }
+        return [];
+      }
+
+      for (final c in categories) {
+        final id = (c['category_id'] ?? c['id'] ?? c['category_id']).toString();
+        final streams = await getLiveStreams(id);
+        all.addAll(streams);
+      }
+      return all;
+    } catch (e) {
+      debugLog('XtreamCodes: Error fetching all live streams: $e');
+      return [];
+    }
+  }
+
   /// Fetch series from a specific category
   Future<List<Content>> getSeriesByCategory(String categoryId, {String? categoryName}) async {
     try {

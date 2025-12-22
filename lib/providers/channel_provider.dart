@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:iptv_player/utils/startup_probe.dart';
@@ -21,6 +22,7 @@ import 'package:http/io_client.dart';
 import 'content_provider.dart';
 import '../services/tmdb_enrichment_service.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
+import 'package:iptv_player/utils/snackbar_helper.dart';
 
 /// Isolate function to extract unique category names only (fast)
 /// Preserves the order categories first appear in the playlist
@@ -1117,6 +1119,13 @@ class ChannelProvider with ChangeNotifier {
       if (epgUrl != null && epgUrl.isNotEmpty) {
         debugLog('ChannelProvider: Found EPG URL: $epgUrl (auto-saving)');
         await prefs.setString('custom_epg_url', epgUrl);
+          try {
+                final enc = base64Url.encode(utf8.encode(url));
+                await prefs.setString('m3u_epg_url_$enc', epgUrl);
+                await prefs.remove('m3u_epg_url_$url');
+              } catch (_) {
+          // ignore per-playlist save errors
+        }
         try {
           await _epgService?.initialize(forceRefresh: true);
           debugLog('ChannelProvider: EPG initialized (auto-save). Available channels: ${_epgService?.availableChannels.length}, Error: ${_epgService?.error}');
@@ -1368,6 +1377,206 @@ class ChannelProvider with ChangeNotifier {
       debugLog(
         'ChannelProvider: Loaded ${xtreamMovies.length} movies, ${xtreamSeries.length} series from Xtream API',
       );
+
+      // Probe Xtream live streams for EPG information (best-effort)
+      try {
+        final liveStreams = await xtreamService.getAllLiveStreams();
+        if (liveStreams.isNotEmpty) {
+          debugLog('ChannelProvider: Retrieved ${liveStreams.length} live streams from Xtream API for EPG probing');
+
+          // Collect potential EPG URL candidates and per-stream EPG IDs
+          final Set<String> epgUrls = {};
+          final Map<String, String> streamIdToEpgId = {}; // keyed by stream_id or name
+
+          for (final s in liveStreams) {
+            // Common fields: 'epg', 'stream_epg', 'epg_channel_id', 'stream_id', 'name'
+            final epgCandidate = (s['epg'] ?? s['stream_epg'] ?? s['epg_channel_id'] ?? s['epg_url'])?.toString();
+            if (epgCandidate != null && epgCandidate.isNotEmpty) {
+              // If it looks like a URL, add to epgUrls; otherwise keep as epg id
+              if (epgCandidate.startsWith('http')) {
+                epgUrls.add(epgCandidate);
+              } else if (epgCandidate.startsWith('/') || epgCandidate.contains('xmltv') || epgCandidate.contains('.php')) {
+                // Relative or server-provided path - resolve against Xtream server URL
+                try {
+                  final resolved = '${serverUrl.replaceAll(RegExp(r'\/$'), '')}/${epgCandidate.replaceAll(RegExp(r'^\/+'), '')}';
+                  epgUrls.add(resolved);
+                } catch (_) {
+                  // ignore resolution errors
+                }
+              } else {
+                final key = (s['stream_id'] ?? s['name'] ?? '').toString();
+                if (key.isNotEmpty) streamIdToEpgId[key] = epgCandidate;
+              }
+            }
+            // Also check for explicit epg_channel_id
+            final epgId = (s['epg_channel_id'] ?? s['epg_id'])?.toString();
+            if (epgId != null && epgId.isNotEmpty) {
+              final key = (s['stream_id'] ?? s['name'] ?? '').toString();
+              if (key.isNotEmpty) streamIdToEpgId[key] = epgId;
+            }
+          }
+
+          final prefs = await SharedPreferences.getInstance();
+
+          // If we found a URL candidate, probe it (short GET) and auto-save it as custom_epg_url and per-playlist key
+          if (epgUrls.isNotEmpty) {
+            String? accepted;
+            final client = http.Client();
+            for (final candidate in epgUrls) {
+              try {
+                final req = http.Request('GET', Uri.parse(candidate));
+                req.headers.addAll({
+                  'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
+                  'Accept': '*/*',
+                });
+                final streamed = await client.send(req).timeout(const Duration(seconds: 15));
+                if (streamed.statusCode == 200) {
+                  // Read a small preview (first ~4KB) to validate it's XML-like
+                  final preview = <int>[];
+                  await for (final chunk in streamed.stream) {
+                    preview.addAll(chunk);
+                    if (preview.length >= 4096) break;
+                  }
+                  final textPreview = utf8.decode(preview, allowMalformed: true).trimLeft();
+                  if (textPreview.startsWith('<?xml') || textPreview.startsWith('<tv') || streamed.headers['content-type']?.contains('xml') == true) {
+                    accepted = candidate;
+                    break;
+                  }
+                }
+              } catch (_) {
+                // ignore probe failures for this candidate
+              }
+            }
+            client.close();
+
+            // If probe failed, optionally retry using a proxy configured in prefs
+            if (accepted == null) {
+              try {
+                final proxySetting = prefs.getString('epg_probe_proxy');
+                if (proxySetting != null && proxySetting.isNotEmpty) {
+                  debugLog('ChannelProvider: Retrying EPG probes via proxy: $proxySetting');
+                  Uri? proxyUri;
+                  try {
+                    proxyUri = Uri.parse(proxySetting);
+                  } catch (_) {
+                    // allow simple host:port format
+                    final parts = proxySetting.split(':');
+                    if (parts.length == 2) {
+                      proxyUri = Uri(scheme: 'http', host: parts[0], port: int.tryParse(parts[1]) ?? 0);
+                    }
+                  }
+
+                  if (proxyUri != null && proxyUri.host.isNotEmpty && proxyUri.port != 0) {
+                    final ioClient = HttpClient();
+                    try {
+                      ioClient.findProxy = (uri) => 'PROXY ${proxyUri!.host}:${proxyUri.port}';
+                    } catch (e) {
+                      debugLog('ChannelProvider: Could not set proxy on HttpClient: $e');
+                    }
+                    final proxiedClient = IOClient(ioClient);
+                    try {
+                      for (final candidate in epgUrls) {
+                        try {
+                          final req = http.Request('GET', Uri.parse(candidate));
+                          req.headers.addAll({
+                            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
+                            'Accept': '*/*',
+                          });
+                          final streamed = await proxiedClient.send(req).timeout(const Duration(seconds: 25));
+                          if (streamed.statusCode == 200) {
+                            final preview = <int>[];
+                            await for (final chunk in streamed.stream) {
+                              preview.addAll(chunk);
+                              if (preview.length >= 4096) break;
+                            }
+                            final textPreview = utf8.decode(preview, allowMalformed: true).trimLeft();
+                            if (textPreview.startsWith('<?xml') || textPreview.startsWith('<tv') || streamed.headers['content-type']?.contains('xml') == true) {
+                              accepted = candidate;
+                              break;
+                            }
+                          }
+                        } catch (_) {
+                          // ignore individual candidate failures
+                        }
+                      }
+                    } finally {
+                      proxiedClient.close();
+                      try {
+                        ioClient.close(force: true);
+                      } catch (_) {}
+                    }
+                  }
+                }
+              } catch (e) {
+                debugLog('ChannelProvider: Proxy fallback failed: $e');
+              }
+            }
+
+            if (accepted != null) {
+              // Show a UI hint that EPG was auto-detected
+              try {
+                final display = accepted.length > 80 ? '${accepted.substring(0, 80)}...' : accepted;
+                rootScaffoldMessengerKey.currentState?.showSnackBar(
+                  SnackBar(content: Text('EPG auto-detected and saved: $display')),
+                );
+              } catch (_) {
+                // ignore UI snackbar failures
+              }
+              debugLog('ChannelProvider: Found EPG URL via Xtream API: $accepted (auto-saving)');
+              await prefs.setString('custom_epg_url', accepted);
+              // Also save per-playlist keys so the saved-playlists UI shows detected EPG
+              try {
+                final enc = base64Url.encode(utf8.encode(m3uUrl));
+                await prefs.setString('xtream_epg_url_$enc', accepted);
+                await prefs.setString('xtream_epg_url_$serverUrl', accepted);
+              } catch (_) {
+                // ignore per-playlist save errors
+              }
+              try {
+                await _epgService?.initialize(forceRefresh: true);
+                debugLog('ChannelProvider: EPG initialized after Xtream probe. Available: ${_epgService?.availableChannels.length}, Error: ${_epgService?.error}');
+              } catch (e) {
+                debugLog('ChannelProvider: EPG initialization failed after Xtream probe: $e');
+              }
+            }
+          }
+
+          // If we found per-stream epg ids, map them into channel maps by matching stream id or name
+          if (streamIdToEpgId.isNotEmpty && _channelMaps.isNotEmpty) {
+            var mapped = 0;
+            for (int i = 0; i < _channelMaps.length; i++) {
+              final map = _channelMaps[i];
+              final url = (map['url'] as String?) ?? '';
+              final name = (map['name'] as String?) ?? '';
+
+              // Try to extract stream id from URL (common Xtream pattern is /USER/PASS/STREAMID)
+              String? streamIdFromUrl;
+              try {
+                final uri = Uri.parse(url);
+                final parts = uri.path.split('/').where((p) => p.isNotEmpty).toList();
+                if (parts.isNotEmpty) streamIdFromUrl = parts.last;
+              } catch (_) {
+                // ignore
+              }
+
+              // Lookup by stream id then by name
+              final epgId = (streamIdFromUrl != null ? streamIdToEpgId[streamIdFromUrl] : null) ?? streamIdToEpgId[name];
+
+              if (epgId != null) {
+                map['tvgId'] = epgId;
+                mapped++;
+              }
+            }
+            if (mapped > 0) {
+              debugLog('ChannelProvider: Mapped $mapped channels to EPG IDs from Xtream API');
+              _channelCache.clear();
+              notifyListeners();
+            }
+          }
+        }
+      } catch (e) {
+        debugLog('ChannelProvider: Error probing Xtream live streams for EPG: $e');
+      }
 
       // Merge with existing VOD counts (avoid duplicates in count)
       _moviesCount += xtreamMovies.length;

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/snackbar_helper.dart';
 
 class EpgDiagnosticScreen extends StatelessWidget {
   const EpgDiagnosticScreen({super.key});
@@ -82,11 +83,11 @@ class EpgDiagnosticScreen extends StatelessWidget {
                     ElevatedButton.icon(
                       onPressed: () async {
                         try {
-                          await epgService.initialize(forceRefresh: true);
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('EPG reload requested')));
-                        } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('EPG reload failed: $e')));
-                        }
+                              await epgService.initialize(forceRefresh: true);
+                              rootScaffoldMessengerKey.currentState?.showSnackBar(const SnackBar(content: Text('EPG reload requested')));
+                            } catch (e) {
+                              rootScaffoldMessengerKey.currentState?.showSnackBar(SnackBar(content: Text('EPG reload failed: $e')));
+                            }
                       },
                       icon: const Icon(Icons.refresh, size: 16),
                       label: const Text('Reload EPG'),
