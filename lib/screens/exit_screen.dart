@@ -134,48 +134,16 @@ class _ExitScreenState extends State<ExitScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Focus(
+                  BrandSecondaryButton(
                     focusNode: _backButtonFocus,
-                    onKeyEvent: (node, event) {
-                      if (event is KeyDownEvent) {
-                        if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-                          _exitButtonFocus.requestFocus();
-                          return KeyEventResult.handled;
-                        }
-                        if (event.logicalKey == LogicalKeyboardKey.select ||
-                            event.logicalKey == LogicalKeyboardKey.enter) {
-                          context.go('/home');
-                          return KeyEventResult.handled;
-                        }
-                      }
-                      return KeyEventResult.ignored;
-                    },
-                    child: BrandSecondaryButton(
-                      onPressed: () => context.go('/home'),
-                      label: 'Go Back',
-                    ),
+                    onPressed: () => context.go('/home'),
+                    label: 'Go Back',
                   ),
                   const SizedBox(width: 24),
-                  Focus(
+                  BrandPrimaryButton(
                     focusNode: _exitButtonFocus,
-                    onKeyEvent: (node, event) {
-                      if (event is KeyDownEvent) {
-                        if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                          _backButtonFocus.requestFocus();
-                          return KeyEventResult.handled;
-                        }
-                        if (event.logicalKey == LogicalKeyboardKey.select ||
-                            event.logicalKey == LogicalKeyboardKey.enter) {
-                          SystemNavigator.pop();
-                          return KeyEventResult.handled;
-                        }
-                      }
-                      return KeyEventResult.ignored;
-                    },
-                    child: BrandPrimaryButton(
-                      onPressed: () => SystemNavigator.pop(),
-                      label: 'Exit App',
-                    ),
+                    onPressed: () => SystemNavigator.pop(),
+                    label: 'Exit App',
                   ),
                 ],
               ),
