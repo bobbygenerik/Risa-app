@@ -6,17 +6,23 @@ import 'package:iptv_player/widgets/brand_button.dart';
 class GoToSettingsButton extends StatelessWidget {
   final VoidCallback onPressed;
   final FocusNode? focusNode;
-  const GoToSettingsButton({super.key, required this.onPressed, this.focusNode});
+  const GoToSettingsButton(
+      {super.key, required this.onPressed, this.focusNode});
 
   @override
   Widget build(BuildContext context) {
-    return BrandPrimaryButton(
-      onPressed: onPressed,
-      label: 'Go to Settings',
-      icon: Icons.settings,
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-      fontSize: 16,
-      focusNode: focusNode,
+    return Center(
+      child: IntrinsicWidth(
+        stepWidth: 1.0,
+        child: BrandPrimaryButton(
+          onPressed: onPressed,
+          label: 'Go to Settings',
+          icon: Icons.settings,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          fontSize: 16,
+          focusNode: focusNode,
+        ),
+      ),
     );
   }
 }

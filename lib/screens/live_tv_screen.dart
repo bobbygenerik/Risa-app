@@ -917,6 +917,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 channelName: channel.name,
               );
             }
+            // DEBUG: show quick epg diagnostics in logs when focused
+            final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
+            if (Focus.of(context).hasFocus) {
+              final hasMatch = epgService.hasEpgMatch(channel.tvgId ?? channel.id, channelName: channel.name);
+              final progCount = epgService.getProgramsForChannel(channel.tvgId ?? channel.id, channelName: channel.name).length;
+              debugPrint('EPG DEBUG: channel=${channel.id} tvg=${channel.tvgId} hasMatch=$hasMatch progCount=$progCount currentProgram=${currentProgram?.title ?? 'null'}');
+            }
             final isFocused = Focus.of(context).hasFocus;
             final progress = currentProgram?.progressPercentage ?? 0.0;
             final imageUrl = _getChannelCardImage(currentProgram, channel);

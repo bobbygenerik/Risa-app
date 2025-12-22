@@ -78,7 +78,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final FocusNode _realDebridApiKeyFocusNode = FocusNode();
   final FocusNode _openSubtitlesUsernameFocusNode = FocusNode();
   final FocusNode _openSubtitlesPasswordFocusNode = FocusNode();
-  
+
   // Action Button Focus Nodes
   final FocusNode _loadM3uButtonFocusNode = FocusNode();
   final FocusNode _loadXtreamButtonFocusNode = FocusNode();
@@ -117,17 +117,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _loadSettingsSync() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
-    
+
     setState(() {
       _m3uUrlController.text = prefs.getString('m3u_url') ?? '';
       _xtreamServerController.text = prefs.getString('xtream_server') ?? '';
       _xtreamUsernameController.text = prefs.getString('xtream_username') ?? '';
       _xtreamPasswordController.text = prefs.getString('xtream_password') ?? '';
       _customEpgUrlController.text = prefs.getString('custom_epg_url') ?? '';
-      _secondaryEpgUrlController.text = prefs.getString('secondary_epg_url') ?? '';
-      _realDebridApiKeyController.text = prefs.getString('realdebrid_api_key') ?? '';
-      _openSubtitlesUsernameController.text = prefs.getString('opensubtitles_username') ?? '';
-      _openSubtitlesPasswordController.text = prefs.getString('opensubtitles_password') ?? '';
+      _secondaryEpgUrlController.text =
+          prefs.getString('secondary_epg_url') ?? '';
+      _realDebridApiKeyController.text =
+          prefs.getString('realdebrid_api_key') ?? '';
+      _openSubtitlesUsernameController.text =
+          prefs.getString('opensubtitles_username') ?? '';
+      _openSubtitlesPasswordController.text =
+          prefs.getString('opensubtitles_password') ?? '';
 
       _autoPlayNextEpisode = prefs.getBool('auto_play_next') ?? true;
       _hardwareAcceleration = prefs.getBool('hardware_acceleration') ?? true;
@@ -136,8 +140,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _openSubtitlesEnabled = prefs.getBool('opensubtitles_enabled') ?? false;
       _transcriptionEnabled = prefs.getBool('transcription_enabled') ?? false;
       _translationEnabled = prefs.getBool('translation_enabled') ?? false;
-    _heroVideoPreview = prefs.getBool('hero_video_preview') ?? false;
-      _rememberPlaybackPosition = prefs.getBool('remember_playback_position') ?? true;
+      _heroVideoPreview = prefs.getBool('hero_video_preview') ?? false;
+      _rememberPlaybackPosition =
+          prefs.getBool('remember_playback_position') ?? true;
       _epgCacheDuration = prefs.getInt('epg_cache_duration') ?? 6;
       _epgRetentionDays = prefs.getInt('epg_retention_days') ?? 7;
       _storeDescriptions = prefs.getBool('epg_store_descriptions') ?? true;
@@ -176,7 +181,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _openSubtitlesUsernameFocusNode.dispose();
     _openSubtitlesPasswordController.dispose();
     _openSubtitlesPasswordFocusNode.dispose();
-    
+
     _loadM3uButtonFocusNode.dispose();
     _loadXtreamButtonFocusNode.dispose();
     _clearM3uButtonFocusNode.dispose();
@@ -186,7 +191,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _browseStorageButtonFocusNode.dispose();
     _playbackFirstFocusNode.dispose();
     _aiFirstFocusNode.dispose();
-    
+
     _customEpgUrlFocusNode.dispose();
     _secondaryEpgUrlFocusNode.dispose();
     super.dispose();
@@ -195,6 +200,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return SettingsLayout(
+      autoFocusOnShow: true,
       selectedIndex: _selectedIndex,
       onCategorySelected: _handleCategorySelected,
       onBackToHome: () => context.go('/home'),
@@ -261,16 +267,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
           title: 'General Settings',
           subtitle: 'Manage your playlists and program guide',
         ),
-        
+
         // Playlist Status
         Consumer2<ChannelProvider, ContentProvider>(
           builder: (context, channelProvider, contentProvider, _) {
             final hasChannels = channelProvider.hasChannels;
-            final totalContent = channelProvider.channelCount + contentProvider.movies.length + contentProvider.series.length;
-            final hasContent = hasChannels || contentProvider.movies.isNotEmpty || contentProvider.series.isNotEmpty;
+            final totalContent = channelProvider.channelCount +
+                contentProvider.movies.length +
+                contentProvider.series.length;
+            final hasContent = hasChannels ||
+                contentProvider.movies.isNotEmpty ||
+                contentProvider.series.isNotEmpty;
             final errorMessage = channelProvider.errorMessage;
             final responsePreview = channelProvider.lastM3UContent;
-            
+
             return Container(
               padding: const EdgeInsets.all(16),
               margin: const EdgeInsets.only(bottom: 24),
@@ -289,7 +299,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   Icon(
                     hasContent ? Icons.check_circle : Icons.error_outline,
-                    color: hasContent ? AppTheme.accentGreen : AppTheme.accentRed,
+                    color:
+                        hasContent ? AppTheme.accentGreen : AppTheme.accentRed,
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -303,7 +314,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ? 'Playlist error'
                                   : 'No playlist loaded'),
                           style: TextStyle(
-                            color: hasContent ? AppTheme.accentGreen : AppTheme.accentRed,
+                            color: hasContent
+                                ? AppTheme.accentGreen
+                                : AppTheme.accentRed,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -338,7 +351,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           Text(
                             '${channelProvider.channelCount} channels • ${contentProvider.movies.length} movies • ${contentProvider.series.length} series',
                             style: TextStyle(
-                              color: hasContent ? AppTheme.accentGreen : AppTheme.accentRed,
+                              color: hasContent
+                                  ? AppTheme.accentGreen
+                                  : AppTheme.accentRed,
                               fontSize: 12,
                             ),
                           ),
@@ -356,18 +371,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
           title: 'Playlists',
           children: [
             SettingsActionTile(
-              title: _playlistInputMethod == 0 ? 'Input Method: M3U URL' : 'Input Method: Xtream Codes',
+              title: _playlistInputMethod == 0
+                  ? 'Input Method: M3U URL'
+                  : 'Input Method: Xtream Codes',
               icon: Icons.swap_horiz,
               onTap: () {
                 setState(
-                  () => _playlistInputMethod = _playlistInputMethod == 0 ? 1 : 0,
+                  () =>
+                      _playlistInputMethod = _playlistInputMethod == 0 ? 1 : 0,
                 );
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   _requestContentFocus();
                 });
               },
             ),
-            
             if (_playlistInputMethod == 0) ...[
               SettingsInputTile(
                 label: 'M3U Playlist URL',
@@ -484,27 +501,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: Icons.timer,
               trailing: Row(
                 children: [
-                  IconButton(icon: const Icon(Icons.remove, color: Colors.white), onPressed: () => _adjustEpgCacheDuration(-1)),
+                  IconButton(
+                      icon: const Icon(Icons.remove, color: Colors.white),
+                      onPressed: () => _adjustEpgCacheDuration(-1)),
                   const SizedBox(width: 8),
-                  IconButton(icon: const Icon(Icons.add, color: Colors.white), onPressed: () => _adjustEpgCacheDuration(1)),
+                  IconButton(
+                      icon: const Icon(Icons.add, color: Colors.white),
+                      onPressed: () => _adjustEpgCacheDuration(1)),
                 ],
               ),
             ),
-             SettingsActionTile(
+            SettingsActionTile(
               title: 'Data Retention',
               subtitle: 'Keep data for $_epgRetentionDays days',
               icon: Icons.calendar_today,
               trailing: Row(
                 children: [
-                  IconButton(icon: const Icon(Icons.remove, color: Colors.white), onPressed: () => _adjustEpgRetentionDays(-1)),
+                  IconButton(
+                      icon: const Icon(Icons.remove, color: Colors.white),
+                      onPressed: () => _adjustEpgRetentionDays(-1)),
                   const SizedBox(width: 8),
-                  IconButton(icon: const Icon(Icons.add, color: Colors.white), onPressed: () => _adjustEpgRetentionDays(1)),
+                  IconButton(
+                      icon: const Icon(Icons.add, color: Colors.white),
+                      onPressed: () => _adjustEpgRetentionDays(1)),
                 ],
               ),
             ),
-            SettingsSwitchTile(title: 'Store Descriptions', value: _storeDescriptions, onChanged: (v) => _handleSwitchTileChange('Store Program Descriptions', v)),
-            SettingsSwitchTile(title: 'Show Channel Logos', value: _showLogos, onChanged: (v) => _handleSwitchTileChange('Show Channel Logos', v)),
-            SettingsSwitchTile(title: 'Show Program Images', value: _showImages, onChanged: (v) => _handleSwitchTileChange('Show Program Images', v)),
+            SettingsSwitchTile(
+                title: 'Store Descriptions',
+                value: _storeDescriptions,
+                onChanged: (v) =>
+                    _handleSwitchTileChange('Store Program Descriptions', v)),
+            SettingsSwitchTile(
+                title: 'Show Channel Logos',
+                value: _showLogos,
+                onChanged: (v) =>
+                    _handleSwitchTileChange('Show Channel Logos', v)),
+            SettingsSwitchTile(
+                title: 'Show Program Images',
+                value: _showImages,
+                onChanged: (v) =>
+                    _handleSwitchTileChange('Show Program Images', v)),
           ],
         ),
 
@@ -526,7 +563,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: Icons.file_download,
               onTap: _importBackup,
             ),
-             SettingsActionTile(
+            SettingsActionTile(
               title: 'Debug Performance',
               icon: Icons.speed,
               onTap: () => context.push('/debug'),
@@ -541,48 +578,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
       children: [
-         const SettingsSectionHeader(title: 'Playback', subtitle: 'Video player configuration'),
-         
-         SettingsGroup(
-           title: 'Performance',
-           children: [
-             SettingsSwitchTile(
-               title: 'Hardware Acceleration',
-               subtitle: 'Use GPU for better performance',
-               value: _hardwareAcceleration,
-               onChanged: (v) => _handleSwitchTileChange('Hardware Acceleration', v),
-               focusNode: _playbackFirstFocusNode,
-             ),
-             SettingsSwitchTile(
-               title: 'Hardware Decoding',
-               value: _hardwareDecoding,
-               onChanged: (v) => _handleSwitchTileChange('Hardware Decoding', v),
-             ),
-           ],
-         ),
-
-         SettingsGroup(
-           title: 'Behavior',
-           children: [
-             SettingsSwitchTile(
-               title: 'Auto-play Next Episode',
-               value: _autoPlayNextEpisode,
-               onChanged: (v) => _handleSwitchTileChange('Auto-play Next Episode', v),
-             ),
-             SettingsSwitchTile(
-               title: 'Hero Video Preview',
-               subtitle: 'Show video preview in the hero banner',
-               value: _heroVideoPreview,
-               onChanged: (v) => _handleSwitchTileChange('Hero Video Preview', v),
-             ),
-             SettingsSwitchTile(
-               title: 'Remember Position',
-               subtitle: 'Resume VODs where you left off',
-               value: _rememberPlaybackPosition,
-               onChanged: (v) => _handleSwitchTileChange('Remember Position VOD', v),
-             ),
-           ],
-         ),
+        const SettingsSectionHeader(
+            title: 'Playback', subtitle: 'Video player configuration'),
+        SettingsGroup(
+          title: 'Performance',
+          children: [
+            SettingsSwitchTile(
+              title: 'Hardware Acceleration',
+              subtitle: 'Use GPU for better performance',
+              value: _hardwareAcceleration,
+              onChanged: (v) =>
+                  _handleSwitchTileChange('Hardware Acceleration', v),
+              focusNode: _playbackFirstFocusNode,
+            ),
+            SettingsSwitchTile(
+              title: 'Hardware Decoding',
+              value: _hardwareDecoding,
+              onChanged: (v) => _handleSwitchTileChange('Hardware Decoding', v),
+            ),
+          ],
+        ),
+        SettingsGroup(
+          title: 'Behavior',
+          children: [
+            SettingsSwitchTile(
+              title: 'Auto-play Next Episode',
+              value: _autoPlayNextEpisode,
+              onChanged: (v) =>
+                  _handleSwitchTileChange('Auto-play Next Episode', v),
+            ),
+            SettingsSwitchTile(
+              title: 'Hero Video Preview',
+              subtitle: 'Show video preview in the hero banner',
+              value: _heroVideoPreview,
+              onChanged: (v) =>
+                  _handleSwitchTileChange('Hero Video Preview', v),
+            ),
+            SettingsSwitchTile(
+              title: 'Remember Position',
+              subtitle: 'Resume VODs where you left off',
+              value: _rememberPlaybackPosition,
+              onChanged: (v) =>
+                  _handleSwitchTileChange('Remember Position VOD', v),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -591,37 +631,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
       children: [
-        const SettingsSectionHeader(title: 'AI Features', subtitle: 'Transcription, Translation & Subtitles'),
-
+        const SettingsSectionHeader(
+            title: 'AI Features',
+            subtitle: 'Transcription, Translation & Subtitles'),
         SettingsGroup(
           title: 'Live Services',
           children: [
-             SettingsSwitchTile(
-               title: 'Live Transcription',
-               subtitle: 'Generate subtitles from audio in real-time',
-               value: _transcriptionEnabled,
-               onChanged: (v) => _handleSwitchTileChange('Enable Live Transcription', v),
-               focusNode: _aiFirstFocusNode,
-             ),
-             SettingsSwitchTile(
-               title: 'Real-time Translation',
-               subtitle: 'Translate transcription to your language',
-               value: _translationEnabled,
-               onChanged: (v) => _handleSwitchTileChange('Enable Translation', v),
-             ),
-             SettingsActionTile(
-               title: 'Manage Speech Models',
-               icon: Icons.mic,
-               onTap: _showSpeechModelsDialog,
-             ),
-             SettingsActionTile(
-               title: 'Manage Translation Models',
-               icon: Icons.translate,
-               onTap: _showLanguageModelsDialog,
-             ),
+            SettingsSwitchTile(
+              title: 'Live Transcription',
+              subtitle: 'Generate subtitles from audio in real-time',
+              value: _transcriptionEnabled,
+              onChanged: (v) =>
+                  _handleSwitchTileChange('Enable Live Transcription', v),
+              focusNode: _aiFirstFocusNode,
+            ),
+            SettingsSwitchTile(
+              title: 'Real-time Translation',
+              subtitle: 'Translate transcription to your language',
+              value: _translationEnabled,
+              onChanged: (v) =>
+                  _handleSwitchTileChange('Enable Translation', v),
+            ),
+            SettingsActionTile(
+              title: 'Manage Speech Models',
+              icon: Icons.mic,
+              onTap: _showSpeechModelsDialog,
+            ),
+            SettingsActionTile(
+              title: 'Manage Translation Models',
+              icon: Icons.translate,
+              onTap: _showLanguageModelsDialog,
+            ),
           ],
         ),
-
         SettingsGroup(
           title: 'Integration',
           children: [
@@ -629,7 +671,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: 'OpenSubtitles',
               subtitle: 'Auto-download VOD subtitles',
               value: _openSubtitlesEnabled,
-              onChanged: (v) => _handleSwitchTileChange('Enable OpenSubtitles', v),
+              onChanged: (v) =>
+                  _handleSwitchTileChange('Enable OpenSubtitles', v),
             ),
             if (_openSubtitlesEnabled) ...[
               SettingsInputTile(
@@ -653,15 +696,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
           ],
         ),
-
-         SettingsGroup(
+        SettingsGroup(
           title: 'Streaming Sources',
           children: [
             SettingsSwitchTile(
               title: 'Real-Debrid',
               subtitle: 'High-speed premium streaming',
               value: _realDebridEnabled,
-              onChanged: (v) => _handleSwitchTileChange('Enable Real-Debrid', v),
+              onChanged: (v) =>
+                  _handleSwitchTileChange('Enable Real-Debrid', v),
             ),
             if (_realDebridEnabled) ...[
               SettingsInputTile(
@@ -683,11 +726,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildRecordingsSettings() {
-     return ListView(
+    return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
       children: [
-        const SettingsSectionHeader(title: 'Recordings', subtitle: 'Manage DVR storage'),
-        
+        const SettingsSectionHeader(
+            title: 'Recordings', subtitle: 'Manage DVR storage'),
         SettingsGroup(
           children: [
             FutureBuilder<String>(
@@ -706,7 +749,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
       ],
-     );
+    );
   }
 
   // LOGIC HELPERS REMAIN UNCHANGED
@@ -842,7 +885,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await prefs.setString('playlist_type', 'xtream');
     if (mounted) {
       final provider = Provider.of<ChannelProvider>(context, listen: false);
-      final playlistUrl = '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
+      final playlistUrl =
+          '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
       await provider.loadPlaylistFromUrl(playlistUrl);
       final hasContent = provider.channelCount > 0 ||
           provider.moviesCount > 0 ||
@@ -902,63 +946,107 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _handleSwitchTileChange(String title, bool newValue) async {
     setState(() {
       switch (title) {
-        case 'Hardware Acceleration': _hardwareAcceleration = newValue; break;
-        case 'Hardware Decoding': _hardwareDecoding = newValue; break;
-        case 'Auto-play Next Episode': _autoPlayNextEpisode = newValue; break;
-        case 'Remember Position VOD': _rememberPlaybackPosition = newValue; break;
-        case 'Enable OpenSubtitles': _openSubtitlesEnabled = newValue; break;
-        case 'Enable Real-Debrid': _realDebridEnabled = newValue; break;
-        case 'Enable Live Transcription': _transcriptionEnabled = newValue; break;
-        case 'Enable Translation': _translationEnabled = newValue; break;
-        case 'Store Program Descriptions': _storeDescriptions = newValue; break;
-        case 'Show Channel Logos': _showLogos = newValue; break;
-        case 'Show Program Images': _showImages = newValue; break;
-        case 'Hero Video Preview': _heroVideoPreview = newValue; break;
+        case 'Hardware Acceleration':
+          _hardwareAcceleration = newValue;
+          break;
+        case 'Hardware Decoding':
+          _hardwareDecoding = newValue;
+          break;
+        case 'Auto-play Next Episode':
+          _autoPlayNextEpisode = newValue;
+          break;
+        case 'Remember Position VOD':
+          _rememberPlaybackPosition = newValue;
+          break;
+        case 'Enable OpenSubtitles':
+          _openSubtitlesEnabled = newValue;
+          break;
+        case 'Enable Real-Debrid':
+          _realDebridEnabled = newValue;
+          break;
+        case 'Enable Live Transcription':
+          _transcriptionEnabled = newValue;
+          break;
+        case 'Enable Translation':
+          _translationEnabled = newValue;
+          break;
+        case 'Store Program Descriptions':
+          _storeDescriptions = newValue;
+          break;
+        case 'Show Channel Logos':
+          _showLogos = newValue;
+          break;
+        case 'Show Program Images':
+          _showImages = newValue;
+          break;
+        case 'Hero Video Preview':
+          _heroVideoPreview = newValue;
+          break;
       }
     });
-    
+
     final prefs = await SharedPreferences.getInstance();
     switch (title) {
-      case 'Hardware Acceleration': await prefs.setBool('hardware_acceleration', newValue); break;
-      case 'Hardware Decoding': await prefs.setBool('hardware_decoding', newValue); break;
-      case 'Auto-play Next Episode': await prefs.setBool('auto_play_next', newValue); break;
-      case 'Remember Position VOD': await prefs.setBool('remember_playback_position', newValue); break;
-      case 'Enable OpenSubtitles': 
+      case 'Hardware Acceleration':
+        await prefs.setBool('hardware_acceleration', newValue);
+        break;
+      case 'Hardware Decoding':
+        await prefs.setBool('hardware_decoding', newValue);
+        break;
+      case 'Auto-play Next Episode':
+        await prefs.setBool('auto_play_next', newValue);
+        break;
+      case 'Remember Position VOD':
+        await prefs.setBool('remember_playback_position', newValue);
+        break;
+      case 'Enable OpenSubtitles':
         await prefs.setBool('opensubtitles_enabled', newValue);
         if (newValue && mounted) {
-           unawaited(Provider.of<OpenSubtitlesService>(context, listen: false).initialize());
+          unawaited(Provider.of<OpenSubtitlesService>(context, listen: false)
+              .initialize());
         }
         break;
-      case 'Enable Real-Debrid': 
+      case 'Enable Real-Debrid':
         await prefs.setBool('realdebrid_enabled', newValue);
         if (newValue && mounted) {
-           unawaited(Provider.of<RealDebridService>(context, listen: false).initialize());
+          unawaited(Provider.of<RealDebridService>(context, listen: false)
+              .initialize());
         }
         break;
-      case 'Enable Live Transcription': 
+      case 'Enable Live Transcription':
         await prefs.setBool('transcription_enabled', newValue);
         if (newValue && mounted) {
-           unawaited(Provider.of<IntegratedTranscriptionService>(context, listen: false).initialize());
+          unawaited(Provider.of<IntegratedTranscriptionService>(context,
+                  listen: false)
+              .initialize());
         }
         break;
-      case 'Enable Translation': 
+      case 'Enable Translation':
         await prefs.setBool('translation_enabled', newValue);
         if (newValue && mounted) {
-           Provider.of<IntegratedTranscriptionService>(context, listen: false).setTranslationEnabled(newValue);
+          Provider.of<IntegratedTranscriptionService>(context, listen: false)
+              .setTranslationEnabled(newValue);
         }
         break;
-      case 'Store Program Descriptions': await prefs.setBool('epg_store_descriptions', newValue); break;
-      case 'Show Channel Logos': await prefs.setBool('epg_show_logos', newValue); break;
-      case 'Show Program Images': await prefs.setBool('epg_show_images', newValue); break;
-      case 'Hero Video Preview': 
+      case 'Store Program Descriptions':
+        await prefs.setBool('epg_store_descriptions', newValue);
+        break;
+      case 'Show Channel Logos':
+        await prefs.setBool('epg_show_logos', newValue);
+        break;
+      case 'Show Program Images':
+        await prefs.setBool('epg_show_images', newValue);
+        break;
+      case 'Hero Video Preview':
         await prefs.setBool('hero_video_preview', newValue);
         if (mounted) {
-           unawaited(Provider.of<SettingsProvider>(context, listen: false).setHeroVideoPreview(newValue));
+          unawaited(Provider.of<SettingsProvider>(context, listen: false)
+              .setHeroVideoPreview(newValue));
         }
         break;
     }
   }
-  
+
   void _adjustEpgCacheDuration(int delta) async {
     final newValue = (_epgCacheDuration + delta).clamp(1, 24);
     if (newValue != _epgCacheDuration) {
@@ -976,14 +1064,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await prefs.setInt('epg_retention_days', newValue);
     }
   }
-  
+
   Future<void> _exportBackup() async {
-      try {
-        final filePath = await BackupService.exportBackup();
-        if (filePath != null) _showMessage('Backup exported!');
-      } catch (e) {
-        _showMessage('Export failed: $e');
-      }
+    try {
+      final filePath = await BackupService.exportBackup();
+      if (filePath != null) _showMessage('Backup exported!');
+    } catch (e) {
+      _showMessage('Export failed: $e');
+    }
   }
 
   Future<void> _importBackup() async {
@@ -1009,16 +1097,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     }
   }
-  
+
   Future<void> _testOpenSubtitlesConnection() async {
-     // Implementation kept simple for brevity as logic is identical, verifying connection
-     await Provider.of<OpenSubtitlesService>(context, listen: false).initialize();
-     _showMessage('Testing connection...');
+    // Implementation kept simple for brevity as logic is identical, verifying connection
+    await Provider.of<OpenSubtitlesService>(context, listen: false)
+        .initialize();
+    _showMessage('Testing connection...');
   }
-  
+
   Future<void> _testRealDebridConnection() async {
-     unawaited(Provider.of<RealDebridService>(context, listen: false).initialize());
-     _showMessage('Testing API Key...');
+    unawaited(
+        Provider.of<RealDebridService>(context, listen: false).initialize());
+    _showMessage('Testing API Key...');
   }
 
   void _showLanguageModelsDialog() {
@@ -1026,27 +1116,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) => const AlertDialog(
         backgroundColor: AppTheme.darkBackground,
-        title: Text('Translation Models', style: TextStyle(color: Colors.white)),
-        content: Text('Model management dialog placeholder', style: TextStyle(color: Colors.white70)),
+        title:
+            Text('Translation Models', style: TextStyle(color: Colors.white)),
+        content: Text('Model management dialog placeholder',
+            style: TextStyle(color: Colors.white70)),
       ),
     );
   }
 
   void _showSpeechModelsDialog() {
-      // Re-implement or call existing dialog logic if needed
-      // For brevity in this massive refactor, triggering the same logic as before
-      // Ideally this would reuse the _buildWhisperModelTile logic from previous version
-      // But simplifying for the rewrite to fit in one go.
-       showDialog(
-      context: context,
-      builder: (context) => Consumer<WhisperModelService>(
-        builder: (context, whisperService, _) => AlertDialog(
-          backgroundColor: AppTheme.darkBackground,
-          title: const Text('Speech Recognition Models', style: TextStyle(color: AppTheme.textPrimary)),
-          content: const Text('Manage models here', style: TextStyle(color: Colors.white70)),
-          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
-        ),
-      ));
+    // Re-implement or call existing dialog logic if needed
+    // For brevity in this massive refactor, triggering the same logic as before
+    // Ideally this would reuse the _buildWhisperModelTile logic from previous version
+    // But simplifying for the rewrite to fit in one go.
+    showDialog(
+        context: context,
+        builder: (context) => Consumer<WhisperModelService>(
+              builder: (context, whisperService, _) => AlertDialog(
+                backgroundColor: AppTheme.darkBackground,
+                title: const Text('Speech Recognition Models',
+                    style: TextStyle(color: AppTheme.textPrimary)),
+                content: const Text('Manage models here',
+                    style: TextStyle(color: Colors.white70)),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Close'))
+                ],
+              ),
+            ));
   }
 
   void _showManagePlaylistsDialog() {

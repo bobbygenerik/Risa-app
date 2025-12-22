@@ -123,84 +123,101 @@ class SettingsActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Focus(
-      focusNode: focusNode,
-      onFocusChange: (focused) {
-        if (focused) {
-          Scrollable.ensureVisible(
-            context,
-            alignment: 0.2,
-            duration: const Duration(milliseconds: 150),
-          );
-        }
-      },
-      onKeyEvent: (node, event) {
-        if (event is KeyDownEvent && (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter)) {
-          onTap?.call();
-          return KeyEventResult.handled;
-        }
-        return KeyEventResult.ignored;
-      },
-      child: Builder(
-        builder: (context) {
-          final isFocused = Focus.of(context).hasFocus;
-          return Material(
-            color: isFocused
-                ? Colors.white.withValues(alpha: 0.18)
-                : Colors.transparent,
-            child: InkWell(
-              onTap: onTap,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                child: Row(
-                  children: [
-                    if (icon != null) ...[
-                      Icon(
-                        icon,
-                        size: 24,
-                        color: iconColor ?? Colors.white70,
-                      ),
-                      const SizedBox(width: 16),
-                    ],
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: titleColor ?? Colors.white,
-                            ),
+    return Builder(
+      builder: (context) {
+        return Focus(
+          focusNode: focusNode,
+          onFocusChange: (focused) {
+            if (focused) {
+              Scrollable.ensureVisible(
+                context,
+                alignment: 0.2,
+                duration: const Duration(milliseconds: 150),
+              );
+            }
+          },
+          onKeyEvent: (node, event) {
+            if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+            if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+              FocusScope.of(context).focusInDirection(TraversalDirection.down);
+              return KeyEventResult.handled;
+            }
+            if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+              FocusScope.of(context).focusInDirection(TraversalDirection.up);
+              return KeyEventResult.handled;
+            }
+
+            if (event.logicalKey == LogicalKeyboardKey.select ||
+                event.logicalKey == LogicalKeyboardKey.enter) {
+              onTap?.call();
+              return KeyEventResult.handled;
+            }
+            return KeyEventResult.ignored;
+          },
+          child: Builder(
+            builder: (context) {
+              final isFocused = Focus.of(context).hasFocus;
+              return Material(
+                color: isFocused
+                    ? Colors.white.withValues(alpha: 0.18)
+                    : Colors.transparent,
+                child: InkWell(
+                  onTap: onTap,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 16),
+                    child: Row(
+                      children: [
+                        if (icon != null) ...[
+                          Icon(
+                            icon,
+                            size: 24,
+                            color: iconColor ?? Colors.white70,
                           ),
-                          if (subtitle != null) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              subtitle!,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.white54,
-                              ),
-                            ),
-                          ],
+                          const SizedBox(width: 16),
                         ],
-                      ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                title,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: titleColor ?? Colors.white,
+                                ),
+                              ),
+                              if (subtitle != null) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  subtitle!,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.white54,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        if (trailing != null)
+                          trailing!
+                        else if (onTap != null)
+                          Icon(
+                            Icons.chevron_right,
+                            color: Colors.white24,
+                          ),
+                      ],
                     ),
-                    if (trailing != null)
-                      trailing!
-                    else if (onTap != null)
-                      Icon(
-                        Icons.chevron_right,
-                        color: Colors.white24,
-                      ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-          );
-        },
-      ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }
@@ -235,7 +252,9 @@ class SettingsSwitchTile extends StatelessWidget {
         }
       },
       onKeyEvent: (node, event) {
-        if (event is KeyDownEvent && (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter)) {
+        if (event is KeyDownEvent &&
+            (event.logicalKey == LogicalKeyboardKey.select ||
+                event.logicalKey == LogicalKeyboardKey.enter)) {
           onChanged(!value);
           return KeyEventResult.handled;
         }
@@ -251,7 +270,8 @@ class SettingsSwitchTile extends StatelessWidget {
             child: InkWell(
               onTap: () => onChanged(!value),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 child: Row(
                   children: [
                     Expanded(
@@ -285,10 +305,16 @@ class SettingsSwitchTile extends StatelessWidget {
                       child: Switch(
                         value: value,
                         onChanged: onChanged,
-                        activeThumbColor: isFocused ? AppTheme.primaryBlue : AppTheme.primaryBlue,
-                        activeTrackColor: isFocused ? AppTheme.primaryBlue.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.2),
-                        inactiveThumbColor: isFocused ? Colors.grey : Colors.grey[400],
-                        inactiveTrackColor: isFocused ? Colors.grey[300] : Colors.grey[800],
+                        activeThumbColor: isFocused
+                            ? AppTheme.primaryBlue
+                            : AppTheme.primaryBlue,
+                        activeTrackColor: isFocused
+                            ? AppTheme.primaryBlue.withValues(alpha: 0.3)
+                            : Colors.white.withValues(alpha: 0.2),
+                        inactiveThumbColor:
+                            isFocused ? Colors.grey : Colors.grey[400],
+                        inactiveTrackColor:
+                            isFocused ? Colors.grey[300] : Colors.grey[800],
                       ),
                     ),
                   ],
@@ -340,12 +366,12 @@ class SettingsInputTile extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           // Using the existing robust TVFriendlyTextField
-          // We need to import it in the parent file or replicate it. 
+          // We need to import it in the parent file or replicate it.
           // For now, assume we use a simplified version here or the caller passes the widget.
           // BUT, to keep it "Premium", let's replicate the container style of SettingsActionTile
           // around the text field.
           // Actually, simply using the `TextField` with custom decoration is better for consistency.
-          
+
           _PremiumTextField(
             controller: controller,
             focusNode: focusNode,
@@ -412,9 +438,9 @@ class _PremiumTextFieldState extends State<_PremiumTextField> {
   void _handleTextFocus() {
     if (mounted) setState(() {});
     if (_textFocusNode.hasFocus) {
-       setState(() => _isEditing = true);
+      setState(() => _isEditing = true);
     } else {
-       setState(() => _isEditing = false);
+      setState(() => _isEditing = false);
     }
   }
 
@@ -428,14 +454,24 @@ class _PremiumTextFieldState extends State<_PremiumTextField> {
         if (!context.isTV || event is! KeyDownEvent) {
           return KeyEventResult.ignored;
         }
-        
+
         // Enter/Select on Container -> Enter Edit Mode
-        if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+        if (event.logicalKey == LogicalKeyboardKey.select ||
+            event.logicalKey == LogicalKeyboardKey.enter) {
           _textFocusNode.requestFocus();
           return KeyEventResult.handled;
         }
-        
-        // Navigation arrows are handled by FocusScope traversal automatically
+
+        // Allow explicit arrow traversal from the container
+        if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+          FocusScope.of(context).focusInDirection(TraversalDirection.down);
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+          FocusScope.of(context).focusInDirection(TraversalDirection.up);
+          return KeyEventResult.handled;
+        }
+
         return KeyEventResult.ignored;
       },
       child: GestureDetector(
@@ -473,24 +509,29 @@ class _PremiumTextFieldState extends State<_PremiumTextField> {
                   ),
                   child: Focus(
                     onKeyEvent: (node, event) {
-                      if (!context.isTV || event is! KeyDownEvent) return KeyEventResult.ignored;
-                      
+                      if (!context.isTV || event is! KeyDownEvent) {
+                        return KeyEventResult.ignored;
+                      }
+
                       // Escape/Back from Edit Mode -> Return to Container
-                      if (event.logicalKey == LogicalKeyboardKey.escape || event.logicalKey == LogicalKeyboardKey.goBack) {
+                      if (event.logicalKey == LogicalKeyboardKey.escape ||
+                          event.logicalKey == LogicalKeyboardKey.goBack) {
                         widget.focusNode.requestFocus();
                         return KeyEventResult.handled;
                       }
 
                       // Arrows in Edit Mode -> Leave Edit Mode and Traverse
                       if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                        FocusScope.of(context).focusInDirection(TraversalDirection.down);
+                        FocusScope.of(context)
+                            .focusInDirection(TraversalDirection.down);
                         return KeyEventResult.handled;
                       }
                       if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-                        FocusScope.of(context).focusInDirection(TraversalDirection.up);
+                        FocusScope.of(context)
+                            .focusInDirection(TraversalDirection.up);
                         return KeyEventResult.handled;
                       }
-                      
+
                       return KeyEventResult.ignored;
                     },
                     child: TextField(
@@ -498,7 +539,8 @@ class _PremiumTextFieldState extends State<_PremiumTextField> {
                       focusNode: _textFocusNode,
                       enableInteractiveSelection: false,
                       selectionControls: NoTextSelectionControls(),
-                      showCursor: _isEditing, // Only show cursor when actually editing
+                      showCursor:
+                          _isEditing, // Only show cursor when actually editing
                       cursorColor: AppTheme.primaryBlue,
                       style: const TextStyle(
                         color: AppTheme.textPrimary,

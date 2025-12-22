@@ -4,10 +4,10 @@ import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
 
 /// A premium Split-Pane layout for TV Settings.
-/// 
+///
 /// Left Pane: Navigation Menu (Categories)
 /// Right Pane: Content Area (Settings for selected category)
-/// 
+///
 /// Handles focus management between panes.
 class SettingsLayout extends StatefulWidget {
   final List<SettingsCategory> categories;
@@ -16,6 +16,7 @@ class SettingsLayout extends StatefulWidget {
   final Widget content;
   final VoidCallback? onBackToHome;
   final VoidCallback? onRequestContentFocus;
+  final bool autoFocusOnShow;
 
   const SettingsLayout({
     super.key,
@@ -25,6 +26,7 @@ class SettingsLayout extends StatefulWidget {
     required this.content,
     this.onBackToHome,
     this.onRequestContentFocus,
+    this.autoFocusOnShow = false,
   });
 
   @override
@@ -41,6 +43,12 @@ class _SettingsLayoutState extends State<SettingsLayout> {
     for (int i = 0; i < widget.categories.length; i++) {
       _menuFocusNodes.add(FocusNode(debugLabel: 'SettingsMenu_$i'));
     }
+    // Optionally autofocus the selected menu item when the layout is shown
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && widget.autoFocusOnShow) {
+        requestMenuFocus();
+      }
+    });
   }
 
   @override
@@ -76,7 +84,7 @@ class _SettingsLayoutState extends State<SettingsLayout> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent, 
+      backgroundColor: Colors.transparent,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -89,7 +97,9 @@ class _SettingsLayoutState extends State<SettingsLayout> {
           ),
         ),
         child: Padding(
-          padding: EdgeInsets.only(left: MediaQuery.of(context).padding.left + AppSpacing.sidebarCollapsedWidth),
+          padding: EdgeInsets.only(
+              left: MediaQuery.of(context).padding.left +
+                  AppSpacing.sidebarCollapsedWidth),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -97,7 +107,7 @@ class _SettingsLayoutState extends State<SettingsLayout> {
               SizedBox(
                 width: 320, // Extended width for premium feel
                 child: Container(
-                  color: AppTheme.sidebarBackground, 
+                  color: Colors.transparent,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -106,16 +116,19 @@ class _SettingsLayoutState extends State<SettingsLayout> {
                         padding: const EdgeInsets.fromLTRB(40, 48, 24, 24),
                         child: Text(
                           'Settings',
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.5,
-                          ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineMedium
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.5,
+                              ),
                         ),
                       ),
-                      
+
                       const SizedBox(height: 16),
-                      
+
                       // Menu Items
                       Expanded(
                         child: ListView.builder(
@@ -138,7 +151,7 @@ class _SettingsLayoutState extends State<SettingsLayout> {
                   child: Focus(
                     onKeyEvent: (node, event) {
                       if (event is! KeyDownEvent) return KeyEventResult.ignored;
-                      
+
                       if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
                         // Return focus to sidebar - go back to currently selected menu item
                         _menuFocusNodes[widget.selectedIndex].requestFocus();
@@ -147,7 +160,7 @@ class _SettingsLayoutState extends State<SettingsLayout> {
                       return KeyEventResult.ignored;
                     },
                     child: Container(
-                      color: AppTheme.darkBackground, 
+                      color: AppTheme.darkBackground,
                       child: widget.content,
                     ),
                   ),
@@ -190,18 +203,18 @@ class _SettingsLayoutState extends State<SettingsLayout> {
           }
           return KeyEventResult.handled;
         } else if (event.logicalKey == LogicalKeyboardKey.goBack) {
-            if (widget.onBackToHome != null) {
-                widget.onBackToHome!();
-                return KeyEventResult.handled;
-            }
+          if (widget.onBackToHome != null) {
+            widget.onBackToHome!();
+            return KeyEventResult.handled;
+          }
         }
-        
+
         return KeyEventResult.ignored;
       },
       child: Builder(
         builder: (context) {
           final isFocused = Focus.of(context).hasFocus;
-          
+
           return GestureDetector(
             onTap: () {
               widget.onCategorySelected(index);
@@ -213,28 +226,36 @@ class _SettingsLayoutState extends State<SettingsLayout> {
               margin: const EdgeInsets.symmetric(vertical: 4),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               decoration: BoxDecoration(
-                color: isSelected && isFocused 
-                    ? Colors.white 
-                    : (isSelected ? Colors.white.withValues(alpha: 0.1) : Colors.transparent),
+                color: isSelected && isFocused
+                    ? Colors.white
+                    : (isSelected
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : Colors.transparent),
                 borderRadius: BorderRadius.circular(12),
                 border: isFocused && !isSelected
-                    ? Border.all(color: Colors.white.withValues(alpha: 0.5), width: 2)
+                    ? Border.all(
+                        color: Colors.white.withValues(alpha: 0.5), width: 2)
                     : null,
               ),
               child: Row(
                 children: [
                   Icon(
                     category.icon,
-                    color: isSelected && isFocused ? Colors.black : (isSelected ? Colors.white : Colors.grey),
+                    color: isSelected && isFocused
+                        ? Colors.black
+                        : (isSelected ? Colors.white : Colors.grey),
                     size: 24,
                   ),
                   const SizedBox(width: 16),
                   Text(
                     category.title,
                     style: TextStyle(
-                      color: isSelected && isFocused ? Colors.black : (isSelected ? Colors.white : Colors.grey),
+                      color: isSelected && isFocused
+                          ? Colors.black
+                          : (isSelected ? Colors.white : Colors.grey),
                       fontSize: 16,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.w500,
                     ),
                   ),
                 ],

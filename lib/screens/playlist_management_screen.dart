@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
@@ -13,12 +14,14 @@ import 'package:iptv_player/utils/no_text_selection_controls.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/widgets/settings_layout.dart';
 import 'package:iptv_player/widgets/settings_tile_widgets.dart';
+import 'package:iptv_player/models/saved_playlist.dart';
 
 class PlaylistManagementScreen extends StatefulWidget {
   const PlaylistManagementScreen({super.key});
 
   @override
-  State<PlaylistManagementScreen> createState() => _PlaylistManagementScreenState();
+  State<PlaylistManagementScreen> createState() =>
+      _PlaylistManagementScreenState();
 }
 
 class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
@@ -33,15 +36,20 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
   final TextEditingController _playlistNameController = TextEditingController();
   final TextEditingController _playlistUrlController = TextEditingController();
   final TextEditingController _epgUrlController = TextEditingController();
-  final TextEditingController _secondaryEpgUrlController = TextEditingController();
-  
+  final TextEditingController _secondaryEpgUrlController =
+      TextEditingController();
+
   // Dialog form controllers
   final TextEditingController _addM3uNameController = TextEditingController();
   final TextEditingController _addM3uUrlController = TextEditingController();
-  final TextEditingController _addXtreamNameController = TextEditingController();
-  final TextEditingController _addXtreamServerController = TextEditingController();
-  final TextEditingController _addXtreamUsernameController = TextEditingController();
-  final TextEditingController _addXtreamPasswordController = TextEditingController();
+  final TextEditingController _addXtreamNameController =
+      TextEditingController();
+  final TextEditingController _addXtreamServerController =
+      TextEditingController();
+  final TextEditingController _addXtreamUsernameController =
+      TextEditingController();
+  final TextEditingController _addXtreamPasswordController =
+      TextEditingController();
 
   // Focus nodes
   final FocusNode _playlistNameFocusNode = FocusNode();
@@ -49,7 +57,7 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
   final FocusNode _epgUrlFocusNode = FocusNode();
   final FocusNode _secondaryEpgUrlFocusNode = FocusNode();
   final FocusNode _firstFocusNode = FocusNode();
-  
+
   // Dialog focus nodes
   final FocusNode _addM3uNameFocusNode = FocusNode();
   final FocusNode _addM3uUrlFocusNode = FocusNode();
@@ -92,7 +100,7 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
 
   Future<void> _loadSavedPlaylists() async {
     setState(() => _isLoading = true);
-    
+
     final prefs = await SharedPreferences.getInstance();
     final savedPlaylists = <PlaylistInfo>[];
 
@@ -103,7 +111,7 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
       final epgUrl = prefs.getString('m3u_epg_url_$url') ?? '';
       final secondaryEpg = prefs.getString('m3u_secondary_epg_$url') ?? '';
       final updateFreq = prefs.getInt('m3u_update_freq_$url') ?? 6;
-      
+
       savedPlaylists.add(PlaylistInfo(
         id: url.hashCode.toString(),
         name: name,
@@ -120,11 +128,13 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
     for (String server in xtreamServers) {
       final username = prefs.getString('xtream_username_$server') ?? '';
       final password = prefs.getString('xtream_password_$server') ?? '';
-      final name = prefs.getString('xtream_playlist_name_$server') ?? 'Xtream Playlist';
+      final name =
+          prefs.getString('xtream_playlist_name_$server') ?? 'Xtream Playlist';
       final epgUrl = prefs.getString('xtream_epg_url_$server') ?? '';
-      final secondaryEpg = prefs.getString('xtream_secondary_epg_$server') ?? '';
+      final secondaryEpg =
+          prefs.getString('xtream_secondary_epg_$server') ?? '';
       final updateFreq = prefs.getInt('xtream_update_freq_$server') ?? 6;
-      
+
       savedPlaylists.add(PlaylistInfo(
         id: server.hashCode.toString(),
         name: name,
@@ -142,6 +152,40 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
       _savedPlaylists = savedPlaylists;
       _isLoading = false;
     });
+
+    // Fallback for legacy storage: 'saved_playlists' JSON (older playlist manager)
+    if (_savedPlaylists.isEmpty) {
+      final legacyJson = prefs.getString('saved_playlists');
+      if (legacyJson != null && legacyJson.trim().isNotEmpty) {
+        try {
+          final decoded = jsonDecode(legacyJson) as List<dynamic>;
+          final legacyItems = decoded
+              .map((e) => SavedPlaylist.fromJson(e as Map<String, dynamic>))
+              .toList();
+          final migrated = legacyItems
+              .map((p) => PlaylistInfo(
+                    id: p.id,
+                    name: p.name,
+                    url: p.type == 'm3u' ? p.url : (p.server ?? ''),
+                    type: p.type,
+                    epgUrl: '',
+                    secondaryEpgUrl: '',
+                    updateFrequency: 6,
+                    username: p.username,
+                    password: p.password,
+                  ))
+              .toList();
+
+          if (mounted) {
+            setState(() {
+              _savedPlaylists = migrated;
+            });
+          }
+        } catch (_) {
+          // ignore parsing errors and leave list empty
+        }
+      }
+    }
   }
 
   @override
@@ -291,12 +335,14 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
                         children: [
                           IconButton(
                             icon: const Icon(Icons.remove, color: Colors.white),
-                            onPressed: () => _updatePlaylistFrequency(playlist, -1),
+                            onPressed: () =>
+                                _updatePlaylistFrequency(playlist, -1),
                           ),
                           const SizedBox(width: 8),
                           IconButton(
                             icon: const Icon(Icons.add, color: Colors.white),
-                            onPressed: () => _updatePlaylistFrequency(playlist, 1),
+                            onPressed: () =>
+                                _updatePlaylistFrequency(playlist, 1),
                           ),
                         ],
                       ),
@@ -308,13 +354,16 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
                   children: [
                     SettingsActionTile(
                       title: 'Primary EPG URL',
-                      subtitle: playlist.epgUrl.isEmpty ? 'Not set' : playlist.epgUrl,
+                      subtitle:
+                          playlist.epgUrl.isEmpty ? 'Not set' : playlist.epgUrl,
                       icon: Icons.tv,
                       onTap: () => _editPlaylistEpg(playlist),
                     ),
                     SettingsActionTile(
                       title: 'Secondary EPG URL',
-                      subtitle: playlist.secondaryEpgUrl.isEmpty ? 'Not set' : playlist.secondaryEpgUrl,
+                      subtitle: playlist.secondaryEpgUrl.isEmpty
+                          ? 'Not set'
+                          : playlist.secondaryEpgUrl,
                       icon: Icons.tv,
                       onTap: () => _editPlaylistSecondaryEpg(playlist),
                     ),
@@ -389,7 +438,8 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.darkBackground,
-        title: const Text('Edit Playlist Name', style: TextStyle(color: Colors.white)),
+        title: const Text('Edit Playlist Name',
+            style: TextStyle(color: Colors.white)),
         content: SizedBox(
           width: double.maxFinite,
           child: _buildInputField(
@@ -420,7 +470,8 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.darkBackground,
-        title: const Text('Edit Playlist URL', style: TextStyle(color: Colors.white)),
+        title: const Text('Edit Playlist URL',
+            style: TextStyle(color: Colors.white)),
         content: SizedBox(
           width: double.maxFinite,
           child: _buildInputField(
@@ -451,7 +502,8 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.darkBackground,
-        title: const Text('Edit Primary EPG URL', style: TextStyle(color: Colors.white)),
+        title: const Text('Edit Primary EPG URL',
+            style: TextStyle(color: Colors.white)),
         content: SizedBox(
           width: double.maxFinite,
           child: _buildInputField(
@@ -482,7 +534,8 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.darkBackground,
-        title: const Text('Edit Secondary EPG URL', style: TextStyle(color: Colors.white)),
+        title: const Text('Edit Secondary EPG URL',
+            style: TextStyle(color: Colors.white)),
         content: SizedBox(
           width: double.maxFinite,
           child: _buildInputField(
@@ -516,11 +569,11 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
       } else {
         await prefs.setInt('xtream_update_freq_${playlist.url}', newFreq);
       }
-      
+
       setState(() {
         playlist.updateFrequency = newFreq;
       });
-      
+
       _showMessage('Update frequency updated to $newFreq hours');
     }
   }
@@ -535,14 +588,15 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
   void _loadPlaylist(PlaylistInfo playlist) async {
     _showMessage('Loading ${playlist.name}...');
     final provider = Provider.of<ChannelProvider>(context, listen: false);
-    
+
     String playlistUrl;
     if (playlist.type == 'm3u') {
       playlistUrl = playlist.url;
     } else {
-      playlistUrl = '${playlist.url}/get.php?username=${playlist.username}&password=${playlist.password}&type=m3u_plus&output=ts';
+      playlistUrl =
+          '${playlist.url}/get.php?username=${playlist.username}&password=${playlist.password}&type=m3u_plus&output=ts';
     }
-    
+
     await provider.loadPlaylistFromUrl(playlistUrl);
     _showMessage('${playlist.name} loaded successfully!');
   }
@@ -552,7 +606,8 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.darkBackground,
-        title: const Text('Delete Playlist', style: TextStyle(color: Colors.white)),
+        title: const Text('Delete Playlist',
+            style: TextStyle(color: Colors.white)),
         content: Text(
           'Are you sure you want to delete "${playlist.name}"? This action cannot be undone.',
           style: const TextStyle(color: Colors.white70),
@@ -564,7 +619,8 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: AppTheme.accentRed)),
+            child: const Text('Delete',
+                style: TextStyle(color: AppTheme.accentRed)),
           ),
         ],
       ),
@@ -572,7 +628,7 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
 
     if (confirmed == true) {
       final prefs = await SharedPreferences.getInstance();
-      
+
       if (playlist.type == 'm3u') {
         final savedM3u = prefs.getStringList('saved_m3u_playlists') ?? [];
         savedM3u.remove(playlist.url);
@@ -590,11 +646,11 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
         await prefs.remove('xtream_secondary_epg_${playlist.url}');
         await prefs.remove('xtream_update_freq_${playlist.url}');
       }
-      
+
       setState(() {
         _savedPlaylists.removeWhere((p) => p.id == playlist.id);
       });
-      
+
       _showMessage('${playlist.name} deleted successfully');
     }
   }
@@ -602,12 +658,13 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
   void _showAddM3uDialog() {
     _addM3uNameController.clear();
     _addM3uUrlController.clear();
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.darkBackground,
-        title: const Text('Add M3U Playlist', style: TextStyle(color: Colors.white)),
+        title: const Text('Add M3U Playlist',
+            style: TextStyle(color: Colors.white)),
         content: SizedBox(
           width: double.maxFinite,
           child: Column(
@@ -637,7 +694,8 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
             child: const Text('Cancel', style: TextStyle(color: Colors.white)),
           ),
           TextButton(
-            onPressed: () => _saveNewM3uPlaylist(_addM3uNameController.text, _addM3uUrlController.text),
+            onPressed: () => _saveNewM3uPlaylist(
+                _addM3uNameController.text, _addM3uUrlController.text),
             child: const Text('Save', style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -650,12 +708,13 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
     _addXtreamServerController.clear();
     _addXtreamUsernameController.clear();
     _addXtreamPasswordController.clear();
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.darkBackground,
-        title: const Text('Add Xtream Playlist', style: TextStyle(color: Colors.white)),
+        title: const Text('Add Xtream Playlist',
+            style: TextStyle(color: Colors.white)),
         content: SizedBox(
           width: double.maxFinite,
           child: Column(
@@ -754,14 +813,10 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
-                    color: isFocused
-                        ? AppTheme.highlight
-                        : Colors.black26,
+                    color: isFocused ? AppTheme.highlight : Colors.black26,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: isFocused
-                          ? AppTheme.primaryBlue
-                          : Colors.white10,
+                      color: isFocused ? AppTheme.primaryBlue : Colors.white10,
                       width: isFocused ? 2 : 1,
                     ),
                   ),
@@ -814,16 +869,18 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
   Future<void> _savePlaylistName(PlaylistInfo playlist) async {
     final prefs = await SharedPreferences.getInstance();
     if (playlist.type == 'm3u') {
-      await prefs.setString('m3u_playlist_name_${playlist.url}', _playlistNameController.text);
+      await prefs.setString(
+          'm3u_playlist_name_${playlist.url}', _playlistNameController.text);
     } else {
-      await prefs.setString('xtream_playlist_name_${playlist.url}', _playlistNameController.text);
+      await prefs.setString(
+          'xtream_playlist_name_${playlist.url}', _playlistNameController.text);
     }
-    
+
     if (mounted) {
       setState(() {
         playlist.name = _playlistNameController.text;
       });
-      
+
       Navigator.of(context).pop();
       _showMessage('Playlist name updated');
     }
@@ -832,7 +889,7 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
   Future<void> _savePlaylistUrl(PlaylistInfo playlist) async {
     final prefs = await SharedPreferences.getInstance();
     final newUrl = _playlistUrlController.text;
-    
+
     if (playlist.type == 'm3u') {
       await prefs.setString('m3u_playlist_url_$newUrl', newUrl);
       await prefs.remove('m3u_playlist_url_${playlist.url}');
@@ -840,12 +897,12 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
       await prefs.setString('xtream_playlist_url_$newUrl', newUrl);
       await prefs.remove('xtream_playlist_url_${playlist.url}');
     }
-    
+
     if (mounted) {
       setState(() {
         playlist.url = newUrl;
       });
-      
+
       Navigator.of(context).pop();
       _showMessage('Playlist URL updated');
     }
@@ -854,18 +911,18 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
   Future<void> _savePlaylistEpg(PlaylistInfo playlist) async {
     final prefs = await SharedPreferences.getInstance();
     final epgUrl = _epgUrlController.text;
-    
+
     if (playlist.type == 'm3u') {
       await prefs.setString('m3u_epg_url_${playlist.url}', epgUrl);
     } else {
       await prefs.setString('xtream_epg_url_${playlist.url}', epgUrl);
     }
-    
+
     if (mounted) {
       setState(() {
         playlist.epgUrl = epgUrl;
       });
-      
+
       Navigator.of(context).pop();
       _showMessage('EPG URL updated');
     }
@@ -874,18 +931,20 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
   Future<void> _savePlaylistSecondaryEpg(PlaylistInfo playlist) async {
     final prefs = await SharedPreferences.getInstance();
     final secondaryEpgUrl = _secondaryEpgUrlController.text;
-    
+
     if (playlist.type == 'm3u') {
-      await prefs.setString('m3u_secondary_epg_${playlist.url}', secondaryEpgUrl);
+      await prefs.setString(
+          'm3u_secondary_epg_${playlist.url}', secondaryEpgUrl);
     } else {
-      await prefs.setString('xtream_secondary_epg_${playlist.url}', secondaryEpgUrl);
+      await prefs.setString(
+          'xtream_secondary_epg_${playlist.url}', secondaryEpgUrl);
     }
-    
+
     if (mounted) {
       setState(() {
         playlist.secondaryEpgUrl = secondaryEpgUrl;
       });
-      
+
       Navigator.of(context).pop();
       _showMessage('Secondary EPG URL updated');
     }
@@ -896,14 +955,14 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
       _showMessage('Please fill in all fields');
       return;
     }
-    
+
     final prefs = await SharedPreferences.getInstance();
     final savedM3u = prefs.getStringList('saved_m3u_playlists') ?? [];
     savedM3u.add(url);
     await prefs.setStringList('saved_m3u_playlists', savedM3u);
     await prefs.setString('m3u_playlist_name_$url', name);
     await prefs.setInt('m3u_update_freq_$url', 6);
-    
+
     if (mounted) {
       Navigator.of(context).pop();
       await _loadSavedPlaylists();
@@ -911,12 +970,16 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
     }
   }
 
-  Future<void> _saveNewXtreamPlaylist(String name, String server, String username, String password) async {
-    if (name.isEmpty || server.isEmpty || username.isEmpty || password.isEmpty) {
+  Future<void> _saveNewXtreamPlaylist(
+      String name, String server, String username, String password) async {
+    if (name.isEmpty ||
+        server.isEmpty ||
+        username.isEmpty ||
+        password.isEmpty) {
       _showMessage('Please fill in all fields');
       return;
     }
-    
+
     final prefs = await SharedPreferences.getInstance();
     final savedXtream = prefs.getStringList('saved_xtream_servers') ?? [];
     savedXtream.add(server);
@@ -925,7 +988,7 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
     await prefs.setString('xtream_username_$server', username);
     await prefs.setString('xtream_password_$server', password);
     await prefs.setInt('xtream_update_freq_$server', 6);
-    
+
     if (mounted) {
       Navigator.of(context).pop();
       await _loadSavedPlaylists();

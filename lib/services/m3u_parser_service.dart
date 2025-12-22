@@ -4,29 +4,15 @@ import 'dart:convert';
 import '../models/channel.dart';
 import '../models/content.dart';
 
-// Top-level function for isolate-based M3U parsing
-Map<String, dynamic> parseM3UInIsolate(String content) {
+// Top-level function for isolate-based M3U parsing.
+// This delegates to the streaming/map-based parser so it can be used
+// safely with `compute()` without allocating a huge intermediate
+// string on the main isolate. The function is `async` so it can be
+// used as a `compute` entrypoint that performs streaming parsing.
+Future<Map<String, dynamic>> parseM3UInIsolate(String content) async {
   final parser = M3UParserService();
-  final channels = parser.parseM3U(content);
-  
-  // Convert channels to maps for efficient transfer
-  final channelMaps = channels.map((channel) => {
-    'id': channel.id,
-    'name': channel.name,
-    'url': channel.url,
-    'logoUrl': channel.logoUrl,
-    'groupTitle': channel.groupTitle,
-    'tvgId': channel.tvgId,
-    'attributes': channel.attributes,
-    'sortOrder': channel.sortOrder,
-    'isFavorite': channel.isFavorite,
-    'isHidden': channel.isHidden,
-  }).toList();
-  
-  return {
-    'channels': channelMaps,
-    'epgUrl': parser.epgUrl,
-  };
+  final bytes = utf8.encode(content);
+  return await parser.parseM3UStreamToMaps(Stream.value(bytes));
 }
 
 class M3UParseResult {

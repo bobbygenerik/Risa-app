@@ -1,6 +1,7 @@
+import 'dart:convert';
+import '../providers/playlist_isolate.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
@@ -10,8 +11,10 @@ import 'package:iptv_player/utils/startup_probe.dart';
 import 'package:iptv_player/utils/performance_monitor.dart';
 import '../models/channel.dart';
 import '../models/content.dart';
-import '../services/m3u_parser_service.dart';
-import 'playlist_isolate.dart';
+// M3U parsing is handled via `playlist_isolate.dart` (streaming/isolate helpers).
+// Keep the local import commented out to avoid unused-import warnings while
+// migration completes.
+// import '../services/m3u_parser_service.dart';
 import '../services/xtream_codes_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
@@ -40,8 +43,6 @@ List<String> _extractCategoriesInIsolate(List<String?> groupTitles) {
   }
   return categories;
 }
-
-
 
 /// Clear both SharedPreferences and file-based playlist cache
 Future<void> clearPlaylistCache() async {
@@ -141,8 +142,6 @@ class ChannelProvider with ChangeNotifier {
   /// Quick check if there are any channels (no conversion needed)
   bool get hasChannels => _channelMaps.isNotEmpty;
 
-
-
   /// Public accessor for virtualized lists
   Channel getChannelAt(int index) => _getChannelAt(index);
 
@@ -153,50 +152,48 @@ class ChannelProvider with ChangeNotifier {
     return List.generate(limit, (i) => _getChannelAt(i));
   }
 
-
-
-
-
   /// Get specific channel by index
   Channel _getChannelAt(int index) {
     if (index < 0 || index >= _channelMaps.length) {
       throw RangeError.index(index, _channelMaps, 'index');
     }
-    
+
     // Track cache performance
     final wasInCache = _channelCache.containsKey(index);
     final channel = _channelCache.putIfAbsent(
       index,
       () => Channel.fromMap(_channelMaps[index]),
     );
-    
+
     // Debug log occasionally
     if (!wasInCache && _channelCache.length % 500 == 0) {
       debugLog('ChannelProvider: Channel cache size: ${_channelCache.length}');
     }
-    
+
     return channel;
   }
-  
+
   /// Get channel maps for virtual scrolling (memory efficient)
   List<Map<String, dynamic>> getChannelMapsForUI({int limit = 50}) {
-    final actualLimit = _channelMaps.length < limit ? _channelMaps.length : limit;
+    final actualLimit =
+        _channelMaps.length < limit ? _channelMaps.length : limit;
     return _channelMaps.take(actualLimit).toList();
   }
 
   /// Get channel maps for category (virtual scrolling)
-  List<Map<String, dynamic>> getChannelMapsForCategory(String category, {int limit = 50}) {
+  List<Map<String, dynamic>> getChannelMapsForCategory(String category,
+      {int limit = 50}) {
     final result = <Map<String, dynamic>>[];
     for (int i = 0; i < _channelMaps.length && result.length < limit; i++) {
       final channelMap = _channelMaps[i];
-      final channelCategory = (channelMap['groupTitle'] as String?) ?? 'Uncategorized';
+      final channelCategory =
+          (channelMap['groupTitle'] as String?) ?? 'Uncategorized';
       if (channelCategory == category) {
         result.add(channelMap);
       }
     }
     return result;
   }
-
 
   /// Find a channel by ID (lazy conversion)
   Channel? getChannelById(String id) {
@@ -342,7 +339,8 @@ class ChannelProvider with ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final watchCountsJson =
           _watchCounts.map((k, v) => MapEntry(k, v.toString()));
-      await prefs.setString('channel_watch_counts', json.encode(watchCountsJson));
+      await prefs.setString(
+          'channel_watch_counts', json.encode(watchCountsJson));
     })());
   }
 
@@ -428,16 +426,17 @@ class ChannelProvider with ChangeNotifier {
           // Extract and save EPG URL from JSON cache
           final epgUrl = parsed['epgUrl'] as String?;
           if (epgUrl != null && epgUrl.isNotEmpty) {
-             final prefs = await SharedPreferences.getInstance();
-             final oldUrl = prefs.getString('epg_url');
-             final urlChanged = oldUrl != epgUrl;
-             
-             await prefs.setString('epg_url', epgUrl);
-             // Ensure EPG service is initialized
-             if (_epgService != null) {
-                debugLog('ChannelProvider: Initializing EPG service with URL from cache');
-                await _epgService!.initialize(forceRefresh: urlChanged);
-             }
+            final prefs = await SharedPreferences.getInstance();
+            final oldUrl = prefs.getString('epg_url');
+            final urlChanged = oldUrl != epgUrl;
+
+            await prefs.setString('epg_url', epgUrl);
+            // Ensure EPG service is initialized
+            if (_epgService != null) {
+              debugLog(
+                  'ChannelProvider: Initializing EPG service with URL from cache');
+              await _epgService!.initialize(forceRefresh: urlChanged);
+            }
           }
 
           // VOD content is now loaded on demand, so just set the cache paths
@@ -514,15 +513,15 @@ class ChannelProvider with ChangeNotifier {
           // Extract and save EPG URL from cache if found
           final epgUrl = parsed['epgUrl'] as String?;
           if (epgUrl != null && epgUrl.isNotEmpty) {
-             final prefs = await SharedPreferences.getInstance();
-             final oldUrl = prefs.getString('epg_url');
-             final urlChanged = oldUrl != epgUrl;
-             
-             await prefs.setString('epg_url', epgUrl);
-             // Ensure EPG service is initialized
-             if (_epgService != null) {
-                unawaited(_epgService!.initialize(forceRefresh: urlChanged));
-             }
+            final prefs = await SharedPreferences.getInstance();
+            final oldUrl = prefs.getString('epg_url');
+            final urlChanged = oldUrl != epgUrl;
+
+            await prefs.setString('epg_url', epgUrl);
+            // Ensure EPG service is initialized
+            if (_epgService != null) {
+              unawaited(_epgService!.initialize(forceRefresh: urlChanged));
+            }
           }
 
           // Store raw maps - already in map format from optimized parser
@@ -637,11 +636,11 @@ class ChannelProvider with ChangeNotifier {
   Future<void> loadPlaylistFromUrl(String url) async {
     PerformanceMonitor.start('PLAYLIST_LOAD_TOTAL');
     PerformanceMonitor.trackMemoryUsage('Before playlist load');
-    
+
     try {
       await _loadPlaylistFromUrlImpl(url);
-      PerformanceMonitor.trackChannelLoad(_channelMaps.length, 
-          DateTime.now().difference(DateTime.now()));
+      PerformanceMonitor.trackChannelLoad(
+          _channelMaps.length, DateTime.now().difference(DateTime.now()));
     } catch (e) {
       // If we get an SSL/TLS handshake error, retry with direct HttpClient
       if (e.toString().contains('HandshakeException') ||
@@ -659,7 +658,7 @@ class ChannelProvider with ChangeNotifier {
   /// Implementation of loadPlaylistFromUrl using standard http.Client
   Future<void> _loadPlaylistFromUrlImpl(String url) async {
     PerformanceMonitor.start('PLAYLIST_LOAD_TOTAL');
-    
+
     _isLoading = true;
     _errorMessage = null;
     _lastM3UContent = null; // Clear old content
@@ -783,7 +782,8 @@ class ChannelProvider with ChangeNotifier {
 
         // Check for empty playlist file
         if (!await tempFile.exists() || await tempFile.length() == 0) {
-          _errorMessage = 'The downloaded playlist file is empty. Please check your playlist URL or server.';
+          _errorMessage =
+              'The downloaded playlist file is empty. Please check your playlist URL or server.';
           _isLoading = false;
           notifyListeners();
           throw Exception('Empty playlist file');
@@ -803,8 +803,10 @@ class ChannelProvider with ChangeNotifier {
             'ChannelProvider: Isolate parsing took ${parseDuration.inMilliseconds}ms');
 
         // Check for empty or invalid parsed data
-        if (parsed['channels'] == null || (parsed['channels'] as List).isEmpty) {
-          _errorMessage = 'The playlist file could not be parsed or contains no channels. Please check your playlist source.';
+        if (parsed['channels'] == null ||
+            (parsed['channels'] as List).isEmpty) {
+          _errorMessage =
+              'The playlist file could not be parsed or contains no channels. Please check your playlist source.';
           _isLoading = false;
           notifyListeners();
           throw Exception('Parsed playlist is empty or invalid');
@@ -821,7 +823,8 @@ class ChannelProvider with ChangeNotifier {
               'ChannelProvider: Found EPG URL in playlist: $epgUrl (changed: $urlChanged)');
           await prefs.setString('epg_url', epgUrl);
           if (_epgService != null) {
-            debugLog('ChannelProvider: Initializing EPG service with URL from M3U');
+            debugLog(
+                'ChannelProvider: Initializing EPG service with URL from M3U');
             await _epgService!.initialize(forceRefresh: urlChanged);
           }
         }
@@ -861,7 +864,8 @@ class ChannelProvider with ChangeNotifier {
           debugLog(
               'ChannelProvider: flutter.cached_playlist contents: ${playlistJson.substring(0, playlistJson.length > 500 ? 500 : playlistJson.length)}');
         } catch (e) {
-          debugLog('ChannelProvider: Failed to save playlist for Android Auto: $e');
+          debugLog(
+              'ChannelProvider: Failed to save playlist for Android Auto: $e');
         }
 
         final List<Content> movies = (parsed['movies'] as List<dynamic>)
@@ -974,7 +978,8 @@ class ChannelProvider with ChangeNotifier {
             '• The server is overloaded\n\n'
             'Try again in a few moments.';
       } else if (e.toString().contains('FormatException')) {
-        _errorMessage = 'Invalid playlist file or format. The playlist could not be parsed.\n\n'
+        _errorMessage =
+            'Invalid playlist file or format. The playlist could not be parsed.\n\n'
             'Please check that your playlist URL is correct and the file is not empty or corrupted.';
       } else if (e.toString().contains('Empty playlist file')) {
         // Already handled above
@@ -1142,7 +1147,10 @@ class ChannelProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final parsed = await compute(_parsePlaylistInIsolate, content);
+      // Use the optimized isolate parser that accepts bytes/stream to avoid
+      // allocating huge intermediate strings in the main isolate.
+      final bytes = utf8.encode(content);
+      final parsed = await compute(parsePlaylistInIsolate, bytes);
 
       // Store raw maps - don't convert to Channel objects on main thread!
       _channelMaps = (parsed['channels'] as List<dynamic>? ?? [])
@@ -1534,24 +1542,8 @@ class ChannelProvider with ChangeNotifier {
   }
 }
 
-
-/// Parse an entire playlist off the main isolate and return simple maps that
-/// can be reconstructed into Channel/Content objects.
-Map<String, dynamic> _parsePlaylistInIsolate(String content) {
-  final parser = M3UParserService();
-  final channels = parser.parseM3U(content).map((c) => c.toMap()).toList();
-  final vodMap = parser.parseVOD(content);
-  final movies = (vodMap['movies'] ?? <Content>[])
-      .map((content) => content.toMap())
-      .toList();
-  final series = (vodMap['series'] ?? <Content>[])
-      .map((content) => content.toMap())
-      .toList();
-
-  return {
-    'channels': channels,
-    'movies': movies,
-    'series': series,
-    'epgUrl': parser.epgUrl,
-  };
-}
+// Playlist parsing is handled via the centralized isolate helpers in
+// `lib/providers/playlist_isolate.dart` which provide streaming, map-based
+// parsing (`parsePlaylistInIsolate` and `parsePlaylistFromFile`). The
+// older string-based helper that lived here was removed to avoid duplicate
+// implementations and to ensure all callers use the streaming/isolate paths.

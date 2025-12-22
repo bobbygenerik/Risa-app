@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:iptv_player/utils/app_theme.dart';
+// app_theme not used here after recent refactors
+// import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
 
 /// Represents a navigation tab in the sidebar
@@ -50,6 +51,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
   late FocusNode _overflowButtonFocusNode;
   late FocusNode _settingsFocusNode;
   bool _isExpanded = false;
+  bool _suppressAutoExpandOnInitialFocus = false;
   String? _lastRoutePath;
   static const double _expandedWidth = 180.0;
 
@@ -80,7 +82,17 @@ class SidebarNavigationState extends State<SidebarNavigation> {
     _activeTabIndex = _resolveActiveTabIndex(widget.activeTab);
 
     _isExpanded = false;
-    WidgetsBinding.instance.addPostFrameCallback((_) => _focusActiveTab());
+    // Suppress auto-expansion triggered by the initial focus request so the
+    // sidebar remains collapsed on app startup (avoid flashing open).
+    _suppressAutoExpandOnInitialFocus = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusActiveTab();
+      // Clear the suppression on the next frame so normal focus expansion
+      // behavior resumes for user-driven focus changes.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _suppressAutoExpandOnInitialFocus = false;
+      });
+    });
     widget.onNavFocusRegistration?.call(_requestActiveTabFocus);
     widget.onExpandRegistration?.call(_expandSidebar);
   }
@@ -177,7 +189,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
   bool _requestActiveTabFocus() {
     if (_tabs.isNotEmpty) {
       final index = _activeTabIndex.clamp(0, _tabs.length - 1);
-      if (!_isExpanded) {
+      if (!_isExpanded && !_suppressAutoExpandOnInitialFocus) {
         _setExpanded(true);
       }
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -251,7 +263,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
         return KeyEventResult.ignored;
       },
       onFocusChange: (hasFocus) {
-        if (hasFocus && !_isExpanded) {
+        if (hasFocus && !_isExpanded && !_suppressAutoExpandOnInitialFocus) {
           _setExpanded(true);
         }
       },
@@ -278,9 +290,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
-                color: isFocused
-                    ? AppTheme.primaryBlue.withValues(alpha: 0.15)
-                    : Colors.transparent,
+                color: Colors.transparent,
               ),
               child: AnimatedScale(
                 duration: const Duration(milliseconds: 140),
@@ -292,8 +302,8 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                         children: [
                           Icon(
                             tab.icon,
-                            color: isActive
-                                ? AppTheme.primaryBlue
+                            color: (isActive || isFocused)
+                                ? Colors.white
                                 : Colors.white70,
                             size: 16,
                           ),
@@ -304,8 +314,8 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                color: isActive
-                                    ? AppTheme.primaryBlue
+                                color: (isActive || isFocused)
+                                    ? Colors.white
                                     : Colors.white70,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
@@ -316,7 +326,9 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                       )
                     : Icon(
                         tab.icon,
-                        color: isActive ? AppTheme.primaryBlue : Colors.white70,
+                        color: (isActive || isFocused)
+                            ? Colors.white
+                            : Colors.white70,
                         size: 16,
                       ),
               ),
@@ -380,7 +392,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
         return KeyEventResult.ignored;
       },
       onFocusChange: (hasFocus) {
-        if (hasFocus && !_isExpanded) {
+        if (hasFocus && !_isExpanded && !_suppressAutoExpandOnInitialFocus) {
           _setExpanded(true);
         }
       },
@@ -408,9 +420,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
-                color: isFocused
-                    ? AppTheme.primaryBlue.withValues(alpha: 0.15)
-                    : Colors.transparent,
+                color: Colors.transparent,
               ),
               child: AnimatedScale(
                 duration: const Duration(milliseconds: 140),
@@ -422,8 +432,8 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                         children: [
                           Icon(
                             tab.icon,
-                            color: isActive
-                                ? AppTheme.primaryBlue
+                            color: (isActive || isFocused)
+                                ? Colors.white
                                 : Colors.white70,
                             size: 16,
                           ),
@@ -434,8 +444,8 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                color: isActive
-                                    ? AppTheme.primaryBlue
+                                color: (isActive || isFocused)
+                                    ? Colors.white
                                     : Colors.white70,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
@@ -446,7 +456,9 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                       )
                     : Icon(
                         tab.icon,
-                        color: isActive ? AppTheme.primaryBlue : Colors.white70,
+                        color: (isActive || isFocused)
+                            ? Colors.white
+                            : Colors.white70,
                         size: 16,
                       ),
               ),
@@ -469,7 +481,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
         duration: const Duration(milliseconds: 200),
         width: _isExpanded ? _expandedWidth : AppSpacing.sidebarCollapsedWidth,
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.1),
+          color: Colors.black.withAlpha((0.7 * 255).round()),
         ),
         child: _buildSidebarContent(),
       ),
@@ -559,7 +571,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
         return KeyEventResult.ignored;
       },
       onFocusChange: (hasFocus) {
-        if (hasFocus && !_isExpanded) {
+        if (hasFocus && !_isExpanded && !_suppressAutoExpandOnInitialFocus) {
           _setExpanded(true);
         }
       },
@@ -585,9 +597,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
-                color: isFocused
-                    ? AppTheme.primaryBlue.withValues(alpha: 0.15)
-                    : Colors.transparent,
+                color: Colors.transparent,
               ),
               child: AnimatedScale(
                 duration: const Duration(milliseconds: 140),
@@ -598,8 +608,8 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(icon,
-                              color: isActive
-                                  ? AppTheme.primaryBlue
+                              color: (isActive || isFocused)
+                                  ? Colors.white
                                   : Colors.white70,
                               size: 16),
                           const SizedBox(width: 8),
@@ -609,8 +619,8 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                color: isActive
-                                    ? AppTheme.primaryBlue
+                                color: (isActive || isFocused)
+                                    ? Colors.white
                                     : Colors.white70,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
@@ -620,7 +630,9 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                         ],
                       )
                     : Icon(icon,
-                        color: isActive ? AppTheme.primaryBlue : Colors.white70,
+                        color: (isActive || isFocused)
+                            ? Colors.white
+                            : Colors.white70,
                         size: 16),
               ),
             ),
