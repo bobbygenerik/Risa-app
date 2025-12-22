@@ -68,14 +68,47 @@ class EpgDiagnosticScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'EPG Status: ${epgService.availableChannels.isNotEmpty ? "Loaded" : "No Data"}',
-                  style: TextStyle(
-                    color: epgService.availableChannels.isNotEmpty ? Colors.green : Colors.red,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'EPG Status: ${epgService.availableChannels.isNotEmpty ? "Loaded" : "No Data"}',
+                      style: TextStyle(
+                        color: epgService.availableChannels.isNotEmpty ? Colors.green : Colors.red,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        try {
+                          await epgService.initialize(forceRefresh: true);
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('EPG reload requested')));
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('EPG reload failed: $e')));
+                        }
+                      },
+                      icon: const Icon(Icons.refresh, size: 16),
+                      label: const Text('Reload EPG'),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 8),
+                if (epgService.isDownloading || epgService.isParsing || epgService.isLoading)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      'EPG: ${epgService.isDownloading ? "Downloading" : epgService.isParsing ? "Parsing" : epgService.isLoading ? "Loading" : "Idle" }',
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  ),
+                if (epgService.error != null) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text('EPG Error: ${epgService.error}', style: const TextStyle(color: Colors.redAccent)),
+                  ),
+                ],
                 Text(
                   'EPG Channels: ${epgChannels.length}',
                   style: const TextStyle(color: Colors.white70, fontSize: 16),

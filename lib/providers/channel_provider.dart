@@ -1117,7 +1117,12 @@ class ChannelProvider with ChangeNotifier {
       if (epgUrl != null && epgUrl.isNotEmpty) {
         debugLog('ChannelProvider: Found EPG URL: $epgUrl (auto-saving)');
         await prefs.setString('custom_epg_url', epgUrl);
-        unawaited(_epgService?.initialize()); // Trigger EPG loading
+        try {
+          await _epgService?.initialize(forceRefresh: true);
+          debugLog('ChannelProvider: EPG initialized (auto-save). Available channels: ${_epgService?.availableChannels.length}, Error: ${_epgService?.error}');
+        } catch (e) {
+          debugLog('ChannelProvider: EPG initialization failed after auto-save: $e');
+        }
       }
 
       unawaited(_loadXtreamVOD(url));
@@ -1192,7 +1197,12 @@ class ChannelProvider with ChangeNotifier {
             'ChannelProvider: Found EPG URL in M3U: $epgUrl (auto-saving)');
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('custom_epg_url', epgUrl);
-        unawaited(_epgService?.initialize()); // Trigger EPG loading
+        try {
+          await _epgService?.initialize(forceRefresh: true);
+          debugLog('ChannelProvider: EPG initialized (M3U). Available channels: ${_epgService?.availableChannels.length}, Error: ${_epgService?.error}');
+        } catch (e) {
+          debugLog('ChannelProvider: EPG initialization failed after M3U save: $e');
+        }
       }
 
       _isLoading = false;
