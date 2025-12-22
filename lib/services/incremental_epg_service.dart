@@ -398,27 +398,33 @@ class IncrementalEpgService extends ChangeNotifier {
 
   static DateTime _staticParseTime(String timeStr) {
     try {
-      if (timeStr.length < 14) return DateTime.now();
-      final mainPart = timeStr.substring(0, 14);
-      final year = int.parse(mainPart.substring(0, 4));
-      final month = int.parse(mainPart.substring(4, 6));
-      final day = int.parse(mainPart.substring(6, 8));
-      final hour = int.parse(mainPart.substring(8, 10));
-      final minute = int.parse(mainPart.substring(10, 12));
-      final second = int.parse(mainPart.substring(12, 14));
-      
-      DateTime utcTime = DateTime.utc(year, month, day, hour, minute, second);
-      
-      if (timeStr.length > 15) {
-        final offset = timeStr.substring(15).trim();
-        if (offset.length >= 4) {
-          final sign = offset.startsWith('+') ? 1 : -1;
-          final h = int.parse(offset.substring(1, 3));
-          final m = int.parse(offset.substring(3, 5));
-          utcTime = utcTime.subtract(Duration(hours: sign * h, minutes: sign * m));
-        }
+      final trimmed = timeStr.trim();
+      // Match base datetime and optional offset like +0100 or -0500
+      final re = RegExp(r'^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(?:\s*([+-]\d{4}))?');
+      final m = re.firstMatch(trimmed);
+      if (m == null) return DateTime.now();
+
+      final year = int.parse(m.group(1)!);
+      final month = int.parse(m.group(2)!);
+      final day = int.parse(m.group(3)!);
+      final hour = int.parse(m.group(4)!);
+      final minute = int.parse(m.group(5)!);
+      final second = int.parse(m.group(6)!);
+
+      DateTime dt = DateTime.utc(year, month, day, hour, minute, second);
+
+      final offset = m.group(7);
+      if (offset != null && offset.length == 5) {
+        // offset like +HHMM or -HHMM
+        final sign = offset.startsWith('+') ? 1 : -1;
+        final offH = int.tryParse(offset.substring(1, 3)) ?? 0;
+        final offM = int.tryParse(offset.substring(3, 5)) ?? 0;
+        // XMLTV offset means local = UTC + offset, so to get UTC subtract offset
+        final delta = Duration(hours: offH, minutes: offM);
+        dt = dt.subtract(sign == 1 ? delta : -delta);
       }
-      return utcTime.toLocal();
+
+      return dt.toLocal();
     } catch (e) {
       return DateTime.now();
     }

@@ -1560,6 +1560,10 @@ class ChannelProvider with ChangeNotifier {
               }
               debugLog('ChannelProvider: Found EPG URL via Xtream API: $accepted (auto-saving)');
               await prefs.setString('custom_epg_url', accepted);
+              // Also set canonical epg_url so other services read it directly
+              try {
+                await prefs.setString('epg_url', accepted);
+              } catch (_) {}
               // Also save per-playlist keys so the saved-playlists UI shows detected EPG
               try {
                 final enc = base64Url.encode(utf8.encode(m3uUrl));

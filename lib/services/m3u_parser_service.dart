@@ -33,7 +33,7 @@ class M3UParserService {
   // Pre-compiled regex patterns for performance (avoid recreating per-line)
 
   static final RegExp _epgUrlRegex = RegExp(
-    r'(?:url-tvg|x-tvg-url|tvg-url)="([^"]+)"',
+    r'(?:url-tvg|x-tvg-url|tvg-url)=["\']([^"\']+)["\']',
     caseSensitive: false,
   );
   static final RegExp _seriesEpisodeRegex = RegExp(r'S\d+E\d+', caseSensitive: false);
@@ -99,6 +99,24 @@ class M3UParserService {
     }
 
     debugLog('M3UParser: Reassembled into ${lines.length} logical lines');
+
+    // Improved EPG detection: scan the first few logical lines for x-tvg-url
+    // attributes (supports both single and double quotes). Many Xtream
+    // providers don't include x-tvg-url on the very first raw line, so scan
+    // a small window to find it.
+    final scanLimit = lines.length < 10 ? lines.length : 10;
+    for (int i = 0; i < scanLimit; i++) {
+      try {
+        final match = _epgUrlRegex.firstMatch(lines[i]);
+        if (match != null) {
+          _epgUrl = match.group(1);
+          debugLog('M3UParser: Found EPG URL in logical line ${i + 1}: $_epgUrl');
+          break;
+        }
+      } catch (_) {
+        // ignore malformed lines while scanning
+      }
+    }
 
     String? currentInfo;
     Map<String, String> currentAttributes = {};

@@ -529,6 +529,16 @@ class _MyAppState extends State<MyApp> {
         if (server != null && username != null && password != null) {
           playlistUrl =
               '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
+          // Also save a computed EPG URL for Xtream providers so EPG loading
+          // doesn't rely on x-tvg-url in M3U headers.
+          try {
+            final cleanServer = server.replaceAll(RegExp(r'\/+\$'), '');
+            final epgUrl = '$cleanServer/xmltv.php?username=$username&password=$password';
+            await prefs.setString('epg_url', epgUrl);
+            debugPrint('Main: Saved computed epg_url for Xtream: $epgUrl');
+          } catch (e) {
+            debugPrint('Main: Could not save epg_url: $e');
+          }
         }
       }
 
