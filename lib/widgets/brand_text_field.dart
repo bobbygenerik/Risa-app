@@ -110,12 +110,10 @@ class BrandTextField extends StatelessWidget {
                     color: Colors.white.withValues(alpha: 0.2),
                   ),
                 ),
+                // Remove the TextField's own focused border so only the outer box highlights
                 focusedBorder: OutlineInputBorder(
                   borderRadius: borderRadius,
-                  borderSide: const BorderSide(
-                    color: AppTheme.primaryBlue,
-                    width: 2,
-                  ),
+                  borderSide: BorderSide.none,
                 ),
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: 16,
