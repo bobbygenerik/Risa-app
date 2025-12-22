@@ -263,9 +263,10 @@ class AppTheme {
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide.none,
         ),
+        // Remove inner focused border to keep focus highlight on outer containers only
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: tvFocusHighlight, width: 3),
+          borderSide: BorderSide.none,
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),

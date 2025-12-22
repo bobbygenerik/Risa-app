@@ -1419,9 +1419,9 @@ class ChannelProvider with ChangeNotifier {
           final prefs = await SharedPreferences.getInstance();
 
           // If we found a URL candidate, probe it (short GET) and auto-save it as custom_epg_url and per-playlist key
+          String? accepted;
+          final client = http.Client();
           if (epgUrls.isNotEmpty) {
-            String? accepted;
-            final client = http.Client();
             for (final candidate in epgUrls) {
               try {
                 final req = http.Request('GET', Uri.parse(candidate));
@@ -1588,7 +1588,7 @@ class ChannelProvider with ChangeNotifier {
                 final prefs2 = await SharedPreferences.getInstance();
                 final xtUser = prefs2.getString('xtream_username') ?? prefs2.getString('xtream_user') ?? username;
                 final xtPass = prefs2.getString('xtream_password') ?? prefs2.getString('xtream_pass') ?? password;
-                if ((xtUser != null && xtUser.isNotEmpty) && (xtPass != null && xtPass.isNotEmpty)) {
+                if ((xtUser.isNotEmpty) && (xtPass.isNotEmpty)) {
                   debugLog('ChannelProvider: Attempting credentialed probes using Xtream creds');
                   final baseUri = Uri.parse(serverUrl);
                   for (final candidate in epgUrls) {
@@ -1596,7 +1596,7 @@ class ChannelProvider with ChangeNotifier {
                       final uri = Uri.parse(candidate);
                       if (uri.host == baseUri.host) {
                         final newQuery = StringBuffer();
-                        if (uri.query != null && uri.query.isNotEmpty) {
+                        if (uri.query.isNotEmpty) {
                           newQuery.write(uri.query);
                           newQuery.write('&');
                         }

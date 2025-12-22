@@ -32,12 +32,10 @@ class M3UParserService {
 
   // Pre-compiled regex patterns for performance (avoid recreating per-line)
 
-  static final RegExp _epgUrlRegex = RegExp(
-    r'(?:url-tvg|x-tvg-url|tvg-url)=["\']([^"\']+)["\']',
-    caseSensitive: false,
-  );
+  // Simpler, analyzer-safe regexes to avoid raw-string delimiter issues
+  static final RegExp _epgUrlRegex = RegExp(r'(?:url-tvg|x-tvg-url|tvg-url)=([^\s]+)', caseSensitive: false);
   static final RegExp _seriesEpisodeRegex = RegExp(r'S\d+E\d+', caseSensitive: false);
-  static final RegExp _urlRegex = RegExp(r'(?:[a-z0-9+.-]+)://\S+', caseSensitive: false);
+  static final RegExp _urlRegex = RegExp(r'(?:[a-z0-9+\.\-]+)://\S+', caseSensitive: false);
 
   /// Gets the EPG URL extracted from the last parsed M3U
   String? get epgUrl => _epgUrl;

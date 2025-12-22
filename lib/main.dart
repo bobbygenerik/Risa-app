@@ -1028,6 +1028,10 @@ class CatchupPlaceholder extends StatelessWidget {
 }
 
 Widget _buildPlaceholder(BuildContext context, String title, IconData icon) {
+  // Prevent initial focus on placeholder screens by unfocusing after build
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    FocusScope.of(context).unfocus();
+  });
   return Center(
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,

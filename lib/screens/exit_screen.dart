@@ -85,11 +85,6 @@ class _ExitScreenState extends State<ExitScreen> {
   void initState() {
     super.initState();
     _selectedMessage = _exitMessages[Random().nextInt(_exitMessages.length)];
-
-    // Auto-focus back button
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _backButtonFocus.requestFocus();
-    });
   }
 
   @override
@@ -138,12 +133,16 @@ class _ExitScreenState extends State<ExitScreen> {
                     focusNode: _backButtonFocus,
                     onPressed: () => context.go('/home'),
                     label: 'Go Back',
+                    minHeight: 44,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   ),
                   const SizedBox(width: 24),
                   BrandPrimaryButton(
                     focusNode: _exitButtonFocus,
                     onPressed: () => SystemNavigator.pop(),
                     label: 'Exit App',
+                    minHeight: 44,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   ),
                 ],
               ),

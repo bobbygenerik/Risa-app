@@ -34,7 +34,7 @@ class BrandPrimaryButton extends StatefulWidget {
 
 class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
   bool _focused = false;
-  bool _pressed = false;
+  final bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
@@ -149,27 +149,7 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
           onShowHoverHighlight: (_) {},
           mouseCursor: SystemMouseCursors.click,
           onFocusChange: (v) => setState(() => _focused = v),
-          child: AnimatedScale(
-            scale: _focused ? 1.05 : 1.0,
-            duration: const Duration(milliseconds: 150),
-            curve: Curves.easeOutCubic,
-            child: Material(
-              color: Colors.transparent,
-              borderRadius: BorderRadius.circular(widget.borderRadius),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(widget.borderRadius),
-                splashColor: Colors.white.withValues(alpha: 0.2),
-                highlightColor: Colors.white.withValues(alpha: 0.1),
-                onTapDown: (_) => setState(() => _pressed = true),
-                onTapCancel: () => setState(() => _pressed = false),
-                onTap: () {
-                  setState(() => _pressed = false);
-                  widget.onPressed();
-                },
-                child: content,
-              ),
-            ),
-          ),
+          child: content,
         ),
       ),
     );
@@ -238,26 +218,13 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
         ),
         borderRadius: BorderRadius.circular(widget.borderRadius),
       ),
-      child: Padding(
-        padding: EdgeInsets.all(_focused ? 2.5 : 1.5),
+            child: Padding(
+        padding: EdgeInsets.all(1.5),
         child: Container(
           decoration: BoxDecoration(
             color: _focused ? focusFill : Colors.transparent,
             borderRadius: BorderRadius.circular(widget.borderRadius - 2),
-            boxShadow: _focused
-                ? [
-                    BoxShadow(
-                      color: AppTheme.tvFocusHighlight.withValues(alpha: 0.3),
-                      blurRadius: 12,
-                      spreadRadius: 1,
-                    ),
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 15,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
-                : null,
+            // Removed focus boxShadow to avoid dual highlighted borders
           ),
           padding: EdgeInsets.only(
             left: scaledPadding.left,
