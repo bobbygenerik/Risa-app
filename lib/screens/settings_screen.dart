@@ -15,6 +15,7 @@ import 'package:iptv_player/widgets/brand_button.dart';
 
 import 'package:iptv_player/widgets/settings_layout.dart';
 import 'package:iptv_player/widgets/settings_tile_widgets.dart';
+import 'package:iptv_player/providers/settings_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
@@ -952,7 +953,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case 'Hero Video Preview': 
         await prefs.setBool('hero_video_preview', newValue);
         if (mounted) {
-           Provider.of<SettingsProvider>(context, listen: false).setHeroVideoPreview(newValue);
+           unawaited(Provider.of<SettingsProvider>(context, listen: false).setHeroVideoPreview(newValue));
         }
         break;
     }

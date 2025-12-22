@@ -1,61 +1,23 @@
-# TV Focus Highlighting Fixes
+# TV Focus Fix Implementation
 
-## Issues Identified
+## Problem
+When returning from the video player (or other full-screen routes) to the main shell (e.g., Live TV screen), the application focus was lost. No element was visually selected, requiring the user to press directional keys blindly to regain focus.
 
-### 1. Exit Screen Buttons
-- **Problem**: Buttons need proper Netflix-style focus highlighting with scale, glow, and shadow effects
-- **Current**: Basic Focus widgets without enhanced visual feedback
-- **Solution**: Apply TVFocusable wrapper or enhance Focus styling
+## Root Cause
+The `MainShell` widget had a `_handleRouteChange` method that listened for route changes. When a route change occurred (like popping the player to return home), it unconditionally called `_globalFocusNode.requestFocus()`. 
 
-### 2. Settings Screen Tabs and Buttons  
-- **Problem**: Sidebar menu tabs and M3U/Xtream tab buttons need enhanced focus highlighting
-- **Current**: Basic focus handling without proper visual feedback
-- **Solution**: Enhance focus styling for all interactive elements
+The `_globalFocusNode` was attached to a parent `Focus` widget wrapping the entire `Scaffold`. Focusing this node moved focus *away* from the content (Live TV, Sidebar, etc.) to the container itself. Since the container has no visual focus indicator and doesn't handle navigation keys to pass focus down, the app appeared to lose focus.
 
-## Fixes Applied
+## Solution
+Modified `lib/widgets/main_shell.dart`:
+- In `_handleRouteChange`, replaced `_globalFocusNode.requestFocus()` with `_requestContentFocus()`.
+- Wrapped `_requestContentFocus()` in `WidgetsBinding.instance.addPostFrameCallback` to ensure the target screen is fully mounted and ready to accept focus after the transition.
 
-### Exit Screen Enhancement
-- Added proper focus event handling for button navigation
-- Enhanced visual feedback with Netflix-style focus effects
-- Improved arrow key navigation between buttons
-
-### Settings Screen Enhancement  
-- Enhanced sidebar menu focus handling
-- Improved tab button focus styling
-- Added proper focus transitions for all interactive elements
-
-## Files Modified
-
-1. **`lib/screens/exit_screen.dart`**
-   - Enhanced button focus highlighting
-   - Added proper keyboard navigation
-   - Improved visual feedback for focused buttons
-
-2. **`lib/screens/settings_screen.dart`**
-   - Enhanced sidebar menu focus styling
-   - Improved tab button focus handling
-   - Added better visual feedback for all interactive elements
-
-## Expected Results
-
-After these fixes:
-- ✅ Exit screen buttons show proper focus highlighting
-- ✅ Settings screen sidebar tabs are clearly highlighted when focused
-- ✅ Settings screen M3U/Xtream tab buttons show focus states
-- ✅ All buttons have Netflix-style focus effects (scale, glow, shadow)
-- ✅ Proper keyboard navigation between interactive elements
-- ✅ Consistent TV remote control experience
-
-## Focus Styling Applied
-
-### Netflix-Style Focus Effects
-- **Scale**: 1.05x scale on focus
-- **Glow**: White glow effect around focused elements
-- **Shadow**: Elevated shadow for depth
-- **Animation**: 150ms smooth transitions
-- **Color**: Primary blue theme color for focus states
-
-### Navigation
-- **Arrow Keys**: Proper navigation between focused elements
-- **Select/Enter**: Activation of focused elements
-- **Focus Cycling**: Logical tab order through interactive elements
+## How it works
+1. User presses Back from Video Player.
+2. Route changes from `/player` to `/home`.
+3. `MainShell._handleRouteChange` detects the change.
+4. Instead of stealing focus to the global container, it calls `_requestContentFocus()`.
+5. `_requestContentFocus()` invokes the callback registered by the active child (e.g., `LiveTVScreen`).
+6. `LiveTVScreen.handleContentFocusRequest()` is called, which requests focus on the "Watch" button (or the first available element).
+7. Focus is visually restored to the primary action on the screen.

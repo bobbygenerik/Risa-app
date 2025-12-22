@@ -335,8 +335,9 @@ class _EPGScreenState extends State<EPGScreen>
                           ],
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
+                ),
 
                   // Transparent header overlay
                   Positioned(

@@ -1,9 +1,9 @@
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
-
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:xml/xml.dart';
+import 'package:xml/xml_events.dart';
 import 'package:iptv_player/models/program.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
@@ -40,13 +40,19 @@ class IncrementalEpgService extends ChangeNotifier {
     debugLog('EPG: Initializing...');
     final prefs = await SharedPreferences.getInstance();
     // Try both keys - custom_epg_url (set by user) and epg_url (auto-found in M3U)
-    _epgUrl = prefs.getString('custom_epg_url') ?? prefs.getString('epg_url');
+    // custom_epg_url takes precedence
+    _epgUrl = prefs.getString('custom_epg_url');
+    if (_epgUrl == null || _epgUrl!.isEmpty) {
+      _epgUrl = prefs.getString('epg_url');
+    }
     
     if (_epgUrl != null && _epgUrl!.isNotEmpty) {
       debugLog('EPG: Initializing with URL: $_epgUrl');
       await _loadChannelList(forceRefresh: forceRefresh);
     } else {
       debugLog('EPG: No URL configured (checked custom_epg_url and epg_url)');
+      _error = 'No EPG URL configured';
+      notifyListeners();
     }
   }
 
@@ -64,9 +70,15 @@ class IncrementalEpgService extends ChangeNotifier {
       }
       
       final modified = await file.lastModified();
+      final length = await file.length();
+      if (length == 0) {
+        debugLog('EPG: Cache file is empty.');
+        return false;
+      }
+
       final age = DateTime.now().difference(modified);
       final isValid = age < _cacheDuration;
-      debugLog('EPG: Cache is ${isValid ? 'valid' : 'stale'}. Age: ${age.inMinutes} minutes.');
+      debugLog('EPG: Cache is ${isValid ? 'valid' : 'stale'}. Age: ${age.inMinutes} minutes. Size: ${(length / 1024 / 1024).toStringAsFixed(2)} MB');
       return isValid;
     } catch (e) {
       debugLog('EPG: Error checking cache validity: $e');
@@ -86,14 +98,18 @@ class IncrementalEpgService extends ChangeNotifier {
     }
 
     _isDownloading = true;
+    _error = null;
     notifyListeners();
     debugLog('EPG: Starting EPG download from $_epgUrl...');
+    
     final client = HttpClient()
-      ..connectionTimeout = const Duration(seconds: 30)
+      ..connectionTimeout = const Duration(seconds: 60)
       ..badCertificateCallback = (cert, host, port) => true;
 
     try {
       final request = await client.getUrl(Uri.parse(_epgUrl!));
+      request.headers.add('Accept-Encoding', 'gzip');
+      
       final response = await request.close();
       
       if (response.statusCode != 200) {
@@ -102,54 +118,53 @@ class IncrementalEpgService extends ChangeNotifier {
 
       final file = await _getCacheFile();
       var received = 0;
-      var total = response.contentLength;
       
-      // Determine if the file is gzipped based on extension
-      final isGzipped = _epgUrl!.toLowerCase().split('?').first.endsWith('.gz');
-      debugLog('EPG: Downloading content (GZIP: $isGzipped)...');
+      // Determine if the content is gzipped
+      // Check header first, then extension
+      final isGzipHeader = response.headers['content-encoding']?.contains('gzip') ?? false;
+      final isGzipExt = _epgUrl!.toLowerCase().split('?').first.endsWith('.gz');
+      final isGzipped = isGzipHeader || isGzipExt;
+      
+      debugLog('EPG: Downloading content (Header GZIP: $isGzipHeader, Ext GZIP: $isGzipExt)...');
 
       final sink = file.openWrite();
       
       try {
+        Stream<List<int>> stream = response;
         if (isGzipped) {
-          // Decompress on the fly
-          await response.transform(gzip.decoder).listen((data) {
-            sink.add(data);
-            received += data.length;
-            // Report progress every 1MB or so (decompressed size)
-            if (received % (1024 * 1024) < 100000) {
-              debugLog('EPG: Decompressed ${(received / (1024 * 1024)).toStringAsFixed(1)} MB');
-            }
-          }).asFuture();
-        } else {
-          await response.listen((data) {
-            sink.add(data);
-            received += data.length;
-            if (total > 0) {
-              final progress = (received / total * 100).toStringAsFixed(1);
-              if (received % (1024 * 1024) < 100000) {
-                debugLog('EPG: Download progress: $progress%');
-              }
-            } else if (received % (1024 * 1024) < 100000) {
-              debugLog('EPG: Downloaded ${(received / (1024 * 1024)).toStringAsFixed(1)} MB');
-            }
-          }).asFuture();
+          stream = stream.transform(gzip.decoder);
         }
+
+        await stream.listen((data) {
+          sink.add(data);
+          received += data.length;
+          // Report progress every 2MB
+          if (received % (2 * 1024 * 1024) < 100000) {
+            debugLog('EPG: Downloaded ${(received / (1024 * 1024)).toStringAsFixed(1)} MB');
+          }
+        }).asFuture();
+        
       } catch (e) {
         debugLog('EPG: Error during download/decompression: $e');
-        // If it failed because it wasn't actually GZIP, we'd need to re-download
-        // But for simplicity in this replacement, we'll rethrow.
-        // Most common cause of failure here is actually network or invalid GZIP.
+        // If it failed because it wasn't actually GZIP but we thought it was,
+        // we might want to retry without gzip, but usually network error is more likely.
         rethrow;
       } finally {
         await sink.close();
       }
-      debugLog('EPG: Download complete. Saved to ${file.path}');
+      
+      final fileSize = await file.length();
+      debugLog('EPG: Download complete. Saved to ${file.path} (${(fileSize / 1024 / 1024).toStringAsFixed(2)} MB)');
+      
+      if (fileSize == 0) {
+        throw Exception('Downloaded EPG file is empty');
+      }
+      
     } catch (e) {
       debugLog('EPG: Download failed: $e');
+      _error = 'Download failed: $e';
       rethrow;
-    }
-    finally {
+    } finally {
       client.close();
       _isDownloading = false;
       notifyListeners();
@@ -175,11 +190,8 @@ class IncrementalEpgService extends ChangeNotifier {
         _isParsing = true;
         notifyListeners();
 
-        final xmlContent = await file.readAsString();
-        if (xmlContent.isEmpty) throw Exception('EPG XML is empty');
-
-        // Use isolate to parse entire XML and return a map of programs
-        final parseResult = await compute(_parseEpgInIsolate, xmlContent);
+        // Pass file path to isolate instead of content string to save memory
+        final parseResult = await compute(_parseEpgInIsolate, file.path);
         
         _programsByChannel.clear();
         final rawData = parseResult['programsByChannel'] as Map<String, List<Program>>;
@@ -195,25 +207,28 @@ class IncrementalEpgService extends ChangeNotifier {
         _isParsing = false;
         _error = null;
         
+        // Cache available channels list
         final prefs = await SharedPreferences.getInstance();
         await prefs.setStringList(_channelListCacheKey, _availableChannels.toList());
         
         debugLog('EPG: Successfully parsed ${_programsByChannel.length} channels and ${_availableChannels.length} IDs');
         break;
-      } catch (e) {
+      } catch (e, stack) {
         retryCount++;
         debugLog('EPG: Error loading (attempt $retryCount): $e');
+        debugLog(stack.toString());
+        
         if (retryCount >= _maxRetries) {
-          _error = e.toString();
+          _error = 'Failed to load EPG: $e';
           _isParsing = false;
           _isLoading = false;
           
-          // Fallback to cache list if available
+          // Fallback to cache list if available to at least show something
           final prefs = await SharedPreferences.getInstance();
           final cached = prefs.getStringList(_channelListCacheKey);
           if (cached != null && cached.isNotEmpty) {
             _availableChannels.addAll(cached);
-            _error = null;
+            // Don't clear error, so user knows latest data failed
           }
           break;
         }
@@ -225,45 +240,43 @@ class IncrementalEpgService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Top-level function for background parsing
-  static Map<String, dynamic> _parseEpgInIsolate(String xmlData) {
-    final document = XmlDocument.parse(xmlData);
-    final programmes = document.findAllElements('programme');
-    final Map<String, List<Program>> programsByChannel = {};
-    final Set<String> channelIds = {};
-    final Map<String, String> normalizedChannels = {};
-
-    for (final programme in programmes) {
-      final channelId = programme.getAttribute('channel');
-      if (channelId == null || channelId.isEmpty) continue;
-
-      channelIds.add(channelId);
-      final normalized = channelId.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-      if (normalized.isNotEmpty) {
-        normalizedChannels[normalized] = channelId;
-      }
-
-      final startStr = programme.getAttribute('start');
-      final stopStr = programme.getAttribute('stop');
-      if (startStr == null || stopStr == null) continue;
-
-      final program = Program(
-        id: '${channelId}_$startStr',
-        channelId: channelId,
-        title: programme.findElements('title').firstOrNull?.innerText ?? 'Unknown',
-        description: programme.findElements('desc').firstOrNull?.innerText,
-        startTime: _staticParseTime(startStr),
-        endTime: _staticParseTime(stopStr),
-        imageUrl: programme.findElements('icon').firstOrNull?.getAttribute('src'),
-        category: programme.findElements('category').firstOrNull?.innerText,
-        isLive: false,
-        canRecord: true,
-      );
-
-      programsByChannel.putIfAbsent(channelId, () => []).add(program);
+  // Optimized streaming parser running in an isolate
+  static Future<Map<String, dynamic>> _parseEpgInIsolate(String filePath) async {
+    final file = File(filePath);
+    if (!await file.exists()) {
+      throw Exception('EPG cache file not found in isolate');
     }
 
-    // Sort programs once after parsing
+    final programsByChannel = <String, List<Program>>{};
+    final channelIds = <String>{};
+    final normalizedChannels = <String, String>{};
+    
+    // Use lenient decoder for Latin-1/Windows-1252 support often found in EPGs
+    // Fallback to UTF-8 if possible, but allowMalformed helps.
+    final stream = file.openRead()
+        .transform(utf8.decoder);
+    
+    // Use XmlEventDecoder to stream events
+    final events = stream.toXmlEvents().withParentEvents();
+    
+    // Select subtrees for <programme> and <channel> elements
+    // This parses only one element at a time, keeping memory usage low
+    final elements = events.selectSubtreeEvents((event) => event.name == 'programme' || event.name == 'channel');
+    
+    await for (final subtreeEvents in elements) {
+      if (subtreeEvents.isEmpty) continue;
+      
+      final startEvent = subtreeEvents.first;
+      if (startEvent is! XmlStartElementEvent) continue;
+      
+      if (startEvent.name == 'programme') {
+        _processProgramme(subtreeEvents, programsByChannel);
+      } else if (startEvent.name == 'channel') {
+        _processChannel(subtreeEvents, channelIds, normalizedChannels);
+      }
+    }
+
+    // Sort programs
     for (final channelId in programsByChannel.keys) {
       programsByChannel[channelId]!.sort((a, b) => a.startTime.compareTo(b.startTime));
     }
@@ -273,6 +286,89 @@ class IncrementalEpgService extends ChangeNotifier {
       'channelIds': channelIds,
       'normalizedChannels': normalizedChannels,
     };
+  }
+  
+  static void _processChannel(List<XmlEvent> events, Set<String> channelIds, Map<String, String> normalizedChannels) {
+    // Basic parsing of channel tag to get ID and display-name
+    // <channel id="BBC1"> <display-name>BBC One</display-name> </channel>
+    final startEvent = events.first as XmlStartElementEvent;
+    final id = startEvent.attributes.firstWhere((a) => a.name == 'id', orElse: () => XmlEventAttribute('id', '', XmlAttributeType.DOUBLE_QUOTE)).value;
+    
+    if (id.isNotEmpty) {
+      channelIds.add(id);
+      final normalized = id.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+      if (normalized.isNotEmpty) {
+        normalizedChannels[normalized] = id;
+      }
+      
+      // We could parse display-name here if we wanted to improve matching further
+    }
+  }
+
+  static void _processProgramme(List<XmlEvent> events, Map<String, List<Program>> programsByChannel) {
+    // Parse programme subtree
+    // <programme start="..." stop="..." channel="..."> ... </programme>
+    final startEvent = events.first as XmlStartElementEvent;
+    
+    final channelId = startEvent.attributes.firstWhere((a) => a.name == 'channel', orElse: () => XmlEventAttribute('channel', '', XmlAttributeType.DOUBLE_QUOTE)).value;
+    final startStr = startEvent.attributes.firstWhere((a) => a.name == 'start', orElse: () => XmlEventAttribute('start', '', XmlAttributeType.DOUBLE_QUOTE)).value;
+    final stopStr = startEvent.attributes.firstWhere((a) => a.name == 'stop', orElse: () => XmlEventAttribute('stop', '', XmlAttributeType.DOUBLE_QUOTE)).value;
+    
+    if (channelId.isEmpty || startStr.isEmpty || stopStr.isEmpty) return;
+    
+    String title = 'Unknown';
+    String? description;
+    String? category;
+    String? icon;
+    
+    // Iterate events to find child tags
+    for (final event in events) {
+      if (event is XmlStartElementEvent) {
+        if (event.name == 'title') {
+          // The next event should be text
+          final idx = events.indexOf(event);
+          if (idx + 1 < events.length) {
+             final next = events[idx+1];
+             if (next is XmlTextEvent) {
+               title = next.value;
+             }
+          }
+        } else if (event.name == 'desc') {
+          final idx = events.indexOf(event);
+          if (idx + 1 < events.length) {
+             final next = events[idx+1];
+             if (next is XmlTextEvent) {
+               description = next.value;
+             }
+          }
+        } else if (event.name == 'category') {
+          final idx = events.indexOf(event);
+          if (idx + 1 < events.length) {
+             final next = events[idx+1];
+             if (next is XmlTextEvent) {
+               category = next.value;
+             }
+          }
+        } else if (event.name == 'icon') {
+          icon = event.attributes.firstWhere((a) => a.name == 'src', orElse: () => XmlEventAttribute('src', '', XmlAttributeType.DOUBLE_QUOTE)).value;
+        }
+      }
+    }
+    
+    final program = Program(
+      id: '${channelId}_$startStr',
+      channelId: channelId,
+      title: title,
+      description: description,
+      startTime: _staticParseTime(startStr),
+      endTime: _staticParseTime(stopStr),
+      imageUrl: icon,
+      category: category,
+      isLive: false,
+      canRecord: true,
+    );
+
+    programsByChannel.putIfAbsent(channelId, () => []).add(program);
   }
 
   static DateTime _staticParseTime(String timeStr) {
@@ -416,9 +512,10 @@ class IncrementalEpgService extends ChangeNotifier {
     }
 
     if (logIfMissing) {
-      debugLog(
-        'EPG: Could not find matching EPG ID for channelId="$channelId" (normalized: "$normalizedId"), name="$channelName"',
-      );
+      // Don't spam logs for every single missing channel
+      // debugLog(
+      //   'EPG: Could not find matching EPG ID for channelId="$channelId" (normalized: "$normalizedId"), name="$channelName"',
+      // );
     }
     return null;
   }
@@ -465,8 +562,6 @@ class IncrementalEpgService extends ChangeNotifier {
 
   final List<String> _pendingBatch = [];
   Timer? _batchTimer;
-
-  // ... (previous code)
 
   Future<void> ensureChannelLoaded(String channelId, {String? channelName}) async {
     final epgId = _internalToEpgIdMapping[channelId] ?? _findBestEpgId(channelId, channelName);

@@ -8,7 +8,6 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/widgets/cached_image.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
@@ -334,7 +333,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                             currentProgram,
                             heroImage,
                             0.0,
-                            settingsProvider.heroVideoPreview,
+                            _heroVideoPreview,
                           ),
                           // Gradient fade at bottom
                           Positioned(

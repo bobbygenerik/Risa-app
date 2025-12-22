@@ -264,7 +264,15 @@ class _MainShellState extends State<MainShell> {
     if (location == null || location == _lastLocation) return;
     _lastLocation = location;
     _sidebarKey.currentState?.collapse();
-    _globalFocusNode.requestFocus();
+    
+    // Restore focus to content when route changes (e.g. returning from player)
+    // Use post-frame callback to allow new route to build and register focus
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _requestContentFocus();
+      }
+    });
+
     if (location.startsWith('/settings')) {
       PaintingBinding.instance.imageCache.clear();
       PaintingBinding.instance.imageCache.clearLiveImages();
