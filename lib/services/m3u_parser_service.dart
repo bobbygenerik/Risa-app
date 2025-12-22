@@ -46,7 +46,10 @@ class M3UParserService {
 
   // Pre-compiled regex patterns for performance (avoid recreating per-line)
 
-  static final RegExp _epgUrlRegex = RegExp(r'x-tvg-url="([^"]+)"');
+  static final RegExp _epgUrlRegex = RegExp(
+    r'(?:url-tvg|x-tvg-url|tvg-url)="([^"]+)"',
+    caseSensitive: false,
+  );
   static final RegExp _seriesEpisodeRegex = RegExp(r'S\d+E\d+', caseSensitive: false);
   static final RegExp _urlRegex = RegExp(r'(?:[a-z0-9+.-]+)://\S+', caseSensitive: false);
 
@@ -66,8 +69,11 @@ class M3UParserService {
       'M3UParser: First line: ${rawLines.isNotEmpty ? rawLines[0] : "EMPTY"}',
     );
 
-    // Check for EPG URL in M3U header (x-tvg-url attribute)
-    if (rawLines.isNotEmpty && rawLines[0].contains('x-tvg-url=')) {
+    // Check for EPG URL in M3U header (multiple possible attributes)
+    if (rawLines.isNotEmpty && 
+        (rawLines[0].toLowerCase().contains('url-tvg=') || 
+         rawLines[0].toLowerCase().contains('x-tvg-url=') ||
+         rawLines[0].toLowerCase().contains('tvg-url='))) {
       final firstLine = rawLines[0];
       final urlMatch = _epgUrlRegex.firstMatch(firstLine);
       if (urlMatch != null) {
@@ -296,7 +302,10 @@ class M3UParserService {
 
       if (!headerProcessed) {
         headerProcessed = true;
-        if (line.contains('x-tvg-url=')) {
+        final lowerLine = line.toLowerCase();
+        if (lowerLine.contains('url-tvg=') || 
+            lowerLine.contains('x-tvg-url=') ||
+            lowerLine.contains('tvg-url=')) {
           final urlMatch = _epgUrlRegex.firstMatch(line);
           if (urlMatch != null) {
             _epgUrl = urlMatch.group(1);
@@ -524,7 +533,10 @@ class M3UParserService {
 
       if (!headerProcessed) {
         headerProcessed = true;
-        if (line.contains('x-tvg-url=')) {
+        final lowerLine = line.toLowerCase();
+        if (lowerLine.contains('url-tvg=') || 
+            lowerLine.contains('x-tvg-url=') ||
+            lowerLine.contains('tvg-url=')) {
           final urlMatch = _epgUrlRegex.firstMatch(line);
           if (urlMatch != null) {
             _epgUrl = urlMatch.group(1);
@@ -551,7 +563,7 @@ class M3UParserService {
             }
             final channelName = _extractChannelName(currentInfo!);
             final groupTitle = currentAttributes['group-title'] ?? '';
-            final isVod = _isVodUrl(inlineUrl);
+            final isVod = _isVodUrl(inlineUrl, groupTitle);
             final isSeries =
                 isVod && _looksLikeSeriesFast(channelName, groupTitle);
             final isMovie = isVod && !isSeries;
@@ -560,20 +572,20 @@ class M3UParserService {
               seriesMaps.add({
                 'id': 'series_${channelName.hashCode.abs()}_$logicalIndex',
                 'title': channelName,
-                'streamUrl': inlineUrl,
-                'posterUrl': currentAttributes['tvg-logo'],
+                'videoUrl': inlineUrl,
+                'imageUrl': currentAttributes['tvg-logo'],
                 'type': 'series',
-                'category': groupTitle,
+                'genres': [groupTitle],
                 'sortOrder': logicalIndex,
               });
             } else if (isMovie) {
               movieMaps.add({
                 'id': 'movie_${channelName.hashCode.abs()}_$logicalIndex',
                 'title': channelName,
-                'streamUrl': inlineUrl,
-                'posterUrl': currentAttributes['tvg-logo'],
+                'videoUrl': inlineUrl,
+                'imageUrl': currentAttributes['tvg-logo'],
                 'type': 'movie',
-                'category': groupTitle,
+                'genres': [groupTitle],
                 'sortOrder': logicalIndex,
               });
             } else {
@@ -625,7 +637,7 @@ class M3UParserService {
         final groupTitle = currentAttributes['group-title'] ?? '';
         
         // Fast classification - check URL patterns first (most reliable)
-        final isVod = _isVodUrl(channelUrl);
+        final isVod = _isVodUrl(channelUrl, groupTitle);
         final isSeries = isVod && _looksLikeSeriesFast(channelName, groupTitle);
         final isMovie = isVod && !isSeries;
 
@@ -633,20 +645,20 @@ class M3UParserService {
           seriesMaps.add({
             'id': 'series_${channelName.hashCode.abs()}_$logicalIndex',
             'title': channelName,
-            'streamUrl': channelUrl,
-            'posterUrl': currentAttributes['tvg-logo'],
+            'videoUrl': channelUrl,
+            'imageUrl': currentAttributes['tvg-logo'],
             'type': 'series',
-            'category': groupTitle,
+            'genres': [groupTitle],
             'sortOrder': logicalIndex,
           });
         } else if (isMovie) {
           movieMaps.add({
             'id': 'movie_${channelName.hashCode.abs()}_$logicalIndex',
             'title': channelName,
-            'streamUrl': channelUrl,
-            'posterUrl': currentAttributes['tvg-logo'],
+            'videoUrl': channelUrl,
+            'imageUrl': currentAttributes['tvg-logo'],
             'type': 'movie',
-            'category': groupTitle,
+            'genres': [groupTitle],
             'sortOrder': logicalIndex,
           });
         } else {
@@ -1011,34 +1023,47 @@ class M3UParserService {
     return null;
   }
 
-  /// Fast VOD detection - checks URL patterns without toLowerCase()
-  bool _isVodUrl(String url) {
-    // Check for VOD file extensions (case-insensitive manual check)
-    final len = url.length;
-    if (len < 5) return false;
-    
+  /// More robust VOD detection - checks URL patterns and group titles
+  bool _isVodUrl(String url, [String? groupTitle]) {
     final lowerUrl = url.toLowerCase();
+    final lowerGroup = groupTitle?.toLowerCase() ?? '';
     
-    // Check last 4-5 chars for extensions
-    final last5 = len >= 5 ? lowerUrl.substring(len - 5) : '';
-    final last4 = lowerUrl.substring(len - 4);
-    
-    if (last4 == '.mp4' || last4 == '.mkv' || last4 == '.avi' || 
-        last4 == '.mov' || last4 == '.wmv' || last4 == '.flv' ||
-        last4 == '.mpg' || last4 == '.m4v' || last5 == '.mpeg') {
-      return true;
+    // 1. Explicit VOD keywords in group title (highly reliable)
+    if (lowerGroup.contains('movie') || lowerGroup.contains('series') || 
+        lowerGroup.contains('vod') || lowerGroup.contains('film') ||
+        lowerGroup.contains('cinema') || lowerGroup.contains('tv show') ||
+        lowerGroup.contains('video on demand')) {
+      // Avoid false positives for "Live Movies", "Movies Channel", etc.
+      if (!lowerGroup.contains('channel') && !lowerGroup.contains('live')) {
+        return true;
+      }
+    }
+
+    // 2. Check for VOD file extensions
+    final len = url.length;
+    if (len >= 4) {
+      final last4 = lowerUrl.substring(len - 4);
+      final last5 = len >= 5 ? lowerUrl.substring(len - 5) : '';
+      
+      if (last4 == '.mp4' || last4 == '.mkv' || last4 == '.avi' || 
+          last4 == '.mov' || last4 == '.wmv' || last4 == '.flv' ||
+          last4 == '.mpg' || last4 == '.m4v' || last5 == '.mpeg' ||
+          last5 == '.m2ts') {
+        return true;
+      }
     }
     
-    // Check for query parameters common in VOD
+    // 3. Check for query parameters common in VOD
     if (lowerUrl.contains('type=movie') || lowerUrl.contains('type=series') || 
         lowerUrl.contains('type=vod')) {
       return true;
     }
 
-    // Check for /movie/ /series/ /vod/ in URL
+    // 4. Check for /movie/ /series/ /vod/ in URL path
+    // These are common in Xtream and other formats even without extensions
     if (lowerUrl.contains('/movie/') || lowerUrl.contains('/movies/') ||
         lowerUrl.contains('/series/') || lowerUrl.contains('/vod/') ||
-        lowerUrl.contains('/film/')) {
+        lowerUrl.contains('/series_info/') || lowerUrl.contains('/film/')) {
       return true;
     }
     

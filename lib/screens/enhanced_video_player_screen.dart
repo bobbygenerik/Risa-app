@@ -95,17 +95,21 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     _player = Player(
       configuration: PlayerConfiguration(
         title: 'Risa IPTV Player',
-        // Use GPU output on TV to avoid audio-only playback.
-        vo: 'gpu',
+        // vo: 'gpu' removed - let media_kit_video manage output for better compatibility
       ),
     );
     
+    // Determine decoder based on settings and device type
+    // On Shield/Android TV, 'mediacodec' (zero-copy) is much better than 'mediacodec-copy'
+    final String hwdecValue = isTv 
+        ? 'mediacodec' 
+        : (useHwDecoding ? 'mediacodec' : 'no');
+
     _controller = VideoController(
       _player,
       configuration: VideoControllerConfiguration(
         enableHardwareAcceleration: resolvedHwAccel,
-        vo: isTv ? 'gpu' : null,
-        hwdec: isTv ? 'mediacodec-copy' : null,
+        hwdec: hwdecValue,
         androidAttachSurfaceAfterVideoParameters: isTv ? true : null,
       ),
     );
@@ -115,16 +119,26 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     try {
       if (_player.platform is NativePlayer) {
         final platform = _player.platform as NativePlayer;
-        final hwDecoding = useHwDecoding || isTv;
-        final hwdecValue = isTv
-            ? 'mediacodec-copy'
-            : (hwDecoding ? 'mediacodec' : 'no');
+        final hwdecValue = isTv ? 'mediacodec' : (useHwDecoding ? 'mediacodec' : 'no');
+        
         platform.setProperty('hwdec', hwdecValue);
         platform.setProperty('network-timeout', '60');
-        platform.setProperty('demuxer-max-bytes', '104857600'); // 100MB buffer
+        
+        // Performance & Stability Optimizations for Android TV / Shield
+        platform.setProperty('opengl-pbo', 'yes');
+        platform.setProperty('vd-lavc-dr', 'yes'); // Direct rendering
+        platform.setProperty('vd-lavc-fast', 'yes'); // Skip non-reference frames if slow
+        
+        // Large buffer for IPTV stability
+        platform.setProperty('demuxer-max-bytes', '157286400'); // 150MB buffer
         platform.setProperty('demuxer-max-back-bytes', '52428800'); // 50MB back buffer
         platform.setProperty('cache', 'yes');
-        platform.setProperty('cache-secs', '30');
+        platform.setProperty('cache-secs', '60');
+        
+        // Fix for specific Shield audio-only issues (ensure surface is attached correctly)
+        if (isTv) {
+          platform.setProperty('gpu-context', 'android');
+        }
       }
     } catch (e) {
       debugLog('MediaKit properties error: $e');

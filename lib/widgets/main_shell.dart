@@ -9,7 +9,6 @@ import 'package:go_router/go_router.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
 import 'package:iptv_player/widgets/sidebar_navigation.dart';
 import 'package:iptv_player/services/timer_service.dart';
-import 'package:iptv_player/utils/app_colors.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 
 const bool kForceSearchPopup = bool.fromEnvironment(
@@ -186,7 +185,7 @@ class _MainShellState extends State<MainShell> {
                       duration: const Duration(milliseconds: 150),
                       curve: Curves.easeOut,
                       child: Container(
-                        color: AppColors.overlayLight,
+                        color: Colors.black54,
                       ),
                     ),
                   ),

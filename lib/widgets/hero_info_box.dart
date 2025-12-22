@@ -53,10 +53,11 @@ class HeroInfoBox extends StatelessWidget {
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
             colors: [
-              Colors.black.withValues(alpha: 0.55),
-              Colors.black.withValues(alpha: 0.3),
+              Colors.black.withValues(alpha: 0.85),
+              Colors.black.withValues(alpha: 0.4),
               Colors.transparent,
             ],
+            stops: const [0.0, 0.7, 1.0],
           ),
         ),
         child: Column(

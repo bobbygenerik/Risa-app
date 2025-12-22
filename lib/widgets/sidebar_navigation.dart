@@ -277,6 +277,21 @@ class SidebarNavigationState extends State<SidebarNavigation> {
               transform: Matrix4.translationValues(0, lift, 0),
               transformAlignment: Alignment.center,
               alignment: Alignment.center,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: isFocused
+                    ? AppTheme.primaryBlue.withValues(alpha: 0.15)
+                    : Colors.transparent,
+                boxShadow: isFocused
+                    ? [
+                        BoxShadow(
+                          color: AppTheme.primaryBlue.withValues(alpha: 0.2),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        )
+                      ]
+                    : null,
+              ),
               child: AnimatedScale(
                 duration: const Duration(milliseconds: 140),
                 curve: Curves.easeOut,
@@ -401,6 +416,21 @@ class SidebarNavigationState extends State<SidebarNavigation> {
               transform: Matrix4.translationValues(0, lift, 0),
               transformAlignment: Alignment.center,
               alignment: Alignment.center,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: isFocused
+                    ? AppTheme.primaryBlue.withValues(alpha: 0.15)
+                    : Colors.transparent,
+                boxShadow: isFocused
+                    ? [
+                        BoxShadow(
+                          color: AppTheme.primaryBlue.withValues(alpha: 0.2),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        )
+                      ]
+                    : null,
+              ),
               child: AnimatedScale(
                 duration: const Duration(milliseconds: 140),
                 curve: Curves.easeOut,
@@ -575,6 +605,21 @@ class SidebarNavigationState extends State<SidebarNavigation> {
               transform: Matrix4.translationValues(0, lift, 0),
               transformAlignment: Alignment.center,
               alignment: Alignment.center,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: isFocused
+                    ? AppTheme.primaryBlue.withValues(alpha: 0.15)
+                    : Colors.transparent,
+                boxShadow: isFocused
+                    ? [
+                        BoxShadow(
+                          color: AppTheme.primaryBlue.withValues(alpha: 0.2),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        )
+                      ]
+                    : null,
+              ),
               child: AnimatedScale(
                 duration: const Duration(milliseconds: 140),
                 curve: Curves.easeOut,

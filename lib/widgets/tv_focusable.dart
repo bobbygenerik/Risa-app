@@ -6,30 +6,32 @@ class TVFocusStyle {
   static const double focusScale = 1.1;
   static const Duration animationDuration = Duration(milliseconds: 150);
   static const Curve animationCurve = Curves.easeOutCubic;
-  static const Color glowColor = Color(0x40FFFFFF);
+  static const Color glowColor = Color(0x60FFFFFF); // Increased opacity
   static const Color focusRingColor = AppTheme.primaryBlue;
+  
   static List<BoxShadow> get focusedShadow => [
     BoxShadow(
-      color: Colors.black.withAlpha((0.4 * 255).round()),
-      blurRadius: 20,
+      color: Colors.black.withValues(alpha: 0.5),
+      blurRadius: 25,
       spreadRadius: 2,
-      offset: const Offset(0, 8),
+      offset: const Offset(0, 10),
     ),
     BoxShadow(
-      color: focusRingColor.withAlpha((0.35 * 255).round()),
-      blurRadius: 16,
-      spreadRadius: 0,
+      color: focusRingColor.withValues(alpha: 0.5),
+      blurRadius: 20,
+      spreadRadius: 1,
     ),
-    const BoxShadow(
-      color: glowColor,
-      blurRadius: 24,
-      spreadRadius: 0,
+    BoxShadow(
+      color: focusRingColor.withValues(alpha: 0.3),
+      blurRadius: 35,
+      spreadRadius: 3,
     ),
   ];
+  
   static List<BoxShadow> get defaultShadow => [
     BoxShadow(
-      color: Colors.black.withAlpha((0.2 * 255).round()),
-      blurRadius: 8,
+      color: Colors.black.withValues(alpha: 0.25),
+      blurRadius: 10,
       spreadRadius: 0,
       offset: const Offset(0, 2),
     ),

@@ -103,20 +103,47 @@ class IncrementalEpgService extends ChangeNotifier {
       final file = await _getCacheFile();
       var received = 0;
       var total = response.contentLength;
+      
+      // Determine if the file is gzipped based on extension
+      final isGzipped = _epgUrl!.toLowerCase().split('?').first.endsWith('.gz');
+      debugLog('EPG: Downloading content (GZIP: $isGzipped)...');
+
       final sink = file.openWrite();
-
-      await response.listen((data) {
-        sink.add(data);
-        received += data.length;
-        if(total > 0) {
-            final progress = (received / total * 100).toStringAsFixed(2);
-            // To avoid spamming logs, maybe report every 10%
-            // This is a simple implementation, a more robust one would throttle logging.
-            debugLog('EPG: Download progress: $progress%');
+      
+      try {
+        if (isGzipped) {
+          // Decompress on the fly
+          await response.transform(gzip.decoder).listen((data) {
+            sink.add(data);
+            received += data.length;
+            // Report progress every 1MB or so (decompressed size)
+            if (received % (1024 * 1024) < 100000) {
+              debugLog('EPG: Decompressed ${(received / (1024 * 1024)).toStringAsFixed(1)} MB');
+            }
+          }).asFuture();
+        } else {
+          await response.listen((data) {
+            sink.add(data);
+            received += data.length;
+            if (total > 0) {
+              final progress = (received / total * 100).toStringAsFixed(1);
+              if (received % (1024 * 1024) < 100000) {
+                debugLog('EPG: Download progress: $progress%');
+              }
+            } else if (received % (1024 * 1024) < 100000) {
+              debugLog('EPG: Downloaded ${(received / (1024 * 1024)).toStringAsFixed(1)} MB');
+            }
+          }).asFuture();
         }
-      }).asFuture();
-
-      await sink.close();
+      } catch (e) {
+        debugLog('EPG: Error during download/decompression: $e');
+        // If it failed because it wasn't actually GZIP, we'd need to re-download
+        // But for simplicity in this replacement, we'll rethrow.
+        // Most common cause of failure here is actually network or invalid GZIP.
+        rethrow;
+      } finally {
+        await sink.close();
+      }
       debugLog('EPG: Download complete. Saved to ${file.path}');
     } catch (e) {
       debugLog('EPG: Download failed: $e');
@@ -285,7 +312,40 @@ class IncrementalEpgService extends ChangeNotifier {
   }
 
   String _normalize(String text) {
-    return text.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    if (text.isEmpty) return '';
+    // Strip common prefixes like "UK:", "US|", etc.
+    String clean = text.replaceAll(RegExp(r'^[A-Z]{2,3}[:|]\s*'), '');
+    // Strip common quality prefixes/suffixes
+    clean = clean.replaceAll(RegExp(r'[|]\s*(HD|FHD|UHD|4K|SD|720p|1080p)', caseSensitive: false), '');
+    
+    String normalized = clean.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    // Strip common country code suffixes
+    normalized = normalized.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk|fr|de|it|es)$'), '');
+    
+    return _convertNumberWords(normalized);
+  }
+
+  static String _convertNumberWords(String text) {
+    const conversions = {
+      'one': '1', 'two': '2', 'three': '3', 'four': '4', 'five': '5',
+      'six': '6', 'seven': '7', 'eight': '8', 'nine': '9', 'ten': '10',
+      '1st': '1', '2nd': '2', '3rd': '3', '4th': '4', '5th': '5',
+    };
+
+    String result = text.toLowerCase();
+    conversions.forEach((key, value) {
+      if (result.contains(key)) {
+        result = result.replaceAll(key, value);
+      }
+    });
+    return result;
+  }
+
+  static String _stripSuffixes(String text) {
+    return text
+        .replaceAll(RegExp(r'(uhd|fhd|hd|sd|4k|1080p|720p)$', caseSensitive: false), '')
+        .replaceAll(RegExp(r'(london|scotland|wales|ireland|ni|channelislands)$', caseSensitive: false), '')
+        .trim();
   }
 
   String? _findBestEpgId(
@@ -304,31 +364,60 @@ class IncrementalEpgService extends ChangeNotifier {
     
     // 2. Normalized ID match
     final normalizedId = _normalize(channelId);
-    if (_normalizedAvailableChannels != null && _normalizedAvailableChannels!.containsKey(normalizedId)) {
+    if (normalizedId.isNotEmpty && _normalizedAvailableChannels != null && _normalizedAvailableChannels!.containsKey(normalizedId)) {
       final foundId = _normalizedAvailableChannels![normalizedId]!;
       _internalToEpgIdMapping[channelId] = foundId;
       return foundId;
+    }
+
+    // Match without domain suffix (e.g., "BBC1.uk" -> "BBC1")
+    if (channelId.contains('.')) {
+      final withoutDomain = _normalize(channelId.split('.').first);
+      if (withoutDomain.isNotEmpty && _normalizedAvailableChannels != null && _normalizedAvailableChannels!.containsKey(withoutDomain)) {
+        final foundId = _normalizedAvailableChannels![withoutDomain]!;
+        _internalToEpgIdMapping[channelId] = foundId;
+        return foundId;
+      }
     }
     
     // 3. Name match (if provided)
     if (channelName != null && channelName.isNotEmpty) {
       final normalizedName = _normalize(channelName);
-      if (_normalizedAvailableChannels != null && _normalizedAvailableChannels!.containsKey(normalizedName)) {
+      if (normalizedName.isNotEmpty && _normalizedAvailableChannels != null && _normalizedAvailableChannels!.containsKey(normalizedName)) {
         final foundId = _normalizedAvailableChannels![normalizedName]!;
         _internalToEpgIdMapping[channelId] = foundId;
         return foundId;
       }
       
-      final strippedName = normalizedName.replaceAll(RegExp(r'(hd|fhd|uhd|4k|sd|1080p|720p)$'), '');
-      if (strippedName != normalizedName && _normalizedAvailableChannels != null && _normalizedAvailableChannels!.containsKey(strippedName)) {
+      final strippedName = _normalize(_stripSuffixes(channelName));
+      if (strippedName.isNotEmpty && strippedName != normalizedName && _normalizedAvailableChannels != null && _normalizedAvailableChannels!.containsKey(strippedName)) {
         final foundId = _normalizedAvailableChannels![strippedName]!;
         _internalToEpgIdMapping[channelId] = foundId;
         return foundId;
       }
+
+      // Try matching the name against exact EPG IDs if they look like names
+      for (final epgId in _availableChannels) {
+        if (_normalize(epgId) == normalizedName) {
+          _internalToEpgIdMapping[channelId] = epgId;
+          return epgId;
+        }
+      }
+      
+      // 4. Loose matching (starts with / contains)
+      if (normalizedName.length >= 4) {
+        for (final entry in _normalizedAvailableChannels!.entries) {
+          if (entry.key.startsWith(normalizedName) || normalizedName.startsWith(entry.key)) {
+             _internalToEpgIdMapping[channelId] = entry.value;
+             return entry.value;
+          }
+        }
+      }
     }
+
     if (logIfMissing) {
       debugLog(
-        'EPG: Could not find matching EPG ID for channelId="$channelId", name="$channelName"',
+        'EPG: Could not find matching EPG ID for channelId="$channelId" (normalized: "$normalizedId"), name="$channelName"',
       );
     }
     return null;

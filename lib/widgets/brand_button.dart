@@ -81,7 +81,11 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
             widget.expand ? MainAxisAlignment.center : MainAxisAlignment.start,
         children: [
           if (widget.icon != null) ...[
-            context.iconSm(widget.icon!, color: labelColor),
+            AnimatedScale(
+              scale: _focused ? 1.15 : 1.0,
+              duration: const Duration(milliseconds: 150),
+              child: context.iconSm(widget.icon!, color: labelColor),
+            ),
             SizedBox(width: context.tvSpacing(8)),
           ],
           Flexible(
@@ -112,9 +116,14 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
         boxShadow: _focused
             ? [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.25),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
+                  color: AppTheme.tvFocusHighlight.withValues(alpha: 0.4),
+                  blurRadius: 15,
+                  spreadRadius: 2,
+                ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 4),
                 ),
               ]
             : null,
@@ -143,20 +152,25 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
           onShowHoverHighlight: (_) {},
           mouseCursor: SystemMouseCursors.click,
           onFocusChange: (v) => setState(() => _focused = v),
-          child: Material(
-            color: Colors.transparent,
-            borderRadius: BorderRadius.circular(widget.borderRadius),
-            child: InkWell(
+          child: AnimatedScale(
+            scale: _focused ? 1.05 : 1.0,
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOutCubic,
+            child: Material(
+              color: Colors.transparent,
               borderRadius: BorderRadius.circular(widget.borderRadius),
-              splashColor: Colors.white.withAlpha((0.2 * 255).round()),
-              highlightColor: Colors.white.withAlpha((0.1 * 255).round()),
-              onTapDown: (_) => setState(() => _pressed = true),
-              onTapCancel: () => setState(() => _pressed = false),
-              onTap: () {
-                setState(() => _pressed = false);
-                widget.onPressed();
-              },
-              child: content,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(widget.borderRadius),
+                splashColor: Colors.white.withValues(alpha: 0.2),
+                highlightColor: Colors.white.withValues(alpha: 0.1),
+                onTapDown: (_) => setState(() => _pressed = true),
+                onTapCancel: () => setState(() => _pressed = false),
+                onTap: () {
+                  setState(() => _pressed = false);
+                  widget.onPressed();
+                },
+                child: content,
+              ),
             ),
           ),
         ),
@@ -237,9 +251,14 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
             boxShadow: _focused
                 ? [
                     BoxShadow(
+                      color: AppTheme.tvFocusHighlight.withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      spreadRadius: 1,
+                    ),
+                    BoxShadow(
                       color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
+                      blurRadius: 15,
+                      offset: const Offset(0, 4),
                     ),
                   ]
                 : null,
@@ -262,9 +281,13 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
                 : MainAxisAlignment.start,
             children: [
               if (widget.icon != null) ...[
-                context.iconSm(
-                  widget.icon!,
-                  color: _focused ? AppTheme.darkBackground : Colors.white,
+                AnimatedScale(
+                  scale: _focused ? 1.15 : 1.0,
+                  duration: const Duration(milliseconds: 150),
+                  child: context.iconSm(
+                    widget.icon!,
+                    color: _focused ? AppTheme.darkBackground : Colors.white,
+                  ),
                 ),
                 SizedBox(width: context.tvSpacing(8)),
               ],
@@ -312,15 +335,20 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
           onShowHoverHighlight: (_) {},
           mouseCursor: SystemMouseCursors.click,
           onFocusChange: (v) => setState(() => _focused = v),
-          child: Material(
-            color: Colors.transparent,
-            borderRadius: BorderRadius.circular(widget.borderRadius),
-            child: InkWell(
+          child: AnimatedScale(
+            scale: _focused ? 1.05 : 1.0,
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOutCubic,
+            child: Material(
+              color: Colors.transparent,
               borderRadius: BorderRadius.circular(widget.borderRadius),
-              splashColor: Colors.white.withAlpha((0.15 * 255).round()),
-              highlightColor: Colors.white.withAlpha((0.08 * 255).round()),
-              onTap: widget.onPressed,
-              child: content,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(widget.borderRadius),
+                splashColor: Colors.white.withValues(alpha: 0.15),
+                highlightColor: Colors.white.withValues(alpha: 0.08),
+                onTap: widget.onPressed,
+                child: content,
+              ),
             ),
           ),
         ),
