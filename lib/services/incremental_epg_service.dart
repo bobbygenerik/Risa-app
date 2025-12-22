@@ -405,7 +405,7 @@ class IncrementalEpgService extends ChangeNotifier {
       }
       
       // 4. Loose matching (starts with / contains)
-      if (normalizedName.length >= 4) {
+      if (normalizedName.length >= 4 && _normalizedAvailableChannels != null) {
         for (final entry in _normalizedAvailableChannels!.entries) {
           if (entry.key.startsWith(normalizedName) || normalizedName.startsWith(entry.key)) {
              _internalToEpgIdMapping[channelId] = entry.value;

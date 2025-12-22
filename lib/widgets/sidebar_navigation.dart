@@ -487,55 +487,52 @@ class SidebarNavigationState extends State<SidebarNavigation> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: _isExpanded ? _expandedWidth : AppSpacing.sidebarCollapsedWidth,
-      child: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.1),
-            ),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.1),
+        ),
+        child: _buildSidebarContent(),
+      ),
+    );
+  }
+
+  Widget _buildSidebarContent() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 4, bottom: 4),
+          child: Image(
+            image: AssetImage(_isExpanded
+                ? 'assets/images/croppedlogo2.png'
+                : 'assets/images/lonelogo (1).png'),
+            height: _isExpanded ? 28 : 20,
+          ),
+        ),
+        Expanded(
+          child: FocusTraversalGroup(
+            policy: WidgetOrderTraversalPolicy(),
             child: Column(
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 4, bottom: 4),
-                  child: Image(
-                    image: AssetImage(_isExpanded
-                        ? 'assets/images/croppedlogo2.png'
-                        : 'assets/images/lonelogo (1).png'),
-                    height: _isExpanded ? 28 : 20,
-                  ),
-                ),
-                Expanded(
-                  child: FocusTraversalGroup(
-                    policy: WidgetOrderTraversalPolicy(),
-                    child: Column(
-                      children: [
-                        const Spacer(),
-                        ..._tabs.map((tab) {
-                          final index = _tabs.indexOf(tab);
-                          return Container(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: tab.id == 'search'
-                                ? _buildSearchButton(index)
-                                : _buildTabButton(index),
-                          );
-                        }),
-                        const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: _buildBottomButton(
-                              Icons.settings, 'Settings', '/settings'),
-                        ),
-                      ],
-                    ),
-                  ),
+                const Spacer(),
+                ..._tabs.map((tab) {
+                  final index = _tabs.indexOf(tab);
+                  return Container(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: tab.id == 'search'
+                        ? _buildSearchButton(index)
+                        : _buildTabButton(index),
+                  );
+                }),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: _buildBottomButton(
+                      Icons.settings, 'Settings', '/settings'),
                 ),
               ],
             ),
           ),
         ),
-      ),
-      ),
+      ],
     );
   }
 

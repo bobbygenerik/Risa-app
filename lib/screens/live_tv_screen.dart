@@ -20,6 +20,7 @@ import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/service_validator.dart';
 import 'package:iptv_player/widgets/tv_focusable.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
+import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/widgets/brand_badge.dart';
 import 'package:iptv_player/utils/app_typography.dart';
 import 'package:iptv_player/utils/app_colors.dart';
@@ -28,7 +29,6 @@ import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:iptv_player/services/timer_service.dart';
 import 'package:iptv_player/services/focus_pool_service.dart';
 import 'package:iptv_player/widgets/shimmer.dart';
-import 'package:iptv_player/widgets/hero_info_box.dart';
 
 /// A focused Live TV screen. Shows a hero for the currently airing program
 /// on a featured channel, plus channel rows below.
@@ -314,23 +314,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                             heroImage,
                             0.0,
                           ),
-                          // Darker Scrim overlay for major streaming app look
-                          Positioned.fill(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.centerLeft,
-                                  end: Alignment.centerRight,
-                                  colors: [
-                                    Colors.black.withValues(alpha: 0.85),
-                                    Colors.black.withValues(alpha: 0.4),
-                                    Colors.transparent,
-                                  ],
-                                  stops: const [0.0, 0.4, 0.8],
-                                ),
-                              ),
-                            ),
-                          ),
                           // Gradient fade at bottom
                           Positioned(
                             bottom: 0,
@@ -433,27 +416,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     }
                     return Opacity(
                       opacity: opacity,
-                      child: HeroInfoBox(
-                        title: currentProgram?.title ?? featuredChannel.name,
-                        description: currentProgram?.description,
-                        progress: currentProgram?.progressPercentage,
-                        onWatchPressed: () =>
-                            context.push('/player', extra: featuredChannel),
-                        channelLogoUrl: featuredChannel.logoUrl,
-                        metadata: [
-                          if (currentProgram != null) ...[
-                            const BrandBadge.live(),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${_formatTime(currentProgram.startTime)} - ${_formatTime(currentProgram.endTime)}',
-                              style: AppTypography.smallText(context),
-                            ),
-                          ],
-                          const BrandBadge.hd(),
-                        ],
-                        primaryButtonFocusNode: _watchButtonFocus,
-                        nextFocusOnRight: _firstChannelFocus,
-                      ),
+                      child: _buildFeaturedInfo(
+                          context, featuredChannel, currentProgram),
                     );
                   }),
                   builder: (context, child) {
@@ -486,7 +450,122 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             ],
           ),
         );
-      },
+    },
+  );
+  }
+
+  Widget _buildFeaturedInfo(
+      BuildContext context, Channel channel, Program? program) {
+    final title = program?.title ?? channel.name;
+    final description = program?.description ?? '';
+    final timeRange = program != null
+        ? '${_formatTime(program.startTime)} - ${_formatTime(program.endTime)}'
+        : '';
+    final progress = program?.progressPercentage ?? 0.0;
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: 0,
+        vertical: context.spacingLg(),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Title - flexible height with max limit
+          Container(
+            constraints: BoxConstraints(
+              maxHeight: context.tvTextSize(24) * 1.3 * 2,
+            ),
+            child: Text(
+              title,
+              style: AppTypography.heroTitle(context),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          SizedBox(height: context.tvSpacing(8)),
+          // Description - flexible height with max limit
+          Container(
+            constraints: BoxConstraints(
+              maxHeight: context.tvTextSize(14) * 1.3 * 3,
+            ),
+            child: Text(
+              description.isNotEmpty ? description : 'No description available',
+              style: AppTypography.heroDescription(context).copyWith(
+                fontStyle:
+                    description.isEmpty ? FontStyle.italic : FontStyle.normal,
+                color: description.isEmpty ? Colors.white60 : null,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          SizedBox(height: context.tvSpacing(8)),
+          // Progress bar - fixed height
+          SizedBox(
+            height: 6,
+            child: program != null
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      backgroundColor: AppColors.progressBackground,
+                      color: AppColors.progressForeground,
+                      minHeight: 6,
+                    ),
+                  )
+                : Container(),
+          ),
+          SizedBox(height: context.tvSpacing(4)),
+          // Time range with LIVE badge - flexible height
+          Container(
+            constraints: BoxConstraints(
+              maxHeight: context.tvTextSize(13) * 1.5,
+            ),
+            child: Row(
+              children: [
+                if (program != null) ...[
+                  const BrandBadge.live(),
+                  const SizedBox(width: 8),
+                ],
+                Expanded(
+                  child: Text(
+                    timeRange,
+                    style: AppTypography.smallText(context),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Focus(
+            canRequestFocus: false,
+            skipTraversal: true,
+            onKeyEvent: (node, event) {
+              if (event is KeyDownEvent &&
+                  event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                _firstChannelFocus.requestFocus();
+                return KeyEventResult.handled;
+              }
+              return KeyEventResult.ignored;
+            },
+            child: SizedBox(
+              width: context.cardWidth() * 0.5,
+              child: BrandPrimaryButton(
+                onPressed: () => context.push('/player', extra: channel),
+                label: 'Watch',
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                fontSize: 12,
+                minHeight: 24,
+                focusNode: _watchButtonFocus,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
