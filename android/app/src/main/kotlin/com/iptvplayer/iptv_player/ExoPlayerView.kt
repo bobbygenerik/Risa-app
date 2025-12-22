@@ -33,11 +33,21 @@ class ExoPlayerView(
         playerView.setShutterBackgroundColor(android.graphics.Color.BLACK)
         playerView.resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
         
-        // Create ExoPlayer instance with custom data source factory for redirects
+        // Create ExoPlayer instance with custom renderers factory and data source factory
         val dataSourceFactory = androidx.media3.datasource.DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(true)
-        
-        exoPlayer = ExoPlayer.Builder(context)
+
+        // Configure renderers factory: enable decoder fallback and prefer extension renderers
+        val renderersFactory = object : androidx.media3.exoplayer.DefaultRenderersFactory(context) {
+            init {
+                // Prefer extension renderers (FFmpeg) when available and enable decoder fallback
+                setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+                setEnableDecoderFallback(true)
+            }
+        }
+
+        // Build ExoPlayer with our custom renderers factory
+        exoPlayer = ExoPlayer.Builder(context, renderersFactory)
             .setMediaSourceFactory(
                 androidx.media3.exoplayer.source.DefaultMediaSourceFactory(context)
                     .setDataSourceFactory(dataSourceFactory)
@@ -72,6 +82,15 @@ class ExoPlayerView(
                 })
             }
 
+        // Force SurfaceView usage on Android TV / NVIDIA Shield to avoid TextureView issues
+        try {
+            // Prefer SurfaceView (disable TextureView)
+            playerView.setUseTextureView(false)
+        } catch (ex: Throwable) {
+            // Some platform builds may not expose setUseTextureView; ignore safely
+            android.util.Log.w("ExoPlayer", "Could not force SurfaceView: ${ex.message}")
+        }
+
         // Attach player to view
         playerView.player = exoPlayer
 
@@ -93,8 +112,20 @@ class ExoPlayerView(
         val mediaItem = MediaItem.Builder()
             .setUri(Uri.parse(url))
             .build()
-        
-        exoPlayer.setMediaItem(mediaItem)
+        // Choose media source type: HLS if .m3u8, otherwise treat as progressive (TS/MP4)
+        val lower = url.lowercase()
+        val mediaSource = if (lower.contains(".m3u8")) {
+            androidx.media3.exoplayer.source.hls.HlsMediaSource.Factory(
+                androidx.media3.datasource.DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true)
+            ).createMediaSource(mediaItem)
+        } else {
+            // ProgressiveMediaSource handles raw TS streams (common for Xtream PHP endpoints)
+            androidx.media3.exoplayer.source.ProgressiveMediaSource.Factory(
+                androidx.media3.datasource.DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true)
+            ).createMediaSource(mediaItem)
+        }
+
+        exoPlayer.setMediaSource(mediaSource)
         exoPlayer.prepare()
     }
 
