@@ -52,17 +52,22 @@ class ExoPlayerView(
             .build()
             .apply {
                 playWhenReady = creationParams?.get("autoPlay") as? Boolean ?: true
+                volume = if (creationParams?.get("muted") as? Boolean == true) 0f else 1f
                 addListener(object : Player.Listener {
                     override fun onPlaybackStateChanged(state: Int) {
-                        when (state) {
-                            Player.STATE_READY -> android.util.Log.d("ExoPlayer", "Ready to play")
-                            Player.STATE_BUFFERING -> android.util.Log.d("ExoPlayer", "Buffering...")
-                            Player.STATE_ENDED -> android.util.Log.d("ExoPlayer", "Playback ended")
-                            Player.STATE_IDLE -> android.util.Log.d("ExoPlayer", "Idle")
+                        val stateName = when (state) {
+                            Player.STATE_READY -> "ready"
+                            Player.STATE_BUFFERING -> "buffering"
+                            Player.STATE_ENDED -> "ended"
+                            Player.STATE_IDLE -> "idle"
+                            else -> "unknown"
                         }
+                        android.util.Log.d("ExoPlayer", "State changed to: $stateName")
+                        methodChannel.invokeMethod("onPlaybackStateChanged", mapOf("state" to stateName))
                     }
                     override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                         android.util.Log.e("ExoPlayer", "Playback error: ${error.message}")
+                        methodChannel.invokeMethod("onPlayerError", mapOf("error" to error.message))
                     }
                 })
             }
@@ -144,6 +149,16 @@ class ExoPlayerView(
                     }
                 }
                 result.success(tracks)
+            }
+            "setVolume" -> {
+                val volume = call.argument<Double>("volume")?.toFloat() ?: 1f
+                exoPlayer.volume = volume
+                result.success(null)
+            }
+            "setMuted" -> {
+                val muted = call.argument<Boolean>("muted") ?: false
+                exoPlayer.volume = if (muted) 0f else 1f
+                result.success(null)
             }
             else -> {
                 result.notImplemented()

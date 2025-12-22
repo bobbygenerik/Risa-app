@@ -29,6 +29,8 @@ import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:iptv_player/services/timer_service.dart';
 import 'package:iptv_player/services/focus_pool_service.dart';
 import 'package:iptv_player/widgets/shimmer.dart';
+import 'package:iptv_player/widgets/exoplayer_video_view.dart';
+import 'package:iptv_player/providers/settings_provider.dart';
 
 /// A focused Live TV screen. Shows a hero for the currently airing program
 /// on a featured channel, plus channel rows below.
@@ -55,6 +57,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   late final bool _tmdbEnabled;
 
   bool _heroVideoPreview = false;
+  bool _isVideoReady = false;
+  String? _playerError;
 
   @override
   void initState() {
@@ -82,7 +86,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           _scrollController.jumpTo(0);
         }
         _startCarouselIfNeeded();
-        _loadHeroVideoPreferenceSetting();
       },
     );
   }
@@ -167,6 +170,23 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     setState(() {
       // Simply cycle to next channel without EPG dependency
       _featuredIndex = (_featuredIndex + 1) % channelProvider.channelCount;
+      _isVideoReady = false;
+      _playerError = null;
+    });
+  }
+
+  void _prevHero() {
+    final channelProvider = Provider.of<ChannelProvider>(
+      context,
+      listen: false,
+    );
+    if (!channelProvider.hasChannels) return;
+    setState(() {
+      _featuredIndex =
+          (_featuredIndex - 1 + channelProvider.channelCount) %
+              channelProvider.channelCount;
+      _isVideoReady = false;
+      _playerError = null;
     });
   }
 
@@ -176,9 +196,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       decoration: const BoxDecoration(
         color: AppColors.background,
       ),
-      child: Consumer<ChannelProvider>(
-        builder: (context, channelProvider, _) {
+      child: Consumer2<ChannelProvider, SettingsProvider>(
+        builder: (context, channelProvider, settingsProvider, _) {
           final hasChannels = channelProvider.hasChannels;
+          _heroVideoPreview = settingsProvider.heroVideoPreview;
 
           if (!hasChannels && channelProvider.isLoading) {
             return _buildSkeletonLoader();
@@ -313,6 +334,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                             currentProgram,
                             heroImage,
                             0.0,
+                            settingsProvider.heroVideoPreview,
                           ),
                           // Gradient fade at bottom
                           Positioned(
@@ -337,6 +359,41 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                           ),
                         ],
                       ),
+                    );
+                  }),
+                  builder: (context, child) {
+                    final scrollPos = _scrollController.hasClients
+                        ? _scrollController.offset
+                        : 0.0;
+                    return Transform.translate(
+                      offset: Offset(0, -scrollPos),
+                      child: child,
+                    );
+                  },
+                ),
+              ),
+              // Hero info overlay
+              Positioned(
+                bottom: heroHeight *
+                    0.15, // Lowered from 0.25 for better artwork exposure
+                left: contentInset,
+                width: heroInfoWidth,
+                child: AnimatedBuilder(
+                  animation: _scrollController,
+                  child: Builder(builder: (context) {
+                    final scrollPos = _scrollController.hasClients
+                        ? _scrollController.offset
+                        : 0.0;
+                    final fadeProgress =
+                        (scrollPos / (heroHeight * 0.12)).clamp(0.0, 1.0);
+                    final opacity = 1.0 - fadeProgress;
+                    if (opacity <= 0.01) {
+                      return const SizedBox.shrink();
+                    }
+                    return Opacity(
+                      opacity: opacity,
+                      child: _buildFeaturedInfo(
+                          context, featuredChannel, currentProgram),
                     );
                   }),
                   builder: (context, child) {
@@ -394,41 +451,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       ),
                     ],
                   ),
-                ),
-              ),
-              // Hero info overlay
-              Positioned(
-                bottom: heroHeight *
-                    0.15, // Lowered from 0.25 for better artwork exposure
-                left: contentInset,
-                width: heroInfoWidth,
-                child: AnimatedBuilder(
-                  animation: _scrollController,
-                  child: Builder(builder: (context) {
-                    final scrollPos = _scrollController.hasClients
-                        ? _scrollController.offset
-                        : 0.0;
-                    final fadeProgress =
-                        (scrollPos / (heroHeight * 0.12)).clamp(0.0, 1.0);
-                    final opacity = 1.0 - fadeProgress;
-                    if (opacity <= 0.01) {
-                      return const SizedBox.shrink();
-                    }
-                    return Opacity(
-                      opacity: opacity,
-                      child: _buildFeaturedInfo(
-                          context, featuredChannel, currentProgram),
-                    );
-                  }),
-                  builder: (context, child) {
-                    final scrollPos = _scrollController.hasClients
-                        ? _scrollController.offset
-                        : 0.0;
-                    return Transform.translate(
-                      offset: Offset(0, -scrollPos),
-                      child: child,
-                    );
-                  },
                 ),
               ),
               // Channel logo
@@ -542,13 +564,20 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           ),
           const SizedBox(height: 16),
           Focus(
-            canRequestFocus: false,
-            skipTraversal: true,
             onKeyEvent: (node, event) {
-              if (event is KeyDownEvent &&
-                  event.logicalKey == LogicalKeyboardKey.arrowRight) {
-                _firstChannelFocus.requestFocus();
-                return KeyEventResult.handled;
+              if (event is KeyDownEvent) {
+                if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                  _nextHero();
+                  return KeyEventResult.handled;
+                }
+                if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                  _prevHero();
+                  return KeyEventResult.handled;
+                }
+                if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                  _firstChannelFocus.requestFocus();
+                  return KeyEventResult.handled;
+                }
               }
               return KeyEventResult.ignored;
             },
@@ -1135,47 +1164,54 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return '${hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} $period';
   }
 
-  Future<void> _loadHeroVideoPreferenceSetting() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (mounted) {
-      setState(() {
-        _heroVideoPreview = prefs.getBool('hero_video_preview') ?? false;
-      });
-    }
-  }
 
   Widget _buildHeroContent(
     Channel featuredChannel,
     Program? currentProgram,
-    String? heroImage,
+    String? heroImage, // Keep as String? for imageUrl
     double scrollProgress,
+    bool heroVideoPreview, // Added parameter
   ) {
     // Show video if enabled, otherwise image
-    if (_heroVideoPreview && featuredChannel.url.isNotEmpty) {
+    if (heroVideoPreview && featuredChannel.url.isNotEmpty) {
       return Stack(
         children: [
-          // Video player (placeholder for now)
-          Container(
-            color: Colors.black,
-            child: Center(
-              child: context.iconXxl(
-                Icons.play_circle_outline,
-                color: AppColors.whiteWithOpacity(0.7),
+          // ExoPlayer Video Preview
+          ClipRRect(
+            child: SizedBox.expand(
+              child: ExoPlayerVideoView(
+                videoUrl: featuredChannel.url,
+                autoPlay: true,
+                muted: true, // Preview is usually muted
+                onStateChanged: (state) {
+                  if (state == 'ready' && mounted) {
+                    setState(() => _isVideoReady = true);
+                  }
+                },
+                onError: (error) {
+                  if (mounted) {
+                    setState(() {
+                      _isVideoReady = false;
+                      _playerError = error;
+                    });
+                  }
+                },
               ),
             ),
           ),
-          // Fallback to image if video fails
-          if (heroImage != null && heroImage.isNotEmpty)
-            Positioned.fill(
-              child: CachedNetworkImage(
-                imageUrl: heroImage,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
-                placeholder: (_, __) => _buildDefaultHeroBackground(),
-                errorWidget: (_, __, ___) => _buildDefaultHeroBackground(),
+          // Static image shown until video is ready or if it fails
+          if (!_isVideoReady || _playerError != null)
+            if (heroImage != null && heroImage.isNotEmpty)
+              Positioned.fill(
+                child: CachedNetworkImage(
+                  imageUrl: heroImage,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: double.infinity,
+                  placeholder: (_, __) => _buildDefaultHeroBackground(),
+                  errorWidget: (_, __, ___) => _buildDefaultHeroBackground(),
+                ),
               ),
-            ),
         ],
       );
     }

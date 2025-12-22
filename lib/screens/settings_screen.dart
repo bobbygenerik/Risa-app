@@ -58,6 +58,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _openSubtitlesEnabled = false;
   bool _transcriptionEnabled = false;
   bool _translationEnabled = false;
+  bool _heroVideoPreview = false;
 
   // EPG Settings
   int _epgCacheDuration = 6; // hours
@@ -134,6 +135,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _openSubtitlesEnabled = prefs.getBool('opensubtitles_enabled') ?? false;
       _transcriptionEnabled = prefs.getBool('transcription_enabled') ?? false;
       _translationEnabled = prefs.getBool('translation_enabled') ?? false;
+    _heroVideoPreview = prefs.getBool('hero_video_preview') ?? false;
       _rememberPlaybackPosition = prefs.getBool('remember_playback_position') ?? true;
       _epgCacheDuration = prefs.getInt('epg_cache_duration') ?? 6;
       _epgRetentionDays = prefs.getInt('epg_retention_days') ?? 7;
@@ -567,6 +569,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                onChanged: (v) => _handleSwitchTileChange('Auto-play Next Episode', v),
              ),
              SettingsSwitchTile(
+               title: 'Hero Video Preview',
+               subtitle: 'Show video preview in the hero banner',
+               value: _heroVideoPreview,
+               onChanged: (v) => _handleSwitchTileChange('Hero Video Preview', v),
+             ),
+             SettingsSwitchTile(
                title: 'Remember Position',
                subtitle: 'Resume VODs where you left off',
                value: _rememberPlaybackPosition,
@@ -904,6 +912,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         case 'Store Program Descriptions': _storeDescriptions = newValue; break;
         case 'Show Channel Logos': _showLogos = newValue; break;
         case 'Show Program Images': _showImages = newValue; break;
+        case 'Hero Video Preview': _heroVideoPreview = newValue; break;
       }
     });
     
@@ -940,6 +949,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case 'Store Program Descriptions': await prefs.setBool('epg_store_descriptions', newValue); break;
       case 'Show Channel Logos': await prefs.setBool('epg_show_logos', newValue); break;
       case 'Show Program Images': await prefs.setBool('epg_show_images', newValue); break;
+      case 'Hero Video Preview': 
+        await prefs.setBool('hero_video_preview', newValue);
+        if (mounted) {
+           Provider.of<SettingsProvider>(context, listen: false).setHeroVideoPreview(newValue);
+        }
+        break;
     }
   }
   

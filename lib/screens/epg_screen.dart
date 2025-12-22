@@ -320,8 +320,10 @@ class _EPGScreenState extends State<EPGScreen>
                       // Spacer for header area
                       const SizedBox(height: headerHeight),
                       Expanded(
-                        child: Row(
-                          children: [
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: AppSpacing.sidebarCollapsedWidth),
+                          child: Row(
+                            children: [
                             // Category sidebar
                             _buildCategorySidebar(categoryNames),
                             const SizedBox(width: 16),
@@ -339,7 +341,7 @@ class _EPGScreenState extends State<EPGScreen>
                   // Transparent header overlay
                   Positioned(
                     top: 0,
-                    left: 0,
+                    left: AppSpacing.sidebarCollapsedWidth,
                     right: 0,
                     child: _buildHeader(epgService),
                   ),

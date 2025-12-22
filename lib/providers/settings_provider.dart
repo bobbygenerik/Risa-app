@@ -32,6 +32,7 @@ class SettingsProvider extends ChangeNotifier {
   bool _realDebridEnabled = false;
   bool _realDebridForCatchup = true;
   bool _realDebridForVod = true;
+  bool _heroVideoPreview = false;
 
   Map<String, String?>? _profileCache;
   Map<String, String?>? _savedPlaylistsCache;
@@ -61,6 +62,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get realDebridEnabled => _realDebridEnabled;
   bool get realDebridForCatchup => _realDebridForCatchup;
   bool get realDebridForVod => _realDebridForVod;
+  bool get heroVideoPreview => _heroVideoPreview;
 
 
   Future<void> initialize() async {
@@ -109,6 +111,7 @@ class SettingsProvider extends ChangeNotifier {
     _realDebridEnabled = prefs.getBool('realdebrid_enabled') ?? false;
     _realDebridForCatchup = prefs.getBool('realdebrid_catchup') ?? true;
     _realDebridForVod = prefs.getBool('realdebrid_vod') ?? true;
+    _heroVideoPreview = prefs.getBool('hero_video_preview') ?? false;
 
   }
 
@@ -266,6 +269,12 @@ class SettingsProvider extends ChangeNotifier {
     if (_realDebridForVod == value) return;
     _realDebridForVod = value;
     await _prefs?.setBool('realdebrid_vod', value);
+    notifyListeners();
+  }
+  Future<void> setHeroVideoPreview(bool value) async {
+    if (_heroVideoPreview == value) return;
+    _heroVideoPreview = value;
+    await _prefs?.setBool('hero_video_preview', value);
     notifyListeners();
   }
 

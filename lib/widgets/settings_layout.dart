@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/app_spacing.dart';
 
 /// A premium Split-Pane layout for TV Settings.
 /// 
@@ -87,71 +88,74 @@ class _SettingsLayoutState extends State<SettingsLayout> {
             ],
           ),
         ),
-        child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Left Pane: Sidebar
-          SizedBox(
-            width: 320, // Extended width for premium feel
-            child: Container(
-              color: AppTheme.sidebarBackground, 
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // App Branding / Header
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(40, 48, 24, 24),
-                    child: Text(
-                      'Settings',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // Menu Items
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: widget.categories.length,
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      itemBuilder: (context, index) {
-                        return _buildMenuItem(index);
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Right Pane: Content
-          Expanded(
-            child: FocusScope(
-              autofocus: true,
-              child: Focus(
-                onKeyEvent: (node, event) {
-                  if (event is! KeyDownEvent) return KeyEventResult.ignored;
-                  
-                  if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                    // Return focus to sidebar - go back to currently selected menu item
-                    _menuFocusNodes[widget.selectedIndex].requestFocus();
-                    return KeyEventResult.handled;
-                  }
-                  return KeyEventResult.ignored;
-                },
+        child: Padding(
+          padding: EdgeInsets.only(left: MediaQuery.of(context).padding.left + AppSpacing.sidebarCollapsedWidth),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Left Pane: Sidebar
+              SizedBox(
+                width: 320, // Extended width for premium feel
                 child: Container(
-                  color: AppTheme.darkBackground, 
-                  child: widget.content,
+                  color: AppTheme.sidebarBackground, 
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // App Branding / Header
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(40, 48, 24, 24),
+                        child: Text(
+                          'Settings',
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Menu Items
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: widget.categories.length,
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          itemBuilder: (context, index) {
+                            return _buildMenuItem(index);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
+
+              // Right Pane: Content
+              Expanded(
+                child: FocusScope(
+                  autofocus: true,
+                  child: Focus(
+                    onKeyEvent: (node, event) {
+                      if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                      
+                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                        // Return focus to sidebar - go back to currently selected menu item
+                        _menuFocusNodes[widget.selectedIndex].requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child: Container(
+                      color: AppTheme.darkBackground, 
+                      child: widget.content,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
       ),
     );
   }
