@@ -847,6 +847,7 @@ class _MoviesScreenState extends State<MoviesScreen>
       },
       primaryButtonFocusNode: _playFocus,
       nextFocusOnRight: _firstRowFocus,
+      autofocusWatchButton: true,
     );
   }
 

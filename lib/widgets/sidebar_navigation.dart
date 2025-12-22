@@ -281,15 +281,6 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                 color: isFocused
                     ? AppTheme.primaryBlue.withValues(alpha: 0.15)
                     : Colors.transparent,
-                boxShadow: isFocused
-                    ? [
-                        BoxShadow(
-                          color: AppTheme.primaryBlue.withValues(alpha: 0.2),
-                          blurRadius: 8,
-                          spreadRadius: 1,
-                        )
-                      ]
-                    : null,
               ),
               child: AnimatedScale(
                 duration: const Duration(milliseconds: 140),
@@ -420,15 +411,6 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                 color: isFocused
                     ? AppTheme.primaryBlue.withValues(alpha: 0.15)
                     : Colors.transparent,
-                boxShadow: isFocused
-                    ? [
-                        BoxShadow(
-                          color: AppTheme.primaryBlue.withValues(alpha: 0.2),
-                          blurRadius: 8,
-                          spreadRadius: 1,
-                        )
-                      ]
-                    : null,
               ),
               child: AnimatedScale(
                 duration: const Duration(milliseconds: 140),
@@ -606,15 +588,6 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                 color: isFocused
                     ? AppTheme.primaryBlue.withValues(alpha: 0.15)
                     : Colors.transparent,
-                boxShadow: isFocused
-                    ? [
-                        BoxShadow(
-                          color: AppTheme.primaryBlue.withValues(alpha: 0.2),
-                          blurRadius: 8,
-                          spreadRadius: 1,
-                        )
-                      ]
-                    : null,
               ),
               child: AnimatedScale(
                 duration: const Duration(milliseconds: 140),

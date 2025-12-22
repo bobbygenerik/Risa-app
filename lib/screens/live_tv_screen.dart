@@ -563,6 +563,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           ),
           const SizedBox(height: 16),
           Focus(
+            autofocus: true,
             onKeyEvent: (node, event) {
               if (event is KeyDownEvent) {
                 if (event.logicalKey == LogicalKeyboardKey.arrowRight) {

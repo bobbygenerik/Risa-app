@@ -948,6 +948,7 @@ class _SeriesScreenState extends State<SeriesScreen>
       },
       primaryButtonFocusNode: _watchFocus,
       nextFocusOnRight: _firstRowFocus,
+      autofocusWatchButton: true,
     );
   }
 

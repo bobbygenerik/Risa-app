@@ -45,11 +45,10 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
                 .clamp(0.0, 1.0))
             .toColor()
         : baseColor;
-    final resolvedColor = _focused ? Colors.white : pressedColor;
+    final resolvedColor = _focused ? Colors.white.withValues(alpha: 0.9) : pressedColor;
     final labelColor = _focused ? AppTheme.darkBackground : Colors.white;
 
-    final resolvedPadding =
-        widget.padding.resolve(Directionality.of(context));
+    final resolvedPadding = widget.padding.resolve(Directionality.of(context));
     final scaledPadding = EdgeInsets.fromLTRB(
       context.tvSpacing(resolvedPadding.left),
       context.tvSpacing(resolvedPadding.top),
@@ -71,9 +70,7 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
         bottom: scaledPadding.bottom,
       ),
       constraints: BoxConstraints(
-        minHeight: context
-            .tvSpacing(widget.minHeight ?? 36)
-            .clamp(20.0, 44.0),
+        minHeight: context.tvSpacing(widget.minHeight ?? 36).clamp(20.0, 44.0),
       ),
       child: Row(
         mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
@@ -219,8 +216,7 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
 
   @override
   Widget build(BuildContext context) {
-    final resolvedPadding =
-        widget.padding.resolve(Directionality.of(context));
+    final resolvedPadding = widget.padding.resolve(Directionality.of(context));
     final scaledPadding = EdgeInsets.fromLTRB(
       context.tvSpacing(resolvedPadding.left),
       context.tvSpacing(resolvedPadding.top),
@@ -228,7 +224,7 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
       context.tvSpacing(resolvedPadding.bottom),
     );
 
-    final focusFill = Colors.white;
+    final focusFill = Colors.white.withValues(alpha: 0.9);
     final content = AnimatedContainer(
       duration: AppDurations.fast,
       decoration: BoxDecoration(
@@ -270,9 +266,8 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
             bottom: scaledPadding.bottom,
           ),
           constraints: BoxConstraints(
-            minHeight: context
-                .tvSpacing(widget.minHeight ?? 32)
-                .clamp(20.0, 40.0),
+            minHeight:
+                context.tvSpacing(widget.minHeight ?? 32).clamp(20.0, 40.0),
           ),
           child: Row(
             mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,

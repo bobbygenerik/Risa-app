@@ -20,6 +20,7 @@ class HeroInfoBox extends StatelessWidget {
   final FocusNode? primaryButtonFocusNode;
   final FocusNode? secondaryButtonFocusNode;
   final FocusNode? nextFocusOnRight;
+  final bool autofocusWatchButton;
 
   const HeroInfoBox({
     super.key,
@@ -34,6 +35,7 @@ class HeroInfoBox extends StatelessWidget {
     this.primaryButtonFocusNode,
     this.secondaryButtonFocusNode,
     this.nextFocusOnRight,
+    this.autofocusWatchButton = false,
   });
 
   @override
@@ -127,8 +129,9 @@ class HeroInfoBox extends StatelessWidget {
           Row(
             children: [
               Focus(
-                canRequestFocus: false,
-                skipTraversal: true,
+                autofocus: autofocusWatchButton,
+                canRequestFocus: !autofocusWatchButton,
+                skipTraversal: !autofocusWatchButton,
                 onKeyEvent: (node, event) {
                   if (event is KeyDownEvent &&
                       event.logicalKey == LogicalKeyboardKey.arrowRight &&

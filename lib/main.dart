@@ -572,9 +572,9 @@ class _MyAppState extends State<MyApp> {
           ChangeNotifierProvider(
             create: (context) {
               final service = IncrementalEpgService();
-              // Initialize EPG service with URL from settings
-              _runDeferred(() async {
-                await service.initialize();
+              // Initialize EPG service immediately with URL from settings
+              service.initialize().catchError((e) {
+                debugLog('EPG Service initialization failed: $e');
               });
               return service;
             },

@@ -124,6 +124,12 @@ class ChannelProvider with ChangeNotifier {
   // Set the IncrementalEpgService reference for EPG loading
   void setEpgService(IncrementalEpgService service) {
     _epgService = service;
+    // Ensure EPG service is initialized when channel provider loads
+    if (service.hasEpgUrl) {
+      service.initialize().catchError((e) {
+        debugLog('EPG Service initialization failed in ChannelProvider: $e');
+      });
+    }
   }
 
   // Watch count tracking (channelId -> count)
@@ -429,7 +435,8 @@ class ChannelProvider with ChangeNotifier {
              await prefs.setString('epg_url', epgUrl);
              // Ensure EPG service is initialized
              if (_epgService != null) {
-                unawaited(_epgService!.initialize(forceRefresh: urlChanged));
+                debugLog('ChannelProvider: Initializing EPG service with URL from cache');
+                await _epgService!.initialize(forceRefresh: urlChanged);
              }
           }
 
@@ -814,7 +821,8 @@ class ChannelProvider with ChangeNotifier {
               'ChannelProvider: Found EPG URL in playlist: $epgUrl (changed: $urlChanged)');
           await prefs.setString('epg_url', epgUrl);
           if (_epgService != null) {
-            unawaited(_epgService!.initialize(forceRefresh: urlChanged));
+            debugLog('ChannelProvider: Initializing EPG service with URL from M3U');
+            await _epgService!.initialize(forceRefresh: urlChanged);
           }
         }
 

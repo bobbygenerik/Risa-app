@@ -54,6 +54,9 @@ class IncrementalEpgService extends ChangeNotifier {
       _error = 'No EPG URL configured';
       notifyListeners();
     }
+    
+    // Debug: Log current state
+    debugLog('EPG: Service state - URL: $_epgUrl, Available channels: ${_availableChannels.length}, Loaded channels: ${_programsByChannel.length}');
   }
 
   Future<File> _getCacheFile() async {
@@ -526,7 +529,25 @@ class IncrementalEpgService extends ChangeNotifier {
     if (epgId != null) {
       return _programsByChannel[epgId] ?? [];
     }
-    return _programsByChannel[channelId] ?? [];
+    
+    // Try direct lookup with channel ID
+    if (_programsByChannel.containsKey(channelId)) {
+      _internalToEpgIdMapping[channelId] = channelId;
+      return _programsByChannel[channelId] ?? [];
+    }
+    
+    // Try with normalized channel ID
+    final normalizedId = _normalize(channelId);
+    for (final key in _programsByChannel.keys) {
+      final normalizedKey = _normalize(key);
+      if (normalizedKey == normalizedId) {
+        _internalToEpgIdMapping[channelId] = key;
+        return _programsByChannel[key] ?? [];
+      }
+    }
+    
+    debugLog('EPG: No programs found for channel "$channelId" (name: "${channelName ?? 'none'}")');
+    return [];
   }
 
   bool hasEpgData(String channelId) {
@@ -544,7 +565,10 @@ class IncrementalEpgService extends ChangeNotifier {
 
   Program? getCurrentProgram(String channelId, {String? channelName}) {
     final epgId = _internalToEpgIdMapping[channelId] ?? _findBestEpgId(channelId, channelName);
-    if (epgId == null) return null;
+    if (epgId == null) {
+      debugLog('EPG: No EPG ID found for channel "$channelId" (name: "${channelName ?? 'none'}")');
+      return null;
+    }
     
     // Cache the mapping
     _internalToEpgIdMapping[channelId] = epgId;
@@ -552,11 +576,24 @@ class IncrementalEpgService extends ChangeNotifier {
     final programs = getProgramsForChannel(epgId);
     final now = DateTime.now();
     
+    debugLog('EPG: Looking for current program on channel "$channelId" (EPG: "$epgId") - ${programs.length} programs available');
+    
     for (final program in programs) {
       if (now.isAfter(program.startTime) && now.isBefore(program.endTime)) {
+        debugLog('EPG: Found current program: "${program.title}" on "$channelId"');
         return program;
       }
     }
+    
+    // If no current program, return the next upcoming program
+    for (final program in programs) {
+      if (program.startTime.isAfter(now)) {
+        debugLog('EPG: No current program, returning next: "${program.title}" on "$channelId"');
+        return program;
+      }
+    }
+    
+    debugLog('EPG: No program data available for channel "$channelId"');
     return null;
   }
 
