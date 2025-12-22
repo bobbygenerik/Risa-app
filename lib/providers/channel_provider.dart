@@ -1449,6 +1449,42 @@ class ChannelProvider with ChangeNotifier {
             }
             client.close();
 
+            // If no candidate accepted yet, try probing a set of common EPG filenames
+            if (accepted == null) {
+              final commonPaths = ['xmltv.php', 'xmltv', 'epg.xml', 'epg.php', 'xmltv/xml.php'];
+              debugLog('ChannelProvider: No EPG accepted from candidates, trying common paths: ${commonPaths.join(', ')}');
+              final client2 = http.Client();
+              for (final p in commonPaths) {
+                try {
+                  final base = Uri.parse(serverUrl);
+                  final probeUri = base.resolve(p).toString();
+                  debugLog('ChannelProvider: Probing common path: $probeUri');
+                  final req = http.Request('GET', Uri.parse(probeUri));
+                  req.headers.addAll({
+                    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
+                    'Accept': '*/*',
+                  });
+                  final streamed = await client2.send(req).timeout(const Duration(seconds: 12));
+                  debugLog('ChannelProvider: Probe $probeUri returned ${streamed.statusCode}');
+                  if (streamed.statusCode == 200) {
+                    final preview = <int>[];
+                    await for (final chunk in streamed.stream) {
+                      preview.addAll(chunk);
+                      if (preview.length >= 4096) break;
+                    }
+                    final textPreview = utf8.decode(preview, allowMalformed: true).trimLeft();
+                    if (textPreview.startsWith('<?xml') || textPreview.startsWith('<tv') || streamed.headers['content-type']?.contains('xml') == true) {
+                      accepted = probeUri;
+                      break;
+                    }
+                  }
+                } catch (e) {
+                  debugLog('ChannelProvider: Common-path probe failed for $p: $e');
+                }
+              }
+              client2.close();
+            }
+
             // If probe failed, optionally retry using a proxy configured in prefs
             if (accepted == null) {
               try {
