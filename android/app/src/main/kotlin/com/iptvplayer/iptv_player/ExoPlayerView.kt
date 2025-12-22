@@ -2,6 +2,7 @@ package com.iptvplayer.iptv_player
 
 import android.content.Context
 import android.net.Uri
+import android.os.Build
 import android.view.View
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -38,11 +39,20 @@ class ExoPlayerView(
             .setAllowCrossProtocolRedirects(true)
 
         // Configure renderers factory: enable decoder fallback and prefer extension renderers
+        // Apply NVIDIA-specific tweaks to prefer extension renderers and allow software fallback earlier
+        val isNvidia = Build.MANUFACTURER.equals("NVIDIA", ignoreCase = true)
         val renderersFactory = object : androidx.media3.exoplayer.DefaultRenderersFactory(context) {
             init {
-                // Prefer extension renderers (FFmpeg) when available and enable decoder fallback
-                setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
-                setEnableDecoderFallback(true)
+                if (isNvidia) {
+                    // On Shield prefer extension (FFmpeg) renderers and enable decoder fallback
+                    setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+                    setEnableDecoderFallback(true)
+                    android.util.Log.i("ExoPlayer", "NVIDIA Shield detected: preferring extension renderers and enabling decoder fallback")
+                } else {
+                    // Default: prefer extension renderers and enable decoder fallback for broad compatibility
+                    setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+                    setEnableDecoderFallback(true)
+                }
             }
         }
 
