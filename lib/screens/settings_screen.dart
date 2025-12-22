@@ -707,7 +707,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showPlaylistResponsePreview(String content) {
+    const maxPreviewChars = 20000;
     final preview = content.trim().isEmpty ? '<empty response>' : content;
+    final truncatedPreview = preview.length > maxPreviewChars
+        ? '${preview.substring(0, maxPreviewChars)}\n\n…(truncated)'
+        : preview;
     final extinfCount =
         RegExp(r'EXTINF:', caseSensitive: false).allMatches(content).length;
     final extinfHashCount =
@@ -750,7 +754,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const Divider(color: AppTheme.divider),
                 const SizedBox(height: 12),
                 Text(
-                  preview,
+                  truncatedPreview,
                   style: const TextStyle(
                     color: AppTheme.textPrimary,
                     fontFamily: 'monospace',

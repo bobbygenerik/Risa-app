@@ -379,77 +379,68 @@ class _PremiumTextField extends StatefulWidget {
 }
 
 class _PremiumTextFieldState extends State<_PremiumTextField> {
-  bool _isFocused = false;
+  late FocusNode _textFocusNode;
   bool _isEditing = false;
 
   @override
   void initState() {
     super.initState();
-    widget.focusNode.addListener(_handleFocus);
+    _textFocusNode = FocusNode();
+    widget.focusNode.addListener(_handleContainerFocus);
+    _textFocusNode.addListener(_handleTextFocus);
   }
 
   @override
   void dispose() {
-    widget.focusNode.removeListener(_handleFocus);
+    widget.focusNode.removeListener(_handleContainerFocus);
+    _textFocusNode.removeListener(_handleTextFocus);
+    _textFocusNode.dispose();
     super.dispose();
   }
 
-  void _handleFocus() {
-    setState(() {
-      _isFocused = widget.focusNode.hasFocus;
-      if (!_isFocused) _isEditing = false;
-    });
-    if (_isFocused) {
-      final text = widget.controller.text;
-      widget.controller.selection =
-          TextSelection.collapsed(offset: text.length);
+  void _handleContainerFocus() {
+    if (mounted) setState(() {});
+    if (widget.focusNode.hasFocus) {
+      Scrollable.ensureVisible(
+        context,
+        alignment: 0.2,
+        duration: const Duration(milliseconds: 150),
+      );
     }
   }
+
+  void _handleTextFocus() {
+    if (mounted) setState(() {});
+    if (_textFocusNode.hasFocus) {
+       setState(() => _isEditing = true);
+    } else {
+       setState(() => _isEditing = false);
+    }
+  }
+
+  bool get _isActive => widget.focusNode.hasFocus || _textFocusNode.hasFocus;
 
   @override
   Widget build(BuildContext context) {
     return Focus(
       focusNode: widget.focusNode,
-      onFocusChange: (focused) {
-        if (focused) {
-          Scrollable.ensureVisible(
-            context,
-            alignment: 0.2,
-            duration: const Duration(milliseconds: 150),
-          );
-        }
-      },
       onKeyEvent: (node, event) {
         if (!context.isTV || event is! KeyDownEvent) {
           return KeyEventResult.ignored;
         }
-        final scope = FocusScope.of(context);
-        if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-          _isEditing = false;
-          scope.focusInDirection(TraversalDirection.down);
+        
+        // Enter/Select on Container -> Enter Edit Mode
+        if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+          _textFocusNode.requestFocus();
           return KeyEventResult.handled;
         }
-        if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-          _isEditing = false;
-          scope.focusInDirection(TraversalDirection.up);
-          return KeyEventResult.handled;
-        }
-        if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-          _isEditing = false;
-          scope.focusInDirection(TraversalDirection.left);
-          return KeyEventResult.handled;
-        }
-        if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-          _isEditing = false;
-          scope.focusInDirection(TraversalDirection.right);
-          return KeyEventResult.handled;
-        }
+        
+        // Navigation arrows are handled by FocusScope traversal automatically
         return KeyEventResult.ignored;
       },
       child: GestureDetector(
         onTap: () {
-          widget.focusNode.requestFocus();
-          setState(() => _isEditing = true);
+          _textFocusNode.requestFocus();
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -458,8 +449,8 @@ class _PremiumTextFieldState extends State<_PremiumTextField> {
             color: AppTheme.highlight,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: _isFocused ? AppTheme.primaryBlue : Colors.white10,
-              width: _isFocused ? 2 : 1,
+              color: _isActive ? AppTheme.primaryBlue : Colors.white10,
+              width: _isActive ? 2 : 1,
             ),
           ),
           child: Row(
@@ -468,7 +459,7 @@ class _PremiumTextFieldState extends State<_PremiumTextField> {
                 Icon(
                   widget.icon,
                   size: 20,
-                  color: _isFocused ? Colors.white : Colors.white54,
+                  color: _isActive ? Colors.white : Colors.white54,
                 ),
                 const SizedBox(width: 12),
               ],
@@ -480,32 +471,54 @@ class _PremiumTextFieldState extends State<_PremiumTextField> {
                       selectionHandleColor: Colors.transparent,
                     ),
                   ),
-                  child: TextField(
-                    controller: widget.controller,
-                    focusNode: widget.focusNode,
-                    enableInteractiveSelection: false,
-                    selectionControls: NoTextSelectionControls(),
-                    showCursor: false,
-                    cursorColor: Colors.transparent,
-                    style: const TextStyle(
-                      color: AppTheme.textPrimary,
-                      fontSize: 16,
-                    ),
-                    obscureText: widget.obscureText,
-                    decoration: InputDecoration.collapsed(
-                      hintText: widget.hint,
-                      hintStyle: const TextStyle(
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                    onSubmitted: (_) {
-                      setState(() => _isEditing = false);
-                      widget.focusNode.unfocus(); // Return focus to container
+                  child: Focus(
+                    onKeyEvent: (node, event) {
+                      if (!context.isTV || event is! KeyDownEvent) return KeyEventResult.ignored;
+                      
+                      // Escape/Back from Edit Mode -> Return to Container
+                      if (event.logicalKey == LogicalKeyboardKey.escape || event.logicalKey == LogicalKeyboardKey.goBack) {
+                        widget.focusNode.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+
+                      // Arrows in Edit Mode -> Leave Edit Mode and Traverse
+                      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                        FocusScope.of(context).focusInDirection(TraversalDirection.down);
+                        return KeyEventResult.handled;
+                      }
+                      if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                        FocusScope.of(context).focusInDirection(TraversalDirection.up);
+                        return KeyEventResult.handled;
+                      }
+                      
+                      return KeyEventResult.ignored;
                     },
+                    child: TextField(
+                      controller: widget.controller,
+                      focusNode: _textFocusNode,
+                      enableInteractiveSelection: false,
+                      selectionControls: NoTextSelectionControls(),
+                      showCursor: _isEditing, // Only show cursor when actually editing
+                      cursorColor: AppTheme.primaryBlue,
+                      style: const TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: 16,
+                      ),
+                      obscureText: widget.obscureText,
+                      decoration: InputDecoration.collapsed(
+                        hintText: widget.hint,
+                        hintStyle: const TextStyle(
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                      onSubmitted: (_) {
+                        widget.focusNode.requestFocus();
+                      },
+                    ),
                   ),
                 ),
               ),
-              if (_isFocused && !_isEditing)
+              if (_isActive && !_isEditing)
                 const Icon(Icons.edit, size: 18, color: Colors.white70),
             ],
           ),

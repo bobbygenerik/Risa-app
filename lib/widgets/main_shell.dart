@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iptv_player/widgets/content_focus_provider.dart';
 import 'package:iptv_player/widgets/sidebar_navigation.dart';
 import 'package:iptv_player/services/timer_service.dart';
+import 'package:iptv_player/utils/app_colors.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 
 const bool kForceSearchPopup = bool.fromEnvironment(
@@ -43,6 +44,7 @@ class _MainShellState extends State<MainShell> {
       GlobalKey<SidebarNavigationState>();
   RouteInformationProvider? _routeInfoProvider;
   String? _lastLocation;
+  bool _isSidebarExpanded = false;
 
   final FocusScopeNode _contentFocusScope =
       FocusScopeNode(debugLabel: 'ContentScope');
@@ -128,6 +130,8 @@ class _MainShellState extends State<MainShell> {
     // final scale = isTV ? 1.2 : 1.0; // Removed
     // final navBarHeight = 64.0 * scale; // AppSizes.appBarHeight * scale // Removed
 
+    final showSidebarScrim = _isSidebarExpanded;
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -173,6 +177,19 @@ class _MainShellState extends State<MainShell> {
                     ),
                   ),
                 ),
+                ),
+                Positioned.fill(
+                  child: IgnorePointer(
+                    ignoring: !showSidebarScrim,
+                    child: AnimatedOpacity(
+                      opacity: showSidebarScrim ? 1.0 : 0.0,
+                      duration: const Duration(milliseconds: 150),
+                      curve: Curves.easeOut,
+                      child: Container(
+                        color: AppColors.overlayLight,
+                      ),
+                    ),
+                  ),
                 ),
                 // Navigation bar overlayed on top - completely transparent
                 // Removed TopNavigationBar
@@ -223,6 +240,11 @@ class _MainShellState extends State<MainShell> {
                     onFocusContent: _requestContentFocus,
                     onNavFocusRegistration: _setNavFocusRequester,
                     onExpandRegistration: (_) {},
+                    onExpansionChanged: (isExpanded) {
+                      if (_isSidebarExpanded != isExpanded) {
+                        setState(() => _isSidebarExpanded = isExpanded);
+                      }
+                    },
                   ),
                 ),
               ],

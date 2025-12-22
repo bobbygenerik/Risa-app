@@ -27,6 +27,7 @@ class SidebarNavigation extends StatefulWidget {
   final bool Function()? onFocusContent;
   final void Function(bool Function()? requester)? onNavFocusRegistration;
   final void Function(VoidCallback? expander)? onExpandRegistration;
+  final ValueChanged<bool>? onExpansionChanged;
 
   const SidebarNavigation({
     super.key,
@@ -36,6 +37,7 @@ class SidebarNavigation extends StatefulWidget {
     this.onFocusContent,
     this.onNavFocusRegistration,
     this.onExpandRegistration,
+    this.onExpansionChanged,
   });
 
   @override
@@ -91,7 +93,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
     if (newIndex != _activeTabIndex) {
       _activeTabIndex = newIndex;
 
-      setState(() => _isExpanded = false);
+      _setExpanded(false);
       WidgetsBinding.instance.addPostFrameCallback((_) => _focusActiveTab());
     }
     if (oldWidget.onNavFocusRegistration != widget.onNavFocusRegistration &&
@@ -113,28 +115,36 @@ class SidebarNavigationState extends State<SidebarNavigation> {
       if (_isExpanded) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
-            setState(() => _isExpanded = false);
+            _setExpanded(false);
           }
         });
       }
     }
   }
 
+  bool get isExpanded => _isExpanded;
+
+  void _setExpanded(bool value) {
+    if (_isExpanded == value) return;
+    setState(() => _isExpanded = value);
+    widget.onExpansionChanged?.call(value);
+  }
+
   void _expandSidebar() {
     if (!_isExpanded) {
-      setState(() => _isExpanded = true);
+      _setExpanded(true);
     }
   }
 
   void expand() {
     if (!_isExpanded) {
-      setState(() => _isExpanded = true);
+      _setExpanded(true);
     }
   }
 
   void collapse() {
     if (_isExpanded) {
-      setState(() => _isExpanded = false);
+      _setExpanded(false);
     }
   }
 
@@ -169,7 +179,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
     if (_tabs.isNotEmpty) {
       final index = _activeTabIndex.clamp(0, _tabs.length - 1);
       if (!_isExpanded) {
-        setState(() => _isExpanded = true);
+        _setExpanded(true);
       }
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -215,7 +225,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
         }
         if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
           if (_isExpanded) {
-            setState(() => _isExpanded = false);
+            _setExpanded(false);
             widget.onFocusContent?.call();
             return KeyEventResult.handled;
           }
@@ -223,17 +233,17 @@ class SidebarNavigationState extends State<SidebarNavigation> {
         }
         if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
           if (!_isExpanded) {
-            setState(() => _isExpanded = true);
+            _setExpanded(true);
             return KeyEventResult.handled;
           }
-          setState(() => _isExpanded = false);
+          _setExpanded(false);
           return KeyEventResult.handled;
         }
         if (event.logicalKey == LogicalKeyboardKey.enter ||
             event.logicalKey == LogicalKeyboardKey.select ||
             event.logicalKey == LogicalKeyboardKey.space) {
           if (!_isExpanded) {
-            setState(() => _isExpanded = true);
+            _setExpanded(true);
             return KeyEventResult.handled;
           }
           widget.onSearch?.call();
@@ -243,7 +253,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
       },
       onFocusChange: (hasFocus) {
         if (hasFocus && !_isExpanded) {
-          setState(() => _isExpanded = true);
+          _setExpanded(true);
         }
       },
       child: Builder(
@@ -254,7 +264,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
             behavior: HitTestBehavior.opaque,
             onTap: () {
               if (!_isExpanded) {
-                setState(() => _isExpanded = true);
+                _setExpanded(true);
               } else {
                 widget.onSearch?.call();
               }
@@ -337,7 +347,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
         }
         if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
           if (_isExpanded) {
-            setState(() => _isExpanded = false);
+            _setExpanded(false);
             widget.onFocusContent?.call();
             return KeyEventResult.handled;
           }
@@ -345,20 +355,20 @@ class SidebarNavigationState extends State<SidebarNavigation> {
         }
         if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
           if (!_isExpanded) {
-            setState(() => _isExpanded = true);
+            _setExpanded(true);
             return KeyEventResult.handled;
           }
-          setState(() => _isExpanded = false);
+          _setExpanded(false);
           return KeyEventResult.handled;
         }
         if (event.logicalKey == LogicalKeyboardKey.enter ||
             event.logicalKey == LogicalKeyboardKey.select ||
             event.logicalKey == LogicalKeyboardKey.space) {
           if (!_isExpanded) {
-            setState(() => _isExpanded = true);
+            _setExpanded(true);
             return KeyEventResult.handled;
           }
-          setState(() => _isExpanded = false);
+          _setExpanded(false);
           context.go(tab.route);
           return KeyEventResult.handled;
         }
@@ -366,7 +376,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
       },
       onFocusChange: (hasFocus) {
         if (hasFocus && !_isExpanded) {
-          setState(() => _isExpanded = true);
+          _setExpanded(true);
         }
       },
       child: Builder(
@@ -377,9 +387,9 @@ class SidebarNavigationState extends State<SidebarNavigation> {
             behavior: HitTestBehavior.opaque,
             onTap: () {
               if (!_isExpanded) {
-                setState(() => _isExpanded = true);
+                _setExpanded(true);
               } else {
-                setState(() => _isExpanded = false);
+                _setExpanded(false);
                 context.go(tab.route);
               }
             },
@@ -441,7 +451,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
     return GestureDetector(
       onTap: () {
         if (_isExpanded) {
-          setState(() => _isExpanded = false);
+          _setExpanded(false);
         }
       },
       child: AnimatedContainer(
@@ -514,27 +524,27 @@ class SidebarNavigationState extends State<SidebarNavigation> {
         }
         if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
           if (_isExpanded) {
-            setState(() => _isExpanded = false);
+            _setExpanded(false);
             return KeyEventResult.handled;
           }
           return KeyEventResult.ignored;
         }
         if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
           if (!_isExpanded) {
-            setState(() => _isExpanded = true);
+            _setExpanded(true);
             return KeyEventResult.handled;
           }
-          setState(() => _isExpanded = false);
+          _setExpanded(false);
           return KeyEventResult.handled;
         }
         if (event.logicalKey == LogicalKeyboardKey.enter ||
             event.logicalKey == LogicalKeyboardKey.select ||
             event.logicalKey == LogicalKeyboardKey.space) {
           if (!_isExpanded) {
-            setState(() => _isExpanded = true);
+            _setExpanded(true);
             return KeyEventResult.handled;
           }
-          setState(() => _isExpanded = false);
+          _setExpanded(false);
           context.go(route);
           return KeyEventResult.handled;
         }
@@ -542,7 +552,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
       },
       onFocusChange: (hasFocus) {
         if (hasFocus && !_isExpanded) {
-          setState(() => _isExpanded = true);
+          _setExpanded(true);
         }
       },
       child: Builder(
@@ -552,9 +562,9 @@ class SidebarNavigationState extends State<SidebarNavigation> {
           return GestureDetector(
             onTap: () {
               if (!_isExpanded) {
-                setState(() => _isExpanded = true);
+                _setExpanded(true);
               } else {
-                setState(() => _isExpanded = false);
+                _setExpanded(false);
                 context.go(route);
               }
             },

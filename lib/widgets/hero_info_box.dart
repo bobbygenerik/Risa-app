@@ -45,10 +45,24 @@ class HeroInfoBox extends StatelessWidget {
       constraints: BoxConstraints(
         maxWidth: context.heroInfoWidth(),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
+      child: Container(
+        padding: EdgeInsets.all(context.spacingSm()),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [
+              Colors.black.withValues(alpha: 0.55),
+              Colors.black.withValues(alpha: 0.3),
+              Colors.transparent,
+            ],
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
           // Channel/Brand Identifier if provided
           if (channelLogoUrl != null) ...[
             Container(
@@ -170,7 +184,8 @@ class HeroInfoBox extends StatelessWidget {
               ],
             ],
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

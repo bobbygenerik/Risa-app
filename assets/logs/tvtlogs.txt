@@ -1,0 +1,1224 @@
+--------- beginning of main
+12-21 09:57:09.224 28507 28585 D EpgDataCleanupService: Received intent: Intent { act=com.android.providers.tv.intent.CLEAN_UP_EPG_DATA flg=0x4 cmp=com.android.providers.tv/.EpgDataCleanupService (has extras) }
+12-21 09:57:09.280 26380 28582 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:09.280 26380 28582 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:09.280 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:09.280 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:09.281 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:09.321 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:09.322 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:09.322 26380 28587 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:09.908 28500 28500 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.measurement.START pkg=com.google.android.gms }
+12-21 09:57:10.323 26380 28587 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:10.323 26380 28587 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:10.323 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:10.323 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:10.323 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:10.361 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:10.364 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:10.364 26380 28588 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:11.231  3383  3503 V hdcp up : tsec_version: 1
+12-21 09:57:11.233  3383  3503 D NvOsDebugPrintf: NvRmStreamFree: WARN: pStream is NULL
+12-21 09:57:11.365 26380 28588 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:11.365 26380 28588 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:11.365 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:11.365 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:11.365 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:11.397 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:11.398 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:11.399 26380 28589 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:12.400 26380 28589 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:12.400 26380 28589 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:12.400 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:12.400 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:12.400 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:12.429 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:12.430 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:12.431 26380 28590 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:13.431 26380 28590 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:13.431 26380 28590 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:13.431 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:13.431 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:13.431 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:13.465 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:13.466 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:13.467 26380 28592 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:13.802 13964 13964 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.libs.gmscorelogger.service.START dat=chimera-action: cmp=com.google.android.gms/.chimera.PersistentDirectBootAwareApiService }
+12-21 09:57:14.468 26380 28592 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:14.468 26380 28592 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:14.468 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:14.468 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:14.468 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:14.497 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:14.497 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:14.498 26380 28593 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:15.499 26380 28593 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:15.499 26380 28593 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:15.499 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:15.499 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:15.499 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:15.529 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:15.529 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:15.530 26380 28594 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:16.237  3383  3503 V hdcp up : tsec_version: 1
+12-21 09:57:16.239  3383  3503 D NvOsDebugPrintf: NvRmStreamFree: WARN: pStream is NULL
+12-21 09:57:16.531 26380 28594 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:16.531 26380 28594 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:16.531 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:16.531 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:16.531 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:16.561 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:16.561 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:16.562 26380 28595 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:17.563 26380 28595 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:17.563 26380 28595 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:17.563 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:17.563 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:17.563 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:17.593 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:17.593 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:17.594 26380 28596 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:18.595 26380 28596 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:18.595 26380 28596 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:18.595 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:18.595 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:18.595 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:18.629 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:18.629 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:18.630 26380 28597 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:19.153 17363 17363 I cast_shell: [1221/095719.153410:INFO:service_base.h(78)] Size of the map for type AuthTokenResponse is 0
+12-21 09:57:19.154 17363 17363 I cast_shell: [1221/095719.154267:INFO:service_base.h(246)] Container sizes for type CloudSetting are (session_info_map: 0), (topic_info_map: 21), (pending_events: 0).
+12-21 09:57:19.154 17363 17363 I cast_shell: [1221/095719.154511:INFO:metrics_stat_logger.cc(38)] Metrics stat for the past 60 secs : total=2
+12-21 09:57:19.154 17363 17363 I cast_shell: [metrics_stat_logger] Cast.Discovery.Mdns.Query.Cast.Count=1
+12-21 09:57:19.154 17363 17363 I cast_shell: [metrics_stat_logger] Cast.Platform.TrimMemory=3
+12-21 09:57:19.631 26380 28597 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:19.631 26380 28597 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:19.631 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:19.631 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:19.631 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:19.665 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:19.665 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:19.666 26380 28598 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:20.667 26380 28598 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:20.667 26380 28598 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:20.667 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:20.667 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:20.667 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:20.705 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:20.706 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:20.707 26380 28599 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:21.243  3383  3503 V hdcp up : tsec_version: 1
+12-21 09:57:21.245  3383  3503 D NvOsDebugPrintf: NvRmStreamFree: WARN: pStream is NULL
+12-21 09:57:21.708 26380 28599 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:21.708 26380 28599 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:21.708 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:21.708 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:21.708 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:21.745 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:21.745 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:21.746 26380 28600 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:22.747 26380 28600 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:22.747 26380 28600 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:22.747 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:22.747 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:22.747 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:22.777 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:22.778 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:22.778 26380 28601 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:23.779 26380 28601 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:23.779 26380 28601 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:23.779 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:23.780 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:23.780 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:23.809 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:23.810 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:23.810 26380 28602 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:24.035 13964 13964 W ThreadPoolForeg: type=1400 audit(0.0:115988): avc: denied { write } for name="traced_producer" dev="tmpfs" ino=24591 scontext=u:r:gmscore_app:s0:c512,c768 tcontext=u:object_r:traced_producer_socket:s0 tclass=sock_file permissive=0 app=com.google.android.gms
+12-21 09:57:24.613 30841 30841 D WindowManager: handleComboKeys keyCode: 23, keyAction: 0
+--------- beginning of system
+12-21 09:57:24.613 30841 30841 I InputManager: Input event injection from pid 30841 uid 1000
+12-21 09:57:24.811 26380 28602 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:24.811 26380 28602 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:24.812 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:24.812 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:24.812 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:24.817 30841 30841 D WindowManager: handleComboKeys keyCode: 23, keyAction: 1
+12-21 09:57:24.817 30841 30841 I InputManager: Input event injection from pid 30841 uid 1000
+12-21 09:57:24.824 30841 30859 D EventSequenceValidator: inc AccIntentStartedEvents to 2
+12-21 09:57:24.824 30841  2390 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LEANBACK_LAUNCHER] flg=0x10000000 pkg=com.risa.app cmp=com.risa.app/.MainActivity} from uid 10025
+12-21 09:57:24.830  3389  3389 W powerHAL::common: Power hint:0x8 is not supported in PowerHAL
+12-21 09:57:24.834 30841 30859 D CompatibilityChangeReporter: Compat change id reported: 135634846; UID 10270; state: DISABLED
+12-21 09:57:24.835 30841 30866 D CompatibilityChangeReporter: Compat change id reported: 143937733; UID 10270; state: ENABLED
+12-21 09:57:24.836 30841 30919 D ConnectivityService: releasing NetworkRequest [ TRACK_DEFAULT id=870, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED Uid: 10025 AdministratorUids: [] RequestorUid: 10025 RequestorPackageName: com.spocky.projengmenu] ] (release request)
+12-21 09:57:24.836 16991 16991 D FirebaseSessions: App backgrounded on com.spocky.projengmenu
+12-21 09:57:24.843 30841 30860 I android_os_HwBinder: HwBinder: Starting thread pool for getting: vendor.nvidia.hardware.cpl.service_common@1.0::INvCplHalCommonService/default
+12-21 09:57:24.844 30745 30745 D Zygote  : Forked child process 28604
+12-21 09:57:24.848 30841 30866 I ActivityManager: Start proc 28604:com.risa.app/u0a270 for pre-top-activity {com.risa.app/com.risa.app.MainActivity}
+12-21 09:57:24.849 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:24.850 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:24.853 26380 28610 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:24.863 28604 28604 I com.risa.app: Late-enabling -Xcheck:jni
+12-21 09:57:24.878 28500 28500 D BoundBrokerSvc: onBind: Intent { act=com.google.android.gms.measurement.START pkg=com.google.android.gms }
+12-21 09:57:24.878 28500 28500 D BoundBrokerSvc: Loading bound service for intent: Intent { act=com.google.android.gms.measurement.START pkg=com.google.android.gms }
+12-21 09:57:24.893 28604 28604 I com.risa.app: Unquickening 12 vdex files!
+12-21 09:57:24.913 26380 26387 I adbd    : jdwp connection from 28604
+12-21 09:57:24.917 28500 28567 W TracingHelper: Mismatched RequestContext found for module MEASUREMENT. Module id from RequestContext is MODULEID_UNKNOWN [CONTEXT service_id=259 ratelimit_count=100000 ]
+12-21 09:57:24.939 13964 13964 D BoundBrokerSvc: onRebind: Intent { act=com.google.android.gms.libs.gmscorelogger.service.START dat=chimera-action: cmp=com.google.android.gms/.chimera.PersistentDirectBootAwareApiService }
+12-21 09:57:24.940 30841 28499 W NvAppProfileService: App Profiles: Enabled
+12-21 09:57:24.943 31784 31831 I android_os_HwBinder: HwBinder: Starting thread pool for getting: vendor.nvidia.hardware.power@1.0::IPower/default
+12-21 09:57:24.985 28500 28567 D AdvertisingIdClient: Creating AdvertisingIdClient
+12-21 09:57:24.985 28500 28567 D AdvertisingIdClient: AdvertisingIdClient already created.
+12-21 09:57:24.986 28500 28567 D AdvertisingIdClient: AdvertisingIdClient is not bounded. Starting to bind it...
+12-21 09:57:24.988 30841 28629 I android_os_HwBinder: HwBinder: Starting thread pool for getting: vendor.nvidia.hardware.cpl.service_common@1.0::INvCplHalCommonService/default
+12-21 09:57:24.990 13964 13964 D BoundBrokerSvc: onRebind: Intent { act=com.google.android.gms.common.telemetry.service.START dat=chimera-action: cmp=com.google.android.gms/.chimera.PersistentApiService }
+12-21 09:57:24.993 28500 28567 D AdvertisingIdClient: AdvertisingIdClient is bounded
+12-21 09:57:25.009 28500 28567 I AdvertisingIdClient: shouldSendLog -1
+12-21 09:57:25.011 28500 28567 I AdvertisingIdClient: GetInfoInternal elapse 24ms
+12-21 09:57:25.019 28500 28500 I AdvertisingIdClient: getting error as 17: API: ClientTelemetry.API is not available on this device. Connection failed with: ConnectionResult{statusCode=API_DISABLED_FOR_CONNECTION, resolution=null, message=null, clientMethodKey=null}
+12-21 09:57:25.030 13964 13964 D BoundBrokerSvc: onRebind: Intent { act=com.google.android.gms.presencemanager.service.START dat=chimera-action: cmp=com.google.android.gms/.chimera.PersistentApiService }
+12-21 09:57:25.033 13964 13964 D BoundBrokerSvc: onRebind: Intent { act=com.google.android.gms.presencemanager.service.INTERNAL_IDENTITY dat=chimera-action: cmp=com.google.android.gms/.chimera.PersistentApiService }
+12-21 09:57:25.064 13964 28106 I NetworkScheduler: (REDACTED) Error inserting %s
+12-21 09:57:25.315 16991 17057 E Surface : freeAllBuffers: 1 buffers were freed while being dequeued!
+12-21 09:57:25.804 28604 28604 D NetworkSecurityConfig: No Network Security Config specified, using platform default
+12-21 09:57:25.805 28604 28604 D NetworkSecurityConfig: No Network Security Config specified, using platform default
+12-21 09:57:25.854 26380 28610 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:25.854 26380 28610 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:25.854 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:25.854 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:25.854 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:25.893 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:25.894 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:25.894 26380 28643 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:26.005 28604 28645 D skia    : [SkFontMgr Android Parser] /system/etc/fonts.xml:102:4: warning: 'DinPro' alias target not found
+12-21 09:57:26.005 28604 28645 D skia    : [SkFontMgr Android Parser] /system/etc/fonts.xml:103:4: warning: 'DinPro' alias target not found
+12-21 09:57:26.005 28604 28645 D skia    : [SkFontMgr Android Parser] /system/etc/fonts.xml:104:4: warning: 'DinPro' alias target not found
+12-21 09:57:26.005 28604 28645 D skia    : [SkFontMgr Android Parser] /system/etc/fonts.xml:105:4: warning: 'DinPro' alias target not found
+12-21 09:57:26.005 28604 28645 D skia    : [SkFontMgr Android Parser] /system/etc/fonts.xml:114:4: warning: 'DinPro-condensed' alias target not found
+12-21 09:57:26.005 28604 28645 D skia    : [SkFontMgr Android Parser] /system/etc/fonts.xml:115:4: warning: 'DinPro-condensed' alias target not found
+12-21 09:57:26.005 28604 28645 D skia    : [SkFontMgr Android Parser] /system/etc/fonts.xml:116:4: warning: 'DinPro-condensed' alias target not found
+12-21 09:57:26.005 28604 28645 D skia    : [SkFontMgr Android Parser] /system/etc/fonts.xml:117:4: warning: 'DinPro-condensed' alias target not found
+12-21 09:57:26.035 28604 28604 W com.risa.app: Accessing hidden method Landroid/view/SurfaceControl$Builder;->setHidden(Z)Landroid/view/SurfaceControl$Builder; (blacklist, linking, denied)
+12-21 09:57:26.059 28604 28604 W com.risa.app: type=1400 audit(0.0:115989): avc: denied { read } for name="max_map_count" dev="proc" ino=5177084 scontext=u:r:untrusted_app:s0:c14,c257,c512,c768 tcontext=u:object_r:proc_max_map_count:s0 tclass=file permissive=0 app=com.risa.app
+12-21 09:57:26.081 28604 28646 E libc    : Access denied finding property "ro.vendor.mediatek.platform"
+12-21 09:57:26.112 28604 28646 D vulkan  : searching for layers in '/data/app/~~sh2YDAp5g-vwoZzOc_wfiQ==/com.risa.app-Tw9V9zwTyebr0FIn_Gf5CA==/lib/arm64'
+12-21 09:57:26.115 28604 28646 D vulkan  : searching for layers in '/data/app/~~sh2YDAp5g-vwoZzOc_wfiQ==/com.risa.app-Tw9V9zwTyebr0FIn_Gf5CA==/base.apk!/lib/arm64-v8a'
+12-21 09:57:26.120 28604 28655 I flutter : The Dart VM service is listening on http://127.0.0.1:33849/iiTgpqlQ4os=/
+12-21 09:57:26.127 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_DEFAULT_DEVICE_INDEX"
+12-21 09:57:26.127 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_UZfVtuHi"
+12-21 09:57:26.128 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_DUMMY"
+12-21 09:57:26.128 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_V5tZ4s00"
+12-21 09:57:26.128 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_CHANNEL_INTERLEAVE"
+12-21 09:57:26.128 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_vGEEY2dW"
+12-21 09:57:26.128 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_CHANNEL_PRIORITY"
+12-21 09:57:26.128 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_zugIRozd"
+12-21 09:57:26.128 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_CHANNEL_TIMESLICE"
+12-21 09:57:26.128 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_maIaPSXj"
+12-21 09:57:26.128 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_DISABLE_COMPRESSION"
+12-21 09:57:26.128 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_LiY1nc6l"
+12-21 09:57:26.128 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_NOUVEAU_DISABLE"
+12-21 09:57:26.128 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_T29RkpyE"
+12-21 09:57:26.128 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_NVGPU_DISABLE"
+12-21 09:57:26.128 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_EEPyR4lp"
+12-21 09:57:26.128 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_NVGPU_DO_NFA_PARTIAL_MAP"
+12-21 09:57:26.128 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_36lvAjow"
+12-21 09:57:26.128 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_NVGPU_ECC_OVERRIDES"
+12-21 09:57:26.129 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_oSawIPsF"
+12-21 09:57:26.129 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_NVGPU_FORCE_SCG"
+12-21 09:57:26.129 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_6aQElJ8Y"
+12-21 09:57:26.129 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_NVGPU_FORCE_SM_DIVERSITY"
+12-21 09:57:26.129 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_UALTpoyI"
+12-21 09:57:26.129 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_NVGPU_NO_ALWAYS_IO_COHERENCY"
+12-21 09:57:26.129 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_kJo45YxE"
+12-21 09:57:26.129 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_NVGPU_NO_ASYNC_CE"
+12-21 09:57:26.129 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_gmxia7dI"
+12-21 09:57:26.129 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_NVGPU_NO_BIG_PAGES"
+12-21 09:57:26.129 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_vl2Vovpk"
+12-21 09:57:26.129 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_NVGPU_NO_CHANNEL_SETPRIORITY_EMUL"
+12-21 09:57:26.129 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_CqEssDmc"
+12-21 09:57:26.129 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_NVGPU_NO_IO_COHERENCY"
+12-21 09:57:26.129 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_x90Ja8kG"
+12-21 09:57:26.129 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_NVGPU_NO_IOCTL_MUTEX"
+12-21 09:57:26.129 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_CI4Wetrn"
+12-21 09:57:26.130 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_NVGPU_NO_L3"
+12-21 09:57:26.130 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_OmETcz6b"
+12-21 09:57:26.130 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_NVGPU_NO_MAP_BUFFER_BATCH"
+12-21 09:57:26.130 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_8sKrPMLm"
+12-21 09:57:26.130 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_NVGPU_NO_PROBE_DGPU"
+12-21 09:57:26.130 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_gT1cB8Jb"
+12-21 09:57:26.130 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_NVGPU_NO_PROBE_IGPU"
+12-21 09:57:26.130 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_dm7XlLKA"
+12-21 09:57:26.130 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_NVGPU_NO_SPARSE"
+12-21 09:57:26.130 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_XzoEBCw9"
+12-21 09:57:26.130 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_NVGPU_NO_SYNCFD"
+12-21 09:57:26.130 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_EHaGX5Xe"
+12-21 09:57:26.130 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_NVGPU_NO_SYNCPOINTS"
+12-21 09:57:26.130 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_59ct6EdS"
+12-21 09:57:26.130 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_NVGPU_NO_TTU"
+12-21 09:57:26.130 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_915h8OIS"
+12-21 09:57:26.130 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_NVGPU_NO_USER_MANAGED_SYNCPOINT"
+12-21 09:57:26.130 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_XylwwSvx"
+12-21 09:57:26.130 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_NVGPU_NO_VPR"
+12-21 09:57:26.130 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_Yb92x8rk"
+12-21 09:57:26.130 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_NVGPU_NO_ZBC"
+12-21 09:57:26.130 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_oMdTiRBY"
+12-21 09:57:26.131 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_NVGPU_NO_ZCULL"
+12-21 09:57:26.131 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_6tRS9rwi"
+12-21 09:57:26.131 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_NVGPU_USE_SYSMEM_FOR_VIDMEM"
+12-21 09:57:26.131 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_TkDtPGzC"
+12-21 09:57:26.131 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_NVGPU_DISABLE_WATCHDOG"
+12-21 09:57:26.131 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_EQ5Qmveh"
+12-21 09:57:26.131 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_PREVENT_USE"
+12-21 09:57:26.131 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRM_GPU_yrGhr5G6"
+12-21 09:57:26.131 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRMT_EMULATE_IO_COHERENCY"
+12-21 09:57:26.131 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRMT_fY86mLY0"
+12-21 09:57:26.132 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRMT_MEMORY_TYPE_SANITIZER"
+12-21 09:57:26.132 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRMT_kzdhcuAG"
+12-21 09:57:26.132 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRMT_FORCE_L3_ALLOC"
+12-21 09:57:26.132 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRMT_ZV2Frkax"
+12-21 09:57:26.132 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRMT_FORCE_SNOOPING"
+12-21 09:57:26.132 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRMT_VzUDgaZ2"
+12-21 09:57:26.132 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRMT_FORCE_SYNC_KICKOFFS"
+12-21 09:57:26.132 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRMT_kdisTKXJ"
+12-21 09:57:26.141 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRMT_EMULATE_BIG_PAGES"
+12-21 09:57:26.141 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRMT_KcOcZFPL"
+12-21 09:57:26.141 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRMT_FORCE_TSG"
+12-21 09:57:26.141 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRMT_64gDxjIe"
+12-21 09:57:26.141 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRMT_DISABLE_VASPACE"
+12-21 09:57:26.141 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRMT_JMAa8wgC"
+12-21 09:57:26.144 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVWSI_DUMP"
+12-21 09:57:26.144 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVWSI_FILL"
+12-21 09:57:26.153 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.nvblit.twod"
+12-21 09:57:26.153 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.nvblit.vic"
+12-21 09:57:26.153 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.nvblit.dump"
+12-21 09:57:26.158 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NV_EGL_FORCE_MSAA"
+12-21 09:57:26.158 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NV_EGL_FORCE_DEPTH"
+12-21 09:57:26.199 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NV_ASYNC"
+12-21 09:57:26.199 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NV_LOGFPS"
+12-21 09:57:26.199 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NV_PROCESS_NAME"
+12-21 09:57:26.199 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NV_FPSDYNAMIC"
+12-21 09:57:26.200 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRMT_DISABLE_COMPRESSION"
+12-21 09:57:26.200 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRMT_h6spQ4yh"
+12-21 09:57:26.200 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRMT_FORCE_ALIGN_128K"
+12-21 09:57:26.200 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRMT_UnLSxhuN"
+12-21 09:57:26.228 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRMT_FORCE_SCG"
+12-21 09:57:26.229 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRMT_WVRg2RZb"
+12-21 09:57:26.229 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRMT_EXPECTED_GPFIFO_ENTRIES_PER_SUBMIT"
+12-21 09:57:26.229 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NVRMT_0ktEXYzd"
+12-21 09:57:26.229 28604 28604 I media_kit: package:media_kit_libs_android_video attached.
+12-21 09:57:26.238 28604 28604 D media_kit: NVIDIA
+12-21 09:57:26.238 28604 28604 D media_kit: mdarcy
+12-21 09:57:26.238 28604 28604 D media_kit: NVIDIA/mdarcy/mdarcy:11/RQ1A.210105.003/7825230_3871.0251:user/release-keys
+12-21 09:57:26.238 28604 28604 D media_kit: darcy
+12-21 09:57:26.238 28604 28604 D media_kit: SHIELD Android TV
+12-21 09:57:26.238 28604 28604 D media_kit: NVIDIA
+12-21 09:57:26.238 28604 28604 D media_kit: mdarcy
+12-21 09:57:26.239 28604 28604 I media_kit: Saved application context.
+12-21 09:57:26.249  3383  3503 V hdcp up : tsec_version: 1
+12-21 09:57:26.251  3383  3503 D NvOsDebugPrintf: NvRmStreamFree: WARN: pStream is NULL
+12-21 09:57:26.278 28604 28646 I flutter : [IMPORTANT:flutter/shell/platform/android/android_context_vk_impeller.cc(62)] Using the Impeller rendering backend (Vulkan).
+12-21 09:57:26.346 28604 28604 W com.risa.app: Accessing hidden method Landroid/view/accessibility/AccessibilityNodeInfo;->getSourceNodeId()J (greylist,test-api, reflection, allowed)
+12-21 09:57:26.346 28604 28604 W com.risa.app: Accessing hidden method Landroid/view/accessibility/AccessibilityRecord;->getSourceNodeId()J (greylist, reflection, allowed)
+12-21 09:57:26.346 28604 28604 W com.risa.app: Accessing hidden field Landroid/view/accessibility/AccessibilityNodeInfo;->mChildNodeIds:Landroid/util/LongArray; (greylist, reflection, allowed)
+12-21 09:57:26.346 28604 28604 W com.risa.app: Accessing hidden method Landroid/util/LongArray;->get(I)J (greylist, reflection, allowed)
+12-21 09:57:26.373 28604 28604 I android_os_HwBinder: HwBinder: Starting thread pool for getting: vendor.nvidia.hardware.cpl.service_common@1.0::INvCplHalCommonService/default
+12-21 09:57:26.380 28604 28604 I android_os_HwBinder: HwBinder: Starting thread pool for getting: vendor.nvidia.hardware.cpl.service_common@1.0::INvCplHalCommonService/default
+12-21 09:57:26.388 30841  7856 I NvUtils : onActivityResumed AM packageName = com.risa.app
+12-21 09:57:26.388 30841  7856 E AudioSystem-JNI: Command failed for android_media_AudioSystem_setParameters: -22
+12-21 09:57:26.390 30841  7856 I chatty  : uid=1000(system) Binder:30841_1F identical 2 lines
+12-21 09:57:26.390 30841  7856 E AudioSystem-JNI: Command failed for android_media_AudioSystem_setParameters: -22
+12-21 09:57:26.391 28604 28604 I flutter : startup: 0ms - main() entry
+12-21 09:57:26.405 28604 28604 I flutter : startup: 13ms - Flutter bindings initialized
+12-21 09:57:26.430 28604 28604 I flutter : startup: 39ms - MediaKit initialized
+12-21 09:57:26.462 28604 28604 I Choreographer: Skipped 35 frames!  The application may be doing too much work on its main thread.
+12-21 09:57:26.465 28604 28604 D View    : com.nvidia.immediateInput = false
+12-21 09:57:26.465 28604 28604 D View    : com.nvidia.mRawCursorInputRequested = false
+12-21 09:57:26.556 28604 28640 E libc    : Access denied finding property "ro.vendor.sys.NV_ASYNC"
+12-21 09:57:26.556 28604 28640 E libc    : Access denied finding property "ro.vendor.sys.NV_LOGFPS"
+12-21 09:57:26.556 28604 28640 E libc    : Access denied finding property "ro.vendor.sys.NV_PROCESS_NAME"
+12-21 09:57:26.556 28604 28640 E libc    : Access denied finding property "ro.vendor.sys.NV_FPSDYNAMIC"
+12-21 09:57:26.561  2877  2877 I hwservicemanager: getTransport: Cannot find entry android.hardware.graphics.mapper@4.0::IMapper/default in either framework or device manifest.
+12-21 09:57:26.562 28604 28646 I Gralloc4: mapper 4.x is not supported
+12-21 09:57:26.563  2877  2877 I hwservicemanager: getTransport: Cannot find entry android.hardware.graphics.mapper@3.0::IMapper/default in either framework or device manifest.
+12-21 09:57:26.563 28604 28646 W Gralloc3: mapper 3.x is not supported
+12-21 09:57:26.566  2877  2877 I hwservicemanager: getTransport: Cannot find entry android.hardware.graphics.allocator@4.0::IAllocator/default in either framework or device manifest.
+12-21 09:57:26.566 28604 28646 W Gralloc4: allocator 3.x is not supported
+12-21 09:57:26.566  2877  2877 I hwservicemanager: getTransport: Cannot find entry android.hardware.graphics.allocator@3.0::IAllocator/default in either framework or device manifest.
+12-21 09:57:26.567 28604 28646 W Gralloc3: allocator 3.x is not supported
+12-21 09:57:26.581 28604 28640 E libc    : Access denied finding property "ro.vendor.sys.NV_ASYNC"
+12-21 09:57:26.581 28604 28640 E libc    : Access denied finding property "ro.vendor.sys.NV_LOGFPS"
+12-21 09:57:26.581 28604 28640 E libc    : Access denied finding property "ro.vendor.sys.NV_PROCESS_NAME"
+12-21 09:57:26.581 28604 28640 E libc    : Access denied finding property "ro.vendor.sys.NV_FPSDYNAMIC"
+12-21 09:57:26.591 28604 28604 I flutter : startup: 199ms - Image cache limits configured
+12-21 09:57:26.598 28604 28604 I flutter : startup: 206ms - SSL handler configured
+12-21 09:57:26.599 28604 28604 I flutter : startup: 207ms - HTTP client service initialized
+12-21 09:57:26.634 28604 28604 I flutter : startup: 242ms - Preferred orientations locked (Android TV)
+12-21 09:57:26.634 28604 28604 I flutter : startup: 243ms - Launching StartupLoader
+12-21 09:57:26.637 28604 28604 I flutter : startup: 245ms - StartupLoader initState
+12-21 09:57:26.637 28604 28604 I flutter : startup: 246ms - StartupLoader: background TMDB init start
+12-21 09:57:26.638 28604 28604 I flutter : startup: 246ms - StartupLoader: continuing with background TMDB init
+12-21 09:57:26.647 28604 28646 E libc    : Access denied finding property "ro.vendor.sys.NV_DECOMPRESSION"
+12-21 09:57:26.670 28604 28604 I flutter : startup: 278ms - StartupLoader: background TMDB init finished
+12-21 09:57:26.757 28604 28640 W libc    : invalid pthread_t (0) passed to pthread_join
+12-21 09:57:26.770 30841 30859 D EventSequenceValidator: dec AccIntentStartedEvents to 1
+12-21 09:57:26.771  3389  3389 W powerHAL::common: Power hint:0x8 is not supported in PowerHAL
+12-21 09:57:26.789 28604 28640 E Surface : freeAllBuffers: 1 buffers were freed while being dequeued!
+12-21 09:57:26.792 28604 28640 E libc    : Access denied finding property "ro.vendor.sys.NV_ASYNC"
+12-21 09:57:26.793 28604 28640 E libc    : Access denied finding property "ro.vendor.sys.NV_LOGFPS"
+12-21 09:57:26.793 28604 28640 E libc    : Access denied finding property "ro.vendor.sys.NV_PROCESS_NAME"
+12-21 09:57:26.793 28604 28640 E libc    : Access denied finding property "ro.vendor.sys.NV_FPSDYNAMIC"
+12-21 09:57:26.803 28604 28604 I flutter : startup: 412ms - StartupLoader: ready to enter MyApp
+12-21 09:57:26.818 28604 28604 I flutter : startup: 426ms - MyAppState initState
+12-21 09:57:26.818 28604 28604 I flutter : startup: 427ms - MyApp initialization: clear old playlists
+12-21 09:57:26.822 25239 25239 I GoogleInputMethodService: GoogleInputMethodService.onFinishInput():2084 
+12-21 09:57:26.822 25239 25239 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatus():101 repeatCheckTimes = 0, locked = false
+12-21 09:57:26.822 25239 25239 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1345 onStartInput(EditorInfo{EditorInfo{packageName=com.risa.app, inputType=0, inputTypeString=NULL, enableLearning=false, autoCorrection=false, autoComplete=false, imeOptions=0, privateImeOptions=null, actionName=UNSPECIFIED, actionLabel=null, initialSelStart=-1, initialSelEnd=-1, initialCapsMode=0, label=null, fieldId=1, fieldName=null, extras=null, hintText=null, hintLocales=[]}}, false)
+12-21 09:57:26.824 25239 25239 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatus():101 repeatCheckTimes = 1, locked = false
+12-21 09:57:26.826 28604 28604 I flutter : startup: 434ms - MyApp initialization: playlists cleared
+12-21 09:57:26.826 28604 28604 I flutter : startup: 434ms - MyApp initialization: check disclaimer
+12-21 09:57:26.826 28604 28604 I flutter : startup: 434ms - MyApp initialization: disclaimer checked
+12-21 09:57:26.826 28604 28604 I flutter : startup: 434ms - MyApp initialization: check/load playlist
+12-21 09:57:26.826 28604 28604 I flutter : startup: 434ms - MyApp initialization: playlist check finished
+12-21 09:57:26.826 28604 28604 I flutter : startup: 434ms - MyApp initialization: complete
+12-21 09:57:26.838 28604 28604 I flutter : content_focus: Shell registered focus callback token=1
+12-21 09:57:26.838 28604 28604 I flutter : content_focus: Registered content focus: LiveTVScreen (token: 1)
+12-21 09:57:26.842 30841 30864 D ArtManagerInternalImpl: /data/misc/iorapd/com.risa.app/20/com.risa.app.MainActivity/compiled_traces/compiled_trace.pb doesn't exist
+12-21 09:57:26.854 30841  8217 I NvUtils : onActivityStopped AM packageName = com.spocky.projengmenu
+12-21 09:57:26.856 30841  8217 E AudioSystem-JNI: Command failed for android_media_AudioSystem_setParameters: -22
+12-21 09:57:26.857 30841  8217 E AudioSystem-JNI: Command failed for android_media_AudioSystem_setParameters: -22
+12-21 09:57:26.859 30841  8217 I android_os_HwBinder: HwBinder: Starting thread pool for getting: vendor.nvidia.hardware.graphics.display@1.0::INvDisplay/default
+12-21 09:57:26.879 28604 28604 I flutter : startup: 487ms - ChannelProvider.autoLoadPlaylist invoked
+12-21 09:57:26.887 16991 28298 I FA      : Application backgrounded at: timestamp_millis: 1766329044878
+12-21 09:57:26.891 28604 28604 I flutter : ChannelProvider: Auto-loading playlist...
+12-21 09:57:26.891 28604 28604 I flutter : EPG: Initializing...
+12-21 09:57:26.891 30841 30864 I ActivityTaskManager: Displayed com.risa.app/.MainActivity: +1s941ms
+12-21 09:57:26.892 30841 30864 I ActivityTaskManager: Fully drawn com.risa.app/.MainActivity: +1s941ms
+12-21 09:57:26.892 28604 28604 I flutter : EPG: Initializing with URL: https://opop.pro/61H7Gn4vvP2o
+12-21 09:57:26.895 26380 28643 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:26.895 26380 28643 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:26.897 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:26.897 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:26.897 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:26.901 28604 28604 I flutter : ChannelProvider: Loading from pre-parsed JSON cache...
+12-21 09:57:26.908 28604 28604 I flutter : EPG: Cache is valid. Age: 352 minutes.
+12-21 09:57:26.908 28604 28604 I flutter : EPG: Using valid cached file, skipping download.
+12-21 09:57:26.915 28604 28604 I flutter : EPG: Starting background parsing...
+12-21 09:57:26.937 28604 28604 I flutter : ChannelProvider: JSON cache loaded in 36ms with 376 channels
+12-21 09:57:26.937 28604 28604 I flutter : startup: 545ms - ChannelProvider.autoLoadPlaylist: JSON cache load finished
+12-21 09:57:26.939 28604 28604 I flutter : ChannelProvider: Found 1 categories from 376 channels
+12-21 09:57:26.941 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:26.942 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:26.945 26380 28669 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:26.970 13964 14065 I FontLog : (REDACTED) Received query %s, URI %s
+12-21 09:57:26.975 13964 14065 I FontLog : (REDACTED) Query [%s] resolved to %s
+12-21 09:57:26.984 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="ABC_971538436_0", name="ABC"
+12-21 09:57:26.984 28604 28604 I flutter : LiveTV: Fetching TMDB art for channel: "ABC"
+12-21 09:57:26.986 13964 14065 I FontLog : (REDACTED) Fetch %s end status %s
+12-21 09:57:26.991 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="ABC_971538436_0", name="ABC"
+12-21 09:57:26.991 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="ABC_971538436_0", name="ABC"
+12-21 09:57:26.993 13964 14065 I FontLog : (REDACTED) Pulling font file for id = %d, cache size = %d
+12-21 09:57:26.993 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="CBS_392340979_1", name="CBS"
+12-21 09:57:26.993 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="CBS_392340979_1", name="CBS"
+12-21 09:57:26.995 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="CW_497031048_2", name="CW"
+12-21 09:57:26.995 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="CW_497031048_2", name="CW"
+12-21 09:57:26.998 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="FOX_1055126310_3", name="FOX"
+12-21 09:57:26.998 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="FOX_1055126310_3", name="FOX"
+12-21 09:57:26.999 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="NBC_535039161_4", name="NBC"
+12-21 09:57:26.999 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="NBC_535039161_4", name="NBC"
+12-21 09:57:27.000 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="A&E East_1072137133_5", name="A&E East"
+12-21 09:57:27.000 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="A&E East_1072137133_5", name="A&E East"
+12-21 09:57:27.023 13964 14065 I FontLog : (REDACTED) Pulling font file for id = %d, cache size = %d
+12-21 09:57:27.044 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="ABC_971538436_0", name="ABC"
+12-21 09:57:27.044 28604 28604 I flutter : LiveTV: Found TMDB art for channel "ABC": https://image.tmdb.org/t/p/w1280/iJV5UD3QclWfLjY4BCu7Vum5HC5.jpg
+12-21 09:57:27.047 28604 28604 I flutter : content_focus: Nav focus request succeeded
+12-21 09:57:27.052 28604 28604 I flutter : EPG: Successfully parsed 8 channels and 8 IDs
+12-21 09:57:27.065 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="ABC_971538436_0", name="ABC"
+12-21 09:57:27.067 28604 28604 I chatty  : uid=10270(com.risa.app) identical 1 line
+12-21 09:57:27.067 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="ABC_971538436_0", name="ABC"
+12-21 09:57:27.067 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="CBS_392340979_1", name="CBS"
+12-21 09:57:27.067 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="CBS_392340979_1", name="CBS"
+12-21 09:57:27.068 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="CW_497031048_2", name="CW"
+12-21 09:57:27.068 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="CW_497031048_2", name="CW"
+12-21 09:57:27.068 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="FOX_1055126310_3", name="FOX"
+12-21 09:57:27.068 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="FOX_1055126310_3", name="FOX"
+12-21 09:57:27.075 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="NBC_535039161_4", name="NBC"
+12-21 09:57:27.075 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="NBC_535039161_4", name="NBC"
+12-21 09:57:27.075 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="A&E East_1072137133_5", name="A&E East"
+12-21 09:57:27.075 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="A&E East_1072137133_5", name="A&E East"
+12-21 09:57:27.081 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="ABC_971538436_0", name="ABC"
+12-21 09:57:27.946 26380 28669 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:27.946 26380 28669 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:27.946 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:27.946 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:27.946 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:27.981 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:27.982 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:27.983 26380 28674 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:28.001 30841 30841 D WindowManager: handleComboKeys keyCode: 21, keyAction: 0
+12-21 09:57:28.001 30841 30841 D WindowManager: isOnHomeScreen mLastTopComponent: null, componentName: ComponentInfo{com.risa.app/com.risa.app.MainActivity}
+12-21 09:57:28.002 30841 30841 D WindowManager: handleComboKeys isOnHomeScreen: false
+12-21 09:57:28.002 30841 30841 I InputManager: Input event injection from pid 30841 uid 1000
+12-21 09:57:28.319 30841 30841 D WindowManager: handleComboKeys keyCode: 21, keyAction: 1
+12-21 09:57:28.319 30841 30841 D WindowManager: isOnHomeScreen mLastTopComponent: null, componentName: ComponentInfo{com.risa.app/com.risa.app.MainActivity}
+12-21 09:57:28.319 30841 30841 D WindowManager: handleComboKeys isOnHomeScreen: false
+12-21 09:57:28.320 30841 30841 I InputManager: Input event injection from pid 30841 uid 1000
+12-21 09:57:28.413 30841 31599 E TaskPersister: File error accessing recents directory (directory doesn't exist?).
+12-21 09:57:28.984 26380 28674 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:28.984 26380 28674 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:28.984 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:28.984 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:28.984 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:29.021 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:29.021 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:29.022 26380 28675 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:29.291 30841 30841 D WindowManager: handleComboKeys keyCode: 21, keyAction: 0
+12-21 09:57:29.291 30841 30841 D WindowManager: isOnHomeScreen mLastTopComponent: null, componentName: ComponentInfo{com.risa.app/com.risa.app.MainActivity}
+12-21 09:57:29.292 30841 30841 D WindowManager: handleComboKeys isOnHomeScreen: false
+12-21 09:57:29.292 30841 30841 I InputManager: Input event injection from pid 30841 uid 1000
+12-21 09:57:29.498 30841 30841 D WindowManager: handleComboKeys keyCode: 21, keyAction: 1
+12-21 09:57:29.498 30841 30841 D WindowManager: isOnHomeScreen mLastTopComponent: null, componentName: ComponentInfo{com.risa.app/com.risa.app.MainActivity}
+12-21 09:57:29.499 30841 30841 D WindowManager: handleComboKeys isOnHomeScreen: false
+12-21 09:57:29.678 30841 30841 D WindowManager: handleComboKeys keyCode: 20, keyAction: 0
+12-21 09:57:29.888 30841 30841 D WindowManager: handleComboKeys keyCode: 20, keyAction: 1
+12-21 09:57:30.019 13964 13964 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.common.telemetry.service.START dat=chimera-action: cmp=com.google.android.gms/.chimera.PersistentApiService }
+12-21 09:57:30.023 26380 28675 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:30.023 26380 28675 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:30.023 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:30.023 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:30.023 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:30.053 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:30.053 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:30.053 26380 28676 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:30.335 30841 30841 D WindowManager: handleComboKeys keyCode: 20, keyAction: 0
+12-21 09:57:30.548 30841 30841 D WindowManager: handleComboKeys keyCode: 20, keyAction: 1
+12-21 09:57:30.706 19152 19172 I Finsky  : [7299] Stats for Executor: LightweightExecutor mgg@4ac0722[Running, pool size = 3, active threads = 0, queued tasks = 0, completed tasks = 812]
+12-21 09:57:30.706 19152 19172 I Finsky  : [7299] Stats for Executor: BlockingExecutor mgg@db795b3[Running, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 99]
+12-21 09:57:30.707 19152 19172 I Finsky  : [7299] Stats for Executor: bgExecutor mgg@2397770[Running, pool size = 4, active threads = 0, queued tasks = 0, completed tasks = 1437]
+12-21 09:57:30.772 30841 30841 D WindowManager: handleComboKeys keyCode: 20, keyAction: 0
+12-21 09:57:30.983 30841 30841 D WindowManager: handleComboKeys keyCode: 20, keyAction: 1
+12-21 09:57:31.055 26380 28676 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:31.055 26380 28676 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:31.055 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:31.055 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:31.055 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:31.085 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:31.086 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:31.086 26380 28677 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:31.254  3383  3503 V hdcp up : tsec_version: 1
+12-21 09:57:31.256  3383  3503 D NvOsDebugPrintf: NvRmStreamFree: WARN: pStream is NULL
+12-21 09:57:31.583 28604 28678 D ProfileInstaller: Installing profile for com.risa.app
+12-21 09:57:31.984 30841 30841 D WindowManager: handleComboKeys keyCode: 20, keyAction: 0
+12-21 09:57:32.087 26380 28677 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:32.087 26380 28677 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:32.087 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:32.087 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:32.087 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:32.129 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:32.130 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:32.130 26380 28679 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:32.188 30841 30841 D WindowManager: handleComboKeys keyCode: 20, keyAction: 1
+12-21 09:57:33.131 26380 28679 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:33.131 26380 28679 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:33.131 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:33.131 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:33.131 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:33.169 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:33.169 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:33.170 26380 28680 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:33.298 30841 30841 D WindowManager: handleComboKeys keyCode: 20, keyAction: 0
+12-21 09:57:33.507 30841 30841 D WindowManager: handleComboKeys keyCode: 20, keyAction: 1
+12-21 09:57:34.171 26380 28680 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:34.171 26380 28680 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:34.171 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:34.171 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:34.171 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:34.201 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:34.201 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:34.202 26380 28681 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:34.855 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="CBS_392340979_1", name="CBS"
+12-21 09:57:34.855 28604 28604 I flutter : LiveTV: Fetching TMDB art for channel: "CBS"
+12-21 09:57:34.857 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="ABC_971538436_0", name="ABC"
+12-21 09:57:34.858 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="ABC_971538436_0", name="ABC"
+12-21 09:57:34.858 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="CBS_392340979_1", name="CBS"
+12-21 09:57:34.858 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="CBS_392340979_1", name="CBS"
+12-21 09:57:34.858 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="CW_497031048_2", name="CW"
+12-21 09:57:34.859 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="CW_497031048_2", name="CW"
+12-21 09:57:34.859 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="FOX_1055126310_3", name="FOX"
+12-21 09:57:34.859 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="FOX_1055126310_3", name="FOX"
+12-21 09:57:34.859 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="NBC_535039161_4", name="NBC"
+12-21 09:57:34.859 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="NBC_535039161_4", name="NBC"
+12-21 09:57:34.860 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="A&E East_1072137133_5", name="A&E East"
+12-21 09:57:34.860 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="A&E East_1072137133_5", name="A&E East"
+12-21 09:57:34.867 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="CBS_392340979_1", name="CBS"
+12-21 09:57:34.867 28604 28604 I flutter : LiveTV: Found TMDB art for channel "CBS": https://image.tmdb.org/t/p/w500/nm8d7P7MJNiBLdgIzUK0gkuEA4r.png
+12-21 09:57:34.869 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="CBS_392340979_1", name="CBS"
+12-21 09:57:34.871 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="ABC_971538436_0", name="ABC"
+12-21 09:57:34.871 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="ABC_971538436_0", name="ABC"
+12-21 09:57:34.872 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="CBS_392340979_1", name="CBS"
+12-21 09:57:34.872 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="CBS_392340979_1", name="CBS"
+12-21 09:57:34.872 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="CW_497031048_2", name="CW"
+12-21 09:57:34.872 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="CW_497031048_2", name="CW"
+12-21 09:57:34.872 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="FOX_1055126310_3", name="FOX"
+12-21 09:57:34.872 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="FOX_1055126310_3", name="FOX"
+12-21 09:57:34.873 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="NBC_535039161_4", name="NBC"
+12-21 09:57:34.873 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="NBC_535039161_4", name="NBC"
+12-21 09:57:34.873 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="A&E East_1072137133_5", name="A&E East"
+12-21 09:57:34.873 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="A&E East_1072137133_5", name="A&E East"
+12-21 09:57:34.877 28604 28604 I flutter : EPG: Could not find matching EPG ID for channelId="CBS_392340979_1", name="CBS"
+12-21 09:57:35.203 26380 28681 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:35.203 26380 28681 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:35.203 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:35.203 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:35.203 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:35.233 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:35.234 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:35.234 26380 28683 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:35.784 30841 30841 D WindowManager: handleComboKeys keyCode: 20, keyAction: 0
+12-21 09:57:35.997 30841 30841 D WindowManager: handleComboKeys keyCode: 20, keyAction: 1
+12-21 09:57:36.235 26380 28683 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:36.235 26380 28683 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:36.235 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:36.235 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:36.235 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:36.259  3383  3503 V hdcp up : tsec_version: 1
+12-21 09:57:36.261  3383  3503 D NvOsDebugPrintf: NvRmStreamFree: WARN: pStream is NULL
+12-21 09:57:36.281 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:36.282 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:36.282 26380 28684 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:36.567 30841 30841 D WindowManager: handleComboKeys keyCode: 23, keyAction: 0
+12-21 09:57:36.567 30841 30841 I chatty  : uid=1000 system_server identical 14 lines
+12-21 09:57:36.778 30841 30841 D WindowManager: handleComboKeys keyCode: 23, keyAction: 1
+12-21 09:57:36.778 30841 30841 I InputManager: Input event injection from pid 30841 uid 1000
+12-21 09:57:36.935 28500 28500 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.measurement.START pkg=com.google.android.gms }
+12-21 09:57:37.283 26380 28684 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:37.283 26380 28684 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:37.283 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:37.283 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:37.283 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:37.317 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:37.317 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:37.318 26380 28686 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:38.319 26380 28686 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:38.319 26380 28686 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:38.319 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:38.319 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:38.319 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:38.357 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:38.357 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:38.357 26380 28687 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:39.359 26380 28687 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:39.359 26380 28687 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:39.359 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:39.359 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:39.359 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:39.401 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:39.401 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:39.402 26380 28688 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:40.075 13964 13964 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.presencemanager.service.START dat=chimera-action: cmp=com.google.android.gms/.chimera.PersistentApiService }
+12-21 09:57:40.076 13964 13964 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.presencemanager.service.INTERNAL_IDENTITY dat=chimera-action: cmp=com.google.android.gms/.chimera.PersistentApiService }
+12-21 09:57:40.403 26380 28688 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:40.403 26380 28688 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:40.403 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:40.403 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:40.403 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:40.441 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:40.441 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:40.441 26380 28689 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:41.264  3383  3503 V hdcp up : tsec_version: 1
+12-21 09:57:41.265  3383  3503 D NvOsDebugPrintf: NvRmStreamFree: WARN: pStream is NULL
+12-21 09:57:41.443 26380 28689 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:41.443 26380 28689 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:41.443 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:41.443 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:41.443 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:41.493 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:41.493 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:41.493 26380 28690 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:41.781 30841 30898 I WindowManager: Input event dispatching timed out sending to com.risa.app/com.risa.app.MainActivity.  Reason: 5fad0bc com.risa.app/com.risa.app.MainActivity (server) is not responding. Waited 5000ms for KeyEvent
+12-21 09:57:41.804 30841 30898 D WindowManager: notifyANR took 23ms
+12-21 09:57:41.804 30841 30898 W InputDispatcher: Canceling events for 5fad0bc com.risa.app/com.risa.app.MainActivity (server) because it is unresponsive
+12-21 09:57:41.840 30841 28691 I ActivityManager: dumpStackTraces pids={13964=true, 16439=true, 16470=true, 16991=true, 17036=true, 17293=true, 17363=true, 17508=true, 19152=true, 25239=true, 27762=true, 28022=true, 28204=true, 28500=true, 28507=true, 31005=true, 31406=true, 31972=true} nativepids=[2884, 3345, 3550, 3574, 3575, 3586, 3591, 30747, 30748, 30749, 30750, 30751, 31005]
+12-21 09:57:41.900 30841 30852 W System  : A resource failed to call release. 
+12-21 09:57:41.903 30841 30852 I chatty  : uid=1000(system) FinalizerDaemon identical 1 line
+12-21 09:57:41.903 30841 30852 W System  : A resource failed to call release. 
+12-21 09:57:42.280 30841 28691 I ActivityManager: Skipping next CPU consuming process, not a java proc: 28604
+12-21 09:57:42.280 30841 28691 I ActivityManager: Skipping next CPU consuming process, not a java proc: 30841
+12-21 09:57:42.281 30841 28691 I ActivityManager: Dumping to /data/anr/anr_2025-12-21-09-57-42-280
+12-21 09:57:42.281 30841 28691 I ActivityManager: Collecting stacks for pid 28604
+12-21 09:57:42.283 30841 28691 I system_server: libdebuggerd_client: started dumping process 28604
+12-21 09:57:42.284  3334  3334 I tombstoned: registered intercept for pid 28604 and type kDebuggerdJavaBacktrace
+12-21 09:57:42.284 28604 28615 I com.risa.app: Thread[6,tid=28615,WaitingInMainSignalCatcherLoop,Thread*=0x237ca946f0,peer=0x13940110,"Signal Catcher"]: reacting to signal 3
+12-21 09:57:42.284 28604 28615 I com.risa.app: 
+12-21 09:57:42.495 26380 28690 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:42.495 26380 28690 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:42.495 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:42.495 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:42.495 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:42.581 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:42.582 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:42.582 26380 28693 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:42.582  3334  3334 I tombstoned: received crash request for pid 28604
+12-21 09:57:42.582  3334  3334 I tombstoned: found intercept fd 512 for pid 28604 and type kDebuggerdJavaBacktrace
+12-21 09:57:42.582 28604 28615 I com.risa.app: Wrote stack traces to tombstoned
+12-21 09:57:42.584 30841 28691 I system_server: libdebuggerd_client: done dumping process 28604
+12-21 09:57:42.586 30841 28691 I ActivityManager: Collecting stacks for pid 30841
+12-21 09:57:42.591 30841 28691 I system_server: libdebuggerd_client: started dumping process 30841
+12-21 09:57:42.591  3334  3334 I tombstoned: registered intercept for pid 30841 and type kDebuggerdJavaBacktrace
+12-21 09:57:42.591 30841 30847 I system_server: Thread[2,tid=30847,WaitingInMainSignalCatcherLoop,Thread*=0x237ca92b20,peer=0x139c04c0,"Signal Catcher"]: reacting to signal 3
+12-21 09:57:42.591 30841 30847 I system_server: 
+12-21 09:57:42.904  3334  3334 I tombstoned: received crash request for pid 30841
+12-21 09:57:42.905  3334  3334 I tombstoned: found intercept fd 512 for pid 30841 and type kDebuggerdJavaBacktrace
+12-21 09:57:42.905 30841 30847 I system_server: Wrote stack traces to tombstoned
+12-21 09:57:42.907 30841 28691 I system_server: libdebuggerd_client: done dumping process 30841
+12-21 09:57:42.910 30841 28691 I ActivityManager: Collecting stacks for pid 31958
+12-21 09:57:42.911 30841 28691 I system_server: libdebuggerd_client: started dumping process 31958
+12-21 09:57:42.911  3334  3334 I tombstoned: registered intercept for pid 31958 and type kDebuggerdJavaBacktrace
+12-21 09:57:42.911 31958 31971 I idia.nvgamecas: Thread[6,tid=31971,WaitingInMainSignalCatcherLoop,Thread*=0x237ca92b20,peer=0x12cc00b0,"Signal Catcher"]: reacting to signal 3
+12-21 09:57:42.911 31958 31971 I idia.nvgamecas: 
+12-21 09:57:42.951  3334  3334 I tombstoned: received crash request for pid 31958
+12-21 09:57:42.951  3334  3334 I tombstoned: found intercept fd 512 for pid 31958 and type kDebuggerdJavaBacktrace
+12-21 09:57:42.952 31958 31971 I idia.nvgamecas: Wrote stack traces to tombstoned
+12-21 09:57:42.952 30841 28691 I system_server: libdebuggerd_client: done dumping process 31958
+12-21 09:57:42.954 30841 28691 I ActivityManager: Collecting stacks for pid 31928
+12-21 09:57:42.955 30841 28691 I system_server: libdebuggerd_client: started dumping process 31928
+12-21 09:57:42.955  3334  3334 I tombstoned: registered intercept for pid 31928 and type kDebuggerdJavaBacktrace
+12-21 09:57:42.955 31928 31940 I a.app.messagin: Thread[5,tid=31940,WaitingInMainSignalCatcherLoop,Thread*=0x237ca9d200,peer=0x12e400b0,"Signal Catcher"]: reacting to signal 3
+12-21 09:57:42.955 31928 31940 I a.app.messagin: 
+12-21 09:57:43.000  3334  3334 I tombstoned: received crash request for pid 31928
+12-21 09:57:43.000  3334  3334 I tombstoned: found intercept fd 512 for pid 31928 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.000 31928 31940 I a.app.messagin: Wrote stack traces to tombstoned
+12-21 09:57:43.000 30841 28691 I system_server: libdebuggerd_client: done dumping process 31928
+12-21 09:57:43.002 30841 28691 I ActivityManager: Collecting stacks for pid 31905
+12-21 09:57:43.003 30841 28691 I system_server: libdebuggerd_client: started dumping process 31905
+12-21 09:57:43.003  3334  3334 I tombstoned: registered intercept for pid 31905 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.003 31905 31917 I com.nvidia.osc: Thread[3,tid=31917,WaitingInMainSignalCatcherLoop,Thread*=0x237ca9d200,peer=0x12d000b0,"Signal Catcher"]: reacting to signal 3
+12-21 09:57:43.004 31905 31917 I com.nvidia.osc: 
+12-21 09:57:43.024 13964 13964 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.libs.gmscorelogger.service.START dat=chimera-action: cmp=com.google.android.gms/.chimera.PersistentDirectBootAwareApiService }
+12-21 09:57:43.044  3334  3334 I tombstoned: received crash request for pid 31905
+12-21 09:57:43.044  3334  3334 I tombstoned: found intercept fd 512 for pid 31905 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.044 31905 31917 I com.nvidia.osc: Wrote stack traces to tombstoned
+12-21 09:57:43.044 30841 28691 I system_server: libdebuggerd_client: done dumping process 31905
+12-21 09:57:43.045 30841 28691 I ActivityManager: Collecting stacks for pid 31885
+12-21 09:57:43.046 30841 28691 I system_server: libdebuggerd_client: started dumping process 31885
+12-21 09:57:43.047  3334  3334 I tombstoned: registered intercept for pid 31885 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.047 31885 31896 I a.shieldservic: Thread[3,tid=31896,WaitingInMainSignalCatcherLoop,Thread*=0x237ca92b20,peer=0x12cc00b0,"Signal Catcher"]: reacting to signal 3
+12-21 09:57:43.047 31885 31896 I a.shieldservic: 
+12-21 09:57:43.089  3334  3334 I tombstoned: received crash request for pid 31885
+12-21 09:57:43.089  3334  3334 I tombstoned: found intercept fd 512 for pid 31885 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.089 31885 31896 I a.shieldservic: Wrote stack traces to tombstoned
+12-21 09:57:43.089 30841 28691 I system_server: libdebuggerd_client: done dumping process 31885
+12-21 09:57:43.090 30841 28691 I ActivityManager: Collecting stacks for pid 31849
+12-21 09:57:43.091 30841 28691 I system_server: libdebuggerd_client: started dumping process 31849
+12-21 09:57:43.091  3334  3334 I tombstoned: registered intercept for pid 31849 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.091 31849 31863 I .nvidia.irtune: Thread[6,tid=31863,WaitingInMainSignalCatcherLoop,Thread*=0x237ca92b20,peer=0x12cc00b0,"Signal Catcher"]: reacting to signal 3
+12-21 09:57:43.091 31849 31863 I .nvidia.irtune: 
+12-21 09:57:43.126  3334  3334 I tombstoned: received crash request for pid 31849
+12-21 09:57:43.127  3334  3334 I tombstoned: found intercept fd 512 for pid 31849 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.127 31849 31863 I .nvidia.irtune: Wrote stack traces to tombstoned
+12-21 09:57:43.127 30841 28691 I system_server: libdebuggerd_client: done dumping process 31849
+12-21 09:57:43.129 30841 28691 I ActivityManager: Collecting stacks for pid 31822
+12-21 09:57:43.130 30841 28691 I system_server: libdebuggerd_client: started dumping process 31822
+12-21 09:57:43.130  3334  3334 I tombstoned: registered intercept for pid 31822 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.130 31822 31837 I d.remote.serve: Thread[3,tid=31837,WaitingInMainSignalCatcherLoop,Thread*=0x237caa4140,peer=0x12f000b0,"Signal Catcher"]: reacting to signal 3
+12-21 09:57:43.130 31822 31837 I d.remote.serve: 
+12-21 09:57:43.157 30841  7856 I ActivityManager: Process com.android.providers.tv (pid 28507) has died: cch+15 CEM 
+12-21 09:57:43.161 30745 30745 I Zygote  : Process 28507 exited due to signal 9 (Killed)
+12-21 09:57:43.173 30841  3198 I ActivityManager: Process com.google.android.gms (pid 28500) has died: cch+5 CEM 
+12-21 09:57:43.174 30745 30745 I Zygote  : Process 28500 exited due to signal 9 (Killed)
+12-21 09:57:43.189  3334  3334 I tombstoned: received crash request for pid 31822
+12-21 09:57:43.189  3334  3334 I tombstoned: found intercept fd 512 for pid 31822 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.190 31822 31837 I d.remote.serve: Wrote stack traces to tombstoned
+12-21 09:57:43.190 30841 28691 I system_server: libdebuggerd_client: done dumping process 31822
+12-21 09:57:43.191 30841 28691 I ActivityManager: Collecting stacks for pid 31799
+12-21 09:57:43.192 30841 28691 I system_server: libdebuggerd_client: started dumping process 31799
+12-21 09:57:43.193 31799 31812 I ifi.countrycod: Thread[4,tid=31812,WaitingInMainSignalCatcherLoop,Thread*=0x237ca962c0,peer=0x12d000b0,"Signal Catcher"]: reacting to signal 3
+12-21 09:57:43.193 31799 31812 I ifi.countrycod: 
+12-21 09:57:43.197  3334  3334 I tombstoned: registered intercept for pid 31799 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.201 30841 30867 I libprocessgroup: Successfully killed process cgroup uid 10035 pid 28507 in 43ms
+12-21 09:57:43.201 30841 30867 I libprocessgroup: Successfully killed process cgroup uid 10005 pid 28500 in 0ms
+12-21 09:57:43.238  3334  3334 I tombstoned: received crash request for pid 31799
+12-21 09:57:43.238  3334  3334 I tombstoned: found intercept fd 512 for pid 31799 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.238 31799 31812 I ifi.countrycod: Wrote stack traces to tombstoned
+12-21 09:57:43.238 30841 28691 I system_server: libdebuggerd_client: done dumping process 31799
+12-21 09:57:43.240 30841 28691 I ActivityManager: Collecting stacks for pid 31784
+12-21 09:57:43.240 30841 28691 I system_server: libdebuggerd_client: started dumping process 31784
+12-21 09:57:43.241  3334  3334 I tombstoned: registered intercept for pid 31784 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.241 31784 31795 I nvidia.NvCPLSv: Thread[4,tid=31795,WaitingInMainSignalCatcherLoop,Thread*=0x237ca92b20,peer=0x12d000b0,"Signal Catcher"]: reacting to signal 3
+12-21 09:57:43.241 31784 31795 I nvidia.NvCPLSv: 
+12-21 09:57:43.289  3334  3334 I tombstoned: received crash request for pid 31784
+12-21 09:57:43.289  3334  3334 I tombstoned: found intercept fd 512 for pid 31784 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.290 31784 31795 I nvidia.NvCPLSv: Wrote stack traces to tombstoned
+12-21 09:57:43.290 30841 28691 I system_server: libdebuggerd_client: done dumping process 31784
+12-21 09:57:43.292 30841 28691 I ActivityManager: Collecting stacks for pid 31747
+12-21 09:57:43.293 30841 28691 I system_server: libdebuggerd_client: started dumping process 31747
+12-21 09:57:43.293  3334  3334 I tombstoned: registered intercept for pid 31747 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.293 31747 31769 I ech.accessoryu: Thread[6,tid=31769,WaitingInMainSignalCatcherLoop,Thread*=0x237caa4140,peer=0x12cc00b0,"Signal Catcher"]: reacting to signal 3
+12-21 09:57:43.293 31747 31769 I ech.accessoryu: 
+12-21 09:57:43.353  3334  3334 I tombstoned: received crash request for pid 31747
+12-21 09:57:43.353  3334  3334 I tombstoned: found intercept fd 512 for pid 31747 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.353 31747 31769 I ech.accessoryu: Wrote stack traces to tombstoned
+12-21 09:57:43.353 30841 28691 I system_server: libdebuggerd_client: done dumping process 31747
+12-21 09:57:43.355 30841 28691 I ActivityManager: Collecting stacks for pid 31709
+12-21 09:57:43.355 30841 28691 I system_server: libdebuggerd_client: started dumping process 31709
+12-21 09:57:43.356  3334  3334 I tombstoned: registered intercept for pid 31709 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.356 31709 31726 I d.audio.servic: Thread[3,tid=31726,WaitingInMainSignalCatcherLoop,Thread*=0x237ca946f0,peer=0x12cc00b0,"Signal Catcher"]: reacting to signal 3
+12-21 09:57:43.356 31709 31726 I d.audio.servic: 
+12-21 09:57:43.399  3334  3334 I tombstoned: received crash request for pid 31709
+12-21 09:57:43.399  3334  3334 I tombstoned: found intercept fd 512 for pid 31709 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.399 31709 31726 I d.audio.servic: Wrote stack traces to tombstoned
+12-21 09:57:43.400 30841 28691 I system_server: libdebuggerd_client: done dumping process 31709
+12-21 09:57:43.401 30841 28691 I ActivityManager: Collecting stacks for pid 31671
+12-21 09:57:43.402 30841 28691 I system_server: libdebuggerd_client: started dumping process 31671
+12-21 09:57:43.402  3334  3334 I tombstoned: registered intercept for pid 31671 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.403 31671 31690 I luetoothManage: Thread[4,tid=31690,WaitingInMainSignalCatcherLoop,Thread*=0x237ca92b20,peer=0x12e400b0,"Signal Catcher"]: reacting to signal 3
+12-21 09:57:43.403 31671 31690 I luetoothManage: 
+12-21 09:57:43.451  3334  3334 I tombstoned: received crash request for pid 31671
+12-21 09:57:43.451  3334  3334 I tombstoned: found intercept fd 512 for pid 31671 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.451 31671 31690 I luetoothManage: Wrote stack traces to tombstoned
+12-21 09:57:43.451 30841 28691 I system_server: libdebuggerd_client: done dumping process 31671
+12-21 09:57:43.453 30841 28691 I ActivityManager: Collecting stacks for pid 31644
+12-21 09:57:43.454 30841 28691 I system_server: libdebuggerd_client: started dumping process 31644
+12-21 09:57:43.454  3334  3334 I tombstoned: registered intercept for pid 31644 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.454 31644 31657 I ia.blakepairin: Thread[3,tid=31657,WaitingInMainSignalCatcherLoop,Thread*=0x237caa4140,peer=0x12ec00b0,"Signal Catcher"]: reacting to signal 3
+12-21 09:57:43.454 31644 31657 I ia.blakepairin: 
+12-21 09:57:43.519  3334  3334 I tombstoned: received crash request for pid 31644
+12-21 09:57:43.519  3334  3334 I tombstoned: found intercept fd 512 for pid 31644 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.519 31644 31657 I ia.blakepairin: Wrote stack traces to tombstoned
+12-21 09:57:43.519 30841 28691 I system_server: libdebuggerd_client: done dumping process 31644
+12-21 09:57:43.521 30841 28691 I ActivityManager: Collecting stacks for pid 31304
+12-21 09:57:43.522 30841 28691 I system_server: libdebuggerd_client: started dumping process 31304
+12-21 09:57:43.522  3334  3334 I tombstoned: registered intercept for pid 31304 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.522 31304 31323 I com.android.se: Thread[4,tid=31323,WaitingInMainSignalCatcherLoop,Thread*=0x237ca8a010,peer=0x12cc00b0,"Signal Catcher"]: reacting to signal 3
+12-21 09:57:43.522 31304 31323 I com.android.se: 
+12-21 09:57:43.560  3334  3334 I tombstoned: received crash request for pid 31304
+12-21 09:57:43.560  3334  3334 I tombstoned: found intercept fd 512 for pid 31304 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.561 31304 31323 I com.android.se: Wrote stack traces to tombstoned
+12-21 09:57:43.561 30841 28691 I system_server: libdebuggerd_client: done dumping process 31304
+12-21 09:57:43.562 30841 28691 I ActivityManager: Collecting stacks for pid 31281
+12-21 09:57:43.563 30841 28691 I system_server: libdebuggerd_client: started dumping process 31281
+12-21 09:57:43.564  3334  3334 I tombstoned: registered intercept for pid 31281 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.564 31281 31294 I idia.nvaudiosv: Thread[3,tid=31294,WaitingInMainSignalCatcherLoop,Thread*=0x237ca946f0,peer=0x12cc00b0,"Signal Catcher"]: reacting to signal 3
+12-21 09:57:43.564 31281 31294 I idia.nvaudiosv: 
+12-21 09:57:43.583 26380 28693 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:43.583 26380 28693 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:43.583 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:43.583 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:43.584 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:43.602  3334  3334 I tombstoned: received crash request for pid 31281
+12-21 09:57:43.602  3334  3334 I tombstoned: found intercept fd 512 for pid 31281 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.602 31281 31294 I idia.nvaudiosv: Wrote stack traces to tombstoned
+12-21 09:57:43.602 30841 28691 I system_server: libdebuggerd_client: done dumping process 31281
+12-21 09:57:43.604 30841 28691 I ActivityManager: Collecting stacks for pid 31163
+12-21 09:57:43.605 30841 28691 I system_server: libdebuggerd_client: started dumping process 31163
+12-21 09:57:43.606  3334  3334 I tombstoned: registered intercept for pid 31163 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.606 31163 31180 I oid.tv.setting: Thread[4,tid=31180,WaitingInMainSignalCatcherLoop,Thread*=0x237ca92b20,peer=0x12d800b0,"Signal Catcher"]: reacting to signal 3
+12-21 09:57:43.606 31163 31180 I oid.tv.setting: 
+12-21 09:57:43.617 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:43.618 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:43.618 26380 28694 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:43.702  3334  3334 I tombstoned: received crash request for pid 31163
+12-21 09:57:43.702  3334  3334 I tombstoned: found intercept fd 512 for pid 31163 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.702 31163 31180 I oid.tv.setting: Wrote stack traces to tombstoned
+12-21 09:57:43.703 30841 28691 I system_server: libdebuggerd_client: done dumping process 31163
+12-21 09:57:43.705 30841 28691 I ActivityManager: Collecting stacks for pid 31024
+12-21 09:57:43.707 30841 28691 I system_server: libdebuggerd_client: started dumping process 31024
+12-21 09:57:43.707  3334  3334 I tombstoned: registered intercept for pid 31024 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.707 31024 31036 I ndroid.systemu: Thread[4,tid=31036,WaitingInMainSignalCatcherLoop,Thread*=0x237caa4140,peer=0x130c00b0,"Signal Catcher"]: reacting to signal 3
+12-21 09:57:43.707 31024 31036 I ndroid.systemu: 
+12-21 09:57:43.813  3334  3334 I tombstoned: received crash request for pid 31024
+12-21 09:57:43.813  3334  3334 I tombstoned: found intercept fd 512 for pid 31024 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.813 31024 31036 I ndroid.systemu: Wrote stack traces to tombstoned
+12-21 09:57:43.814 30841 28691 I system_server: libdebuggerd_client: done dumping process 31024
+12-21 09:57:43.816 30841 28691 I ActivityManager: Collecting stacks for pid 30975
+12-21 09:57:43.817 30841 28691 I system_server: libdebuggerd_client: started dumping process 30975
+12-21 09:57:43.817  3334  3334 I tombstoned: registered intercept for pid 30975 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.817 30975 30987 I irtuner_servic: Thread[5,tid=30987,WaitingInMainSignalCatcherLoop,Thread*=0x237ca8a010,peer=0x12d000b0,"Signal Catcher"]: reacting to signal 3
+12-21 09:57:43.817 30975 30987 I irtuner_servic: 
+12-21 09:57:43.859  3334  3334 I tombstoned: received crash request for pid 30975
+12-21 09:57:43.859  3334  3334 I tombstoned: found intercept fd 512 for pid 30975 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.859 30975 30987 I irtuner_servic: Wrote stack traces to tombstoned
+12-21 09:57:43.860 30841 28691 I system_server: libdebuggerd_client: done dumping process 30975
+12-21 09:57:43.861 30841 28691 I ActivityManager: Collecting stacks for pid 30957
+12-21 09:57:43.862 30841 28691 I system_server: libdebuggerd_client: started dumping process 30957
+12-21 09:57:43.862  3334  3334 I tombstoned: registered intercept for pid 30957 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.862 30957 30969 I ieldtech.syste: Thread[4,tid=30969,WaitingInMainSignalCatcherLoop,Thread*=0x237ca962c0,peer=0x12f400b0,"Signal Catcher"]: reacting to signal 3
+12-21 09:57:43.862 30957 30969 I ieldtech.syste: 
+12-21 09:57:43.909  3334  3334 I tombstoned: received crash request for pid 30957
+12-21 09:57:43.909  3334  3334 I tombstoned: found intercept fd 512 for pid 30957 and type kDebuggerdJavaBacktrace
+12-21 09:57:43.909 30957 30969 I ieldtech.syste: Wrote stack traces to tombstoned
+12-21 09:57:43.910 30841 28691 I system_server: libdebuggerd_client: done dumping process 30957
+12-21 09:57:43.911 30841 28691 I ActivityManager: Collecting stacks for native pid 2884
+12-21 09:57:43.911 30841 28691 I system_server: libdebuggerd_client: started dumping process 2884
+12-21 09:57:43.911  3334  3334 I tombstoned: registered intercept for pid 2884 and type kDebuggerdNativeBacktrace
+12-21 09:57:43.911  2884  2884 I libc    : Requested dump for tid 2884 (Binder:2884_2)
+12-21 09:57:43.939 28697 28697 W crash_dump64: type=1400 audit(0.0:115990): avc: denied { ptrace } for scontext=u:r:crash_dump:s0 tcontext=u:r:vold:s0 tclass=process permissive=0
+12-21 09:57:43.945 28697 28697 F crash_dump64: crash_dump.cpp:474] failed to attach to thread 2884: Permission denied
+12-21 09:57:43.945  3334  3334 I tombstoned: received crash request for pid 2884
+12-21 09:57:43.945  3334  3334 I tombstoned: found registered intercept of type kDebuggerdNativeBacktrace for requested type kDebuggerdAnyIntercept
+12-21 09:57:43.945  3334  3334 I tombstoned: found intercept fd 512 for pid 2884 and type kDebuggerdNativeBacktrace
+12-21 09:57:43.946 30841 28691 I system_server: libdebuggerd_client: done dumping process 2884
+12-21 09:57:43.946  3334  3334 W tombstoned: crash socket received short read of length 0 (expected 12)
+12-21 09:57:43.965 30841 28691 I ActivityManager: Collecting stacks for native pid 3345
+12-21 09:57:43.966 30841 28691 I system_server: libdebuggerd_client: started dumping process 3345
+12-21 09:57:43.967  3334  3334 I tombstoned: registered intercept for pid 3345 and type kDebuggerdNativeBacktrace
+12-21 09:57:43.967  3345  3345 I libc    : Requested dump for tid 3345 (Binder:3345_2)
+12-21 09:57:43.985 28700 28700 I crash_dump64: obtaining output fd from tombstoned, type: kDebuggerdNativeBacktrace
+12-21 09:57:43.985  3334  3334 I tombstoned: received crash request for pid 3345
+12-21 09:57:43.985  3334  3334 I tombstoned: found intercept fd 512 for pid 3345 and type kDebuggerdNativeBacktrace
+12-21 09:57:43.985 28700 28700 I crash_dump64: performing dump of process 3345 (target tid = 3345)
+12-21 09:57:44.002 30841 28691 I system_server: libdebuggerd_client: done dumping process 3345
+12-21 09:57:44.003 30841 28691 I ActivityManager: Collecting stacks for native pid 3550
+12-21 09:57:44.004 30841 28691 I system_server: libdebuggerd_client: started dumping process 3550
+12-21 09:57:44.005  3334  3334 I tombstoned: registered intercept for pid 3550 and type kDebuggerdNativeBacktrace
+12-21 09:57:44.005  3550  3550 I libc    : Requested dump for tid 3550 (drmserver)
+12-21 09:57:44.034 28705 28705 I crash_dump32: obtaining output fd from tombstoned, type: kDebuggerdNativeBacktrace
+12-21 09:57:44.035  3334  3334 I tombstoned: received crash request for pid 3550
+12-21 09:57:44.035  3334  3334 I tombstoned: found intercept fd 512 for pid 3550 and type kDebuggerdNativeBacktrace
+12-21 09:57:44.035 28705 28705 I crash_dump32: performing dump of process 3550 (target tid = 3550)
+12-21 09:57:44.053 30841 28691 I system_server: libdebuggerd_client: done dumping process 3550
+12-21 09:57:44.054 30841 28691 I ActivityManager: Collecting stacks for native pid 3574
+12-21 09:57:44.055 30841 28691 I system_server: libdebuggerd_client: started dumping process 3574
+12-21 09:57:44.055  3334  3334 I tombstoned: registered intercept for pid 3574 and type kDebuggerdNativeBacktrace
+12-21 09:57:44.057  3334  3334 I tombstoned: received crash request for pid 3574
+12-21 09:57:44.057  3334  3334 I tombstoned: found intercept fd 512 for pid 3574 and type kDebuggerdNativeBacktrace
+12-21 09:57:44.102 30841 28691 I system_server: libdebuggerd_client: done dumping process 3574
+12-21 09:57:44.103 30841 28691 I ActivityManager: Collecting stacks for native pid 3575
+12-21 09:57:44.104 30841 28691 I system_server: libdebuggerd_client: started dumping process 3575
+12-21 09:57:44.104  3334  3334 I tombstoned: registered intercept for pid 3575 and type kDebuggerdNativeBacktrace
+12-21 09:57:44.104  3575  3575 I libc    : Requested dump for tid 3575 (mediametrics)
+12-21 09:57:44.119 28710 28710 I crash_dump64: obtaining output fd from tombstoned, type: kDebuggerdNativeBacktrace
+12-21 09:57:44.119  3334  3334 I tombstoned: received crash request for pid 3575
+12-21 09:57:44.119  3334  3334 I tombstoned: found intercept fd 512 for pid 3575 and type kDebuggerdNativeBacktrace
+12-21 09:57:44.119 28710 28710 I crash_dump64: performing dump of process 3575 (target tid = 3575)
+12-21 09:57:44.154 30841 28691 I system_server: libdebuggerd_client: done dumping process 3575
+12-21 09:57:44.155 30841 28691 I ActivityManager: Collecting stacks for native pid 3586
+12-21 09:57:44.156 30841 28691 I system_server: libdebuggerd_client: started dumping process 3586
+12-21 09:57:44.157  3334  3334 I tombstoned: registered intercept for pid 3586 and type kDebuggerdNativeBacktrace
+12-21 09:57:44.157  3334  3334 I tombstoned: received crash request for pid 3586
+12-21 09:57:44.157  3334  3334 I tombstoned: found intercept fd 512 for pid 3586 and type kDebuggerdNativeBacktrace
+12-21 09:57:44.483 30841 28691 I system_server: libdebuggerd_client: done dumping process 3586
+12-21 09:57:44.485 30841 28691 I ActivityManager: Collecting stacks for native pid 3591
+12-21 09:57:44.486 30841 28691 I system_server: libdebuggerd_client: started dumping process 3591
+12-21 09:57:44.486  3334  3334 I tombstoned: registered intercept for pid 3591 and type kDebuggerdNativeBacktrace
+12-21 09:57:44.486  3334  3334 I tombstoned: received crash request for pid 3591
+12-21 09:57:44.486  3334  3334 I tombstoned: found intercept fd 512 for pid 3591 and type kDebuggerdNativeBacktrace
+12-21 09:57:44.553 30841 28691 I system_server: libdebuggerd_client: done dumping process 3591
+12-21 09:57:44.554 30841 28691 I ActivityManager: Collecting stacks for native pid 30747
+12-21 09:57:44.555 30841 28691 I system_server: libdebuggerd_client: started dumping process 30747
+12-21 09:57:44.556  3334  3334 I tombstoned: registered intercept for pid 30747 and type kDebuggerdNativeBacktrace
+12-21 09:57:44.556 30747 30747 I libc    : Requested dump for tid 30747 (audioserver)
+12-21 09:57:44.574 28715 28715 I crash_dump64: obtaining output fd from tombstoned, type: kDebuggerdNativeBacktrace
+12-21 09:57:44.574  3334  3334 I tombstoned: received crash request for pid 30747
+12-21 09:57:44.574  3334  3334 I tombstoned: found intercept fd 512 for pid 30747 and type kDebuggerdNativeBacktrace
+12-21 09:57:44.574 28715 28715 I crash_dump64: performing dump of process 30747 (target tid = 30747)
+12-21 09:57:44.617 30841 28691 I system_server: libdebuggerd_client: done dumping process 30747
+12-21 09:57:44.618 30841 28691 I ActivityManager: Collecting stacks for native pid 30748
+12-21 09:57:44.619 30841 28691 I system_server: libdebuggerd_client: started dumping process 30748
+12-21 09:57:44.619 26380 28694 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:44.619 26380 28694 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:44.619 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:44.620 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:44.620 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:44.620  3334  3334 I tombstoned: registered intercept for pid 30748 and type kDebuggerdNativeBacktrace
+12-21 09:57:44.625 30748 30748 I libc    : Requested dump for tid 30748 (cameraserver)
+12-21 09:57:44.641 28720 28720 I crash_dump32: obtaining output fd from tombstoned, type: kDebuggerdNativeBacktrace
+12-21 09:57:44.641  3334  3334 I tombstoned: received crash request for pid 30748
+12-21 09:57:44.641  3334  3334 I tombstoned: found intercept fd 512 for pid 30748 and type kDebuggerdNativeBacktrace
+12-21 09:57:44.641 28720 28720 I crash_dump32: performing dump of process 30748 (target tid = 30748)
+12-21 09:57:44.649 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:44.650 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:44.650 26380 28723 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:44.670 30841 28691 I system_server: libdebuggerd_client: done dumping process 30748
+12-21 09:57:44.671 30841 28691 I ActivityManager: Collecting stacks for native pid 30749
+12-21 09:57:44.672 30841 28691 I system_server: libdebuggerd_client: started dumping process 30749
+12-21 09:57:44.672  3334  3334 I tombstoned: registered intercept for pid 30749 and type kDebuggerdNativeBacktrace
+12-21 09:57:44.673 30749 30749 I libc    : Requested dump for tid 30749 (mediaserver)
+12-21 09:57:44.692 28727 28727 I crash_dump32: obtaining output fd from tombstoned, type: kDebuggerdNativeBacktrace
+12-21 09:57:44.692  3334  3334 I tombstoned: received crash request for pid 30749
+12-21 09:57:44.692  3334  3334 I tombstoned: found intercept fd 512 for pid 30749 and type kDebuggerdNativeBacktrace
+12-21 09:57:44.692 28727 28727 I crash_dump32: performing dump of process 30749 (target tid = 30749)
+12-21 09:57:44.703 17363 17456 W cast_shell: [1221/095744.698188:WARNING:mdns_socket.cc(568)] mDNS socket could not send message: err=ERR_ADDRESS_UNREACHABLE
+12-21 09:57:44.703 17363 17456 W cast_shell: [1221/095744.703688:WARNING:mdns_socket.cc(568)] mDNS socket could not send message: err=ERR_ADDRESS_UNREACHABLE
+12-21 09:57:44.704 17363 17456 I cast_shell: [1221/095744.704195:INFO:mdns_app_filter.cc(3358)] MdnsAppFilter: responses sent in 96 seconds: 3
+12-21 09:57:44.719 30841 28691 I system_server: libdebuggerd_client: done dumping process 30749
+12-21 09:57:44.720 30841 28691 I ActivityManager: Collecting stacks for native pid 30750
+12-21 09:57:44.720 30841 28691 I system_server: libdebuggerd_client: started dumping process 30750
+12-21 09:57:44.721  3334  3334 I tombstoned: registered intercept for pid 30750 and type kDebuggerdNativeBacktrace
+12-21 09:57:44.724 30750 30750 I libc    : Requested dump for tid 30750 (Binder:30750_3)
+12-21 09:57:44.740 28732 28732 I crash_dump64: obtaining output fd from tombstoned, type: kDebuggerdNativeBacktrace
+12-21 09:57:44.740  3334  3334 I tombstoned: received crash request for pid 30750
+12-21 09:57:44.740  3334  3334 I tombstoned: found intercept fd 512 for pid 30750 and type kDebuggerdNativeBacktrace
+12-21 09:57:44.740 28732 28732 I crash_dump64: performing dump of process 30750 (target tid = 30750)
+12-21 09:57:44.786 30841 28691 I system_server: libdebuggerd_client: done dumping process 30750
+12-21 09:57:44.787 30841 28691 I ActivityManager: Collecting stacks for native pid 30751
+12-21 09:57:44.788 30841 28691 I system_server: libdebuggerd_client: started dumping process 30751
+12-21 09:57:44.788  3334  3334 I tombstoned: registered intercept for pid 30751 and type kDebuggerdNativeBacktrace
+12-21 09:57:44.792 30751 30751 I libc    : Requested dump for tid 30751 (surfaceflinger)
+12-21 09:57:44.818 28737 28737 I crash_dump64: obtaining output fd from tombstoned, type: kDebuggerdNativeBacktrace
+12-21 09:57:44.819  3334  3334 I tombstoned: received crash request for pid 30751
+12-21 09:57:44.819  3334  3334 I tombstoned: found intercept fd 512 for pid 30751 and type kDebuggerdNativeBacktrace
+12-21 09:57:44.819 28737 28737 I crash_dump64: performing dump of process 30751 (target tid = 30751)
+12-21 09:57:44.867 30841 28691 I system_server: libdebuggerd_client: done dumping process 30751
+12-21 09:57:44.873 30841 28691 I ActivityManager: Collecting stacks for native pid 31005
+12-21 09:57:44.875 30841 28691 I system_server: libdebuggerd_client: started dumping process 31005
+12-21 09:57:44.875  3334  3334 I tombstoned: registered intercept for pid 31005 and type kDebuggerdNativeBacktrace
+12-21 09:57:44.875 31005 31005 I libc    : Requested dump for tid 31005 (droid.bluetooth)
+12-21 09:57:44.923 28742 28742 I crash_dump64: obtaining output fd from tombstoned, type: kDebuggerdNativeBacktrace
+12-21 09:57:44.923  3334  3334 I tombstoned: received crash request for pid 31005
+12-21 09:57:44.924  3334  3334 I tombstoned: found intercept fd 512 for pid 31005 and type kDebuggerdNativeBacktrace
+12-21 09:57:44.924 28742 28742 I crash_dump64: performing dump of process 31005 (target tid = 31005)
+12-21 09:57:45.227 30841 28691 I system_server: libdebuggerd_client: done dumping process 31005
+12-21 09:57:45.243 30841 28691 I ActivityManager: Collecting stacks for extra pid 28500
+12-21 09:57:45.243 30841 28691 W system_server: libdebuggerd_client: Failed to get process tids
+12-21 09:57:45.243 30841 28691 E system_server: libdebugged_client: failed to get process info: failed to open /proc/28500
+12-21 09:57:45.243 30841 28691 W ActivityManager: Dumping Java threads failed, initiating native stack dump.
+12-21 09:57:45.243 30841 28691 W system_server: libdebuggerd_client: Failed to get process tids
+12-21 09:57:45.243 30841 28691 I system_server: libdebuggerd_client: started dumping process 28500
+12-21 09:57:45.244  3334  3334 I tombstoned: registered intercept for pid 28500 and type kDebuggerdNativeBacktrace
+12-21 09:57:45.244 30841 28691 E system_server: libdebuggerd_client: failed to send signal to pid 28500: No such process
+12-21 09:57:45.244  3334  3334 I tombstoned: intercept for pid 28500 and type kDebuggerdNativeBacktrace terminated: due to input
+12-21 09:57:45.244 30841 28691 W ActivityManager: Native stack dump failed!
+12-21 09:57:45.244 30841 28691 I ActivityManager: Done dumping
+12-21 09:57:45.245 30841 28691 E ActivityManager: ANR in com.risa.app (com.risa.app/.MainActivity)
+12-21 09:57:45.245 30841 28691 E ActivityManager: PID: 28604
+12-21 09:57:45.245 30841 28691 E ActivityManager: Reason: Input dispatching timed out (5fad0bc com.risa.app/com.risa.app.MainActivity (server) is not responding. Waited 5000ms for KeyEvent)
+12-21 09:57:45.245 30841 28691 E ActivityManager: Parent: com.risa.app/.MainActivity
+12-21 09:57:45.245 30841 28691 E ActivityManager: Load: 1.24 / 0.69 / 0.64
+12-21 09:57:45.245 30841 28691 E ActivityManager: CPU usage from 49423ms to 0ms ago (2025-12-21 09:56:52.383 to 2025-12-21 09:57:41.805):
+12-21 09:57:45.245 30841 28691 E ActivityManager:   13% 16991/com.spocky.projengmenu: 10% user + 3% kernel / faults: 18848 minor 35 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   6.7% 30751/surfaceflinger: 3.8% user + 2.8% kernel / faults: 2389 minor 23 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   5.3% 3383/vendor.nvidia.hardware.graphics.composer@2.0-service: 3.5% user + 1.8% kernel / faults: 1069 minor 10 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   3.9% 30841/system_server: 1.6% user + 2.2% kernel / faults: 29138 minor 284 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   2.2% 4438/nvphsd: 1% user + 1.1% kernel / faults: 142 minor 4 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   1.9% 879/kswapd0: 0% user + 1.9% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   1.6% 1666/mmcqd/0: 0% user + 1.6% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   1.3% 1093/tegradc.0/a: 0% user + 1.3% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0.9% 13964/com.google.android.gms.persistent: 0.2% user + 0.7% kernel / faults: 5012 minor 60 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0.9% 650/ksmd: 0% user + 0.9% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 3586/media.codec: 0% user + 0% kernel / faults: 10815 minor 4 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0.5% 24142/kworker/u8:2: 0% user + 0.5% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0.5% 3645/nvgpu_channel_p: 0% user + 0.5% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0.4% 3389/vendor.nvidia.hardware.power@1.0-service: 0.1% user + 0.3% kernel / faults: 170 minor 4 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0.4% 832/irq/65-host_syn: 0% user + 0.4% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0.3% 27063/kworker/u8:8: 0% user + 0.3% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0.2% 1104/irq/68-tegradc.: 0% user + 0.2% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0.2% 1161/nvmap-bz: 0% user + 0.2% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0.2% 31024/com.android.systemui: 0.1% user + 0.1% kernel / faults: 6401 minor 8 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 31163/com.android.tv.settings: 0% user + 0% kernel / faults: 5141 minor 1 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0.1% 2875/lmkd: 0% user + 0.1% kernel / faults: 53 minor
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0.1% 26380/adbd: 0.1% user + 0% kernel / faults: 636 minor 1 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0.1% 2874/logd: 0% user + 0% kernel / faults: 189 minor 1 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0.1% 30957/com.nvidia.shieldtech.system: 0% user + 0% kernel / faults: 3429 minor 6 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0.1% 31784/com.nvidia.NvCPLSvc: 0% user + 0% kernel / faults: 2975 minor 11 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0.1% 3443/sugov:0: 0% user + 0.1% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 3574/media.extractor: 0% user + 0% kernel / faults: 1760 minor 1 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0.1% 25735/kworker/1:0: 0% user + 0.1% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0.1% 26109/kworker/3:1: 0% user + 0.1% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0.1% 26679/kworker/0:3: 0% user + 0.1% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 31644/com.nvidia.blakepairing: 0% user + 0% kernel / faults: 2969 minor 5 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 31671/com.nvidia.bluetooth.ShieldBluetoothManager: 0% user + 0% kernel / faults: 2701 minor 1 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 31709/com.dolby.android.audio.service: 0% user + 0% kernel / faults: 2528 minor 3 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 31747/com.nvidia.shieldtech.accessoryui: 0% user + 0% kernel / faults: 2467 minor 4 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 31799/com.nvidia.wifi.countrycode: 0% user + 0% kernel / faults: 2522 minor 1 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 31822/com.nvidia.shield.remote.server: 0% user + 0% kernel / faults: 2464 minor 6 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 31885/com.nvidia.shieldservice: 0% user + 0% kernel / faults: 2541 minor 1 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 31905/com.nvidia.osc: 0% user + 0% kernel / faults: 2436 minor 6 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 31928/com.nvidia.app.messaging: 0% user + 0% kernel / faults: 2613 minor 6 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 3591/media.swcodec: 0% user + 0% kernel / faults: 2034 minor 5 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 17363/com.google.android.apps.mediashell: 0% user + 0% kernel / faults: 2017 minor 9 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 30747/audioserver: 0% user + 0% kernel / faults: 425 minor 4 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 30975/com.nvidia.irtuner:irtuner_service: 0% user + 0% kernel / faults: 2628 minor 2 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 31005/com.android.bluetooth: 0% user + 0% kernel / faults: 778 minor
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 31281/com.nvidia.nvaudiosvc: 0% user + 0% kernel / faults: 2286 minor 1 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 31304/com.android.se: 0% user + 0% kernel / faults: 2318 minor 1 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 31849/com.nvidia.irtuner: 0% user + 0% kernel / faults: 2219 minor 1 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 31958/com.nvidia.nvgamecast: 0% user + 0% kernel / faults: 2313 minor 6 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 1/init: 0% user + 0% kernel / faults: 226 minor 7 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 3369/android.hardware.graphics.allocator@2.0-service: 0% user + 0% kernel / faults: 114 minor 3 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 17293/com.google.android.katniss:interactor: 0% user + 0% kernel / faults: 802 minor 1 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 24722/kworker/u8:7: 0% user + 0% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 27062/kworker/u8:6: 0% user + 0% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 28022/com.google.android.tv: 0% user + 0% kernel / faults: 1245 minor 9 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 7/rcu_preempt: 0% user + 0% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 2876/servicemanager: 0% user + 0% kernel / faults: 154 minor 2 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 2877/hwservicemanager: 0% user + 0% kernel / faults: 187 minor 6 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 3334/tombstoned: 0% user + 0% kernel / faults: 165 minor
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 19152/com.android.vending: 0% user + 0% kernel / faults: 883 minor 18 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 24928/kworker/u8:0: 0% user + 0% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 25239/com.google.android.inputmethod.latin: 0% user + 0% kernel / faults: 1509 minor 8 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 28204/com.google.android.katniss:search: 0% user + 0% kernel / faults: 2405 minor 40 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 30745/zygote64: 0% user + 0% kernel / faults: 1169 minor 1 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 30753/android.hardware.audio.service: 0% user + 0% kernel / faults: 99 minor 5 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 2/kthreadd: 0% user + 0% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 3/ksoftirqd/0: 0% user + 0% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 8/rcu_sched: 0% user + 0% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 10/migration/0: 0% user + 0% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 648/kcompactd0: 0% user + 0% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 1511/kworker/0:1H: 0% user + 0% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 2978/jbd2/mmcblk0p32: 0% user + 0% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 3345/statsd: 0% user + 0% kernel / faults: 246 minor 2 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 3374/android.hardware.wifi@1.0-service: 0% user + 0% kernel / faults: 191 minor
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 3400/gpuservice: 0% user + 0% kernel / faults: 1365 minor 26 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 3575/media.metrics: 0% user + 0% kernel / faults: 497 minor 3 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 24174/kworker/u8:4: 0% user + 0% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 27762/com.google.android.tvrecommendations: 0% user + 0% kernel / faults: 283 minor
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 27863/kworker/2:2: 0% user + 0% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 30750/netd: 0% user + 0% kernel / faults: 279 minor 2 major
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 30754/android.hardware.audio@6.0-service-msd: 0% user + 0% kernel / faults: 144 minor
+12-21 09:57:45.245 30841 28691 E ActivityManager:   0% 31506/irq/402-brcmf_p: 0% user + 0% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:  +0% 28434/kworker/u8:1: 0% user + 0% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:  +0% 28435/kworker/u8:3: 0% user + 0% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:  +0% 28437/kworker/u8:5: 0% user + 0% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:  +0% 28438/kworker/u8:9: 0% user + 0% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:  +0% 28440/kworker/u8:10: 0% user + 0% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:  +0% 28445/crash_dump64: 0% user + 0% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:  +0% 28500/com.google.android.gms: 0% user + 0% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:  +0% 28507/com.android.providers.tv: 0% user + 0% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:  +0% 28604/com.risa.app: 0% user + 0% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:  +0% 28639/kworker/2:1: 0% user + 0% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager: 24% TOTAL: 14% user + 7.2% kernel + 2% iowait + 0.4% irq + 0.1% softirq
+12-21 09:57:45.245 30841 28691 E ActivityManager: CPU usage from 35ms to 452ms later (2025-12-21 09:57:41.840 to 2025-12-21 09:57:42.257):
+12-21 09:57:45.245 30841 28691 E ActivityManager:   101% 28604/com.risa.app: 79% user + 21% kernel / faults: 24815 minor
+12-21 09:57:45.245 30841 28691 E ActivityManager:     101% 28604/com.risa.app: 79% user + 21% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   22% 30841/system_server: 11% user + 11% kernel / faults: 137 minor
+12-21 09:57:45.245 30841 28691 E ActivityManager:     22% 28691/AnrConsumer: 11% user + 11% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager:   3.5% 28500/com.google.android.gms: 3.5% user + 0% kernel / faults: 95 minor
+12-21 09:57:45.245 30841 28691 E ActivityManager:     3.5% 28534/HeapTaskDaemon: 3.5% user + 0% kernel
+12-21 09:57:45.245 30841 28691 E ActivityManager: 43% TOTAL: 29% user + 11% kernel + 1.8% iowait + 0.6% irq
+12-21 09:57:45.263 30841 28691 D ActivityManager: Completed ANR of com.risa.app in 3458ms, latency 1ms
+12-21 09:57:45.264 30841 30857 W ActivityTaskManager:   Force finishing activity com.risa.app/.MainActivity
+12-21 09:57:45.269 30841 28745 I DropBoxManagerService: add tag=data_app_anr isTagEnabled=true flags=0x2
+12-21 09:57:45.308 30841  2515 E libc    : Access denied finding property "ro.vendor.sys.NV_ASYNC"
+12-21 09:57:45.308 30841  2515 E libc    : Access denied finding property "ro.vendor.sys.NV_LOGFPS"
+12-21 09:57:45.308 30841  2515 E libc    : Access denied finding property "ro.vendor.sys.NV_PROCESS_NAME"
+12-21 09:57:45.308 30841  2515 E libc    : Access denied finding property "ro.vendor.sys.NV_FPSDYNAMIC"
+12-21 09:57:45.315 30841 30857 I ActivityManager: Killing 28604:com.risa.app/u0a270 (adj 0): user request after error
+12-21 09:57:45.318 30841 30864 V RescueParty: Disabled because of manual property
+12-21 09:57:45.356 30841 30865 W BroadcastQueue: Background execution not allowed: receiving Intent { act=android.intent.action.DROPBOX_ENTRY_ADDED flg=0x10 (has extras) } to com.google.android.gms/.stats.service.DropBoxEntryAddedReceiver
+12-21 09:57:45.356 30841 30865 W BroadcastQueue: Background execution not allowed: receiving Intent { act=android.intent.action.DROPBOX_ENTRY_ADDED flg=0x10 (has extras) } to com.nvidia.stats/.CollectionsReceiver
+12-21 09:57:45.370 17363 17456 W cast_shell: [1221/095745.369989:WARNING:mdns_socket.cc(568)] mDNS socket could not send message: err=ERR_ADDRESS_UNREACHABLE
+12-21 09:57:45.375 30841 30841 W RenderThread: type=1400 audit(0.0:115991): avc: denied { execute } for path=2F6D656D66643A2F2E676C585858585858202864656C6574656429 dev="tmpfs" ino=5185932 scontext=u:r:system_server:s0 tcontext=u:object_r:system_server_tmpfs:s0 tclass=file permissive=0
+12-21 09:57:45.375 30841 30841 W RenderThread: type=1400 audit(0.0:115992): avc: denied { execute } for path=2F6D656D66643A2F2E676C585858585858202864656C6574656429 dev="tmpfs" ino=5185933 scontext=u:r:system_server:s0 tcontext=u:object_r:system_server_tmpfs:s0 tclass=file permissive=0
+12-21 09:57:45.412 16991 17033 I TRuntime.CctTransportBackend: Making request to: https://firebaselogging-pa.googleapis.com/v1/firelog/legacy/batchlog
+12-21 09:57:45.443 31024 31038 I ndroid.systemu: NativeAlloc concurrent copying GC freed 4469(256KB) AllocSpace objects, 0(0B) LOS objects, 49% free, 2562KB/5125KB, paused 72us total 126.124ms
+12-21 09:57:45.444 31024 31040 W System  : A resource failed to call release. 
+12-21 09:57:45.444 31024 31040 W System  : A resource failed to call release. 
+12-21 09:57:45.530 30841 31856 I WindowManager: WIN DEATH: Window{5fad0bc u0 com.risa.app/com.risa.app.MainActivity}
+12-21 09:57:45.530 30841 31856 W InputDispatcher: Attempted to unregister already unregistered input channel '5fad0bc com.risa.app/com.risa.app.MainActivity (server)'
+12-21 09:57:45.535 30841 31858 W WindowManager: Cannot find window which accessibility connection is added to
+12-21 09:57:45.536 30745 30745 I Zygote  : Process 28604 exited due to signal 9 (Killed)
+12-21 09:57:45.541 30841 30867 I libprocessgroup: Successfully killed process cgroup uid 10270 pid 28604 in 224ms
+12-21 09:57:45.578 30841  8217 I android_os_HwBinder: HwBinder: Starting thread pool for getting: vendor.nvidia.hardware.graphics.display@1.0::INvDisplay/default
+12-21 09:57:45.581 30841 30859 W ActivityManager: setHasOverlayUi called on unknown pid: 28604
+12-21 09:57:45.590 31784 31831 I android_os_HwBinder: HwBinder: Starting thread pool for getting: vendor.nvidia.hardware.power@1.0::IPower/default
+12-21 09:57:45.604 16991 16991 D FirebaseSessions: App foregrounded on com.spocky.projengmenu
+12-21 09:57:45.604 30841  8217 D ConnectivityService: requestNetwork for uid/pid:10025/16991 NetworkRequest [ TRACK_DEFAULT id=871, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED Uid: 10025 AdministratorUids: [] RequestorUid: 10025 RequestorPackageName: com.spocky.projengmenu] ]
+12-21 09:57:45.605 30841 30919 D ConnectivityService: NetReassign [871 : null → 107]
+12-21 09:57:45.605 30841 30913 D UntrustedWifiNetworkFactory: got request NetworkRequest [ TRACK_DEFAULT id=871, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED Uid: 10025 AdministratorUids: [] RequestorUid: 10025 RequestorPackageName: com.spocky.projengmenu] ] with score 60 and providerId 2
+12-21 09:57:45.605 30841 30951 D Ethernet: got request NetworkRequest [ TRACK_DEFAULT id=871, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED Uid: 10025 AdministratorUids: [] RequestorUid: 10025 RequestorPackageName: com.spocky.projengmenu] ] with score 60 and providerId 2
+12-21 09:57:45.605 30841 30913 D WifiNetworkFactory: got request NetworkRequest [ TRACK_DEFAULT id=871, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED Uid: 10025 AdministratorUids: [] RequestorUid: 10025 RequestorPackageName: com.spocky.projengmenu] ] with score 60 and providerId 2
+12-21 09:57:45.607 30841 31858 I NvUtils : onActivityResumed AM packageName = com.spocky.projengmenu
+12-21 09:57:45.608 30841 31858 E AudioSystem-JNI: Command failed for android_media_AudioSystem_setParameters: -22
+12-21 09:57:45.608 30841 31858 E AudioSystem-JNI: Command failed for android_media_AudioSystem_setParameters: -22
+12-21 09:57:45.609 30841  8217 D CompatibilityChangeReporter: Compat change id reported: 135634846; UID 10005; state: DISABLED
+12-21 09:57:45.609 30841 30866 D CompatibilityChangeReporter: Compat change id reported: 143937733; UID 10005; state: ENABLED
+12-21 09:57:45.619 30745 30745 D Zygote  : Forked child process 28751
+12-21 09:57:45.620 16991 17057 E libc    : Access denied finding property "ro.vendor.sys.NV_ASYNC"
+12-21 09:57:45.620 16991 17057 E libc    : Access denied finding property "ro.vendor.sys.NV_LOGFPS"
+12-21 09:57:45.620 16991 17057 E libc    : Access denied finding property "ro.vendor.sys.NV_PROCESS_NAME"
+12-21 09:57:45.620 16991 17057 E libc    : Access denied finding property "ro.vendor.sys.NV_FPSDYNAMIC"
+12-21 09:57:45.621 30841 30866 I ActivityManager: Start proc 28751:com.google.android.gms/u0a5 for service {com.google.android.gms/com.google.android.gms.measurement.service.MeasurementBrokerService}
+12-21 09:57:45.636 30841 31858 D CompatibilityChangeReporter: Compat change id reported: 135634846; UID 10035; state: DISABLED
+12-21 09:57:45.636 30841 30866 D CompatibilityChangeReporter: Compat change id reported: 143937733; UID 10035; state: ENABLED
+12-21 09:57:45.646 30745 30745 D Zygote  : Forked child process 28757
+12-21 09:57:45.649 30841 30866 I ActivityManager: Start proc 28757:com.android.providers.tv/u0a35 for content provider {com.android.providers.tv/com.android.providers.tv.TvProvider}
+12-21 09:57:45.651 26380 28723 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:45.651 26380 28723 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:45.651 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:45.651 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:45.651 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:45.656 25239 25239 I GoogleInputMethodService: GoogleInputMethodService.onFinishInput():2084 
+12-21 09:57:45.657 25239 25239 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatus():101 repeatCheckTimes = 0, locked = false
+12-21 09:57:45.658 25239 25239 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1345 onStartInput(EditorInfo{EditorInfo{packageName=com.spocky.projengmenu, inputType=0, inputTypeString=NULL, enableLearning=false, autoCorrection=false, autoComplete=false, imeOptions=0, privateImeOptions=null, actionName=UNSPECIFIED, actionLabel=null, initialSelStart=-1, initialSelEnd=-1, initialCapsMode=0, label=null, fieldId=-1, fieldName=null, extras=null, hintText=null, hintLocales=[]}}, false)
+12-21 09:57:45.659 25239 25239 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatus():101 repeatCheckTimes = 1, locked = false
+12-21 09:57:45.659 28751 28751 E gle.android.gm: Not starting debugger since process cannot load the jdwp agent.
+12-21 09:57:45.673 28757 28757 E id.providers.t: Not starting debugger since process cannot load the jdwp agent.
+12-21 09:57:45.683 17363 17456 W cast_shell: [1221/095745.683290:WARNING:mdns_socket.cc(568)] mDNS socket could not send message: err=ERR_ADDRESS_UNREACHABLE
+12-21 09:57:45.689 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:45.690 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:45.690 26380 28788 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:45.698 17363 17456 W cast_shell: [1221/095745.698143:WARNING:mdns_socket.cc(568)] mDNS socket could not send message: err=ERR_ADDRESS_UNREACHABLE
+12-21 09:57:45.706 28757 28757 D NetworkSecurityConfig: No Network Security Config specified, using platform default
+12-21 09:57:45.706 28757 28757 D NetworkSecurityConfig: No Network Security Config specified, using platform default
+12-21 09:57:45.734 28751 28751 W gle.android.gm: JIT profile information will not be recorded: profile file does not exist.
+12-21 09:57:45.735 28751 28751 W gle.android.gm: JIT profile information will not be recorded: profile file does not exist.
+12-21 09:57:45.758 28751 28751 D NetworkSecurityConfig: Using Network Security Config from resource network_security_config debugBuild: false
+12-21 09:57:45.761 28751 28751 D NetworkSecurityConfig: Using Network Security Config from resource network_security_config debugBuild: false
+12-21 09:57:45.770 30841 30859 W ActivityTaskManager: Activity top resumed state loss timeout for ActivityRecord{e98b782 u0 com.risa.app/.MainActivity t-1 f}}
+12-21 09:57:45.901 28751 28751 I GmsApplication: Using GservicesReaderQueryDelegate
+12-21 09:57:45.903 28751 28751 I GmsApplication: Using GoogleSettingsReaderQueryDelegate
+12-21 09:57:45.938 28751 28751 W ProviderHelper: Unknown dynamite feature providerinstaller.dynamite
+12-21 09:57:45.939 28751 28751 I DynamiteModule: Considering local module com.google.android.gms.providerinstaller.dynamite:1 and remote module com.google.android.gms.providerinstaller.dynamite:0
+12-21 09:57:45.939 28751 28751 I DynamiteModule: Selected local version of com.google.android.gms.providerinstaller.dynamite
+12-21 09:57:45.950 28751 28751 V NativeCrypto: Registering com/google/android/gms/org/conscrypt/NativeCrypto's 329 native methods...
+12-21 09:57:45.972 28751 28751 I ProviderInstaller: Installed default security provider GmsCore_OpenSSL
+12-21 09:57:45.978 13964 13964 D BoundBrokerSvc: onRebind: Intent { act=com.google.android.gms.libs.gmscorelogger.service.START dat=chimera-action: cmp=com.google.android.gms/.chimera.PersistentDirectBootAwareApiService }
+12-21 09:57:45.984 28751 28800 W DataCollectionRegistryV: DataCollectionRegistryFullEntries is missing
+12-21 09:57:45.984 28751 28800 W DataCollectionRegistryV: DataCollectionRpcMethodNameCollectionDefinition is missing
+12-21 09:57:46.036 28751 28807 I Watchcat: Started
+12-21 09:57:46.037 28751 28807 I GMS_MM_Logger: (REDACTED) Start time: %s
+12-21 09:57:46.038 28751 28807 I GMS_MM_Logger: Started.
+12-21 09:57:46.043 28751 28751 D BoundBrokerSvc: onBind: Intent { act=com.google.android.gms.measurement.START pkg=com.google.android.gms }
+12-21 09:57:46.043 28751 28751 D BoundBrokerSvc: Loading bound service for intent: Intent { act=com.google.android.gms.measurement.START pkg=com.google.android.gms }
+12-21 09:57:46.053 28751 28774 I DynamiteModule: Considering local module com.google.android.gms.googlecertificates:7 and remote module com.google.android.gms.googlecertificates:0
+12-21 09:57:46.053 28751 28774 I DynamiteModule: Selected local version of com.google.android.gms.googlecertificates
+12-21 09:57:46.062 28751 28774 W GoogleCertificates: GoogleCertificates has been initialized already
+12-21 09:57:46.092 28751 28814 I FA-SVC  : App measurement initialized, version: 254932
+12-21 09:57:46.136 28751 28799 W TracingHelper: No RequestContext found in the trace or trace not available. [CONTEXT service_id=259 ratelimit_count=100000 ]
+12-21 09:57:46.178 28751 28814 I TetheringManager: registerTetheringEventCallback:com.google.android.gms
+12-21 09:57:46.188 13964 28802 I NetworkScheduler: (REDACTED) Error inserting %s
+12-21 09:57:46.270  3383  3503 V hdcp up : tsec_version: 1
+12-21 09:57:46.271  3383  3503 D NvOsDebugPrintf: NvRmStreamFree: WARN: pStream is NULL
+12-21 09:57:46.692 26380 28788 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:46.692 26380 28788 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:46.692 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:46.692 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:46.692 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:46.721 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:46.721 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:46.722 26380 28818 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:47.631 16991 17033 I TRuntime.CctTransportBackend: Status Code: 200
+12-21 09:57:47.723 26380 28818 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:47.723 26380 28818 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:47.723 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:47.723 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:47.723 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:47.757 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:47.757 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:47.758 26380 28819 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:48.581 30841 31599 E TaskPersister: File error accessing recents directory (directory doesn't exist?).
+12-21 09:57:48.759 26380 28819 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:48.759 26380 28819 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:48.759 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:48.759 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:48.759 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:48.789 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:48.790 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:48.790 26380 28820 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:49.791 26380 28820 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:49.791 26380 28820 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:49.791 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:49.791 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:49.791 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:49.821 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:49.822 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:49.822 26380 28821 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:50.823 26380 28821 W adbd    : timed out while waiting for FUNCTIONFS_BIND, trying again
+12-21 09:57:50.823 26380 28821 I adbd    : UsbFfs: connection terminated: monitor thread finished
+12-21 09:57:50.823 26380 26380 I adbd    : UsbFfs: already offline
+12-21 09:57:50.823 26380 26380 I adbd    : destroying transport UsbFfs
+12-21 09:57:50.823 26380 26380 I adbd    : UsbFfsConnection being destroyed
+12-21 09:57:50.873 26380 26383 I adbd    : opening control endpoint /dev/usb-ffs/adb/ep0
+12-21 09:57:50.874 26380 26383 I adbd    : UsbFfsConnection constructed
+12-21 09:57:50.874 26380 28822 I adbd    : UsbFfs-monitor thread spawned
+12-21 09:57:51.275  3383  3503 V hdcp up : tsec_version: 1
+12-21 09:57:51.277  3383  3503 D NvOsDebugPrintf: NvRmStreamFree: WARN: pStream is NULL
