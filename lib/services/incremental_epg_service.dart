@@ -24,6 +24,7 @@ class IncrementalEpgService extends ChangeNotifier {
   final Map<String, List<Program>> _programsByChannel = {};
   
   static const String _channelListCacheKey = 'epg_channel_list';
+  static const String _normalizedMapCacheKey = 'epg_normalized_map';
   static const int _channelsPerBatch = 50;
   static const int _maxRetries = 3;
   static const Duration _cacheDuration = Duration(hours: 6);
@@ -48,6 +49,8 @@ class IncrementalEpgService extends ChangeNotifier {
     
     if (_epgUrl != null && _epgUrl!.isNotEmpty) {
       debugLog('EPG: Initializing with URL: $_epgUrl');
+      // Try loading persisted normalized mapping early to speed up matches
+      await _loadNormalizedMappingFromPrefs();
       await _loadChannelList(forceRefresh: forceRefresh);
     } else {
       debugLog('EPG: No URL configured (checked custom_epg_url and epg_url)');
@@ -57,6 +60,35 @@ class IncrementalEpgService extends ChangeNotifier {
     
     // Debug: Log current state
     debugLog('EPG: Service state - URL: $_epgUrl, Available channels: ${_availableChannels.length}, Loaded channels: ${_programsByChannel.length}');
+  }
+
+  Future<void> _saveNormalizedMappingToPrefs(Map<String, String>? map) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (map == null || map.isEmpty) {
+        await prefs.remove(_normalizedMapCacheKey);
+        return;
+      }
+      final jsonStr = jsonEncode(map);
+      await prefs.setString(_normalizedMapCacheKey, jsonStr);
+      debugLog('EPG: Saved normalized mapping (${map.length} entries) to prefs');
+    } catch (e) {
+      debugLog('EPG: Failed to save normalized mapping: $e');
+    }
+  }
+
+  Future<void> _loadNormalizedMappingFromPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonStr = prefs.getString(_normalizedMapCacheKey);
+      if (jsonStr == null || jsonStr.isEmpty) return;
+      final Map<String, dynamic> decoded = jsonDecode(jsonStr);
+      _normalizedAvailableChannels = decoded.map((k, v) => MapEntry(k, v.toString()));
+      _availableChannels.addAll(_normalizedAvailableChannels!.values);
+      debugLog('EPG: Loaded normalized mapping from prefs (${_normalizedAvailableChannels!.length} entries)');
+    } catch (e) {
+      debugLog('EPG: Failed to load normalized mapping from prefs: $e');
+    }
   }
 
   Future<File> _getCacheFile() async {
@@ -213,6 +245,8 @@ class IncrementalEpgService extends ChangeNotifier {
         // Cache available channels list
         final prefs = await SharedPreferences.getInstance();
         await prefs.setStringList(_channelListCacheKey, _availableChannels.toList());
+        // Persist normalized mapping for faster startup
+        await _saveNormalizedMappingToPrefs(_normalizedAvailableChannels);
         
         debugLog('EPG: Successfully parsed ${_programsByChannel.length} channels and ${_availableChannels.length} IDs');
         break;
@@ -326,7 +360,29 @@ class IncrementalEpgService extends ChangeNotifier {
         normalizedChannels[normalized] = id;
       }
       
-      // We could parse display-name here if we wanted to improve matching further
+      // Parse <display-name> elements to improve name->id matching
+      String? displayName;
+      for (final event in events) {
+        if (event is XmlStartElementEvent && event.name == 'display-name') {
+          final idx = events.indexOf(event);
+          if (idx + 1 < events.length) {
+            final next = events[idx + 1];
+              if (next is XmlTextEvent) {
+              displayName = next.value.trim();
+              if (displayName.isNotEmpty) break;
+            }
+          }
+        }
+      }
+
+      if (displayName != null && displayName.isNotEmpty) {
+        final stripped = _stripSuffixes(displayName);
+        String normalizedDisplay = stripped.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+        normalizedDisplay = _convertNumberWords(normalizedDisplay);
+        if (normalizedDisplay.isNotEmpty && !normalizedChannels.containsKey(normalizedDisplay)) {
+          normalizedChannels[normalizedDisplay] = id;
+        }
+      }
     }
   }
 
@@ -475,6 +531,27 @@ class IncrementalEpgService extends ChangeNotifier {
         .trim();
   }
 
+  // Conservative trigram-based similarity to use as a last-resort fallback.
+  double _trigramSimilarity(String a, String b) {
+    final sa = _normalize(a);
+    final sb = _normalize(b);
+    if (sa.isEmpty || sb.isEmpty) return 0.0;
+
+    final aTr = <String>{};
+    for (var i = 0; i + 3 <= sa.length; i++) {
+      aTr.add(sa.substring(i, i + 3));
+    }
+    final bTr = <String>{};
+    for (var i = 0; i + 3 <= sb.length; i++) {
+      bTr.add(sb.substring(i, i + 3));
+    }
+    if (aTr.isEmpty || bTr.isEmpty) return 0.0;
+    final inter = aTr.intersection(bTr).length;
+    final union = aTr.length + bTr.length - inter;
+    if (union == 0) return 0.0;
+    return inter / union;
+  }
+
   String? _findBestEpgId(
     String channelId,
     String? channelName, {
@@ -537,6 +614,27 @@ class IncrementalEpgService extends ChangeNotifier {
           if (entry.key.startsWith(normalizedName) || normalizedName.startsWith(entry.key)) {
              _internalToEpgIdMapping[channelId] = entry.value;
              return entry.value;
+          }
+        }
+      }
+
+      // 5. Conservative fuzzy-match fallback using trigram similarity
+      if (channelName.isNotEmpty && _normalizedAvailableChannels != null) {
+        final normalizedName = _normalize(channelName);
+        if (normalizedName.length >= 4) {
+          double bestScore = 0.0;
+          String? bestId;
+          for (final entry in _normalizedAvailableChannels!.entries) {
+            final score = _trigramSimilarity(normalizedName, entry.key);
+            if (score > bestScore) {
+              bestScore = score;
+              bestId = entry.value;
+            }
+          }
+          const double threshold = 0.60; // tuned conservative threshold
+          if (bestScore >= threshold && bestId != null) {
+            _internalToEpgIdMapping[channelId] = bestId;
+            return bestId;
           }
         }
       }
@@ -623,6 +721,27 @@ class IncrementalEpgService extends ChangeNotifier {
     
     debugLog('EPG: No program data available for channel "$channelId"');
     return null;
+  }
+
+  /// Convenience method: resolve a playlist channel to an EPG id and return its current program.
+  Program? getProgramForChannel(String channelId, {String? channelName}) {
+    // Try to resolve mapping first
+    final epgId = _internalToEpgIdMapping[channelId] ?? _findBestEpgId(channelId, channelName);
+    if (epgId != null) {
+      // Use programs for resolved EPG id
+      final programs = getProgramsForChannel(epgId, channelName: channelName);
+      final now = DateTime.now();
+      for (final program in programs) {
+        if (now.isAfter(program.startTime) && now.isBefore(program.endTime)) return program;
+      }
+      for (final program in programs) {
+        if (program.startTime.isAfter(now)) return program;
+      }
+      return null;
+    }
+
+    // Fall back to existing behaviour
+    return getCurrentProgram(channelId, channelName: channelName);
   }
 
   final List<String> _pendingBatch = [];

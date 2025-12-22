@@ -401,8 +401,8 @@ class EPGHero extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<IncrementalEpgService>(
       builder: (context, epgService, child) {
-        // Get current program from EPG service
-        final currentProgram = epgService.getCurrentProgram(
+        // Get current program from EPG service (resolver-aware)
+        final currentProgram = epgService.getProgramForChannel(
           channel.tvgId ?? channel.id,
           channelName: channel.name,
         );

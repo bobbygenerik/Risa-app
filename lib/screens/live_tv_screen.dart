@@ -297,7 +297,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
     // Use a Selector to get the current program for the featured channel
     return Selector<IncrementalEpgService, Program?>(
-      selector: (_, epg) => epg.getCurrentProgram(
+      selector: (_, epg) => epg.getProgramForChannel(
         featuredChannel.tvgId ?? featuredChannel.id,
         channelName: featuredChannel.name,
       ),
@@ -904,7 +904,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           return KeyEventResult.ignored;
         },
         child: Selector<IncrementalEpgService, Program?>(
-          selector: (_, epgService) => epgService.getCurrentProgram(
+          selector: (_, epgService) => epgService.getProgramForChannel(
             channel.tvgId ?? channel.id,
             channelName: channel.name,
           ),

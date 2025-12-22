@@ -718,7 +718,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   void _updateLiveProgress() {
     if (!mounted || widget.channel == null) return;
     final epg = Provider.of<IncrementalEpgService>(context, listen: false);
-    final program = epg.getCurrentProgram(
+    final program = epg.getProgramForChannel(
       widget.channel!.tvgId ?? widget.channel!.id,
       channelName: widget.channel!.name,
     );

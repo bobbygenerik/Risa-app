@@ -59,8 +59,8 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
 
     final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
     
-    // Get current program from EPG
-    final currentProgram = epgService.getCurrentProgram(
+    // Get current program from EPG (resolver-aware)
+    final currentProgram = epgService.getProgramForChannel(
       widget.channel.tvgId ?? widget.channel.id,
       channelName: widget.channel.name,
     );
