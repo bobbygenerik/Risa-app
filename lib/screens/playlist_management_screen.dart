@@ -44,7 +44,85 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
   // Focus nodes
   final FocusNode _playlistNameFocusNode = FocusNode();
   final FocusNode _playlistUrlFocusNode = FocusNode();
-  // add-dialogs removed; creation handled from Settings → General
+  final FocusNode _epgUrlFocusNode = FocusNode();
+  final FocusNode _secondaryEpgUrlFocusNode = FocusNode();
+  final FocusNode _firstFocusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedPlaylists();
+  }
+
+  Future<void> _loadSavedPlaylists() async {
+    setState(() => _isLoading = true);
+
+    final prefs = await SharedPreferences.getInstance();
+    final savedPlaylists = <PlaylistInfo>[];
+
+    // Load M3U playlists
+    final m3uUrls = prefs.getStringList('saved_m3u_playlists') ?? [];
+    for (final url in m3uUrls) {
+      final enc = base64Url.encode(utf8.encode(url));
+      final name = prefs.getString('m3u_playlist_name_$enc') ?? 'M3U Playlist';
+      final epgUrl = prefs.getString('m3u_epg_url_$enc') ?? '';
+      final secondary = prefs.getString('m3u_secondary_epg_$enc') ?? '';
+      final freq = prefs.getInt('m3u_update_freq_$enc') ?? 6;
+
+      savedPlaylists.add(PlaylistInfo(
+        id: url.hashCode.toString(),
+        name: name,
+        url: url,
+        type: 'm3u',
+        epgUrl: epgUrl,
+        secondaryEpgUrl: secondary,
+        updateFrequency: freq,
+      ));
+    }
+
+    // Load Xtream servers
+    final xtreamServers = prefs.getStringList('saved_xtream_servers') ?? [];
+    for (final server in xtreamServers) {
+      final enc = base64Url.encode(utf8.encode(server));
+      final name = prefs.getString('xtream_playlist_name_$enc') ?? 'Xtream Playlist';
+      final username = prefs.getString('xtream_username_$enc') ?? '';
+      final password = prefs.getString('xtream_password_$enc') ?? '';
+      final epgUrl = prefs.getString('xtream_epg_url_$enc') ?? '';
+      final secondary = prefs.getString('xtream_secondary_epg_$enc') ?? '';
+      final freq = prefs.getInt('xtream_update_freq_$enc') ?? 6;
+
+      savedPlaylists.add(PlaylistInfo(
+        id: server.hashCode.toString(),
+        name: name,
+        url: server,
+        type: 'xtream',
+        epgUrl: epgUrl,
+        secondaryEpgUrl: secondary,
+        updateFrequency: freq,
+        username: username,
+        password: password,
+      ));
+    }
+
+    setState(() {
+      _savedPlaylists = savedPlaylists;
+      _isLoading = false;
+    });
+  }
+
+  @override
+  void dispose() {
+    _playlistNameController.dispose();
+    _playlistUrlController.dispose();
+    _epgUrlController.dispose();
+    _secondaryEpgUrlController.dispose();
+    _playlistNameFocusNode.dispose();
+    _playlistUrlFocusNode.dispose();
+    _epgUrlFocusNode.dispose();
+    _secondaryEpgUrlFocusNode.dispose();
+    _firstFocusNode.dispose();
+    super.dispose();
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
