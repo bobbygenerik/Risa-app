@@ -603,20 +603,44 @@ class ChannelProvider with ChangeNotifier {
         debugLog('ChannelProvider: Xtream account configured');
         // Note: Do NOT log credentials or full URLs containing credentials
         if (server != null && username != null && password != null) {
-          playlistUrl =
-              '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
-          // Construct a canonical EPG url for Xtream servers: /xmltv.php?username=...&password=...
           try {
-            var cleanServer = server.trim();
-            if (cleanServer.endsWith('/')) cleanServer = cleanServer.substring(0, cleanServer.length - 1);
-            final epgUrl = '$cleanServer/xmltv.php?username=$username&password=$password';
+            final cleaned = server.trim();
+            Uri baseUri = Uri.parse(cleaned);
+            if (baseUri.scheme.isEmpty || baseUri.host.isEmpty) {
+              baseUri = Uri.parse('https://' + cleaned.replaceAll(RegExp(r'^https?://'), ''));
+            }
+
+            final playlistUri = baseUri.replace(
+              path: (baseUri.path == null || baseUri.path.trim().isEmpty)
+                  ? 'get.php'
+                  : baseUri.path.replaceAll(RegExp(r'^/'), '') + '/get.php',
+              queryParameters: {
+                'username': username.replaceAll(' ', ''),
+                'password': password.replaceAll(' ', ''),
+                'type': 'm3u_plus',
+                'output': 'ts'
+              },
+            );
+            playlistUrl = playlistUri.toString();
+
+            // Construct a canonical EPG url for Xtream servers using Uri
+            final epgUri = baseUri.replace(
+              path: (baseUri.path == null || baseUri.path.trim().isEmpty)
+                  ? 'xmltv.php'
+                  : baseUri.path.replaceAll(RegExp(r'^/'), '') + '/xmltv.php',
+              queryParameters: {
+                'username': username.replaceAll(' ', ''),
+                'password': password.replaceAll(' ', ''),
+              },
+            );
+
             final prefs = await SharedPreferences.getInstance();
             final oldUrl = prefs.getString('epg_url');
             final custom = prefs.getString('custom_epg_url');
             // Overwrite stored epg_url if empty or if the prior value was just the user's custom URL
             final shouldSave = (oldUrl == null || oldUrl.isEmpty) || (custom != null && oldUrl == custom);
             if (shouldSave) {
-              await prefs.setString('epg_url', epgUrl);
+              await prefs.setString('epg_url', epgUri.toString());
               debugLog('ChannelProvider: Saved computed epg_url for Xtream');
               // Initialize EPG service later when UI requests it; do not force refresh here
             }

@@ -193,10 +193,31 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
     try {
       // Build Xtream API URL for getting live streams
       // Format: http://server:port/get.php?username=xxx&password=xxx&type=m3u_plus&output=ts
-      final url =
-          '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
+      // Build playlist URL using Uri to avoid malformed interpolation and spacing
+      final cleanServer = server.trim();
+      Uri baseUri;
+      try {
+        baseUri = Uri.parse(cleanServer);
+        if (baseUri.scheme.isEmpty || baseUri.host.isEmpty) {
+          baseUri = Uri.parse('https://'+cleanServer.replaceAll(RegExp(r'^https?://'), ''));
+        }
+      } catch (_) {
+        baseUri = Uri.parse('https://'+cleanServer.replaceAll(RegExp(r'^https?://'), ''));
+      }
 
-      await channelProvider.loadPlaylistFromUrl(url);
+      final playlistUri = baseUri.replace(
+        path: (baseUri.path == null || baseUri.path.trim().isEmpty)
+            ? 'get.php'
+            : baseUri.path.replaceAll(RegExp(r'^/'), '') + '/get.php',
+        queryParameters: {
+          'username': username.replaceAll(' ', ''),
+          'password': password.replaceAll(' ', ''),
+          'type': 'm3u_plus',
+          'output': 'ts'
+        },
+      );
+
+      await channelProvider.loadPlaylistFromUrl(playlistUri.toString());
 
       final channelCount = channelProvider.channelCount;
       final movieCount = channelProvider.moviesCount;
@@ -210,8 +231,25 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
       await prefs.setString('playlist_type', 'xtream');
 
       // Build and save EPG URL for Xtream codes
-      final epgUrl = '$server/xmltv.php?username=$username&password=$password';
-      await prefs.setString('epg_url', epgUrl);
+      // Build canonical EPG URL using Uri and ensure scheme/host
+      try {
+        final epgBase = Uri.parse(server.trim());
+        final base = (epgBase.scheme.isEmpty || epgBase.host.isEmpty)
+            ? Uri.parse('https://' + server.replaceAll(RegExp(r'^https?://'), ''))
+            : epgBase;
+        final epgUri = base.replace(
+          path: (base.path == null || base.path.trim().isEmpty)
+              ? 'xmltv.php'
+              : base.path.replaceAll(RegExp(r'^/'), '') + '/xmltv.php',
+          queryParameters: {
+            'username': username.replaceAll(' ', ''),
+            'password': password.replaceAll(' ', ''),
+          },
+        );
+        await prefs.setString('epg_url', epgUri.toString());
+      } catch (_) {
+        // swallow to avoid leaking credentials
+      }
 
       // Auto-load EPG data
       if (mounted) {

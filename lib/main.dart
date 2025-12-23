@@ -527,17 +527,40 @@ class _MyAppState extends State<MyApp> {
         final password = prefs.getString('xtream_password');
 
         if (server != null && username != null && password != null) {
-          playlistUrl =
-              '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
-          // Also save a computed EPG URL for Xtream providers so EPG loading
-          // doesn't rely on x-tvg-url in M3U headers.
+          // Build playlist URL and computed EPG URL using Uri for safety
           try {
-            final cleanServer = server.replaceAll(RegExp(r'\/+\$'), '');
-            final epgUrl = '$cleanServer/xmltv.php?username=$username&password=$password';
-            await prefs.setString('epg_url', epgUrl);
-            debugPrint('Main: Saved computed epg_url for Xtream: $epgUrl');
+            final cleaned = server.trim();
+            Uri baseUri = Uri.parse(cleaned);
+            if (baseUri.scheme.isEmpty || baseUri.host.isEmpty) {
+              baseUri = Uri.parse('https://' + cleaned.replaceAll(RegExp(r'^https?://'), ''));
+            }
+            final playlistUri = baseUri.replace(
+                path: (baseUri.path == null || baseUri.path.trim().isEmpty)
+                    ? 'get.php'
+                    : baseUri.path.replaceAll(RegExp(r'^/'), '') + '/get.php',
+                queryParameters: {
+                  'username': username.replaceAll(' ', ''),
+                  'password': password.replaceAll(' ', ''),
+                  'type': 'm3u_plus',
+                  'output': 'ts'
+                });
+            playlistUrl = playlistUri.toString();
+
+            // Computed EPG URL
+            final epgUri = baseUri.replace(
+              path: (baseUri.path == null || baseUri.path.trim().isEmpty)
+                  ? 'xmltv.php'
+                  : baseUri.path.replaceAll(RegExp(r'^/'), '') + '/xmltv.php',
+              queryParameters: {
+                'username': username.replaceAll(' ', ''),
+                'password': password.replaceAll(' ', ''),
+              },
+            );
+            await prefs.setString('epg_url', epgUri.toString());
+            debugPrint('Main: Saved computed epg_url for Xtream: ${epgUri.toString()}');
           } catch (e) {
-            debugPrint('Main: Could not save epg_url: $e');
+            debugPrint('Main: Could not compute/save epg_url: $e');
+            playlistUrl = '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
           }
         }
       }

@@ -887,23 +887,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // Compute and save Xtream EPG URL at credential entry time.
     // Respect user-set `custom_epg_url`: if it's present, do not overwrite `epg_url`.
     try {
-      var cleanServer = server.trim();
-      if (cleanServer.endsWith('/')) {
-        cleanServer = cleanServer.substring(0, cleanServer.length - 1);
-      }
-      final epgUrl = '\$cleanServer/xmltv.php?username=\$username&password=\$password';
-      final custom = prefs.getString('custom_epg_url') ?? '';
-      if (custom.trim().isEmpty) {
-        await prefs.setString('epg_url', epgUrl);
+      try {
+        final cleaned = server.trim();
+        final epgBase = Uri.parse(cleaned);
+        final base = (epgBase.scheme.isEmpty || epgBase.host.isEmpty)
+            ? Uri.parse('https://' + cleaned.replaceAll(RegExp(r'^https?://'), ''))
+            : epgBase;
+        final epgUri = base.replace(
+          path: (base.path == null || base.path.trim().isEmpty)
+              ? 'xmltv.php'
+              : base.path.replaceAll(RegExp(r'^/'), '') + '/xmltv.php',
+          queryParameters: {
+            'username': username.replaceAll(' ', ''),
+            'password': password.replaceAll(' ', ''),
+          },
+        );
+        final custom = prefs.getString('custom_epg_url') ?? '';
+        if (custom.trim().isEmpty) {
+          await prefs.setString('epg_url', epgUri.toString());
+        }
+      } catch (_) {
+        // swallow to avoid leaking credentials
       }
     } catch (_) {
       // Swallow any unexpected errors silently to avoid leaking credentials or logs.
     }
     if (mounted) {
       final provider = Provider.of<ChannelProvider>(context, listen: false);
-      final playlistUrl =
-          '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
-      await provider.loadPlaylistFromUrl(playlistUrl);
+      try {
+        final cleaned = server.trim();
+        Uri baseUri = Uri.parse(cleaned);
+        if (baseUri.scheme.isEmpty || baseUri.host.isEmpty) {
+          baseUri = Uri.parse('https://' + cleaned.replaceAll(RegExp(r'^https?://'), ''));
+        }
+        final playlistUri = baseUri.replace(
+          path: (baseUri.path == null || baseUri.path.trim().isEmpty)
+              ? 'get.php'
+              : baseUri.path.replaceAll(RegExp(r'^/'), '') + '/get.php',
+          queryParameters: {
+            'username': username.replaceAll(' ', ''),
+            'password': password.replaceAll(' ', ''),
+            'type': 'm3u_plus',
+            'output': 'ts'
+          },
+        );
+        await provider.loadPlaylistFromUrl(playlistUri.toString());
+      } catch (e) {
+        await provider.loadPlaylistFromUrl('$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts');
+      }
       final hasContent = provider.channelCount > 0 ||
           provider.moviesCount > 0 ||
           provider.seriesCount > 0;
