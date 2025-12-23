@@ -2,13 +2,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:iptv_player/services/integrated_transcription_service.dart';
-import '../screens/exoplayer_fullscreen_screen.dart';
+// Note: fullscreen native ExoPlayer view is provided elsewhere; this widget
+// focuses solely on rendering video for use with external overlays.
 
 class ExoPlayerWidget extends StatefulWidget {
   final String url;
   final bool isLive;
   final IntegratedTranscriptionService? transcriptionService;
   final ValueNotifier<VideoPlayerController?>? controllerNotifier;
+  final bool showInternalControls;
 
   const ExoPlayerWidget({
     super.key,
@@ -16,6 +18,7 @@ class ExoPlayerWidget extends StatefulWidget {
     this.isLive = false,
     this.transcriptionService,
     this.controllerNotifier,
+    this.showInternalControls = false,
   });
 
   @override
@@ -25,8 +28,6 @@ class ExoPlayerWidget extends StatefulWidget {
 class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
   late VideoPlayerController _controller;
   Future<void>? _initializeFuture;
-  bool _showControls = true;
-  Timer? _hideTimer;
   Timer? _positionTimer;
   /// Notifies listeners of current playback position (updated ~500ms).
   final ValueNotifier<Duration> positionNotifier = ValueNotifier(Duration.zero);
@@ -61,19 +62,14 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
         widget.transcriptionService?.updatePlaybackPosition(pos);
       } catch (_) {}
     });
-    _startHideTimer();
   }
 
   void _startHideTimer() {
-    _hideTimer?.cancel();
-    _hideTimer = Timer(const Duration(seconds: 4), () {
-      setState(() => _showControls = false);
-    });
+    // internal hide timer removed; external overlay controls are authoritative
   }
 
   @override
   void dispose() {
-    _hideTimer?.cancel();
     _positionTimer?.cancel();
     _controller.removeListener(_onControllerChanged);
     try {
@@ -104,132 +100,27 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
         }
 
         final value = _controller.value;
-        final aspect = value.size.width > 0 && value.size.height > 0
-            ? value.aspectRatio
-            : 16 / 9;
 
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            setState(() {
-              _showControls = !_showControls;
-            });
-            if (_showControls) _startHideTimer();
-          },
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              AspectRatio(
-                aspectRatio: aspect,
-                child: VideoPlayer(_controller),
-              ),
-              if (_showControls) _buildControls(context, value),
-              if (value.isBuffering)
-                const Center(child: CircularProgressIndicator()),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildControls(BuildContext context, VideoPlayerValue value) {
-    final isPlaying = value.isPlaying;
-    final duration = value.duration;
-    final position = value.position;
-
-    return Positioned.fill(
-      child: Container(
-        color: Colors.black38,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
+        return Stack(
+          alignment: Alignment.center,
           children: [
-            // Center Play/Pause
-            Expanded(
-              child: Align(
+            // Fill available area while preserving aspect via FittedBox
+            SizedBox.expand(
+              child: FittedBox(
+                fit: BoxFit.cover,
                 alignment: Alignment.center,
-                child: InkWell(
-                  onTap: () {
-                    if (isPlaying) {
-                      _controller.pause();
-                    } else {
-                      _controller.play();
-                    }
-                    _startHideTimer();
-                  },
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black45,
-                      shape: BoxShape.circle,
-                    ),
-                    padding: const EdgeInsets.all(12),
-                    child: Icon(
-                      isPlaying ? Icons.pause : Icons.play_arrow,
-                      color: Colors.white,
-                      size: 36,
-                    ),
-                  ),
+                child: SizedBox(
+                  width: value.size.width > 0 ? value.size.width : 16,
+                  height: value.size.height > 0 ? value.size.height : 9,
+                  child: VideoPlayer(_controller),
                 ),
               ),
             ),
-            // Progress and controls row
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
-              child: Row(
-                children: [
-                  Text(
-                    _formatDuration(position),
-                    style: const TextStyle(color: Colors.white, fontSize: 12),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: widget.isLive
-                        ? const Text('LIVE', style: TextStyle(color: Colors.redAccent))
-                        : SliderTheme(
-                            data: SliderTheme.of(context).copyWith(
-                              trackHeight: 3,
-                              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                            ),
-                            child: Slider(
-                              value: position.inMilliseconds.clamp(0, duration.inMilliseconds).toDouble(),
-                              max: duration.inMilliseconds.toDouble().clamp(1.0, double.infinity),
-                              onChanged: (v) {
-                                final target = Duration(milliseconds: v.toInt());
-                                _controller.seekTo(target);
-                              },
-                              onChangeStart: (_) => _hideTimer?.cancel(),
-                              onChangeEnd: (_) => _startHideTimer(),
-                            ),
-                          ),
-                  ),
-                  const SizedBox(width: 6),
-                  // Fullscreen button
-                  InkWell(
-                    onTap: () {
-                      Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => ExoPlayerFullscreenScreen(
-                          videoUrl: widget.url,
-                          isLive: widget.isLive,
-                          title: null,
-                        ),
-                      ));
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      child: const Icon(Icons.fullscreen, color: Colors.white, size: 18),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    _formatDuration(duration),
-                    style: const TextStyle(color: Colors.white, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
+            if (value.isBuffering) const Center(child: CircularProgressIndicator()),
           ],
-        ),
-      ),
+        );
+
+      },
     );
   }
 }
