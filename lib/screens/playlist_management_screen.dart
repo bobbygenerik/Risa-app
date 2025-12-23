@@ -398,33 +398,7 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
     );
   }
 
-  Widget _buildAddNewPlaylist() {
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
-      children: [
-        const SettingsSectionHeader(
-          title: 'Add New Playlist',
-          subtitle: 'Add a new playlist to manage',
-        ),
-        SettingsGroup(
-          title: 'Quick Add',
-          children: [
-            SettingsActionTile(
-              title: 'Add M3U Playlist',
-              icon: Icons.link,
-              focusNode: _firstFocusNode,
-              onTap: () => _showAddM3uDialog(),
-            ),
-            SettingsActionTile(
-              title: 'Add Xtream Playlist',
-              icon: Icons.dns,
-              onTap: () => _showAddXtreamDialog(),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+
 
   // Playlist editing methods
   void _editPlaylistName(PlaylistInfo playlist) {
