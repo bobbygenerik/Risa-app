@@ -15,7 +15,6 @@ import 'package:iptv_player/utils/no_text_selection_controls.dart';
 // displaying a second, nested settings sidebar. The app's main sidebar
 // (from `MainShell`) remains visible on all pages.
 import 'package:iptv_player/widgets/settings_tile_widgets.dart';
-import 'package:iptv_player/models/saved_playlist.dart';
 
 class PlaylistManagementScreen extends StatefulWidget {
   const PlaylistManagementScreen({super.key});
