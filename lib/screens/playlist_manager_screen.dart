@@ -285,15 +285,8 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
       appBar: AppBar(
         title: const Text('Manage Playlists'),
         backgroundColor: Colors.white.withAlpha((0.08 * 255).round()),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            tooltip: 'Add New Playlist',
-            onPressed: () {
-              context.go('/settings/playlist-login');
-            },
-          ),
-        ],
+        // No add action here — playlists should be added from Settings → General
+        actions: [],
       ),
       body: Container(
         decoration: const BoxDecoration(
@@ -325,18 +318,13 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
           ),
           const SizedBox(height: AppSizes.sm),
           Text(
-            'Add a playlist to get started',
+            'No saved playlists. Add playlists from Settings → General',
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
           ),
           const SizedBox(height: AppSizes.xl),
-          BrandPrimaryButton(
-            icon: Icons.add,
-            label: 'Add Playlist',
-            onPressed: () => context.go('/settings/playlist-login'),
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-          ),
+          // Intentionally no add button here to centralize playlist creation
         ],
       ),
     );
