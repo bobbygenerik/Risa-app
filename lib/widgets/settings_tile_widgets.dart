@@ -139,20 +139,13 @@ class SettingsActionTile extends StatelessWidget {
           onKeyEvent: (node, event) {
             if (event is! KeyDownEvent) return KeyEventResult.ignored;
 
-            if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-              FocusScope.of(context).focusInDirection(TraversalDirection.down);
-              return KeyEventResult.handled;
-            }
-            if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-              FocusScope.of(context).focusInDirection(TraversalDirection.up);
-              return KeyEventResult.handled;
-            }
-
             if (event.logicalKey == LogicalKeyboardKey.select ||
-                event.logicalKey == LogicalKeyboardKey.enter) {
+                event.logicalKey == LogicalKeyboardKey.enter ||
+                event.logicalKey == LogicalKeyboardKey.center) {
               onTap?.call();
               return KeyEventResult.handled;
             }
+            // Allow default focus engine to handle other keys (arrows, etc.)
             return KeyEventResult.ignored;
           },
           child: Builder(
@@ -254,7 +247,8 @@ class SettingsSwitchTile extends StatelessWidget {
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent &&
             (event.logicalKey == LogicalKeyboardKey.select ||
-                event.logicalKey == LogicalKeyboardKey.enter)) {
+                event.logicalKey == LogicalKeyboardKey.enter ||
+                event.logicalKey == LogicalKeyboardKey.center)) {
           onChanged(!value);
           return KeyEventResult.handled;
         }
@@ -466,20 +460,11 @@ class _PremiumTextFieldState extends State<_PremiumTextField> {
           return KeyEventResult.ignored;
         }
 
-        // Enter/Select on Container -> Enter Edit Mode
+        // Enter/Select/Center on Container -> Enter Edit Mode
         if (event.logicalKey == LogicalKeyboardKey.select ||
-            event.logicalKey == LogicalKeyboardKey.enter) {
+            event.logicalKey == LogicalKeyboardKey.enter ||
+            event.logicalKey == LogicalKeyboardKey.center) {
           _textFocusNode.requestFocus();
-          return KeyEventResult.handled;
-        }
-
-        // Allow explicit arrow traversal from the container
-        if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-          FocusScope.of(context).focusInDirection(TraversalDirection.down);
-          return KeyEventResult.handled;
-        }
-        if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-          FocusScope.of(context).focusInDirection(TraversalDirection.up);
           return KeyEventResult.handled;
         }
 

@@ -473,7 +473,7 @@ class IncrementalEpgService extends ChangeNotifier {
         if (startEvent is! XmlStartElementEvent) continue;
 
         if (startEvent.name == 'programme') {
-          _processProgramme(subtreeEvents, programsByChannel);
+          _processProgramme(subtreeEvents, programsByChannel, channelIds, normalizedChannels);
         } else if (startEvent.name == 'channel') {
           _processChannel(subtreeEvents, channelIds, normalizedChannels);
         }
@@ -554,7 +554,7 @@ class IncrementalEpgService extends ChangeNotifier {
     }
   }
 
-  static void _processProgramme(List<XmlEvent> events, Map<String, List<Program>> programsByChannel) {
+  static void _processProgramme(List<XmlEvent> events, Map<String, List<Program>> programsByChannel, Set<String> channelIds, Map<String, String> normalizedChannels) {
     // Parse programme subtree
     // <programme start="..." stop="..." channel="..."> ... </programme>
     final startEvent = events.first as XmlStartElementEvent;
@@ -565,6 +565,10 @@ class IncrementalEpgService extends ChangeNotifier {
     
     if (channelId.isEmpty || startStr.isEmpty || stopStr.isEmpty) return;
     
+    // Ensure we track this channel ID even if No <channel> tag exists for it in the XMLTV
+    // This allows the UI to still match programs to the M3U channels.
+    channelIds.add(channelId);
+
     String title = 'Unknown';
     String? description;
     String? category;
@@ -602,6 +606,16 @@ class IncrementalEpgService extends ChangeNotifier {
           icon = event.attributes.firstWhere((a) => a.name == 'src', orElse: () => XmlEventAttribute('src', '', XmlAttributeType.DOUBLE_QUOTE)).value;
         }
       }
+    }
+    
+    // Ensure we track this channel ID even if no <channel> tag exists for it in the XMLTV
+    // This allows the UI to still match programs to the M3U channels.
+    channelIds.add(channelId);
+    
+    // Also track in normalized map for loose matching
+    final normalized = channelId.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    if (normalized.isNotEmpty && !normalizedChannels.containsKey(normalized)) {
+      normalizedChannels[normalized] = channelId;
     }
     
     final program = Program(

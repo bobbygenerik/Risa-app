@@ -101,9 +101,10 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     );
     
     // Determine decoder based on settings and device type
-    // On Shield/Android TV, 'mediacodec' (zero-copy) is much better than 'mediacodec-copy'
+    // On Shield/Android TV, 'mediacodec-copy' is often more compatible than zero-copy
+    // for various stream formats, though 'mediacodec' (zero-copy) is faster.
     final String hwdecValue = isTv 
-        ? 'mediacodec' 
+        ? 'mediacodec-copy' 
         : (useHwDecoding ? 'mediacodec' : 'no');
 
     _controller = VideoController(
@@ -120,12 +121,13 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     try {
       if (_player.platform is NativePlayer) {
         final platform = _player.platform as NativePlayer;
-        final hwdecValue = isTv ? 'mediacodec' : (useHwDecoding ? 'mediacodec' : 'no');
+        final hwdecValue = isTv ? 'mediacodec-copy' : (useHwDecoding ? 'mediacodec' : 'no');
         
         platform.setProperty('hwdec', hwdecValue);
         platform.setProperty('network-timeout', '60');
         
         // Performance & Stability Optimizations for Android TV / Shield
+        platform.setProperty('vo', 'gpu');
         platform.setProperty('opengl-pbo', 'yes');
         platform.setProperty('vd-lavc-dr', 'yes'); // Direct rendering
         platform.setProperty('vd-lavc-fast', 'yes'); // Skip non-reference frames if slow
@@ -196,6 +198,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     });
 
     _videoParamsSubscription = _player.stream.videoParams.listen((params) {
+      debugLog('MediaKit Video Params: w=${params.w}, h=${params.h}, dw=${params.dw}, dh=${params.dh}');
       if ((params.w ?? 0) > 0 && (params.h ?? 0) > 0) {
         _hasVideo = true;
         // If player was opened but not yet playing, start playback now that

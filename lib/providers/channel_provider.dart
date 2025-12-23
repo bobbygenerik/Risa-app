@@ -561,8 +561,8 @@ class ChannelProvider with ChangeNotifier {
           unawaited(_computeCategoriesAsync());
 
           if (_contentProvider != null) {
-            _contentProvider!.loadMovies(movies.take(100).toList());
-            _contentProvider!.loadSeries(series.take(100).toList());
+            _contentProvider!.loadMovies(movies.toList());
+            _contentProvider!.loadSeries(series.toList());
           }
 
           // Save to JSON cache for faster loading next time
@@ -947,8 +947,8 @@ class ChannelProvider with ChangeNotifier {
         notifyListeners();
 
         if (_contentProvider != null) {
-          _contentProvider!.loadMovies(movies.take(100).toList());
-          _contentProvider!.loadSeries(series.take(100).toList());
+          _contentProvider!.loadMovies(movies.toList());
+          _contentProvider!.loadSeries(series.toList());
         }
 
         _loadingStatus = 'Finalizing...';
@@ -1134,8 +1134,8 @@ class ChannelProvider with ChangeNotifier {
           'ChannelProvider: Parsed ${_channelMaps.length} channels (direct client)');
 
       if (_contentProvider != null) {
-        _contentProvider!.loadMovies(movies.take(100).toList());
-        _contentProvider!.loadSeries(series.take(100).toList());
+        _contentProvider!.loadMovies(movies.toList());
+        _contentProvider!.loadSeries(series.toList());
       }
 
       // Use the temp file as cache
@@ -1235,8 +1235,8 @@ class ChannelProvider with ChangeNotifier {
 
       // Sync VOD content to ContentProvider (first batch only)
       if (_contentProvider != null) {
-        _contentProvider!.loadMovies(movies.take(100).toList());
-        _contentProvider!.loadSeries(series.take(100).toList());
+        _contentProvider!.loadMovies(movies.toList());
+        _contentProvider!.loadSeries(series.toList());
       }
 
       // Auto-save EPG URL from M3U x-tvg-url attribute
@@ -1732,8 +1732,8 @@ class ChannelProvider with ChangeNotifier {
 
       // Sync only first batch to ContentProvider
       if (_contentProvider != null) {
-        final firstMovies = await getMovies(limit: 100);
-        final firstSeries = await getSeries(limit: 100);
+        final firstMovies = await getMovies(limit: 999999);
+        final firstSeries = await getSeries(limit: 999999);
         _contentProvider!.loadMovies(firstMovies);
         _contentProvider!.loadSeries(firstSeries);
       }
@@ -1854,10 +1854,10 @@ class ChannelProvider with ChangeNotifier {
         // Save enriched content back to cache files
         await _saveEnrichedContent(enrichedMovies, enrichedSeries);
 
-        // Update ContentProvider with enriched data (first 100 for UI)
+        // Update ContentProvider with enriched data
         if (_contentProvider != null) {
-          _contentProvider!.loadMovies(enrichedMovies.take(100).toList());
-          _contentProvider!.loadSeries(enrichedSeries.take(100).toList());
+          _contentProvider!.loadMovies(enrichedMovies.toList());
+          _contentProvider!.loadSeries(enrichedSeries.toList());
         }
 
         debugLog('ChannelProvider: Background TMDB enrichment completed');

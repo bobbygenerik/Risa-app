@@ -113,7 +113,7 @@ class _SettingsLayoutState extends State<SettingsLayout> {
                     children: [
                       // App Branding / Header
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(40, 48, 24, 24),
+                        padding: const EdgeInsets.fromLTRB(40, 48, 24, 0),
                         child: Text(
                           'Settings',
                           style: Theme.of(context)
@@ -127,16 +127,21 @@ class _SettingsLayoutState extends State<SettingsLayout> {
                         ),
                       ),
 
-                      const SizedBox(height: 16),
-
-                      // Menu Items
+                      // Vertically center menu items
                       Expanded(
-                        child: ListView.builder(
-                          itemCount: widget.categories.length,
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          itemBuilder: (context, index) {
-                            return _buildMenuItem(index);
-                          },
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: widget.categories.length,
+                              padding: const EdgeInsets.symmetric(horizontal: 24),
+                              itemBuilder: (context, index) {
+                                return _buildMenuItem(index);
+                              },
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -160,7 +165,6 @@ class _SettingsLayoutState extends State<SettingsLayout> {
                       return KeyEventResult.ignored;
                     },
                     child: Container(
-                      color: AppTheme.darkBackground,
                       child: widget.content,
                     ),
                   ),
