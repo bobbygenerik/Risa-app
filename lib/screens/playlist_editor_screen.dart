@@ -174,7 +174,7 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
                   const SizedBox(height: 16),
                   const Text('Error details:', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
                   const SizedBox(height: 8),
-                  SelectableText(
+                  Text(
                     errorMessage,
                     style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
                   ),

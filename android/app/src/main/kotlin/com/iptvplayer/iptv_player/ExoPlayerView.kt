@@ -9,6 +9,8 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import com.risa.app.R
+import android.view.LayoutInflater
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -22,12 +24,16 @@ class ExoPlayerView(
     creationParams: Map<String, Any>?
 ) : PlatformView, MethodChannel.MethodCallHandler {
 
-    private val playerView: PlayerView = PlayerView(context)
+    private lateinit var playerView: PlayerView
     private val exoPlayer: ExoPlayer
     private val methodChannel: MethodChannel
 
     init {
-        // Configure PlayerView first
+        // Inflate PlayerView from XML which enforces SurfaceView via `app:surface_type="surface_view"`
+        val inflater = LayoutInflater.from(context)
+        val inflated = inflater.inflate(R.layout.exo_player_view, null)
+        playerView = inflated as PlayerView
+        // Configure PlayerView
         playerView.useController = false // We use Flutter overlay controls
         playerView.setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
         playerView.setKeepScreenOn(true)
@@ -92,14 +98,9 @@ class ExoPlayerView(
                 })
             }
 
-        // Force SurfaceView usage on Android TV / NVIDIA Shield to avoid TextureView issues
-        try {
-            // Prefer SurfaceView (disable TextureView)
-            playerView.setUseTextureView(false)
-        } catch (ex: Throwable) {
-            // Some platform builds may not expose setUseTextureView; ignore safely
-            android.util.Log.w("ExoPlayer", "Could not force SurfaceView: ${ex.message}")
-        }
+        // Prefer the platform default surface type. For some media3 versions
+        // `setUseTextureView` is not available, so don't call it to avoid compile errors.
+        android.util.Log.d("ExoPlayer", "Using platform default surface type for PlayerView")
 
         // Attach player to view
         playerView.player = exoPlayer
@@ -119,23 +120,10 @@ class ExoPlayerView(
     }
 
     private fun loadVideo(url: String) {
-        val mediaItem = MediaItem.Builder()
-            .setUri(Uri.parse(url))
-            .build()
-        // Choose media source type: HLS if .m3u8, otherwise treat as progressive (TS/MP4)
-        val lower = url.lowercase()
-        val mediaSource = if (lower.contains(".m3u8")) {
-            androidx.media3.exoplayer.source.hls.HlsMediaSource.Factory(
-                androidx.media3.datasource.DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true)
-            ).createMediaSource(mediaItem)
-        } else {
-            // ProgressiveMediaSource handles raw TS streams (common for Xtream PHP endpoints)
-            androidx.media3.exoplayer.source.ProgressiveMediaSource.Factory(
-                androidx.media3.datasource.DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true)
-            ).createMediaSource(mediaItem)
-        }
-
-        exoPlayer.setMediaSource(mediaSource)
+        // Use DefaultMediaSourceFactory (configured on the player) to infer
+        // the correct MediaSource (HLS, progressive, etc.) from the MediaItem.
+        val mediaItem = MediaItem.fromUri(Uri.parse(url))
+        exoPlayer.setMediaItem(mediaItem)
         exoPlayer.prepare()
     }
 

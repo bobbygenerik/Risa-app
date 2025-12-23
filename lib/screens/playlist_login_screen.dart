@@ -307,7 +307,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
             ],
           ),
           content: SingleChildScrollView(
-            child: SelectableText(
+            child: Text(
               message,
               style: const TextStyle(
                 color: AppTheme.textPrimary,
@@ -412,7 +412,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
                   ),
                 ),
                 const SizedBox(height: 8),
-                SelectableText(
+                Text(
                   preview,
                   style: const TextStyle(
                     fontFamily: 'monospace',

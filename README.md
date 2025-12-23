@@ -105,6 +105,18 @@ flutter pub get
 flutter run
 ```
 
+### Download prebuilt APK for testing
+
+- **Path on this machine:** `/home/devuser/repos/Risa-app/build/app/outputs/flutter-apk/app-profile.apk`
+- **Served with:** `python3 serve_apk.py` (serves on port `7575`)
+- **Download URL:** http://165.22.47.246:7575/app-profile.apk
+- **SHA256 checksum:** `34039ee9b2609e0865de34d028f00de9e25165480df8e589489a55d72a00caa9`
+
+To install on a connected device via `adb` after download (or from this machine):
+```bash
+adb install -r build/app/outputs/flutter-apk/app-profile.apk
+```
+
 ### Platform-Specific Setup
 
 #### Android
