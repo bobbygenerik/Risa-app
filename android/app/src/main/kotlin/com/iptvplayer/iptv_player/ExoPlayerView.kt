@@ -112,6 +112,12 @@ class ExoPlayerView(
 
         // Attach player to view
         playerView.player = exoPlayer
+        // Hide native PlayerView until we have media to play so it doesn't steal focus
+        try {
+            playerView.visibility = View.GONE
+        } catch (ex: Exception) {
+            android.util.Log.w("ExoPlayer", "Failed to set PlayerView visibility: ${ex.message}")
+        }
 
         // Setup method channel for communication with Flutter
         methodChannel = MethodChannel(messenger, "com.streamhub.iptv/exoplayer_$viewId")
@@ -128,6 +134,12 @@ class ExoPlayerView(
     }
 
     private fun loadVideo(url: String) {
+        // Make native PlayerView visible only when media is about to play
+        try {
+            playerView.visibility = View.VISIBLE
+        } catch (ex: Exception) {
+            android.util.Log.w("ExoPlayer", "Failed to set PlayerView visibility visible: ${ex.message}")
+        }
         // Use DefaultMediaSourceFactory (configured on the player) to infer
         // the correct MediaSource (HLS, progressive, etc.) from the MediaItem.
         val mediaItem = MediaItem.fromUri(Uri.parse(url))
