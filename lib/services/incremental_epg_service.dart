@@ -8,6 +8,10 @@ import 'package:iptv_player/models/program.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 
+// Provider-block exception type removed — provider HTML cases are handled
+// via graceful aborts and user-facing `_error` messages to preserve
+// last-known-good EPG state.
+
 class IncrementalEpgService extends ChangeNotifier {
   final Set<String> _availableChannels = {};
   final Set<String> _loadedChannels = {};
@@ -23,8 +27,9 @@ class IncrementalEpgService extends ChangeNotifier {
   // Storage for all parsed programs
   final Map<String, List<Program>> _programsByChannel = {};
   
-  static const String _channelListCacheKey = 'epg_channel_list';
-  static const String _normalizedMapCacheKey = 'epg_normalized_map';
+  // legacy prefs keys removed: do not store large EPG data in SharedPreferences
+  static const String _epgCacheTimeKey = 'epg_cache_time';
+  static const String _normalizedMapFileName = 'epg_normalized.json';
   static const int _channelsPerBatch = 50;
   static const int _maxRetries = 3;
   static const Duration _cacheDuration = Duration(hours: 6);
@@ -64,14 +69,15 @@ class IncrementalEpgService extends ChangeNotifier {
 
   Future<void> _saveNormalizedMappingToPrefs(Map<String, String>? map) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final dir = await getApplicationSupportDirectory();
+      final file = File('${dir.path}/$_normalizedMapFileName');
       if (map == null || map.isEmpty) {
-        await prefs.remove(_normalizedMapCacheKey);
+        if (await file.exists()) await file.delete();
         return;
       }
       final jsonStr = jsonEncode(map);
-      await prefs.setString(_normalizedMapCacheKey, jsonStr);
-      debugLog('EPG: Saved normalized mapping (${map.length} entries) to prefs');
+      await file.writeAsString(jsonStr);
+      debugLog('EPG: Saved normalized mapping (${map.length} entries) to ${file.path}');
     } catch (e) {
       debugLog('EPG: Failed to save normalized mapping: $e');
     }
@@ -79,15 +85,17 @@ class IncrementalEpgService extends ChangeNotifier {
 
   Future<void> _loadNormalizedMappingFromPrefs() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final jsonStr = prefs.getString(_normalizedMapCacheKey);
-      if (jsonStr == null || jsonStr.isEmpty) return;
+      final dir = await getApplicationSupportDirectory();
+      final file = File('${dir.path}/$_normalizedMapFileName');
+      if (!await file.exists()) return;
+      final jsonStr = await file.readAsString();
+      if (jsonStr.isEmpty) return;
       final Map<String, dynamic> decoded = jsonDecode(jsonStr);
       _normalizedAvailableChannels = decoded.map((k, v) => MapEntry(k, v.toString()));
       _availableChannels.addAll(_normalizedAvailableChannels!.values);
-      debugLog('EPG: Loaded normalized mapping from prefs (${_normalizedAvailableChannels!.length} entries)');
+      debugLog('EPG: Loaded normalized mapping from file (${_normalizedAvailableChannels!.length} entries)');
     } catch (e) {
-      debugLog('EPG: Failed to load normalized mapping from prefs: $e');
+      debugLog('EPG: Failed to load normalized mapping from file: $e');
     }
   }
 
@@ -132,6 +140,12 @@ class IncrementalEpgService extends ChangeNotifier {
       return;
     }
 
+    // Single-flight: prevent overlapping downloads
+    if (_isDownloading) {
+      debugLog('EPG: Download already in progress, skipping concurrent request.');
+      return;
+    }
+
     _isDownloading = true;
     _error = null;
     notifyListeners();
@@ -139,66 +153,210 @@ class IncrementalEpgService extends ChangeNotifier {
     
     final client = HttpClient()
       ..connectionTimeout = const Duration(seconds: 60)
+      // Manage decompression ourselves so we can inspect headers/body and
+      // avoid accidental double-decompression by the HttpClient.
+      ..autoUncompress = false
       ..badCertificateCallback = (cert, host, port) => true;
 
     try {
       final request = await client.getUrl(Uri.parse(_epgUrl!));
-      request.headers.add('Accept-Encoding', 'gzip');
-      
+      request.headers.add('Accept-Encoding', 'gzip, deflate');
+
       final response = await request.close();
-      
+
+      // 1) HTTP status check — abort gracefully on non-200
       if (response.statusCode != 200) {
-        throw Exception('HTTP ${response.statusCode} while downloading EPG.');
+        _error = 'EPG fetch failed: HTTP ${response.statusCode}';
+        debugLog('EPG: $_error');
+        // Ensure no partial cache remains
+        final cf = await _getCacheFile();
+        if (await cf.exists()) await cf.delete();
+        return;
+      }
+
+      // 2) Content-Type sanity check
+      final contentTypeHeader = response.headers.value('content-type')?.toLowerCase();
+      if (contentTypeHeader == null || !contentTypeHeader.contains('xml')) {
+        _error = 'EPG response is not XML (Content-Type: ${contentTypeHeader ?? 'unknown'})';
+        debugLog('EPG: $_error');
+        throw Exception(_error);
       }
 
       final file = await _getCacheFile();
       var received = 0;
-      
-      // Determine if the content is gzipped
-      // Check header first, then extension
-      final isGzipHeader = response.headers['content-encoding']?.contains('gzip') ?? false;
+
+      // Respect Content-Encoding header and avoid double-decompress.
+      final encHeader = response.headers.value('content-encoding')?.toLowerCase() ?? '';
+      final isGzipHeader = encHeader.contains('gzip');
+      final isDeflateHeader = encHeader.contains('deflate') || encHeader.contains('zlib');
       final isGzipExt = _epgUrl!.toLowerCase().split('?').first.endsWith('.gz');
-      final isGzipped = isGzipHeader || isGzipExt;
-      
-      debugLog('EPG: Downloading content (Header GZIP: $isGzipHeader, Ext GZIP: $isGzipExt)...');
+
+      debugLog('EPG: Downloading content (Content-Encoding: $encHeader, Ext GZIP: $isGzipExt)...');
 
       final sink = file.openWrite();
-      
+
       try {
         Stream<List<int>> stream = response;
-        if (isGzipped) {
+
+        // Apply decompression only when the response body is encoded.
+        if (isGzipHeader || isGzipExt) {
           stream = stream.transform(gzip.decoder);
+        } else if (isDeflateHeader) {
+          stream = stream.transform(zlib.decoder);
         }
 
-        await stream.listen((data) {
-          sink.add(data);
-          received += data.length;
-          // Report progress every 2MB
-          if (received % (2 * 1024 * 1024) < 100000) {
-            debugLog('EPG: Downloaded ${(received / (1024 * 1024)).toStringAsFixed(1)} MB');
+        // We'll inspect the first decoded chunk(s) to ensure the response
+        // looks like XML (starts with '<'). If it looks like an HTML error
+        // page, surface a clear error and abort.
+        final firstBuffer = <int>[];
+        bool headerChecked = false;
+        const int requiredInspectBytes = 4096;
+
+        late StreamSubscription<List<int>> sub;
+        sub = stream.listen((data) {
+          try {
+            if (!headerChecked) {
+              firstBuffer.addAll(data);
+              // If we have enough or this is the last chunk, inspect.
+              if (firstBuffer.length >= requiredInspectBytes) {
+                final preview = utf8.decode(firstBuffer, allowMalformed: true).trimLeft().toLowerCase();
+                if (preview.isEmpty) {
+                  _error = 'EPG response body is empty or unreadable';
+                  debugLog('EPG: $_error');
+                  sub.cancel();
+                  sink.close();
+                  // cleanup
+                  try { if (file.existsSync()) file.deleteSync(); } catch (_) {}
+                  return;
+                }
+
+                if (!preview.startsWith('<')) {
+                  _error = 'EPG response does not start with XML';
+                  debugLog('EPG: $_error');
+                  sub.cancel();
+                  sink.close();
+                  try { if (file.existsSync()) file.deleteSync(); } catch (_) {}
+                  return;
+                }
+
+                if (preview.startsWith('<!doctype html') || preview.startsWith('<html')) {
+                  _error = 'EPG unavailable from provider';
+                  debugLog('EPG: Provider returned HTML error page');
+                  sub.cancel();
+                  sink.close();
+                  try { if (file.existsSync()) file.deleteSync(); } catch (_) {}
+                  return;
+                }
+
+                // Looks like XML — write the buffered bytes and continue
+                sink.add(firstBuffer);
+                headerChecked = true;
+              }
+            } else {
+              sink.add(data);
+            }
+
+            received += data.length;
+            if (received % (2 * 1024 * 1024) < 100000) {
+              debugLog('EPG: Downloaded ${(received / (1024 * 1024)).toStringAsFixed(1)} MB');
+            }
+          } catch (e) {
+            debugLog('EPG: Stream chunk handling error: $e');
+            try { sink.close(); } catch (_) {}
+            try { if (file.existsSync()) file.deleteSync(); } catch (_) {}
+            return;
           }
-        }).asFuture();
-        
+        }, onDone: () async {
+          // If header wasn't checked yet (small content), check now
+          if (!headerChecked) {
+            final preview = utf8.decode(firstBuffer, allowMalformed: true).trimLeft().toLowerCase();
+            if (preview.isEmpty) {
+              _error = 'EPG response body is empty or unreadable';
+              debugLog('EPG: $_error');
+              await sink.close();
+              try { if (file.existsSync()) await file.delete(); } catch (_) {}
+              return;
+            }
+
+            if (!preview.startsWith('<')) {
+              _error = 'EPG response does not start with XML';
+              debugLog('EPG: $_error');
+              await sink.close();
+              try { if (file.existsSync()) await file.delete(); } catch (_) {}
+              return;
+            }
+
+            if (preview.startsWith('<!doctype html') || preview.startsWith('<html')) {
+              _error = 'EPG unavailable from provider';
+              debugLog('EPG: Provider returned HTML error page');
+              await sink.close();
+              try { if (file.existsSync()) await file.delete(); } catch (_) {}
+              return;
+            }
+
+            // Looks like XML — write buffer
+            sink.add(firstBuffer);
+            headerChecked = true;
+          }
+
+          await sink.close();
+        });
+        await sub.asFuture();
       } catch (e) {
-        debugLog('EPG: Error during download/decompression: $e');
-        // If it failed because it wasn't actually GZIP but we thought it was,
-        // we might want to retry without gzip, but usually network error is more likely.
-        rethrow;
-      } finally {
-        await sink.close();
+        debugLog('EPG: Error during download/decompression/check: $e');
+        try { if (await file.exists()) await file.delete(); } catch (_) {}
+        _error = 'EPG download failed: $e';
+        return;
       }
-      
+
       final fileSize = await file.length();
-      debugLog('EPG: Download complete. Saved to ${file.path} (${(fileSize / 1024 / 1024).toStringAsFixed(2)} MB)');
-      
-      if (fileSize == 0) {
-        throw Exception('Downloaded EPG file is empty');
+      debugLog('EPG: Download complete. Saved to ${file.path} (${(fileSize / 1024).toStringAsFixed(2)} KB)');
+
+      // Minimal sanity checks on final file
+      if (fileSize == 0 || fileSize < 100) {
+        _error = 'Downloaded EPG file is too small';
+        debugLog('EPG: $_error');
+        try { if (await file.exists()) await file.delete(); } catch (_) {}
+        return;
+      }
+
+      // Read a small prefix to validate structure (avoid loading full file)
+      try {
+        final prefixBytes = await file.openRead(0, 16384).reduce((a, b) => a + b);
+        final prefix = utf8.decode(prefixBytes, allowMalformed: true).trimLeft().toLowerCase();
+        if (!prefix.startsWith('<')) {
+          _error = 'EPG response does not start with XML';
+          debugLog('EPG: $_error');
+          try { if (await file.exists()) await file.delete(); } catch (_) {}
+          return;
+        }
+        if (prefix.startsWith('<!doctype html') || prefix.startsWith('<html')) {
+          _error = 'EPG unavailable from provider';
+          debugLog('EPG: Provider returned HTML error page');
+          try { if (await file.exists()) await file.delete(); } catch (_) {}
+          return;
+        }
+        if (!prefix.contains('<tv')) {
+          _error = 'EPG does not appear to be XMLTV (missing <tv)';
+          debugLog('EPG: $_error');
+          try { if (await file.exists()) await file.delete(); } catch (_) {}
+          return;
+        }
+      } catch (e) {
+        debugLog('EPG: Post-download content check failed: $e');
+        try { if (await file.exists()) await file.delete(); } catch (_) {}
+        _error = 'EPG content validation failed';
+        return;
       }
       
     } catch (e) {
       debugLog('EPG: Download failed: $e');
       _error = 'Download failed: $e';
-      rethrow;
+      try {
+        final f = await _getCacheFile();
+        if (await f.exists()) await f.delete();
+      } catch (_) {}
+      return;
     } finally {
       client.close();
       _isDownloading = false;
@@ -208,7 +366,12 @@ class IncrementalEpgService extends ChangeNotifier {
 
   Future<void> _loadChannelList({bool forceRefresh = false}) async {
     if (_epgUrl == null || _epgUrl!.isEmpty) return;
-    
+    // Prevent overlapping loads
+    if (_isLoading || _isDownloading) {
+      debugLog('EPG: Load already in progress, skipping concurrent request.');
+      return;
+    }
+
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -217,9 +380,16 @@ class IncrementalEpgService extends ChangeNotifier {
     while (retryCount < _maxRetries) {
       try {
         await _downloadEpgIfNeeded(forceRefresh: forceRefresh);
-        
+
         final file = await _getCacheFile();
-        if (!await file.exists()) throw Exception('Cache file missing after download');
+        if (!await file.exists()) {
+          debugLog('EPG: No cache file available after download; aborting load.');
+          // _error should already be set by downloader with a user-friendly message
+          _isParsing = false;
+          _isLoading = false;
+          notifyListeners();
+          return;
+        }
 
         debugLog('EPG: Starting background parsing...');
         _isParsing = true;
@@ -242,10 +412,10 @@ class IncrementalEpgService extends ChangeNotifier {
         _isParsing = false;
         _error = null;
         
-        // Cache available channels list
+        // Persist cache timestamp (do NOT store full EPG or channel lists in prefs)
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setStringList(_channelListCacheKey, _availableChannels.toList());
-        // Persist normalized mapping for faster startup
+        await prefs.setString(_epgCacheTimeKey, DateTime.now().toIso8601String());
+        // Persist normalized mapping to file for faster startup
         await _saveNormalizedMappingToPrefs(_normalizedAvailableChannels);
         
         debugLog('EPG: Successfully parsed ${_programsByChannel.length} channels and ${_availableChannels.length} IDs');
@@ -254,18 +424,16 @@ class IncrementalEpgService extends ChangeNotifier {
         retryCount++;
         debugLog('EPG: Error loading (attempt $retryCount): $e');
         debugLog(stack.toString());
-        
+
         if (retryCount >= _maxRetries) {
           _error = 'Failed to load EPG: $e';
           _isParsing = false;
           _isLoading = false;
-          
-          // Fallback to cache list if available to at least show something
-          final prefs = await SharedPreferences.getInstance();
-          final cached = prefs.getStringList(_channelListCacheKey);
-          if (cached != null && cached.isNotEmpty) {
-            _availableChannels.addAll(cached);
-            // Don't clear error, so user knows latest data failed
+
+          // Fallback: try to load normalized mapping file to repopulate channel list
+          await _loadNormalizedMappingFromPrefs();
+          if (_normalizedAvailableChannels != null && _normalizedAvailableChannels!.isNotEmpty) {
+            _availableChannels.addAll(_normalizedAvailableChannels!.values);
           }
           break;
         }

@@ -70,6 +70,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   Timer? _videoFallbackTimer;
   bool _hasVideo = false;
   bool _fallbackAttempted = false;
+  bool _playerOpened = false;
   late final FocusNode _playPauseFocus;
   
   // Stream subscriptions
@@ -197,6 +198,15 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     _videoParamsSubscription = _player.stream.videoParams.listen((params) {
       if ((params.w ?? 0) > 0 && (params.h ?? 0) > 0) {
         _hasVideo = true;
+        // If player was opened but not yet playing, start playback now that
+        // we have valid video parameters / surface attached.
+        if (_playerOpened && !_isPlaying) {
+          try {
+            _player.play();
+          } catch (e) {
+            debugLog('Error while starting playback after videoParams: $e');
+          }
+        }
       }
     });
 
@@ -233,7 +243,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     unawaited(WakelockPlus.disable());
     
     // Dispose MediaKit resources
-    unawaited(_player.dispose());
+    // Ordered async shutdown to avoid native crashes (stop -> short delay -> dispose)
+    unawaited(_shutdownPlayer());
     
     super.dispose();
   }
@@ -569,15 +580,34 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       
       debugLog('MediaKit Player: Opening stream...');
 
+      // Open without auto-play. Start actual playback only after the
+      // surface/video parameters are available to avoid native vo init
+      // races on Android TV devices.
       await _player.open(
         Media(
           url,
           httpHeaders: headers,
         ),
-        play: true,
+        play: false,
       );
 
+      _playerOpened = true;
+
+      // Safeguard: attempt to start playback after a short delay if no
+      // videoParams event arrives. This is a fallback to avoid hanging.
+      Timer(const Duration(milliseconds: 400), () {
+        if (_playerOpened && !_isPlaying) {
+          try {
+            _player.play();
+          } catch (e) {
+            debugLog('Error while auto-starting playback: $e');
+          }
+        }
+      });
+
+      // Show loading until playback begins
       setState(() => _isLoading = false);
+
       unawaited(WakelockPlus.enable());
 
       _videoFallbackTimer?.cancel();
@@ -600,6 +630,28 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
         setState(() => _isLoading = false);
          _handleVideoError(e.toString());
       }
+    }
+  }
+
+  Future<void> _shutdownPlayer() async {
+    try {
+      if (_playerOpened) {
+        try {
+          await _player.stop();
+        } catch (e) {
+          debugLog('Error while stopping player: $e');
+        }
+        // Give native layers a brief moment to detach surfaces.
+        await Future.delayed(const Duration(milliseconds: 80));
+      }
+
+      try {
+        await _player.dispose();
+      } catch (e) {
+        debugLog('Error while disposing player: $e');
+      }
+    } catch (e) {
+      debugLog('Shutdown player error: $e');
     }
   }
 

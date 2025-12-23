@@ -204,7 +204,12 @@ class EpgService with ChangeNotifier {
       notifyListeners();
       return;
     }
-    
+    // Prevent concurrent loads
+    if (_isLoading) {
+      debugPrint('EpgService: Load already in progress, skipping concurrent request.');
+      return;
+    }
+
     // Check cache first if not forcing refresh
     if (!forceRefresh && await _loadFromCache()) {
       debugPrint('EPG loaded from cache');
@@ -229,31 +234,59 @@ class EpgService with ChangeNotifier {
         
         final request = await client.getUrl(Uri.parse(url))
             .timeout(const Duration(seconds: 30));
-        final response = await request.close()
-            .timeout(const Duration(seconds: 60));
+        final response = await request.close().timeout(const Duration(seconds: 60));
 
         debugPrint('EPG HTTP response: ${response.statusCode}');
-        
+
         if (response.statusCode != 200) {
-          throw Exception('HTTP ${response.statusCode}');
+          _error = 'HTTP ${response.statusCode}';
+          debugPrint('EpgService: $_error');
+          client.close();
+          _isLoading = false;
+          notifyListeners();
+          return;
         }
 
-        // Download all bytes (streamed, then parsed in background)
+        // Stream download (accumulate but perform minimal checks to avoid
+        // parsing HTML/error pages or tiny responses)
         final epgBytes = <int>[];
         int totalBytes = 0;
-        
+        final bufferLimitForInspect = 16384; // 16KB
+
         await for (final chunk in response) {
           totalBytes += chunk.length;
-          epgBytes.addAll(chunk);
-          
-          // Show progress for large files
+          if (epgBytes.length < bufferLimitForInspect) {
+            epgBytes.addAll(chunk);
+          } else {
+            // If we've already collected enough prefix bytes, ignore adding more to prefix buffer
+            epgBytes.addAll(chunk);
+          }
+
           if (totalBytes % (1024 * 1024) == 0) {
             debugPrint('EPG download: ${(totalBytes / 1024 / 1024).toStringAsFixed(1)} MB');
           }
         }
-        
+
         client.close();
-        debugPrint('EPG downloaded: ${(totalBytes / 1024 / 1024).toStringAsFixed(2)} MB');
+        debugPrint('EPG downloaded: ${(totalBytes / 1024).toStringAsFixed(2)} KB');
+
+        // Basic sanity checks
+        if (totalBytes < 100) {
+          _error = 'EPG response too small';
+          debugPrint('EpgService: $_error');
+          _isLoading = false;
+          notifyListeners();
+          return;
+        }
+
+        final prefix = utf8.decode(epgBytes.sublist(0, epgBytes.length.clamp(0, bufferLimitForInspect)), allowMalformed: true).trimLeft().toLowerCase();
+        if (prefix.isEmpty || !prefix.startsWith('<') || prefix.startsWith('<!doctype html') || prefix.startsWith('<html') || !prefix.contains('<tv')) {
+          _error = 'EPG response invalid or provider returned HTML';
+          debugPrint('EpgService: $_error');
+          _isLoading = false;
+          notifyListeners();
+          return;
+        }
 
         // Parse in background isolate to avoid blocking UI
         final xmlData = utf8.decode(epgBytes, allowMalformed: true);
