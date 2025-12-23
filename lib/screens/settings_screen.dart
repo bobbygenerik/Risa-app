@@ -933,7 +933,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
         await provider.loadPlaylistFromUrl(playlistUri.toString());
       } catch (e) {
-        await provider.loadPlaylistFromUrl('$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts');
+        await provider.loadPlaylistFromUrl('${server.replaceAll(' ', '')}/get.php?username=${username.replaceAll(' ', '')}&password=${password.replaceAll(' ', '')}&type=m3u_plus&output=ts');
       }
       final hasContent = provider.channelCount > 0 ||
           provider.moviesCount > 0 ||

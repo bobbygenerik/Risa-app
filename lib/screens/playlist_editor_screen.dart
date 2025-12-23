@@ -123,8 +123,26 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
           throw Exception('Server URL and username are required');
         }
         
-        final url = '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
-        await provider.loadPlaylistFromUrl(url);
+        try {
+          Uri baseUri = Uri.parse(server);
+          if (baseUri.scheme.isEmpty || baseUri.host.isEmpty) {
+            baseUri = Uri.parse('https://' + server.replaceAll(RegExp(r'^https?://'), ''));
+          }
+          final playlistUri = baseUri.replace(
+            path: (baseUri.path == null || baseUri.path.trim().isEmpty)
+                ? 'get.php'
+                : baseUri.path.replaceAll(RegExp(r'^/'), '') + '/get.php',
+            queryParameters: {
+              'username': username.replaceAll(' ', ''),
+              'password': password.replaceAll(' ', ''),
+              'type': 'm3u_plus',
+              'output': 'ts'
+            },
+          );
+          await provider.loadPlaylistFromUrl(playlistUri.toString());
+        } catch (_) {
+          await provider.loadPlaylistFromUrl('${server.replaceAll(' ', '')}/get.php?username=${username.replaceAll(' ', '')}&password=${password.replaceAll(' ', '')}&type=m3u_plus&output=ts');
+        }
       }
 
       if (mounted) {

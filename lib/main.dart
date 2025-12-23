@@ -560,7 +560,27 @@ class _MyAppState extends State<MyApp> {
             debugPrint('Main: Saved computed epg_url for Xtream: ${epgUri.toString()}');
           } catch (e) {
             debugPrint('Main: Could not compute/save epg_url: $e');
-            playlistUrl = '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
+            try {
+              final cleaned2 = server.trim();
+              Uri fallbackBase = Uri.parse(cleaned2);
+              if (fallbackBase.scheme.isEmpty || fallbackBase.host.isEmpty) {
+                fallbackBase = Uri.parse('https://' + cleaned2.replaceAll(RegExp(r'^https?://'), ''));
+              }
+              final fallbackUri = fallbackBase.replace(
+                path: (fallbackBase.path == null || fallbackBase.path.trim().isEmpty)
+                    ? 'get.php'
+                    : fallbackBase.path.replaceAll(RegExp(r'^/'), '') + '/get.php',
+                queryParameters: {
+                  'username': username.replaceAll(' ', ''),
+                  'password': password.replaceAll(' ', ''),
+                  'type': 'm3u_plus',
+                  'output': 'ts'
+                },
+              );
+              playlistUrl = fallbackUri.toString();
+            } catch (_) {
+              playlistUrl = '';
+            }
           }
         }
       }

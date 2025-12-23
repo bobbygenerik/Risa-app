@@ -496,8 +496,27 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
     if (playlist.type == 'm3u') {
       playlistUrl = playlist.url;
     } else {
-      playlistUrl =
-          '${playlist.url}/get.php?username=${playlist.username}&password=${playlist.password}&type=m3u_plus&output=ts';
+      try {
+        final cleaned = playlist.url.trim();
+        Uri baseUri = Uri.parse(cleaned);
+        if (baseUri.scheme.isEmpty || baseUri.host.isEmpty) {
+          baseUri = Uri.parse('https://' + cleaned.replaceAll(RegExp(r'^https?://'), ''));
+        }
+        final playlistUri = baseUri.replace(
+          path: (baseUri.path == null || baseUri.path.trim().isEmpty)
+              ? 'get.php'
+              : baseUri.path.replaceAll(RegExp(r'^/'), '') + '/get.php',
+          queryParameters: {
+            'username': (playlist.username ?? '').replaceAll(' ', ''),
+            'password': (playlist.password ?? '').replaceAll(' ', ''),
+            'type': 'm3u_plus',
+            'output': 'ts'
+          },
+        );
+        playlistUrl = playlistUri.toString();
+      } catch (_) {
+        playlistUrl = '${playlist.url}/get.php?username=${playlist.username}&password=${playlist.password}&type=m3u_plus&output=ts';
+      }
     }
 
     await provider.loadPlaylistFromUrl(playlistUrl);
