@@ -8,7 +8,9 @@ import '../widgets/live_subtitle_overlay.dart';
 import '../services/integrated_transcription_service.dart';
 
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:video_player/video_player.dart';
 import '../widgets/exo_player_widget.dart';
+import '_player_control_overlay.dart';
 
 class EnhancedVideoPlayerScreen extends StatefulWidget {
   final Channel? channel;
@@ -36,6 +38,7 @@ class EnhancedVideoPlayerScreen extends StatefulWidget {
 
 class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   bool _isLoading = true;
+  final ValueNotifier<VideoPlayerController?> _playerControllerNotifier = ValueNotifier(null);
 
   @override
   void initState() {
@@ -83,7 +86,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
   Future<void> _initializePlayer() async {
     final url = widget.videoUrl ?? widget.content?.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '';
-    
+
     debugLog('Video Player: Initializing with URL: $url');
     if (url.isEmpty) {
       if (mounted) {
@@ -162,23 +165,28 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
               children: [
                 // Player fills the available area
                 Positioned.fill(
-                  child: Provider.of<IntegratedTranscriptionService>(context, listen: false) == null
-                      ? const SizedBox.shrink()
-                      : ExoPlayerWidget(
-                          url: widget.videoUrl ?? widget.content?.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '',
-                          isLive: widget.isLive,
-                          transcriptionService:
-                              Provider.of<IntegratedTranscriptionService>(context, listen: false),
-                        ),
+                  child: ExoPlayerWidget(
+                    url: widget.videoUrl ?? widget.content?.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '',
+                    isLive: widget.isLive,
+                    transcriptionService: Provider.of<IntegratedTranscriptionService>(context, listen: false),
+                    controllerNotifier: _playerControllerNotifier,
+                  ),
                 ),
                 // Live subtitle overlay positioned at bottom center
                 Positioned(
                   left: 16,
                   right: 16,
-                  bottom: 16,
+                  bottom: 80,
                   child: LiveSubtitleOverlay(
                     showSubtitles: true,
                   ),
+                ),
+                // Player controls
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: PlayerControlOverlay(controllerNotifier: _playerControllerNotifier, isLive: widget.isLive),
                 ),
               ],
             ),
