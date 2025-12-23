@@ -12,7 +12,9 @@ import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/no_text_selection_controls.dart';
 
 import 'package:iptv_player/widgets/brand_button.dart';
-import 'package:iptv_player/widgets/settings_layout.dart';
+// Note: This screen intentionally does not use `SettingsLayout` to avoid
+// displaying a second, nested settings sidebar. The app's main sidebar
+// (from `MainShell`) remains visible on all pages.
 import 'package:iptv_player/widgets/settings_tile_widgets.dart';
 import 'package:iptv_player/models/saved_playlist.dart';
 
@@ -190,15 +192,18 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return SettingsLayout(
-      selectedIndex: _selectedIndex,
-      onCategorySelected: (index) => setState(() => _selectedIndex = index),
-      onBackToHome: () => context.go('/settings'),
-      categories: const [
-        SettingsCategory(title: 'Saved Playlists', icon: Icons.playlist_play),
-        SettingsCategory(title: 'Add New', icon: Icons.add_circle),
-      ],
-      content: _buildActiveContent(),
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        title: const Text('Manage Playlists'),
+        backgroundColor: Colors.white.withAlpha((0.08 * 255).round()),
+      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          color: AppTheme.darkBackground,
+        ),
+        child: _buildSavedPlaylists(),
+      ),
     );
   }
 
@@ -239,12 +244,10 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
                   style: TextStyle(color: Colors.white70, fontSize: 18),
                 ),
                 const SizedBox(height: 24),
-                SizedBox(
-                  width: 200,
-                  child: BrandPrimaryButton(
-                    label: 'Add First Playlist',
-                    onPressed: () => setState(() => _selectedIndex = 1),
-                  ),
+                const SizedBox(height: 8),
+                Text(
+                  'Add playlists from Settings → General',
+                  style: TextStyle(color: Colors.white54, fontSize: 14),
                 ),
               ],
             ),
