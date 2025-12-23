@@ -438,8 +438,19 @@ class _PremiumTextFieldState extends State<_PremiumTextField> {
   void _handleTextFocus() {
     if (mounted) setState(() {});
     if (_textFocusNode.hasFocus) {
+      // Ensure no range selection is visible when entering edit mode.
+      // Collapse the selection and place the cursor at the end.
+      final textLen = widget.controller.text.length;
+      try {
+        widget.controller.selection = TextSelection.collapsed(offset: textLen);
+      } catch (_) {}
       setState(() => _isEditing = true);
     } else {
+      // Collapse selection when leaving edit mode to avoid persistent highlights.
+      final textLen = widget.controller.text.length;
+      try {
+        widget.controller.selection = TextSelection.collapsed(offset: textLen);
+      } catch (_) {}
       setState(() => _isEditing = false);
     }
   }
