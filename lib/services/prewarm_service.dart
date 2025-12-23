@@ -2,16 +2,16 @@ import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:media_kit/media_kit.dart';
+// import 'package:media_kit/media_kit.dart'; // REMOVED: switching to alternative video player
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
-import 'package:iptv_player/services/http_client_service.dart';
+// import 'package:iptv_player/services/http_client_service.dart'; // removed: unused after MediaKit removal
 // Settings provider import removed - not used in prewarm service
 
 /// Lightweight prewarm service to preload hero/backdrop images and
 /// initialize a temporary video controller for the featured Live TV channel.
 class PrewarmService {
-  static Player? _prewarmedPlayer;
+  // static Player? _prewarmedPlayer; // REMOVED: MediaKit Player
 
   /// Precache a small set of images used on the main screens to reduce jank
   /// when the user first visits them.
@@ -83,7 +83,8 @@ class PrewarmService {
       try {
         final url = featuredChannelUrl;
         if (url != null && url.isNotEmpty) {
-          await _initPrewarmPlayer(url);
+          // await _initPrewarmPlayer(url); // REMOVED: MediaKit player initialization
+          debugLog('Video prewarming disabled (MediaKit removed)');
         }
       } catch (_) {}
     } catch (e) {
@@ -91,6 +92,8 @@ class PrewarmService {
     }
   }
 
+  // REMOVED: MediaKit player initialization method
+  /*
   static Future<void> _initPrewarmPlayer(String url) async {
     try {
       await _prewarmedPlayer?.dispose();
@@ -117,12 +120,14 @@ class PrewarmService {
       _prewarmedPlayer = null;
     }
   }
+  */
 
   /// Dispose any prewarmed resources (call on app dispose)
   static Future<void> dispose() async {
     try {
-      await _prewarmedPlayer?.dispose();
-      _prewarmedPlayer = null;
+      // await _prewarmedPlayer?.dispose(); // REMOVED: MediaKit player disposal
+      // _prewarmedPlayer = null; // REMOVED: MediaKit player reference
+      debugLog('PrewarmService dispose: MediaKit player cleanup disabled');
     } catch (_) {}
   }
 }

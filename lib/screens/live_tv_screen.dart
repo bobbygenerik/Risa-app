@@ -193,14 +193,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF080808), // Rich Black
-            AppTheme.darkBackground, // True Black
-          ],
-        ),
+        color: AppColors.background,
       ),
       child: Consumer2<ChannelProvider, SettingsProvider>(
         builder: (context, channelProvider, settingsProvider, _) {

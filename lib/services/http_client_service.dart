@@ -46,6 +46,13 @@ class HttpClientService {
   HttpClient get httpClient => _httpClient;
   bool get isInitialized => _isInitialized;
 
+  /// Simple helper to fetch plain text from a URL
+  Future<String> getString(String url) async {
+    initialize();
+    final response = await _dio.get(url, options: Options(responseType: ResponseType.plain));
+    return response.data?.toString() ?? '';
+  }
+
   Map<String, String> get videoHeaders => {
     'User-Agent': 'VLC/3.0.0 LibVLC/3.0.0',
     'Connection': 'keep-alive',

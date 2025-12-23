@@ -3,6 +3,8 @@ package com.iptvplayer.iptv_player
 import android.content.Context
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -27,6 +29,9 @@ class ExoPlayerView(
     private lateinit var playerView: PlayerView
     private val exoPlayer: ExoPlayer
     private val methodChannel: MethodChannel
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var positionUpdateRunnable: Runnable? = null
+    private var isDisposed = false
 
     init {
         // Inflate PlayerView from XML which enforces SurfaceView via `app:surface_type="surface_view"`
@@ -51,6 +56,9 @@ class ExoPlayerView(
         // Create ExoPlayer instance with custom renderers factory and data source factory
         val dataSourceFactory = androidx.media3.datasource.DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(true)
+            .setConnectTimeoutMs(30000)
+            .setReadTimeoutMs(30000)
+            .setUserAgent("VLC/3.0.0 LibVLC/3.0.0")
 
         // Configure renderers factory: enable decoder fallback and prefer extension renderers
         // Apply NVIDIA-specific tweaks to prefer extension renderers and allow software fallback earlier
@@ -79,7 +87,7 @@ class ExoPlayerView(
             .setTrackSelector(
                 androidx.media3.exoplayer.trackselection.DefaultTrackSelector(context).apply {
                     parameters = buildUponParameters()
-                        .setMaxAudioChannelCount(2)
+                        .setMaxAudioChannelCount(8)
                         .build()
                 }
             )
@@ -99,6 +107,11 @@ class ExoPlayerView(
                         android.util.Log.d("ExoPlayer", "State changed to: $stateName")
                         methodChannel.invokeMethod("onPlaybackStateChanged", mapOf("state" to stateName))
                     }
+                    
+                    override fun onIsPlayingChanged(isPlaying: Boolean) {
+                        methodChannel.invokeMethod("onPlayingChanged", mapOf("isPlaying" to isPlaying))
+                    }
+                    
                     override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                         android.util.Log.e("ExoPlayer", "Playback error: ${error.message}")
                         methodChannel.invokeMethod("onPlayerError", mapOf("error" to error.message))
@@ -106,8 +119,11 @@ class ExoPlayerView(
                 })
             }
 
-        // Prefer the platform default surface type. For some media3 versions
-        // `setUseTextureView` is not available, so don't call it to avoid compile errors.
+        // Setup method channel for communication with Flutter
+        methodChannel = MethodChannel(messenger, "com.streamhub.iptv/exoplayer_$viewId")
+        methodChannel.setMethodCallHandler(this)
+
+        // Prefer the platform default surface type.
         android.util.Log.d("ExoPlayer", "Using platform default surface type for PlayerView")
 
         // Attach player to view
@@ -119,9 +135,8 @@ class ExoPlayerView(
             android.util.Log.w("ExoPlayer", "Failed to set PlayerView visibility: ${ex.message}")
         }
 
-        // Setup method channel for communication with Flutter
-        methodChannel = MethodChannel(messenger, "com.streamhub.iptv/exoplayer_$viewId")
-        methodChannel.setMethodCallHandler(this)
+        // Start periodic position updates
+        startPositionUpdates()
 
         // Load video URL if provided
         val videoUrl = creationParams?.get("videoUrl") as? String
@@ -131,6 +146,28 @@ class ExoPlayerView(
         } else {
             android.util.Log.w("ExoPlayer", "No video URL provided")
         }
+    }
+
+    private fun startPositionUpdates() {
+        positionUpdateRunnable = object : Runnable {
+            override fun run() {
+                if (!isDisposed && exoPlayer.playbackState != Player.STATE_IDLE) {
+                    val position = exoPlayer.currentPosition
+                    val duration = exoPlayer.duration
+                    val bufferedPosition = exoPlayer.bufferedPosition
+                    
+                    methodChannel.invokeMethod("onPositionUpdate", mapOf(
+                        "position" to position,
+                        "duration" to if (duration > 0) duration else 0L,
+                        "bufferedPosition" to bufferedPosition
+                    ))
+                }
+                if (!isDisposed) {
+                    mainHandler.postDelayed(this, 500) // Update every 500ms
+                }
+            }
+        }
+        mainHandler.post(positionUpdateRunnable!!)
     }
 
     private fun loadVideo(url: String) {
@@ -150,12 +187,25 @@ class ExoPlayerView(
     override fun getView(): View = playerView
 
     override fun dispose() {
+        isDisposed = true
+        positionUpdateRunnable?.let { mainHandler.removeCallbacks(it) }
         exoPlayer.release()
         methodChannel.setMethodCallHandler(null)
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
+            "loadVideo" -> {
+                val videoUrl = call.argument<String>("videoUrl")
+                val autoPlay = call.argument<Boolean>("autoPlay") ?: true
+                if (videoUrl != null) {
+                    exoPlayer.playWhenReady = autoPlay
+                    loadVideo(videoUrl)
+                    result.success(null)
+                } else {
+                    result.error("INVALID_URL", "Video URL is required", null)
+                }
+            }
             "play" -> {
                 exoPlayer.play()
                 result.success(null)
@@ -164,16 +214,39 @@ class ExoPlayerView(
                 exoPlayer.pause()
                 result.success(null)
             }
+            "playOrPause" -> {
+                if (exoPlayer.isPlaying) {
+                    exoPlayer.pause()
+                } else {
+                    exoPlayer.play()
+                }
+                result.success(exoPlayer.isPlaying)
+            }
             "seekTo" -> {
-                val position = call.argument<Int>("position")?.toLong() ?: 0L
+                val position = (call.argument<Any>("position") as? Number)?.toLong() ?: 0L
                 exoPlayer.seekTo(position)
                 result.success(null)
             }
+            "seekForward" -> {
+                val seconds = (call.argument<Any>("seconds") as? Number)?.toInt() ?: 10
+                val newPos = exoPlayer.currentPosition + (seconds * 1000L)
+                exoPlayer.seekTo(minOf(newPos, exoPlayer.duration))
+                result.success(null)
+            }
+            "seekBackward" -> {
+                val seconds = (call.argument<Any>("seconds") as? Number)?.toInt() ?: 10
+                val newPos = exoPlayer.currentPosition - (seconds * 1000L)
+                exoPlayer.seekTo(maxOf(newPos, 0))
+                result.success(null)
+            }
             "getPosition" -> {
-                result.success(exoPlayer.currentPosition.toInt())
+                result.success(exoPlayer.currentPosition)
             }
             "getDuration" -> {
-                result.success(exoPlayer.duration.toInt())
+                result.success(exoPlayer.duration)
+            }
+            "isPlaying" -> {
+                result.success(exoPlayer.isPlaying)
             }
             "switchAudioTrack" -> {
                 val trackIndex = call.argument<Int>("trackIndex") ?: 0
@@ -209,9 +282,14 @@ class ExoPlayerView(
                 exoPlayer.volume = if (muted) 0f else 1f
                 result.success(null)
             }
+            "stop" -> {
+                exoPlayer.stop()
+                result.success(null)
+            }
             else -> {
                 result.notImplemented()
             }
         }
     }
 }
+

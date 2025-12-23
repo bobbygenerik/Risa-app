@@ -8,6 +8,7 @@ import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 import 'package:google_mlkit_language_id/google_mlkit_language_id.dart';
 import 'package:record/record.dart';
 import 'whisper_transcription_service.dart';
+import 'package:iptv_player/services/http_client_service.dart';
 
 /// Integrated On-Device Transcription and Translation Service
 ///
@@ -47,6 +48,16 @@ class IntegratedTranscriptionService extends ChangeNotifier {
   final List<SubtitleEntry> _subtitles = [];
   String _currentText = '';
   String _currentTranslatedText = '';
+  // Last known playback position from player (optional)
+  Duration? _lastPlaybackPosition;
+  // System time when the last playback position was recorded
+  DateTime? _lastPlaybackPositionTimestamp;
+  // Smoothed playback position (exponential moving average) to reduce jitter
+  Duration? _smoothedPlaybackPosition;
+  // EMA alpha for smoothing (0-1). Higher means more responsive, lower means smoother.
+  final double _playbackEmaAlpha = 0.2;
+  // VOD (SRT) subtitles parsed for VOD playback
+  final List<VodSubtitle> _vodSubtitles = [];
 
   Timer? _cleanupTimer;
 
@@ -129,13 +140,19 @@ class IntegratedTranscriptionService extends ChangeNotifier {
     debugLog('Joined IntegratedTranscriptionService with WhisperTranscriptionService');
   }
 
-  void _onWhisperUpdate() {
+  Future<void> _onWhisperUpdate() async {
     if (_whisperService == null) return;
-    
     final newText = _whisperService!.currentText;
     if (newText.isNotEmpty && newText != _currentText) {
       _currentText = newText;
-      _addSubtitle(newText);
+      // Estimate playback position at arrival time using smoothed last sample + elapsed
+      Duration? estimatedPosition = _smoothedPlaybackPosition ?? _lastPlaybackPosition;
+      if (estimatedPosition != null && _lastPlaybackPositionTimestamp != null) {
+        final elapsed = DateTime.now().difference(_lastPlaybackPositionTimestamp!);
+        estimatedPosition = estimatedPosition + elapsed;
+      }
+
+      await _addSubtitle(newText, playbackPosition: estimatedPosition);
     }
   }
 
@@ -201,6 +218,31 @@ class IntegratedTranscriptionService extends ChangeNotifier {
     _isTranscribing = true;
     notifyListeners();
   }
+
+  /// Load SRT contents (text) and parse into VOD subtitles
+  Future<void> loadSrtFromString(String srtContents) async {
+    try {
+      final parsed = _parseSrt(srtContents);
+      _vodSubtitles
+        ..clear()
+        ..addAll(parsed);
+      notifyListeners();
+      debugLog('Loaded ${_vodSubtitles.length} VOD subtitles');
+    } catch (e) {
+      debugLog('Failed to load SRT: $e');
+    }
+  }
+
+  /// Load SRT from a remote URL
+  Future<void> loadSrtFromUrl(String url) async {
+    try {
+      final res = await HttpClientService().getString(url);
+      await loadSrtFromString(res);
+    } catch (e) {
+      debugLog('Failed to fetch SRT from $url: $e');
+      rethrow;
+    }
+  }
   
   /// Transcribe an audio file with Whisper
   Future<void> _transcribeAudioFile(String filePath) async {
@@ -232,12 +274,15 @@ class IntegratedTranscriptionService extends ChangeNotifier {
   }
 
   /// Add subtitle and translate if enabled
-  Future<void> _addSubtitle(String text) async {
+  /// Add subtitle and translate if enabled. If [playbackPosition] is provided
+  /// the subtitle will be associated with that position for VOD sync/export.
+  Future<void> _addSubtitle(String text, {Duration? playbackPosition}) async {
     if (text.trim().isEmpty) return;
 
     final entry = SubtitleEntry(
       originalText: text,
       timestamp: DateTime.now(),
+      playbackPosition: playbackPosition ?? _lastPlaybackPosition,
       sourceLanguage: _sourceLanguage,
       targetLanguage: _targetLanguage,
     );
@@ -423,6 +468,40 @@ class IntegratedTranscriptionService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Clear VOD subtitles
+  void clearVodSubtitles() {
+    _vodSubtitles.clear();
+    notifyListeners();
+  }
+
+  /// Update player playback position (call periodically from player)
+  void updatePlaybackPosition(Duration position) {
+    // Update raw last sample
+    _lastPlaybackPosition = position;
+    _lastPlaybackPositionTimestamp = DateTime.now();
+
+    // Update EMA-smoothed playback position (in milliseconds)
+    if (_smoothedPlaybackPosition == null) {
+      _smoothedPlaybackPosition = position;
+    } else {
+      final prevMs = _smoothedPlaybackPosition!.inMilliseconds.toDouble();
+      final newMs = position.inMilliseconds.toDouble();
+      final smoothedMs = (_playbackEmaAlpha * newMs) + ((1 - _playbackEmaAlpha) * prevMs);
+      _smoothedPlaybackPosition = Duration(milliseconds: smoothedMs.round());
+    }
+  }
+
+  /// Return current VOD subtitle text for current playback position (if any)
+  String get currentVodSubtitle {
+    final pos = _smoothedPlaybackPosition ?? _lastPlaybackPosition;
+    if (pos == null || _vodSubtitles.isEmpty) return '';
+
+    for (final sub in _vodSubtitles) {
+      if (pos >= sub.start && pos <= sub.end) return sub.text;
+    }
+    return '';
+  }
+
   /// Clean up old subtitles
   void _cleanupOldSubtitles() {
     final cutoff = DateTime.now().subtract(const Duration(minutes: 5));
@@ -442,10 +521,17 @@ class IntegratedTranscriptionService extends ChangeNotifier {
 
       buffer.writeln(i + 1);
 
-      final start = _formatSRTTimestamp(entry.timestamp);
-      final end = _formatSRTTimestamp(
-        entry.timestamp.add(const Duration(seconds: 3)),
-      );
+      String start;
+      String end;
+      if (entry.playbackPosition != null) {
+        start = _formatDurationAsSRT(entry.playbackPosition!);
+        end = _formatDurationAsSRT(entry.playbackPosition! + const Duration(seconds: 3));
+      } else {
+        start = _formatSRTTimestamp(entry.timestamp);
+        end = _formatSRTTimestamp(
+          entry.timestamp.add(const Duration(seconds: 3)),
+        );
+      }
       buffer.writeln('$start --> $end');
 
       buffer.writeln(text);
@@ -461,6 +547,15 @@ class IntegratedTranscriptionService extends ChangeNotifier {
     final minutes = time.minute.toString().padLeft(2, '0');
     final seconds = time.second.toString().padLeft(2, '0');
     final milliseconds = time.millisecond.toString().padLeft(3, '0');
+    return '$hours:$minutes:$seconds,$milliseconds';
+  }
+
+  /// Format a duration (relative) to SRT timestamp (HH:MM:SS,mmm)
+  String _formatDurationAsSRT(Duration d) {
+    final hours = d.inHours.toString().padLeft(2, '0');
+    final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    final milliseconds = (d.inMilliseconds.remainder(1000)).toString().padLeft(3, '0');
     return '$hours:$minutes:$seconds,$milliseconds';
   }
 
@@ -514,6 +609,7 @@ class SubtitleEntry {
   final String originalText;
   String translatedText;
   final DateTime timestamp;
+  final Duration? playbackPosition;
   final TranslateLanguage sourceLanguage;
   final TranslateLanguage targetLanguage;
 
@@ -521,9 +617,77 @@ class SubtitleEntry {
     required this.originalText,
     this.translatedText = '',
     required this.timestamp,
+    this.playbackPosition,
     required this.sourceLanguage,
     required this.targetLanguage,
   });
+}
+
+/// VOD subtitle entry (parsed from SRT/WebVTT)
+class VodSubtitle {
+  final Duration start;
+  final Duration end;
+  final String text;
+
+  VodSubtitle({required this.start, required this.end, required this.text});
+}
+
+// Simple SRT parser (durations returned as Duration)
+List<VodSubtitle> _parseSrt(String srt) {
+  final lines = srt.replaceAll('\r', '').split('\n');
+  final entries = <VodSubtitle>[];
+  int i = 0;
+  while (i < lines.length) {
+    final idxLine = lines[i].trim();
+    if (idxLine.isEmpty) {
+      i++;
+      continue;
+    }
+    // optional index
+    if (RegExp(r'^\d+ * * * * * * * * * *$').hasMatch(idxLine)) {
+      i++;
+    }
+    if (i >= lines.length) break;
+    final timeLine = lines[i].trim();
+    final parts = timeLine.split(' --> ');
+    if (parts.length != 2) {
+      i++;
+      continue;
+    }
+    final start = _parseSrtTimestamp(parts[0]);
+    final end = _parseSrtTimestamp(parts[1]);
+    i++;
+    final buffer = StringBuffer();
+    while (i < lines.length && lines[i].trim().isNotEmpty) {
+      if (buffer.isNotEmpty) buffer.writeln();
+      buffer.write(lines[i]);
+      i++;
+    }
+    entries.add(VodSubtitle(start: start, end: end, text: buffer.toString()));
+  }
+  return entries;
+}
+
+Duration _parseSrtTimestamp(String s) {
+  // Format: HH:MM:SS,mmm or H:MM:SS.mmm or MM:SS,mmm
+  final clean = s.replaceAll(',', '.').trim();
+  final parts = clean.split(':');
+  if (parts.length == 3) {
+    final h = int.tryParse(parts[0]) ?? 0;
+    final m = int.tryParse(parts[1]) ?? 0;
+    final secParts = parts[2].split('.');
+    final sec = int.tryParse(secParts[0]) ?? 0;
+    final ms = secParts.length > 1 ? int.tryParse(('${secParts[1]}000').substring(0, 3)) ?? 0 : 0;
+    return Duration(hours: h, minutes: m, seconds: sec, milliseconds: ms);
+  }
+  if (parts.length == 2) {
+    final m = int.tryParse(parts[0]) ?? 0;
+    final secParts = parts[1].split('.');
+    final sec = int.tryParse(secParts[0]) ?? 0;
+    final ms = secParts.length > 1 ? int.tryParse(('${secParts[1]}000').substring(0, 3)) ?? 0 : 0;
+    return Duration(minutes: m, seconds: sec, milliseconds: ms);
+  }
+  return Duration.zero;
 }
 
 /// Language option for UI

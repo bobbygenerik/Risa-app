@@ -28,7 +28,8 @@ dependencies:
   go_router: ^16.1.0
   intl: ^0.20.2
   wakelock_plus: ^1.2.8
-  media_kit: ^1.1.10+1  # Modern media processing library
+  video_player: ^2.7.2
+  # media_kit: ^1.1.10+1  # REMOVED: switching to alternative video player
   # media_kit_libs_audio: ^1.0.4  # Audio-only libraries (conflicts with video libs)
 
 
@@ -41,9 +42,9 @@ dependencies:
   
 
 
-  # Optional/native media plugins referenced in the codebase
-  media_kit_video: ^1.2.4
-  media_kit_libs_android_video: ^1.2.0
+  # Optional/native media plugins referenced in codebase
+  # media_kit_video: ^1.2.4  # REMOVED: switching to alternative video player
+  # media_kit_libs_android_video: ^1.2.0  # REMOVED: switching to alternative video player
   # video_player: ^2.7.2  # DISABLED: switched to VLC for better IPTV support
   # vosk_flutter: any  # OPTIONAL: removed to avoid forcing transitive downgrades
   

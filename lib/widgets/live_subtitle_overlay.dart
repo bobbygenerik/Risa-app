@@ -30,12 +30,12 @@ class LiveSubtitleOverlay extends StatelessWidget {
 
     return Consumer<IntegratedTranscriptionService>(
       builder: (context, service, child) {
-        final subtitles = service.latestSubtitles;
+        // Prefer VOD subtitles when loaded and matching current playback position
+        final vodText = service.currentVodSubtitle;
+        final liveText = service.latestSubtitles;
+        final subtitles = vodText.isNotEmpty ? vodText : liveText;
 
-        if (subtitles.isEmpty) {
-          return const SizedBox.shrink();
-        }
-
+        if (subtitles.isEmpty) return const SizedBox.shrink();
         return Container(
           padding: EdgeInsets.symmetric(
             horizontal: context.tvSpacing(AppSizes.md),

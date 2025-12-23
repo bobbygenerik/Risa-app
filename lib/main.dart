@@ -15,7 +15,7 @@ import 'package:iptv_player/services/voice_search_service.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'package:iptv_player/utils/crash_logger.dart';
-import 'package:media_kit/media_kit.dart';
+// import 'package:media_kit/media_kit.dart'; // REMOVED: switching to alternative video player
 
 import 'package:iptv_player/services/incremental_epg_service.dart';
 
@@ -113,8 +113,8 @@ void main() {
       StartupProbe.mark('Flutter bindings initialized');
       unawaited(CrashLogger.instance.init());
       
-      MediaKit.ensureInitialized();
-      StartupProbe.mark('MediaKit initialized');
+      // MediaKit.ensureInitialized(); // REMOVED: switching to alternative video player
+      StartupProbe.mark('MediaKit initialized (REMOVED)');
 
       // Optimize image cache for IPTV with many channel logos
       final memoryInfo = await _getDeviceMemoryInfo();

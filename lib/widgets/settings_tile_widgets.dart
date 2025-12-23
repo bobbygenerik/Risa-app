@@ -141,7 +141,7 @@ class SettingsActionTile extends StatelessWidget {
 
             if (event.logicalKey == LogicalKeyboardKey.select ||
                 event.logicalKey == LogicalKeyboardKey.enter ||
-                event.logicalKey == LogicalKeyboardKey.center) {
+                event.logicalKey == LogicalKeyboardKey.space) {
               onTap?.call();
               return KeyEventResult.handled;
             }
@@ -248,7 +248,7 @@ class SettingsSwitchTile extends StatelessWidget {
         if (event is KeyDownEvent &&
             (event.logicalKey == LogicalKeyboardKey.select ||
                 event.logicalKey == LogicalKeyboardKey.enter ||
-                event.logicalKey == LogicalKeyboardKey.center)) {
+                event.logicalKey == LogicalKeyboardKey.space)) {
           onChanged(!value);
           return KeyEventResult.handled;
         }
@@ -463,7 +463,7 @@ class _PremiumTextFieldState extends State<_PremiumTextField> {
         // Enter/Select/Center on Container -> Enter Edit Mode
         if (event.logicalKey == LogicalKeyboardKey.select ||
             event.logicalKey == LogicalKeyboardKey.enter ||
-            event.logicalKey == LogicalKeyboardKey.center) {
+            event.logicalKey == LogicalKeyboardKey.space) {
           _textFocusNode.requestFocus();
           return KeyEventResult.handled;
         }

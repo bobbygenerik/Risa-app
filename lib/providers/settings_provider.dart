@@ -33,6 +33,7 @@ class SettingsProvider extends ChangeNotifier {
   bool _realDebridForCatchup = true;
   bool _realDebridForVod = true;
   bool _heroVideoPreview = false;
+  String _videoPlayerBackend = 'Auto'; // Auto, ExoPlayer, MediaKit
 
   Map<String, String?>? _profileCache;
   Map<String, String?>? _savedPlaylistsCache;
@@ -63,6 +64,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get realDebridForCatchup => _realDebridForCatchup;
   bool get realDebridForVod => _realDebridForVod;
   bool get heroVideoPreview => _heroVideoPreview;
+  String get videoPlayerBackend => _videoPlayerBackend;
 
 
   Future<void> initialize() async {
@@ -112,6 +114,7 @@ class SettingsProvider extends ChangeNotifier {
     _realDebridForCatchup = prefs.getBool('realdebrid_catchup') ?? true;
     _realDebridForVod = prefs.getBool('realdebrid_vod') ?? true;
     _heroVideoPreview = prefs.getBool('hero_video_preview') ?? false;
+    _videoPlayerBackend = prefs.getString('video_player_backend') ?? 'Auto';
 
   }
 
@@ -275,6 +278,13 @@ class SettingsProvider extends ChangeNotifier {
     if (_heroVideoPreview == value) return;
     _heroVideoPreview = value;
     await _prefs?.setBool('hero_video_preview', value);
+    notifyListeners();
+  }
+
+  Future<void> setVideoPlayerBackend(String value) async {
+    if (_videoPlayerBackend == value) return;
+    _videoPlayerBackend = value;
+    await _prefs?.setString('video_player_backend', value);
     notifyListeners();
   }
 

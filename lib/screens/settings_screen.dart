@@ -218,6 +218,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _handleCategorySelected(int index) {
     if (_selectedIndex == index) return;
     setState(() => _selectedIndex = index);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _requestContentFocus();
+    });
   }
 
   void _requestContentFocus() {
