@@ -883,6 +883,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await prefs.setString('xtream_username', username);
     await prefs.setString('xtream_password', password);
     await prefs.setString('playlist_type', 'xtream');
+
+    // Compute and save Xtream EPG URL at credential entry time.
+    // Respect user-set `custom_epg_url`: if it's present, do not overwrite `epg_url`.
+    try {
+      var cleanServer = server.trim();
+      if (cleanServer.endsWith('/')) {
+        cleanServer = cleanServer.substring(0, cleanServer.length - 1);
+      }
+      final epgUrl = '\$cleanServer/xmltv.php?username=\$username&password=\$password';
+      final custom = prefs.getString('custom_epg_url') ?? '';
+      if (custom.trim().isEmpty) {
+        await prefs.setString('epg_url', epgUrl);
+      }
+    } catch (_) {
+      // Swallow any unexpected errors silently to avoid leaking credentials or logs.
+    }
     if (mounted) {
       final provider = Provider.of<ChannelProvider>(context, listen: false);
       final playlistUrl =
