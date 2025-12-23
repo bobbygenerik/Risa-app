@@ -180,13 +180,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                     showSubtitles: true,
                   ),
                 ),
-                // Player controls
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: PlayerControlOverlay(controllerNotifier: _playerControllerNotifier, isLive: widget.isLive),
-                ),
+                // Player controls are provided by ExoPlayerWidget
               ],
             ),
     );
