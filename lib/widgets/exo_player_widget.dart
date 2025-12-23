@@ -15,7 +15,7 @@ class ExoPlayerWidget extends StatefulWidget {
     required this.url,
     this.isLive = false,
     this.transcriptionService,
-    this.controllerNotifier,
+      // this.controllerNotifier,
   });
 
   @override
@@ -43,10 +43,7 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
     _initializeFuture = _controller.initialize().then((_) {
       // Autoplay when ready
       _controller.play();
-      // expose controller to external listeners if requested
-      try {
-        widget.controllerNotifier?.value = _controller;
-      } catch (_) {}
+        // Removed external controllerNotifier coupling
       setState(() {});
     }).catchError((e) {
       // Let parent handle errors if needed
@@ -76,7 +73,7 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
     _hideTimer?.cancel();
     _positionTimer?.cancel();
     _controller.removeListener(_onControllerChanged);
-    try { widget.controllerNotifier?.value = null; } catch (_) {}
+      // Removed external controllerNotifier coupling
     _controller.dispose();
     positionNotifier.dispose();
     isPlayingNotifier.dispose();

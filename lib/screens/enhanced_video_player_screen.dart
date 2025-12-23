@@ -10,7 +10,6 @@ import '../services/integrated_transcription_service.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:video_player/video_player.dart';
 import '../widgets/exo_player_widget.dart';
-import '_player_control_overlay.dart';
 
 class EnhancedVideoPlayerScreen extends StatefulWidget {
   final Channel? channel;
