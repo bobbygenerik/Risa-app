@@ -104,6 +104,19 @@ class _EPGScreenState extends State<EPGScreen>
 
       // Scroll to current time position (no animation for initial load)
       _scrollToCurrentTime(animate: false);
+      // Auto-load EPG on first open if an URL exists (respect cache behavior)
+      try {
+        if (!mounted) return;
+        final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
+        final epgUrl = prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
+        if (epgUrl != null && epgUrl.isNotEmpty && !epgService.isLoading) {
+          debugLog('EPG Screen: Found EPG URL - initializing service');
+          // Initialize without forcing a refresh so cache behavior is respected
+          unawaited(epgService.initialize());
+        }
+      } catch (e) {
+        debugLog('EPG Screen: Failed to auto-initialize EPG: $e');
+      }
     });
   }
 

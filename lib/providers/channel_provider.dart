@@ -600,13 +600,29 @@ class ChannelProvider with ChangeNotifier {
         final server = prefs.getString('xtream_server');
         final username = prefs.getString('xtream_username');
         final password = prefs.getString('xtream_password');
-
-        debugLog(
-          'ChannelProvider: Xtream - Server: $server, User: $username',
-        );
+        debugLog('ChannelProvider: Xtream account configured');
+        // Note: Do NOT log credentials or full URLs containing credentials
         if (server != null && username != null && password != null) {
           playlistUrl =
               '$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts';
+          // Construct a canonical EPG url for Xtream servers: /xmltv.php?username=...&password=...
+          try {
+            var cleanServer = server.trim();
+            if (cleanServer.endsWith('/')) cleanServer = cleanServer.substring(0, cleanServer.length - 1);
+            final epgUrl = '$cleanServer/xmltv.php?username=$username&password=$password';
+            final prefs = await SharedPreferences.getInstance();
+            final oldUrl = prefs.getString('epg_url');
+            final custom = prefs.getString('custom_epg_url');
+            // Overwrite stored epg_url if empty or if the prior value was just the user's custom URL
+            final shouldSave = (oldUrl == null || oldUrl.isEmpty) || (custom != null && oldUrl == custom);
+            if (shouldSave) {
+              await prefs.setString('epg_url', epgUrl);
+              debugLog('ChannelProvider: Saved computed epg_url for Xtream');
+              // Initialize EPG service later when UI requests it; do not force refresh here
+            }
+          } catch (e) {
+            debugLog('ChannelProvider: Failed to compute/save epg_url for Xtream: $e');
+          }
         }
       }
 
