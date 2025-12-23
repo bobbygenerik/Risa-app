@@ -156,38 +156,32 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
           style: const TextStyle(color: Colors.white, fontSize: 18),
         ),
       ),
-      body: Center(
-        child: _isLoading
-            ? const CircularProgressIndicator()
-            : SizedBox(
-                width: double.infinity,
-                height: MediaQuery.of(context).size.height * 0.6,
-                child: Builder(builder: (context) {
-                  final transcriptionService = Provider.of<IntegratedTranscriptionService>(context);
-                  // Transcription listener handled in lifecycle (didChangeDependencies)
-
-                  return Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      ExoPlayerWidget(
-                        url: widget.videoUrl ?? widget.content?.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '',
-                        isLive: widget.isLive,
-                        transcriptionService: transcriptionService,
-                      ),
-                      // Live subtitle overlay positioned at bottom center
-                      Positioned(
-                        left: 16,
-                        right: 16,
-                        bottom: 16,
-                        child: LiveSubtitleOverlay(
-                          showSubtitles: true,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Stack(
+              children: [
+                // Player fills the available area
+                Positioned.fill(
+                  child: Provider.of<IntegratedTranscriptionService>(context, listen: false) == null
+                      ? const SizedBox.shrink()
+                      : ExoPlayerWidget(
+                          url: widget.videoUrl ?? widget.content?.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '',
+                          isLive: widget.isLive,
+                          transcriptionService:
+                              Provider.of<IntegratedTranscriptionService>(context, listen: false),
                         ),
-                      ),
-                    ],
-                  );
-                }),
-              ),
-      ),
+                ),
+                // Live subtitle overlay positioned at bottom center
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  bottom: 16,
+                  child: LiveSubtitleOverlay(
+                    showSubtitles: true,
+                  ),
+                ),
+              ],
+            ),
     );
   }
 
