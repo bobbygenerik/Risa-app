@@ -39,155 +39,12 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
   final TextEditingController _secondaryEpgUrlController =
       TextEditingController();
 
-  // Dialog form controllers
-  final TextEditingController _addM3uNameController = TextEditingController();
-  final TextEditingController _addM3uUrlController = TextEditingController();
-  final TextEditingController _addXtreamNameController =
-      TextEditingController();
-  final TextEditingController _addXtreamServerController =
-      TextEditingController();
-  final TextEditingController _addXtreamUsernameController =
-      TextEditingController();
-  final TextEditingController _addXtreamPasswordController =
-      TextEditingController();
+    // (Add-dialog controllers removed — creation handled via Settings → General)
 
   // Focus nodes
   final FocusNode _playlistNameFocusNode = FocusNode();
   final FocusNode _playlistUrlFocusNode = FocusNode();
-  final FocusNode _epgUrlFocusNode = FocusNode();
-  final FocusNode _secondaryEpgUrlFocusNode = FocusNode();
-  final FocusNode _firstFocusNode = FocusNode();
-
-  // Dialog focus nodes
-  final FocusNode _addM3uNameFocusNode = FocusNode();
-  final FocusNode _addM3uUrlFocusNode = FocusNode();
-  final FocusNode _addXtreamNameFocusNode = FocusNode();
-  final FocusNode _addXtreamServerFocusNode = FocusNode();
-  final FocusNode _addXtreamUsernameFocusNode = FocusNode();
-  final FocusNode _addXtreamPasswordFocusNode = FocusNode();
-
-  @override
-  void initState() {
-    super.initState();
-    _loadSavedPlaylists();
-  }
-
-  @override
-  void dispose() {
-    _playlistNameController.dispose();
-    _playlistUrlController.dispose();
-    _epgUrlController.dispose();
-    _secondaryEpgUrlController.dispose();
-    _addM3uNameController.dispose();
-    _addM3uUrlController.dispose();
-    _addXtreamNameController.dispose();
-    _addXtreamServerController.dispose();
-    _addXtreamUsernameController.dispose();
-    _addXtreamPasswordController.dispose();
-    _playlistNameFocusNode.dispose();
-    _playlistUrlFocusNode.dispose();
-    _epgUrlFocusNode.dispose();
-    _secondaryEpgUrlFocusNode.dispose();
-    _firstFocusNode.dispose();
-    _addM3uNameFocusNode.dispose();
-    _addM3uUrlFocusNode.dispose();
-    _addXtreamNameFocusNode.dispose();
-    _addXtreamServerFocusNode.dispose();
-    _addXtreamUsernameFocusNode.dispose();
-    _addXtreamPasswordFocusNode.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadSavedPlaylists() async {
-    setState(() => _isLoading = true);
-
-    final prefs = await SharedPreferences.getInstance();
-    final savedPlaylists = <PlaylistInfo>[];
-
-    // Load M3U playlists
-    final m3uUrls = prefs.getStringList('saved_m3u_playlists') ?? [];
-    for (String url in m3uUrls) {
-      final enc = base64Url.encode(utf8.encode(url));
-      final name = prefs.getString('m3u_playlist_name_$enc') ?? prefs.getString('m3u_playlist_name_$url') ?? 'M3U Playlist';
-      final epgUrl = prefs.getString('m3u_epg_url_$enc') ?? prefs.getString('m3u_epg_url_$url') ?? '';
-      final secondaryEpg = prefs.getString('m3u_secondary_epg_$enc') ?? prefs.getString('m3u_secondary_epg_$url') ?? '';
-      final updateFreq = prefs.getInt('m3u_update_freq_$enc') ?? prefs.getInt('m3u_update_freq_$url') ?? 6;
-
-      savedPlaylists.add(PlaylistInfo(
-        id: url.hashCode.toString(),
-        name: name,
-        url: url,
-        type: 'm3u',
-        epgUrl: epgUrl,
-        secondaryEpgUrl: secondaryEpg,
-        updateFrequency: updateFreq,
-      ));
-    }
-
-    // Load Xtream playlists
-    final xtreamServers = prefs.getStringList('saved_xtream_servers') ?? [];
-    for (String server in xtreamServers) {
-      final enc = base64Url.encode(utf8.encode(server));
-      final username = prefs.getString('xtream_username_$enc') ?? prefs.getString('xtream_username_$server') ?? '';
-      final password = prefs.getString('xtream_password_$enc') ?? prefs.getString('xtream_password_$server') ?? '';
-      final name = prefs.getString('xtream_playlist_name_$enc') ?? prefs.getString('xtream_playlist_name_$server') ?? 'Xtream Playlist';
-      final epgUrl = prefs.getString('xtream_epg_url_$enc') ?? prefs.getString('xtream_epg_url_$server') ?? '';
-      final secondaryEpg = prefs.getString('xtream_secondary_epg_$enc') ?? prefs.getString('xtream_secondary_epg_$server') ?? '';
-      final updateFreq = prefs.getInt('xtream_update_freq_$enc') ?? prefs.getInt('xtream_update_freq_$server') ?? 6;
-
-      savedPlaylists.add(PlaylistInfo(
-        id: server.hashCode.toString(),
-        name: name,
-        url: server,
-        type: 'xtream',
-        epgUrl: epgUrl,
-        secondaryEpgUrl: secondaryEpg,
-        updateFrequency: updateFreq,
-        username: username,
-        password: password,
-      ));
-    }
-
-    setState(() {
-      _savedPlaylists = savedPlaylists;
-      _isLoading = false;
-    });
-
-    // Fallback for legacy storage: 'saved_playlists' JSON (older playlist manager)
-    if (_savedPlaylists.isEmpty) {
-      final legacyJson = prefs.getString('saved_playlists');
-      if (legacyJson != null && legacyJson.trim().isNotEmpty) {
-        try {
-          final decoded = jsonDecode(legacyJson) as List<dynamic>;
-          final legacyItems = decoded
-              .map((e) => SavedPlaylist.fromJson(e as Map<String, dynamic>))
-              .toList();
-          final migrated = legacyItems
-              .map((p) => PlaylistInfo(
-                    id: p.id,
-                    name: p.name,
-                    url: p.type == 'm3u' ? p.url : (p.server ?? ''),
-                    type: p.type,
-                    epgUrl: '',
-                    secondaryEpgUrl: '',
-                    updateFrequency: 6,
-                    username: p.username,
-                    password: p.password,
-                  ))
-              .toList();
-
-          if (mounted) {
-            setState(() {
-              _savedPlaylists = migrated;
-            });
-          }
-        } catch (_) {
-          // ignore parsing errors and leave list empty
-        }
-      }
-    }
-  }
-
+  // add-dialogs removed; creation handled from Settings → General
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -205,10 +62,7 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
     );
   }
 
-  Widget _buildActiveContent() {
-    // No active content switching needed for standalone management screen.
-    return _buildSavedPlaylists();
-  }
+  // Note: active content switching removed — this screen always shows saved playlists.
 
   Widget _buildSavedPlaylists() {
     if (_isLoading) {
