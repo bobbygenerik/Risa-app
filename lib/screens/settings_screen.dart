@@ -876,7 +876,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final server = _normalizeHttpUrl(_xtreamServerController.text);
     final username = _xtreamUsernameController.text.trim();
     final password = _xtreamPasswordController.text.trim();
-    if (server.isEmpty || username.isEmpty || password.isEmpty) return;
+      if (server.isEmpty || username.isEmpty || password.isEmpty) {
+        _showMessage('Please fill in all fields.');
+        return;
+      }
     _showMessage('Loading Xtream playlist...');
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('xtream_server', server);
@@ -891,12 +894,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final cleaned = server.trim();
         final epgBase = Uri.parse(cleaned);
         final base = (epgBase.scheme.isEmpty || epgBase.host.isEmpty)
-            ? Uri.parse('https://' + cleaned.replaceAll(RegExp(r'^https?://'), ''))
-            : epgBase;
+          ? Uri.parse('https://${cleaned.replaceAll(RegExp(r'^https?://'), '')}')
+          : epgBase;
         final epgUri = base.replace(
-          path: (base.path == null || base.path.trim().isEmpty)
+            path: (base.path.trim().isEmpty)
               ? 'xmltv.php'
-              : base.path.replaceAll(RegExp(r'^/'), '') + '/xmltv.php',
+              : '${base.path.replaceAll(RegExp(r'^/'), '')}/xmltv.php',
           queryParameters: {
             'username': username.replaceAll(' ', ''),
             'password': password.replaceAll(' ', ''),
@@ -918,12 +921,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final cleaned = server.trim();
         Uri baseUri = Uri.parse(cleaned);
         if (baseUri.scheme.isEmpty || baseUri.host.isEmpty) {
-          baseUri = Uri.parse('https://' + cleaned.replaceAll(RegExp(r'^https?://'), ''));
+          baseUri = Uri.parse('https://${cleaned.replaceAll(RegExp(r'^https?://'), '')}');
         }
         final playlistUri = baseUri.replace(
-          path: (baseUri.path == null || baseUri.path.trim().isEmpty)
+          path: (baseUri.path.trim().isEmpty)
               ? 'get.php'
-              : baseUri.path.replaceAll(RegExp(r'^/'), '') + '/get.php',
+              : '${baseUri.path.replaceAll(RegExp(r'^/'), '')}/get.php',
           queryParameters: {
             'username': username.replaceAll(' ', ''),
             'password': password.replaceAll(' ', ''),

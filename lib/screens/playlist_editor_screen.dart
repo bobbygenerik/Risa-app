@@ -124,14 +124,15 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
         }
         
         try {
-          Uri baseUri = Uri.parse(server);
-          if (baseUri.scheme.isEmpty || baseUri.host.isEmpty) {
-            baseUri = Uri.parse('https://' + server.replaceAll(RegExp(r'^https?://'), ''));
+            final cleaned = server.replaceAll(RegExp(r'\s+'), '');
+            var baseUri = Uri.parse(cleaned);
+            if (baseUri.scheme.isEmpty || baseUri.host.isEmpty) {
+              baseUri = Uri.parse('https://${cleaned.replaceAll(RegExp(r'^https?://'), '')}');
           }
           final playlistUri = baseUri.replace(
-            path: (baseUri.path == null || baseUri.path.trim().isEmpty)
-                ? 'get.php'
-                : baseUri.path.replaceAll(RegExp(r'^/'), '') + '/get.php',
+            path: (baseUri.path.trim().isEmpty)
+              ? 'get.php'
+              : '${baseUri.path.replaceAll(RegExp(r'^/'), '')}/get.php',
             queryParameters: {
               'username': username.replaceAll(' ', ''),
               'password': password.replaceAll(' ', ''),

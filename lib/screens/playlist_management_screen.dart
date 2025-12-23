@@ -498,14 +498,14 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
     } else {
       try {
         final cleaned = playlist.url.trim();
-        Uri baseUri = Uri.parse(cleaned);
-        if (baseUri.scheme.isEmpty || baseUri.host.isEmpty) {
-          baseUri = Uri.parse('https://' + cleaned.replaceAll(RegExp(r'^https?://'), ''));
-        }
-        final playlistUri = baseUri.replace(
-          path: (baseUri.path == null || baseUri.path.trim().isEmpty)
-              ? 'get.php'
-              : baseUri.path.replaceAll(RegExp(r'^/'), '') + '/get.php',
+          var baseUri = Uri.parse(cleaned);
+          if (baseUri.scheme.isEmpty || baseUri.host.isEmpty) {
+            baseUri = Uri.parse('https://${cleaned.replaceAll(RegExp(r'^https?://'), '')}');
+          }
+          final playlistUri = baseUri.replace(
+            path: (baseUri.path.trim().isEmpty)
+                ? 'xmltv.php'
+                : '${baseUri.path.replaceAll(RegExp(r'^/'), '')}/xmltv.php',
           queryParameters: {
             'username': (playlist.username ?? '').replaceAll(' ', ''),
             'password': (playlist.password ?? '').replaceAll(' ', ''),

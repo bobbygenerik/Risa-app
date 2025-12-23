@@ -195,20 +195,15 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
       // Format: http://server:port/get.php?username=xxx&password=xxx&type=m3u_plus&output=ts
       // Build playlist URL using Uri to avoid malformed interpolation and spacing
       final cleanServer = server.trim();
-      Uri baseUri;
-      try {
-        baseUri = Uri.parse(cleanServer);
+        var baseUri = Uri.parse(cleanServer);
         if (baseUri.scheme.isEmpty || baseUri.host.isEmpty) {
-          baseUri = Uri.parse('https://'+cleanServer.replaceAll(RegExp(r'^https?://'), ''));
+          baseUri = Uri.parse('https://${cleanServer.replaceAll(RegExp(r'^https?://'), '')}');
         }
-      } catch (_) {
-        baseUri = Uri.parse('https://'+cleanServer.replaceAll(RegExp(r'^https?://'), ''));
-      }
 
       final playlistUri = baseUri.replace(
-        path: (baseUri.path == null || baseUri.path.trim().isEmpty)
-            ? 'get.php'
-            : baseUri.path.replaceAll(RegExp(r'^/'), '') + '/get.php',
+        path: (baseUri.path.trim().isEmpty)
+          ? 'get.php'
+          : '${baseUri.path.replaceAll(RegExp(r'^/'), '')}/get.php',
         queryParameters: {
           'username': username.replaceAll(' ', ''),
           'password': password.replaceAll(' ', ''),
@@ -235,17 +230,17 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
       try {
         final epgBase = Uri.parse(server.trim());
         final base = (epgBase.scheme.isEmpty || epgBase.host.isEmpty)
-            ? Uri.parse('https://' + server.replaceAll(RegExp(r'^https?://'), ''))
-            : epgBase;
-        final epgUri = base.replace(
-          path: (base.path == null || base.path.trim().isEmpty)
+          ? Uri.parse('https://${server.replaceAll(RegExp(r'^https?://'), '')}')
+          : epgBase;
+          final epgUri = base.replace(
+            path: (base.path.trim().isEmpty)
               ? 'xmltv.php'
-              : base.path.replaceAll(RegExp(r'^/'), '') + '/xmltv.php',
-          queryParameters: {
-            'username': username.replaceAll(' ', ''),
-            'password': password.replaceAll(' ', ''),
-          },
-        );
+              : '${base.path.replaceAll(RegExp(r'^/'), '')}/xmltv.php',
+            queryParameters: {
+              'username': username.replaceAll(' ', ''),
+              'password': password.replaceAll(' ', ''),
+            },
+          );
         await prefs.setString('epg_url', epgUri.toString());
       } catch (_) {
         // swallow to avoid leaking credentials

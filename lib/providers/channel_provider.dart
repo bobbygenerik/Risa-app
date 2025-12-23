@@ -607,13 +607,13 @@ class ChannelProvider with ChangeNotifier {
             final cleaned = server.trim();
             Uri baseUri = Uri.parse(cleaned);
             if (baseUri.scheme.isEmpty || baseUri.host.isEmpty) {
-              baseUri = Uri.parse('https://' + cleaned.replaceAll(RegExp(r'^https?://'), ''));
+              baseUri = Uri.parse('https://${cleaned.replaceAll(RegExp(r'^https?://'), '')}');
             }
 
             final playlistUri = baseUri.replace(
-              path: (baseUri.path == null || baseUri.path.trim().isEmpty)
+              path: (baseUri.path.trim().isEmpty)
                   ? 'get.php'
-                  : baseUri.path.replaceAll(RegExp(r'^/'), '') + '/get.php',
+                  : '${baseUri.path.replaceAll(RegExp(r'^/'), '')}/get.php',
               queryParameters: {
                 'username': username.replaceAll(' ', ''),
                 'password': password.replaceAll(' ', ''),
@@ -625,9 +625,9 @@ class ChannelProvider with ChangeNotifier {
 
             // Construct a canonical EPG url for Xtream servers using Uri
             final epgUri = baseUri.replace(
-              path: (baseUri.path == null || baseUri.path.trim().isEmpty)
+              path: (baseUri.path.trim().isEmpty)
                   ? 'xmltv.php'
-                  : baseUri.path.replaceAll(RegExp(r'^/'), '') + '/xmltv.php',
+                  : '${baseUri.path.replaceAll(RegExp(r'^/'), '')}/xmltv.php',
               queryParameters: {
                 'username': username.replaceAll(' ', ''),
                 'password': password.replaceAll(' ', ''),

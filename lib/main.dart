@@ -532,12 +532,12 @@ class _MyAppState extends State<MyApp> {
             final cleaned = server.trim();
             Uri baseUri = Uri.parse(cleaned);
             if (baseUri.scheme.isEmpty || baseUri.host.isEmpty) {
-              baseUri = Uri.parse('https://' + cleaned.replaceAll(RegExp(r'^https?://'), ''));
+              baseUri = Uri.parse('https://${cleaned.replaceAll(RegExp(r'^https?://'), '')}');
             }
             final playlistUri = baseUri.replace(
-                path: (baseUri.path == null || baseUri.path.trim().isEmpty)
-                    ? 'get.php'
-                    : baseUri.path.replaceAll(RegExp(r'^/'), '') + '/get.php',
+                path: (baseUri.path.trim().isEmpty)
+                  ? 'get.php'
+                  : '${baseUri.path.replaceAll(RegExp(r'^/'), '')}/get.php',
                 queryParameters: {
                   'username': username.replaceAll(' ', ''),
                   'password': password.replaceAll(' ', ''),
@@ -548,9 +548,9 @@ class _MyAppState extends State<MyApp> {
 
             // Computed EPG URL
             final epgUri = baseUri.replace(
-              path: (baseUri.path == null || baseUri.path.trim().isEmpty)
+                path: (baseUri.path.trim().isEmpty)
                   ? 'xmltv.php'
-                  : baseUri.path.replaceAll(RegExp(r'^/'), '') + '/xmltv.php',
+                  : '${baseUri.path.replaceAll(RegExp(r'^/'), '')}/xmltv.php',
               queryParameters: {
                 'username': username.replaceAll(' ', ''),
                 'password': password.replaceAll(' ', ''),
@@ -564,12 +564,12 @@ class _MyAppState extends State<MyApp> {
               final cleaned2 = server.trim();
               Uri fallbackBase = Uri.parse(cleaned2);
               if (fallbackBase.scheme.isEmpty || fallbackBase.host.isEmpty) {
-                fallbackBase = Uri.parse('https://' + cleaned2.replaceAll(RegExp(r'^https?://'), ''));
+                fallbackBase = Uri.parse('https://${cleaned2.replaceAll(RegExp(r'^https?://'), '')}');
               }
               final fallbackUri = fallbackBase.replace(
-                path: (fallbackBase.path == null || fallbackBase.path.trim().isEmpty)
+                path: (fallbackBase.path.trim().isEmpty)
                     ? 'get.php'
-                    : fallbackBase.path.replaceAll(RegExp(r'^/'), '') + '/get.php',
+                    : '${fallbackBase.path.replaceAll(RegExp(r'^/'), '')}/get.php',
                 queryParameters: {
                   'username': username.replaceAll(' ', ''),
                   'password': password.replaceAll(' ', ''),
