@@ -33,6 +33,14 @@ class ExoPlayerView(
         val inflater = LayoutInflater.from(context)
         val inflated = inflater.inflate(R.layout.exo_player_view, null)
         playerView = inflated as PlayerView
+        // Prevent the native PlayerView from stealing focus/DPAD events so Flutter widgets can receive input
+        try {
+            playerView.isFocusable = false
+            playerView.isFocusableInTouchMode = false
+            playerView.isClickable = false
+        } catch (ex: Exception) {
+            android.util.Log.w("ExoPlayer", "Failed to change focusability on PlayerView: ${ex.message}")
+        }
         // Configure PlayerView
         playerView.useController = false // We use Flutter overlay controls
         playerView.setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
