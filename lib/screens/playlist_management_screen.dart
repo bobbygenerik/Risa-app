@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -11,7 +10,7 @@ import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/no_text_selection_controls.dart';
 
-import 'package:iptv_player/widgets/brand_button.dart';
+// removed unused imports
 // Note: This screen intentionally does not use `SettingsLayout` to avoid
 // displaying a second, nested settings sidebar. The app's main sidebar
 // (from `MainShell`) remains visible on all pages.
@@ -27,8 +26,7 @@ class PlaylistManagementScreen extends StatefulWidget {
 }
 
 class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
-  // Navigation State
-  int _selectedIndex = 0;
+  // Navigation State (not used - this screen is a standalone list)
 
   // Playlist management
   List<PlaylistInfo> _savedPlaylists = [];
@@ -208,14 +206,8 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
   }
 
   Widget _buildActiveContent() {
-    switch (_selectedIndex) {
-      case 0:
-        return _buildSavedPlaylists();
-      case 1:
-        return _buildAddNewPlaylist();
-      default:
-        return _buildSavedPlaylists();
-    }
+    // No active content switching needed for standalone management screen.
+    return _buildSavedPlaylists();
   }
 
   Widget _buildSavedPlaylists() {
