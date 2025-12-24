@@ -235,7 +235,7 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
           ),
           constraints: BoxConstraints(
             minHeight:
-                context.tvSpacing(widget.minHeight ?? 32).clamp(20.0, 40.0),
+                context.tvSpacing(widget.minHeight ?? 32).clamp(20.0, 44.0),
           ),
           child: Row(
             mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
