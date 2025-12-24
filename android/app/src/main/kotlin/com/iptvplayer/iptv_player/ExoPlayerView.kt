@@ -38,7 +38,7 @@ class ExoPlayerView(
     init {
         // Inflate PlayerView XML. Allow TextureView vs SurfaceView selection via creationParams
         val inflater = LayoutInflater.from(context)
-        val requestedSurface = (creationParams?.get("surfaceType") as? String)?.toLowerCase()
+        val requestedSurface = (creationParams?.get("surfaceType") as? String)?.lowercase()
         val layoutId = when (requestedSurface) {
             "texture" -> R.layout.exo_player_view_texture
             "surface" -> R.layout.exo_player_view
@@ -72,7 +72,7 @@ class ExoPlayerView(
         // Apply NVIDIA-specific tweaks to prefer extension renderers and allow software fallback earlier
         val isNvidia = Build.MANUFACTURER.equals("NVIDIA", ignoreCase = true)
         // Allow per-device override (set after an automatic recovery) to prefer platform decoders
-        val shared = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
+        val shared = context.getSharedPreferences("risa_exo_prefs", Context.MODE_PRIVATE)
         val forcePlatform = shared.getBoolean(prefsKey, false)
         val renderersFactory = object : androidx.media3.exoplayer.DefaultRenderersFactory(context) {
             init {
@@ -87,27 +87,26 @@ class ExoPlayerView(
                     setEnableDecoderFallback(true)
                     android.util.Log.i("ExoPlayer", "Per-device override: forcing platform renderers (extensions OFF)")
                 } else {
-                    // Default: use extension renderers when available but do not prefer them
-                    setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+                    // Default: prefer platform renderers (avoid tint issues on many devices)
+                    setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
                     setEnableDecoderFallback(true)
-                    android.util.Log.i("ExoPlayer", "Using extension renderer mode: ON (recommended default)")
+                    android.util.Log.i("ExoPlayer", "Defaulting to platform renderers (extensions OFF) to avoid tint issues")
                 }
             }
         }
 
         // Build ExoPlayer with our custom renderers factory
+        val trackSelector = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(context)
+        trackSelector.parameters = trackSelector.buildUponParameters()
+            .setMaxAudioChannelCount(8)
+            .build()
+
         exoPlayer = ExoPlayer.Builder(context, renderersFactory)
             .setMediaSourceFactory(
                 androidx.media3.exoplayer.source.DefaultMediaSourceFactory(context)
                     .setDataSourceFactory(dataSourceFactory)
             )
-            .setTrackSelector(
-                androidx.media3.exoplayer.trackselection.DefaultTrackSelector(context).apply {
-                    parameters = buildUponParameters()
-                        .setMaxAudioChannelCount(8)
-                        .build()
-                }
-            )
+            .setTrackSelector(trackSelector)
             .build()
             .apply {
                 playWhenReady = creationParams?.get("autoPlay") as? Boolean ?: true
@@ -170,14 +169,14 @@ class ExoPlayerView(
                                                 val max = maxOf(rAvg, gAvg, bAvg)
                                                 val min = minOf(rAvg, gAvg, bAvg)
                                                 if (max - min > 30) {
-                                                    android.util.Log.w("ExoPlayer", "Detected color tint; attempting one-shot recovery by forcing platform decoders")
-                                                    retriedForTint = true
-                                                    // Persist preference for this device to avoid recurring tint
-                                                    try {
-                                                        shared.edit().putBoolean(prefsKey, true).apply()
-                                                    } catch (_: Exception) {}
-                                                    // Recreate player with platform-only renderers
-                                                    mainHandler.post {
+                                                        android.util.Log.w("ExoPlayer", "Detected color tint; attempting one-shot recovery by forcing platform decoders")
+                                                        retriedForTint = true
+                                                        // Persist preference for this device to avoid recurring tint
+                                                        try {
+                                                            shared.edit().putBoolean(prefsKey, true).apply()
+                                                        } catch (_: Exception) {}
+                                                        // Recreate player with platform-only renderers
+                                                        mainHandler.post {
                                                         try {
                                                             val curMedia = exoPlayer.currentMediaItem
                                                             val curPos = exoPlayer.currentPosition
@@ -190,18 +189,17 @@ class ExoPlayerView(
                                                                     setEnableDecoderFallback(true)
                                                                 }
                                                             }
+                                                            val newTrackSelector = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(context)
+                                                            newTrackSelector.parameters = newTrackSelector.buildUponParameters()
+                                                                .setMaxAudioChannelCount(8)
+                                                                .build()
+
                                                             val newPlayer = ExoPlayer.Builder(context, newFactory)
                                                                 .setMediaSourceFactory(
                                                                     androidx.media3.exoplayer.source.DefaultMediaSourceFactory(context)
                                                                         .setDataSourceFactory(dataSourceFactory)
                                                                 )
-                                                                .setTrackSelector(
-                                                                    androidx.media3.exoplayer.trackselection.DefaultTrackSelector(context).apply {
-                                                                        parameters = buildUponParameters()
-                                                                            .setMaxAudioChannelCount(8)
-                                                                            .build()
-                                                                    }
-                                                                )
+                                                                .setTrackSelector(newTrackSelector)
                                                                 .build()
                                                             // Attach listeners similar to original
                                                             newPlayer.playWhenReady = wasPlaying

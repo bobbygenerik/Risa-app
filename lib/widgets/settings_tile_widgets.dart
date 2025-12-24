@@ -27,22 +27,19 @@ class SettingsSectionHeader extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              letterSpacing: 0.5,
-            ),
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: AppTheme.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
           ),
           if (subtitle != null) ...[
             const SizedBox(height: 8),
             Text(
               subtitle!,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.white.withValues(alpha: 0.6),
-                height: 1.4,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.textSecondary,
+                    height: 1.4,
+                  ),
             ),
           ],
         ],
@@ -71,12 +68,11 @@ class SettingsGroup extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 12, top: 8),
             child: Text(
               title!.toUpperCase(),
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
-                color: AppTheme.primaryBlue.withValues(alpha: 0.8),
-              ),
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: AppTheme.primaryBlue.withValues(alpha: 0.9),
+                    letterSpacing: 1.2,
+                    fontWeight: FontWeight.w700,
+                  ),
             ),
           ),
         Container(
@@ -176,20 +172,18 @@ class SettingsActionTile extends StatelessWidget {
                             children: [
                               Text(
                                 title,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                  color: titleColor ?? Colors.white,
-                                ),
+                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                      color: titleColor ?? AppTheme.textPrimary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                               ),
                               if (subtitle != null) ...[
                                 const SizedBox(height: 4),
                                 Text(
                                   subtitle!,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.white54,
-                                  ),
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        color: AppTheme.textSecondary,
+                                      ),
                                 ),
                               ],
                             ],
@@ -274,20 +268,18 @@ class SettingsSwitchTile extends StatelessWidget {
                         children: [
                           Text(
                             title,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.white,
-                            ),
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  color: AppTheme.textPrimary,
+                                  fontWeight: FontWeight.w600,
+                                ),
                           ),
                           if (subtitle != null) ...[
                             const SizedBox(height: 4),
                             Text(
                               subtitle!,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.white54,
-                              ),
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: AppTheme.textSecondary,
+                                  ),
                             ),
                           ],
                         ],
@@ -352,11 +344,10 @@ class SettingsInputTile extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              fontSize: 13,
-              color: Colors.white70,
-              fontWeight: FontWeight.w500,
-            ),
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: AppTheme.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
           ),
           const SizedBox(height: 10),
           // Using the existing robust TVFriendlyTextField

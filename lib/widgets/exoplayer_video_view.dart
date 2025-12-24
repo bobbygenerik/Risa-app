@@ -84,6 +84,7 @@ class _ExoPlayerVideoViewState extends State<ExoPlayerVideoView> {
       'videoUrl': widget.videoUrl,
       'autoPlay': widget.autoPlay,
       'muted': widget.muted,
+      'surfaceType': 'texture',
     };
 
     return AndroidView(

@@ -260,6 +260,7 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
       'videoUrl': url,
       'autoPlay': true,
       'muted': false,
+      'surfaceType': 'texture',
     };
 
     return AndroidView(

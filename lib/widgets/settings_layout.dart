@@ -166,6 +166,7 @@ class _SettingsLayoutState extends State<SettingsLayout> {
                       return KeyEventResult.ignored;
                     },
                     child: Container(
+                      color: AppTheme.darkBackground,
                       child: widget.content,
                     ),
                   ),
