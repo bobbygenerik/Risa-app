@@ -41,8 +41,10 @@ class IntegratedTranscriptionService extends ChangeNotifier {
   double _downloadProgress = 0.0;
 
   // Languages
-  TranslateLanguage _sourceLanguage = TranslateLanguage.english; // Auto-detected
-  TranslateLanguage _targetLanguage = TranslateLanguage.english; // Always English
+  TranslateLanguage _sourceLanguage =
+      TranslateLanguage.english; // Auto-detected
+  TranslateLanguage _targetLanguage =
+      TranslateLanguage.english; // Always English
 
   // Data
   final List<SubtitleEntry> _subtitles = [];
@@ -119,10 +121,9 @@ class IntegratedTranscriptionService extends ChangeNotifier {
   Future<void> transcribeVideoStream(String videoUrl) async {
     try {
       debugLog('Starting audio extraction from: $videoUrl');
-      
+
       // Start transcription from video stream audio
       await startTranscription(videoUrl: videoUrl);
-      
     } catch (e) {
       debugLog('Video stream transcription error: $e');
     }
@@ -131,13 +132,14 @@ class IntegratedTranscriptionService extends ChangeNotifier {
   /// Attach Whisper service for delegation
   void attachWhisperService(WhisperTranscriptionService service) {
     if (_whisperService == service) return;
-    
+
     // Remove old listener if exists
     _whisperService?.removeListener(_onWhisperUpdate);
-    
+
     _whisperService = service;
     _whisperService?.addListener(_onWhisperUpdate);
-    debugLog('Joined IntegratedTranscriptionService with WhisperTranscriptionService');
+    debugLog(
+        'Joined IntegratedTranscriptionService with WhisperTranscriptionService');
   }
 
   Future<void> _onWhisperUpdate() async {
@@ -146,9 +148,11 @@ class IntegratedTranscriptionService extends ChangeNotifier {
     if (newText.isNotEmpty && newText != _currentText) {
       _currentText = newText;
       // Estimate playback position at arrival time using smoothed last sample + elapsed
-      Duration? estimatedPosition = _smoothedPlaybackPosition ?? _lastPlaybackPosition;
+      Duration? estimatedPosition =
+          _smoothedPlaybackPosition ?? _lastPlaybackPosition;
       if (estimatedPosition != null && _lastPlaybackPositionTimestamp != null) {
-        final elapsed = DateTime.now().difference(_lastPlaybackPositionTimestamp!);
+        final elapsed =
+            DateTime.now().difference(_lastPlaybackPositionTimestamp!);
         estimatedPosition = estimatedPosition + elapsed;
       }
 
@@ -157,7 +161,8 @@ class IntegratedTranscriptionService extends ChangeNotifier {
   }
 
   /// Start live transcription from audio stream
-  Future<void> startTranscription({String? audioFilePath, String? videoUrl}) async {
+  Future<void> startTranscription(
+      {String? audioFilePath, String? videoUrl}) async {
     if (!_isInitialized) {
       await initialize();
     }
@@ -189,7 +194,7 @@ class IntegratedTranscriptionService extends ChangeNotifier {
   Future<void> _transcribeWithWhisper(String audioFilePath) async {
     try {
       debugLog('Transcribing with Whisper: $audioFilePath');
-      
+
       if (audioFilePath == 'live_stream') {
         // For live streams, start continuous transcription
         await _startLiveWhisperTranscription();
@@ -197,24 +202,24 @@ class IntegratedTranscriptionService extends ChangeNotifier {
         // For audio files, transcribe the file
         await _transcribeAudioFile(audioFilePath);
       }
-      
     } catch (e) {
       debugLog('Whisper transcription error: $e');
     }
   }
-  
+
   /// Start live Whisper transcription from video stream
   Future<void> _startLiveWhisperTranscription() async {
     debugLog('Delegating live transcription to WhisperTranscriptionService');
-    
+
     if (_whisperService != null && _lastVideoUrl != null) {
       await _whisperService!.startTranscription(streamUrl: _lastVideoUrl!);
     } else {
-      debugLog('⚠️ Cannot start live transcription: Whisper service or Video URL missing');
-      // For now, keep _isTranscribing = true so UI doesn't flicker, 
+      debugLog(
+          '⚠️ Cannot start live transcription: Whisper service or Video URL missing');
+      // For now, keep _isTranscribing = true so UI doesn't flicker,
       // but results won't come in until whisper starts.
     }
-    
+
     _isTranscribing = true;
     notifyListeners();
   }
@@ -243,12 +248,12 @@ class IntegratedTranscriptionService extends ChangeNotifier {
       rethrow;
     }
   }
-  
+
   /// Transcribe an audio file with Whisper
   Future<void> _transcribeAudioFile(String filePath) async {
     // This would use your Whisper model to transcribe the audio file
     debugLog('Transcribing audio file: $filePath');
-    
+
     // Placeholder - integrate with your actual Whisper implementation
     await Future.delayed(const Duration(seconds: 2));
     await _addSubtitle('Transcription result from file: $filePath');
@@ -309,8 +314,9 @@ class IntegratedTranscriptionService extends ChangeNotifier {
     try {
       // Detect source language
       final languageId = LanguageIdentifier(confidenceThreshold: 0.5);
-      final detectedLanguage = await languageId.identifyLanguage(entry.originalText);
-      
+      final detectedLanguage =
+          await languageId.identifyLanguage(entry.originalText);
+
       // If already English or detection failed, no translation needed
       if (detectedLanguage == 'en' || detectedLanguage == 'und') {
         entry.translatedText = entry.originalText;
@@ -318,14 +324,14 @@ class IntegratedTranscriptionService extends ChangeNotifier {
         notifyListeners();
         return;
       }
-      
+
       // Create translator for detected language -> English
       final sourceLanguage = _getTranslateLanguage(detectedLanguage);
       if (sourceLanguage == null) {
         entry.translatedText = entry.originalText;
         return;
       }
-      
+
       final translator = OnDeviceTranslator(
         sourceLanguage: sourceLanguage,
         targetLanguage: TranslateLanguage.english,
@@ -335,7 +341,7 @@ class IntegratedTranscriptionService extends ChangeNotifier {
       final translation = await translator.translateText(entry.originalText);
       entry.translatedText = translation;
       _currentTranslatedText = translation;
-      
+
       await translator.close();
 
       // TTS speak functionality removed (not used)
@@ -346,7 +352,7 @@ class IntegratedTranscriptionService extends ChangeNotifier {
       entry.translatedText = entry.originalText;
     }
   }
-  
+
   TranslateLanguage? _getTranslateLanguage(String languageCode) {
     final languageMap = {
       'es': TranslateLanguage.spanish,
@@ -366,7 +372,6 @@ class IntegratedTranscriptionService extends ChangeNotifier {
     };
     return languageMap[languageCode];
   }
-
 
   /// Download translation models
   Future<bool> downloadTranslationModels() async {
@@ -486,7 +491,8 @@ class IntegratedTranscriptionService extends ChangeNotifier {
     } else {
       final prevMs = _smoothedPlaybackPosition!.inMilliseconds.toDouble();
       final newMs = position.inMilliseconds.toDouble();
-      final smoothedMs = (_playbackEmaAlpha * newMs) + ((1 - _playbackEmaAlpha) * prevMs);
+      final smoothedMs =
+          (_playbackEmaAlpha * newMs) + ((1 - _playbackEmaAlpha) * prevMs);
       _smoothedPlaybackPosition = Duration(milliseconds: smoothedMs.round());
     }
   }
@@ -525,7 +531,8 @@ class IntegratedTranscriptionService extends ChangeNotifier {
       String end;
       if (entry.playbackPosition != null) {
         start = _formatDurationAsSRT(entry.playbackPosition!);
-        end = _formatDurationAsSRT(entry.playbackPosition! + const Duration(seconds: 3));
+        end = _formatDurationAsSRT(
+            entry.playbackPosition! + const Duration(seconds: 3));
       } else {
         start = _formatSRTTimestamp(entry.timestamp);
         end = _formatSRTTimestamp(
@@ -555,7 +562,8 @@ class IntegratedTranscriptionService extends ChangeNotifier {
     final hours = d.inHours.toString().padLeft(2, '0');
     final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    final milliseconds = (d.inMilliseconds.remainder(1000)).toString().padLeft(3, '0');
+    final milliseconds =
+        (d.inMilliseconds.remainder(1000)).toString().padLeft(3, '0');
     return '$hours:$minutes:$seconds,$milliseconds';
   }
 
@@ -567,7 +575,8 @@ class IntegratedTranscriptionService extends ChangeNotifier {
         name: _getLanguageName(lang),
         language: lang,
       );
-    }).toList()..sort((a, b) => a.name.compareTo(b.name));
+    }).toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
   }
 
   /// Get language name
@@ -677,14 +686,18 @@ Duration _parseSrtTimestamp(String s) {
     final m = int.tryParse(parts[1]) ?? 0;
     final secParts = parts[2].split('.');
     final sec = int.tryParse(secParts[0]) ?? 0;
-    final ms = secParts.length > 1 ? int.tryParse(('${secParts[1]}000').substring(0, 3)) ?? 0 : 0;
+    final ms = secParts.length > 1
+        ? int.tryParse(('${secParts[1]}000').substring(0, 3)) ?? 0
+        : 0;
     return Duration(hours: h, minutes: m, seconds: sec, milliseconds: ms);
   }
   if (parts.length == 2) {
     final m = int.tryParse(parts[0]) ?? 0;
     final secParts = parts[1].split('.');
     final sec = int.tryParse(secParts[0]) ?? 0;
-    final ms = secParts.length > 1 ? int.tryParse(('${secParts[1]}000').substring(0, 3)) ?? 0 : 0;
+    final ms = secParts.length > 1
+        ? int.tryParse(('${secParts[1]}000').substring(0, 3)) ?? 0
+        : 0;
     return Duration(minutes: m, seconds: sec, milliseconds: ms);
   }
   return Duration.zero;

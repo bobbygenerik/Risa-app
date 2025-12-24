@@ -43,7 +43,7 @@ class AIModelManager extends ChangeNotifier {
   /// Check if model is downloaded
   bool isModelDownloaded(String modelId) {
     return _modelStatus[modelId] == ModelDownloadStatus.downloaded ||
-           _modelStatus[modelId] == ModelDownloadStatus.bundled;
+        _modelStatus[modelId] == ModelDownloadStatus.bundled;
   }
 
   /// Check if model is downloading
@@ -117,7 +117,7 @@ class AIModelManager extends ChangeNotifier {
     if (_modelStatus[model.id] == ModelDownloadStatus.downloading) {
       return false; // Already downloading
     }
-    
+
     if (model.isBundled) {
       _modelStatus[model.id] = ModelDownloadStatus.bundled;
       notifyListeners();
@@ -153,9 +153,8 @@ class AIModelManager extends ChangeNotifier {
         await for (final chunk in response.stream) {
           downloadedBytes += chunk.length;
           sink.add(chunk);
-          _downloadProgress[model.id] = contentLength > 0
-              ? downloadedBytes / contentLength
-              : 0.0;
+          _downloadProgress[model.id] =
+              contentLength > 0 ? downloadedBytes / contentLength : 0.0;
           notifyListeners();
         }
 
@@ -191,8 +190,7 @@ class AIModelManager extends ChangeNotifier {
 
       final response = await client.send(request);
 
-      final isRedirect =
-          response.statusCode == 301 ||
+      final isRedirect = response.statusCode == 301 ||
           response.statusCode == 302 ||
           response.statusCode == 303 ||
           response.statusCode == 307 ||
@@ -334,8 +332,6 @@ class AIModel {
       return '${(sizeBytes / 1024).toStringAsFixed(1)} KB';
     return '${(sizeBytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
-
-
 
   // === SPEECH RECOGNITION MODELS ===
 

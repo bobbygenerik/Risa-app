@@ -1,19 +1,118 @@
 import 'dart:io';
+import 'dart:isolate';
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import '../services/m3u_parser_service.dart';
 
-/// Isolate entry point for parsing a playlist from bytes
+/// Legacy compute-compatible entrypoint retained for small payloads
 Future<Map<String, dynamic>> parsePlaylistInIsolate(List<int> bytes) async {
   final parser = M3UParserService();
-  // Use optimized map-based parsing (avoids Channel/Content object creation)
   return parser.parseM3UStreamToMaps(Stream.value(bytes));
 }
 
-/// Isolate entry point for parsing a playlist from a file path (memory efficient)
-/// This reads the file in chunks and streams it to the parser to avoid OOM
-Future<Map<String, dynamic>> parsePlaylistFromFile(String filePath) async {
-  final file = File(filePath);
-  final parser = M3UParserService();
-  
-  // Use optimized map-based parsing (avoids Channel/Content object creation)
-  return parser.parseM3UStreamToMaps(file.openRead());
+/// Isolate worker that receives a SendPort and a stream source descriptor.
+/// This supports progress updates and cooperative cancellation.
+class _IsolateRequest {
+  final SendPort replyPort;
+  final String? filePath;
+  final List<int>? bytes;
+  _IsolateRequest({required this.replyPort, this.filePath, this.bytes});
+}
+
+/// Top-level entrypoint for spawned isolate
+void _isolateEntry(_IsolateRequest request) async {
+  final SendPort reply = request.replyPort;
+  try {
+    final parser = M3UParserService();
+    Stream<List<int>> stream;
+    if (request.filePath != null) {
+      final file = File(request.filePath!);
+      stream = file.openRead();
+    } else if (request.bytes != null) {
+      stream = Stream.value(request.bytes!);
+    } else {
+      throw Exception('No source provided');
+    }
+
+    final result =
+        await parser.parseM3UStreamToMaps(stream, progressPort: reply);
+    reply.send({'type': 'done', 'result': result});
+  } catch (e, st) {
+    reply
+        .send({'type': 'error', 'error': e.toString(), 'stack': st.toString()});
+  }
+}
+
+/// Parse playlist in a spawned isolate with progress messages and cancellation support.
+/// Returns a map with keys: 'result' (parsed maps) or 'error'.
+Future<Map<String, dynamic>> parsePlaylistCancelable(
+    {String? filePath,
+    List<int>? bytes,
+    void Function(int parsedChannels)? onProgress,
+    CancelToken? cancelToken}) async {
+  final receivePort = ReceivePort();
+  final errorPort = ReceivePort();
+
+  // Spawn a real isolate entry function (top-level) to avoid closure sendability issues
+  final isolate = await Isolate.spawn<_IsolateRequest>(
+      _isolateEntry,
+      _IsolateRequest(
+          replyPort: receivePort.sendPort, filePath: filePath, bytes: bytes),
+      onError: errorPort.sendPort);
+
+  final completer = Completer<Map<String, dynamic>>();
+
+  StreamSubscription? sub;
+  sub = receivePort.listen((message) {
+    if (message is Map) {
+      final t = message['type'];
+      if (t == 'done') {
+        completer.complete(Map<String, dynamic>.from(message['result']));
+        sub?.cancel();
+        receivePort.close();
+        errorPort.close();
+        isolate.kill(priority: Isolate.immediate);
+      } else if (t == 'error') {
+        completer.completeError(Exception(message['error']));
+        sub?.cancel();
+        receivePort.close();
+        errorPort.close();
+        isolate.kill(priority: Isolate.immediate);
+      } else if (t == 'progress') {
+        final channels = message['channels'] as int? ?? 0;
+        if (onProgress != null) {
+          try {
+            onProgress(channels);
+          } catch (_) {}
+        }
+      }
+    }
+  });
+
+  // Cancel handling
+  cancelToken?.onCancel = () {
+    if (!completer.isCompleted) {
+      completer.complete(
+          {'channels': [], 'movies': [], 'series': [], 'epgUrl': null});
+    }
+    try {
+      isolate.kill(priority: Isolate.immediate);
+    } catch (_) {}
+    sub?.cancel();
+    receivePort.close();
+    errorPort.close();
+  };
+
+  return completer.future;
+}
+
+/// Simple cancel token to request cancellation from caller side.
+class CancelToken {
+  void Function()? onCancel;
+  bool get isCancelled => _cancelled;
+  bool _cancelled = false;
+  void cancel() {
+    _cancelled = true;
+    if (onCancel != null) onCancel!();
+  }
 }

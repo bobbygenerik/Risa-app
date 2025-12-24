@@ -297,7 +297,8 @@ class HeroInfoBox extends StatelessWidget {
                 boxShadow: isFocused
                     ? [
                         BoxShadow(
-                          color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
+                          color: AppTheme.primaryBlue
+                              .withAlpha((0.4 * 255).round()),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
@@ -409,7 +410,8 @@ class EPGHero extends StatelessWidget {
 
         final title = currentProgram?.title ?? channel.name;
         final description = currentProgram?.description;
-        final heroImage = customHeroImage ?? currentProgram?.imageUrl ?? channel.logoUrl;
+        final heroImage =
+            customHeroImage ?? currentProgram?.imageUrl ?? channel.logoUrl;
         final isLive = currentProgram?.isCurrentlyPlaying == true;
 
         return Stack(

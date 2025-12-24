@@ -45,7 +45,8 @@ class ProfileProvider extends ChangeNotifier {
       _profiles = [];
     }
     final activeId = prefs.getString(_activeProfileKey);
-    _activeProfile = _findProfile(activeId) ?? (_profiles.isNotEmpty ? _profiles.first : null);
+    _activeProfile = _findProfile(activeId) ??
+        (_profiles.isNotEmpty ? _profiles.first : null);
     _notifyIfActive();
   }
 
@@ -98,13 +99,13 @@ class ProfileProvider extends ChangeNotifier {
       await prefs.remove(_activeProfileKey);
     }
   }
-  
+
   void _notifyIfActive() {
     if (!_isDisposed) {
       notifyListeners();
     }
   }
-  
+
   @override
   void dispose() {
     _isDisposed = true;

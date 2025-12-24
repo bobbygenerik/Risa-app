@@ -45,7 +45,8 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
                 .clamp(0.0, 1.0))
             .toColor()
         : baseColor;
-    final resolvedColor = _focused ? Colors.white.withValues(alpha: 0.9) : pressedColor;
+    final resolvedColor =
+        _focused ? Colors.white.withValues(alpha: 0.9) : pressedColor;
     final labelColor = _focused ? AppTheme.darkBackground : Colors.white;
 
     final resolvedPadding = widget.padding.resolve(Directionality.of(context));
@@ -218,7 +219,7 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
         ),
         borderRadius: BorderRadius.circular(widget.borderRadius),
       ),
-            child: Padding(
+      child: Padding(
         padding: EdgeInsets.all(1.5),
         child: Container(
           decoration: BoxDecoration(

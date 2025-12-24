@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 /// context is not within an active Scaffold hierarchy yet (e.g., during route
 /// transitions or early initialization).
 final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey =
-  GlobalKey<ScaffoldMessengerState>();
+    GlobalKey<ScaffoldMessengerState>();
 
 /// Safely show a SnackBar. If the provided [context] has a [ScaffoldMessenger],
 /// it will be used. Otherwise, this will attempt to use the root navigator's
@@ -58,8 +58,7 @@ void showAppSnackBar(BuildContext context, SnackBar snackBar) {
   // As a last resort, schedule for after the frame in case the Scaffold is
   // still being created (e.g., during first build).
   WidgetsBinding.instance.addPostFrameCallback((_) {
-    final messenger =
-        ScaffoldMessenger.maybeOf(context) ??
+    final messenger = ScaffoldMessenger.maybeOf(context) ??
         (rootCtx != null ? ScaffoldMessenger.maybeOf(rootCtx) : null) ??
         rootScaffoldMessengerKey.currentState;
     messenger?.showSnackBar(snackBar);

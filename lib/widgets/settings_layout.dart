@@ -136,7 +136,8 @@ class _SettingsLayoutState extends State<SettingsLayout> {
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
                               itemCount: widget.categories.length,
-                              padding: const EdgeInsets.symmetric(horizontal: 24),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 24),
                               itemBuilder: (context, index) {
                                 return _buildMenuItem(index);
                               },

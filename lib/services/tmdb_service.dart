@@ -26,11 +26,11 @@ class TMDBService {
   static const Duration _defaultTtl = Duration(hours: 24);
   static const int _maxCacheEntries = 500; // Increased cache size
   static Future<void>? _cacheLoadFuture;
-  
+
   // Batch request queue
   static final Map<String, List<Function(String?)>> _pendingRequests = {};
   static final Set<String> _processingRequests = {};
-  
+
   // TMDB Genre ID to Name mapping
   static const Map<int, String> _movieGenres = {
     28: 'Action',
@@ -53,7 +53,7 @@ class TMDBService {
     10752: 'War',
     37: 'Western',
   };
-  
+
   static const Map<int, String> _tvGenres = {
     10759: 'Action & Adventure',
     16: 'Animation',
@@ -84,11 +84,11 @@ class TMDBService {
       _cache.remove(key);
       return null;
     }
-    
+
     // LRU: Move to end (most recently used)
     _cache.remove(key);
     _cache[key] = item;
-    
+
     return item.data;
   }
 
@@ -101,13 +101,13 @@ class TMDBService {
     if (_cache.containsKey(key)) {
       _cache.remove(key);
     }
-    
+
     // Evict LRU entries if cache is full
     while (_cache.length >= _maxCacheEntries) {
       final oldestKey = _cache.keys.first;
       _cache.remove(oldestKey);
     }
-    
+
     // Add new entry (most recently used)
     _cache[key] = _CacheItem(data, DateTime.now().add(ttl ?? _defaultTtl));
     // persist asynchronously
@@ -258,7 +258,7 @@ class TMDBService {
 
         if (results.isNotEmpty) {
           final movie = results.first;
-          
+
           // Map genre IDs to genre names
           final genreIds = movie['genre_ids'] as List?;
           final List<String> genres = [];
@@ -268,7 +268,7 @@ class TMDBService {
               if (genreName != null) genres.add(genreName);
             }
           }
-          
+
           final result = {
             'rating': movie['vote_average'] as double?,
             'poster': movie['poster_path'] != null
@@ -299,7 +299,8 @@ class TMDBService {
     String type = 'movie', // 'movie' or 'series'
   }) async {
     try {
-      var searchUrl = '$_omdbBaseUrl/?apikey=$_omdbApiKey&t=${Uri.encodeComponent(title)}';
+      var searchUrl =
+          '$_omdbBaseUrl/?apikey=$_omdbApiKey&t=${Uri.encodeComponent(title)}';
       if (year != null) {
         searchUrl += '&y=$year';
       }
@@ -309,18 +310,20 @@ class TMDBService {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        
+
         if (data['Response'] == 'True') {
           final poster = data['Poster'] as String?;
           // OMDb returns 'N/A' for missing posters
-          final validPoster = (poster != null && poster != 'N/A') ? poster : null;
-          
+          final validPoster =
+              (poster != null && poster != 'N/A') ? poster : null;
+
           return {
             'rating': data['imdbRating'] != null && data['imdbRating'] != 'N/A'
                 ? double.tryParse(data['imdbRating'] as String)
                 : null,
             'poster': validPoster,
-            'backdrop': validPoster, // OMDb doesn't have separate backdrops, use poster
+            'backdrop':
+                validPoster, // OMDb doesn't have separate backdrops, use poster
             'overview': data['Plot'] as String?,
             'release_date': data['Year'] as String?,
           };
@@ -357,7 +360,7 @@ class TMDBService {
 
         if (results.isNotEmpty) {
           final show = results.first;
-          
+
           // Map genre IDs to genre names
           final genreIds = show['genre_ids'] as List?;
           final List<String> genres = [];
@@ -367,7 +370,7 @@ class TMDBService {
               if (genreName != null) genres.add(genreName);
             }
           }
-          
+
           final result = {
             'rating': show['vote_average'] as double?,
             'poster': show['poster_path'] != null
@@ -426,9 +429,10 @@ class TMDBService {
         details = await getTVDetails(title, year: year);
       }
       details ??= await getMovieDetails(title, year: year);
-      
+
       // Only use company logos as last resort if no backdrop/poster found
-      if (details == null || (details['backdrop'] == null && details['poster'] == null)) {
+      if (details == null ||
+          (details['backdrop'] == null && details['poster'] == null)) {
         final companySearchUrl =
             '$_baseUrl/search/company?api_key=$_apiKey&query=${Uri.encodeComponent(title)}';
         final companyResponse = await http.get(Uri.parse(companySearchUrl));
@@ -443,35 +447,44 @@ class TMDBService {
             }
           }
         }
-        
+
         // Only use company logo if no other artwork found
-        if (companyLogoUrl != null && (details == null || (details['backdrop'] == null && details['poster'] == null))) {
+        if (companyLogoUrl != null &&
+            (details == null ||
+                (details['backdrop'] == null && details['poster'] == null))) {
           details = {'backdrop': companyLogoUrl};
         }
       }
-      
+
       // If TMDB didn't find anything, try OMDb as fallback
-      if (details == null || (details['backdrop'] == null && details['poster'] == null)) {
+      if (details == null ||
+          (details['backdrop'] == null && details['poster'] == null)) {
         debugLog('TMDB miss for "$title", trying OMDb as fallback...');
         final omdbTV = await _getOMDbDetails(title, year: year, type: 'series');
-        final omdbMovie = await _getOMDbDetails(title, year: year, type: 'movie');
+        final omdbMovie =
+            await _getOMDbDetails(title, year: year, type: 'movie');
         details = omdbTV ?? omdbMovie;
         if (details != null) {
-          debugLog('OMDb found artwork for "$title": ${details['backdrop'] ?? details['poster']}');
+          debugLog(
+              'OMDb found artwork for "$title": ${details['backdrop'] ?? details['poster']}');
         } else {
           debugLog('No artwork found for "$title" in TMDB or OMDb');
         }
       } else {
-        debugLog('TMDB found artwork for "$title": ${details['backdrop'] ?? details['poster']}');
+        debugLog(
+            'TMDB found artwork for "$title": ${details['backdrop'] ?? details['poster']}');
       }
 
       final image =
           (details?['backdrop'] as String?) ?? (details?['poster'] as String?);
       // Cache both hits and misses (shorter TTL for misses) to avoid spamming APIs
-      _setCache(cacheKey, {
-        'image': image,
-      }, ttl: image == null ? const Duration(hours: 1) : null);
-      
+      _setCache(
+          cacheKey,
+          {
+            'image': image,
+          },
+          ttl: image == null ? const Duration(hours: 1) : null);
+
       // Notify all pending requests
       final pending = _pendingRequests.remove(cacheKey);
       if (pending != null) {
@@ -479,7 +492,7 @@ class TMDBService {
           callback(image);
         }
       }
-      
+
       return image;
     } finally {
       _processingRequests.remove(cacheKey);
@@ -495,7 +508,7 @@ class TMDBService {
   }) async {
     await init();
     final results = <String, String?>{};
-    
+
     // First check cache
     final uncached = <String>[];
     for (final title in titles) {
@@ -509,26 +522,27 @@ class TMDBService {
         uncached.add(title);
       }
     }
-    
+
     // Fetch uncached in smaller batches for Live TV performance
     if (uncached.isNotEmpty) {
       const chunkSize = 3; // Reduced from 5 for better Live TV performance
       for (var i = 0; i < uncached.length; i += chunkSize) {
         final chunk = uncached.skip(i).take(chunkSize).toList();
-        final futures = chunk.map((title) => getBestBackdrop(title, year: year));
+        final futures =
+            chunk.map((title) => getBestBackdrop(title, year: year));
         final chunkResults = await Future.wait(futures);
-        
+
         for (var j = 0; j < chunk.length; j++) {
           results[chunk[j]] = chunkResults[j];
         }
-        
+
         // Shorter delay for Live TV responsiveness
         if (i + chunkSize < uncached.length) {
           await Future.delayed(const Duration(milliseconds: 100));
         }
       }
     }
-    
+
     return results;
   }
 

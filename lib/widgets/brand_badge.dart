@@ -87,14 +87,14 @@ class BrandBadge extends StatelessWidget {
     this.borderRadius,
   });
 
-
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: padding ?? EdgeInsets.symmetric(
-        horizontal: context.tvSpacing(6),
-        vertical: context.tvSpacing(2),
-      ),
+      padding: padding ??
+          EdgeInsets.symmetric(
+            horizontal: context.tvSpacing(6),
+            vertical: context.tvSpacing(2),
+          ),
       decoration: BoxDecoration(
         color: backgroundColor ?? AppTheme.primaryBlue,
         borderRadius: BorderRadius.circular(

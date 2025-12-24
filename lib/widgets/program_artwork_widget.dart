@@ -35,7 +35,7 @@ class ProgramArtworkWidget extends StatefulWidget {
 
 class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
   String? _artworkUrl;
-  
+
   // Static cache shared across all instances
   static final Map<String, String?> _artworkCache = {};
   static final Set<String> _pendingRequests = {};
@@ -57,21 +57,23 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
   Future<void> _fetchArtwork() async {
     if (!mounted) return;
 
-    final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
-    
+    final epgService =
+        Provider.of<IncrementalEpgService>(context, listen: false);
+
     // Get current program from EPG (resolver-aware)
     final currentProgram = epgService.getProgramForChannel(
       widget.channel.tvgId ?? widget.channel.id,
       channelName: widget.channel.name,
     );
-    
+
     // Determine the search title
-    final searchTitle = currentProgram?.title.isNotEmpty == true 
-        ? currentProgram!.title 
+    final searchTitle = currentProgram?.title.isNotEmpty == true
+        ? currentProgram!.title
         : widget.channel.name;
-    
-    debugLog('ProgramArtwork: Channel "${widget.channel.name}" - searching for "$searchTitle"');
-    
+
+    debugLog(
+        'ProgramArtwork: Channel "${widget.channel.name}" - searching for "$searchTitle"');
+
     // Check cache
     if (_artworkCache.containsKey(searchTitle)) {
       if (mounted) {
@@ -81,7 +83,7 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
       }
       return;
     }
-    
+
     // Check if already fetching
     if (_pendingRequests.contains(searchTitle)) {
       // Wait a bit and check cache again
@@ -93,12 +95,13 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
       }
       return;
     }
-    
+
     _pendingRequests.add(searchTitle);
-    
+
     try {
       // First try program's own image URL from EPG
-      if (currentProgram?.imageUrl != null && currentProgram!.imageUrl!.isNotEmpty) {
+      if (currentProgram?.imageUrl != null &&
+          currentProgram!.imageUrl!.isNotEmpty) {
         final url = currentProgram.imageUrl!;
         _artworkCache[searchTitle] = url;
         if (mounted) {
@@ -108,13 +111,13 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
         }
         return;
       }
-      
+
       // Fetch from TMDB
       debugLog('ProgramArtwork: Fetching TMDB art for "$searchTitle"');
       final url = await TMDBService.getBestBackdrop(searchTitle);
-      
+
       _artworkCache[searchTitle] = url;
-      
+
       if (mounted) {
         if (url != null) {
           debugLog('ProgramArtwork: Found art for "$searchTitle": $url');
@@ -140,10 +143,13 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final tvWidth = widget.width != null ? context.tvSpacing(widget.width!) : null;
-    final tvHeight = widget.height != null ? context.tvSpacing(widget.height!) : null;
+    final tvWidth =
+        widget.width != null ? context.tvSpacing(widget.width!) : null;
+    final tvHeight =
+        widget.height != null ? context.tvSpacing(widget.height!) : null;
     return ClipRRect(
-      borderRadius: widget.borderRadius ?? BorderRadius.circular(context.tvSpacing(12)),
+      borderRadius:
+          widget.borderRadius ?? BorderRadius.circular(context.tvSpacing(12)),
       child: SizedBox(
         width: tvWidth,
         height: tvHeight,
@@ -151,10 +157,15 @@ class _ProgramArtworkWidgetState extends State<ProgramArtworkWidget> {
             ? CachedNetworkImage(
                 imageUrl: _artworkUrl!,
                 fit: widget.fit,
-                placeholder: (context, url) => widget.placeholder ?? Icon(Icons.tv, size: context.tvIconSize(32)),
-                errorWidget: (context, url, error) => widget.errorWidget ?? Icon(Icons.tv, size: context.tvIconSize(32)),
+                placeholder: (context, url) =>
+                    widget.placeholder ??
+                    Icon(Icons.tv, size: context.tvIconSize(32)),
+                errorWidget: (context, url, error) =>
+                    widget.errorWidget ??
+                    Icon(Icons.tv, size: context.tvIconSize(32)),
               )
-            : (widget.placeholder ?? Icon(Icons.tv, size: context.tvIconSize(32))),
+            : (widget.placeholder ??
+                Icon(Icons.tv, size: context.tvIconSize(32))),
       ),
     );
   }

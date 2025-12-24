@@ -181,9 +181,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
     if (!channelProvider.hasChannels) return;
     setState(() {
-      _featuredIndex =
-          (_featuredIndex - 1 + channelProvider.channelCount) %
-              channelProvider.channelCount;
+      _featuredIndex = (_featuredIndex - 1 + channelProvider.channelCount) %
+          channelProvider.channelCount;
       _isVideoReady = false;
       _playerError = null;
     });
@@ -213,7 +212,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   children: [
                     context.iconXxl(
                       AppIcons.liveTV,
-                      color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
+                      color:
+                          AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
                     ),
                     SizedBox(height: context.tvSpacing(24)),
                     Text(
@@ -278,16 +278,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final isTV = screenSize.width >= 1920 || screenSize.height >= 1080;
     final heroHeight = context.heroHeight();
     final cardPeek = context.spacingXl();
-    final contentInset =
-        context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
+    final contentInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
     final rightInset = context.spacingLg();
-    
+
     // Calculate available width for content
     final availableWidth = screenSize.width - contentInset - rightInset;
-    
+
     // Responsive width calculation
-    final desiredInfoWidth = screenSize.width < 800 
-        ? availableWidth 
+    final desiredInfoWidth = screenSize.width < 800
+        ? availableWidth
         : screenSize.width * AppSpacing.heroInfoWidth;
 
     final heroInfoWidth = min(
@@ -415,7 +414,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Hero spacer
-                      SizedBox(height: (heroHeight - cardPeek).clamp(0.0, heroHeight)),
+                      SizedBox(
+                          height:
+                              (heroHeight - cardPeek).clamp(0.0, heroHeight)),
                       // Content with sidebar alignment
                       Container(
                         decoration: const BoxDecoration(
@@ -471,8 +472,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             ],
           ),
         );
-    },
-  );
+      },
+    );
   }
 
   Widget _buildFeaturedInfo(
@@ -586,7 +587,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               child: BrandPrimaryButton(
                 onPressed: () => context.push('/player', extra: channel),
                 label: 'Watch',
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 fontSize: 12,
                 minHeight: 24,
                 focusNode: _watchButtonFocus,
@@ -767,15 +769,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   Widget _buildChannelSection(
-    BuildContext context,
-    String title,
-    List<Channel> channels,
-    {bool isFirstRow = false}
-  ) {
+      BuildContext context, String title, List<Channel> channels,
+      {bool isFirstRow = false}) {
     if (channels.isEmpty) return const SizedBox.shrink();
 
     final screenWidth = MediaQuery.of(context).size.width;
-    final maxCardWidth = screenWidth < 800 ? screenWidth / 2.8 : screenWidth / 5.5;
+    final maxCardWidth =
+        screenWidth < 800 ? screenWidth / 2.8 : screenWidth / 5.5;
     final cardWidth = min(context.cardWidth(), maxCardWidth);
     const cardFocusScale = 1.02;
     final cardHeight = cardWidth * 0.6;
@@ -797,38 +797,38 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           ),
         ),
         SizedBox(
-            height: rowHeight,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return SizedBox(
-                  width: constraints.maxWidth,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: EdgeInsets.only(
-                      left: rowInset,
-                      right: context.spacingLg(),
-                    ),
-                    clipBehavior: Clip.none,
-                    itemCount: channels.length,
-                    itemBuilder: (context, index) {
-                      final focusNode =
-                          isFirstRow && index == 0 ? _firstChannelFocus : null;
-                      return _buildChannelCard(
-                        context,
-                        channels[index],
-                        cardWidth,
-                        cardHeight,
-                        index,
-                        channels.length,
-                        focusNode: focusNode,
-                      );
-                    },
-                    separatorBuilder: (context, index) =>
-                        SizedBox(width: context.cardGap()),
+          height: rowHeight,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SizedBox(
+                width: constraints.maxWidth,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: EdgeInsets.only(
+                    left: rowInset,
+                    right: context.spacingLg(),
                   ),
-                );
-              },
-            ),
+                  clipBehavior: Clip.none,
+                  itemCount: channels.length,
+                  itemBuilder: (context, index) {
+                    final focusNode =
+                        isFirstRow && index == 0 ? _firstChannelFocus : null;
+                    return _buildChannelCard(
+                      context,
+                      channels[index],
+                      cardWidth,
+                      cardHeight,
+                      index,
+                      channels.length,
+                      focusNode: focusNode,
+                    );
+                  },
+                  separatorBuilder: (context, index) =>
+                      SizedBox(width: context.cardGap()),
+                ),
+              );
+            },
+          ),
         ),
         SizedBox(height: context.spacingSm()),
       ],
@@ -896,9 +896,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 index == 0) {
               // Only open sidebar if we are at the start of the list
               final moved = requestNavigationFocus();
-              return moved
-                  ? KeyEventResult.handled
-                  : KeyEventResult.ignored;
+              return moved ? KeyEventResult.handled : KeyEventResult.ignored;
             }
           }
           return KeyEventResult.ignored;
@@ -918,11 +916,18 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               );
             }
             // DEBUG: show quick epg diagnostics in logs when focused
-            final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
+            final epgService =
+                Provider.of<IncrementalEpgService>(context, listen: false);
             if (Focus.of(context).hasFocus) {
-              final hasMatch = epgService.hasEpgMatch(channel.tvgId ?? channel.id, channelName: channel.name);
-              final progCount = epgService.getProgramsForChannel(channel.tvgId ?? channel.id, channelName: channel.name).length;
-              debugPrint('EPG DEBUG: channel=${channel.id} tvg=${channel.tvgId} hasMatch=$hasMatch progCount=$progCount currentProgram=${currentProgram?.title ?? 'null'}');
+              final hasMatch = epgService.hasEpgMatch(
+                  channel.tvgId ?? channel.id,
+                  channelName: channel.name);
+              final progCount = epgService
+                  .getProgramsForChannel(channel.tvgId ?? channel.id,
+                      channelName: channel.name)
+                  .length;
+              debugPrint(
+                  'EPG DEBUG: channel=${channel.id} tvg=${channel.tvgId} hasMatch=$hasMatch progCount=$progCount currentProgram=${currentProgram?.title ?? 'null'}');
             }
             final isFocused = Focus.of(context).hasFocus;
             final progress = currentProgram?.progressPercentage ?? 0.0;
@@ -1170,7 +1175,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final period = dt.hour < 12 ? 'AM' : 'PM';
     return '${hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} $period';
   }
-
 
   Widget _buildHeroContent(
     Channel featuredChannel,

@@ -10,7 +10,7 @@ import 'exoplayer_fullscreen_screen.dart';
 
 /// A smart video player wrapper that routes to the appropriate player backend
 /// based on user settings and device type.
-/// 
+///
 /// For Android TV devices (like Nvidia Shield), ExoPlayer is preferred as it
 /// provides better hardware codec compatibility. For phones/tablets, MediaKit
 /// is the default as it provides more features and cross-platform consistency.
@@ -38,7 +38,7 @@ class VideoPlayerRouter extends StatelessWidget {
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
     final backend = settings.videoPlayerBackend;
-    
+
     // Determine which player to use. Only use the native ExoPlayer fullscreen
     // view when the user explicitly selects the 'ExoPlayer' backend. For
     // 'Auto' or 'MediaKit' prefer the Flutter-based EnhancedVideoPlayerScreen

@@ -6,7 +6,8 @@ import 'package:http/http.dart' as http;
 void main(List<String> args) async {
   if (args.isEmpty) {
     print('Usage: dart debug_epg_matching.dart <epg_url> [m3u_url]');
-    print('Example: dart debug_epg_matching.dart https://example.com/epg.xml https://example.com/playlist.m3u');
+    print(
+        'Example: dart debug_epg_matching.dart https://example.com/epg.xml https://example.com/playlist.m3u');
     exit(1);
   }
 
@@ -27,14 +28,15 @@ void main(List<String> args) async {
       exit(1);
     }
 
-    final epgSize = (epgResponse.bodyBytes.length / 1024 / 1024).toStringAsFixed(2);
+    final epgSize =
+        (epgResponse.bodyBytes.length / 1024 / 1024).toStringAsFixed(2);
     print('✅ EPG downloaded: $epgSize MB');
 
     // Parse EPG
     print('📊 Parsing EPG XML...');
     final document = XmlDocument.parse(epgResponse.body);
     final programmes = document.findAllElements('programme');
-    
+
     // Extract unique channel IDs
     final channelIds = <String>{};
     for (final programme in programmes) {
@@ -44,7 +46,8 @@ void main(List<String> args) async {
       }
     }
 
-    print('✅ Found ${programmes.length} programmes for ${channelIds.length} channels');
+    print(
+        '✅ Found ${programmes.length} programmes for ${channelIds.length} channels');
     print('');
 
     // Show sample EPG channel IDs
@@ -113,11 +116,13 @@ void main(List<String> args) async {
       final lowerEpgIds = channelIds.map((id) => id.toLowerCase()).toSet();
       final lowerM3uIds = m3uChannelIds.map((id) => id.toLowerCase()).toSet();
       final caseInsensitiveMatches = lowerM3uIds.intersection(lowerEpgIds);
-      print('🎯 Case-Insensitive Matches: ${caseInsensitiveMatches.length}/${m3uChannelIds.length}');
+      print(
+          '🎯 Case-Insensitive Matches: ${caseInsensitiveMatches.length}/${m3uChannelIds.length}');
       print('');
 
       // Show unmatched channels
-      final unmatched = m3uChannelIds.where((id) => !channelIds.contains(id)).toList();
+      final unmatched =
+          m3uChannelIds.where((id) => !channelIds.contains(id)).toList();
       if (unmatched.isNotEmpty) {
         print('❌ Unmatched M3U Channel IDs (first 10):');
         for (int i = 0; i < 10 && i < unmatched.length; i++) {
@@ -131,7 +136,8 @@ void main(List<String> args) async {
       if (exactMatches.isEmpty && caseInsensitiveMatches.isEmpty) {
         print('  ❌ No matches found! This indicates:');
         print('     • EPG and M3U use completely different channel ID schemes');
-        print('     • You may need a different EPG source that matches your M3U');
+        print(
+            '     • You may need a different EPG source that matches your M3U');
         print('     • Manual channel mapping may be required');
       } else if (exactMatches.length < m3uChannelIds.length * 0.5) {
         print('  ⚠️  Low match rate. Consider:');
@@ -145,11 +151,12 @@ void main(List<String> args) async {
 
     print('');
     print('🔧 Troubleshooting Tips:');
-    print('  1. Ensure your M3U has tvg-id attributes that match EPG channel IDs');
+    print(
+        '  1. Ensure your M3U has tvg-id attributes that match EPG channel IDs');
     print('  2. Try different EPG sources that match your IPTV provider');
-    print('  3. Use the app\'s manual EPG mapping feature for important channels');
+    print(
+        '  3. Use the app\'s manual EPG mapping feature for important channels');
     print('  4. Check if your IPTV provider offers their own EPG URL');
-
   } catch (e) {
     print('❌ Error: $e');
     exit(1);

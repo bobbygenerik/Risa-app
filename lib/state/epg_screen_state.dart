@@ -5,17 +5,17 @@ class EPGScreenState extends ChangeNotifier {
   // Date and view state
   final DateTime _selectedDate = DateTime.now();
   final bool _isHourlyView = true;
-  
+
   // Category and favorites
   String? _selectedCategory;
   Set<String> _epgFavoriteChannelIds = {};
-  
+
   // Pagination state
   static const int _channelsPerPage = 50;
   int _currentPage = 0;
   bool _isLoadingMore = false;
   List<Channel> _paginatedChannels = [];
-  
+
   // Scroll synchronization
   bool _syncingScroll = false;
 
@@ -71,7 +71,7 @@ class EPGScreenState extends ChangeNotifier {
       }
       return a.name.compareTo(b.name);
     });
-    
+
     // Reset pagination when category changes
     _currentPage = 0;
     _paginatedChannels = allChannels.take(_channelsPerPage).toList();
@@ -80,18 +80,19 @@ class EPGScreenState extends ChangeNotifier {
 
   void loadMoreChannels(List<Channel> allChannels) {
     if (_isLoadingMore) return;
-    
+
     final startIndex = (_currentPage + 1) * _channelsPerPage;
     if (startIndex >= allChannels.length) return;
-    
+
     _isLoadingMore = true;
     notifyListeners();
-    
+
     // Simulate loading delay for smooth UX
     Future.delayed(const Duration(milliseconds: 300), () {
-      final endIndex = (startIndex + _channelsPerPage).clamp(0, allChannels.length);
+      final endIndex =
+          (startIndex + _channelsPerPage).clamp(0, allChannels.length);
       final newChannels = allChannels.sublist(startIndex, endIndex);
-      
+
       _paginatedChannels.addAll(newChannels);
       _currentPage++;
       _isLoadingMore = false;

@@ -22,22 +22,24 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
   final TextEditingController _playlistNameController = TextEditingController();
   final TextEditingController _m3uUrlController = TextEditingController();
   final TextEditingController _xtreamServerController = TextEditingController();
-  final TextEditingController _xtreamUsernameController = TextEditingController();
-  final TextEditingController _xtreamPasswordController = TextEditingController();
-  
+  final TextEditingController _xtreamUsernameController =
+      TextEditingController();
+  final TextEditingController _xtreamPasswordController =
+      TextEditingController();
+
   final FocusNode _playlistNameFocusNode = FocusNode();
   final FocusNode _m3uUrlFocusNode = FocusNode();
   final FocusNode _xtreamServerFocusNode = FocusNode();
   final FocusNode _xtreamUsernameFocusNode = FocusNode();
   final FocusNode _xtreamPasswordFocusNode = FocusNode();
   final FocusNode _updateFrequencyFocusNode = FocusNode();
-  
+
   bool _playlistNameEditable = false;
   bool _m3uUrlEditable = false;
   bool _xtreamServerEditable = false;
   bool _xtreamUsernameEditable = false;
   bool _xtreamPasswordEditable = false;
-  
+
   String _playlistType = 'm3u';
   int _updateFrequencyHours = 24; // Default: update every 24 hours
   bool _isLoading = true;
@@ -68,7 +70,8 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _playlistType = prefs.getString('playlist_type') ?? 'm3u';
-      _playlistNameController.text = prefs.getString('playlist_name') ?? 'My Playlist';
+      _playlistNameController.text =
+          prefs.getString('playlist_name') ?? 'My Playlist';
       _m3uUrlController.text = prefs.getString('m3u_url') ?? '';
       _xtreamServerController.text = prefs.getString('xtream_server') ?? '';
       _xtreamUsernameController.text = prefs.getString('xtream_username') ?? '';
@@ -82,7 +85,7 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('playlist_name', _playlistNameController.text);
     await prefs.setInt('playlist_update_frequency', _updateFrequencyHours);
-    
+
     if (_playlistType == 'm3u') {
       await prefs.setString('m3u_url', _m3uUrlController.text);
     } else {
@@ -104,10 +107,10 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
 
   Future<void> _updatePlaylist() async {
     setState(() => _isLoading = true);
-    
+
     try {
       final provider = Provider.of<ChannelProvider>(context, listen: false);
-      
+
       if (_playlistType == 'm3u') {
         final url = _m3uUrlController.text.trim();
         if (url.isEmpty) {
@@ -118,21 +121,22 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
         final server = _xtreamServerController.text.trim();
         final username = _xtreamUsernameController.text.trim();
         final password = _xtreamPasswordController.text.trim();
-        
+
         if (server.isEmpty || username.isEmpty) {
           throw Exception('Server URL and username are required');
         }
-        
+
         try {
-            final cleaned = server.replaceAll(RegExp(r'\s+'), '');
-            var baseUri = Uri.parse(cleaned);
-            if (baseUri.scheme.isEmpty || baseUri.host.isEmpty) {
-              baseUri = Uri.parse('https://${cleaned.replaceAll(RegExp(r'^https?://'), '')}');
+          final cleaned = server.replaceAll(RegExp(r'\s+'), '');
+          var baseUri = Uri.parse(cleaned);
+          if (baseUri.scheme.isEmpty || baseUri.host.isEmpty) {
+            baseUri = Uri.parse(
+                'https://${cleaned.replaceAll(RegExp(r'^https?://'), '')}');
           }
           final playlistUri = baseUri.replace(
             path: (baseUri.path.trim().isEmpty)
-              ? 'get.php'
-              : '${baseUri.path.replaceAll(RegExp(r'^/'), '')}/get.php',
+                ? 'get.php'
+                : '${baseUri.path.replaceAll(RegExp(r'^/'), '')}/get.php',
             queryParameters: {
               'username': username.replaceAll(' ', ''),
               'password': password.replaceAll(' ', ''),
@@ -142,21 +146,23 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
           );
           await provider.loadPlaylistFromUrl(playlistUri.toString());
         } catch (_) {
-          await provider.loadPlaylistFromUrl('${server.replaceAll(' ', '')}/get.php?username=${username.replaceAll(' ', '')}&password=${password.replaceAll(' ', '')}&type=m3u_plus&output=ts');
+          await provider.loadPlaylistFromUrl(
+              '${server.replaceAll(' ', '')}/get.php?username=${username.replaceAll(' ', '')}&password=${password.replaceAll(' ', '')}&type=m3u_plus&output=ts');
         }
       }
 
       if (mounted) {
         setState(() => _isLoading = false);
-        
+
         // Save settings after successful update
         await _saveSettings();
-        
+
         if (mounted) {
           showAppSnackBar(
             context,
             SnackBar(
-              content: Text('Playlist updated! ${provider.channels.length} channels, ${provider.moviesCount} movies, ${provider.seriesCount} series found.'),
+              content: Text(
+                  'Playlist updated! ${provider.channels.length} channels, ${provider.moviesCount} movies, ${provider.seriesCount} series found.'),
               backgroundColor: AppTheme.accentGreen,
             ),
           );
@@ -165,10 +171,10 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        
+
         final provider = Provider.of<ChannelProvider>(context, listen: false);
         final errorMessage = provider.errorMessage ?? e.toString();
-        
+
         // Show detailed error in dialog instead of snackbar
         unawaited(showDialog(
           context: context,
@@ -191,18 +197,22 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
-                  const Text('Error details:', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                  const Text('Error details:',
+                      style: TextStyle(
+                          fontSize: 12, color: AppTheme.textSecondary)),
                   const SizedBox(height: 8),
                   Text(
                     errorMessage,
-                    style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                    style:
+                        const TextStyle(fontSize: 12, fontFamily: 'monospace'),
                   ),
                   if (errorMessage.contains('429'))
                     const Padding(
                       padding: EdgeInsets.only(top: 16),
                       child: Text(
                         'ℹ️ HTTP 429 means the server is rate-limiting requests. Please wait a few minutes before trying again.',
-                        style: TextStyle(fontSize: 12, color: AppTheme.accentOrange),
+                        style: TextStyle(
+                            fontSize: 12, color: AppTheme.accentOrange),
                       ),
                     ),
                 ],
@@ -299,7 +309,9 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
       onKeyEvent: (node, event) {
         if (event is! KeyDownEvent) return KeyEventResult.ignored;
         final key = event.logicalKey;
-        if ((key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) && !isEditable) {
+        if ((key == LogicalKeyboardKey.select ||
+                key == LogicalKeyboardKey.enter) &&
+            !isEditable) {
           onEditableChange(true);
           WidgetsBinding.instance.addPostFrameCallback((_) {
             focusNode.requestFocus();
@@ -331,17 +343,16 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
           cursorColor: Colors.transparent,
           onTap: () {
             final text = controller.text;
-            controller.selection =
-                TextSelection.collapsed(offset: text.length);
+            controller.selection = TextSelection.collapsed(offset: text.length);
           },
-            decoration: InputDecoration(
+          decoration: InputDecoration(
             labelText: label,
             hintText: hint,
             prefixIcon: Icon(icon),
-      filled: true,
-      fillColor: isEditable
-        ? AppTheme.primaryBlue.withAlpha((0.1 * 255).round())
-        : AppTheme.cardBackground,
+            filled: true,
+            fillColor: isEditable
+                ? AppTheme.primaryBlue.withAlpha((0.1 * 255).round())
+                : AppTheme.cardBackground,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(context.tvSpacing(8)),
               borderSide: BorderSide.none,
@@ -352,9 +363,12 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(context.tvSpacing(8)),
-              borderSide: BorderSide(color: AppTheme.primaryBlue, width: context.tvSpacing(3)),
+              borderSide: BorderSide(
+                  color: AppTheme.primaryBlue, width: context.tvSpacing(3)),
             ),
-            contentPadding: EdgeInsets.symmetric(horizontal: context.tvSpacing(16), vertical: context.tvSpacing(16)),
+            contentPadding: EdgeInsets.symmetric(
+                horizontal: context.tvSpacing(16),
+                vertical: context.tvSpacing(16)),
           ),
         ),
       ),
@@ -378,7 +392,7 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
         backgroundColor: Colors.transparent,
         body: Container(
           decoration: const BoxDecoration(
-          color: AppTheme.darkBackground,
+            color: AppTheme.darkBackground,
           ),
           child: const Center(
             child: CircularProgressIndicator(color: AppTheme.primaryBlue),
@@ -428,7 +442,8 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
                     controller: _playlistNameController,
                     focusNode: _playlistNameFocusNode,
                     isEditable: _playlistNameEditable,
-                    onEditableChange: (value) => setState(() => _playlistNameEditable = value),
+                    onEditableChange: (value) =>
+                        setState(() => _playlistNameEditable = value),
                     label: 'Playlist Name',
                     hint: 'e.g., My IPTV Channels',
                     icon: Icons.label,
@@ -441,172 +456,185 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
               // Playlist Source
               _buildSectionCard(
                 title: 'Playlist Source',
-                subtitle: _playlistType == 'm3u' ? 'M3U URL Configuration' : 'Xtream Codes Configuration',
+                subtitle: _playlistType == 'm3u'
+                    ? 'M3U URL Configuration'
+                    : 'Xtream Codes Configuration',
                 children: [
-                if (_playlistType == 'm3u') ...[
-                  _buildTVFriendlyTextField(
-                    controller: _m3uUrlController,
-                    focusNode: _m3uUrlFocusNode,
-                    isEditable: _m3uUrlEditable,
-                    onEditableChange: (value) => setState(() => _m3uUrlEditable = value),
-                    label: 'M3U Playlist URL',
-                    hint: 'http://example.com/playlist.m3u',
-                    icon: Icons.link,
-                  ),
-                ] else ...[
-                  _buildTVFriendlyTextField(
-                    controller: _xtreamServerController,
-                    focusNode: _xtreamServerFocusNode,
-                    isEditable: _xtreamServerEditable,
-                    onEditableChange: (value) => setState(() => _xtreamServerEditable = value),
-                    label: 'Server URL',
-                    hint: 'http://example.com:8080',
-                    icon: Icons.dns,
-                  ),
-                  const SizedBox(height: AppSizes.md),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildTVFriendlyTextField(
-                          controller: _xtreamUsernameController,
-                          focusNode: _xtreamUsernameFocusNode,
-                          isEditable: _xtreamUsernameEditable,
-                          onEditableChange: (value) => setState(() => _xtreamUsernameEditable = value),
-                          label: 'Username',
-                          hint: 'Your username',
-                          icon: Icons.person,
+                  if (_playlistType == 'm3u') ...[
+                    _buildTVFriendlyTextField(
+                      controller: _m3uUrlController,
+                      focusNode: _m3uUrlFocusNode,
+                      isEditable: _m3uUrlEditable,
+                      onEditableChange: (value) =>
+                          setState(() => _m3uUrlEditable = value),
+                      label: 'M3U Playlist URL',
+                      hint: 'http://example.com/playlist.m3u',
+                      icon: Icons.link,
+                    ),
+                  ] else ...[
+                    _buildTVFriendlyTextField(
+                      controller: _xtreamServerController,
+                      focusNode: _xtreamServerFocusNode,
+                      isEditable: _xtreamServerEditable,
+                      onEditableChange: (value) =>
+                          setState(() => _xtreamServerEditable = value),
+                      label: 'Server URL',
+                      hint: 'http://example.com:8080',
+                      icon: Icons.dns,
+                    ),
+                    const SizedBox(height: AppSizes.md),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildTVFriendlyTextField(
+                            controller: _xtreamUsernameController,
+                            focusNode: _xtreamUsernameFocusNode,
+                            isEditable: _xtreamUsernameEditable,
+                            onEditableChange: (value) =>
+                                setState(() => _xtreamUsernameEditable = value),
+                            label: 'Username',
+                            hint: 'Your username',
+                            icon: Icons.person,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: AppSizes.md),
-                      Expanded(
-                        child: _buildTVFriendlyTextField(
-                          controller: _xtreamPasswordController,
-                          focusNode: _xtreamPasswordFocusNode,
-                          isEditable: _xtreamPasswordEditable,
-                          onEditableChange: (value) => setState(() => _xtreamPasswordEditable = value),
-                          label: 'Password',
-                          hint: 'Your password',
-                          icon: Icons.lock,
-                          obscureText: true,
+                        const SizedBox(width: AppSizes.md),
+                        Expanded(
+                          child: _buildTVFriendlyTextField(
+                            controller: _xtreamPasswordController,
+                            focusNode: _xtreamPasswordFocusNode,
+                            isEditable: _xtreamPasswordEditable,
+                            onEditableChange: (value) =>
+                                setState(() => _xtreamPasswordEditable = value),
+                            label: 'Password',
+                            hint: 'Your password',
+                            icon: Icons.lock,
+                            obscureText: true,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  ],
                 ],
-              ],
-            ),
+              ),
 
               const SizedBox(height: AppSizes.lg),
 
               // Update Frequency
               _buildSectionCard(
-              title: 'Auto-Update Frequency',
-              subtitle: 'How often to refresh the playlist automatically',
-              children: [
-                Focus(
-                  focusNode: _updateFrequencyFocusNode,
-                  onKeyEvent: (node, event) {
-                    if (event is! KeyDownEvent) return KeyEventResult.ignored;
-                    if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                      setState(() {
-                        if (_updateFrequencyHours > 1) _updateFrequencyHours--;
-                      });
-                      return KeyEventResult.handled;
-                    } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-                      setState(() {
-                        if (_updateFrequencyHours < 168) _updateFrequencyHours++;
-                      });
-                      return KeyEventResult.handled;
-                    }
-                    return KeyEventResult.ignored;
-                  },
-                  child: ListTile(
-                    leading: const Icon(Icons.refresh, color: AppTheme.primaryBlue),
-                    title: const Text('Update every'),
-                    subtitle: Text('$_updateFrequencyHours hours'),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.remove),
-                          onPressed: () {
-                            if (_updateFrequencyHours > 1) {
-                              setState(() => _updateFrequencyHours--);
-                            }
-                          },
-                        ),
-                        Text(
-                          '$_updateFrequencyHours',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                title: 'Auto-Update Frequency',
+                subtitle: 'How often to refresh the playlist automatically',
+                children: [
+                  Focus(
+                    focusNode: _updateFrequencyFocusNode,
+                    onKeyEvent: (node, event) {
+                      if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                        setState(() {
+                          if (_updateFrequencyHours > 1)
+                            _updateFrequencyHours--;
+                        });
+                        return KeyEventResult.handled;
+                      } else if (event.logicalKey ==
+                          LogicalKeyboardKey.arrowRight) {
+                        setState(() {
+                          if (_updateFrequencyHours < 168)
+                            _updateFrequencyHours++;
+                        });
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child: ListTile(
+                      leading: const Icon(Icons.refresh,
+                          color: AppTheme.primaryBlue),
+                      title: const Text('Update every'),
+                      subtitle: Text('$_updateFrequencyHours hours'),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.remove),
+                            onPressed: () {
+                              if (_updateFrequencyHours > 1) {
+                                setState(() => _updateFrequencyHours--);
+                              }
+                            },
                           ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.add),
-                          onPressed: () {
-                            if (_updateFrequencyHours < 168) {
-                              setState(() => _updateFrequencyHours++);
-                            }
-                          },
+                          Text(
+                            '$_updateFrequencyHours',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.add),
+                            onPressed: () {
+                              if (_updateFrequencyHours < 168) {
+                                setState(() => _updateFrequencyHours++);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.sm),
+                  Container(
+                    padding: const EdgeInsets.all(AppSizes.md),
+                    decoration: BoxDecoration(
+                      color:
+                          AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
+                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline,
+                            size: 16, color: AppTheme.primaryBlue),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Playlist will automatically refresh every $_updateFrequencyHours ${_updateFrequencyHours == 1 ? "hour" : "hours"}',
+                            style: const TextStyle(
+                                fontSize: 12, color: AppTheme.textSecondary),
+                          ),
                         ),
                       ],
                     ),
                   ),
-                ),
-                const SizedBox(height: AppSizes.sm),
-                Container(
-                  padding: const EdgeInsets.all(AppSizes.md),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
-                    borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.info_outline, size: 16, color: AppTheme.primaryBlue),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Playlist will automatically refresh every $_updateFrequencyHours ${_updateFrequencyHours == 1 ? "hour" : "hours"}',
-                          style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+                ],
+              ),
 
               const SizedBox(height: AppSizes.xl),
 
               // Action Buttons
               Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _deletePlaylist,
-                    icon: const Icon(Icons.delete_outline),
-                    label: const Text('Delete Playlist'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.accentRed,
-                      padding: const EdgeInsets.all(AppSizes.md),
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _deletePlaylist,
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('Delete Playlist'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.accentRed,
+                        padding: const EdgeInsets.all(AppSizes.md),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: AppSizes.md),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _updatePlaylist,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Update Playlist Now'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryBlue,
-                      padding: const EdgeInsets.all(AppSizes.md),
+                  const SizedBox(width: AppSizes.md),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _updatePlaylist,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Update Playlist Now'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryBlue,
+                        padding: const EdgeInsets.all(AppSizes.md),
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
 
               const SizedBox(height: AppSizes.md),
 
@@ -624,16 +652,17 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
                     Expanded(
                       child: Text(
                         'Press ENTER on text fields to edit them. Press ESC to finish editing. Don\'t forget to save your changes!',
-                        style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                        style: TextStyle(
+                            color: AppTheme.textSecondary, fontSize: 12),
                       ),
                     ),
                   ],
                 ),
               ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 

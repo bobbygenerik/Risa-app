@@ -393,14 +393,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 controller: _m3uUrlController,
                 focusNode: _m3uUrlFocusNode,
               ),
-              SettingsActionTile(
-                title: 'Load Playlist',
-                icon: Icons.download,
-                iconColor: AppTheme.primaryBlue,
-                titleColor: AppTheme.primaryBlue,
-                focusNode: _loadM3uButtonFocusNode,
-                onTap: _loadM3uPlaylist,
-              ),
+              Builder(builder: (context) {
+                final cp = Provider.of<ChannelProvider>(context);
+                return SettingsActionTile(
+                  title: 'Load Playlist',
+                  icon: Icons.download,
+                  iconColor: AppTheme.primaryBlue,
+                  titleColor: AppTheme.primaryBlue,
+                  focusNode: _loadM3uButtonFocusNode,
+                  onTap: _loadM3uPlaylist,
+                  trailing: cp.isLoading
+                      ? IconButton(
+                          icon: const Icon(Icons.cancel),
+                          color: Colors.white70,
+                          tooltip: 'Cancel load',
+                          onPressed: () => cp.cancelPlaylistLoad(),
+                        )
+                      : null,
+                );
+              }),
               SettingsActionTile(
                 title: 'Clear URL',
                 icon: Icons.clear,
@@ -435,14 +446,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 controller: _xtreamPasswordController,
                 focusNode: _xtreamPasswordFocusNode,
               ),
-              SettingsActionTile(
-                title: 'Load Xtream Playlist',
-                icon: Icons.download,
-                iconColor: AppTheme.primaryBlue,
-                titleColor: AppTheme.primaryBlue,
-                focusNode: _loadXtreamButtonFocusNode,
-                onTap: _loadXtreamPlaylist,
-              ),
+              Builder(builder: (context) {
+                final cp = Provider.of<ChannelProvider>(context);
+                return SettingsActionTile(
+                  title: 'Load Xtream Playlist',
+                  icon: Icons.download,
+                  iconColor: AppTheme.primaryBlue,
+                  titleColor: AppTheme.primaryBlue,
+                  focusNode: _loadXtreamButtonFocusNode,
+                  onTap: _loadXtreamPlaylist,
+                  trailing: cp.isLoading
+                      ? IconButton(
+                          icon: const Icon(Icons.cancel),
+                          color: Colors.white70,
+                          tooltip: 'Cancel load',
+                          onPressed: () => cp.cancelPlaylistLoad(),
+                        )
+                      : null,
+                );
+              }),
               SettingsActionTile(
                 title: 'Clear Fields',
                 icon: Icons.clear,
@@ -876,10 +898,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final server = _normalizeHttpUrl(_xtreamServerController.text);
     final username = _xtreamUsernameController.text.trim();
     final password = _xtreamPasswordController.text.trim();
-      if (server.isEmpty || username.isEmpty || password.isEmpty) {
-        _showMessage('Please fill in all fields.');
-        return;
-      }
+    if (server.isEmpty || username.isEmpty || password.isEmpty) {
+      _showMessage('Please fill in all fields.');
+      return;
+    }
     _showMessage('Loading Xtream playlist...');
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('xtream_server', server);
@@ -894,10 +916,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final cleaned = server.trim();
         final epgBase = Uri.parse(cleaned);
         final base = (epgBase.scheme.isEmpty || epgBase.host.isEmpty)
-          ? Uri.parse('https://${cleaned.replaceAll(RegExp(r'^https?://'), '')}')
-          : epgBase;
+            ? Uri.parse(
+                'https://${cleaned.replaceAll(RegExp(r'^https?://'), '')}')
+            : epgBase;
         final epgUri = base.replace(
-            path: (base.path.trim().isEmpty)
+          path: (base.path.trim().isEmpty)
               ? 'xmltv.php'
               : '${base.path.replaceAll(RegExp(r'^/'), '')}/xmltv.php',
           queryParameters: {
@@ -921,7 +944,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final cleaned = server.trim();
         Uri baseUri = Uri.parse(cleaned);
         if (baseUri.scheme.isEmpty || baseUri.host.isEmpty) {
-          baseUri = Uri.parse('https://${cleaned.replaceAll(RegExp(r'^https?://'), '')}');
+          baseUri = Uri.parse(
+              'https://${cleaned.replaceAll(RegExp(r'^https?://'), '')}');
         }
         final playlistUri = baseUri.replace(
           path: (baseUri.path.trim().isEmpty)
@@ -936,7 +960,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
         await provider.loadPlaylistFromUrl(playlistUri.toString());
       } catch (e) {
-        await provider.loadPlaylistFromUrl('${server.replaceAll(' ', '')}/get.php?username=${username.replaceAll(' ', '')}&password=${password.replaceAll(' ', '')}&type=m3u_plus&output=ts');
+        await provider.loadPlaylistFromUrl(
+            '${server.replaceAll(' ', '')}/get.php?username=${username.replaceAll(' ', '')}&password=${password.replaceAll(' ', '')}&type=m3u_plus&output=ts');
       }
       final hasContent = provider.channelCount > 0 ||
           provider.moviesCount > 0 ||

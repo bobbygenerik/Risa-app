@@ -293,10 +293,11 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
           color: AppTheme.darkBackground,
         ),
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryBlue))
+            ? const Center(
+                child: CircularProgressIndicator(color: AppTheme.primaryBlue))
             : _playlists.isEmpty
-            ? _buildEmptyState()
-            : _buildPlaylistList(),
+                ? _buildEmptyState()
+                : _buildPlaylistList(),
       ),
     );
   }
@@ -362,12 +363,14 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
                 Expanded(
                   child: Text(
                     playlist.name,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ),
                 if (isActive)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: AppTheme.accentGreen,
                       borderRadius: BorderRadius.circular(4),
@@ -389,7 +392,8 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
                 const SizedBox(height: 4),
                 Text(
                   playlist.type == 'm3u' ? 'M3U Playlist' : 'Xtream Codes',
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  style: const TextStyle(
+                      color: AppTheme.textSecondary, fontSize: 12),
                 ),
                 if (playlist.type == 'xtream' && playlist.server != null)
                   Text(

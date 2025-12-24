@@ -40,7 +40,7 @@ class _MoviesScreenState extends State<MoviesScreen>
   final FocusNode _firstRowFocus = FocusNode();
   List<Content> _curatedMovies = [];
   final Map<String, String?> _tmdbArtCache = {};
-  
+
   // Pagination for genre sections
   final Map<String, int> _genreDisplayCounts = {};
   static const int _itemsPerPage = 12;
@@ -68,7 +68,8 @@ class _MoviesScreenState extends State<MoviesScreen>
   @override
   bool handleContentFocusRequest() {
     if (!mounted) return false;
-    final contentProvider = Provider.of<ContentProvider>(context, listen: false);
+    final contentProvider =
+        Provider.of<ContentProvider>(context, listen: false);
     if (contentProvider.movies.isEmpty) {
       _settingsFocus.requestFocus();
     } else {
@@ -86,9 +87,7 @@ class _MoviesScreenState extends State<MoviesScreen>
 
   void _nextHero() {
     final provider = Provider.of<ContentProvider>(context, listen: false);
-    final movies = _curatedMovies.isNotEmpty
-        ? _curatedMovies
-        : provider.movies;
+    final movies = _curatedMovies.isNotEmpty ? _curatedMovies : provider.movies;
     if (movies.isEmpty) return;
     if (mounted) {
       setState(() {
@@ -118,13 +117,13 @@ class _MoviesScreenState extends State<MoviesScreen>
     _playFocus.addListener(_onPlayFocusChange);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      
+
       // Prioritize newly added content with artwork for hero banner
       final provider = Provider.of<ContentProvider>(context, listen: false);
       if (provider.movies.isNotEmpty) {
         _featuredIndex = _findNewestContentWithArtwork(provider.movies);
       }
-      
+
       _startCarousel();
       // prepare curated list (may perform TMDB lookups)
       _prepareCuratedList();
@@ -153,7 +152,6 @@ class _MoviesScreenState extends State<MoviesScreen>
     return null;
   }
 
-
   /// Find the newest content (from end of list) that has artwork for hero banner
   int _findNewestContentWithArtwork(List<Content> items) {
     // Filter to only items with backdrop or image
@@ -164,12 +162,12 @@ class _MoviesScreenState extends State<MoviesScreen>
         itemsWithArt.add(i);
       }
     }
-    
+
     if (itemsWithArt.isEmpty) {
       // Fallback to first item if none have artwork
       return 0;
     }
-    
+
     // Select randomly from the last 12 items with artwork (newest content)
     final recentCount = itemsWithArt.length.clamp(1, 12);
     final startIndex = itemsWithArt.length - recentCount;
@@ -180,11 +178,11 @@ class _MoviesScreenState extends State<MoviesScreen>
   void _preloadTMDBArtwork() async {
     final provider = Provider.of<ContentProvider>(context, listen: false);
     final movies = provider.movies.take(30).toList();
-    
+
     if (movies.isEmpty) return;
-    
+
     final titles = movies.map((m) => m.title).toList();
-    
+
     try {
       final results = await TMDBService.getBestBackdropBatch(titles);
       if (mounted) {
@@ -212,9 +210,8 @@ class _MoviesScreenState extends State<MoviesScreen>
           return _wrapWithDirectionalFocus(_buildEmptyState(context));
         }
 
-        final displayMovies = _curatedMovies.isNotEmpty
-            ? _curatedMovies
-            : movies;
+        final displayMovies =
+            _curatedMovies.isNotEmpty ? _curatedMovies : movies;
         if (_featuredIndex >= displayMovies.length) _featuredIndex = 0;
         final featured = displayMovies[_featuredIndex];
 
@@ -314,12 +311,11 @@ class _MoviesScreenState extends State<MoviesScreen>
     FocusNode? firstCardFocusNode,
   }) {
     if (movies.isEmpty) return const SizedBox.shrink();
-    
+
     const cardFocusScale = 1.02;
     final inset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
     final cardHeight = context.cardHeight();
-    final rowHeight =
-        context.rowHeight() + (cardHeight * (cardFocusScale - 1));
+    final rowHeight = context.rowHeight() + (cardHeight * (cardFocusScale - 1));
 
     return SizedBox(
       height: rowHeight,
@@ -350,7 +346,7 @@ class _MoviesScreenState extends State<MoviesScreen>
   }) {
     final cardWidth = context.cardWidth();
     final cardHeight = context.cardHeight();
-    
+
     return SizedBox(
       width: cardWidth,
       child: Focus(
@@ -368,9 +364,7 @@ class _MoviesScreenState extends State<MoviesScreen>
             if (event.logicalKey == LogicalKeyboardKey.arrowLeft &&
                 index == 0) {
               final moved = requestNavigationFocus();
-              return moved
-                  ? KeyEventResult.handled
-                  : KeyEventResult.ignored;
+              return moved ? KeyEventResult.handled : KeyEventResult.ignored;
             }
           }
           return KeyEventResult.ignored;
@@ -409,38 +403,41 @@ class _MoviesScreenState extends State<MoviesScreen>
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                          child: Stack(
-                            children: [
-                              Container(
-                                color: AppTheme.cardBackground,
-                                child: VodCardImage(
-                                  content: movie,
-                                  fit: BoxFit.fill,
-                                  placeholder: _buildPlaceholder(movie.title),
+                        child: Stack(
+                          children: [
+                            Container(
+                              color: AppTheme.cardBackground,
+                              child: VodCardImage(
+                                content: movie,
+                                fit: BoxFit.fill,
+                                placeholder: _buildPlaceholder(movie.title),
+                              ),
+                            ),
+                            if (movie.addedDate != null &&
+                                DateTime.now()
+                                        .difference(movie.addedDate!)
+                                        .inDays <
+                                    14)
+                              const Positioned(
+                                top: 8,
+                                right: 8,
+                                child: BrandBadge.newContent(fontSize: 8),
+                              ),
+                            if (movie.watchProgress != null &&
+                                movie.watchProgress! > 0)
+                              Positioned(
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                child: LinearProgressIndicator(
+                                  value: movie.watchProgress!,
+                                  backgroundColor: Colors.grey[800],
+                                  color: AppTheme.primaryBlue,
+                                  minHeight: 4,
                                 ),
                               ),
-                              if (movie.addedDate != null &&
-                                  DateTime.now().difference(movie.addedDate!).inDays < 14)
-                                const Positioned(
-                                  top: 8,
-                                  right: 8,
-                                  child: BrandBadge.newContent(fontSize: 8),
-                                ),
-                              if (movie.watchProgress != null &&
-                                  movie.watchProgress! > 0)
-                                Positioned(
-                                  bottom: 0,
-                                  left: 0,
-                                  right: 0,
-                                  child: LinearProgressIndicator(
-                                    value: movie.watchProgress!,
-                                    backgroundColor: Colors.grey[800],
-                                    color: AppTheme.primaryBlue,
-                                    minHeight: 4,
-                                  ),
-                                ),
-                            ],
-                          ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -523,7 +520,7 @@ class _MoviesScreenState extends State<MoviesScreen>
     final validMovies = movies.where((movie) {
       // Skip movies with generic/placeholder titles
       final title = movie.title.toLowerCase();
-      if (title == 'movie' || 
+      if (title == 'movie' ||
           title == 'movie to be announced' ||
           title.startsWith('movie ') ||
           title.contains('to be announced')) {
@@ -531,7 +528,7 @@ class _MoviesScreenState extends State<MoviesScreen>
       }
       return true;
     }).toList();
-    
+
     // Group movies by genre (prefer TMDB genres, fallback to M3U genres)
     final genreMap = <String, List<Content>>{};
     for (final movie in validMovies) {
@@ -546,16 +543,18 @@ class _MoviesScreenState extends State<MoviesScreen>
       }
     }
 
-    debugLog('Movies: Total=${movies.length}, Valid=${validMovies.length}, Genres=${genreMap.keys.join(", ")}');
+    debugLog(
+        'Movies: Total=${movies.length}, Valid=${validMovies.length}, Genres=${genreMap.keys.join(", ")}');
     for (final entry in genreMap.entries) {
       debugLog('  ${entry.key}: ${entry.value.length} movies');
     }
-    
+
     // Log first 3 movies to help debug genre issues
     if (movies.isNotEmpty) {
       debugLog('Sample movies for genre debugging:');
       for (final movie in movies.take(3)) {
-        debugLog('  Title: "${movie.title}", TMDB Genres: ${movie.tmdbGenres?.join(", ") ?? "NONE"}, M3U Genres: ${movie.genres?.join(", ") ?? "NONE"}');
+        debugLog(
+            '  Title: "${movie.title}", TMDB Genres: ${movie.tmdbGenres?.join(", ") ?? "NONE"}, M3U Genres: ${movie.genres?.join(", ") ?? "NONE"}');
       }
     }
 
@@ -567,14 +566,14 @@ class _MoviesScreenState extends State<MoviesScreen>
       final allMovies = entry.value;
       final displayCount = _genreDisplayCounts[genre] ?? _itemsPerPage;
       final displayMovies = allMovies.take(displayCount).toList();
-      final rowFocusNode =
-          !usedFocusNode ? firstRowFocusNode : null;
+      final rowFocusNode = !usedFocusNode ? firstRowFocusNode : null;
       usedFocusNode = usedFocusNode || rowFocusNode != null;
-      
+
       sections.addAll([
         _buildSectionHeader(context, genre),
         SizedBox(height: context.spacingXs()),
-        _buildMoviesRow(context, displayMovies, firstCardFocusNode: rowFocusNode),
+        _buildMoviesRow(context, displayMovies,
+            firstCardFocusNode: rowFocusNode),
         if (allMovies.length > displayCount)
           Center(
             child: Padding(
@@ -588,20 +587,24 @@ class _MoviesScreenState extends State<MoviesScreen>
                       duration: const Duration(milliseconds: 200),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(8),
-                        boxShadow: isFocused ? [
-                          BoxShadow(
-                            color: AppTheme.primaryBlue.withAlpha((0.6 * 255).round()),
-                            blurRadius: 20,
-                            spreadRadius: 2,
-                          ),
-                        ] : null,
+                        boxShadow: isFocused
+                            ? [
+                                BoxShadow(
+                                  color: AppTheme.primaryBlue
+                                      .withAlpha((0.6 * 255).round()),
+                                  blurRadius: 20,
+                                  spreadRadius: 2,
+                                ),
+                              ]
+                            : null,
                       ),
                       child: BrandSecondaryButton(
                         label: 'Load More ($genre)',
                         onPressed: () {
                           debugLog('Load More pressed for genre: $genre');
                           setState(() {
-                            _genreDisplayCounts[genre] = displayCount + _itemsPerPage;
+                            _genreDisplayCounts[genre] =
+                                displayCount + _itemsPerPage;
                           });
                         },
                       ),
@@ -627,8 +630,7 @@ class _MoviesScreenState extends State<MoviesScreen>
     final heroImage = _resolveHeroImage(featuredMovie);
     final heroHeight = context.heroHeight();
     final cardPeek = context.spacingXl();
-    final contentInset =
-        context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
+    final contentInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
 
     return Focus(
       canRequestFocus: false,
@@ -637,12 +639,13 @@ class _MoviesScreenState extends State<MoviesScreen>
       child: AnimatedBuilder(
         animation: _scrollController,
         builder: (context, child) {
-          final scrollOffset = _scrollController.hasClients ? _scrollController.offset : 0.0;
+          final scrollOffset =
+              _scrollController.hasClients ? _scrollController.offset : 0.0;
           final fadeProgress =
               (scrollOffset / (heroHeight * 0.3)).clamp(0.0, 1.0);
           final overlayFadeProgress =
               (scrollOffset / (heroHeight * 0.12)).clamp(0.0, 1.0);
-          
+
           return Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -673,11 +676,14 @@ class _MoviesScreenState extends State<MoviesScreen>
                           if (event is KeyDownEvent) {
                             if (event.logicalKey == LogicalKeyboardKey.select ||
                                 event.logicalKey == LogicalKeyboardKey.enter) {
-                              final encodedId = Uri.encodeComponent(featuredMovie.id);
-                              context.push('/content/$encodedId', extra: featuredMovie);
+                              final encodedId =
+                                  Uri.encodeComponent(featuredMovie.id);
+                              context.push('/content/$encodedId',
+                                  extra: featuredMovie);
                               return KeyEventResult.handled;
                             }
-                            if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                            if (event.logicalKey ==
+                                LogicalKeyboardKey.arrowLeft) {
                               return requestNavigationFocus()
                                   ? KeyEventResult.handled
                                   : KeyEventResult.ignored;
@@ -687,8 +693,10 @@ class _MoviesScreenState extends State<MoviesScreen>
                         },
                         child: GestureDetector(
                           onTap: () {
-                            final encodedId = Uri.encodeComponent(featuredMovie.id);
-                            context.push('/content/$encodedId', extra: featuredMovie);
+                            final encodedId =
+                                Uri.encodeComponent(featuredMovie.id);
+                            context.push('/content/$encodedId',
+                                extra: featuredMovie);
                           },
                           child: Stack(
                             children: [
@@ -706,7 +714,8 @@ class _MoviesScreenState extends State<MoviesScreen>
                                       end: Alignment.bottomCenter,
                                       colors: [
                                         Colors.transparent,
-                                        AppTheme.darkBackground.withAlpha((0.8 * 255).round()),
+                                        AppTheme.darkBackground
+                                            .withAlpha((0.8 * 255).round()),
                                         AppTheme.darkBackground,
                                       ],
                                     ),
@@ -748,7 +757,9 @@ class _MoviesScreenState extends State<MoviesScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SizedBox(height: (heroHeight - cardPeek).clamp(0.0, heroHeight)),
+                        SizedBox(
+                            height:
+                                (heroHeight - cardPeek).clamp(0.0, heroHeight)),
                         Container(
                           decoration: const BoxDecoration(
                             gradient: LinearGradient(
@@ -784,8 +795,9 @@ class _MoviesScreenState extends State<MoviesScreen>
                               ..._buildGenreSections(
                                 context,
                                 allMovies,
-                                firstRowFocusNode:
-                                    recentMovies.isEmpty ? _firstRowFocus : null,
+                                firstRowFocusNode: recentMovies.isEmpty
+                                    ? _firstRowFocus
+                                    : null,
                               ),
                               SizedBox(height: context.sectionSpacing()),
                             ],
@@ -803,7 +815,8 @@ class _MoviesScreenState extends State<MoviesScreen>
     );
   }
 
-  Widget _buildHeroContent(Content featuredMovie, String? heroImage, double scrollProgress) {
+  Widget _buildHeroContent(
+      Content featuredMovie, String? heroImage, double scrollProgress) {
     return heroImage != null
         ? Positioned.fill(
             child: CachedNetworkImage(
@@ -824,22 +837,21 @@ class _MoviesScreenState extends State<MoviesScreen>
       description: featuredMovie.description,
       metadata: [
         if (featuredMovie.rating != null)
-           BrandBadge(
-             text: '★ ${featuredMovie.rating!.toStringAsFixed(1)}',
-             backgroundColor: Colors.amber.withValues(alpha: 0.2),
-             textColor: Colors.amber,
-           ),
+          BrandBadge(
+            text: '★ ${featuredMovie.rating!.toStringAsFixed(1)}',
+            backgroundColor: Colors.amber.withValues(alpha: 0.2),
+            textColor: Colors.amber,
+          ),
         if (featuredMovie.year != null)
-           Text('${featuredMovie.year}', style: AppTypography.smallText(context)),
+          Text('${featuredMovie.year}',
+              style: AppTypography.smallText(context)),
         const BrandBadge.hd(),
         if (featuredMovie.genres != null && featuredMovie.genres!.isNotEmpty)
-          ...featuredMovie.genres!.take(2).map((g) => 
-            BrandBadge(
-              text: g.toUpperCase(),
-              backgroundColor: Colors.white10,
-              textColor: Colors.white70,
-            )
-          ),
+          ...featuredMovie.genres!.take(2).map((g) => BrandBadge(
+                text: g.toUpperCase(),
+                backgroundColor: Colors.white10,
+                textColor: Colors.white70,
+              )),
       ],
       onWatchPressed: () {
         final encodedId = Uri.encodeComponent(featuredMovie.id);
@@ -862,8 +874,7 @@ class _MoviesScreenState extends State<MoviesScreen>
   Widget _buildSkeletonLoader() {
     final screenSize = MediaQuery.of(context).size;
     final heroHeight = context.heroHeight();
-    final contentInset =
-        context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
+    final contentInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
     final heroInfoWidth = min(
       screenSize.width * AppSpacing.heroInfoWidth,
       screenSize.width >= 1920 ? 480.0 : 420.0,
@@ -935,40 +946,45 @@ class _MoviesScreenState extends State<MoviesScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(height: context.sectionSpacing()),
-                  ...List.generate(3, (rowIndex) => Padding(
-                    padding: EdgeInsets.only(bottom: context.sectionSpacing()),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          height: 20,
-                          width: 180.0,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withAlpha((0.15 * 255).round()),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          height: rowHeight,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: 5,
-                            itemBuilder: (context, cardIndex) => Container(
-                              width: cardWidth,
-                              height: cardHeight,
-                              decoration: BoxDecoration(
-                                color: AppTheme.cardBackground,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
+                  ...List.generate(
+                      3,
+                      (rowIndex) => Padding(
+                            padding: EdgeInsets.only(
+                                bottom: context.sectionSpacing()),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  height: 20,
+                                  width: 180.0,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white
+                                        .withAlpha((0.15 * 255).round()),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                SizedBox(
+                                  height: rowHeight,
+                                  child: ListView.separated(
+                                    scrollDirection: Axis.horizontal,
+                                    itemCount: 5,
+                                    itemBuilder: (context, cardIndex) =>
+                                        Container(
+                                      width: cardWidth,
+                                      height: cardHeight,
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.cardBackground,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    separatorBuilder: (context, index) =>
+                                        SizedBox(width: context.cardGap()),
+                                  ),
+                                ),
+                              ],
                             ),
-                            separatorBuilder: (context, index) =>
-                                SizedBox(width: context.cardGap()),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )),
+                          )),
                 ],
               ),
             ),
@@ -1001,7 +1017,8 @@ class _MoviesScreenState extends State<MoviesScreen>
             );
             if (details != null || bestBackdrop != null) {
               final patched = m.copyWith(
-                backdropUrl: bestBackdrop ?? details?['backdrop'] ?? m.backdropUrl,
+                backdropUrl:
+                    bestBackdrop ?? details?['backdrop'] ?? m.backdropUrl,
                 imageUrl: details?['poster'] ?? m.imageUrl,
                 rating: (details?['rating'] as double?) ?? m.rating,
                 description: details?['overview'] ?? m.description,
@@ -1017,7 +1034,7 @@ class _MoviesScreenState extends State<MoviesScreen>
           }
           if (curated.length >= 12) break;
         }
-        
+
         // Update the provider with enhanced metadata (including genres)
         if (enhancedMovies.isNotEmpty) {
           final allMovies = movies.map((m) {

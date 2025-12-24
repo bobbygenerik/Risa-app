@@ -43,7 +43,8 @@ class LiveSubtitleOverlay extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             color: backgroundColor,
-            borderRadius: BorderRadius.circular(context.tvSpacing(AppSizes.radiusMd)),
+            borderRadius:
+                BorderRadius.circular(context.tvSpacing(AppSizes.radiusMd)),
           ),
           child: Text(
             subtitles,
@@ -233,8 +234,8 @@ class TranscriptionControlPanel extends StatelessWidget {
                 Text(
                   '${service.subtitles.length} subtitle entries',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.textSecondary,
-                  ),
+                        color: AppTheme.textSecondary,
+                      ),
                 ),
               ],
             ),

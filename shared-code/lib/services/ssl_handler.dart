@@ -16,13 +16,14 @@ class SSLHandler {
   }
 
   /// Check if a certificate should be accepted
-  static bool shouldAcceptCertificate(X509Certificate cert, String host, int port) {
+  static bool shouldAcceptCertificate(
+      X509Certificate cert, String host, int port) {
     // If user has enabled "allow all" mode (default for IPTV compatibility)
     if (_allowAllCertificates) return true;
-    
+
     // Check if host is in trusted list
     if (_trustedHosts.contains(host)) return true;
-    
+
     return false;
   }
 

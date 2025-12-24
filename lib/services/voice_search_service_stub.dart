@@ -21,5 +21,4 @@ class VoiceSearchService extends ChangeNotifier {
   Future<void> stopListening() async {
     // Stub implementation
   }
-
 }

@@ -5,7 +5,7 @@ import 'package:path_provider/path_provider.dart';
 
 class WhisperPlatformService {
   static const MethodChannel _channel = MethodChannel('com.risa.iptv/whisper');
-  
+
   static const Map<String, WhisperModel> availableModels = {
     'tiny.en': WhisperModel(
       name: 'tiny.en',
@@ -15,7 +15,7 @@ class WhisperPlatformService {
       filename: 'ggml-tiny.en.bin',
     ),
     'base.en': WhisperModel(
-      name: 'base.en', 
+      name: 'base.en',
       size: '142 MB',
       description: 'Good quality, English only',
       bundled: false,
@@ -23,7 +23,7 @@ class WhisperPlatformService {
     ),
     'small.en': WhisperModel(
       name: 'small.en',
-      size: '466 MB', 
+      size: '466 MB',
       description: 'Better quality, English only',
       bundled: false,
       filename: 'ggml-small.en.bin',
@@ -63,12 +63,12 @@ class WhisperPlatformService {
   static Future<bool> isModelAvailable(String modelName) async {
     final model = availableModels[modelName];
     if (model == null) return false;
-    
+
     if (model.bundled) {
       // Bundled models are always available
       return true;
     }
-    
+
     // Check if downloaded model exists
     final modelPath = await _getModelPath(modelName);
     return modelPath != null && await File(modelPath).exists();
@@ -112,18 +112,18 @@ class WhisperPlatformService {
   /// Get available models with their status
   static Future<List<WhisperModelStatus>> getModelStatuses() async {
     final statuses = <WhisperModelStatus>[];
-    
+
     for (final entry in availableModels.entries) {
       final model = entry.value;
       final isAvailable = await isModelAvailable(entry.key);
-      
+
       statuses.add(WhisperModelStatus(
         model: model,
         isAvailable: isAvailable,
         isDownloading: false, // Download state tracked by AIModelManager
       ));
     }
-    
+
     return statuses;
   }
 }

@@ -81,19 +81,24 @@ class _FocusableCardState extends State<FocusableCard> {
           duration: widget.animationDuration,
           margin: widget.margin,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(context.tvSpacing(widget.borderRadius)),
+            borderRadius:
+                BorderRadius.circular(context.tvSpacing(widget.borderRadius)),
             border: Border.all(
-              color: _isFocused ? widget.focusBorderColor : widget.idleBorderColor,
-              width: _isFocused ? context.tvSpacing(widget.focusBorderWidth) : context.tvSpacing(widget.idleBorderWidth),
+              color:
+                  _isFocused ? widget.focusBorderColor : widget.idleBorderColor,
+              width: _isFocused
+                  ? context.tvSpacing(widget.focusBorderWidth)
+                  : context.tvSpacing(widget.idleBorderWidth),
             ),
             boxShadow: _isFocused
-                ? (widget.focusedBoxShadow ?? [
-                    BoxShadow(
-                      color: widget.focusBorderColor.withAlpha(80),
-                      blurRadius: context.tvSpacing(24),
-                      spreadRadius: context.tvSpacing(2),
-                    ),
-                  ])
+                ? (widget.focusedBoxShadow ??
+                    [
+                      BoxShadow(
+                        color: widget.focusBorderColor.withAlpha(80),
+                        blurRadius: context.tvSpacing(24),
+                        spreadRadius: context.tvSpacing(2),
+                      ),
+                    ])
                 : null,
           ),
           child: widget.child,

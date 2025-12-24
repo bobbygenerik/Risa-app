@@ -34,10 +34,11 @@ class BrandCard extends StatelessWidget {
       margin: margin,
       decoration: BoxDecoration(
         color: backgroundColor ?? AppTheme.cardBackground,
-        borderRadius: BorderRadius.circular(borderRadius ?? context.tvSpacing(12)),
-        border: hasBorder 
-          ? Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1)
-          : null,
+        borderRadius:
+            BorderRadius.circular(borderRadius ?? context.tvSpacing(12)),
+        border: hasBorder
+            ? Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1)
+            : null,
       ),
       child: child,
     );
@@ -53,19 +54,21 @@ class BrandCard extends StatelessWidget {
               child: AnimatedContainer(
                 duration: AppDurations.fast,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(borderRadius ?? context.tvSpacing(12)),
+                  borderRadius: BorderRadius.circular(
+                      borderRadius ?? context.tvSpacing(12)),
                   border: isFocused
-                    ? Border.all(color: AppTheme.primaryBlue, width: 3)
-                    : null,
+                      ? Border.all(color: AppTheme.primaryBlue, width: 3)
+                      : null,
                   boxShadow: isFocused
-                    ? [
-                        BoxShadow(
-                          color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
-                          blurRadius: 16,
-                          spreadRadius: 2,
-                        ),
-                      ]
-                    : null,
+                      ? [
+                          BoxShadow(
+                            color: AppTheme.primaryBlue
+                                .withAlpha((0.4 * 255).round()),
+                            blurRadius: 16,
+                            spreadRadius: 2,
+                          ),
+                        ]
+                      : null,
                 ),
                 child: content,
               ),
@@ -142,7 +145,10 @@ class BrandStatusCard extends StatelessWidget {
         Row(
           children: [
             Icon(
-              icon ?? (isSuccess ? Icons.check_circle : Icons.warning_amber_outlined),
+              icon ??
+                  (isSuccess
+                      ? Icons.check_circle
+                      : Icons.warning_amber_outlined),
               color: isSuccess ? AppTheme.accentGreen : AppTheme.accentOrange,
               size: context.tvIconSize(20),
             ),

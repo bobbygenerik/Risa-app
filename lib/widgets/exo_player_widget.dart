@@ -29,18 +29,21 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
   late VideoPlayerController _controller;
   Future<void>? _initializeFuture;
   Timer? _positionTimer;
+
   /// Notifies listeners of current playback position (updated ~500ms).
   final ValueNotifier<Duration> positionNotifier = ValueNotifier(Duration.zero);
+
   /// Notifies listeners when playback state changes.
   final ValueNotifier<bool> isPlayingNotifier = ValueNotifier(false);
-  
+
   void _onControllerChanged() {
     setState(() {});
   }
+
   @override
   void initState() {
     super.initState();
-        _controller = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.url));
     _initializeFuture = _controller.initialize().then((_) {
       // Autoplay when ready
       _controller.play();
@@ -56,14 +59,13 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
     // Start periodic position updates for transcription sync and external listeners
     _positionTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
       try {
-          final pos = _controller.value.position;
-          positionNotifier.value = pos;
-          isPlayingNotifier.value = _controller.value.isPlaying;
+        final pos = _controller.value.position;
+        positionNotifier.value = pos;
+        isPlayingNotifier.value = _controller.value.isPlaying;
         widget.transcriptionService?.updatePlaybackPosition(pos);
       } catch (_) {}
     });
   }
-
 
   @override
   void dispose() {
@@ -107,10 +109,10 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
                 ),
               ),
             ),
-            if (value.isBuffering) const Center(child: CircularProgressIndicator()),
+            if (value.isBuffering)
+              const Center(child: CircularProgressIndicator()),
           ],
         );
-
       },
     );
   }

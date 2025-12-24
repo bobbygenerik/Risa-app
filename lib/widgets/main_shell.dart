@@ -163,19 +163,19 @@ class _MainShellState extends State<MainShell> {
                       skipTraversal: true,
 
                       // onKeyEvent: _handleContentKeyEvent, // Removed global handler
-                    child: FocusScope(
-                      node: _contentFocusScope,
-                      autofocus: false,
-                      child: ContentFocusProvider(
-                        registerFocusCallback: _registerContentFocusCallback,
-                        unregisterFocusCallback:
-                            _unregisterContentFocusCallback,
-                        requestNavFocus: _requestNavFocus,
-                        child: widget.child,
+                      child: FocusScope(
+                        node: _contentFocusScope,
+                        autofocus: false,
+                        child: ContentFocusProvider(
+                          registerFocusCallback: _registerContentFocusCallback,
+                          unregisterFocusCallback:
+                              _unregisterContentFocusCallback,
+                          requestNavFocus: _requestNavFocus,
+                          child: widget.child,
+                        ),
                       ),
                     ),
                   ),
-                ),
                 ),
                 Positioned.fill(
                   child: IgnorePointer(
@@ -264,7 +264,7 @@ class _MainShellState extends State<MainShell> {
     if (location == null || location == _lastLocation) return;
     _lastLocation = location;
     _sidebarKey.currentState?.collapse();
-    
+
     // Restore focus to content when route changes (e.g. returning from player)
     // Use post-frame callback to allow new route to build and register focus
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -372,8 +372,7 @@ class _MainShellState extends State<MainShell> {
       if (currentFocus != null &&
           !_isFocusInSidebar(currentFocus) &&
           _isFocusInContent(currentFocus)) {
-        final moved =
-            currentFocus.focusInDirection(TraversalDirection.left);
+        final moved = currentFocus.focusInDirection(TraversalDirection.left);
         if (!moved) {
           _expandSidebarFromContent();
         }
@@ -419,5 +418,4 @@ class _MainShellState extends State<MainShell> {
     // Request focus back to content
     _requestContentFocus();
   }
-
 }

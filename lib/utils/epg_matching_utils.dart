@@ -7,9 +7,21 @@ class EPGMatchingUtils {
   /// Convert number words to digits for better matching
   static String convertNumberWords(String text) {
     final conversions = {
-      'one': '1', 'two': '2', 'three': '3', 'four': '4', 'five': '5',
-      'six': '6', 'seven': '7', 'eight': '8', 'nine': '9', 'ten': '10',
-      '1st': '1', '2nd': '2', '3rd': '3', '4th': '4', '5th': '5',
+      'one': '1',
+      'two': '2',
+      'three': '3',
+      'four': '4',
+      'five': '5',
+      'six': '6',
+      'seven': '7',
+      'eight': '8',
+      'nine': '9',
+      'ten': '10',
+      '1st': '1',
+      '2nd': '2',
+      '3rd': '3',
+      '4th': '4',
+      '5th': '5',
     };
 
     String result = text.toLowerCase();
@@ -91,8 +103,7 @@ class EPGMatchingUtils {
 
     for (final key in allEpgKeys) {
       // Normalize: lowercase, remove spaces/dots/hyphens, keep alphanumeric
-      final normalized =
-          key.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+      final normalized = key.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
       normalizedEpgKeys[normalized] = key;
 
       // Also add without domain suffix
@@ -123,7 +134,7 @@ class EPGMatchingUtils {
         nameToEpgKeys.putIfAbsent(part, () => []).add(key);
       }
     }
-    
+
     return normalizedEpgKeys;
   }
 
@@ -135,7 +146,7 @@ class EPGMatchingUtils {
     Map<String, String> manualMappings,
   ) {
     final cacheKey = '$channelId|${channelName ?? ''}';
-    
+
     // Check manual mapping first (highest priority)
     if (manualMappings.containsKey(channelId)) {
       final manualKey = manualMappings[channelId]!;
@@ -143,14 +154,14 @@ class EPGMatchingUtils {
         return manualKey;
       }
     }
-    
+
     // Check cache
     if (_channelIdCache.containsKey(cacheKey)) {
       return _channelIdCache[cacheKey];
     }
 
     final normalizedKeys = getNormalizedEpgKeys(allEpgKeys);
-    
+
     // Try lowercase match
     final lowerChannelId = channelId.toLowerCase();
     for (final key in allEpgKeys) {
@@ -159,7 +170,7 @@ class EPGMatchingUtils {
         return key;
       }
     }
-    
+
     // Try matching without domain suffix
     final withoutDomain = channelId.split('.').first;
     for (final key in allEpgKeys) {
@@ -169,7 +180,7 @@ class EPGMatchingUtils {
         return key;
       }
     }
-    
+
     // Try normalized matching
     final normalizedId =
         channelId.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
@@ -177,7 +188,7 @@ class EPGMatchingUtils {
       _channelIdCache[cacheKey] = normalizedKeys[normalizedId];
       return normalizedKeys[normalizedId];
     }
-    
+
     // Try with number word conversion
     final normalizedWithNumbers = convertNumberWords(normalizedId);
     if (normalizedWithNumbers != normalizedId &&
@@ -185,7 +196,7 @@ class EPGMatchingUtils {
       _channelIdCache[cacheKey] = normalizedKeys[normalizedWithNumbers];
       return normalizedKeys[normalizedWithNumbers];
     }
-    
+
     // Try prefix/contains matching with normalized ID
     final normalizedIdWithoutCountry =
         normalizedId.replaceAll(RegExp(r'(uk|us|ca|au|ie|pt|hk)$'), '');
@@ -226,7 +237,7 @@ class EPGMatchingUtils {
       _channelIdCache[cacheKey] = bestMatch.value;
       return bestMatch.value;
     }
-    
+
     // Try number-stripped matching
     final channelStrippedNumbers = stripNumbers(normalizedIdWithoutCountry);
     if (channelStrippedNumbers.length >= 3) {
@@ -257,7 +268,7 @@ class EPGMatchingUtils {
         return bestMatch.value;
       }
     }
-    
+
     // Try contains matching
     for (final entry in normalizedKeys.entries) {
       final epgNormalized = entry.key;
@@ -269,7 +280,7 @@ class EPGMatchingUtils {
         return entry.value;
       }
     }
-    
+
     // Try matching by channel NAME if provided
     if (channelName != null && channelName.isNotEmpty) {
       final normalizedName =
@@ -296,7 +307,7 @@ class EPGMatchingUtils {
         }
       }
     }
-    
+
     // Try partial match
     for (final key in allEpgKeys) {
       if (key.toLowerCase().contains(lowerChannelId) ||
@@ -305,7 +316,7 @@ class EPGMatchingUtils {
         return key;
       }
     }
-    
+
     // No match found - cache the miss
     _channelIdCache[cacheKey] = null;
     return null;

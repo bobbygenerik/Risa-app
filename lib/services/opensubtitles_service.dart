@@ -8,8 +8,7 @@ import 'package:http/http.dart' as http;
 /// API Documentation: https://opensubtitles.stoplight.io/docs/opensubtitles-api
 class OpenSubtitlesService extends ChangeNotifier {
   static const String _apiUrl = 'https://api.opensubtitles.com/api/v1';
-  static const String _apiKey =
-      'WX4Acrpk0veYJrpQTc1I5oUBkpNnIqbc';
+  static const String _apiKey = 'WX4Acrpk0veYJrpQTc1I5oUBkpNnIqbc';
 
   String? _username;
   String? _password;

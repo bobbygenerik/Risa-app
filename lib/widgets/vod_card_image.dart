@@ -45,19 +45,22 @@ class _VodCardImageState extends State<VodCardImage> {
         widget.content.title,
         year: widget.content.year,
       );
-      
+
       if (mounted && posterUrl != null) {
-        debugLog('VodCardImage: Got artwork for "${widget.content.title}": $posterUrl');
+        debugLog(
+            'VodCardImage: Got artwork for "${widget.content.title}": $posterUrl');
         setState(() {
           _tmdbPosterUrl = posterUrl;
           _fetchedTmdb = true;
         });
       } else {
-        debugLog('VodCardImage: No artwork found for "${widget.content.title}"');
+        debugLog(
+            'VodCardImage: No artwork found for "${widget.content.title}"');
         _fetchedTmdb = true;
       }
     } catch (e) {
-      debugLog('VodCardImage: Failed to fetch artwork for ${widget.content.title}: $e');
+      debugLog(
+          'VodCardImage: Failed to fetch artwork for ${widget.content.title}: $e');
       _fetchedTmdb = true;
     } finally {
       _isFetching = false;
@@ -68,7 +71,7 @@ class _VodCardImageState extends State<VodCardImage> {
   Widget build(BuildContext context) {
     // Show original image immediately if available, TMDB will replace when loaded
     final tmdbUrl = _tmdbPosterUrl;
-    
+
     // If we have TMDB image, use it (higher quality)
     if (tmdbUrl != null && tmdbUrl.isNotEmpty) {
       return CachedNetworkImage(
@@ -80,7 +83,7 @@ class _VodCardImageState extends State<VodCardImage> {
         errorWidget: (context, url, error) => _buildOriginalImageFallback(),
       );
     }
-    
+
     // Fallback to original image
     return _buildOriginalImageFallback();
   }
@@ -100,4 +103,3 @@ class _VodCardImageState extends State<VodCardImage> {
     return widget.placeholder;
   }
 }
-

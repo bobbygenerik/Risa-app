@@ -28,7 +28,8 @@ class ContentFocusProvider extends InheritedWidget {
   }
 
   static ContentFocusProvider? maybeOf(BuildContext context) {
-    final element = context.getElementForInheritedWidgetOfExactType<ContentFocusProvider>();
+    final element =
+        context.getElementForInheritedWidgetOfExactType<ContentFocusProvider>();
     return element?.widget as ContentFocusProvider?;
   }
 

@@ -128,35 +128,39 @@ class ContentProvider with ChangeNotifier {
   Content? getContentById(String contentId) {
     final movieIndex = _movies.indexWhere((m) => m.id == contentId);
     if (movieIndex != -1) return _movies[movieIndex];
-    
+
     final seriesIndex = _series.indexWhere((s) => s.id == contentId);
     if (seriesIndex != -1) return _series[seriesIndex];
-    
+
     return null;
   }
 
   /// Get next episode in series
   Content? getNextEpisode(String currentContentId) {
     final current = getContentById(currentContentId);
-    if (current?.type != ContentType.series || current?.seasonNumber == null || current?.episodeNumber == null) {
+    if (current?.type != ContentType.series ||
+        current?.seasonNumber == null ||
+        current?.episodeNumber == null) {
       return null;
     }
-    
+
     // Find next episode in same season
-    final nextInSeason = _series.where((s) => 
-      s.title == current!.title &&
-      s.seasonNumber == current.seasonNumber &&
-      s.episodeNumber == (current.episodeNumber! + 1)
-    ).firstOrNull;
-    
+    final nextInSeason = _series
+        .where((s) =>
+            s.title == current!.title &&
+            s.seasonNumber == current.seasonNumber &&
+            s.episodeNumber == (current.episodeNumber! + 1))
+        .firstOrNull;
+
     if (nextInSeason != null) return nextInSeason;
-    
+
     // Find first episode of next season
-    return _series.where((s) => 
-      s.title == current!.title &&
-      s.seasonNumber == (current.seasonNumber! + 1) &&
-      s.episodeNumber == 1
-    ).firstOrNull;
+    return _series
+        .where((s) =>
+            s.title == current!.title &&
+            s.seasonNumber == (current.seasonNumber! + 1) &&
+            s.episodeNumber == 1)
+        .firstOrNull;
   }
 
   /// Check if content is in favorites

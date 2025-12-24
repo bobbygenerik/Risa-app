@@ -12,7 +12,7 @@ class OptimizedImage extends StatelessWidget {
   final bool enableMemoryCache;
   final int? memCacheWidth;
   final int? memCacheHeight;
-  
+
   const OptimizedImage({
     super.key,
     required this.imageUrl,
@@ -30,12 +30,16 @@ class OptimizedImage extends StatelessWidget {
   Widget build(BuildContext context) {
     // Calculate optimal memory cache dimensions
     final screenWidth = MediaQuery.of(context).size.width;
-    final optimalWidth = memCacheWidth ?? 
-        (width != null ? (width! * MediaQuery.of(context).devicePixelRatio).round() : 
-         (screenWidth * 0.3 * MediaQuery.of(context).devicePixelRatio).round());
-    
+    final optimalWidth = memCacheWidth ??
+        (width != null
+            ? (width! * MediaQuery.of(context).devicePixelRatio).round()
+            : (screenWidth * 0.3 * MediaQuery.of(context).devicePixelRatio)
+                .round());
+
     final optimalHeight = memCacheHeight ??
-        (height != null ? (height! * MediaQuery.of(context).devicePixelRatio).round() : null);
+        (height != null
+            ? (height! * MediaQuery.of(context).devicePixelRatio).round()
+            : null);
 
     return CachedNetworkImage(
       imageUrl: imageUrl,
@@ -44,13 +48,17 @@ class OptimizedImage extends StatelessWidget {
       fit: fit,
       memCacheWidth: enableMemoryCache ? optimalWidth : null,
       memCacheHeight: enableMemoryCache ? optimalHeight : null,
-      placeholder: placeholder != null ? (context, url) => placeholder! : (context, url) => _buildShimmerPlaceholder(),
-      errorWidget: errorWidget != null ? (context, url, error) => errorWidget! : _buildErrorWidget,
+      placeholder: placeholder != null
+          ? (context, url) => placeholder!
+          : (context, url) => _buildShimmerPlaceholder(),
+      errorWidget: errorWidget != null
+          ? (context, url, error) => errorWidget!
+          : _buildErrorWidget,
       fadeInDuration: const Duration(milliseconds: 200),
       fadeOutDuration: const Duration(milliseconds: 100),
     );
   }
-  
+
   Widget _buildShimmerPlaceholder() {
     return Container(
       width: width,
@@ -68,7 +76,7 @@ class OptimizedImage extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildErrorWidget(BuildContext context, String url, dynamic error) {
     return Container(
       width: width,
@@ -93,7 +101,7 @@ class OptimizedThumbnail extends StatelessWidget {
   final String imageUrl;
   final double size;
   final BoxFit fit;
-  
+
   const OptimizedThumbnail({
     super.key,
     required this.imageUrl,
@@ -135,7 +143,7 @@ class ProgressiveImage extends StatefulWidget {
   final double? width;
   final double? height;
   final BoxFit fit;
-  
+
   const ProgressiveImage({
     super.key,
     required this.imageUrl,
@@ -164,14 +172,14 @@ class _ProgressiveImageState extends State<ProgressiveImage> {
             memCacheWidth: 200, // Small cache for low-res
             memCacheHeight: 200,
           ),
-        
+
         // High resolution image
         OptimizedImage(
           imageUrl: widget.imageUrl,
           width: widget.width,
           height: widget.height,
           fit: widget.fit,
-          placeholder: widget.lowResImageUrl != null 
+          placeholder: widget.lowResImageUrl != null
               ? const SizedBox.shrink() // No placeholder if we have low-res
               : null,
           errorWidget: Container(

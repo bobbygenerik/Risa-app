@@ -23,7 +23,6 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
   bool _isLoading = true;
   String? _errorMessage;
 
-
   @override
   void initState() {
     super.initState();
@@ -33,8 +32,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
 
   void _updateTime() {
     if (!mounted) return;
-    setState(() {
-    });
+    setState(() {});
     Future.delayed(const Duration(seconds: 1), _updateTime);
   }
 
@@ -193,30 +191,37 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
             color: AppTheme.darkBackground,
           ),
           child: Column(
-          children: [
-            _buildGlassAppBar(),
-            Divider(height: context.tvSpacing(1), color: AppTheme.darkBackgroundOpacity(0.12), thickness: context.tvSpacing(2)),
-            Expanded(child: _buildContent()),
-          ],
+            children: [
+              _buildGlassAppBar(),
+              Divider(
+                  height: context.tvSpacing(1),
+                  color: AppTheme.darkBackgroundOpacity(0.12),
+                  thickness: context.tvSpacing(2)),
+              Expanded(child: _buildContent()),
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 
   Widget _buildGlassAppBar() {
     return Container(
       height: context.tvSpacing(64), // AppSizes.appBarHeight assumed 64
-      padding: EdgeInsets.symmetric(horizontal: context.tvSpacing(32), vertical: context.tvSpacing(20)), // AppSizes.lg=32, md=20
+      padding: EdgeInsets.symmetric(
+          horizontal: context.tvSpacing(32),
+          vertical: context.tvSpacing(20)), // AppSizes.lg=32, md=20
       decoration: BoxDecoration(
         color: Colors.white.withAlpha((0.08 * 255).round()),
         border: Border(
-          bottom: BorderSide(color: AppTheme.darkBackgroundOpacity(0.12), width: 2),
+          bottom:
+              BorderSide(color: AppTheme.darkBackgroundOpacity(0.12), width: 2),
         ),
       ),
       child: Row(
         children: [
-          Icon(Icons.fiber_manual_record, color: AppTheme.accentRed, size: context.tvIconSize(24)),
+          Icon(Icons.fiber_manual_record,
+              color: AppTheme.accentRed, size: context.tvIconSize(24)),
           SizedBox(width: context.tvSpacing(20)), // AppSizes.md assumed 20
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -225,8 +230,8 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
               Text(
                 'Recordings',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
               if (_storagePath != null)
                 Text(
@@ -240,10 +245,10 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
           ),
           const Spacer(),
           IconButton(
-            icon: Icon(Icons.refresh, color: AppTheme.primaryBlue, size: context.tvIconSize(24)),
+            icon: Icon(Icons.refresh,
+                color: AppTheme.primaryBlue, size: context.tvIconSize(24)),
             onPressed: _loadRecordings,
           ),
-
         ],
       ),
     );
@@ -292,12 +297,15 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(context.tvSpacing(8)),
                       border: hasFocus
-                          ? Border.all(color: AppTheme.primaryBlue, width: context.tvSpacing(3))
+                          ? Border.all(
+                              color: AppTheme.primaryBlue,
+                              width: context.tvSpacing(3))
                           : null,
                       boxShadow: hasFocus
                           ? [
                               BoxShadow(
-                                color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
+                                color: AppTheme.primaryBlue
+                                    .withAlpha((0.5 * 255).round()),
                                 blurRadius: context.tvSpacing(12),
                                 spreadRadius: context.tvSpacing(2),
                               ),
@@ -309,7 +317,8 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
                         context.go('/settings');
                       },
                       icon: Icon(Icons.settings, size: context.tvIconSize(24)),
-                      label: Text('Go to Settings', style: TextStyle(fontSize: context.tvTextSize(16))),
+                      label: Text('Go to Settings',
+                          style: TextStyle(fontSize: context.tvTextSize(16))),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryBlue,
                       ),
@@ -324,7 +333,9 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
               child: Text(
                 'Configure your recording storage location in Settings > EPG & Recordings',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: context.tvTextSize(12), color: AppTheme.textTertiary),
+                style: TextStyle(
+                    fontSize: context.tvTextSize(12),
+                    color: AppTheme.textTertiary),
               ),
             ),
           ],
@@ -345,12 +356,16 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
             SizedBox(height: context.tvSpacing(16)),
             Text(
               'No recordings found',
-              style: TextStyle(fontSize: context.tvTextSize(16), color: AppTheme.textSecondary),
+              style: TextStyle(
+                  fontSize: context.tvTextSize(16),
+                  color: AppTheme.textSecondary),
             ),
             SizedBox(height: context.tvSpacing(8)),
             Text(
               'Recordings will appear here once you record from the EPG',
-              style: TextStyle(fontSize: context.tvTextSize(12), color: AppTheme.textTertiary),
+              style: TextStyle(
+                  fontSize: context.tvTextSize(12),
+                  color: AppTheme.textTertiary),
               textAlign: TextAlign.center,
             ),
           ],
@@ -387,7 +402,9 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
             ),
             title: Text(
               fileName,
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: context.tvTextSize(16)),
+              style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: context.tvTextSize(16)),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),

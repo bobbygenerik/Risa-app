@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -29,7 +28,7 @@ class _SearchPopupState extends State<SearchPopup> {
   List<Content> _seriesResults = [];
   bool _isSearching = false;
   bool _hasSearched = false;
-  
+
   // Pagination
   static const int _resultsPerSection = 12;
   int _liveTvDisplayCount = _resultsPerSection;
@@ -81,12 +80,10 @@ class _SearchPopupState extends State<SearchPopup> {
 
     final liveTv = channelProvider.searchChannels(query);
     final allContent = contentProvider.searchContent(query);
-    final movies = allContent
-        .where((c) => c.type == ContentType.movie)
-        .toList();
-    final series = allContent
-        .where((c) => c.type == ContentType.series)
-        .toList();
+    final movies =
+        allContent.where((c) => c.type == ContentType.movie).toList();
+    final series =
+        allContent.where((c) => c.type == ContentType.series).toList();
 
     setState(() {
       _liveTvResults = liveTv;
@@ -99,6 +96,7 @@ class _SearchPopupState extends State<SearchPopup> {
       _seriesDisplayCount = _resultsPerSection;
     });
   }
+
   @override
   Widget build(BuildContext context) {
     return Align(
@@ -143,8 +141,11 @@ class _SearchPopupState extends State<SearchPopup> {
                     },
                     decoration: InputDecoration(
                       hintText: 'Search...',
-                      hintStyle: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.5)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      hintStyle: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white.withValues(alpha: 0.5)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
                       filled: true,
                       fillColor: Colors.white.withValues(alpha: 0.05),
                       border: OutlineInputBorder(
@@ -158,7 +159,9 @@ class _SearchPopupState extends State<SearchPopup> {
                 const SizedBox(height: 12),
                 Expanded(
                   child: _isSearching
-                      ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryBlue))
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                              color: AppTheme.primaryBlue))
                       : _buildResultsList(),
                 ),
               ],
@@ -316,9 +319,9 @@ class _SearchPopupState extends State<SearchPopup> {
         final channel = channels[index];
         return Focus(
           onKeyEvent: (node, event) {
-            if (event is KeyDownEvent && 
-                (event.logicalKey == LogicalKeyboardKey.select || 
-                 event.logicalKey == LogicalKeyboardKey.enter)) {
+            if (event is KeyDownEvent &&
+                (event.logicalKey == LogicalKeyboardKey.select ||
+                    event.logicalKey == LogicalKeyboardKey.enter)) {
               Navigator.of(context).pop();
               context.push('/player', extra: channel);
               return KeyEventResult.handled;
@@ -341,53 +344,55 @@ class _SearchPopupState extends State<SearchPopup> {
                     border: Border.all(
                       color: isFocused
                           ? AppTheme.primaryBlue
-                          : AppTheme.textSecondary.withAlpha((0.1 * 255).round()),
+                          : AppTheme.textSecondary
+                              .withAlpha((0.1 * 255).round()),
                       width: isFocused ? 3 : 1,
                     ),
                   ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (channel.logoUrl != null && channel.logoUrl!.isNotEmpty)
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSizes.sm),
-                      child: Image.network(
-                        channel.logoUrl!,
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => const Icon(
-                          Icons.tv,
-                          size: 32,
-                          color: AppTheme.textSecondary,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (channel.logoUrl != null &&
+                          channel.logoUrl!.isNotEmpty)
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppSizes.sm),
+                            child: Image.network(
+                              channel.logoUrl!,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.tv,
+                                size: 32,
+                                color: AppTheme.textSecondary,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        const Expanded(
+                          child: Icon(
+                            Icons.tv,
+                            size: 32,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                      Padding(
+                        padding: const EdgeInsets.all(AppSizes.xs),
+                        child: Text(
+                          channel.name,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textPrimary,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                    ),
-                  )
-                else
-                  const Expanded(
-                    child: Icon(
-                      Icons.tv,
-                      size: 32,
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                Padding(
-                  padding: const EdgeInsets.all(AppSizes.xs),
-                  child: Text(
-                    channel.name,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.textPrimary,
-                    ),
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
-        );
+              );
             },
           ),
         );

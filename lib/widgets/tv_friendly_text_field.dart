@@ -64,7 +64,7 @@ class _TVFriendlyTextFieldState extends State<TVFriendlyTextField> {
 
   void _toggleEditMode(bool enable) {
     if (_isEditing == enable) return;
-    
+
     setState(() {
       _isEditing = enable;
     });
@@ -72,10 +72,11 @@ class _TVFriendlyTextFieldState extends State<TVFriendlyTextField> {
     if (!enable) {
       // Just stopped editing: keep focus on this widget but hide keyboard
       widget.focusNode.requestFocus();
-      FocusScope.of(context).unfocus(); // Hides keyboard implies we might lose focus, so we re-request?
-      // Actually, we want to hide the soft keyboard. 
+      FocusScope.of(context)
+          .unfocus(); // Hides keyboard implies we might lose focus, so we re-request?
+      // Actually, we want to hide the soft keyboard.
       // SystemChannels.textInput.invokeMethod('TextInput.hide');
-      
+
       // Re-request focus to ensure we stay selected after keyboard closes
       Future.microtask(() {
         if (mounted) widget.focusNode.requestFocus();
@@ -99,19 +100,19 @@ class _TVFriendlyTextFieldState extends State<TVFriendlyTextField> {
     // We do NOT pass the focusNode to the BrandTextField as a parameter that wraps it in Focus.
     // Instead, we use BrandTextField purely for styling and rendering, and WE handle the Focus.
     // But BrandTextField's implementation uses the passed focusNode to wrap a Focus widget.
-    // 
+    //
     // Let's look at BrandTextField implementation again:
     // It takes `focusNode` and wraps `TextField` in `Focus(focusNode: focusNode)`.
-    // 
-    // So to avoid the crash, we must NOT wrap BrandTextField in *another* Focus widget 
+    //
+    // So to avoid the crash, we must NOT wrap BrandTextField in *another* Focus widget
     // using the *same* node.
     //
     // However, we need to intercept keys *on* that focus node.
     // The `Focus` widget in `BrandTextField` exposes `onKeyEvent`? No, BrandTextField does NOT expose onKeyEvent.
     //
-    // So we effectively have to reimplement the "Container with Focus" part here, 
+    // So we effectively have to reimplement the "Container with Focus" part here,
     // or modify BrandTextField. Modifying BrandTextField is risky as it is used elsewhere.
-    // 
+    //
     // Strategy:
     // We will use a `Focus` widget HERE, with the `widget.focusNode`.
     // We will pass `null` as the focusNode to `BrandTextField` so it doesn't create a conflicting Focus widget.
@@ -121,7 +122,7 @@ class _TVFriendlyTextFieldState extends State<TVFriendlyTextField> {
     //
     // So:
     // TVFriendlyTextField -> Focus(node: widget.focusNode) -> BrandTextField(focusNode: null)
-    
+
     return Focus(
       focusNode: widget.focusNode,
       onKeyEvent: (node, event) {
@@ -129,45 +130,50 @@ class _TVFriendlyTextFieldState extends State<TVFriendlyTextField> {
         final key = event.logicalKey;
 
         // ENTER / SELECT: Toggle Edit Mode
-        if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
+        if (key == LogicalKeyboardKey.select ||
+            key == LogicalKeyboardKey.enter) {
           if (!_isEditing) {
             _toggleEditMode(true);
             return KeyEventResult.handled;
           }
           // If already editing, let the TextField handle Enter (e.g. submit) or we can capture it to stop editing?
           // Usually proper behavior is: Enter -> Submit/Done -> Stop Editing
-          // For now let's allow it to propagate so `onSubmitted` works if we had it, 
+          // For now let's allow it to propagate so `onSubmitted` works if we had it,
           // or we can treat it as "Done".
           // Let's toggle OFF on second enter for now since we lack a "Submit" button separate actions.
           // toggleEditMode(false);
           // return KeyEventResult.handled;
-          return KeyEventResult.ignored; // Let TextField consume it (newline or submit)
+          return KeyEventResult
+              .ignored; // Let TextField consume it (newline or submit)
         }
 
         // BACK / ESCAPE: Cancel Edit Mode
-        if (key == LogicalKeyboardKey.escape || key == LogicalKeyboardKey.goBack) {
+        if (key == LogicalKeyboardKey.escape ||
+            key == LogicalKeyboardKey.goBack) {
           if (_isEditing) {
             _toggleEditMode(false);
-            return KeyEventResult.handled; // STOP EVENT BUBBLING so app doesn't exit
+            return KeyEventResult
+                .handled; // STOP EVENT BUBBLING so app doesn't exit
           }
-           // If not editing, let it bubble up (to Sidebar)
-          return KeyEventResult.ignored; 
+          // If not editing, let it bubble up (to Sidebar)
+          return KeyEventResult.ignored;
         }
 
         // NAVIGATION (Arrows)
         // Only verify navigation if NOT editing. If editing, arrows move cursor.
         if (!_isEditing) {
-           if (key == LogicalKeyboardKey.arrowDown) {
-             // Handle custom navigation if needed, or let FocusScope handle it
-             return KeyEventResult.ignored;
-           }
-           if (key == LogicalKeyboardKey.arrowUp) {
-             return KeyEventResult.ignored;
-           }
-           if (key == LogicalKeyboardKey.arrowLeft || key == LogicalKeyboardKey.arrowRight) {
-             // Let settings screen or FocusScope handle moving to/from sidebar
-             return KeyEventResult.ignored; 
-           }
+          if (key == LogicalKeyboardKey.arrowDown) {
+            // Handle custom navigation if needed, or let FocusScope handle it
+            return KeyEventResult.ignored;
+          }
+          if (key == LogicalKeyboardKey.arrowUp) {
+            return KeyEventResult.ignored;
+          }
+          if (key == LogicalKeyboardKey.arrowLeft ||
+              key == LogicalKeyboardKey.arrowRight) {
+            // Let settings screen or FocusScope handle moving to/from sidebar
+            return KeyEventResult.ignored;
+          }
         }
 
         return KeyEventResult.ignored;
@@ -177,7 +183,7 @@ class _TVFriendlyTextFieldState extends State<TVFriendlyTextField> {
           // This Builder ensures that if we needed to access the Focus above, we can.
           // BrandTextField's build method checks `Focus.of(context).hasFocus`.
           // Since BrandTextField is a child of Focus, `Focus.of(brandContext)` will find our Focus.
-          
+
           return SizedBox(
             width: double.infinity,
             child: BrandTextField(
@@ -190,7 +196,7 @@ class _TVFriendlyTextFieldState extends State<TVFriendlyTextField> {
               onChanged: widget.onChanged,
               isFocusedOverride: widget.focusNode.hasFocus || _isEditing,
               // We want to show the "Edit" icon when we are focused but NOT editing
-              // BrandTextField doesn't natively support a distinct "suffix icon" param for this state 
+              // BrandTextField doesn't natively support a distinct "suffix icon" param for this state
               // without modification, but we can rely on standard verified visual for now.
               // If strictly needed, we can wrap or modify BrandTextField later.
               // For now, the crash fix is the priority.

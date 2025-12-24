@@ -317,7 +317,8 @@ class MLKitTranslationService extends ChangeNotifier {
         name: _getLanguageName(lang),
         language: lang,
       );
-    }).toList()..sort((a, b) => a.name.compareTo(b.name));
+    }).toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
   }
 
   /// Get human-readable language name

@@ -56,7 +56,7 @@ class _EPGScreenState extends State<EPGScreen>
 
   final TimerService _timerService = TimerService();
   final FocusPoolService _focusPool = FocusPoolService();
-  
+
   late final FocusNode _refreshButtonFocus;
   late final FocusNode _firstCategoryFocus;
   late final FocusNode _firstChannelFocus;
@@ -71,20 +71,24 @@ class _EPGScreenState extends State<EPGScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     );
-    
+
     // Initialize scroll controllers
     _horizontalScrollController = ScrollController();
     _timeHeaderScrollController = ScrollController();
     _linkedScrollGroup = LinkedScrollControllerGroup();
     _sidebarController = _linkedScrollGroup.addAndGet();
     _verticalScrollController = _linkedScrollGroup.addAndGet();
-    
+
     // Get focus nodes from pool
-    _refreshButtonFocus = _focusPool.getFocusNode('epg_refresh', debugLabel: 'EPG Refresh');
-    _firstCategoryFocus = _focusPool.getFocusNode('epg_first_category', debugLabel: 'EPG First Category');
-    _firstChannelFocus = _focusPool.getFocusNode('epg_first_channel', debugLabel: 'EPG First Channel');
-    _firstProgramFocus = _focusPool.getFocusNode('epg_first_program', debugLabel: 'EPG First Program');
-    
+    _refreshButtonFocus =
+        _focusPool.getFocusNode('epg_refresh', debugLabel: 'EPG Refresh');
+    _firstCategoryFocus = _focusPool.getFocusNode('epg_first_category',
+        debugLabel: 'EPG First Category');
+    _firstChannelFocus = _focusPool.getFocusNode('epg_first_channel',
+        debugLabel: 'EPG First Channel');
+    _firstProgramFocus = _focusPool.getFocusNode('epg_first_program',
+        debugLabel: 'EPG First Program');
+
     // Sync scroll controllers
     _horizontalScrollController.addListener(_syncHorizontalScroll);
     _timeHeaderScrollController.addListener(_syncTimeHeaderScroll);
@@ -107,8 +111,10 @@ class _EPGScreenState extends State<EPGScreen>
       // Auto-load EPG on first open if an URL exists (respect cache behavior)
       try {
         if (!mounted) return;
-        final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
-        final epgUrl = prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
+        final epgService =
+            Provider.of<IncrementalEpgService>(context, listen: false);
+        final epgUrl =
+            prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
         if (epgUrl != null && epgUrl.isNotEmpty && !epgService.isLoading) {
           debugLog('EPG Screen: Found EPG URL - initializing service');
           // Initialize without forcing a refresh so cache behavior is respected
@@ -141,10 +147,12 @@ class _EPGScreenState extends State<EPGScreen>
   }
 
   void _startEpgAutoRefresh() {
-    _timerService.registerCustomCallback('epg_auto_refresh', 1800, () async { // 30 minutes = 1800 seconds
+    _timerService.registerCustomCallback('epg_auto_refresh', 1800, () async {
+      // 30 minutes = 1800 seconds
       if (!mounted) return;
 
-      final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
+      final epgService =
+          Provider.of<IncrementalEpgService>(context, listen: false);
       final prefs = await SharedPreferences.getInstance();
       final epgUrl =
           prefs.getString('epg_url') ?? prefs.getString('custom_epg_url');
@@ -176,7 +184,7 @@ class _EPGScreenState extends State<EPGScreen>
       _epgState.setSyncingScroll(false);
     }
   }
-  
+
   void _syncTimeHeaderScroll() {
     if (!_epgState.syncingScroll && _horizontalScrollController.hasClients) {
       _epgState.setSyncingScroll(true);
@@ -197,15 +205,18 @@ class _EPGScreenState extends State<EPGScreen>
     _verticalScrollController.dispose();
 
     _focusPool.returnFocusNodes(
-      ['epg_refresh', 'epg_first_category', 'epg_first_channel', 'epg_first_program'],
+      [
+        'epg_refresh',
+        'epg_first_category',
+        'epg_first_channel',
+        'epg_first_program'
+      ],
     );
     _timerService.unregister('epg_auto_refresh');
     _epgState.dispose();
     super.dispose();
   }
 
-
-  
   /// Scroll the channel list back to the top when category changes
   void _scrollChannelListToTop() {
     if (_verticalScrollController.hasClients) {
@@ -216,8 +227,6 @@ class _EPGScreenState extends State<EPGScreen>
       ));
     }
   }
-
-
 
   Future<void> _triggerEpgRefresh() async {
     if (!mounted) return;
@@ -242,7 +251,8 @@ class _EPGScreenState extends State<EPGScreen>
     await _refreshAnimationController.repeat();
 
     if (!mounted) return;
-    final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
+    final epgService =
+        Provider.of<IncrementalEpgService>(context, listen: false);
 
     // Refresh EPG in background
     await epgService.initialize();
@@ -306,7 +316,7 @@ class _EPGScreenState extends State<EPGScreen>
                 excludeHidden: true,
               );
             }
-            
+
             // Apply pagination
             _epgState.updatePaginatedChannels(allFilteredChannels);
             final filteredChannels = _epgState.paginatedChannels;
@@ -334,23 +344,24 @@ class _EPGScreenState extends State<EPGScreen>
                       const SizedBox(height: headerHeight),
                       Expanded(
                         child: Padding(
-                          padding: const EdgeInsets.only(left: AppSpacing.sidebarCollapsedWidth),
+                          padding: const EdgeInsets.only(
+                              left: AppSpacing.sidebarCollapsedWidth),
                           child: Row(
                             children: [
-                            // Category sidebar
-                            _buildCategorySidebar(categoryNames),
-                            const SizedBox(width: 16),
-                            // Program grid with channel names
-                            Expanded(
-                              child: _buildProgramGrid(
-                                  filteredChannels, epgService, allFilteredChannels),
-                            ),
-                          ],
+                              // Category sidebar
+                              _buildCategorySidebar(categoryNames),
+                              const SizedBox(width: 16),
+                              // Program grid with channel names
+                              Expanded(
+                                child: _buildProgramGrid(filteredChannels,
+                                    epgService, allFilteredChannels),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
 
                   // Transparent header overlay
                   Positioned(
@@ -359,8 +370,6 @@ class _EPGScreenState extends State<EPGScreen>
                     right: 0,
                     child: _buildHeader(epgService),
                   ),
-
-
                 ],
               ),
             );
@@ -505,17 +514,17 @@ class _EPGScreenState extends State<EPGScreen>
                 focusNode: _refreshButtonFocus,
                 onKeyEvent: (node, event) {
                   if (event is KeyDownEvent) {
-                  if (event.logicalKey == LogicalKeyboardKey.select ||
-                      event.logicalKey == LogicalKeyboardKey.enter) {
-                    if (!epgService.isLoading) {
-                      setState(() => _refreshPressed = true);
-                      unawaited(_triggerEpgRefresh());
-                      Future.delayed(const Duration(milliseconds: 150), () {
-                        if (mounted) setState(() => _refreshPressed = false);
-                      });
+                    if (event.logicalKey == LogicalKeyboardKey.select ||
+                        event.logicalKey == LogicalKeyboardKey.enter) {
+                      if (!epgService.isLoading) {
+                        setState(() => _refreshPressed = true);
+                        unawaited(_triggerEpgRefresh());
+                        Future.delayed(const Duration(milliseconds: 150), () {
+                          if (mounted) setState(() => _refreshPressed = false);
+                        });
+                      }
+                      return KeyEventResult.handled;
                     }
-                    return KeyEventResult.handled;
-                  }
                     if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
                       _firstCategoryFocus.requestFocus();
                       return KeyEventResult.handled;
@@ -528,7 +537,8 @@ class _EPGScreenState extends State<EPGScreen>
                     final isFocused = Focus.of(context).hasFocus;
                     return GestureDetector(
                       onTapDown: (_) => setState(() => _refreshPressed = true),
-                      onTapCancel: () => setState(() => _refreshPressed = false),
+                      onTapCancel: () =>
+                          setState(() => _refreshPressed = false),
                       onTapUp: (_) => setState(() => _refreshPressed = false),
                       child: Container(
                         decoration: BoxDecoration(
@@ -537,7 +547,8 @@ class _EPGScreenState extends State<EPGScreen>
                               : Colors.black.withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(8),
                           border: isFocused
-                              ? Border.all(color: AppTheme.primaryBlue, width: 2)
+                              ? Border.all(
+                                  color: AppTheme.primaryBlue, width: 2)
                               : null,
                         ),
                         child: IconButton(
@@ -546,7 +557,9 @@ class _EPGScreenState extends State<EPGScreen>
                             builder: (context, child) {
                               return Transform.rotate(
                                 angle: epgService.isLoading
-                                    ? _refreshAnimationController.value * 2 * 3.14159
+                                    ? _refreshAnimationController.value *
+                                        2 *
+                                        3.14159
                                     : 0,
                                 child: Icon(
                                   AppIcons.refresh,
@@ -659,11 +672,8 @@ class _EPGScreenState extends State<EPGScreen>
     );
   }
 
-
-
-
-
-  Widget _buildProgramGrid(List<Channel> channels, IncrementalEpgService epgService, List<Channel> allChannels) {
+  Widget _buildProgramGrid(List<Channel> channels,
+      IncrementalEpgService epgService, List<Channel> allChannels) {
     debugLog(
         'EPG Grid: isLoading=${epgService.isLoading}, availableChannels=${epgService.availableChannels.length}, loadedChannels=${epgService.loadedChannelCount}');
 
@@ -690,7 +700,8 @@ class _EPGScreenState extends State<EPGScreen>
                       child: Text(
                         'No EPG data. Configure EPG URL in Settings.',
                         style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.7), fontSize: 12),
+                            color: Colors.white.withValues(alpha: 0.7),
+                            fontSize: 12),
                       ),
                     ),
                   ],
@@ -711,16 +722,21 @@ class _EPGScreenState extends State<EPGScreen>
                           height: 64,
                           margin: const EdgeInsets.only(bottom: 4, right: 4),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF2a2a3e).withValues(alpha: 0.4),
+                            color:
+                                const Color(0xFF2a2a3e).withValues(alpha: 0.4),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
+                            border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.1),
+                                width: 1),
                           ),
                           child: Center(
                             child: Text(
-                              _epgState.selectedDate.day == DateTime.now().day &&
+                              _epgState.selectedDate.day ==
+                                          DateTime.now().day &&
                                       _epgState.selectedDate.month ==
                                           DateTime.now().month &&
-                                      _epgState.selectedDate.year == DateTime.now().year
+                                      _epgState.selectedDate.year ==
+                                          DateTime.now().year
                                   ? 'Today'
                                   : '${_epgState.selectedDate.month}/${_epgState.selectedDate.day}',
                               style: TextStyle(
@@ -736,15 +752,20 @@ class _EPGScreenState extends State<EPGScreen>
                           child: EPGChannelSidebar(
                             channels: channels,
                             isLoadingMore: _epgState.isLoadingMore,
-                            onLoadMore: () => _epgState.loadMoreChannels(allChannels),
+                            onLoadMore: () =>
+                                _epgState.loadMoreChannels(allChannels),
                             onChannelTap: (channel) {
                               context.push('/player', extra: channel);
                             },
-                            onChannelLongPress: (channel) => _showChannelContextMenu(context, channel),
+                            onChannelLongPress: (channel) =>
+                                _showChannelContextMenu(context, channel),
                             firstChannelFocusNode: _firstChannelFocus,
-                            onFocusCategories: () => _firstCategoryFocus.requestFocus(),
-                            onFocusRefresh: () => _refreshButtonFocus.requestFocus(),
-                            onFocusPrograms: () => _firstProgramFocus.requestFocus(),
+                            onFocusCategories: () =>
+                                _firstCategoryFocus.requestFocus(),
+                            onFocusRefresh: () =>
+                                _refreshButtonFocus.requestFocus(),
+                            onFocusPrograms: () =>
+                                _firstProgramFocus.requestFocus(),
                             controller: _sidebarController,
                           ),
                         ),
@@ -812,8 +833,6 @@ class _EPGScreenState extends State<EPGScreen>
     );
   }
 
-
-
   /// Time header only (no channel sidebar part)
   Widget _buildTimeHeaderOnly() {
     final now = DateTime.now();
@@ -835,7 +854,8 @@ class _EPGScreenState extends State<EPGScreen>
             decoration: BoxDecoration(
               color: const Color(0xFF2a2a3e).withValues(alpha: 0.4),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
+              border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.1), width: 1),
             ),
             child: Center(
               child: Text(
@@ -851,12 +871,6 @@ class _EPGScreenState extends State<EPGScreen>
       ),
     );
   }
-
-
-  
-
-
-
 
   void _showProgramDetails(Program program) {
     final rootContext = context; // Capture parent context for snackbars
@@ -1026,13 +1040,11 @@ class _EPGScreenState extends State<EPGScreen>
     ));
   }
 
-
-
-
   /// Show context menu for channel long press
   void _showChannelContextMenu(BuildContext ctx, Channel channel) {
     if (!mounted) return;
-    final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
+    final epgService =
+        Provider.of<IncrementalEpgService>(context, listen: false);
     final hasMapping = epgService.hasManualMapping(channel.tvgId ?? channel.id);
 
     unawaited(showModalBottomSheet(
@@ -1125,7 +1137,8 @@ class _EPGScreenState extends State<EPGScreen>
   /// Show EPG channel selection dialog
   void _showEpgChannelSelector(Channel channel) {
     if (!mounted) return;
-    final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
+    final epgService =
+        Provider.of<IncrementalEpgService>(context, listen: false);
     final epgChannelIds = epgService.getEpgChannelIds();
 
     if (epgChannelIds.isEmpty) {
@@ -1164,14 +1177,13 @@ class _EPGScreenState extends State<EPGScreen>
                 .toList();
             filteredIds = [...suggestions.map((e) => e.key), ...otherIds];
           } else {
-            filteredIds = epgChannelIds
-                .where((id) {
-                  final displayName = _getDisplayNameForEpgId(id).toLowerCase();
-                  final idLower = id.toLowerCase();
-                  final queryLower = searchQuery.toLowerCase();
-                  return displayName.contains(queryLower) || idLower.contains(queryLower);
-                })
-                .toList();
+            filteredIds = epgChannelIds.where((id) {
+              final displayName = _getDisplayNameForEpgId(id).toLowerCase();
+              final idLower = id.toLowerCase();
+              final queryLower = searchQuery.toLowerCase();
+              return displayName.contains(queryLower) ||
+                  idLower.contains(queryLower);
+            }).toList();
           }
 
           return AlertDialog(
@@ -1180,10 +1192,12 @@ class _EPGScreenState extends State<EPGScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Match EPG for ${channel.name}',
-                    style: const TextStyle(fontSize: 18, color: AppTheme.textPrimary)),
+                    style: const TextStyle(
+                        fontSize: 18, color: AppTheme.textPrimary)),
                 Text(
                   'ID: ${channel.tvgId ?? channel.id}',
-                  style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                  style: const TextStyle(
+                      fontSize: 12, color: AppTheme.textSecondary),
                 ),
                 const SizedBox(height: 8),
                 TextField(
@@ -1200,16 +1214,19 @@ class _EPGScreenState extends State<EPGScreen>
                   },
                   decoration: InputDecoration(
                     hintText: 'Search EPG channels...',
-                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+                    hintStyle:
+                        TextStyle(color: Colors.white.withValues(alpha: 0.5)),
                     prefixIcon: const Icon(Icons.search, color: Colors.white54),
                     isDense: true,
                     filled: true,
                     fillColor: Colors.white.withValues(alpha: 0.05),
                     border: UnderlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                      borderSide: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.2)),
                     ),
                     focusedBorder: const UnderlineInputBorder(
-                      borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
+                      borderSide:
+                          BorderSide(color: AppTheme.primaryBlue, width: 2),
                     ),
                   ),
                   onChanged: (value) {
@@ -1322,7 +1339,9 @@ class _EPGScreenState extends State<EPGScreen>
                                   if (preview != null)
                                     Text(
                                       'Now: $preview',
-                                      style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          color: AppTheme.textSecondary),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -1349,7 +1368,10 @@ class _EPGScreenState extends State<EPGScreen>
                                     const EdgeInsets.symmetric(vertical: 8),
                                 child: Row(
                                   children: [
-                                    Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.1))),
+                                    Expanded(
+                                        child: Divider(
+                                            color: Colors.white
+                                                .withValues(alpha: 0.1))),
                                     Padding(
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 8),
@@ -1360,7 +1382,10 @@ class _EPGScreenState extends State<EPGScreen>
                                             color: AppTheme.textSecondary),
                                       ),
                                     ),
-                                    Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.1))),
+                                    Expanded(
+                                        child: Divider(
+                                            color: Colors.white
+                                                .withValues(alpha: 0.1))),
                                   ],
                                 ),
                               ),
@@ -1383,7 +1408,8 @@ class _EPGScreenState extends State<EPGScreen>
 
   /// Set EPG mapping for a channel
   Future<void> _setEpgMapping(Channel channel, String epgChannelId) async {
-    final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
+    final epgService =
+        Provider.of<IncrementalEpgService>(context, listen: false);
     await epgService.setManualMapping(
         channel.tvgId ?? channel.id, epgChannelId);
 
@@ -1400,7 +1426,8 @@ class _EPGScreenState extends State<EPGScreen>
 
   /// Remove EPG mapping for a channel
   Future<void> _removeEpgMapping(Channel channel) async {
-    final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
+    final epgService =
+        Provider.of<IncrementalEpgService>(context, listen: false);
     await epgService.removeManualMapping(channel.tvgId ?? channel.id);
 
     if (mounted) {
@@ -1414,44 +1441,46 @@ class _EPGScreenState extends State<EPGScreen>
     }
   }
 
-
-
-
-
-
-
-
   /// Convert EPG ID to readable display name
   String _getDisplayNameForEpgId(String epgId) {
     // Remove domain suffixes
     String name = epgId.split('.').first;
-    
+
     // Convert common patterns to readable names
     final patterns = {
-      RegExp(r'^bbc(\d+)$', caseSensitive: false): (Match m) => 'BBC ${m.group(1)}',
-      RegExp(r'^itv(\d+)?$', caseSensitive: false): (Match m) => 'ITV${m.group(1) ?? ''}',
-      RegExp(r'^channel(\d+)$', caseSensitive: false): (Match m) => 'Channel ${m.group(1)}',
-      RegExp(r'^sky(\w+)$', caseSensitive: false): (Match m) => 'Sky ${m.group(1)!.toUpperCase()}',
-      RegExp(r'^fox(\w+)?$', caseSensitive: false): (Match m) => 'FOX${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
-      RegExp(r'^cnn(\w+)?$', caseSensitive: false): (Match m) => 'CNN${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
-      RegExp(r'^abc(\w+)?$', caseSensitive: false): (Match m) => 'ABC${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
-      RegExp(r'^nbc(\w+)?$', caseSensitive: false): (Match m) => 'NBC${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
-      RegExp(r'^cbs(\w+)?$', caseSensitive: false): (Match m) => 'CBS${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
+      RegExp(r'^bbc(\d+)$', caseSensitive: false): (Match m) =>
+          'BBC ${m.group(1)}',
+      RegExp(r'^itv(\d+)?$', caseSensitive: false): (Match m) =>
+          'ITV${m.group(1) ?? ''}',
+      RegExp(r'^channel(\d+)$', caseSensitive: false): (Match m) =>
+          'Channel ${m.group(1)}',
+      RegExp(r'^sky(\w+)$', caseSensitive: false): (Match m) =>
+          'Sky ${m.group(1)!.toUpperCase()}',
+      RegExp(r'^fox(\w+)?$', caseSensitive: false): (Match m) =>
+          'FOX${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
+      RegExp(r'^cnn(\w+)?$', caseSensitive: false): (Match m) =>
+          'CNN${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
+      RegExp(r'^abc(\w+)?$', caseSensitive: false): (Match m) =>
+          'ABC${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
+      RegExp(r'^nbc(\w+)?$', caseSensitive: false): (Match m) =>
+          'NBC${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
+      RegExp(r'^cbs(\w+)?$', caseSensitive: false): (Match m) =>
+          'CBS${m.group(1) != null ? ' ${m.group(1)!.toUpperCase()}' : ''}',
     };
-    
+
     for (final pattern in patterns.entries) {
       final match = pattern.key.firstMatch(name);
       if (match != null) {
         return pattern.value(match);
       }
     }
-    
+
     // Capitalize first letter and replace underscores/hyphens with spaces
     name = name.replaceAll(RegExp(r'[_-]'), ' ');
     if (name.isNotEmpty) {
       name = name[0].toUpperCase() + name.substring(1).toLowerCase();
     }
-    
+
     return name.isEmpty ? epgId : name;
   }
 

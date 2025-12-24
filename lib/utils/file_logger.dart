@@ -23,7 +23,8 @@ class FileLogger {
       _isInitialized = true;
       // Write any buffered logs
       if (_logBuffer.isNotEmpty) {
-        await _logFile!.writeAsString(_logBuffer.join('\n'), mode: FileMode.append);
+        await _logFile!
+            .writeAsString(_logBuffer.join('\n'), mode: FileMode.append);
         _logBuffer.clear();
       }
     } catch (e) {
@@ -35,7 +36,8 @@ class FileLogger {
   void log(String message) {
     final timestampedMessage = '[${DateTime.now().toIso8601String()}] $message';
     if (_isInitialized && _logFile != null) {
-      _logFile!.writeAsStringSync('$timestampedMessage\n', mode: FileMode.append);
+      _logFile!
+          .writeAsStringSync('$timestampedMessage\n', mode: FileMode.append);
     } else {
       _logBuffer.add(timestampedMessage);
     }

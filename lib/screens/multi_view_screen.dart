@@ -62,7 +62,8 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
     final channels = _channelsLocal;
     for (var i = 0; i < 4; i++) {
       if (i < channels.length && channels[i].url.isNotEmpty) {
-        final controller = VideoPlayerController.networkUrl(Uri.parse(channels[i].url));
+        final controller =
+            VideoPlayerController.networkUrl(Uri.parse(channels[i].url));
         _controllers[i] = controller;
         _inits[i] = controller.initialize().then((_) {
           controller.setLooping(true);
@@ -118,7 +119,8 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
           } else if (key == LogicalKeyboardKey.arrowUp) {
             _moveFocus(index, IndexDirection.up);
             return KeyEventResult.handled;
-          } else if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter) {
+          } else if (key == LogicalKeyboardKey.select ||
+              key == LogicalKeyboardKey.enter) {
             // Enter opens fullscreen
             if (channel != null) {
               Navigator.of(context).push(MaterialPageRoute(
@@ -136,133 +138,143 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
         return KeyEventResult.ignored;
       },
       child: GestureDetector(
-      onTap: () {
-        if (channel != null) {
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => EnhancedVideoPlayerScreen(
-              channel: channel,
-              videoUrl: channel.url,
-              title: channel.name,
-              isLive: true,
-            ),
-          ));
-        }
-      },
-      onLongPress: () {
-        // Long-press toggles mute for this tile and ensures others are muted
-        setState(() {
-          final newMuted = !_muted[index];
-          for (var j = 0; j < _muted.length; j++) {
-            _muted[j] = true;
-            try {
-              _controllers[j]?.setVolume(0);
-            } catch (_) {}
+        onTap: () {
+          if (channel != null) {
+            Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => EnhancedVideoPlayerScreen(
+                channel: channel,
+                videoUrl: channel.url,
+                title: channel.name,
+                isLive: true,
+              ),
+            ));
           }
-          _muted[index] = newMuted;
-          try {
-            _controllers[index]?.setVolume(newMuted ? 0 : 1);
-          } catch (_) {}
-          _focusedIndex = index;
-          _saveMutedState();
-        });
-      },
-      onDoubleTap: () async {
-        // Double-tap toggles play/pause for this tile. If unpausing, pause others.
-        final c = _controllers[index];
-        if (c == null) return;
-        setState(() {
-          final shouldPlay = !_isPlaying[index];
-          if (shouldPlay) {
-            // Pause others to conserve resources
-            for (var j = 0; j < _controllers.length; j++) {
-              if (j != index) {
-                try {
-                  _controllers[j]?.pause();
-                  _isPlaying[j] = false;
-                } catch (_) {}
-              }
+        },
+        onLongPress: () {
+          // Long-press toggles mute for this tile and ensures others are muted
+          setState(() {
+            final newMuted = !_muted[index];
+            for (var j = 0; j < _muted.length; j++) {
+              _muted[j] = true;
+              try {
+                _controllers[j]?.setVolume(0);
+              } catch (_) {}
             }
+            _muted[index] = newMuted;
             try {
-              c.play();
-              _isPlaying[index] = true;
+              _controllers[index]?.setVolume(newMuted ? 0 : 1);
             } catch (_) {}
-          } else {
-            try {
-              c.pause();
-              _isPlaying[index] = false;
-            } catch (_) {}
-          }
-          _focusedIndex = index;
-          // update focus visuals
-          _focusNodes[index].requestFocus();
-        });
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          border: _focusedIndex == index ? Border.all(color: Colors.blueAccent, width: 2) : null,
-          color: Colors.black,
-        ),
-        child: Stack(
-          children: [
-            if (controller != null)
-              FutureBuilder<void>(
-                future: _inits[index],
-                builder: (context, snap) {
-                  if (snap.connectionState != ConnectionState.done) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  return AspectRatio(aspectRatio: controller.value.aspectRatio, child: VideoPlayer(controller));
-                },
-              )
-            else
-              const Center(child: Icon(Icons.tv_off, color: Colors.white24, size: 48)),
-            Positioned(
-              left: 6,
-              top: 6,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(6)),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      channel?.name ?? 'Empty',
-                      style: const TextStyle(color: Colors.white, fontSize: 12),
-                    ),
-                    const SizedBox(width: 8),
-                    Icon(
-                      _isPlaying[index] ? Icons.play_arrow : Icons.pause,
-                      color: Colors.white54,
-                      size: 14,
-                    ),
-                  ],
+            _focusedIndex = index;
+            _saveMutedState();
+          });
+        },
+        onDoubleTap: () async {
+          // Double-tap toggles play/pause for this tile. If unpausing, pause others.
+          final c = _controllers[index];
+          if (c == null) return;
+          setState(() {
+            final shouldPlay = !_isPlaying[index];
+            if (shouldPlay) {
+              // Pause others to conserve resources
+              for (var j = 0; j < _controllers.length; j++) {
+                if (j != index) {
+                  try {
+                    _controllers[j]?.pause();
+                    _isPlaying[j] = false;
+                  } catch (_) {}
+                }
+              }
+              try {
+                c.play();
+                _isPlaying[index] = true;
+              } catch (_) {}
+            } else {
+              try {
+                c.pause();
+                _isPlaying[index] = false;
+              } catch (_) {}
+            }
+            _focusedIndex = index;
+            // update focus visuals
+            _focusNodes[index].requestFocus();
+          });
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            border: _focusedIndex == index
+                ? Border.all(color: Colors.blueAccent, width: 2)
+                : null,
+            color: Colors.black,
+          ),
+          child: Stack(
+            children: [
+              if (controller != null)
+                FutureBuilder<void>(
+                  future: _inits[index],
+                  builder: (context, snap) {
+                    if (snap.connectionState != ConnectionState.done) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    return AspectRatio(
+                        aspectRatio: controller.value.aspectRatio,
+                        child: VideoPlayer(controller));
+                  },
+                )
+              else
+                const Center(
+                    child: Icon(Icons.tv_off, color: Colors.white24, size: 48)),
+              Positioned(
+                left: 6,
+                top: 6,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                      color: Colors.black45,
+                      borderRadius: BorderRadius.circular(6)),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        channel?.name ?? 'Empty',
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(
+                        _isPlaying[index] ? Icons.play_arrow : Icons.pause,
+                        color: Colors.white54,
+                        size: 14,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            Positioned(
-              right: 6,
-              top: 6,
-              child: IconButton(
-                icon: Icon(_muted[index] ? Icons.volume_off : Icons.volume_up, color: Colors.white, size: 18),
-                onPressed: () {
-                  setState(() {
-                    final newMuted = !_muted[index];
-                    for (var j = 0; j < _muted.length; j++) {
-                      _muted[j] = true;
+              Positioned(
+                right: 6,
+                top: 6,
+                child: IconButton(
+                  icon: Icon(_muted[index] ? Icons.volume_off : Icons.volume_up,
+                      color: Colors.white, size: 18),
+                  onPressed: () {
+                    setState(() {
+                      final newMuted = !_muted[index];
+                      for (var j = 0; j < _muted.length; j++) {
+                        _muted[j] = true;
+                        try {
+                          _controllers[j]?.setVolume(0);
+                        } catch (_) {}
+                      }
+                      _muted[index] = newMuted;
                       try {
-                        _controllers[j]?.setVolume(0);
+                        _controllers[index]?.setVolume(newMuted ? 0 : 1);
                       } catch (_) {}
-                    }
-                    _muted[index] = newMuted;
-                    try {
-                      _controllers[index]?.setVolume(newMuted ? 0 : 1);
-                    } catch (_) {}
-                    _focusedIndex = index;
-                    _saveMutedState();
-                  });
-                },
+                      _focusedIndex = index;
+                      _saveMutedState();
+                    });
+                  },
+                ),
               ),
-            ),
             ],
           ),
         ),
@@ -309,7 +321,10 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
   }
 
   void _swapChannels(int a, int b) {
-    if (a < 0 || b < 0 || a >= _channelsLocal.length || b >= _channelsLocal.length) return;
+    if (a < 0 ||
+        b < 0 ||
+        a >= _channelsLocal.length ||
+        b >= _channelsLocal.length) return;
     final tmp = _channelsLocal[a];
     _channelsLocal[a] = _channelsLocal[b];
     _channelsLocal[b] = tmp;
@@ -344,14 +359,19 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
     if (channels.isEmpty) {
       return Scaffold(
         backgroundColor: Colors.black,
-        appBar: AppBar(title: const Text('Multi View'), backgroundColor: Colors.transparent),
-        body: const Center(child: Text('No channels available', style: TextStyle(color: Colors.white70))),
+        appBar: AppBar(
+            title: const Text('Multi View'),
+            backgroundColor: Colors.transparent),
+        body: const Center(
+            child: Text('No channels available',
+                style: TextStyle(color: Colors.white70))),
       );
     }
 
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(title: const Text('Multi View'), backgroundColor: Colors.transparent),
+      appBar: AppBar(
+          title: const Text('Multi View'), backgroundColor: Colors.transparent),
       body: Column(
         children: [
           Expanded(
@@ -372,10 +392,13 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                 // Swap mode toggle
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _swapMode ? Colors.blueAccent : Colors.grey[850],
+                    backgroundColor:
+                        _swapMode ? Colors.blueAccent : Colors.grey[850],
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                   onPressed: () {
                     setState(() {
@@ -392,10 +415,14 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.grey[850],
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
-                  onPressed: _focusedIndex >= 0 ? () => _promoteAudio(_focusedIndex) : null,
+                  onPressed: _focusedIndex >= 0
+                      ? () => _promoteAudio(_focusedIndex)
+                      : null,
                   icon: const Icon(Icons.volume_up, size: 18),
                   label: const Text('Promote Audio'),
                 ),
@@ -403,17 +430,22 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                 // Swap action / confirm
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _swapFirstIndex != null ? Colors.blueAccent : Colors.grey[850],
+                    backgroundColor: _swapFirstIndex != null
+                        ? Colors.blueAccent
+                        : Colors.grey[850],
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                   onPressed: () {
                     if (!_swapMode) return;
                     if (_swapFirstIndex == null) {
                       // set first
                       setState(() {
-                        _swapFirstIndex = _focusedIndex >= 0 ? _focusedIndex : null;
+                        _swapFirstIndex =
+                            _focusedIndex >= 0 ? _focusedIndex : null;
                       });
                     } else if (_swapFirstIndex != null && _focusedIndex >= 0) {
                       _swapChannels(_swapFirstIndex!, _focusedIndex);
@@ -424,15 +456,19 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
                     }
                   },
                   icon: const Icon(Icons.swap_calls, size: 18),
-                  label: Text(_swapFirstIndex == null ? 'Select First' : 'Confirm Swap'),
+                  label: Text(_swapFirstIndex == null
+                      ? 'Select First'
+                      : 'Confirm Swap'),
                 ),
 
                 // Cancel / Close toolbar action
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.grey[800],
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                   onPressed: () {
                     setState(() {
@@ -450,4 +486,3 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
     );
   }
 }
-

@@ -74,13 +74,17 @@ class _SearchScreenState extends State<SearchScreen>
       _hasSearched = true;
     });
 
-    final channelProvider = Provider.of<ChannelProvider>(context, listen: false);
-    final contentProvider = Provider.of<ContentProvider>(context, listen: false);
+    final channelProvider =
+        Provider.of<ChannelProvider>(context, listen: false);
+    final contentProvider =
+        Provider.of<ContentProvider>(context, listen: false);
 
     final liveTv = channelProvider.searchChannels(query);
     final allContent = contentProvider.searchContent(query);
-    final movies = allContent.where((c) => c.type == ContentType.movie).toList();
-    final series = allContent.where((c) => c.type == ContentType.series).toList();
+    final movies =
+        allContent.where((c) => c.type == ContentType.movie).toList();
+    final series =
+        allContent.where((c) => c.type == ContentType.series).toList();
 
     setState(() {
       _liveTvResults = liveTv;
@@ -144,16 +148,22 @@ class _SearchScreenState extends State<SearchScreen>
                       },
                       decoration: InputDecoration(
                         hintText: 'Search for channels, movies, or series...',
-                        hintStyle: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.5)),
-                        prefixIcon: const Icon(Icons.search, color: AppTheme.primaryBlue, size: 24),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                        hintStyle: TextStyle(
+                            fontSize: 16,
+                            color: Colors.white.withValues(alpha: 0.5)),
+                        prefixIcon: const Icon(Icons.search,
+                            color: AppTheme.primaryBlue, size: 24),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 16),
                         filled: true,
                         fillColor: Colors.white.withValues(alpha: 0.05),
                         border: UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                          borderSide: BorderSide(
+                              color: Colors.white.withValues(alpha: 0.2)),
                         ),
                         focusedBorder: const UnderlineInputBorder(
-                          borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
+                          borderSide:
+                              BorderSide(color: AppTheme.primaryBlue, width: 2),
                         ),
                       ),
                       onSubmitted: _performSearch,
@@ -208,7 +218,9 @@ class _SearchScreenState extends State<SearchScreen>
       );
     }
 
-    if (_liveTvResults.isEmpty && _movieResults.isEmpty && _seriesResults.isEmpty) {
+    if (_liveTvResults.isEmpty &&
+        _movieResults.isEmpty &&
+        _seriesResults.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -231,7 +243,7 @@ class _SearchScreenState extends State<SearchScreen>
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
       children: [
-        if (_liveTvResults.isNotEmpty) ...[ 
+        if (_liveTvResults.isNotEmpty) ...[
           _buildSectionHeader('Live TV', Icons.live_tv, _liveTvResults.length),
           const SizedBox(height: 12),
           _buildLiveTvGrid(_liveTvResults.take(_liveTvDisplayCount).toList()),
@@ -304,9 +316,11 @@ class _SearchScreenState extends State<SearchScreen>
         child: TextButton.icon(
           onPressed: onPressed,
           icon: const Icon(Icons.expand_more, color: AppTheme.primaryBlue),
-          label: const Text('Load More', style: TextStyle(color: AppTheme.primaryBlue)),
+          label: const Text('Load More',
+              style: TextStyle(color: AppTheme.primaryBlue)),
           style: TextButton.styleFrom(
-            backgroundColor: AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
+            backgroundColor:
+                AppTheme.primaryBlue.withAlpha((0.1 * 255).round()),
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           ),
         ),
@@ -348,14 +362,17 @@ class _SearchScreenState extends State<SearchScreen>
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(12),
-                    border: isFocused ? Border.all(
-                      color: AppTheme.primaryBlue,
-                      width: 3,
-                    ) : null,
+                    border: isFocused
+                        ? Border.all(
+                            color: AppTheme.primaryBlue,
+                            width: 3,
+                          )
+                        : null,
                     boxShadow: isFocused
                         ? [
                             BoxShadow(
-                              color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
+                              color: AppTheme.primaryBlue
+                                  .withAlpha((0.4 * 255).round()),
                               blurRadius: 16,
                               spreadRadius: 2,
                             ),
@@ -365,7 +382,8 @@ class _SearchScreenState extends State<SearchScreen>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      if (channel.logoUrl != null && channel.logoUrl!.isNotEmpty)
+                      if (channel.logoUrl != null &&
+                          channel.logoUrl!.isNotEmpty)
                         Expanded(
                           child: Padding(
                             padding: const EdgeInsets.all(12),
@@ -382,13 +400,15 @@ class _SearchScreenState extends State<SearchScreen>
                         )
                       else
                         const Expanded(
-                          child: Icon(Icons.tv, size: 32, color: AppTheme.textSecondary),
+                          child: Icon(Icons.tv,
+                              size: 32, color: AppTheme.textSecondary),
                         ),
                       Padding(
                         padding: const EdgeInsets.all(8),
                         child: Text(
                           channel.name,
-                          style: const TextStyle(fontSize: 12, color: AppTheme.textPrimary),
+                          style: const TextStyle(
+                              fontSize: 12, color: AppTheme.textPrimary),
                           textAlign: TextAlign.center,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -423,7 +443,8 @@ class _SearchScreenState extends State<SearchScreen>
             if (event is KeyDownEvent &&
                 (event.logicalKey == LogicalKeyboardKey.select ||
                     event.logicalKey == LogicalKeyboardKey.enter)) {
-              context.push('/content/${Uri.encodeComponent(item.id)}', extra: item);
+              context.push('/content/${Uri.encodeComponent(item.id)}',
+                  extra: item);
               return KeyEventResult.handled;
             }
             return KeyEventResult.ignored;
@@ -432,20 +453,24 @@ class _SearchScreenState extends State<SearchScreen>
             builder: (context) {
               final isFocused = Focus.of(context).hasFocus;
               return InkWell(
-                onTap: () => context.push('/content/${Uri.encodeComponent(item.id)}', extra: item),
+                onTap: () => context.push(
+                    '/content/${Uri.encodeComponent(item.id)}',
+                    extra: item),
                 borderRadius: BorderRadius.circular(12),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: isFocused ? AppTheme.primaryBlue : Colors.transparent,
+                      color:
+                          isFocused ? AppTheme.primaryBlue : Colors.transparent,
                       width: 3,
                     ),
                     boxShadow: isFocused
                         ? [
                             BoxShadow(
-                              color: AppTheme.primaryBlue.withAlpha((0.4 * 255).round()),
+                              color: AppTheme.primaryBlue
+                                  .withAlpha((0.4 * 255).round()),
                               blurRadius: 16,
                               spreadRadius: 2,
                             ),
@@ -469,7 +494,8 @@ class _SearchScreenState extends State<SearchScreen>
                           ),
                           child: item.imageUrl == null
                               ? const Center(
-                                  child: Icon(Icons.movie, color: AppTheme.textSecondary),
+                                  child: Icon(Icons.movie,
+                                      color: AppTheme.textSecondary),
                                 )
                               : null,
                         ),
@@ -478,7 +504,8 @@ class _SearchScreenState extends State<SearchScreen>
                         padding: const EdgeInsets.all(8),
                         child: Text(
                           item.title,
-                          style: const TextStyle(fontSize: 12, color: AppTheme.textPrimary),
+                          style: const TextStyle(
+                              fontSize: 12, color: AppTheme.textPrimary),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),

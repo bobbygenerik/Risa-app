@@ -9,11 +9,12 @@ import 'package:iptv_player/utils/snackbar_helper.dart';
 
 class EpgDiagnosticScreen extends StatelessWidget {
   const EpgDiagnosticScreen({super.key});
-  
+
   Future<Map<String, String?>> _getEpgConfiguration() async {
     final prefs = await SharedPreferences.getInstance();
     return {
-      'primary': prefs.getString('custom_epg_url') ?? prefs.getString('epg_url'),
+      'primary':
+          prefs.getString('custom_epg_url') ?? prefs.getString('epg_url'),
       'secondary': prefs.getString('secondary_epg_url'),
     };
   }
@@ -43,27 +44,29 @@ class EpgDiagnosticScreen extends StatelessWidget {
             }
           }
           final stats = {'matched': matched, 'total': totalChannels};
-          
+
           // Debug info for IncrementalEpgService
           if (totalChannels > 0 && epgService.availableChannels.isNotEmpty) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               print('=== INCREMENTAL EPG DEBUG ===');
-              print('EPG available channels: ${epgService.availableChannels.length}');
+              print(
+                  'EPG available channels: ${epgService.availableChannels.length}');
               print('EPG loaded channels: ${epgService.loadedChannelCount}');
               print('Channel provider channels count: $totalChannels');
-              
+
               // Test first few channels manually
               for (int i = 0; i < 5 && i < totalChannels; i++) {
                 final channel = channelProvider.getChannelAt(i);
                 final tvgId = channel.tvgId ?? channel.id;
                 final hasEpg =
                     epgService.hasEpgMatch(tvgId, channelName: channel.name);
-                print('Channel $i: "${channel.name}" (ID: "$tvgId") -> EPG: $hasEpg');
+                print(
+                    'Channel $i: "${channel.name}" (ID: "$tvgId") -> EPG: $hasEpg');
               }
               print('=== END INCREMENTAL EPG DEBUG ===');
             });
           }
-          
+
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -75,7 +78,9 @@ class EpgDiagnosticScreen extends StatelessWidget {
                     Text(
                       'EPG Status: ${epgService.availableChannels.isNotEmpty ? "Loaded" : "No Data"}',
                       style: TextStyle(
-                        color: epgService.availableChannels.isNotEmpty ? Colors.green : Colors.red,
+                        color: epgService.availableChannels.isNotEmpty
+                            ? Colors.green
+                            : Colors.red,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -83,31 +88,38 @@ class EpgDiagnosticScreen extends StatelessWidget {
                     ElevatedButton.icon(
                       onPressed: () async {
                         try {
-                              await epgService.initialize(forceRefresh: true);
-                              rootScaffoldMessengerKey.currentState?.showSnackBar(const SnackBar(content: Text('EPG reload requested')));
-                            } catch (e) {
-                              rootScaffoldMessengerKey.currentState?.showSnackBar(SnackBar(content: Text('EPG reload failed: $e')));
-                            }
+                          await epgService.initialize(forceRefresh: true);
+                          rootScaffoldMessengerKey.currentState?.showSnackBar(
+                              const SnackBar(
+                                  content: Text('EPG reload requested')));
+                        } catch (e) {
+                          rootScaffoldMessengerKey.currentState?.showSnackBar(
+                              SnackBar(content: Text('EPG reload failed: $e')));
+                        }
                       },
                       icon: const Icon(Icons.refresh, size: 16),
                       label: const Text('Reload EPG'),
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
-                if (epgService.isDownloading || epgService.isParsing || epgService.isLoading)
+                if (epgService.isDownloading ||
+                    epgService.isParsing ||
+                    epgService.isLoading)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Text(
-                      'EPG: ${epgService.isDownloading ? "Downloading" : epgService.isParsing ? "Parsing" : epgService.isLoading ? "Loading" : "Idle" }',
+                      'EPG: ${epgService.isDownloading ? "Downloading" : epgService.isParsing ? "Parsing" : epgService.isLoading ? "Loading" : "Idle"}',
                       style: const TextStyle(color: Colors.white70),
                     ),
                   ),
                 if (epgService.error != null) ...[
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
-                    child: Text('EPG Error: ${epgService.error}', style: const TextStyle(color: Colors.redAccent)),
+                    child: Text('EPG Error: ${epgService.error}',
+                        style: const TextStyle(color: Colors.redAccent)),
                   ),
                 ],
                 Text(
@@ -121,30 +133,36 @@ class EpgDiagnosticScreen extends StatelessWidget {
                 Text(
                   'Matched: ${stats['matched']}/${stats['total']} (${stats['total']! == 0 ? '0.0' : ((stats['matched']! / stats['total']!) * 100).toStringAsFixed(1)}%)',
                   style: TextStyle(
-                    color: stats['matched']! > stats['total']! * 0.5 ? Colors.green : Colors.orange,
+                    color: stats['matched']! > stats['total']! * 0.5
+                        ? Colors.green
+                        : Colors.orange,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 20),
-                
+
                 // EPG Configuration Status
                 FutureBuilder<Map<String, String?>>(
                   future: _getEpgConfiguration(),
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) return const SizedBox.shrink();
-                    
+
                     final config = snapshot.data!;
                     final primaryUrl = config['primary'];
                     final secondaryUrl = config['secondary'];
-                    
+
                     return Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: (primaryUrl?.isNotEmpty == true) ? Colors.green.withAlpha(50) : Colors.red.withAlpha(50),
+                        color: (primaryUrl?.isNotEmpty == true)
+                            ? Colors.green.withAlpha(50)
+                            : Colors.red.withAlpha(50),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: (primaryUrl?.isNotEmpty == true) ? Colors.green : Colors.red,
+                          color: (primaryUrl?.isNotEmpty == true)
+                              ? Colors.green
+                              : Colors.red,
                           width: 1,
                         ),
                       ),
@@ -153,29 +171,38 @@ class EpgDiagnosticScreen extends StatelessWidget {
                         children: [
                           Text(
                             'EPG Configuration',
-                            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             'Primary EPG URL: ${primaryUrl?.isNotEmpty == true ? "✓ Configured" : "❌ Not configured"}',
                             style: TextStyle(
-                              color: (primaryUrl?.isNotEmpty == true) ? Colors.green : Colors.red,
+                              color: (primaryUrl?.isNotEmpty == true)
+                                  ? Colors.green
+                                  : Colors.red,
                               fontSize: 14,
                             ),
                           ),
                           Text(
                             'Secondary EPG URL: ${secondaryUrl?.isNotEmpty == true ? "✓ Configured" : "❌ Not configured"}',
                             style: TextStyle(
-                              color: (secondaryUrl?.isNotEmpty == true) ? Colors.green : Colors.orange,
+                              color: (secondaryUrl?.isNotEmpty == true)
+                                  ? Colors.green
+                                  : Colors.orange,
                               fontSize: 14,
                             ),
                           ),
                           if (primaryUrl?.isEmpty != false) ...[
-
                             const SizedBox(height: 8),
                             const Text(
                               '⚠️ No EPG URL configured! This is likely why only 10 channels are matching.',
-                              style: TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                  color: Colors.orange,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 8),
                             ElevatedButton.icon(
@@ -185,7 +212,8 @@ class EpgDiagnosticScreen extends StatelessWidget {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.blue,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 8),
                                 textStyle: const TextStyle(fontSize: 12),
                               ),
                             ),
@@ -196,24 +224,31 @@ class EpgDiagnosticScreen extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 20),
-                
+
                 const Text(
                   'First 10 EPG Channel IDs:',
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 ...epgChannels.take(10).map((id) => Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Text(
-                    id,
-                    style: const TextStyle(color: Colors.green, fontSize: 14),
-                  ),
-                )),
-                
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        id,
+                        style:
+                            const TextStyle(color: Colors.green, fontSize: 14),
+                      ),
+                    )),
+
                 const SizedBox(height: 20),
                 const Text(
                   'First 10 Playlist Channels:',
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 ...List.generate(previewCount, (index) {
@@ -227,7 +262,9 @@ class EpgDiagnosticScreen extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: hasEpg ? Colors.green.withAlpha(50) : Colors.red.withAlpha(50),
+                        color: hasEpg
+                            ? Colors.green.withAlpha(50)
+                            : Colors.red.withAlpha(50),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Column(
@@ -235,16 +272,19 @@ class EpgDiagnosticScreen extends StatelessWidget {
                         children: [
                           Text(
                             'Name: ${channel.name}',
-                            style: const TextStyle(color: Colors.white, fontSize: 14),
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 14),
                           ),
                           Text(
                             'ID: ${channel.id}',
-                            style: const TextStyle(color: Colors.white70, fontSize: 12),
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 12),
                           ),
                           if (channel.tvgId != null)
                             Text(
                               'TVG-ID: ${channel.tvgId}',
-                              style: const TextStyle(color: Colors.white70, fontSize: 12),
+                              style: const TextStyle(
+                                  color: Colors.white70, fontSize: 12),
                             ),
                           Text(
                             'EPG Match: ${hasEpg ? "YES" : "NO"}',

@@ -64,8 +64,8 @@ class _ExoPlayerVideoViewState extends State<ExoPlayerVideoView> {
         'videoUrl': widget.videoUrl,
         'autoPlay': widget.autoPlay,
       });
-      // Native implementation doesn't have a specific 'setMuted' but we could add it 
-      // or handle it via volume. For now, native ExoPlayer is initialized 
+      // Native implementation doesn't have a specific 'setMuted' but we could add it
+      // or handle it via volume. For now, native ExoPlayer is initialized
       // and we just load the URL.
     } catch (e) {
       debugPrint('Error loading video in ExoPlayerVideoView: $e');
@@ -75,7 +75,8 @@ class _ExoPlayerVideoViewState extends State<ExoPlayerVideoView> {
   @override
   Widget build(BuildContext context) {
     if (defaultTargetPlatform != TargetPlatform.android) {
-      return const Center(child: Text('ExoPlayer is only available on Android'));
+      return const Center(
+          child: Text('ExoPlayer is only available on Android'));
     }
 
     const String viewType = 'com.streamhub.iptv/exoplayer';

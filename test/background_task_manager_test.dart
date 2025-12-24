@@ -5,18 +5,23 @@ import 'package:iptv_player/services/background_task_manager.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 
-class MockIncrementalEpgService extends Fake with ChangeNotifier implements IncrementalEpgService {
+class MockIncrementalEpgService extends Fake
+    with ChangeNotifier
+    implements IncrementalEpgService {
   @override
   Future<void> initialize({bool forceRefresh = false}) async {}
 }
 
-class MockChannelProvider extends Fake with ChangeNotifier implements ChannelProvider {
+class MockChannelProvider extends Fake
+    with ChangeNotifier
+    implements ChannelProvider {
   @override
   Future<void> autoLoadPlaylist() async {}
 }
 
 void main() {
-  testWidgets('BackgroundTaskManager can start and stop without error', (WidgetTester tester) async {
+  testWidgets('BackgroundTaskManager can start and stop without error',
+      (WidgetTester tester) async {
     final mockEpg = MockIncrementalEpgService();
     final mockChannel = MockChannelProvider();
 
@@ -39,7 +44,7 @@ void main() {
     // Verify timers started? The original test just checked returnsNormally.
     // Since timers are private static, we can't easily check them without reflection or exposing them.
     // The goal here is "start and stop without error".
-    
+
     expect(() => BackgroundTaskManager.stop(), returnsNormally);
   });
 }

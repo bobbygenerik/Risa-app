@@ -14,7 +14,7 @@ class _DebugScreenState extends State<DebugScreen> {
   @override
   Widget build(BuildContext context) {
     final logs = PerformanceMonitor.getLogs();
-    
+
     return Scaffold(
       backgroundColor: AppTheme.darkBackground,
       appBar: AppBar(
@@ -53,7 +53,7 @@ class _DebugScreenState extends State<DebugScreen> {
               itemBuilder: (context, index) {
                 final log = logs[index];
                 Color textColor = AppTheme.textPrimary;
-                
+
                 if (log.contains('WARNING')) {
                   textColor = Colors.orange;
                 } else if (log.contains('CRITICAL')) {
@@ -63,7 +63,7 @@ class _DebugScreenState extends State<DebugScreen> {
                 } else if (log.contains('END')) {
                   textColor = Colors.green;
                 }
-                
+
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 2),
                   child: Text(

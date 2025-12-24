@@ -10,6 +10,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:path_provider/path_provider.dart';
 import 'package:iptv_player/utils/performance_monitor.dart';
+import 'package:iptv_player/utils/provider_normalizer.dart';
 
 /// Convert number words to digits for better matching
 String _convertNumberWords(String text) {
@@ -51,10 +52,10 @@ Map<String, dynamic> parseEpgInIsolate(String xmlData) {
     final document = XmlDocument.parse(xmlData);
     final programmes = document.findAllElements('programme');
     final epgData = <String, List<Map<String, dynamic>>>{};
-    
+
     int processedCount = 0;
     const chunkSize = 1000; // Process in chunks to prevent memory spikes
-    
+
     for (final programme in programmes) {
       try {
         final channelId = programme.getAttribute('channel');
@@ -90,7 +91,7 @@ Map<String, dynamic> parseEpgInIsolate(String xmlData) {
           epgData[channelId] = [];
         }
         epgData[channelId]!.add(programMap);
-        
+
         processedCount++;
         // Yield control periodically to prevent blocking
         if (processedCount % chunkSize == 0) {
@@ -184,8 +185,7 @@ class EpgService with ChangeNotifier {
       debugLog('EpgService: Loading from cache...');
       final cacheLoaded = await _loadFromCache();
       if (cacheLoaded) {
-        debugLog(
-            'EpgService: ✓ Loaded ${_epgData.length} channels from cache');
+        debugLog('EpgService: ✓ Loaded ${_epgData.length} channels from cache');
         notifyListeners();
       } else {
         debugLog('EpgService: ✗ No cache found');
@@ -233,8 +233,7 @@ class EpgService with ChangeNotifier {
           'EpgService: Triggering loadSecondaryEpgFromUrl from public loadEpg() method.');
       await loadSecondaryEpgFromUrl(secondaryEpgUrl, forceRefresh: true);
     } else {
-      debugLog(
-          'EpgService: No secondary EPG URL found in SharedPreferences.');
+      debugLog('EpgService: No secondary EPG URL found in SharedPreferences.');
     }
   }
 
@@ -275,9 +274,23 @@ class EpgService with ChangeNotifier {
   /// Load EPG from URL with robust error handling and caching
   Future<void> loadEpgFromUrl(String url, {bool forceRefresh = false}) async {
     PerformanceMonitor.start('EPG_LOAD_TOTAL');
-    
+
     if (url.isEmpty) {
       _error = 'EPG URL is empty';
+      notifyListeners();
+      return;
+    }
+
+    // Normalize EPG URL (user-friendly errors)
+    try {
+      url = normalizeEpgUrl(url);
+    } catch (e) {
+      if (e is NormalizationError) {
+        _error = e.message;
+      } else {
+        _error = 'EPG URL invalid';
+      }
+      _isLoading = false;
       notifyListeners();
       return;
     }
@@ -324,17 +337,17 @@ class EpgService with ChangeNotifier {
         int totalBytes = 0;
         int chunkCount = 0;
         const maxMemoryMB = 100; // Limit memory usage
-        
+
         await for (final chunk in response) {
           totalBytes += chunk.length;
           chunks.add(chunk);
           chunkCount++;
-          
+
           // Show progress and manage memory for large files
           if (totalBytes % (1024 * 1024) == 0) {
             final sizeMB = totalBytes / 1024 / 1024;
             debugLog('EPG download: ${sizeMB.toStringAsFixed(1)} MB');
-            
+
             // If file is very large, process in streaming mode
             if (sizeMB > maxMemoryMB) {
               debugLog('EPG: Large file detected, switching to streaming mode');
@@ -342,17 +355,18 @@ class EpgService with ChangeNotifier {
               // but for now, continue with current approach
             }
           }
-          
+
           // Yield control periodically to prevent UI blocking
           if (chunkCount % 50 == 0) {
-            await Future.delayed(const Duration(milliseconds: 1)); // Yield to event loop
+            await Future.delayed(
+                const Duration(milliseconds: 1)); // Yield to event loop
           }
         }
 
         client.close();
         debugLog(
             'EPG downloaded: ${(totalBytes / 1024 / 1024).toStringAsFixed(2)} MB in $chunkCount chunks');
-            
+
         // Combine chunks efficiently
         final epgBytes = <int>[];
         for (final chunk in chunks) {
@@ -372,21 +386,22 @@ class EpgService with ChangeNotifier {
         _epgData.clear();
         final rawEpgData = parsed['epgData'] as Map<String, dynamic>;
         final processedCount = parsed['processedCount'] as int? ?? 0;
-        
-        debugLog('EPG: Converting $processedCount programs for ${rawEpgData.length} channels');
-        
+
+        debugLog(
+            'EPG: Converting $processedCount programs for ${rawEpgData.length} channels');
+
         int channelCount = 0;
         const channelChunkSize = 50; // Process channels in chunks
-        
+
         for (final channelId in rawEpgData.keys) {
           final programMaps = rawEpgData[channelId] as List<dynamic>;
           final programs = <Program>[];
-          
+
           // Process programs in chunks to prevent blocking
           for (int i = 0; i < programMaps.length; i += 100) {
             final end = (i + 100).clamp(0, programMaps.length);
             final chunk = programMaps.sublist(i, end);
-            
+
             for (final p in chunk) {
               final map = Map<String, dynamic>.from(p);
               programs.add(Program(
@@ -402,7 +417,7 @@ class EpgService with ChangeNotifier {
                 canRecord: map['canRecord'] ?? true,
               ));
             }
-            
+
             // Yield control after each chunk
             if (i + 100 < programMaps.length) {
               await Future.delayed(const Duration(milliseconds: 1));
@@ -412,20 +427,22 @@ class EpgService with ChangeNotifier {
           // Sort by start time
           programs.sort((a, b) => a.startTime.compareTo(b.startTime));
           _epgData[channelId] = programs;
-          
+
           channelCount++;
-          
+
           // Yield control periodically and notify progress
           if (channelCount % channelChunkSize == 0) {
-            debugLog('EPG: Processed $channelCount/${rawEpgData.length} channels');
-            await Future.delayed(const Duration(milliseconds: 2)); // Yield to UI thread
+            debugLog(
+                'EPG: Processed $channelCount/${rawEpgData.length} channels');
+            await Future.delayed(
+                const Duration(milliseconds: 2)); // Yield to UI thread
             notifyListeners(); // Update UI with partial data
           }
         }
 
         await _saveToCache(xmlData);
         PerformanceMonitor.end('EPG_DATA_CONVERSION');
-        
+
         success = true;
         _error = null;
         _lastFetchTime = DateTime.now();
@@ -435,7 +452,7 @@ class EpgService with ChangeNotifier {
         // Log sample EPG keys for debugging
         final sampleKeys = _epgData.keys.take(10).toList();
         debugLog('EPG sample keys: $sampleKeys');
-        
+
         PerformanceMonitor.end('EPG_LOAD_TOTAL');
       } catch (e) {
         retryCount++;
@@ -468,6 +485,20 @@ class EpgService with ChangeNotifier {
   /// Load secondary/supplemental EPG from URL (adds to existing data without replacing)
   Future<void> loadSecondaryEpgFromUrl(String url,
       {bool forceRefresh = false}) async {
+    // Normalize EPG URL early
+    try {
+      url = normalizeEpgUrl(url);
+    } catch (e) {
+      if (e is NormalizationError) {
+        _error = e.message;
+      } else {
+        _error = 'Secondary EPG URL invalid';
+      }
+      _isLoading = false;
+      notifyListeners();
+      return;
+    }
+
     // Check cache first if not forcing refresh
     if (!forceRefresh && await _loadSecondaryFromCache()) {
       debugLog('Secondary EPG loaded from cache');
@@ -752,13 +783,15 @@ class EpgService with ChangeNotifier {
       }
       debugLog('EPG: Starting channel matching analysis...');
     }
-    
+
     // Debug: Log first few channel lookups
     if (_channelIdCache.length < 20) {
-      debugLog('EPG: Looking for channel "$channelId" (name: "${channelName ?? 'none'}")');
+      debugLog(
+          'EPG: Looking for channel "$channelId" (name: "${channelName ?? 'none'}")');
       // Show if EPG data is empty
       if (_epgData.isEmpty && _secondaryEpgData.isEmpty) {
-        debugLog('EPG: ❌ No EPG data loaded - this will cause all lookups to fail!');
+        debugLog(
+            'EPG: ❌ No EPG data loaded - this will cause all lookups to fail!');
       }
     }
     final allEpgKeys = {..._epgData.keys, ..._secondaryEpgData.keys};
@@ -914,7 +947,8 @@ class EpgService with ChangeNotifier {
     if (_channelIdCache.length < 20) {
       debugLog('EPG Miss: "$channelId" (name: "${channelName ?? 'none'}")');
       // Show first few EPG keys for comparison
-      final sampleEpgKeys = {..._epgData.keys, ..._secondaryEpgData.keys}.take(5).toList();
+      final sampleEpgKeys =
+          {..._epgData.keys, ..._secondaryEpgData.keys}.take(5).toList();
       debugLog('EPG: Available keys sample: ${sampleEpgKeys.join(", ")}');
     }
     return null;
@@ -1187,8 +1221,7 @@ class EpgService with ChangeNotifier {
       }
       debugLog(
           'EPG: ✓ Successfully loaded ${_epgData.length} channels from cache (age: ${cacheTime != null ? DateTime.now().difference(cacheTime).inHours : "unknown"}h)');
-      debugLog(
-          'EPG: Sample channel IDs: ${_epgData.keys.take(5).join(", ")}');
+      debugLog('EPG: Sample channel IDs: ${_epgData.keys.take(5).join(", ")}');
       return true;
     } catch (e) {
       debugLog('Failed to load EPG from cache: $e');
@@ -1394,22 +1427,23 @@ class EpgService with ChangeNotifier {
       'secondaryChannels': _secondaryEpgData.length,
     };
   }
-  
+
   /// Debug method to analyze channel ID patterns vs EPG key patterns
   void debugChannelMatching(List<Channel> channels) {
     debugLog('=== EPG MATCHING DEBUG ===');
     debugLog('Total channels: ${channels.length}');
     debugLog('Primary EPG channels: ${_epgData.length}');
     debugLog('Secondary EPG channels: ${_secondaryEpgData.length}');
-    debugLog('Total EPG channels: ${_epgData.length + _secondaryEpgData.length}');
-    
+    debugLog(
+        'Total EPG channels: ${_epgData.length + _secondaryEpgData.length}');
+
     // Check if EPG data is actually loaded
     if (_epgData.isEmpty && _secondaryEpgData.isEmpty) {
       debugLog('❌ NO EPG DATA LOADED!');
       debugLog('This is likely the root cause of the matching issue.');
       return;
     }
-    
+
     // Sample channel IDs
     final sampleChannels = channels.take(10).toList();
     debugLog('\nSample channel IDs:');
@@ -1417,7 +1451,7 @@ class EpgService with ChangeNotifier {
       final tvgId = channel.tvgId ?? channel.id;
       debugLog('  "$tvgId" (name: "${channel.name}")');
     }
-    
+
     // Sample EPG keys from both primary and secondary
     final allEpgKeys = {..._epgData.keys, ..._secondaryEpgData.keys};
     final sampleEpgKeys = allEpgKeys.take(10).toList();
@@ -1426,7 +1460,7 @@ class EpgService with ChangeNotifier {
       final isPrimary = _epgData.containsKey(key);
       debugLog('  "$key" (${isPrimary ? "primary" : "secondary"})');
     }
-    
+
     // Test exact matches
     int exactMatches = 0;
     for (final channel in channels) {
@@ -1436,7 +1470,7 @@ class EpgService with ChangeNotifier {
       }
     }
     debugLog('\nExact matches: $exactMatches/${channels.length}');
-    
+
     // Test case-insensitive matches
     int caseInsensitiveMatches = 0;
     final lowerEpgKeys = allEpgKeys.map((k) => k.toLowerCase()).toSet();
@@ -1446,8 +1480,9 @@ class EpgService with ChangeNotifier {
         caseInsensitiveMatches++;
       }
     }
-    debugLog('Case-insensitive matches: $caseInsensitiveMatches/${channels.length}');
-    
+    debugLog(
+        'Case-insensitive matches: $caseInsensitiveMatches/${channels.length}');
+
     // Test fuzzy matching (using the actual service method)
     int fuzzyMatches = 0;
     debugLog('\nTesting fuzzy matches (first 5 channels):');
@@ -1458,10 +1493,11 @@ class EpgService with ChangeNotifier {
       if (hasMatch) fuzzyMatches++;
       debugLog('  "$tvgId" -> ${hasMatch ? "MATCH" : "NO MATCH"}');
     }
-    
+
     debugLog('\n=== SUMMARY ===');
     debugLog('Exact matches: $exactMatches/${channels.length}');
-    debugLog('Case-insensitive matches: $caseInsensitiveMatches/${channels.length}');
+    debugLog(
+        'Case-insensitive matches: $caseInsensitiveMatches/${channels.length}');
     debugLog('Fuzzy matches (sample): $fuzzyMatches/5');
     debugLog('=== END EPG DEBUG ===');
   }

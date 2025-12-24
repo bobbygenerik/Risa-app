@@ -66,7 +66,6 @@ class SettingsProvider extends ChangeNotifier {
   bool get heroVideoPreview => _heroVideoPreview;
   String get videoPlayerBackend => _videoPlayerBackend;
 
-
   Future<void> initialize() async {
     if (_isInitialized) return;
     _prefs = await SharedPreferences.getInstance();
@@ -87,8 +86,7 @@ class SettingsProvider extends ChangeNotifier {
 
     _hardwareAcceleration = prefs.getBool('hardware_acceleration') ?? true;
     _hardwareDecoding = prefs.getBool('hardware_decoding') ?? true;
-    _hardwarePostProcessing =
-        prefs.getBool('hardware_postprocessing') ?? true;
+    _hardwarePostProcessing = prefs.getBool('hardware_postprocessing') ?? true;
 
     _decoderType = prefs.getString('decoder_type') ?? 'Auto';
     _renderingEngine = prefs.getString('rendering_engine') ?? 'Auto';
@@ -115,7 +113,6 @@ class SettingsProvider extends ChangeNotifier {
     _realDebridForVod = prefs.getBool('realdebrid_vod') ?? true;
     _heroVideoPreview = prefs.getBool('hero_video_preview') ?? false;
     _videoPlayerBackend = prefs.getString('video_player_backend') ?? 'Auto';
-
   }
 
   Future<void> setHardwareAcceleration(bool value) async {
@@ -138,8 +135,6 @@ class SettingsProvider extends ChangeNotifier {
     await _prefs?.setBool('hardware_postprocessing', value);
     notifyListeners();
   }
-
-
 
   Future<void> setDecoderType(String value) async {
     if (_decoderType == value) return;
@@ -274,6 +269,7 @@ class SettingsProvider extends ChangeNotifier {
     await _prefs?.setBool('realdebrid_vod', value);
     notifyListeners();
   }
+
   Future<void> setHeroVideoPreview(bool value) async {
     if (_heroVideoPreview == value) return;
     _heroVideoPreview = value;
@@ -288,7 +284,8 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<Map<String, String?>> getProfileData({bool forceRefresh = false}) async {
+  Future<Map<String, String?>> getProfileData(
+      {bool forceRefresh = false}) async {
     if (!forceRefresh && _profileCache != null) {
       return _profileCache!;
     }
@@ -302,7 +299,8 @@ class SettingsProvider extends ChangeNotifier {
     return data;
   }
 
-  Future<Map<String, String?>> getSavedPlaylists({bool forceRefresh = false}) async {
+  Future<Map<String, String?>> getSavedPlaylists(
+      {bool forceRefresh = false}) async {
     if (!forceRefresh && _savedPlaylistsCache != null) {
       return _savedPlaylistsCache!;
     }

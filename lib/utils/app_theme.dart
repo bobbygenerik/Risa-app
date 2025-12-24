@@ -8,14 +8,18 @@ class AppTheme {
   // Using deep blue from logo palette
   static const Color primaryBlue = Color(0xFF2E3192);
   static const Color richBlack = Color(0xFF080808); // Cinema-grade Rich Black
-  static const Color darkBackground = Color(0xFF050505); // Deeper than pure grey, better for OLED than true grey
+  static const Color darkBackground = Color(
+      0xFF050505); // Deeper than pure grey, better for OLED than true grey
   static const Color cardBackground = Color(0x00000000); // fully transparent
-  static const Color dialogBackground = Color(0xFF1E1E2E); // Solid dark for dialogs/popups
-  static const Color sidebarBackground = Color(0xFF08090C); // Slightly lighter black for sidebar contrast
-  static const Color textPrimary = Color(0xFFE8E8E8); // Softer off-white for better theme cohesion
+  static const Color dialogBackground =
+      Color(0xFF1E1E2E); // Solid dark for dialogs/popups
+  static const Color sidebarBackground =
+      Color(0xFF08090C); // Slightly lighter black for sidebar contrast
+  static const Color textPrimary =
+      Color(0xFFE8E8E8); // Softer off-white for better theme cohesion
   static const Color textSecondary = Color(0xFFB3B3B3);
   static const Color textTertiary = Color(0xFF808080);
-  
+
   // Accent Colors
   static const Color accentOrange = Color(0xFFFF6B35);
   static const Color accentGreen = Color(0xFF4CAF50);
@@ -29,18 +33,24 @@ class AppTheme {
   );
 
   // Common opacity variants
-  static Color primaryBlueOpacity(double opacity) => primaryBlue.withAlpha((opacity * 255).round());
-  static Color accentOrangeOpacity(double opacity) => accentOrange.withAlpha((opacity * 255).round());
-  static Color accentGreenOpacity(double opacity) => accentGreen.withAlpha((opacity * 255).round());
-  static Color accentPinkOpacity(double opacity) => accentPink.withAlpha((opacity * 255).round());
-  static Color textPrimaryOpacity(double opacity) => textPrimary.withAlpha((opacity * 255).round());
-  static Color darkBackgroundOpacity(double opacity) => darkBackground.withAlpha((opacity * 255).round());
-  
+  static Color primaryBlueOpacity(double opacity) =>
+      primaryBlue.withAlpha((opacity * 255).round());
+  static Color accentOrangeOpacity(double opacity) =>
+      accentOrange.withAlpha((opacity * 255).round());
+  static Color accentGreenOpacity(double opacity) =>
+      accentGreen.withAlpha((opacity * 255).round());
+  static Color accentPinkOpacity(double opacity) =>
+      accentPink.withAlpha((opacity * 255).round());
+  static Color textPrimaryOpacity(double opacity) =>
+      textPrimary.withAlpha((opacity * 255).round());
+  static Color darkBackgroundOpacity(double opacity) =>
+      darkBackground.withAlpha((opacity * 255).round());
+
   // UI Element Colors
   static const Color divider = Color(0xFF2A2A2A);
   static const Color highlight = Color(0xFF2D2D2D);
   static const Color focusBorder = Color(0xFF00A8E8);
-  
+
   // Android TV Focus Colors
   static const Color tvFocusHighlight = Color(0xFF2E3192);
   static const Color tvFocusGlow = Color(0x402E3192);
@@ -87,7 +97,7 @@ class AppTheme {
       return true;
     }
   }
-  
+
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
@@ -95,15 +105,12 @@ class AppTheme {
       scaffoldBackgroundColor: darkBackground,
       primaryColor: primaryBlue,
       visualDensity: VisualDensity.standard,
-      
       colorScheme: const ColorScheme.dark(
         primary: primaryBlue,
         secondary: primaryBlue,
         surface: cardBackground,
-        
         error: accentRed,
       ),
-      
       appBarTheme: const AppBarTheme(
         backgroundColor: darkBackground,
         elevation: 0,
@@ -114,7 +121,6 @@ class AppTheme {
           fontWeight: FontWeight.w600,
         ),
       ),
-      
       cardTheme: CardThemeData(
         color: cardBackground,
         elevation: 0,
@@ -122,7 +128,6 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
         ),
       ),
-      
       textTheme: const TextTheme(
         displayLarge: TextStyle(
           fontSize: 48,
@@ -177,7 +182,6 @@ class AppTheme {
           color: textTertiary,
         ),
       ),
-      
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryBlue,
@@ -203,7 +207,6 @@ class AppTheme {
           }),
         ),
       ),
-      
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: primaryBlue,
@@ -224,17 +227,14 @@ class AppTheme {
           }),
         ),
       ),
-      
       iconTheme: const IconThemeData(
         color: textSecondary,
         size: 28,
       ),
-      
       dividerTheme: const DividerThemeData(
         color: divider,
         thickness: 1,
       ),
-      
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
@@ -255,20 +255,17 @@ class AppTheme {
           return Colors.white.withValues(alpha: 0.3);
         }),
       ),
-      
       sliderTheme: const SliderThemeData(
         activeTrackColor: primaryBlue,
         inactiveTrackColor: highlight,
         thumbColor: textPrimary,
         overlayColor: Color(0x2900A8E8),
       ),
-
       textSelectionTheme: TextSelectionThemeData(
         cursorColor: primaryBlue,
         selectionColor: Colors.transparent,
         selectionHandleColor: Colors.transparent,
       ),
-      
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: highlight,
@@ -280,9 +277,9 @@ class AppTheme {
           borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: tvFocusHighlight, width: 3),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       ),
-
       snackBarTheme: SnackBarThemeData(
         backgroundColor: darkBackgroundOpacity(0.95),
         contentTextStyle: const TextStyle(
@@ -310,14 +307,14 @@ class AppSizes {
   static const double lg = 16.0;
   static const double xl = 24.0;
   static const double xxl = 32.0;
-  
+
   // Border Radius
   static const double radiusSm = 4.0;
   static const double radiusMd = 8.0;
   static const double radiusLg = 12.0;
   static const double radiusXl = 16.0;
   static const double radiusFull = 9999.0;
-  
+
   // Component Sizes
   static const double sidebarWidth = 240.0;
   static const double sidebarCollapsedWidth = 80.0;
@@ -326,7 +323,7 @@ class AppSizes {
   static const double cardWidth = 120.0;
   static const double cardLandscapeHeight = 180.0;
   static const double cardLandscapeWidth = 320.0;
-  
+
   // Icon Sizes
   static const double iconSm = 16.0;
   static const double iconMd = 24.0;

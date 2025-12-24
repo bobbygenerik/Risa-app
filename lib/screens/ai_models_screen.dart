@@ -115,7 +115,8 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
               Expanded(
                 child: Text(
                   hint,
-                  style: const TextStyle(fontSize: 12, color: AppTheme.accentOrange),
+                  style: const TextStyle(
+                      fontSize: 12, color: AppTheme.accentOrange),
                 ),
               ),
             ],
@@ -245,18 +246,23 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
-
-                if (status == ModelDownloadStatus.downloaded || status == ModelDownloadStatus.bundled) ...[
+                if (status == ModelDownloadStatus.downloaded ||
+                    status == ModelDownloadStatus.bundled) ...[
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: null,
                       icon: Icon(
-                        status == ModelDownloadStatus.bundled ? Icons.check_circle_outline : Icons.check_circle,
+                        status == ModelDownloadStatus.bundled
+                            ? Icons.check_circle_outline
+                            : Icons.check_circle,
                         size: 18,
                       ),
-                      label: Text(status == ModelDownloadStatus.bundled ? 'Built-in' : 'Downloaded'),
+                      label: Text(status == ModelDownloadStatus.bundled
+                          ? 'Built-in'
+                          : 'Downloaded'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.accentGreen.withAlpha((0.2 * 255).round()),
+                        backgroundColor:
+                            AppTheme.accentGreen.withAlpha((0.2 * 255).round()),
                         foregroundColor: AppTheme.accentGreen,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
@@ -278,7 +284,6 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
                       ),
                     ),
                 ],
-
                 if (status == ModelDownloadStatus.downloading)
                   const Expanded(
                     child: ElevatedButton(
@@ -286,7 +291,6 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
                       child: Text('Downloading...'),
                     ),
                   ),
-
                 if (status == ModelDownloadStatus.corrupted)
                   Expanded(
                     child: BrandPrimaryButton(
@@ -425,13 +429,14 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
-              ElevatedButton(
+          ElevatedButton(
             onPressed: () {
               modelManager.deleteModel(model.id);
               Navigator.pop(context);
               final localContext = context;
               if (localContext.mounted) {
-                showAppSnackBar(localContext, SnackBar(content: Text('${model.name} deleted')));
+                showAppSnackBar(localContext,
+                    SnackBar(content: Text('${model.name} deleted')));
               }
             },
             style: ElevatedButton.styleFrom(
@@ -531,8 +536,8 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
                 runSpacing: 8,
                 children: [
                   _buildHeaderChip(Icons.storage, totalSize),
-                  _buildHeaderChip(Icons.shield_moon,
-                      'On-device · Zero cloud cost'),
+                  _buildHeaderChip(
+                      Icons.shield_moon, 'On-device · Zero cloud cost'),
                   _buildHeaderChip(
                     Icons.sync_alt,
                     'Shared across services',

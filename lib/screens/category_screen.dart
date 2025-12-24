@@ -22,67 +22,70 @@ class CategoryScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Consumer<ChannelProvider>(
-      builder: (context, channelProvider, child) {
-        // Get total count without converting all channels
-        final totalCount = channelProvider.getChannelCountForCategory(category);
+        builder: (context, channelProvider, child) {
+          // Get total count without converting all channels
+          final totalCount =
+              channelProvider.getChannelCountForCategory(category);
 
-        return Padding(
-          padding: context.screenPaddingInsets,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
-                children: [
-                  IconButton(
-                    icon: context.backIcon(),
-                    onPressed: () => context.go('/home'),
-                  ),
-                  context.spacingSmBox,
-                  Text(
-                    category,
-                    style: AppTypography.screenTitle(context),
-                  ),
-                  const Spacer(),
-                  Text(
-                    '$totalCount channels',
-                    style: AppTypography.countText(context),
-                  ),
-                ],
-              ),
-              context.spacingXlBox,
+          return Padding(
+            padding: context.screenPaddingInsets,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  children: [
+                    IconButton(
+                      icon: context.backIcon(),
+                      onPressed: () => context.go('/home'),
+                    ),
+                    context.spacingSmBox,
+                    Text(
+                      category,
+                      style: AppTypography.screenTitle(context),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '$totalCount channels',
+                      style: AppTypography.countText(context),
+                    ),
+                  ],
+                ),
+                context.spacingXlBox,
 
-              // Channels Grid - lazy loading with GridView.builder
-              Expanded(
-                child: totalCount == 0
-                    ? _buildEmptyState()
-                    : GridView.builder(
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 6,
-                          crossAxisSpacing: AppSpacing.gridSpacing,
-                          mainAxisSpacing: AppSpacing.gridSpacing,
-                          childAspectRatio: 0.85,
+                // Channels Grid - lazy loading with GridView.builder
+                Expanded(
+                  child: totalCount == 0
+                      ? _buildEmptyState()
+                      : GridView.builder(
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 6,
+                            crossAxisSpacing: AppSpacing.gridSpacing,
+                            mainAxisSpacing: AppSpacing.gridSpacing,
+                            childAspectRatio: 0.85,
+                          ),
+                          itemCount: totalCount,
+                          itemBuilder: (context, index) {
+                            // Lazy load channel at this index
+                            final channel = channelProvider
+                                .getChannelInCategoryAtIndex(category, index);
+                            if (channel == null) {
+                              return const SizedBox.shrink();
+                            }
+                            return _buildChannelCard(
+                              context,
+                              channel,
+                              channelProvider,
+                            );
+                          },
                         ),
-                        itemCount: totalCount,
-                        itemBuilder: (context, index) {
-                          // Lazy load channel at this index
-                          final channel = channelProvider.getChannelInCategoryAtIndex(category, index);
-                          if (channel == null) {
-                            return const SizedBox.shrink();
-                          }
-                          return _buildChannelCard(
-                            context,
-                            channel,
-                            channelProvider,
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
-        );
-      },
-    ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -134,30 +137,36 @@ class CategoryScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: AppTheme.cardBackground,
                       borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(context.tvSpacing(12)), // AppSizes.radiusMd assumed 12
+                        top: Radius.circular(context
+                            .tvSpacing(12)), // AppSizes.radiusMd assumed 12
                       ),
                     ),
                     child: Stack(
                       children: [
                         // Logo
-                        if (channel.logoUrl != null && channel.logoUrl!.isNotEmpty)
+                        if (channel.logoUrl != null &&
+                            channel.logoUrl!.isNotEmpty)
                           ClipRRect(
                             borderRadius: BorderRadius.vertical(
                               top: Radius.circular(context.scale(12)),
                             ),
                             child: Center(
                               child: Padding(
-                                padding: EdgeInsets.all(context.tvSpacing(8)), // AppSizes.sm assumed 8
+                                padding: EdgeInsets.all(context
+                                    .tvSpacing(8)), // AppSizes.sm assumed 8
                                 child: CachedNetworkImage(
                                   imageUrl: channel.logoUrl!,
                                   fit: BoxFit.contain,
                                   width: double.infinity,
                                   height: double.infinity,
                                   httpHeaders: const {
-                                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                                    'User-Agent':
+                                        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                                   },
-                                  placeholder: (context, url) => _buildChannelPlaceholder(channel.name),
-                                  errorWidget: (context, url, error) => _buildChannelPlaceholder(channel.name),
+                                  placeholder: (context, url) =>
+                                      _buildChannelPlaceholder(channel.name),
+                                  errorWidget: (context, url, error) =>
+                                      _buildChannelPlaceholder(channel.name),
                                 ),
                               ),
                             ),
@@ -180,9 +189,13 @@ class CategoryScreen extends StatelessWidget {
                           right: context.scale(4),
                           child: IconButton(
                             icon: Icon(
-                              isFavorite ? AppIcons.favorite : AppIcons.favoriteOutline,
+                              isFavorite
+                                  ? AppIcons.favorite
+                                  : AppIcons.favoriteOutline,
                               size: context.tvIconSize(16),
-                              color: isFavorite ? AppTheme.accentRed : AppColors.textPrimary,
+                              color: isFavorite
+                                  ? AppTheme.accentRed
+                                  : AppColors.textPrimary,
                             ),
                             onPressed: () {
                               if (isFavorite) {
@@ -202,7 +215,8 @@ class CategoryScreen extends StatelessWidget {
 
                 // Channel Info
                 Padding(
-                  padding: EdgeInsets.all(context.tvSpacing(4)), // AppSizes.xs assumed 4
+                  padding: EdgeInsets.all(
+                      context.tvSpacing(4)), // AppSizes.xs assumed 4
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

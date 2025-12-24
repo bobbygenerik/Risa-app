@@ -44,14 +44,14 @@ class CircuitBreaker {
 
     try {
       final result = await operation().timeout(_timeout);
-      
+
       // Success - reset failure count if we were in half-open state
       if (_state == CircuitState.halfOpen) {
         _reset();
       } else if (_failureCount > 0) {
         _failureCount = 0;
       }
-      
+
       return result;
     } catch (e) {
       _recordFailure();
@@ -132,10 +132,10 @@ class CircuitBreaker {
 enum CircuitState {
   /// Normal operation - calls pass through
   closed,
-  
+
   /// Calls are blocked due to failures
   open,
-  
+
   /// Testing if service has recovered
   halfOpen,
 }

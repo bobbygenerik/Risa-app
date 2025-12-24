@@ -7,7 +7,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 class VoiceSearchService with ChangeNotifier {
   final stt.SpeechToText _speech = stt.SpeechToText();
-  
+
   bool _isAvailable = false;
   bool _isListening = false;
   String _lastWords = '';
@@ -24,7 +24,7 @@ class VoiceSearchService with ChangeNotifier {
     try {
       // Request microphone permission
       final status = await Permission.microphone.request();
-      
+
       if (status.isGranted) {
         _isAvailable = await _speech.initialize(
           onError: (error) {
@@ -61,17 +61,17 @@ class VoiceSearchService with ChangeNotifier {
       _lastError = '';
       notifyListeners();
 
-  await _speech.listen(
+      await _speech.listen(
         onResult: (result) {
           _lastWords = result.recognizedWords;
           _confidence = result.confidence;
-          
+
           if (result.finalResult) {
             onResult?.call(_lastWords);
           } else {
             onPartialResult?.call(_lastWords);
           }
-          
+
           notifyListeners();
         },
         listenFor: const Duration(seconds: 30),

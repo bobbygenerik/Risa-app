@@ -10,7 +10,7 @@ class TimerService {
 
   Timer? _masterTimer;
   int _tickCount = 0;
-  
+
   final Map<String, VoidCallback> _secondCallbacks = {};
   final Map<String, VoidCallback> _minuteCallbacks = {};
   final Map<String, VoidCallback> _customCallbacks = {};
@@ -26,7 +26,7 @@ class TimerService {
   /// Handle each timer tick
   void _onTick(Timer timer) {
     _tickCount++;
-    
+
     // Execute second callbacks
     // Iterate over a copy to avoid concurrent modification if a callback unregisters itself
     for (final callback in List.of(_secondCallbacks.values)) {
@@ -36,7 +36,7 @@ class TimerService {
         // Ignore callback errors to prevent timer disruption
       }
     }
-    
+
     // Execute minute callbacks every 60 seconds
     if (_tickCount % 60 == 0) {
       for (final callback in List.of(_minuteCallbacks.values)) {
@@ -47,7 +47,7 @@ class TimerService {
         }
       }
     }
-    
+
     // Execute custom interval callbacks
     for (final entry in List.of(_customIntervals.entries)) {
       if (_tickCount % entry.value == 0) {
@@ -61,10 +61,10 @@ class TimerService {
         }
       }
     }
-    
+
     // Stop timer if no callbacks registered
-    if (_secondCallbacks.isEmpty && 
-        _minuteCallbacks.isEmpty && 
+    if (_secondCallbacks.isEmpty &&
+        _minuteCallbacks.isEmpty &&
         _customCallbacks.isEmpty) {
       _masterTimer?.cancel();
       _masterTimer = null;
@@ -85,7 +85,8 @@ class TimerService {
   }
 
   /// Register callback to run at custom interval (in seconds)
-  void registerCustomCallback(String id, int intervalSeconds, VoidCallback callback) {
+  void registerCustomCallback(
+      String id, int intervalSeconds, VoidCallback callback) {
     _customCallbacks[id] = callback;
     _customIntervals[id] = intervalSeconds;
     _ensureTimerRunning();
@@ -112,7 +113,7 @@ class TimerService {
 
   /// Get current tick count (useful for debugging)
   int get tickCount => _tickCount;
-  
+
   /// Check if timer is active
   bool get isActive => _masterTimer?.isActive == true;
 }

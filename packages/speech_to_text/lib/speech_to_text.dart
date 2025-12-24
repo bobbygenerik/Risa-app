@@ -4,7 +4,9 @@
 
 import 'dart:async';
 
-typedef SpeechRecognitionResultCallback = void Function(SpeechRecognitionResult result);
+typedef SpeechRecognitionResultCallback = void Function(
+    SpeechRecognitionResult result);
+
 class SpeechError {
   final String errorMsg;
   SpeechError(this.errorMsg);
@@ -20,13 +22,17 @@ class SpeechRecognitionResult {
   final bool finalResult;
   final double confidence;
 
-  SpeechRecognitionResult({required this.recognizedWords, this.finalResult = false, this.confidence = 1.0});
+  SpeechRecognitionResult(
+      {required this.recognizedWords,
+      this.finalResult = false,
+      this.confidence = 1.0});
 }
 
 class SpeechToText {
   bool _initialized = false;
 
-  Future<bool> initialize({SpeechErrorCallback? onError, SpeechStatusCallback? onStatus}) async {
+  Future<bool> initialize(
+      {SpeechErrorCallback? onError, SpeechStatusCallback? onStatus}) async {
     _initialized = true;
     // Simulate ready status
     onStatus?.call('ready');
@@ -46,7 +52,8 @@ class SpeechToText {
 
     // No-op: provide an empty result after a short delay to satisfy callers
     Future.delayed(const Duration(milliseconds: 200), () {
-      onResult(SpeechRecognitionResult(recognizedWords: '', finalResult: true, confidence: 0.0));
+      onResult(SpeechRecognitionResult(
+          recognizedWords: '', finalResult: true, confidence: 0.0));
     });
     return Future.value();
   }

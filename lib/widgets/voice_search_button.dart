@@ -87,7 +87,10 @@ class _VoiceSearchButtonState extends State<VoiceSearchButton>
             const SizedBox(height: AppSizes.sm),
             Text(
               '"$query"',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.primaryBlue),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(color: AppTheme.primaryBlue),
             ),
           ],
         ),

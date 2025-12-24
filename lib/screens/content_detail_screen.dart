@@ -9,7 +9,6 @@ import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 
-
 class ContentDetailScreen extends StatefulWidget {
   final Content content;
 
@@ -49,7 +48,8 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
       backgroundColor: AppTheme.darkBackground,
       body: Focus(
         onKeyEvent: (node, event) {
-          if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.goBack) {
+          if (event is KeyDownEvent &&
+              event.logicalKey == LogicalKeyboardKey.goBack) {
             Navigator.pop(context);
             return KeyEventResult.handled;
           }
@@ -111,7 +111,8 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
           right: 0,
           child: SafeArea(
             child: Padding(
-              padding: EdgeInsets.all(context.tvSpacing(20)), // AppSizes.md assumed 20
+              padding: EdgeInsets.all(
+                  context.tvSpacing(20)), // AppSizes.md assumed 20
               child: Row(
                 children: [
                   Container(
@@ -124,7 +125,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                       onKeyEvent: (node, event) {
                         if (event is KeyDownEvent &&
                             (event.logicalKey == LogicalKeyboardKey.select ||
-                             event.logicalKey == LogicalKeyboardKey.enter)) {
+                                event.logicalKey == LogicalKeyboardKey.enter)) {
                           Navigator.pop(context);
                           return KeyEventResult.handled;
                         }
@@ -153,7 +154,8 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
           left: 0,
           right: 0,
           child: Padding(
-            padding: EdgeInsets.all(context.tvSpacing(40)), // AppSizes.xxl assumed 40
+            padding: EdgeInsets.all(
+                context.tvSpacing(40)), // AppSizes.xxl assumed 40
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -166,7 +168,8 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                     shadows: [
                       Shadow(
                         color: Colors.black.withAlpha((0.8 * 255).round()),
-                        offset: Offset(context.tvSpacing(2), context.tvSpacing(2)),
+                        offset:
+                            Offset(context.tvSpacing(2), context.tvSpacing(2)),
                         blurRadius: context.tvSpacing(8),
                       ),
                     ],
@@ -188,11 +191,13 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                       focusNode: _playButtonFocus,
                       onKeyEvent: (node, event) {
                         if (event is KeyDownEvent) {
-                          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                          if (event.logicalKey ==
+                              LogicalKeyboardKey.arrowLeft) {
                             _backButtonFocus.requestFocus();
                             return KeyEventResult.handled;
                           }
-                          if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                          if (event.logicalKey ==
+                              LogicalKeyboardKey.arrowRight) {
                             _myListButtonFocus.requestFocus();
                             return KeyEventResult.handled;
                           }
@@ -224,11 +229,13 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                       focusNode: _myListButtonFocus,
                       onKeyEvent: (node, event) {
                         if (event is KeyDownEvent) {
-                          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                          if (event.logicalKey ==
+                              LogicalKeyboardKey.arrowLeft) {
                             _playButtonFocus.requestFocus();
                             return KeyEventResult.handled;
                           }
-                          if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                          if (event.logicalKey ==
+                              LogicalKeyboardKey.arrowRight) {
                             _downloadButtonFocus.requestFocus();
                             return KeyEventResult.handled;
                           }
@@ -237,10 +244,12 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                       },
                       child: Consumer<ContentProvider>(
                         builder: (context, contentProvider, child) {
-                          final isInMyList = contentProvider.isInFavorites(widget.content.id);
+                          final isInMyList =
+                              contentProvider.isInFavorites(widget.content.id);
                           return BrandSecondaryButton(
                             onPressed: () async {
-                              await contentProvider.toggleFavorite(widget.content.id);
+                              await contentProvider
+                                  .toggleFavorite(widget.content.id);
                             },
                             icon: isInMyList ? Icons.check : Icons.add,
                             label: 'My List',
@@ -256,7 +265,8 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                       focusNode: _downloadButtonFocus,
                       onKeyEvent: (node, event) {
                         if (event is KeyDownEvent) {
-                          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                          if (event.logicalKey ==
+                              LogicalKeyboardKey.arrowLeft) {
                             _myListButtonFocus.requestFocus();
                             return KeyEventResult.handled;
                           }
@@ -269,7 +279,9 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                             _isDownloaded = !_isDownloaded;
                           });
                         },
-                        icon: _isDownloaded ? Icons.download_done : Icons.download,
+                        icon: _isDownloaded
+                            ? Icons.download_done
+                            : Icons.download,
                         label: _isDownloaded ? 'Downloaded' : 'Download',
                       ),
                     ),
@@ -370,9 +382,9 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
           Text(
             _resolveDescription(),
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              height: 1.6,
-              color: AppTheme.textSecondary,
-            ),
+                  height: 1.6,
+                  color: AppTheme.textSecondary,
+                ),
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
           ),
@@ -454,9 +466,8 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
     if (widget.content.episodeNumber != null) {
       selectionParts.add('Episode ${widget.content.episodeNumber}');
     }
-    final currentSelection = selectionParts.isEmpty
-        ? null
-        : selectionParts.join(', ');
+    final currentSelection =
+        selectionParts.isEmpty ? null : selectionParts.join(', ');
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSizes.xxl),
@@ -465,7 +476,6 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
         children: [
           const Divider(color: AppTheme.divider),
           const SizedBox(height: AppSizes.xl),
-
           Text('Episodes', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: AppSizes.md),
           if (currentSelection != null) ...[

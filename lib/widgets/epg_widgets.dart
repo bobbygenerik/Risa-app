@@ -39,7 +39,8 @@ class EPGChannelSidebar extends StatelessWidget {
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
         if (notification is ScrollEndNotification &&
-            notification.metrics.pixels >= notification.metrics.maxScrollExtent - 200) {
+            notification.metrics.pixels >=
+                notification.metrics.maxScrollExtent - 200) {
           onLoadMore();
         }
         return false;
@@ -139,7 +140,8 @@ class EPGChannelItem extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 border: isFocused
                     ? Border.all(color: AppTheme.primaryBlue, width: 2)
-                    : Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
+                    : Border.all(
+                        color: Colors.white.withValues(alpha: 0.1), width: 1),
                 // Optimization: No shadow here
               ),
               child: Center(
@@ -235,7 +237,8 @@ class EPGProgramRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final channelKey = channel.tvgId ?? channel.id;
-    final programs = epgService.getProgramsForChannel(channelKey, channelName: channel.name);
+    final programs =
+        epgService.getProgramsForChannel(channelKey, channelName: channel.name);
 
     final now = DateTime.now();
     final startHour = now.hour;
@@ -243,7 +246,8 @@ class EPGProgramRow extends StatelessWidget {
     final displayEnd = displayStart.add(const Duration(hours: 12));
 
     final dayPrograms = programs.where((program) {
-      return program.startTime.isBefore(displayEnd) && program.endTime.isAfter(displayStart);
+      return program.startTime.isBefore(displayEnd) &&
+          program.endTime.isAfter(displayStart);
     }).toList();
 
     const cellWidth = 240.0;
@@ -259,7 +263,8 @@ class EPGProgramRow extends StatelessWidget {
               padding: const EdgeInsets.only(left: 12),
               child: Text(
                 'No EPG data',
-                style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.5)),
+                style: TextStyle(
+                    fontSize: 12, color: Colors.white.withValues(alpha: 0.5)),
               ),
             )
           : EPGVirtualProgramRow(
@@ -302,14 +307,20 @@ class EPGVirtualProgramRow extends StatelessWidget {
       children: programs.asMap().entries.map((entry) {
         final programIndex = entry.key;
         final program = entry.value;
-        final programStart = program.startTime.isBefore(displayStart) ? displayStart : program.startTime;
-        final programEnd = program.endTime.isAfter(displayStart.add(const Duration(hours: 12)))
-            ? displayStart.add(const Duration(hours: 12)) : program.endTime;
+        final programStart = program.startTime.isBefore(displayStart)
+            ? displayStart
+            : program.startTime;
+        final programEnd =
+            program.endTime.isAfter(displayStart.add(const Duration(hours: 12)))
+                ? displayStart.add(const Duration(hours: 12))
+                : program.endTime;
 
-        final minutesFromStart = programStart.difference(displayStart).inMinutes;
+        final minutesFromStart =
+            programStart.difference(displayStart).inMinutes;
         final leftOffset = (minutesFromStart / 60) * cellWidth;
         final visibleDuration = programEnd.difference(programStart).inMinutes;
-        final width = ((visibleDuration / 60) * cellWidth).clamp(30.0, totalWidth - leftOffset);
+        final width = ((visibleDuration / 60) * cellWidth)
+            .clamp(30.0, totalWidth - leftOffset);
 
         final focusNode =
             isFirstRow && programIndex == 0 ? firstProgramFocusNode : null;
@@ -369,7 +380,8 @@ class EPGProgramCell extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               border: isFocused
                   ? Border.all(color: AppTheme.primaryBlue, width: 2)
-                  : Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
+                  : Border.all(
+                      color: Colors.white.withValues(alpha: 0.1), width: 1),
             ),
             child: Material(
               color: Colors.transparent,
@@ -377,15 +389,17 @@ class EPGProgramCell extends StatelessWidget {
                 onTap: onTap,
                 borderRadius: BorderRadius.circular(4),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Row(
                         children: [
-                          if (hasCatchup) ...[ 
-                            const Icon(Icons.replay, size: 10, color: epgCatchupColor),
+                          if (hasCatchup) ...[
+                            const Icon(Icons.replay,
+                                size: 10, color: epgCatchupColor),
                             const SizedBox(width: 3),
                           ],
                           Expanded(
@@ -393,7 +407,9 @@ class EPGProgramCell extends StatelessWidget {
                               program.title,
                               style: TextStyle(
                                 fontSize: 12,
-                                fontWeight: isLive ? FontWeight.w600 : FontWeight.normal,
+                                fontWeight: isLive
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
                                 color: Colors.white.withValues(alpha: 0.9),
                               ),
                               maxLines: 1,

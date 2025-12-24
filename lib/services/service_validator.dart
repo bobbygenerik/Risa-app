@@ -25,7 +25,6 @@ class ServiceValidator {
     return {
       'opensubtitles': isOpenSubtitlesAvailable,
       'tmdb': isTmdbAvailable,
-
       'whisper': isWhisperAvailable,
     };
   }

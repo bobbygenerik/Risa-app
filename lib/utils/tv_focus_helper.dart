@@ -98,7 +98,8 @@ class TVFocusHelper {
     bool autofocus = false,
     Color? color,
     double fontSize = 18,
-    EdgeInsets padding = const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+    EdgeInsets padding =
+        const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
   }) {
     return Focus(
       focusNode: focusNode,
@@ -168,7 +169,8 @@ extension TVBuildContextExtension on BuildContext {
   double tvIconSize(double baseSize) => TVFocusHelper.getTVIconSize(baseSize);
 
   /// Get TV-scaled spacing
-  double tvSpacing(double baseSpacing) => TVFocusHelper.getTVSpacing(baseSpacing);
+  double tvSpacing(double baseSpacing) =>
+      TVFocusHelper.getTVSpacing(baseSpacing);
 
   /// Get horizontally scaled size based on a 1920px reference width
   double scale(double value) {

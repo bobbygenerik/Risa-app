@@ -54,7 +54,7 @@ class Content {
     if (type == ContentType.series &&
         seasonNumber != null &&
         episodeNumber != null) {
-  return '$title - S${seasonNumber}E$episodeNumber';
+      return '$title - S${seasonNumber}E$episodeNumber';
     }
     return title;
   }
@@ -64,7 +64,7 @@ class Content {
     final genreList = tmdbGenres ?? genres;
     return genreList?.isNotEmpty == true ? genreList?.first : null;
   }
-  
+
   // Get all genres (TMDB preferred, M3U fallback)
   List<String> get allGenres => tmdbGenres ?? genres ?? [];
 
@@ -87,7 +87,9 @@ class Content {
       rating: map['rating']?.toDouble(),
       duration: map['duration'],
       genres: map['genres'] != null ? List<String>.from(map['genres']) : null,
-      tmdbGenres: map['tmdbGenres'] != null ? List<String>.from(map['tmdbGenres']) : null,
+      tmdbGenres: map['tmdbGenres'] != null
+          ? List<String>.from(map['tmdbGenres'])
+          : null,
       cast: map['cast'] != null ? List<String>.from(map['cast']) : null,
       director: map['director'],
       videoUrl: map['videoUrl'],
@@ -95,9 +97,8 @@ class Content {
       episodeNumber: map['episodeNumber'],
       watchProgress: map['watchProgress']?.toDouble(),
       isFavorite: map['isFavorite'],
-      addedDate: map['addedDate'] != null
-          ? DateTime.parse(map['addedDate'])
-          : null,
+      addedDate:
+          map['addedDate'] != null ? DateTime.parse(map['addedDate']) : null,
       lastWatchedDate: map['lastWatchedDate'] != null
           ? DateTime.parse(map['lastWatchedDate'])
           : null,

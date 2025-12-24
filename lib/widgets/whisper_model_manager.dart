@@ -71,22 +71,26 @@ class _WhisperModelManagerState extends State<WhisperModelManager> {
               ),
             ),
             const SizedBox(height: 16),
-            ..._modelStatuses.map((status) => _buildModelTile(context, status, service)),
+            ..._modelStatuses
+                .map((status) => _buildModelTile(context, status, service)),
           ],
         );
       },
     );
   }
 
-  Widget _buildModelTile(BuildContext context, WhisperModelStatus status, WhisperTranscriptionService service) {
+  Widget _buildModelTile(BuildContext context, WhisperModelStatus status,
+      WhisperTranscriptionService service) {
     final isSelected = service.selectedModel == status.model.name;
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(8),
-        border: isSelected ? Border.all(color: AppTheme.primaryBlue, width: 1) : null,
+        border: isSelected
+            ? Border.all(color: AppTheme.primaryBlue, width: 1)
+            : null,
       ),
       child: ListTile(
         dense: true,
@@ -109,7 +113,9 @@ class _WhisperModelManagerState extends State<WhisperModelManager> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: status.model.bundled ? Colors.green.withValues(alpha: 0.2) : Colors.blue.withValues(alpha: 0.2),
+                color: status.model.bundled
+                    ? Colors.green.withValues(alpha: 0.2)
+                    : Colors.blue.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
@@ -131,12 +137,15 @@ class _WhisperModelManagerState extends State<WhisperModelManager> {
           ),
         ),
         trailing: _buildModelAction(context, status, service),
-        onTap: status.isAvailable ? () => _selectModel(status.model.name, service) : null,
+        onTap: status.isAvailable
+            ? () => _selectModel(status.model.name, service)
+            : null,
       ),
     );
   }
 
-  Widget _buildModelAction(BuildContext context, WhisperModelStatus status, WhisperTranscriptionService service) {
+  Widget _buildModelAction(BuildContext context, WhisperModelStatus status,
+      WhisperTranscriptionService service) {
     if (status.model.bundled) {
       return const Icon(Icons.check, color: Colors.green, size: 20);
     }
@@ -196,7 +205,7 @@ class _WhisperModelManagerState extends State<WhisperModelManager> {
 
   Future<void> _downloadModel(BuildContext context, String modelName) async {
     final dialogContext = context; // Capture context before async gap
-    
+
     unawaited(showDialog(
       context: dialogContext,
       barrierDismissible: false,
@@ -221,7 +230,7 @@ class _WhisperModelManagerState extends State<WhisperModelManager> {
       final success = await WhisperPlatformService.downloadModel(modelName);
       if (mounted) {
         navigator.pop(); // Close progress dialog
-        
+
         if (success) {
           await _loadModelStatuses(); // Refresh status
         } else {

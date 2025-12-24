@@ -22,21 +22,22 @@ class XtreamCodesService {
 
   /// Create HTTP client that bypasses SSL certificate verification
   static http.Client _createDefaultClient() {
-    final ioClient = HttpClient(context: SecurityContext(withTrustedRoots: true))
-      ..badCertificateCallback = (cert, host, port) {
-        debugPrint('XtreamCodes: Accepting cert from $host:$port');
-        return true;
-      }
-      ..connectionTimeout = const Duration(seconds: 15)
-      ..idleTimeout = const Duration(seconds: 15);
-    
+    final ioClient =
+        HttpClient(context: SecurityContext(withTrustedRoots: true))
+          ..badCertificateCallback = (cert, host, port) {
+            debugPrint('XtreamCodes: Accepting cert from $host:$port');
+            return true;
+          }
+          ..connectionTimeout = const Duration(seconds: 15)
+          ..idleTimeout = const Duration(seconds: 15);
+
     // Force using all available security contexts
     try {
       ioClient.findProxy = (uri) => 'DIRECT';
     } catch (e) {
       debugPrint('XtreamCodes: Could not set proxy: $e');
     }
-    
+
     return IOClient(ioClient);
   }
 
@@ -64,14 +65,17 @@ class XtreamCodesService {
 
   /// Base API endpoint for Xtream Codes (ensures the path is correct)
   String get _apiBase {
-    final trimmed = serverUrl.endsWith('/') ? serverUrl.substring(0, serverUrl.length - 1) : serverUrl;
+    final trimmed = serverUrl.endsWith('/')
+        ? serverUrl.substring(0, serverUrl.length - 1)
+        : serverUrl;
     return '$trimmed/player_api.php';
   }
 
   /// Fetch all VOD categories
   Future<List<Map<String, dynamic>>> getVodCategories() async {
     try {
-      final url = '$_apiBase?username=$username&password=$password&action=get_vod_categories';
+      final url =
+          '$_apiBase?username=$username&password=$password&action=get_vod_categories';
       final response = await _makeRequest(url);
 
       if (response.statusCode == 200) {
@@ -88,7 +92,8 @@ class XtreamCodesService {
   /// Fetch all series categories
   Future<List<Map<String, dynamic>>> getSeriesCategories() async {
     try {
-      final url = '$_apiBase?username=$username&password=$password&action=get_series_categories';
+      final url =
+          '$_apiBase?username=$username&password=$password&action=get_series_categories';
       final response = await _makeRequest(url);
 
       if (response.statusCode == 200) {
@@ -103,18 +108,24 @@ class XtreamCodesService {
   }
 
   /// Fetch movies from a specific category
-  Future<List<Content>> getMoviesByCategory(String categoryId, {String? categoryName}) async {
+  Future<List<Content>> getMoviesByCategory(String categoryId,
+      {String? categoryName}) async {
     try {
-      final url = '$_apiBase?username=$username&password=$password&action=get_vod_streams&category_id=$categoryId';
+      final url =
+          '$_apiBase?username=$username&password=$password&action=get_vod_streams&category_id=$categoryId';
       final response = await _makeRequest(url);
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        return data.map((movie) => _parseMovie(movie as Map<String, dynamic>, categoryName)).toList();
+        return data
+            .map((movie) =>
+                _parseMovie(movie as Map<String, dynamic>, categoryName))
+            .toList();
       }
       return [];
     } catch (e) {
-      debugPrint('XtreamCodes: Error fetching movies for category $categoryId: $e');
+      debugPrint(
+          'XtreamCodes: Error fetching movies for category $categoryId: $e');
       return [];
     }
   }
@@ -131,10 +142,13 @@ class XtreamCodesService {
       for (final category in categories) {
         final categoryId = category['category_id'].toString();
         final categoryName = category['category_name'] ?? 'Unknown';
-        debugPrint('XtreamCodes: Fetching movies from "$categoryName" (ID: $categoryId)...');
+        debugPrint(
+            'XtreamCodes: Fetching movies from "$categoryName" (ID: $categoryId)...');
 
-        final movies = await getMoviesByCategory(categoryId, categoryName: categoryName);
-        debugPrint('XtreamCodes: Found ${movies.length} movies in "$categoryName"');
+        final movies =
+            await getMoviesByCategory(categoryId, categoryName: categoryName);
+        debugPrint(
+            'XtreamCodes: Found ${movies.length} movies in "$categoryName"');
         allMovies.addAll(movies);
       }
 
@@ -147,18 +161,24 @@ class XtreamCodesService {
   }
 
   /// Fetch series from a specific category
-  Future<List<Content>> getSeriesByCategory(String categoryId, {String? categoryName}) async {
+  Future<List<Content>> getSeriesByCategory(String categoryId,
+      {String? categoryName}) async {
     try {
-      final url = '$_apiBase?username=$username&password=$password&action=get_series&category_id=$categoryId';
+      final url =
+          '$_apiBase?username=$username&password=$password&action=get_series&category_id=$categoryId';
       final response = await _makeRequest(url);
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        return data.map((series) => _parseSeries(series as Map<String, dynamic>, categoryName)).toList();
+        return data
+            .map((series) =>
+                _parseSeries(series as Map<String, dynamic>, categoryName))
+            .toList();
       }
       return [];
     } catch (e) {
-      debugPrint('XtreamCodes: Error fetching series for category $categoryId: $e');
+      debugPrint(
+          'XtreamCodes: Error fetching series for category $categoryId: $e');
       return [];
     }
   }
@@ -175,10 +195,13 @@ class XtreamCodesService {
       for (final category in categories) {
         final categoryId = category['category_id'].toString();
         final categoryName = category['category_name'] ?? 'Unknown';
-        debugPrint('XtreamCodes: Fetching series from "$categoryName" (ID: $categoryId)...');
+        debugPrint(
+            'XtreamCodes: Fetching series from "$categoryName" (ID: $categoryId)...');
 
-        final series = await getSeriesByCategory(categoryId, categoryName: categoryName);
-        debugPrint('XtreamCodes: Found ${series.length} series in "$categoryName"');
+        final series =
+            await getSeriesByCategory(categoryId, categoryName: categoryName);
+        debugPrint(
+            'XtreamCodes: Found ${series.length} series in "$categoryName"');
         allSeries.addAll(series);
       }
 
@@ -193,7 +216,8 @@ class XtreamCodesService {
   /// Get detailed info about a specific movie
   Future<Map<String, dynamic>?> getMovieInfo(String streamId) async {
     try {
-      final url = '$_apiBase?username=$username&password=$password&action=get_vod_info&vod_id=$streamId';
+      final url =
+          '$_apiBase?username=$username&password=$password&action=get_vod_info&vod_id=$streamId';
       final response = await _makeRequest(url);
 
       if (response.statusCode == 200) {
@@ -209,7 +233,8 @@ class XtreamCodesService {
   /// Get detailed info about a specific series (includes all episodes)
   Future<Map<String, dynamic>?> getSeriesInfo(String seriesId) async {
     try {
-      final url = '$_apiBase?username=$username&password=$password&action=get_series_info&series_id=$seriesId';
+      final url =
+          '$_apiBase?username=$username&password=$password&action=get_series_info&series_id=$seriesId';
       final response = await _makeRequest(url);
 
       if (response.statusCode == 200) {
@@ -226,7 +251,8 @@ class XtreamCodesService {
   Content _parseMovie(Map<String, dynamic> data, [String? categoryName]) {
     final streamId = data['stream_id'].toString();
     final containerExtension = data['container_extension'] ?? 'mp4';
-    final videoUrl = '$serverUrl/movie/$username/$password/$streamId.$containerExtension';
+    final videoUrl =
+        '$serverUrl/movie/$username/$password/$streamId.$containerExtension';
 
     final imageUrl = data['stream_icon'];
     final backdropPath = data['backdrop_path'];
@@ -235,7 +261,8 @@ class XtreamCodesService {
         : null;
 
     if (imageUrl != null || backdropUrl != null) {
-      debugPrint('Movie "${data['name']}": imageUrl=$imageUrl, backdropUrl=$backdropUrl');
+      debugPrint(
+          'Movie "${data['name']}": imageUrl=$imageUrl, backdropUrl=$backdropUrl');
     }
 
     return Content(
@@ -263,7 +290,8 @@ class XtreamCodesService {
         : null;
 
     if (cover != null || backdropUrl != null) {
-      debugPrint('Series "${data['name']}": cover=$cover, backdropUrl=$backdropUrl');
+      debugPrint(
+          'Series "${data['name']}": cover=$cover, backdropUrl=$backdropUrl');
     }
 
     return Content(
@@ -292,7 +320,8 @@ class XtreamCodesService {
   int? _parseYear(dynamic timestamp) {
     if (timestamp == null) return null;
     try {
-      final int ts = timestamp is int ? timestamp : int.parse(timestamp.toString());
+      final int ts =
+          timestamp is int ? timestamp : int.parse(timestamp.toString());
       final date = DateTime.fromMillisecondsSinceEpoch(ts * 1000);
       return date.year;
     } catch (e) {
@@ -304,7 +333,8 @@ class XtreamCodesService {
   DateTime? _parseDate(dynamic timestamp) {
     if (timestamp == null) return null;
     try {
-      final int ts = timestamp is int ? timestamp : int.parse(timestamp.toString());
+      final int ts =
+          timestamp is int ? timestamp : int.parse(timestamp.toString());
       return DateTime.fromMillisecondsSinceEpoch(ts * 1000);
     } catch (e) {
       return null;

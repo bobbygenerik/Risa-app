@@ -34,9 +34,15 @@ class ExoPlayerView(
     private var isDisposed = false
 
     init {
-        // Inflate PlayerView from XML which enforces SurfaceView via `app:surface_type="surface_view"`
+        // Inflate PlayerView XML. Allow TextureView vs SurfaceView selection via creationParams
         val inflater = LayoutInflater.from(context)
-        val inflated = inflater.inflate(R.layout.exo_player_view, null)
+        val requestedSurface = (creationParams?.get("surfaceType") as? String)?.toLowerCase()
+        val layoutId = when (requestedSurface) {
+            "texture" -> R.layout.exo_player_view_texture
+            "surface" -> R.layout.exo_player_view
+            else -> R.layout.exo_player_view
+        }
+        val inflated = inflater.inflate(layoutId, null)
         playerView = inflated as PlayerView
         // Prevent the native PlayerView from stealing focus/DPAD events so Flutter widgets can receive input
         try {
@@ -71,9 +77,10 @@ class ExoPlayerView(
                     setEnableDecoderFallback(true)
                     android.util.Log.i("ExoPlayer", "NVIDIA Shield detected: preferring extension renderers and enabling decoder fallback")
                 } else {
-                    // Default: prefer extension renderers and enable decoder fallback for broad compatibility
-                    setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+                    // Default: do not prefer extensions by default (use ON) and enable decoder fallback
+                    setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
                     setEnableDecoderFallback(true)
+                    android.util.Log.i("ExoPlayer", "Using extension renderer mode: ON (recommended default)")
                 }
             }
         }
@@ -106,6 +113,22 @@ class ExoPlayerView(
                         }
                         android.util.Log.d("ExoPlayer", "State changed to: $stateName")
                         methodChannel.invokeMethod("onPlaybackStateChanged", mapOf("state" to stateName))
+                            // Log active track details when ready (debug)
+                            if (state == Player.STATE_READY) {
+                                try {
+                                    val tracks = exoPlayer.currentTracks
+                                    for (group in tracks.groups) {
+                                        for (i in 0 until group.length) {
+                                            val format = group.getTrackFormat(i)
+                                            if (format != null) {
+                                                android.util.Log.d("ExoPlayer", "Active format: mime=${format.sampleMimeType}, w=${format.width}, h=${format.height}, color=${format.colorInfo}")
+                                            }
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    android.util.Log.w("ExoPlayer", "Failed to log format details: ${e.message}")
+                                }
+                            }
                     }
                     
                     override fun onIsPlayingChanged(isPlaying: Boolean) {

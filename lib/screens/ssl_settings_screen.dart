@@ -50,7 +50,8 @@ class _SSLSettingsScreenState extends State<SSLSettingsScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.security, color: AppTheme.accentOrange, size: scale(24)),
+                      Icon(Icons.security,
+                          color: AppTheme.accentOrange, size: scale(24)),
                       SizedBox(width: scale(12)),
                       Text(
                         'Security Warning',
@@ -65,7 +66,8 @@ class _SSLSettingsScreenState extends State<SSLSettingsScreen> {
                   Text(
                     'Many IPTV providers use self-signed or misconfigured SSL certificates. '
                     'Allowing all certificates enables compatibility but reduces security.',
-                    style: TextStyle(color: AppTheme.textSecondary, fontSize: scale(16)),
+                    style: TextStyle(
+                        color: AppTheme.textSecondary, fontSize: scale(16)),
                   ),
                 ],
               ),
@@ -73,7 +75,8 @@ class _SSLSettingsScreenState extends State<SSLSettingsScreen> {
           ),
           SizedBox(height: vScale(16)),
           SwitchListTile(
-            title: Text('Allow All SSL Certificates', style: TextStyle(fontSize: scale(16))),
+            title: Text('Allow All SSL Certificates',
+                style: TextStyle(fontSize: scale(16))),
             subtitle: Text(
               'Enable for IPTV compatibility (recommended for most users)',
               style: TextStyle(fontSize: scale(14)),

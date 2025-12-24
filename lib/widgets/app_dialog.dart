@@ -92,8 +92,12 @@ class AppDialogButton extends StatelessWidget {
             duration: const Duration(milliseconds: 150),
             decoration: BoxDecoration(
               color: isPrimary
-                  ? (isFocused ? AppTheme.primaryBlue : AppTheme.primaryBlue.withValues(alpha: 0.8))
-                  : (isFocused ? Colors.white.withValues(alpha: 0.1) : Colors.transparent),
+                  ? (isFocused
+                      ? AppTheme.primaryBlue
+                      : AppTheme.primaryBlue.withValues(alpha: 0.8))
+                  : (isFocused
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.transparent),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Material(
@@ -102,13 +106,15 @@ class AppDialogButton extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
                 onTap: onPressed,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Text(
                     text,
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 13,
-                      fontWeight: isPrimary ? FontWeight.w600 : FontWeight.normal,
+                      fontWeight:
+                          isPrimary ? FontWeight.w600 : FontWeight.normal,
                     ),
                   ),
                 ),

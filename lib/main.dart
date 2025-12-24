@@ -73,14 +73,14 @@ class _DeviceMemoryInfo {
 Future<_DeviceMemoryInfo> _getDeviceMemoryInfo() async {
   try {
     if (kIsWeb) return _DeviceMemoryInfo(isLowMemory: false);
-    
+
     // Simple heuristic: assume low memory if running on older Android
     if (Platform.isAndroid) {
       final info = await Process.run('getprop', ['ro.build.version.sdk']);
       final sdkVersion = int.tryParse(info.stdout.toString().trim()) ?? 30;
       return _DeviceMemoryInfo(isLowMemory: sdkVersion < 26); // Android 8.0+
     }
-    
+
     return _DeviceMemoryInfo(isLowMemory: false);
   } catch (e) {
     return _DeviceMemoryInfo(isLowMemory: false);
@@ -112,21 +112,23 @@ void main() {
       WidgetsFlutterBinding.ensureInitialized();
       StartupProbe.mark('Flutter bindings initialized');
       unawaited(CrashLogger.instance.init());
-      
+
       // MediaKit.ensureInitialized(); // REMOVED: switching to alternative video player
       StartupProbe.mark('MediaKit initialized (REMOVED)');
 
       // Optimize image cache for IPTV with many channel logos
       final memoryInfo = await _getDeviceMemoryInfo();
-      PaintingBinding.instance.imageCache.maximumSize = memoryInfo.isLowMemory ? 150 : 300;
-      PaintingBinding.instance.imageCache.maximumSizeBytes = memoryInfo.isLowMemory ? 75 << 20 : 150 << 20;
+      PaintingBinding.instance.imageCache.maximumSize =
+          memoryInfo.isLowMemory ? 150 : 300;
+      PaintingBinding.instance.imageCache.maximumSizeBytes =
+          memoryInfo.isLowMemory ? 75 << 20 : 150 << 20;
       StartupProbe.mark('Image cache limits configured');
 
       // Initialize SSL handler for IPTV providers with certificate issues
       await SSLHandler.init();
       HttpOverrides.global = IPTVHttpOverrides();
       StartupProbe.mark('SSL handler configured');
-      
+
       // Initialize HTTP client service with connection pooling
       HttpClientService().initialize();
       StartupProbe.mark('HTTP client service initialized');
@@ -158,7 +160,7 @@ void main() {
           details.stack ?? StackTrace.current,
         );
       };
-      
+
       PlatformDispatcher.instance.onError = (error, stack) {
         unawaited(CrashLogger.instance.logError(
           error,
@@ -210,7 +212,7 @@ class _StartupLoaderState extends State<StartupLoader> {
     }).catchError((error, stack) {
       debugLog('TMDBService.init() failed during startup: $error');
     }));
-    
+
     StartupProbe.mark('StartupLoader: continuing with background TMDB init');
 
     // EPG loading is now handled by the EpgService provider's initialize() method
@@ -436,7 +438,7 @@ class _MyAppState extends State<MyApp> {
           if (context != null) {
             // Wait for router to be ready and navigate
             await Future.delayed(const Duration(milliseconds: 500));
-            
+
             if (mounted) {
               // ignore: use_build_context_synchronously
               GoRouter.of(context).go('/player', extra: channel);
@@ -458,7 +460,6 @@ class _MyAppState extends State<MyApp> {
       StartupProbe.mark('MyApp initialization: check/load playlist');
       await _checkAndLoadPlaylist();
       StartupProbe.mark('MyApp initialization: playlist check finished');
-
     } catch (error, stack) {
       debugLog('Initialization error: $error');
       debugLog('$stack');
@@ -483,7 +484,7 @@ class _MyAppState extends State<MyApp> {
       // Only clear cache files, preserve user settings
       await prefs.remove('cached_playlist');
       await prefs.remove('cache_timestamp');
-      
+
       // Don't clear user's playlist URLs and EPG settings
       // await prefs.remove('playlist_type');
       // await prefs.remove('m3u_url');
@@ -494,7 +495,8 @@ class _MyAppState extends State<MyApp> {
       // Save new version
       await prefs.setString('app_version', currentVersion);
 
-      debugLog('Cleared cache data - preserved user settings - new version: $currentVersion');
+      debugLog(
+          'Cleared cache data - preserved user settings - new version: $currentVersion');
     }
   }
 
@@ -532,12 +534,13 @@ class _MyAppState extends State<MyApp> {
             final cleaned = server.trim();
             Uri baseUri = Uri.parse(cleaned);
             if (baseUri.scheme.isEmpty || baseUri.host.isEmpty) {
-              baseUri = Uri.parse('https://${cleaned.replaceAll(RegExp(r'^https?://'), '')}');
+              baseUri = Uri.parse(
+                  'https://${cleaned.replaceAll(RegExp(r'^https?://'), '')}');
             }
             final playlistUri = baseUri.replace(
                 path: (baseUri.path.trim().isEmpty)
-                  ? 'get.php'
-                  : '${baseUri.path.replaceAll(RegExp(r'^/'), '')}/get.php',
+                    ? 'get.php'
+                    : '${baseUri.path.replaceAll(RegExp(r'^/'), '')}/get.php',
                 queryParameters: {
                   'username': username.replaceAll(' ', ''),
                   'password': password.replaceAll(' ', ''),
@@ -548,7 +551,7 @@ class _MyAppState extends State<MyApp> {
 
             // Computed EPG URL
             final epgUri = baseUri.replace(
-                path: (baseUri.path.trim().isEmpty)
+              path: (baseUri.path.trim().isEmpty)
                   ? 'xmltv.php'
                   : '${baseUri.path.replaceAll(RegExp(r'^/'), '')}/xmltv.php',
               queryParameters: {
@@ -557,14 +560,16 @@ class _MyAppState extends State<MyApp> {
               },
             );
             await prefs.setString('epg_url', epgUri.toString());
-            debugPrint('Main: Saved computed epg_url for Xtream: ${epgUri.toString()}');
+            debugPrint(
+                'Main: Saved computed epg_url for Xtream: ${epgUri.toString()}');
           } catch (e) {
             debugPrint('Main: Could not compute/save epg_url: $e');
             try {
               final cleaned2 = server.trim();
               Uri fallbackBase = Uri.parse(cleaned2);
               if (fallbackBase.scheme.isEmpty || fallbackBase.host.isEmpty) {
-                fallbackBase = Uri.parse('https://${cleaned2.replaceAll(RegExp(r'^https?://'), '')}');
+                fallbackBase = Uri.parse(
+                    'https://${cleaned2.replaceAll(RegExp(r'^https?://'), '')}');
               }
               final fallbackUri = fallbackBase.replace(
                 path: (fallbackBase.path.trim().isEmpty)
@@ -597,15 +602,15 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     if (_loading) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: AppTheme.darkTheme,
-        home: const Scaffold(body: Center(child: CircularProgressIndicator(color: AppTheme.primaryBlue))),
+        home: const Scaffold(
+            body: Center(
+                child: CircularProgressIndicator(color: AppTheme.primaryBlue))),
       );
     }
 
@@ -632,7 +637,8 @@ class _MyAppState extends State<MyApp> {
               return service;
             },
           ),
-          ChangeNotifierProxyProvider2<ContentProvider, IncrementalEpgService, ChannelProvider>(
+          ChangeNotifierProxyProvider2<ContentProvider, IncrementalEpgService,
+              ChannelProvider>(
             create: (context) {
               final provider = ChannelProvider();
               // Defer playlist loading until after first frame is rendered
@@ -712,7 +718,8 @@ class _MyAppState extends State<MyApp> {
               return service;
             },
             update: (_, whisperService, integratedService) {
-              final service = integratedService ?? IntegratedTranscriptionService();
+              final service =
+                  integratedService ?? IntegratedTranscriptionService();
               service.attachWhisperService(whisperService);
               return service;
             },
@@ -757,7 +764,7 @@ class _MyAppState extends State<MyApp> {
     _pendingDeferredOperations.clear();
     super.dispose();
   }
-  
+
   final Set<Future> _pendingDeferredOperations = {};
 }
 
@@ -861,7 +868,6 @@ final _router = GoRouter(
           _fadeSlidePage(key: state.pageKey, child: const RecordingsScreen()),
     ),
 
-
     GoRoute(
       path: '/playlist-editor',
       pageBuilder: (context, state) => _fadeSlidePage(
@@ -897,8 +903,8 @@ final _router = GoRouter(
     ),
     GoRoute(
       path: '/epg-diagnostic',
-      pageBuilder: (context, state) =>
-          _fadeSlidePage(key: state.pageKey, child: const EpgDiagnosticScreen()),
+      pageBuilder: (context, state) => _fadeSlidePage(
+          key: state.pageKey, child: const EpgDiagnosticScreen()),
     ),
     GoRoute(
       path: '/epg-manager',
@@ -1001,13 +1007,13 @@ final _router = GoRouter(
         final data = state.extra;
         List<Channel>? channels;
         Channel? initialChannel;
-        
+
         if (data is List<Channel>) {
           channels = data;
         } else if (data is Channel) {
           initialChannel = data;
         }
-        
+
         return _fadeSlidePage(
           key: state.pageKey,
           child: MultiViewScreen(
@@ -1017,7 +1023,6 @@ final _router = GoRouter(
         );
       },
     ),
-
   ],
 );
 

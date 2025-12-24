@@ -31,7 +31,7 @@ class SeriesScreen extends StatefulWidget {
 }
 
 class _SeriesScreenState extends State<SeriesScreen>
-  with ContentFocusRegistrant<SeriesScreen> {
+    with ContentFocusRegistrant<SeriesScreen> {
   Timer? _carouselTimer;
   int _featuredIndex = 0;
   final ScrollController _scrollController = ScrollController();
@@ -41,7 +41,7 @@ class _SeriesScreenState extends State<SeriesScreen>
   final FocusNode _firstRowFocus = FocusNode();
   List<Content> _curatedSeries = [];
   final Map<String, String?> _tmdbArtCache = {};
-  
+
   // Pagination for genre sections
   final Map<String, int> _genreDisplayCounts = {};
   static const int _itemsPerPage = 12;
@@ -69,7 +69,8 @@ class _SeriesScreenState extends State<SeriesScreen>
   @override
   bool handleContentFocusRequest() {
     if (!mounted) return false;
-    final contentProvider = Provider.of<ContentProvider>(context, listen: false);
+    final contentProvider =
+        Provider.of<ContentProvider>(context, listen: false);
     if (contentProvider.series.isEmpty) {
       _settingsFocus.requestFocus();
     } else {
@@ -84,13 +85,13 @@ class _SeriesScreenState extends State<SeriesScreen>
     _watchFocus.addListener(_onWatchFocusChange);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      
+
       // Prioritize newly added content with artwork for hero banner
       final provider = Provider.of<ContentProvider>(context, listen: false);
       if (provider.series.isNotEmpty) {
         _featuredIndex = _findNewestContentWithArtwork(provider.series);
       }
-      
+
       _startCarousel();
       _prepareCuratedSeriesList();
       _preloadTMDBArtwork();
@@ -108,12 +109,12 @@ class _SeriesScreenState extends State<SeriesScreen>
         itemsWithArt.add(i);
       }
     }
-    
+
     if (itemsWithArt.isEmpty) {
       // Fallback to first item if none have artwork
       return 0;
     }
-    
+
     // Select randomly from the last 12 items with artwork (newest content)
     final recentCount = itemsWithArt.length.clamp(1, 12);
     final startIndex = itemsWithArt.length - recentCount;
@@ -124,11 +125,11 @@ class _SeriesScreenState extends State<SeriesScreen>
   void _preloadTMDBArtwork() async {
     final provider = Provider.of<ContentProvider>(context, listen: false);
     final series = provider.series.take(30).toList();
-    
+
     if (series.isEmpty) return;
-    
+
     final titles = series.map((s) => s.title).toList();
-    
+
     try {
       final results = await TMDBService.getBestBackdropBatch(titles);
       if (mounted) {
@@ -161,7 +162,6 @@ class _SeriesScreenState extends State<SeriesScreen>
     return null;
   }
 
-
   void _startCarousel() {
     _carouselTimer?.cancel();
     _carouselTimer = Timer.periodic(const Duration(seconds: 8), (_) {
@@ -171,9 +171,7 @@ class _SeriesScreenState extends State<SeriesScreen>
 
   void _nextHero() {
     final provider = Provider.of<ContentProvider>(context, listen: false);
-    final series = _curatedSeries.isNotEmpty
-        ? _curatedSeries
-        : provider.series;
+    final series = _curatedSeries.isNotEmpty ? _curatedSeries : provider.series;
     if (series.isEmpty) return;
     if (mounted) {
       setState(() {
@@ -220,7 +218,8 @@ class _SeriesScreenState extends State<SeriesScreen>
             );
             if (details != null || bestBackdrop != null) {
               final patched = s.copyWith(
-                backdropUrl: bestBackdrop ?? details?['backdrop'] ?? s.backdropUrl,
+                backdropUrl:
+                    bestBackdrop ?? details?['backdrop'] ?? s.backdropUrl,
                 imageUrl: details?['poster'] ?? s.imageUrl,
                 rating: (details?['rating'] as double?) ?? s.rating,
                 description: details?['overview'] ?? s.description,
@@ -236,7 +235,7 @@ class _SeriesScreenState extends State<SeriesScreen>
           }
           if (curated.length >= 12) break;
         }
-        
+
         // Update the provider with enhanced metadata (including genres)
         if (enhancedSeries.isNotEmpty) {
           final allSeries = series.map((s) {
@@ -307,7 +306,8 @@ class _SeriesScreenState extends State<SeriesScreen>
           return _wrapWithDirectionalFocus(_buildEmptyState(context));
         }
 
-        final displaySeries = _curatedSeries.isNotEmpty ? _curatedSeries : series;
+        final displaySeries =
+            _curatedSeries.isNotEmpty ? _curatedSeries : series;
         if (_featuredIndex >= displaySeries.length) _featuredIndex = 0;
         final featured = displaySeries[_featuredIndex];
 
@@ -410,12 +410,11 @@ class _SeriesScreenState extends State<SeriesScreen>
     }
 
     if (seriesMap.isEmpty) return const SizedBox.shrink();
-    
+
     const cardFocusScale = 1.02;
     final inset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
     final cardHeight = context.cardHeight();
-    final rowHeight =
-        context.rowHeight() + (cardHeight * (cardFocusScale - 1));
+    final rowHeight = context.rowHeight() + (cardHeight * (cardFocusScale - 1));
 
     return SizedBox(
       height: rowHeight,
@@ -468,9 +467,7 @@ class _SeriesScreenState extends State<SeriesScreen>
             if (event.logicalKey == LogicalKeyboardKey.arrowLeft &&
                 index == 0) {
               final moved = requestNavigationFocus();
-              return moved
-                  ? KeyEventResult.handled
-                  : KeyEventResult.ignored;
+              return moved ? KeyEventResult.handled : KeyEventResult.ignored;
             }
           }
           return KeyEventResult.ignored;
@@ -509,50 +506,54 @@ class _SeriesScreenState extends State<SeriesScreen>
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                          child: Stack(
-                            children: [
-                              Container(
-                                color: AppTheme.cardBackground,
-                                child: VodCardImage(
-                                  content: firstEpisode,
-                                  fit: BoxFit.cover,
-                                  placeholder: _buildPlaceholder(title),
+                        child: Stack(
+                          children: [
+                            Container(
+                              color: AppTheme.cardBackground,
+                              child: VodCardImage(
+                                content: firstEpisode,
+                                fit: BoxFit.cover,
+                                placeholder: _buildPlaceholder(title),
+                              ),
+                            ),
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: context.tvSpacing(8),
+                                  vertical: context.tvSpacing(4),
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.darkBackground
+                                      .withAlpha((0.6 * 255).round()),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                      color: Colors.white24, width: 1),
+                                ),
+                                child: Text(
+                                  '${episodes.length} EPISODES',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: context.tvTextSize(9),
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
                                 ),
                               ),
-                                Positioned(
-                                  top: 8,
-                                  right: 8,
-                                  child: Container(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: context.tvSpacing(8),
-                                      vertical: context.tvSpacing(4),
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.darkBackground.withAlpha((0.6 * 255).round()),
-                                      borderRadius: BorderRadius.circular(4),
-                                      border: Border.all(color: Colors.white24, width: 1),
-                                    ),
-                                    child: Text(
-                                      '${episodes.length} EPISODES',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: context.tvTextSize(9),
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                if (firstEpisode.addedDate != null &&
-                                    DateTime.now().difference(firstEpisode.addedDate!).inDays < 14)
-                                  const Positioned(
-                                    top: 8,
-                                    left: 8,
-                                    child: BrandBadge.newContent(fontSize: 8),
-                                  ),
-
-                            ],
-                          ),
+                            ),
+                            if (firstEpisode.addedDate != null &&
+                                DateTime.now()
+                                        .difference(firstEpisode.addedDate!)
+                                        .inDays <
+                                    14)
+                              const Positioned(
+                                top: 8,
+                                left: 8,
+                                child: BrandBadge.newContent(fontSize: 8),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                     SizedBox(height: context.tvSpacing(8)),
@@ -566,7 +567,8 @@ class _SeriesScreenState extends State<SeriesScreen>
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    if (firstEpisode.year != null || firstEpisode.rating != null)
+                    if (firstEpisode.year != null ||
+                        firstEpisode.rating != null)
                       Text(
                         '${firstEpisode.year ?? ''} ${firstEpisode.rating != null ? '★${firstEpisode.ratingDisplay}' : ''}',
                         style: TextStyle(
@@ -635,7 +637,7 @@ class _SeriesScreenState extends State<SeriesScreen>
     final validSeries = series.where((show) {
       // Skip shows with generic/placeholder titles
       final title = show.title.toLowerCase();
-      if (title == 'series' || 
+      if (title == 'series' ||
           title == 'show' ||
           title == 'series to be announced' ||
           title == 'show to be announced' ||
@@ -646,7 +648,7 @@ class _SeriesScreenState extends State<SeriesScreen>
       }
       return true;
     }).toList();
-    
+
     // Group series by genre (prefer TMDB genres, fallback to M3U genres)
     final genreMap = <String, List<Content>>{};
     for (final show in validSeries) {
@@ -669,14 +671,14 @@ class _SeriesScreenState extends State<SeriesScreen>
       final allSeries = entry.value;
       final displayCount = _genreDisplayCounts[genre] ?? _itemsPerPage;
       final displaySeries = allSeries.take(displayCount).toList();
-      final rowFocusNode =
-          !usedFocusNode ? firstRowFocusNode : null;
+      final rowFocusNode = !usedFocusNode ? firstRowFocusNode : null;
       usedFocusNode = usedFocusNode || rowFocusNode != null;
-      
+
       sections.addAll([
         _buildSectionHeader(context, genre),
         SizedBox(height: context.spacingXs()),
-        _buildSeriesRow(context, displaySeries, firstCardFocusNode: rowFocusNode),
+        _buildSeriesRow(context, displaySeries,
+            firstCardFocusNode: rowFocusNode),
         if (allSeries.length > displayCount)
           Center(
             child: Padding(
@@ -690,20 +692,24 @@ class _SeriesScreenState extends State<SeriesScreen>
                       duration: const Duration(milliseconds: 200),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(8),
-                        boxShadow: isFocused ? [
-                          BoxShadow(
-                            color: AppTheme.primaryBlue.withAlpha((0.6 * 255).round()),
-                            blurRadius: 20,
-                            spreadRadius: 2,
-                          ),
-                        ] : null,
+                        boxShadow: isFocused
+                            ? [
+                                BoxShadow(
+                                  color: AppTheme.primaryBlue
+                                      .withAlpha((0.6 * 255).round()),
+                                  blurRadius: 20,
+                                  spreadRadius: 2,
+                                ),
+                              ]
+                            : null,
                       ),
                       child: BrandSecondaryButton(
                         label: 'Load More ($genre)',
                         onPressed: () {
                           debugLog('Load More pressed for genre: $genre');
                           setState(() {
-                            _genreDisplayCounts[genre] = displayCount + _itemsPerPage;
+                            _genreDisplayCounts[genre] =
+                                displayCount + _itemsPerPage;
                           });
                         },
                       ),
@@ -729,8 +735,7 @@ class _SeriesScreenState extends State<SeriesScreen>
     final heroImage = _resolveHeroImage(featuredSeries);
     final heroHeight = context.heroHeight();
     final cardPeek = context.spacingXl();
-    final contentInset =
-        context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
+    final contentInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
 
     return Focus(
       canRequestFocus: false,
@@ -739,12 +744,13 @@ class _SeriesScreenState extends State<SeriesScreen>
       child: AnimatedBuilder(
         animation: _scrollController,
         builder: (context, child) {
-          final scrollOffset = _scrollController.hasClients ? _scrollController.offset : 0.0;
+          final scrollOffset =
+              _scrollController.hasClients ? _scrollController.offset : 0.0;
           final fadeProgress =
               (scrollOffset / (heroHeight * 0.3)).clamp(0.0, 1.0);
           final overlayFadeProgress =
               (scrollOffset / (heroHeight * 0.12)).clamp(0.0, 1.0);
-          
+
           return Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -775,11 +781,14 @@ class _SeriesScreenState extends State<SeriesScreen>
                           if (event is KeyDownEvent) {
                             if (event.logicalKey == LogicalKeyboardKey.select ||
                                 event.logicalKey == LogicalKeyboardKey.enter) {
-                              final encodedId = Uri.encodeComponent(featuredSeries.id);
-                              context.push('/content/$encodedId', extra: featuredSeries);
+                              final encodedId =
+                                  Uri.encodeComponent(featuredSeries.id);
+                              context.push('/content/$encodedId',
+                                  extra: featuredSeries);
                               return KeyEventResult.handled;
                             }
-                            if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                            if (event.logicalKey ==
+                                LogicalKeyboardKey.arrowLeft) {
                               return requestNavigationFocus()
                                   ? KeyEventResult.handled
                                   : KeyEventResult.ignored;
@@ -789,8 +798,10 @@ class _SeriesScreenState extends State<SeriesScreen>
                         },
                         child: GestureDetector(
                           onTap: () {
-                            final encodedId = Uri.encodeComponent(featuredSeries.id);
-                            context.push('/content/$encodedId', extra: featuredSeries);
+                            final encodedId =
+                                Uri.encodeComponent(featuredSeries.id);
+                            context.push('/content/$encodedId',
+                                extra: featuredSeries);
                           },
                           child: Stack(
                             children: [
@@ -808,7 +819,8 @@ class _SeriesScreenState extends State<SeriesScreen>
                                       end: Alignment.bottomCenter,
                                       colors: [
                                         Colors.transparent,
-                                        AppTheme.darkBackground.withAlpha((0.8 * 255).round()),
+                                        AppTheme.darkBackground
+                                            .withAlpha((0.8 * 255).round()),
                                         AppTheme.darkBackground,
                                       ],
                                     ),
@@ -850,7 +862,9 @@ class _SeriesScreenState extends State<SeriesScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SizedBox(height: (heroHeight - cardPeek).clamp(0.0, heroHeight)),
+                        SizedBox(
+                            height:
+                                (heroHeight - cardPeek).clamp(0.0, heroHeight)),
                         Container(
                           decoration: const BoxDecoration(
                             gradient: LinearGradient(
@@ -874,7 +888,8 @@ class _SeriesScreenState extends State<SeriesScreen>
                             children: [
                               const SizedBox(height: 0),
                               if (recentSeries.isNotEmpty) ...[
-                                _buildSectionHeader(context, 'Recently Added Series'),
+                                _buildSectionHeader(
+                                    context, 'Recently Added Series'),
                                 SizedBox(height: context.spacingXs()),
                                 _buildSeriesRow(
                                   context,
@@ -886,8 +901,9 @@ class _SeriesScreenState extends State<SeriesScreen>
                               ..._buildGenreSections(
                                 context,
                                 allSeries,
-                                firstRowFocusNode:
-                                    recentSeries.isEmpty ? _firstRowFocus : null,
+                                firstRowFocusNode: recentSeries.isEmpty
+                                    ? _firstRowFocus
+                                    : null,
                               ),
                               SizedBox(height: context.sectionSpacing()),
                             ],
@@ -905,7 +921,8 @@ class _SeriesScreenState extends State<SeriesScreen>
     );
   }
 
-  Widget _buildHeroContent(Content featuredSeries, String? heroImage, double scrollProgress) {
+  Widget _buildHeroContent(
+      Content featuredSeries, String? heroImage, double scrollProgress) {
     return heroImage != null
         ? Positioned.fill(
             child: CachedNetworkImage(
@@ -919,28 +936,28 @@ class _SeriesScreenState extends State<SeriesScreen>
           )
         : _buildBannerPlaceholder();
   }
+
   Widget _buildHeroInfo(BuildContext context, Content featuredSeries) {
     return HeroInfoBox(
       title: featuredSeries.title,
       description: featuredSeries.description,
       metadata: [
         if (featuredSeries.rating != null)
-           BrandBadge(
-             text: '★ ${featuredSeries.rating!.toStringAsFixed(1)}',
-             backgroundColor: Colors.amber.withValues(alpha: 0.2),
-             textColor: Colors.amber,
-           ),
+          BrandBadge(
+            text: '★ ${featuredSeries.rating!.toStringAsFixed(1)}',
+            backgroundColor: Colors.amber.withValues(alpha: 0.2),
+            textColor: Colors.amber,
+          ),
         if (featuredSeries.year != null)
-           Text('${featuredSeries.year}', style: AppTypography.smallText(context)),
+          Text('${featuredSeries.year}',
+              style: AppTypography.smallText(context)),
         const BrandBadge.hd(),
         if (featuredSeries.genres != null && featuredSeries.genres!.isNotEmpty)
-          ...featuredSeries.genres!.take(2).map((g) => 
-            BrandBadge(
-              text: g.toUpperCase(),
-              backgroundColor: Colors.white10,
-              textColor: Colors.white70,
-            )
-          ),
+          ...featuredSeries.genres!.take(2).map((g) => BrandBadge(
+                text: g.toUpperCase(),
+                backgroundColor: Colors.white10,
+                textColor: Colors.white70,
+              )),
       ],
       onWatchPressed: () {
         final encodedId = Uri.encodeComponent(featuredSeries.id);
@@ -951,7 +968,6 @@ class _SeriesScreenState extends State<SeriesScreen>
       autofocusWatchButton: true,
     );
   }
-
 
   Widget _buildBannerPlaceholder() {
     return Container(
@@ -971,8 +987,7 @@ class _SeriesScreenState extends State<SeriesScreen>
   Widget _buildSkeletonLoader() {
     final screenSize = MediaQuery.of(context).size;
     final heroHeight = context.heroHeight();
-    final contentInset =
-        context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
+    final contentInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
     final heroInfoWidth = min(
       screenSize.width * AppSpacing.heroInfoWidth,
       screenSize.width >= 1920 ? 480.0 : 420.0,
@@ -1078,115 +1093,140 @@ class _SeriesScreenState extends State<SeriesScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(height: context.sectionSpacing()),
-                  ...List.generate(3, (rowIndex) => Padding(
-                    padding: EdgeInsets.only(bottom: context.sectionSpacing()),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Section header skeleton
-                        Container(
-                          height: 20,
-                          width: [180, 140, 160][rowIndex % 3].toDouble(),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withAlpha((0.15 * 255).round()),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        // Series cards row skeleton
-                        SizedBox(
-                          height: rowHeight,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            padding: EdgeInsets.zero,
-                            itemCount: 5,
-                            itemBuilder: (context, cardIndex) => Column(
+                  ...List.generate(
+                      3,
+                      (rowIndex) => Padding(
+                            padding: EdgeInsets.only(
+                                bottom: context.sectionSpacing()),
+                            child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Series poster skeleton with episode badge
-                                Stack(
-                                  children: [
-                                    Container(
-                                      width: cardWidth,
-                                      height: cardHeight,
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.cardBackground,
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
-                                    // Episode count badge skeleton
-                                    Positioned(
-                                      top: 8,
-                                      right: 8,
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: Container(
-                                          width: 30,
-                                          height: 10,
-                                          decoration: BoxDecoration(
-                                            color: Colors.white.withAlpha((0.3 * 255).round()),
-                                            borderRadius: BorderRadius.circular(2),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                // Title skeleton
+                                // Section header skeleton
                                 Container(
-                                  width: cardWidth,
-                                  height: 14,
+                                  height: 20,
+                                  width:
+                                      [180, 140, 160][rowIndex % 3].toDouble(),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withAlpha((0.15 * 255).round()),
+                                    color: Colors.white
+                                        .withAlpha((0.15 * 255).round()),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                 ),
-                                const SizedBox(height: 4),
-                                // Year and rating skeleton
-                                Row(
-                                  children: [
-                                    Container(
-                                      width: 30,
-                                      height: 11,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withAlpha((0.1 * 255).round()),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
+                                const SizedBox(height: 8),
+                                // Series cards row skeleton
+                                SizedBox(
+                                  height: rowHeight,
+                                  child: ListView.separated(
+                                    scrollDirection: Axis.horizontal,
+                                    padding: EdgeInsets.zero,
+                                    itemCount: 5,
+                                    itemBuilder: (context, cardIndex) => Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        // Series poster skeleton with episode badge
+                                        Stack(
+                                          children: [
+                                            Container(
+                                              width: cardWidth,
+                                              height: cardHeight,
+                                              decoration: BoxDecoration(
+                                                color: AppTheme.cardBackground,
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                            ),
+                                            // Episode count badge skeleton
+                                            Positioned(
+                                              top: 8,
+                                              right: 8,
+                                              child: Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 8,
+                                                        vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: AppTheme.primaryBlue
+                                                      .withAlpha(
+                                                          (0.3 * 255).round()),
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                                child: Container(
+                                                  width: 30,
+                                                  height: 10,
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.white
+                                                        .withAlpha((0.3 * 255)
+                                                            .round()),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            2),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        // Title skeleton
+                                        Container(
+                                          width: cardWidth,
+                                          height: 14,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withAlpha(
+                                                (0.15 * 255).round()),
+                                            borderRadius:
+                                                BorderRadius.circular(4),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        // Year and rating skeleton
+                                        Row(
+                                          children: [
+                                            Container(
+                                              width: 30,
+                                              height: 11,
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withAlpha(
+                                                    (0.1 * 255).round()),
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              width: 8,
+                                              height: 8,
+                                              decoration: BoxDecoration(
+                                                color: Colors.amber.withAlpha(
+                                                    (0.3 * 255).round()),
+                                                borderRadius:
+                                                    BorderRadius.circular(2),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Container(
+                                              width: 20,
+                                              height: 11,
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withAlpha(
+                                                    (0.1 * 255).round()),
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      width: 8,
-                                      height: 8,
-                                      decoration: BoxDecoration(
-                                        color: Colors.amber.withAlpha((0.3 * 255).round()),
-                                        borderRadius: BorderRadius.circular(2),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Container(
-                                      width: 20,
-                                      height: 11,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withAlpha((0.1 * 255).round()),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                    ),
-                                  ],
+                                    separatorBuilder: (context, index) =>
+                                        SizedBox(width: context.cardGap()),
+                                  ),
                                 ),
                               ],
                             ),
-                            separatorBuilder: (context, index) =>
-                                SizedBox(width: context.cardGap()),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )),
+                          )),
                 ],
               ),
             ),

@@ -13,28 +13,29 @@ void main() async {
 
   for (final url in testUrls) {
     print('Testing URL: $url');
-    
+
     try {
       // Test HTTP HEAD request
       print('  → Sending HEAD request...');
       final response = await http.head(
         Uri.parse(url),
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         },
       ).timeout(const Duration(seconds: 10));
-      
+
       print('  ✓ Status: ${response.statusCode}');
       print('  ✓ Content-Type: ${response.headers['content-type']}');
       print('  ✓ Content-Length: ${response.headers['content-length']}');
-      
+
       if (response.statusCode == 200) {
         // Try to fetch first few bytes
         print('  → Fetching first 1KB...');
         final request = await HttpClient().getUrl(Uri.parse(url));
         request.headers.set('User-Agent', 'Mozilla/5.0');
         final streamResponse = await request.close();
-        
+
         final bytes = await streamResponse.take(1024).toList();
         final totalBytes = bytes.fold<int>(0, (sum, list) => sum + list.length);
         print('  ✓ Received $totalBytes bytes');

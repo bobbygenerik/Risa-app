@@ -32,12 +32,14 @@ class EnhancedVideoPlayerScreen extends StatefulWidget {
   });
 
   @override
-  State<EnhancedVideoPlayerScreen> createState() => _EnhancedVideoPlayerScreenState();
+  State<EnhancedVideoPlayerScreen> createState() =>
+      _EnhancedVideoPlayerScreenState();
 }
 
 class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   bool _isLoading = true;
-  final ValueNotifier<VideoPlayerController?> _playerControllerNotifier = ValueNotifier(null);
+  final ValueNotifier<VideoPlayerController?> _playerControllerNotifier =
+      ValueNotifier(null);
 
   @override
   void initState() {
@@ -60,7 +62,11 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       _transcriptionServiceRef = service;
       _transcriptionListener = () {
         if (!mounted) return;
-        final url = widget.videoUrl ?? widget.content?.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '';
+        final url = widget.videoUrl ??
+            widget.content?.videoUrl ??
+            widget.streamUrl ??
+            widget.channel?.url ??
+            '';
         if (service.isTranscribing && url.isNotEmpty) {
           // fire-and-forget: start transcription without awaiting here
           // ignore: unawaited_futures
@@ -84,22 +90,32 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   Future<void> _initializePlayer() async {
-    final url = widget.videoUrl ?? widget.content?.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '';
+    final url = widget.videoUrl ??
+        widget.content?.videoUrl ??
+        widget.streamUrl ??
+        widget.channel?.url ??
+        '';
 
     debugLog('Video Player: Initializing with URL: $url');
     if (url.isEmpty) {
       if (mounted) {
         setState(() => _isLoading = false);
-        _showErrorDialog('Invalid Stream', 'No stream URL provided for this channel.');
+        _showErrorDialog(
+            'Invalid Stream', 'No stream URL provided for this channel.');
       }
       return;
     }
 
     // Prepare transcription service and detect any subtitle URL from channel metadata
-    final service = Provider.of<IntegratedTranscriptionService>(context, listen: false);
+    final service =
+        Provider.of<IntegratedTranscriptionService>(context, listen: false);
     String? subtitleUrl;
-    subtitleUrl ??= widget.channel?.attributes != null ? widget.channel!.attributes!['subtitleUrl'] : null;
-    subtitleUrl ??= widget.channel?.attributes != null ? widget.channel!.attributes!['subtitle'] : null;
+    subtitleUrl ??= widget.channel?.attributes != null
+        ? widget.channel!.attributes!['subtitleUrl']
+        : null;
+    subtitleUrl ??= widget.channel?.attributes != null
+        ? widget.channel!.attributes!['subtitle']
+        : null;
 
     // Keep wakelock active while playing
     await WakelockPlus.enable();
@@ -165,9 +181,15 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                 // Player fills the available area
                 Positioned.fill(
                   child: ExoPlayerWidget(
-                    url: widget.videoUrl ?? widget.content?.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '',
+                    url: widget.videoUrl ??
+                        widget.content?.videoUrl ??
+                        widget.streamUrl ??
+                        widget.channel?.url ??
+                        '',
                     isLive: widget.isLive,
-                    transcriptionService: Provider.of<IntegratedTranscriptionService>(context, listen: false),
+                    transcriptionService:
+                        Provider.of<IntegratedTranscriptionService>(context,
+                            listen: false),
                     controllerNotifier: _playerControllerNotifier,
                   ),
                 ),
@@ -188,7 +210,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   }
 
   Future<void> _showSrtDialog() async {
-    final service = Provider.of<IntegratedTranscriptionService>(context, listen: false);
+    final service =
+        Provider.of<IntegratedTranscriptionService>(context, listen: false);
     final srt = service.exportAsSRT();
 
     await showDialog<void>(
@@ -212,7 +235,8 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
               Navigator.of(context).pop();
               await Clipboard.setData(ClipboardData(text: srt));
               if (!mounted) return;
-              ScaffoldMessenger.of(this.context).showSnackBar(const SnackBar(content: Text('SRT copied to clipboard')));
+              ScaffoldMessenger.of(this.context).showSnackBar(
+                  const SnackBar(content: Text('SRT copied to clipboard')));
             },
             child: const Text('Copy'),
           ),

@@ -84,13 +84,13 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     final tvWidth = context.tvSpacing(widget.width);
     final tvHeight = context.tvSpacing(widget.height);
     return ClipRRect(
-      borderRadius: widget.borderRadius ?? BorderRadius.circular(context.tvSpacing(12)),
+      borderRadius:
+          widget.borderRadius ?? BorderRadius.circular(context.tvSpacing(12)),
       child: Container(
         width: tvWidth,
         height: tvHeight,
@@ -99,10 +99,15 @@ class _ChannelLogoWidgetState extends State<ChannelLogoWidget> {
             ? CachedNetworkImage(
                 imageUrl: _effectiveLogoUrl!,
                 fit: widget.fit,
-                placeholder: (context, url) => widget.placeholder ?? Icon(Icons.tv, size: context.tvIconSize(32)),
-                errorWidget: (context, url, error) => widget.errorWidget ?? Icon(Icons.tv, size: context.tvIconSize(32)),
+                placeholder: (context, url) =>
+                    widget.placeholder ??
+                    Icon(Icons.tv, size: context.tvIconSize(32)),
+                errorWidget: (context, url, error) =>
+                    widget.errorWidget ??
+                    Icon(Icons.tv, size: context.tvIconSize(32)),
               )
-            : (widget.placeholder ?? Icon(Icons.tv, size: context.tvIconSize(32))),
+            : (widget.placeholder ??
+                Icon(Icons.tv, size: context.tvIconSize(32))),
       ),
     );
   }

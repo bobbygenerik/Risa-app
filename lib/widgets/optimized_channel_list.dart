@@ -10,7 +10,7 @@ class OptimizedChannelList extends StatelessWidget {
   final String? category;
   final Function(Channel)? onChannelTap;
   final int itemsPerPage;
-  
+
   const OptimizedChannelList({
     super.key,
     this.category,
@@ -26,7 +26,7 @@ class OptimizedChannelList extends StatelessWidget {
         final channelMaps = category != null
             ? provider.getChannelMapsForCategory(category!, limit: itemsPerPage)
             : provider.getChannelMapsForUI(limit: itemsPerPage);
-            
+
         if (channelMaps.isEmpty) {
           return const Center(
             child: Text('No channels available'),
@@ -51,7 +51,7 @@ class OptimizedChannelList extends StatelessWidget {
 class OptimizedChannelTile extends StatelessWidget {
   final Map<String, dynamic> channelMap;
   final Function(Channel)? onTap;
-  
+
   const OptimizedChannelTile({
     super.key,
     required this.channelMap,
@@ -63,7 +63,7 @@ class OptimizedChannelTile extends StatelessWidget {
     final name = channelMap['name'] as String? ?? 'Unknown Channel';
     final logoUrl = channelMap['logoUrl'] as String?;
     final groupTitle = channelMap['groupTitle'] as String? ?? 'Uncategorized';
-    
+
     return ListTile(
       leading: logoUrl != null
           ? CachedImage(
@@ -100,7 +100,7 @@ class PaginatedChannelList extends StatefulWidget {
   final String? category;
   final Function(Channel)? onChannelTap;
   final int pageSize;
-  
+
   const PaginatedChannelList({
     super.key,
     this.category,
@@ -116,46 +116,47 @@ class _PaginatedChannelListState extends State<PaginatedChannelList> {
   final ScrollController _scrollController = ScrollController();
   List<Map<String, dynamic>> _loadedChannels = [];
   bool _isLoadingMore = false;
-  
+
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
     _loadInitialChannels();
   }
-  
+
   @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
   }
-  
+
   void _onScroll() {
-    if (_scrollController.position.pixels >= 
+    if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
       _loadMoreChannels();
     }
   }
-  
+
   void _loadInitialChannels() {
     final provider = context.read<ChannelProvider>();
     final channelMaps = widget.category != null
-        ? provider.getChannelMapsForCategory(widget.category!, limit: widget.pageSize)
+        ? provider.getChannelMapsForCategory(widget.category!,
+            limit: widget.pageSize)
         : provider.getChannelMapsForUI(limit: widget.pageSize);
-    
+
     setState(() {
       _loadedChannels = channelMaps;
     });
   }
-  
+
   void _loadMoreChannels() {
     if (_isLoadingMore) return;
-    
+
     setState(() {
       _isLoadingMore = true;
     });
-    
-    // Simulate loading more channels (in real implementation, 
+
+    // Simulate loading more channels (in real implementation,
     // you'd extend the provider to support offset/limit)
     Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) {
@@ -180,7 +181,7 @@ class _PaginatedChannelListState extends State<PaginatedChannelList> {
             ),
           );
         }
-        
+
         return OptimizedChannelTile(
           channelMap: _loadedChannels[index],
           onTap: widget.onChannelTap,

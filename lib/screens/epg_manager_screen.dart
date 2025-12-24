@@ -24,7 +24,8 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
     });
 
     try {
-      final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
+      final epgService =
+          Provider.of<IncrementalEpgService>(context, listen: false);
       await epgService.initialize();
       _showMessage('All EPG sources refreshed successfully!');
     } catch (e) {
@@ -46,7 +47,8 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
     });
 
     try {
-      final epgService = Provider.of<IncrementalEpgService>(context, listen: false);
+      final epgService =
+          Provider.of<IncrementalEpgService>(context, listen: false);
       // Rebuild mappings by clearing cache and reloading
       await epgService.initialize();
       _showMessage('Channel mappings rebuilt successfully!');
@@ -67,7 +69,8 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.darkBackground,
-        title: const Text('Clear All EPG Data', style: TextStyle(color: AppTheme.textPrimary)),
+        title: const Text('Clear All EPG Data',
+            style: TextStyle(color: AppTheme.textPrimary)),
         content: const Text(
           'This will remove all EPG data and channel mappings. You will need to reload EPG from settings.',
           style: TextStyle(color: AppTheme.textSecondary),
@@ -134,20 +137,21 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
               children: [
                 IconButton(
                   onPressed: () => context.pop(),
-                  icon: const Icon(Icons.arrow_back, color: AppTheme.textPrimary),
+                  icon:
+                      const Icon(Icons.arrow_back, color: AppTheme.textPrimary),
                 ),
                 const SizedBox(width: 16),
                 Text(
                   'EPG Manager',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: AppTheme.textPrimary,
-                    fontWeight: FontWeight.bold,
-                  ),
+                        color: AppTheme.textPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
               ],
             ),
           ),
-          
+
           // Content
           Expanded(
             child: SingleChildScrollView(
@@ -161,22 +165,22 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
                       return _buildStatusCard(epgService);
                     },
                   ),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Advanced Management Section
                   _buildAdvancedActionsSection(),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Channel Mapping Section
                   _buildChannelMappingSection(),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Maintenance Section
                   _buildMaintenanceSection(),
-                  
+
                   if (_isLoading && _statusMessage != null) ...[
                     const SizedBox(height: 24),
                     _buildLoadingCard(),
@@ -202,8 +206,12 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
           Row(
             children: [
               Icon(
-                epgService.availableChannels.isNotEmpty ? Icons.check_circle : Icons.warning_amber,
-                color: epgService.availableChannels.isNotEmpty ? AppTheme.accentGreen : AppTheme.accentOrange,
+                epgService.availableChannels.isNotEmpty
+                    ? Icons.check_circle
+                    : Icons.warning_amber,
+                color: epgService.availableChannels.isNotEmpty
+                    ? AppTheme.accentGreen
+                    : AppTheme.accentOrange,
                 size: 20,
               ),
               const SizedBox(width: 12),
@@ -218,8 +226,10 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          _buildStatusRow('Available Channels', '${epgService.availableChannels.length}'),
-          _buildStatusRow('Loaded Channels', '${epgService.loadedChannelCount}'),
+          _buildStatusRow(
+              'Available Channels', '${epgService.availableChannels.length}'),
+          _buildStatusRow(
+              'Loaded Channels', '${epgService.loadedChannelCount}'),
           if (epgService.error != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -245,7 +255,10 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
           ),
           Text(
             value,
-            style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w500),
+            style: const TextStyle(
+                color: AppTheme.textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w500),
           ),
         ],
       ),
@@ -273,26 +286,27 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
           Row(
             children: [
               Expanded(
-                child: _isLoading ? 
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    child: const Center(
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
+                child: _isLoading
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        child: const Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  AppTheme.primaryBlue),
+                            ),
+                          ),
                         ),
+                      )
+                    : BrandPrimaryButton(
+                        onPressed: _forceRefreshAll,
+                        icon: Icons.refresh,
+                        label: 'Force Refresh All',
+                        expand: true,
                       ),
-                    ),
-                  ) :
-                  BrandPrimaryButton(
-                    onPressed: _forceRefreshAll,
-                    icon: Icons.refresh,
-                    label: 'Force Refresh All',
-                    expand: true,
-                  ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -330,26 +344,27 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
           Row(
             children: [
               Expanded(
-                child: _isLoading ? 
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    child: const Center(
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
+                child: _isLoading
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        child: const Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  AppTheme.primaryBlue),
+                            ),
+                          ),
                         ),
+                      )
+                    : BrandSecondaryButton(
+                        onPressed: _rebuildChannelMappings,
+                        icon: Icons.build,
+                        label: 'Rebuild Mappings',
+                        expand: true,
                       ),
-                    ),
-                  ) :
-                  BrandSecondaryButton(
-                    onPressed: _rebuildChannelMappings,
-                    icon: Icons.build,
-                    label: 'Rebuild Mappings',
-                    expand: true,
-                  ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -384,26 +399,27 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          _isLoading ? 
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              child: const Center(
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
+          _isLoading
+              ? Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  child: const Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
+                      ),
+                    ),
                   ),
+                )
+              : BrandSecondaryButton(
+                  onPressed: _clearAllEpgData,
+                  icon: Icons.delete_forever,
+                  label: 'Clear All EPG Data',
+                  expand: true,
                 ),
-              ),
-            ) :
-            BrandSecondaryButton(
-              onPressed: _clearAllEpgData,
-              icon: Icons.delete_forever,
-              label: 'Clear All EPG Data',
-              expand: true,
-            ),
         ],
       ),
     );

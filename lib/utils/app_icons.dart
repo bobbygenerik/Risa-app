@@ -107,23 +107,32 @@ extension AppIconsExtension on BuildContext {
   double iconSizeXxl() => tvIconSize(AppIcons.sizeXxl);
 
   // Standard icon widgets with TV scaling
-  Widget iconXs(IconData icon, {Color? color}) => Icon(icon, size: iconSizeXs(), color: color);
-  Widget iconSm(IconData icon, {Color? color}) => Icon(icon, size: iconSizeSm(), color: color);
-  Widget iconMd(IconData icon, {Color? color}) => Icon(icon, size: iconSizeMd(), color: color);
-  Widget iconLg(IconData icon, {Color? color}) => Icon(icon, size: iconSizeLg(), color: color);
-  Widget iconXl(IconData icon, {Color? color}) => Icon(icon, size: iconSizeXl(), color: color);
-  Widget iconXxl(IconData icon, {Color? color}) => Icon(icon, size: iconSizeXxl(), color: color);
+  Widget iconXs(IconData icon, {Color? color}) =>
+      Icon(icon, size: iconSizeXs(), color: color);
+  Widget iconSm(IconData icon, {Color? color}) =>
+      Icon(icon, size: iconSizeSm(), color: color);
+  Widget iconMd(IconData icon, {Color? color}) =>
+      Icon(icon, size: iconSizeMd(), color: color);
+  Widget iconLg(IconData icon, {Color? color}) =>
+      Icon(icon, size: iconSizeLg(), color: color);
+  Widget iconXl(IconData icon, {Color? color}) =>
+      Icon(icon, size: iconSizeXl(), color: color);
+  Widget iconXxl(IconData icon, {Color? color}) =>
+      Icon(icon, size: iconSizeXxl(), color: color);
 
   // Semantic icon widgets
   Widget playIcon({Color? color}) => iconMd(AppIcons.play, color: color);
   Widget pauseIcon({Color? color}) => iconMd(AppIcons.pause, color: color);
-  Widget favoriteIcon({Color? color}) => iconSm(AppIcons.favorite, color: color);
-  Widget favoriteOutlineIcon({Color? color}) => iconSm(AppIcons.favoriteOutline, color: color);
+  Widget favoriteIcon({Color? color}) =>
+      iconSm(AppIcons.favorite, color: color);
+  Widget favoriteOutlineIcon({Color? color}) =>
+      iconSm(AppIcons.favoriteOutline, color: color);
   Widget tvIcon({Color? color}) => iconMd(AppIcons.tv, color: color);
   Widget movieIcon({Color? color}) => iconMd(AppIcons.movie, color: color);
   Widget seriesIcon({Color? color}) => iconMd(AppIcons.series, color: color);
   Widget searchIcon({Color? color}) => iconSm(AppIcons.search, color: color);
-  Widget settingsIcon({Color? color}) => iconMd(AppIcons.settings, color: color);
+  Widget settingsIcon({Color? color}) =>
+      iconMd(AppIcons.settings, color: color);
   Widget backIcon({Color? color}) => iconMd(AppIcons.back, color: color);
   Widget infoIcon({Color? color}) => iconSm(AppIcons.info, color: color);
   Widget timeIcon({Color? color}) => iconSm(AppIcons.time, color: color);

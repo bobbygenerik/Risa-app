@@ -66,8 +66,8 @@ class _LegalDisclaimerDialogState extends State<LegalDisclaimerDialog> {
             Text(
               'Important Notice',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSizes.lg),
@@ -105,8 +105,8 @@ The developers do not provide, host, or endorse any content. We are not responsi
 
 By continuing, you confirm you will only use this app for legal purposes and comply with all applicable laws.''',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    height: 1.5,
-                  ),
+                        height: 1.5,
+                      ),
                 ),
               ),
             ),
@@ -127,8 +127,8 @@ By continuing, you confirm you will only use this app for legal purposes and com
                   child: Text(
                     'I understand and will only use this app for legal content',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w500,
-                    ),
+                          fontWeight: FontWeight.w500,
+                        ),
                   ),
                 ),
               ],

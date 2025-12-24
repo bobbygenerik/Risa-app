@@ -12,7 +12,7 @@ class HttpClientService {
 
   void initialize() {
     if (_isInitialized) return;
-    
+
     // Configure HttpClient with connection pooling
     _httpClient = HttpClient()
       ..maxConnectionsPerHost = 6
@@ -38,7 +38,7 @@ class HttpClientService {
         handler.next(options);
       },
     ));
-    
+
     _isInitialized = true;
   }
 
@@ -49,17 +49,18 @@ class HttpClientService {
   /// Simple helper to fetch plain text from a URL
   Future<String> getString(String url) async {
     initialize();
-    final response = await _dio.get(url, options: Options(responseType: ResponseType.plain));
+    final response =
+        await _dio.get(url, options: Options(responseType: ResponseType.plain));
     return response.data?.toString() ?? '';
   }
 
   Map<String, String> get videoHeaders => {
-    'User-Agent': 'VLC/3.0.0 LibVLC/3.0.0',
-    'Connection': 'keep-alive',
-    'Accept': '*/*',
-    'Cache-Control': 'no-cache',
-    'Range': 'bytes=0-',
-  };
+        'User-Agent': 'VLC/3.0.0 LibVLC/3.0.0',
+        'Connection': 'keep-alive',
+        'Accept': '*/*',
+        'Cache-Control': 'no-cache',
+        'Range': 'bytes=0-',
+      };
 
   void dispose() {
     _httpClient.close();

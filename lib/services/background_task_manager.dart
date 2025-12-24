@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 
-
 /// Manages periodic background tasks for EPG and playlist sync.
 class BackgroundTaskManager {
   static Timer? _epgTimer;
@@ -14,7 +13,8 @@ class BackgroundTaskManager {
   /// Call this once at app startup, passing the BuildContext.
   static void start(BuildContext context) {
     final epg = Provider.of<IncrementalEpgService>(context, listen: false);
-    final channelProvider = Provider.of<ChannelProvider>(context, listen: false);
+    final channelProvider =
+        Provider.of<ChannelProvider>(context, listen: false);
 
     // Load playlist immediately on startup to avoid placeholder screen
     channelProvider.autoLoadPlaylist();

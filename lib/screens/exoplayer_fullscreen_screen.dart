@@ -45,7 +45,8 @@ class ExoPlayerFullscreenScreen extends StatefulWidget {
   });
 
   @override
-  State<ExoPlayerFullscreenScreen> createState() => _ExoPlayerFullscreenScreenState();
+  State<ExoPlayerFullscreenScreen> createState() =>
+      _ExoPlayerFullscreenScreenState();
 }
 
 class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
@@ -59,7 +60,7 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
   double _liveProgress = 0.0;
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
-  
+
   ExoSubtitleMode _subtitleMode = ExoSubtitleMode.off;
   IntegratedTranscriptionService? _transcriptionService;
   Timer? _controlsHideTimer;
@@ -69,23 +70,24 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
   @override
   void initState() {
     super.initState();
-    _transcriptionService = Provider.of<IntegratedTranscriptionService>(context, listen: false);
+    _transcriptionService =
+        Provider.of<IntegratedTranscriptionService>(context, listen: false);
     _playPauseFocus = FocusNode(debugLabel: 'ExoPlayerPlayPause');
-    
+
     _hideControlsAfterDelay();
     _startLiveProgressTimer();
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _playPauseFocus.requestFocus();
     });
-    
+
     unawaited(WakelockPlus.enable());
   }
 
   void _onPlatformViewCreated(int id) {
     _channel = MethodChannel('com.streamhub.iptv/exoplayer_$id');
     _channel?.setMethodCallHandler(_handleMethodCall);
-    
+
     debugLog('ExoPlayer: Platform view created with id $id');
   }
 
@@ -100,14 +102,14 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
           });
         }
         break;
-        
+
       case 'onPlayingChanged':
         final isPlaying = call.arguments['isPlaying'] as bool;
         if (mounted) {
           setState(() => _isPlaying = isPlaying);
         }
         break;
-        
+
       case 'onPositionUpdate':
         final position = (call.arguments['position'] as num).toInt();
         final duration = (call.arguments['duration'] as num).toInt();
@@ -121,7 +123,7 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
           }
         }
         break;
-        
+
       case 'onPlayerError':
         final error = call.arguments['error'] as String?;
         debugLog('ExoPlayer error: $error');
@@ -137,10 +139,10 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
     _controlsHideTimer?.cancel();
     _liveProgressTimer?.cancel();
     _playPauseFocus.dispose();
-    
+
     // Save position for VOD content
     unawaited(_saveCurrentPosition());
-    
+
     try {
       if (_transcriptionService != null) {
         unawaited(_transcriptionService!.stopTranscription());
@@ -148,30 +150,38 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
     } catch (e) {
       debugLog('TTS cleanup error: $e');
     }
-    
+
     unawaited(WakelockPlus.disable());
-    
+
     // Stop the native player
     _channel?.invokeMethod('stop');
-    
+
     super.dispose();
   }
 
   Future<void> _saveCurrentPosition() async {
     if (!widget.isLive && _position.inMilliseconds > 0) {
       final settings = Provider.of<SettingsProvider>(context, listen: false);
-      
+
       if (settings.rememberPlaybackPosition) {
-        final key = widget.content?.id ?? widget.title ?? widget.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '';
+        final key = widget.content?.id ??
+            widget.title ??
+            widget.videoUrl ??
+            widget.streamUrl ??
+            widget.channel?.url ??
+            '';
         final prefs = await SharedPreferences.getInstance();
         await prefs.setInt('position_$key', _position.inMilliseconds);
-        
+
         // Update watch progress for content
         if (widget.content != null && mounted) {
-          final contentProvider = Provider.of<ContentProvider>(context, listen: false);
+          final contentProvider =
+              Provider.of<ContentProvider>(context, listen: false);
           if (_duration.inMilliseconds > 0) {
-            final progress = _position.inMilliseconds / _duration.inMilliseconds;
-            await contentProvider.updateWatchProgress(widget.content!.id, progress);
+            final progress =
+                _position.inMilliseconds / _duration.inMilliseconds;
+            await contentProvider.updateWatchProgress(
+                widget.content!.id, progress);
           }
         }
       }
@@ -192,9 +202,13 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
       );
     }
 
-    final url = widget.videoUrl ?? widget.content?.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '';
+    final url = widget.videoUrl ??
+        widget.content?.videoUrl ??
+        widget.streamUrl ??
+        widget.channel?.url ??
+        '';
     final progressValue = widget.isLive ? _liveProgress : _progress;
-    
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: Focus(
@@ -213,10 +227,11 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
               Positioned.fill(
                 child: _buildExoPlayerView(url),
               ),
-              
+
               if (_isLoading)
-                const Center(child: CircularProgressIndicator(color: Colors.white)),
-              
+                const Center(
+                    child: CircularProgressIndicator(color: Colors.white)),
+
               // Subtitle overlay
               if (_subtitleMode == ExoSubtitleMode.liveTranslation)
                 Positioned(
@@ -225,14 +240,13 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
                   right: context.tvSpacing(20),
                   child: const LiveSubtitleOverlay(showSubtitles: true),
                 ),
-              
+
               // Modern streaming controls
               if (_showControls && !_isLoading)
                 _buildModernControls(progressValue),
-                
+
               // Guide overlay
-              if (_showGuide)
-                _buildGuideOverlay(),
+              if (_showGuide) _buildGuideOverlay(),
             ],
           ),
         ),
@@ -281,19 +295,22 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
             right: 0,
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 child: Row(
                   children: [
                     // Back button
                     IconButton(
                       onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+                      icon: const Icon(Icons.arrow_back,
+                          color: Colors.white, size: 24),
                     ),
                     const Spacer(),
                     // Live badge
                     if (widget.isLive)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.red,
                           borderRadius: BorderRadius.circular(4),
@@ -311,14 +328,15 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
                     // Guide button
                     IconButton(
                       onPressed: _toggleGuide,
-                      icon: const Icon(Icons.dvr, color: Colors.white, size: 24),
+                      icon:
+                          const Icon(Icons.dvr, color: Colors.white, size: 24),
                     ),
                   ],
                 ),
               ),
             ),
           ),
-          
+
           // Bottom controls
           Positioned(
             bottom: 0,
@@ -330,7 +348,8 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
                 children: [
                   // Control buttons
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 16),
                     child: FocusTraversalGroup(
                       policy: WidgetOrderTraversalPolicy(),
                       child: Row(
@@ -363,9 +382,9 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
                           const SizedBox(width: 12),
                           // Subtitles Menu
                           _buildControlButton(
-                            icon: _subtitleMode == ExoSubtitleMode.off 
-                              ? Icons.subtitles_outlined
-                              : Icons.subtitles,
+                            icon: _subtitleMode == ExoSubtitleMode.off
+                                ? Icons.subtitles_outlined
+                                : Icons.subtitles,
                             onPressed: _showSubtitleMenu,
                           ),
                           const SizedBox(width: 12),
@@ -393,7 +412,8 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
                       child: LinearProgressIndicator(
                         value: progressValue.clamp(0.0, 1.0),
                         backgroundColor: Colors.white.withValues(alpha: 0.3),
-                        valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                            AppTheme.primaryBlue),
                       ),
                     ),
                   ),
@@ -547,8 +567,8 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
       }
     });
 
-    final label = _videoFit == BoxFit.contain 
-        ? 'Fit' 
+    final label = _videoFit == BoxFit.contain
+        ? 'Fit'
         : (_videoFit == BoxFit.cover ? 'Zoom' : 'Stretch');
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -588,7 +608,8 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
       final tracks = await _channel?.invokeMethod('listAudioTracks');
       if (!mounted) return;
       if (tracks == null || (tracks as List).isEmpty) {
-        showAppSnackBar(context, const SnackBar(content: Text('No alternative audio tracks')));
+        showAppSnackBar(context,
+            const SnackBar(content: Text('No alternative audio tracks')));
         return;
       }
       showAppSnackBar(
@@ -609,16 +630,17 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
 
   void _setSubtitleMode(ExoSubtitleMode mode) async {
     setState(() => _subtitleMode = mode);
-    
+
     try {
-      if (mode == ExoSubtitleMode.liveTranslation && _transcriptionService != null) {
+      if (mode == ExoSubtitleMode.liveTranslation &&
+          _transcriptionService != null) {
         if (!_transcriptionService!.isInitialized) {
           final initialized = await _transcriptionService!.initialize();
           if (!initialized) {
             throw Exception('Failed to initialize transcription service');
           }
         }
-        
+
         _transcriptionService!.setTranslationEnabled(true);
         final streamUrl = widget.videoUrl ?? widget.channel?.url;
         if (streamUrl != null) {
@@ -668,8 +690,13 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
             onPressed: () {
               Navigator.pop(context);
               // Retry by reloading the video
-              final url = widget.videoUrl ?? widget.content?.videoUrl ?? widget.streamUrl ?? widget.channel?.url ?? '';
-              _channel?.invokeMethod('loadVideo', {'videoUrl': url, 'autoPlay': true});
+              final url = widget.videoUrl ??
+                  widget.content?.videoUrl ??
+                  widget.streamUrl ??
+                  widget.channel?.url ??
+                  '';
+              _channel?.invokeMethod(
+                  'loadVideo', {'videoUrl': url, 'autoPlay': true});
             },
             child: const Text('Retry'),
           ),
@@ -715,7 +742,8 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
     );
   }
 
-  Widget _buildMenuOption(String title, IconData icon, bool selected, VoidCallback onTap) {
+  Widget _buildMenuOption(
+      String title, IconData icon, bool selected, VoidCallback onTap) {
     return Material(
       color: Colors.transparent,
       child: InkWell(

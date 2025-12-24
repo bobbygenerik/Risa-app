@@ -5,7 +5,7 @@ class MLKitTranslationService extends ChangeNotifier {
   bool get isEnabled => false;
   bool get isDownloading => false;
   double get downloadProgress => 0.0;
-  
+
   Future<bool> initialize() async => false;
   Future<String> translate(String text) async => text;
   void setEnabled(bool enabled) {}

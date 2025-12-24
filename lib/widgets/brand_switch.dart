@@ -31,12 +31,16 @@ class BrandSwitchTile extends StatelessWidget {
           return AnimatedContainer(
             duration: const Duration(milliseconds: 150),
             margin: margin ?? EdgeInsets.only(bottom: context.tvSpacing(16)),
-            padding: EdgeInsets.symmetric(vertical: context.tvSpacing(8), horizontal: context.tvSpacing(8)),
+            padding: EdgeInsets.symmetric(
+                vertical: context.tvSpacing(8),
+                horizontal: context.tvSpacing(8)),
             decoration: BoxDecoration(
               color: isFocused
                   ? Colors.white.withValues(alpha: 0.2)
                   : Colors.transparent,
-              border: isFocused ? Border.all(color: AppTheme.primaryBlue, width: 2) : null,
+              border: isFocused
+                  ? Border.all(color: AppTheme.primaryBlue, width: 2)
+                  : null,
               borderRadius: BorderRadius.circular(4),
             ),
             child: Row(

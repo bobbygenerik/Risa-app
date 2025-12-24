@@ -30,28 +30,30 @@ class CachedImage extends StatelessWidget {
       width: width,
       height: height,
       fit: fit,
-      placeholder: (context, url) => placeholder ?? 
-        Container(
-          width: width,
-          height: height,
-          color: Colors.grey.withAlpha((0.2 * 255).round()),
-          child: const Center(
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
+      placeholder: (context, url) =>
+          placeholder ??
+          Container(
+            width: width,
+            height: height,
+            color: Colors.grey.withAlpha((0.2 * 255).round()),
+            child: const Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white54,
+              ),
+            ),
+          ),
+      errorWidget: (context, url, error) =>
+          errorWidget ??
+          Container(
+            width: width,
+            height: height,
+            color: Colors.grey.withAlpha((0.2 * 255).round()),
+            child: const Icon(
+              Icons.broken_image,
               color: Colors.white54,
             ),
           ),
-        ),
-      errorWidget: (context, url, error) => errorWidget ??
-        Container(
-          width: width,
-          height: height,
-          color: Colors.grey.withAlpha((0.2 * 255).round()),
-          child: const Icon(
-            Icons.broken_image,
-            color: Colors.white54,
-          ),
-        ),
       // Cache configuration
       memCacheWidth: width?.toInt(),
       memCacheHeight: height?.toInt(),

@@ -134,7 +134,8 @@ class _ExitScreenState extends State<ExitScreen> {
                     onPressed: () => context.go('/home'),
                     label: 'Go Back',
                     minHeight: 44,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
                   ),
                   const SizedBox(width: 24),
                   BrandPrimaryButton(
@@ -142,7 +143,8 @@ class _ExitScreenState extends State<ExitScreen> {
                     onPressed: () => SystemNavigator.pop(),
                     label: 'Exit App',
                     minHeight: 44,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
                   ),
                 ],
               ),

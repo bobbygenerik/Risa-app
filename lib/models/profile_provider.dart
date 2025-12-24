@@ -102,13 +102,13 @@ class ProfileProvider extends ChangeNotifier {
       await prefs.remove(_activeProfileKey);
     }
   }
-  
+
   void _notifyIfActive() {
     if (!_isDisposed) {
       notifyListeners();
     }
   }
-  
+
   @override
   void dispose() {
     _isDisposed = true;

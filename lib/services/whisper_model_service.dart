@@ -10,14 +10,18 @@ class WhisperModelService extends ChangeNotifier {
   final Map<String, bool> _isDownloading = {};
   final Set<String> _downloadedModels = {};
 
-  Map<String, double> get downloadProgress => Map.unmodifiable(_downloadProgress);
+  Map<String, double> get downloadProgress =>
+      Map.unmodifiable(_downloadProgress);
   Map<String, bool> get isDownloading => Map.unmodifiable(_isDownloading);
   Set<String> get downloadedModels => Set.unmodifiable(_downloadedModels);
 
   static const Map<String, String> _modelUrls = {
-    'Whisper Tiny (Multilingual)': 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin',
-    'Whisper Base (Multilingual)': 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin',
-    'Whisper Small (Multilingual)': 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin',
+    'Whisper Tiny (Multilingual)':
+        'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin',
+    'Whisper Base (Multilingual)':
+        'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin',
+    'Whisper Small (Multilingual)':
+        'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin',
   };
 
   Future<void> initialize() async {
@@ -34,12 +38,13 @@ class WhisperModelService extends ChangeNotifier {
 
   Future<void> _saveDownloadedModels() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('downloaded_whisper_models', _downloadedModels.toList());
+    await prefs.setStringList(
+        'downloaded_whisper_models', _downloadedModels.toList());
   }
 
   Future<bool> downloadModel(String modelName) async {
     if (_isDownloading[modelName] == true) return false;
-    
+
     final url = _modelUrls[modelName];
     if (url == null) return false;
 
@@ -76,7 +81,7 @@ class WhisperModelService extends ChangeNotifier {
           notifyListeners();
         }
       }
-      
+
       await sink.close();
       _downloadedModels.add(modelName);
       await _saveDownloadedModels();
@@ -99,11 +104,11 @@ class WhisperModelService extends ChangeNotifier {
       final directory = await getApplicationDocumentsDirectory();
       final fileName = _getModelFileName(modelName);
       final file = File('${directory.path}/whisper_models/$fileName');
-      
+
       if (await file.exists()) {
         await file.delete();
       }
-      
+
       _downloadedModels.remove(modelName);
       await _saveDownloadedModels();
       notifyListeners();
@@ -116,16 +121,20 @@ class WhisperModelService extends ChangeNotifier {
 
   String _getModelFileName(String modelName) {
     switch (modelName) {
-      case 'Whisper Tiny (Multilingual)': return 'ggml-tiny.bin';
-      case 'Whisper Base (Multilingual)': return 'ggml-base.bin';
-      case 'Whisper Small (Multilingual)': return 'ggml-small.bin';
-      default: return 'model.bin';
+      case 'Whisper Tiny (Multilingual)':
+        return 'ggml-tiny.bin';
+      case 'Whisper Base (Multilingual)':
+        return 'ggml-base.bin';
+      case 'Whisper Small (Multilingual)':
+        return 'ggml-small.bin';
+      default:
+        return 'model.bin';
     }
   }
 
   String? getModelPath(String modelName) {
     if (!_downloadedModels.contains(modelName)) return null;
-    
+
     return '${Directory.systemTemp.path}/whisper_models/${_getModelFileName(modelName)}';
   }
 }

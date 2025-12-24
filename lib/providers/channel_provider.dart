@@ -23,6 +23,7 @@ import 'content_provider.dart';
 import '../services/tmdb_enrichment_service.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
+import 'playlist_loader.dart';
 
 /// Isolate function to extract unique category names only (fast)
 /// Preserves the order categories first appear in the playlist
@@ -106,6 +107,9 @@ class ChannelProvider with ChangeNotifier {
   bool _isGroupingChannels = false;
   bool get isGroupingChannels => _isGroupingChannels;
 
+  // Playlist loader manages download+isolate parsing and supports cancellation
+  PlaylistLoader _playlistLoader = PlaylistLoader();
+
   @override
   void dispose() {
     _disposed = true;
@@ -134,6 +138,17 @@ class ChannelProvider with ChangeNotifier {
     service.initialize().catchError((e) {
       debugLog('EPG Service initialization failed in ChannelProvider: $e');
     });
+  }
+
+  /// Public API to cancel any in-progress playlist load.
+  void cancelPlaylistLoad() {
+    try {
+      _playlistLoader.cancelCurrent();
+    } catch (_) {}
+    _loadingStatus = 'Cancelled';
+    _loadingProgress = 0.0;
+    _isLoading = false;
+    notifyListeners();
   }
 
   // Watch count tracking (channelId -> count)
@@ -508,7 +523,7 @@ class ChannelProvider with ChangeNotifier {
 
           // Parse from file in isolate to avoid blocking main thread and OOM
           final parseStart = DateTime.now();
-          final parsed = await compute(parsePlaylistFromFile, cacheFilePath);
+          final parsed = await parsePlaylistCancelable(filePath: cacheFilePath);
           final parseDuration = DateTime.now().difference(parseStart);
           debugLog(
               'ChannelProvider: Cache isolate parsing took ${parseDuration.inMilliseconds}ms');
@@ -608,7 +623,8 @@ class ChannelProvider with ChangeNotifier {
             final cleaned = server.trim();
             Uri baseUri = Uri.parse(cleaned);
             if (baseUri.scheme.isEmpty || baseUri.host.isEmpty) {
-              baseUri = Uri.parse('https://${cleaned.replaceAll(RegExp(r'^https?://'), '')}');
+              baseUri = Uri.parse(
+                  'https://${cleaned.replaceAll(RegExp(r'^https?://'), '')}');
             }
 
             final playlistUri = baseUri.replace(
@@ -639,14 +655,16 @@ class ChannelProvider with ChangeNotifier {
             final oldUrl = prefs.getString('epg_url');
             final custom = prefs.getString('custom_epg_url');
             // Overwrite stored epg_url if empty or if the prior value was just the user's custom URL
-            final shouldSave = (oldUrl == null || oldUrl.isEmpty) || (custom != null && oldUrl == custom);
+            final shouldSave = (oldUrl == null || oldUrl.isEmpty) ||
+                (custom != null && oldUrl == custom);
             if (shouldSave) {
               await prefs.setString('epg_url', epgUri.toString());
               debugLog('ChannelProvider: Saved computed epg_url for Xtream');
               // Initialize EPG service later when UI requests it; do not force refresh here
             }
           } catch (e) {
-            debugLog('ChannelProvider: Failed to compute/save epg_url for Xtream: $e');
+            debugLog(
+                'ChannelProvider: Failed to compute/save epg_url for Xtream: $e');
           }
         }
       }
@@ -708,286 +726,157 @@ class ChannelProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      debugLog('ChannelProvider: Loading playlist from URL: $url');
       debugLog(
-        'ChannelProvider: Starting streamed download with 90 second timeout...',
-      );
+          'ChannelProvider: Loading playlist from URL: $url (using PlaylistLoader)');
+      // Cancel any prior loader job
+      _playlistLoader.cancelCurrent();
+      _playlistLoader = PlaylistLoader();
 
-      // Create HttpClient with maximum TLS compatibility (no SecurityContext)
-      final ioClient = HttpClient()
-        ..badCertificateCallback = (cert, host, port) {
-          debugLog('ChannelProvider: Accepting cert from $host:$port');
-          return true;
-        }
-        ..connectionTimeout = const Duration(seconds: 90)
-        ..idleTimeout = const Duration(seconds: 90);
+      _loadingStatus = 'Starting download...';
+      _loadingProgress = 0.0;
+      notifyListeners();
 
-      try {
-        ioClient.findProxy = (uri) => 'DIRECT';
-      } catch (e) {
-        debugLog('ChannelProvider: Could not set proxy: $e');
-      }
-
-      http.Client client = IOClient(ioClient);
-
-      try {
-        final request = http.Request('GET', Uri.parse(url));
-        request.headers.addAll({
-          'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
-          'Accept': '*/*',
-          'Accept-Encoding': 'gzip, deflate',
-        });
-
-        final streamedResponse = await client.send(request).timeout(
-          const Duration(seconds: 90),
-          onTimeout: () {
-            debugLog(
-              'ChannelProvider: Request timed out after 90 seconds',
-            );
-            throw Exception(
-              'Connection timeout - server took too long to respond (90s limit)',
-            );
-          },
-        ).catchError((e) {
-          // Handshake errors will be caught by outer try-catch
-          throw e;
-        });
-
-        debugLog(
-          'ChannelProvider: Response received - status: ${streamedResponse.statusCode}',
-        );
-        debugLog(
-          'ChannelProvider: Content-Type: ${streamedResponse.headers['content-type']}',
-        );
-
-        if (streamedResponse.statusCode != 200) {
-          final previewBuilder = BytesBuilder();
-          await for (final chunk in streamedResponse.stream) {
-            if (previewBuilder.length >= _debugCaptureBytes) continue;
-            final remaining = _debugCaptureBytes - previewBuilder.length;
-            previewBuilder.add(
-              chunk.length <= remaining ? chunk : chunk.sublist(0, remaining),
-            );
-          }
-          _lastM3UContent = utf8.decode(
-            previewBuilder.takeBytes(),
-            allowMalformed: true,
-          );
-          throw Exception(
-            'HTTP ${streamedResponse.statusCode}: Failed to load playlist',
-          );
-        }
-
-        // Stream download directly to temp file to avoid OOM on large playlists
-        final dir = await getApplicationDocumentsDirectory();
-        final tempFile = File('${dir.path}/temp_playlist.m3u');
-        final sink = tempFile.openWrite();
-        final debugBuilder = BytesBuilder();
-        int totalBytes = 0;
-
-        final downloadStart = DateTime.now();
-        _loadingStatus = 'Downloading playlist...';
-        _loadingProgress = 0.0;
+      final parsed =
+          await _playlistLoader.loadFromUrl(url, onProgress: (count) {
+        // Emit progressive parsing progress
+        _loadingStatus = 'Parsing playlist: $count channels';
+        // Rough normalized progress: parsing dominates after download
+        _loadingProgress = 0.5 + (count / 20000).clamp(0.0, 0.45);
         notifyListeners();
+      });
 
-        try {
-          await for (final chunk in streamedResponse.stream) {
-            totalBytes += chunk.length;
-            sink.add(chunk);
-            if (debugBuilder.length < _debugCaptureBytes) {
-              final remaining = _debugCaptureBytes - debugBuilder.length;
-              debugBuilder.add(
-                chunk.length <= remaining ? chunk : chunk.sublist(0, remaining),
-              );
-            }
-            // Update progress (estimate)
-            if (totalBytes % (1024 * 1024) == 0) {
-              // Every MB
-              _loadingProgress = 0.3; // Download is 30% of total work
-              _loadingStatus =
-                  'Downloaded ${(totalBytes / (1024 * 1024)).toStringAsFixed(1)} MB...';
-              notifyListeners();
-            }
-          }
-          await sink.flush();
-        } finally {
-          await sink.close();
-        }
-        final downloadDuration = DateTime.now().difference(downloadStart);
-        debugLog(
-            'ChannelProvider: Downloaded $totalBytes bytes in ${downloadDuration.inMilliseconds}ms');
-        if (debugBuilder.length > 0) {
-          _lastM3UContent = utf8.decode(
-            debugBuilder.takeBytes(),
-            allowMalformed: true,
-          );
-        }
-
-        // Check for empty playlist file
-        if (!await tempFile.exists() || await tempFile.length() == 0) {
-          _errorMessage =
-              'The downloaded playlist file is empty. Please check your playlist URL or server.';
-          _isLoading = false;
-          notifyListeners();
-          throw Exception('Empty playlist file');
-        }
-
-        // Parse playlist from file in background isolate (memory efficient)
-        _loadingStatus = 'Parsing playlist...';
-        _loadingProgress = 0.5;
-        notifyListeners();
-
-        PerformanceMonitor.start('PLAYLIST_PARSE_ISOLATE');
-        final parseStart = DateTime.now();
-        final parsed = await compute(parsePlaylistFromFile, tempFile.path);
-        final parseDuration = DateTime.now().difference(parseStart);
-        PerformanceMonitor.end('PLAYLIST_PARSE_ISOLATE');
-        debugLog(
-            'ChannelProvider: Isolate parsing took ${parseDuration.inMilliseconds}ms');
-
-        // Check for empty or invalid parsed data
-        if (parsed['channels'] == null ||
-            (parsed['channels'] as List).isEmpty) {
-          _errorMessage =
-              'The playlist file could not be parsed or contains no channels. Please check your playlist source.';
-          _isLoading = false;
-          notifyListeners();
-          throw Exception('Parsed playlist is empty or invalid');
-        }
-
-        final prefs = await SharedPreferences.getInstance();
-
-        // Extract and save EPG URL if found
-        final epgUrl = parsed['epgUrl'] as String?;
-        if (epgUrl != null && epgUrl.isNotEmpty) {
-          final oldUrl = prefs.getString('epg_url');
-          final urlChanged = oldUrl != epgUrl;
-          debugLog(
-              'ChannelProvider: Found EPG URL in playlist: $epgUrl (changed: $urlChanged)');
-          await prefs.setString('epg_url', epgUrl);
-          if (_epgService != null) {
-            debugLog(
-                'ChannelProvider: Initializing EPG service with URL from M3U');
-            await _epgService!.initialize(forceRefresh: urlChanged);
-          }
-        }
-
-        _loadingStatus = 'Processing channels...';
-        _loadingProgress = 0.7;
-        notifyListeners();
-
-        final mapStart = DateTime.now();
-        final rawChannels = parsed['channels'] as List<dynamic>;
-        _channelMaps.clear();
-        _channelCache.clear();
-
-        const chunkSize = 1000;
-        for (int i = 0; i < rawChannels.length; i += chunkSize) {
-          final end = (i + chunkSize).clamp(0, rawChannels.length);
-          final chunk = rawChannels.sublist(i, end);
-
-          for (final c in chunk) {
-            _channelMaps.add(Map<String, dynamic>.from(c));
-          }
-
-          if (rawChannels.length > 5000 && i % (chunkSize * 2) == 0) {
-            _loadingStatus =
-                'Processing channels... ${i + end}/${rawChannels.length}';
-            _loadingProgress = 0.7 + (0.1 * (i + end) / rawChannels.length);
-            notifyListeners();
-            await Future.delayed(Duration.zero);
-          }
-        }
-
-        try {
-          final playlistJson = json.encode(_channelMaps);
-          await prefs.setString('flutter.cached_playlist', playlistJson);
-          debugLog(
-              'ChannelProvider: Saved playlist to flutter.cached_playlist for Android Auto');
-          debugLog(
-              'ChannelProvider: flutter.cached_playlist contents: ${playlistJson.substring(0, playlistJson.length > 500 ? 500 : playlistJson.length)}');
-        } catch (e) {
-          debugLog(
-              'ChannelProvider: Failed to save playlist for Android Auto: $e');
-        }
-
-        final List<Content> movies = (parsed['movies'] as List<dynamic>)
-            .map((m) => Content.fromMap(Map<String, dynamic>.from(m)))
-            .toList();
-        final List<Content> series = (parsed['series'] as List<dynamic>)
-            .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
-            .toList();
-
-        _moviesCount = movies.length;
-        _seriesCount = series.length;
-
-        _loadingStatus = 'Saving VOD content...';
-        _loadingProgress = 0.8;
-        notifyListeners();
-
-        _moviesCachePath = '${dir.path}/movies_cache.json';
-        _seriesCachePath = '${dir.path}/series_cache.json';
-        await File(_moviesCachePath!)
-            .writeAsString(json.encode(movies.map((m) => m.toMap()).toList()));
-        await File(_seriesCachePath!)
-            .writeAsString(json.encode(series.map((s) => s.toMap()).toList()));
-        final mapDuration = DateTime.now().difference(mapStart);
-        debugLog(
-            'ChannelProvider: Map conversion took ${mapDuration.inMilliseconds}ms');
-
-        _cachedCategories = null;
-        unawaited(_computeCategoriesAsync());
-
-        debugLog(
-            'ChannelProvider: Parsed ${_channelMaps.length} channels (isolate)');
-        debugLog(
-            'ChannelProvider: Parsed $_moviesCount movies, $_seriesCount series (isolate)');
-
-        _loadingStatus = 'Loading initial VOD content...';
-        _loadingProgress = 0.9;
-        notifyListeners();
-
-        if (_contentProvider != null) {
-          _contentProvider!.loadMovies(movies.take(100).toList());
-          _contentProvider!.loadSeries(series.take(100).toList());
-        }
-
-        _loadingStatus = 'Finalizing...';
-        _loadingProgress = 0.95;
-        notifyListeners();
-
-        final now = DateTime.now().millisecondsSinceEpoch;
-        final cacheFile = File('${dir.path}/$_playlistCacheFileName');
-        if (await tempFile.exists()) {
-          if (await cacheFile.exists()) {
-            await cacheFile.delete();
-          }
-          await tempFile.rename(cacheFile.path);
-          await prefs.setString(_playlistCacheFilePathKey, cacheFile.path);
-          await prefs.setInt('cache_timestamp', now);
-          await prefs.remove('cached_playlist');
-          debugLog(
-              'ChannelProvider: Playlist cached to file (${cacheFile.path}, $totalBytes bytes)');
-        }
-
-        unawaited(_saveJsonCache(parsed));
-        unawaited(_loadXtreamVOD(url));
-
-        _loadingProgress = 1.0;
-        _loadingStatus = 'Complete!';
+      // Validate parsed result
+      if (parsed['channels'] == null || (parsed['channels'] as List).isEmpty) {
+        _errorMessage =
+            'The playlist file could not be parsed or contains no channels. Please check your playlist source.';
         _isLoading = false;
-        _hasLoadedPlaylist = true;
         notifyListeners();
-
-        PerformanceMonitor.end('PLAYLIST_LOAD_TOTAL');
-        PerformanceMonitor.trackMemoryUsage('After playlist load');
-        debugLog(
-            'ChannelProvider: Loaded ${_channelMaps.length} channels, cache size: ${_channelCache.length}');
-
-        unawaited(_startBackgroundEnrichment());
-      } finally {
-        client.close();
+        throw Exception('Parsed playlist is empty or invalid');
       }
+
+      final prefs = await SharedPreferences.getInstance();
+
+      // Extract and save EPG URL if found
+      final epgUrl = parsed['epgUrl'] as String?;
+      if (epgUrl != null && epgUrl.isNotEmpty) {
+        final oldUrl = prefs.getString('epg_url');
+        final urlChanged = oldUrl != epgUrl;
+        debugLog(
+            'ChannelProvider: Found EPG URL in playlist: $epgUrl (changed: $urlChanged)');
+        await prefs.setString('epg_url', epgUrl);
+        if (_epgService != null) {
+          debugLog(
+              'ChannelProvider: Initializing EPG service with URL from M3U');
+          await _epgService!.initialize(forceRefresh: urlChanged);
+        }
+      }
+
+      _loadingStatus = 'Processing channels...';
+      _loadingProgress = 0.7;
+      notifyListeners();
+
+      final mapStart = DateTime.now();
+      final rawChannels = parsed['channels'] as List<dynamic>;
+      _channelMaps.clear();
+      _channelCache.clear();
+
+      const chunkSize = 1000;
+      for (int i = 0; i < rawChannels.length; i += chunkSize) {
+        final end = (i + chunkSize).clamp(0, rawChannels.length);
+        final chunk = rawChannels.sublist(i, end);
+
+        for (final c in chunk) {
+          _channelMaps.add(Map<String, dynamic>.from(c));
+        }
+
+        if (rawChannels.length > 5000 && i % (chunkSize * 2) == 0) {
+          _loadingStatus =
+              'Processing channels... ${i + end}/${rawChannels.length}';
+          _loadingProgress = 0.7 + (0.1 * (i + end) / rawChannels.length);
+          notifyListeners();
+          await Future.delayed(Duration.zero);
+        }
+      }
+
+      try {
+        final playlistJson = json.encode(_channelMaps);
+        await prefs.setString('flutter.cached_playlist', playlistJson);
+        debugLog(
+            'ChannelProvider: Saved playlist to flutter.cached_playlist for Android Auto');
+      } catch (e) {
+        debugLog(
+            'ChannelProvider: Failed to save playlist for Android Auto: $e');
+      }
+
+      final List<Content> movies = (parsed['movies'] as List<dynamic>)
+          .map((m) => Content.fromMap(Map<String, dynamic>.from(m)))
+          .toList();
+      final List<Content> series = (parsed['series'] as List<dynamic>)
+          .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
+          .toList();
+
+      _moviesCount = movies.length;
+      _seriesCount = series.length;
+
+      _loadingStatus = 'Saving VOD content...';
+      _loadingProgress = 0.8;
+      notifyListeners();
+
+      final dir = await getApplicationDocumentsDirectory();
+      _moviesCachePath = '${dir.path}/movies_cache.json';
+      _seriesCachePath = '${dir.path}/series_cache.json';
+      await File(_moviesCachePath!)
+          .writeAsString(json.encode(movies.map((m) => m.toMap()).toList()));
+      await File(_seriesCachePath!)
+          .writeAsString(json.encode(series.map((s) => s.toMap()).toList()));
+      final mapDuration = DateTime.now().difference(mapStart);
+      debugLog(
+          'ChannelProvider: Map conversion took ${mapDuration.inMilliseconds}ms');
+
+      _cachedCategories = null;
+      unawaited(_computeCategoriesAsync());
+
+      debugLog(
+          'ChannelProvider: Parsed ${_channelMaps.length} channels (isolate)');
+      debugLog(
+          'ChannelProvider: Parsed $_moviesCount movies, $_seriesCount series (isolate)');
+
+      _loadingStatus = 'Loading initial VOD content...';
+      _loadingProgress = 0.9;
+      notifyListeners();
+
+      if (_contentProvider != null) {
+        _contentProvider!.loadMovies(movies.take(100).toList());
+        _contentProvider!.loadSeries(series.take(100).toList());
+      }
+
+      _loadingStatus = 'Finalizing...';
+      _loadingProgress = 0.95;
+      notifyListeners();
+
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final cacheFile = File('${dir.path}/$_playlistCacheFileName');
+      // PlaylistLoader stores temp files internally; we just write cache metadata
+      if (_channelMaps.isNotEmpty) {
+        await prefs.setString(_playlistCacheFilePathKey, cacheFile.path);
+        await prefs.setInt('cache_timestamp', now);
+      }
+
+      unawaited(_saveJsonCache(parsed));
+      unawaited(_loadXtreamVOD(url));
+
+      _loadingProgress = 1.0;
+      _loadingStatus = 'Complete!';
+      _isLoading = false;
+      _hasLoadedPlaylist = true;
+      notifyListeners();
+
+      PerformanceMonitor.end('PLAYLIST_LOAD_TOTAL');
+      PerformanceMonitor.trackMemoryUsage('After playlist load');
+      debugLog(
+          'ChannelProvider: Loaded ${_channelMaps.length} channels, cache size: ${_channelCache.length}');
+
+      unawaited(_startBackgroundEnrichment());
     } catch (e, stackTrace) {
       debugLog('ChannelProvider: Error loading playlist: $e');
       debugLog('ChannelProvider: Stack trace: $stackTrace');
@@ -1101,7 +990,7 @@ class ChannelProvider with ChangeNotifier {
           'ChannelProvider: Downloaded $totalBytes bytes to temp file (direct client)');
 
       // Parse from file in background isolate (memory efficient)
-      final parsed = await compute(parsePlaylistFromFile, tempFile.path);
+      final parsed = await parsePlaylistCancelable(filePath: tempFile.path);
 
       // Store raw maps - don't convert to Channel objects on main thread!
       _channelMaps = (parsed['channels'] as List<dynamic>)
@@ -1160,18 +1049,20 @@ class ChannelProvider with ChangeNotifier {
       if (epgUrl != null && epgUrl.isNotEmpty) {
         debugLog('ChannelProvider: Found EPG URL: $epgUrl (auto-saving)');
         await prefs.setString('custom_epg_url', epgUrl);
-          try {
-                final enc = base64Url.encode(utf8.encode(url));
-                await prefs.setString('m3u_epg_url_$enc', epgUrl);
-                await prefs.remove('m3u_epg_url_$url');
-              } catch (_) {
+        try {
+          final enc = base64Url.encode(utf8.encode(url));
+          await prefs.setString('m3u_epg_url_$enc', epgUrl);
+          await prefs.remove('m3u_epg_url_$url');
+        } catch (_) {
           // ignore per-playlist save errors
         }
         try {
           await _epgService?.initialize(forceRefresh: true);
-          debugLog('ChannelProvider: EPG initialized (auto-save). Available channels: ${_epgService?.availableChannels.length}, Error: ${_epgService?.error}');
+          debugLog(
+              'ChannelProvider: EPG initialized (auto-save). Available channels: ${_epgService?.availableChannels.length}, Error: ${_epgService?.error}');
         } catch (e) {
-          debugLog('ChannelProvider: EPG initialization failed after auto-save: $e');
+          debugLog(
+              'ChannelProvider: EPG initialization failed after auto-save: $e');
         }
       }
 
@@ -1249,9 +1140,11 @@ class ChannelProvider with ChangeNotifier {
         await prefs.setString('custom_epg_url', epgUrl);
         try {
           await _epgService?.initialize(forceRefresh: true);
-          debugLog('ChannelProvider: EPG initialized (M3U). Available channels: ${_epgService?.availableChannels.length}, Error: ${_epgService?.error}');
+          debugLog(
+              'ChannelProvider: EPG initialized (M3U). Available channels: ${_epgService?.availableChannels.length}, Error: ${_epgService?.error}');
         } catch (e) {
-          debugLog('ChannelProvider: EPG initialization failed after M3U save: $e');
+          debugLog(
+              'ChannelProvider: EPG initialization failed after M3U save: $e');
         }
       }
 
@@ -1423,23 +1316,32 @@ class ChannelProvider with ChangeNotifier {
       try {
         final liveStreams = await xtreamService.getAllLiveStreams();
         if (liveStreams.isNotEmpty) {
-          debugLog('ChannelProvider: Retrieved ${liveStreams.length} live streams from Xtream API for EPG probing');
+          debugLog(
+              'ChannelProvider: Retrieved ${liveStreams.length} live streams from Xtream API for EPG probing');
 
           // Collect potential EPG URL candidates and per-stream EPG IDs
           final Set<String> epgUrls = {};
-          final Map<String, String> streamIdToEpgId = {}; // keyed by stream_id or name
+          final Map<String, String> streamIdToEpgId =
+              {}; // keyed by stream_id or name
 
           for (final s in liveStreams) {
             // Common fields: 'epg', 'stream_epg', 'epg_channel_id', 'stream_id', 'name'
-            final epgCandidate = (s['epg'] ?? s['stream_epg'] ?? s['epg_channel_id'] ?? s['epg_url'])?.toString();
+            final epgCandidate = (s['epg'] ??
+                    s['stream_epg'] ??
+                    s['epg_channel_id'] ??
+                    s['epg_url'])
+                ?.toString();
             if (epgCandidate != null && epgCandidate.isNotEmpty) {
               // If it looks like a URL, add to epgUrls; otherwise keep as epg id
               if (epgCandidate.startsWith('http')) {
                 epgUrls.add(epgCandidate);
-              } else if (epgCandidate.startsWith('/') || epgCandidate.contains('xmltv') || epgCandidate.contains('.php')) {
+              } else if (epgCandidate.startsWith('/') ||
+                  epgCandidate.contains('xmltv') ||
+                  epgCandidate.contains('.php')) {
                 // Relative or server-provided path - resolve against Xtream server URL
                 try {
-                  final resolved = '${serverUrl.replaceAll(RegExp(r'\/$'), '')}/${epgCandidate.replaceAll(RegExp(r'^\/+'), '')}';
+                  final resolved =
+                      '${serverUrl.replaceAll(RegExp(r'\/$'), '')}/${epgCandidate.replaceAll(RegExp(r'^\/+'), '')}';
                   epgUrls.add(resolved);
                 } catch (_) {
                   // ignore resolution errors
@@ -1467,10 +1369,12 @@ class ChannelProvider with ChangeNotifier {
               try {
                 final req = http.Request('GET', Uri.parse(candidate));
                 req.headers.addAll({
-                  'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
+                  'User-Agent':
+                      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
                   'Accept': '*/*',
                 });
-                final streamed = await client.send(req).timeout(const Duration(seconds: 15));
+                final streamed =
+                    await client.send(req).timeout(const Duration(seconds: 15));
                 if (streamed.statusCode == 200) {
                   // Read a small preview (first ~4KB) to validate it's XML-like
                   final preview = <int>[];
@@ -1478,8 +1382,12 @@ class ChannelProvider with ChangeNotifier {
                     preview.addAll(chunk);
                     if (preview.length >= 4096) break;
                   }
-                  final textPreview = utf8.decode(preview, allowMalformed: true).trimLeft();
-                  if (textPreview.startsWith('<?xml') || textPreview.startsWith('<tv') || streamed.headers['content-type']?.contains('xml') == true) {
+                  final textPreview =
+                      utf8.decode(preview, allowMalformed: true).trimLeft();
+                  if (textPreview.startsWith('<?xml') ||
+                      textPreview.startsWith('<tv') ||
+                      streamed.headers['content-type']?.contains('xml') ==
+                          true) {
                     accepted = candidate;
                     break;
                   }
@@ -1492,8 +1400,15 @@ class ChannelProvider with ChangeNotifier {
 
             // If no candidate accepted yet, try probing a set of common EPG filenames
             if (accepted == null) {
-              final commonPaths = ['xmltv.php', 'xmltv', 'epg.xml', 'epg.php', 'xmltv/xml.php'];
-              debugLog('ChannelProvider: No EPG accepted from candidates, trying common paths: ${commonPaths.join(', ')}');
+              final commonPaths = [
+                'xmltv.php',
+                'xmltv',
+                'epg.xml',
+                'epg.php',
+                'xmltv/xml.php'
+              ];
+              debugLog(
+                  'ChannelProvider: No EPG accepted from candidates, trying common paths: ${commonPaths.join(', ')}');
               final client2 = http.Client();
               for (final p in commonPaths) {
                 try {
@@ -1502,25 +1417,34 @@ class ChannelProvider with ChangeNotifier {
                   debugLog('ChannelProvider: Probing common path: $probeUri');
                   final req = http.Request('GET', Uri.parse(probeUri));
                   req.headers.addAll({
-                    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
+                    'User-Agent':
+                        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
                     'Accept': '*/*',
                   });
-                  final streamed = await client2.send(req).timeout(const Duration(seconds: 12));
-                  debugLog('ChannelProvider: Probe $probeUri returned ${streamed.statusCode}');
+                  final streamed = await client2
+                      .send(req)
+                      .timeout(const Duration(seconds: 12));
+                  debugLog(
+                      'ChannelProvider: Probe $probeUri returned ${streamed.statusCode}');
                   if (streamed.statusCode == 200) {
                     final preview = <int>[];
                     await for (final chunk in streamed.stream) {
                       preview.addAll(chunk);
                       if (preview.length >= 4096) break;
                     }
-                    final textPreview = utf8.decode(preview, allowMalformed: true).trimLeft();
-                    if (textPreview.startsWith('<?xml') || textPreview.startsWith('<tv') || streamed.headers['content-type']?.contains('xml') == true) {
+                    final textPreview =
+                        utf8.decode(preview, allowMalformed: true).trimLeft();
+                    if (textPreview.startsWith('<?xml') ||
+                        textPreview.startsWith('<tv') ||
+                        streamed.headers['content-type']?.contains('xml') ==
+                            true) {
                       accepted = probeUri;
                       break;
                     }
                   }
                 } catch (e) {
-                  debugLog('ChannelProvider: Common-path probe failed for $p: $e');
+                  debugLog(
+                      'ChannelProvider: Common-path probe failed for $p: $e');
                 }
               }
               client2.close();
@@ -1531,7 +1455,8 @@ class ChannelProvider with ChangeNotifier {
               try {
                 final proxySetting = prefs.getString('epg_probe_proxy');
                 if (proxySetting != null && proxySetting.isNotEmpty) {
-                  debugLog('ChannelProvider: Retrying EPG probes via proxy: $proxySetting');
+                  debugLog(
+                      'ChannelProvider: Retrying EPG probes via proxy: $proxySetting');
                   Uri? proxyUri;
                   try {
                     proxyUri = Uri.parse(proxySetting);
@@ -1539,16 +1464,23 @@ class ChannelProvider with ChangeNotifier {
                     // allow simple host:port format
                     final parts = proxySetting.split(':');
                     if (parts.length == 2) {
-                      proxyUri = Uri(scheme: 'http', host: parts[0], port: int.tryParse(parts[1]) ?? 0);
+                      proxyUri = Uri(
+                          scheme: 'http',
+                          host: parts[0],
+                          port: int.tryParse(parts[1]) ?? 0);
                     }
                   }
 
-                  if (proxyUri != null && proxyUri.host.isNotEmpty && proxyUri.port != 0) {
+                  if (proxyUri != null &&
+                      proxyUri.host.isNotEmpty &&
+                      proxyUri.port != 0) {
                     final ioClient = HttpClient();
                     try {
-                      ioClient.findProxy = (uri) => 'PROXY ${proxyUri!.host}:${proxyUri.port}';
+                      ioClient.findProxy =
+                          (uri) => 'PROXY ${proxyUri!.host}:${proxyUri.port}';
                     } catch (e) {
-                      debugLog('ChannelProvider: Could not set proxy on HttpClient: $e');
+                      debugLog(
+                          'ChannelProvider: Could not set proxy on HttpClient: $e');
                     }
                     final proxiedClient = IOClient(ioClient);
                     try {
@@ -1556,18 +1488,27 @@ class ChannelProvider with ChangeNotifier {
                         try {
                           final req = http.Request('GET', Uri.parse(candidate));
                           req.headers.addAll({
-                            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
+                            'User-Agent':
+                                'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
                             'Accept': '*/*',
                           });
-                          final streamed = await proxiedClient.send(req).timeout(const Duration(seconds: 25));
+                          final streamed = await proxiedClient
+                              .send(req)
+                              .timeout(const Duration(seconds: 25));
                           if (streamed.statusCode == 200) {
                             final preview = <int>[];
                             await for (final chunk in streamed.stream) {
                               preview.addAll(chunk);
                               if (preview.length >= 4096) break;
                             }
-                            final textPreview = utf8.decode(preview, allowMalformed: true).trimLeft();
-                            if (textPreview.startsWith('<?xml') || textPreview.startsWith('<tv') || streamed.headers['content-type']?.contains('xml') == true) {
+                            final textPreview = utf8
+                                .decode(preview, allowMalformed: true)
+                                .trimLeft();
+                            if (textPreview.startsWith('<?xml') ||
+                                textPreview.startsWith('<tv') ||
+                                streamed.headers['content-type']
+                                        ?.contains('xml') ==
+                                    true) {
                               accepted = candidate;
                               break;
                             }
@@ -1592,14 +1533,18 @@ class ChannelProvider with ChangeNotifier {
             if (accepted != null) {
               // Show a UI hint that EPG was auto-detected
               try {
-                final display = accepted.length > 80 ? '${accepted.substring(0, 80)}...' : accepted;
+                final display = accepted.length > 80
+                    ? '${accepted.substring(0, 80)}...'
+                    : accepted;
                 rootScaffoldMessengerKey.currentState?.showSnackBar(
-                  SnackBar(content: Text('EPG auto-detected and saved: $display')),
+                  SnackBar(
+                      content: Text('EPG auto-detected and saved: $display')),
                 );
               } catch (_) {
                 // ignore UI snackbar failures
               }
-              debugLog('ChannelProvider: Found EPG URL via Xtream API: $accepted (auto-saving)');
+              debugLog(
+                  'ChannelProvider: Found EPG URL via Xtream API: $accepted (auto-saving)');
               await prefs.setString('custom_epg_url', accepted);
               // Also set canonical epg_url so other services read it directly
               try {
@@ -1615,63 +1560,81 @@ class ChannelProvider with ChangeNotifier {
               }
               try {
                 await _epgService?.initialize(forceRefresh: true);
-                debugLog('ChannelProvider: EPG initialized after Xtream probe. Available: ${_epgService?.availableChannels.length}, Error: ${_epgService?.error}');
+                debugLog(
+                    'ChannelProvider: EPG initialized after Xtream probe. Available: ${_epgService?.availableChannels.length}, Error: ${_epgService?.error}');
               } catch (e) {
-                debugLog('ChannelProvider: EPG initialization failed after Xtream probe: $e');
+                debugLog(
+                    'ChannelProvider: EPG initialization failed after Xtream probe: $e');
               }
             }
           }
-            // If still not accepted, and we have Xtream credentials, try probing
-            // same-host candidates with username/password appended (some providers
-            // require auth parameters on the XMLTV endpoint).
-            if (accepted == null) {
-              try {
-                final prefs2 = await SharedPreferences.getInstance();
-                final xtUser = prefs2.getString('xtream_username') ?? prefs2.getString('xtream_user') ?? username;
-                final xtPass = prefs2.getString('xtream_password') ?? prefs2.getString('xtream_pass') ?? password;
-                if ((xtUser.isNotEmpty) && (xtPass.isNotEmpty)) {
-                  debugLog('ChannelProvider: Attempting credentialed probes using Xtream creds');
-                  final baseUri = Uri.parse(serverUrl);
-                  for (final candidate in epgUrls) {
-                    try {
-                      final uri = Uri.parse(candidate);
-                      if (uri.host == baseUri.host) {
-                        final newQuery = StringBuffer();
-                        if (uri.query.isNotEmpty) {
-                          newQuery.write(uri.query);
-                          newQuery.write('&');
+          // If still not accepted, and we have Xtream credentials, try probing
+          // same-host candidates with username/password appended (some providers
+          // require auth parameters on the XMLTV endpoint).
+          if (accepted == null) {
+            try {
+              final prefs2 = await SharedPreferences.getInstance();
+              final xtUser = prefs2.getString('xtream_username') ??
+                  prefs2.getString('xtream_user') ??
+                  username;
+              final xtPass = prefs2.getString('xtream_password') ??
+                  prefs2.getString('xtream_pass') ??
+                  password;
+              if ((xtUser.isNotEmpty) && (xtPass.isNotEmpty)) {
+                debugLog(
+                    'ChannelProvider: Attempting credentialed probes using Xtream creds');
+                final baseUri = Uri.parse(serverUrl);
+                for (final candidate in epgUrls) {
+                  try {
+                    final uri = Uri.parse(candidate);
+                    if (uri.host == baseUri.host) {
+                      final newQuery = StringBuffer();
+                      if (uri.query.isNotEmpty) {
+                        newQuery.write(uri.query);
+                        newQuery.write('&');
+                      }
+                      newQuery.write(
+                          'username=${Uri.encodeComponent(xtUser)}&password=${Uri.encodeComponent(xtPass)}');
+                      final credUri =
+                          uri.replace(query: newQuery.toString()).toString();
+                      debugLog(
+                          'ChannelProvider: Probing credentialed URL: $credUri');
+                      final req = http.Request('GET', Uri.parse(credUri));
+                      req.headers.addAll({
+                        'User-Agent':
+                            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
+                        'Accept': '*/*',
+                      });
+                      final streamed = await client
+                          .send(req)
+                          .timeout(const Duration(seconds: 15));
+                      if (streamed.statusCode == 200) {
+                        final preview = <int>[];
+                        await for (final chunk in streamed.stream) {
+                          preview.addAll(chunk);
+                          if (preview.length >= 4096) break;
                         }
-                        newQuery.write('username=${Uri.encodeComponent(xtUser)}&password=${Uri.encodeComponent(xtPass)}');
-                        final credUri = uri.replace(query: newQuery.toString()).toString();
-                        debugLog('ChannelProvider: Probing credentialed URL: $credUri');
-                        final req = http.Request('GET', Uri.parse(credUri));
-                        req.headers.addAll({
-                          'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
-                          'Accept': '*/*',
-                        });
-                        final streamed = await client.send(req).timeout(const Duration(seconds: 15));
-                        if (streamed.statusCode == 200) {
-                          final preview = <int>[];
-                          await for (final chunk in streamed.stream) {
-                            preview.addAll(chunk);
-                            if (preview.length >= 4096) break;
-                          }
-                          final textPreview = utf8.decode(preview, allowMalformed: true).trimLeft();
-                          if (textPreview.startsWith('<?xml') || textPreview.startsWith('<tv') || streamed.headers['content-type']?.contains('xml') == true) {
-                            accepted = credUri;
-                            break;
-                          }
+                        final textPreview = utf8
+                            .decode(preview, allowMalformed: true)
+                            .trimLeft();
+                        if (textPreview.startsWith('<?xml') ||
+                            textPreview.startsWith('<tv') ||
+                            streamed.headers['content-type']?.contains('xml') ==
+                                true) {
+                          accepted = credUri;
+                          break;
                         }
                       }
-                    } catch (e) {
-                      debugLog('ChannelProvider: Credentialed probe failed: $e');
                     }
+                  } catch (e) {
+                    debugLog('ChannelProvider: Credentialed probe failed: $e');
                   }
                 }
-              } catch (e) {
-                debugLog('ChannelProvider: Error during credentialed probes: $e');
               }
+            } catch (e) {
+              debugLog('ChannelProvider: Error during credentialed probes: $e');
             }
+          }
 
           // If we found per-stream epg ids, map them into channel maps by matching stream id or name
           if (streamIdToEpgId.isNotEmpty && _channelMaps.isNotEmpty) {
@@ -1685,14 +1648,18 @@ class ChannelProvider with ChangeNotifier {
               String? streamIdFromUrl;
               try {
                 final uri = Uri.parse(url);
-                final parts = uri.path.split('/').where((p) => p.isNotEmpty).toList();
+                final parts =
+                    uri.path.split('/').where((p) => p.isNotEmpty).toList();
                 if (parts.isNotEmpty) streamIdFromUrl = parts.last;
               } catch (_) {
                 // ignore
               }
 
               // Lookup by stream id then by name
-              final epgId = (streamIdFromUrl != null ? streamIdToEpgId[streamIdFromUrl] : null) ?? streamIdToEpgId[name];
+              final epgId = (streamIdFromUrl != null
+                      ? streamIdToEpgId[streamIdFromUrl]
+                      : null) ??
+                  streamIdToEpgId[name];
 
               if (epgId != null) {
                 map['tvgId'] = epgId;
@@ -1700,14 +1667,16 @@ class ChannelProvider with ChangeNotifier {
               }
             }
             if (mapped > 0) {
-              debugLog('ChannelProvider: Mapped $mapped channels to EPG IDs from Xtream API');
+              debugLog(
+                  'ChannelProvider: Mapped $mapped channels to EPG IDs from Xtream API');
               _channelCache.clear();
               notifyListeners();
             }
           }
         }
       } catch (e) {
-        debugLog('ChannelProvider: Error probing Xtream live streams for EPG: $e');
+        debugLog(
+            'ChannelProvider: Error probing Xtream live streams for EPG: $e');
       }
 
       // Merge with existing VOD counts (avoid duplicates in count)

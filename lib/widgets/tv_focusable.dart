@@ -8,34 +8,34 @@ class TVFocusStyle {
   static const Curve animationCurve = Curves.easeOutCubic;
   static const Color glowColor = Color(0x60FFFFFF); // Increased opacity
   static const Color focusRingColor = AppTheme.primaryBlue;
-  
+
   static List<BoxShadow> get focusedShadow => [
-    BoxShadow(
-      color: Colors.black.withValues(alpha: 0.5),
-      blurRadius: 25,
-      spreadRadius: 2,
-      offset: const Offset(0, 10),
-    ),
-    BoxShadow(
-      color: focusRingColor.withValues(alpha: 0.5),
-      blurRadius: 20,
-      spreadRadius: 1,
-    ),
-    BoxShadow(
-      color: focusRingColor.withValues(alpha: 0.3),
-      blurRadius: 35,
-      spreadRadius: 3,
-    ),
-  ];
-  
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.5),
+          blurRadius: 25,
+          spreadRadius: 2,
+          offset: const Offset(0, 10),
+        ),
+        BoxShadow(
+          color: focusRingColor.withValues(alpha: 0.5),
+          blurRadius: 20,
+          spreadRadius: 1,
+        ),
+        BoxShadow(
+          color: focusRingColor.withValues(alpha: 0.3),
+          blurRadius: 35,
+          spreadRadius: 3,
+        ),
+      ];
+
   static List<BoxShadow> get defaultShadow => [
-    BoxShadow(
-      color: Colors.black.withValues(alpha: 0.25),
-      blurRadius: 10,
-      spreadRadius: 0,
-      offset: const Offset(0, 2),
-    ),
-  ];
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.25),
+          blurRadius: 10,
+          spreadRadius: 0,
+          offset: const Offset(0, 2),
+        ),
+      ];
 }
 
 /// Reusable wrapper that adds modern Netflix-style TV focus cues
@@ -79,7 +79,7 @@ class _TVFocusableState extends State<TVFocusable> {
         child: child,
       );
     }
-    
+
     return Focus(
       focusNode: widget.focusNode,
       autofocus: widget.autofocus,
@@ -90,20 +90,22 @@ class _TVFocusableState extends State<TVFocusable> {
             scale: isFocused && widget.enableScale ? widget.focusScale : 1.0,
             duration: TVFocusStyle.animationDuration,
             curve: TVFocusStyle.animationCurve,
-          child: AnimatedContainer(
-            duration: TVFocusStyle.animationDuration,
-            curve: TVFocusStyle.animationCurve,
-            margin: widget.focusMargin,
-            decoration: BoxDecoration(
-              borderRadius: widget.borderRadius,
-              border: isFocused
-                  ? Border.all(color: TVFocusStyle.focusRingColor, width: 2)
-                  : null,
-              boxShadow: isFocused ? TVFocusStyle.focusedShadow : TVFocusStyle.defaultShadow,
+            child: AnimatedContainer(
+              duration: TVFocusStyle.animationDuration,
+              curve: TVFocusStyle.animationCurve,
+              margin: widget.focusMargin,
+              decoration: BoxDecoration(
+                borderRadius: widget.borderRadius,
+                border: isFocused
+                    ? Border.all(color: TVFocusStyle.focusRingColor, width: 2)
+                    : null,
+                boxShadow: isFocused
+                    ? TVFocusStyle.focusedShadow
+                    : TVFocusStyle.defaultShadow,
+              ),
+              child: child,
             ),
-            child: child,
-          ),
-        );
+          );
         },
       ),
     );

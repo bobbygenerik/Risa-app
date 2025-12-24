@@ -38,7 +38,7 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
   final TextEditingController _secondaryEpgUrlController =
       TextEditingController();
 
-    // (Add-dialog controllers removed — creation handled via Settings → General)
+  // (Add-dialog controllers removed — creation handled via Settings → General)
 
   // Focus nodes
   final FocusNode _playlistNameFocusNode = FocusNode();
@@ -83,7 +83,8 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
     final xtreamServers = prefs.getStringList('saved_xtream_servers') ?? [];
     for (final server in xtreamServers) {
       final enc = base64Url.encode(utf8.encode(server));
-      final name = prefs.getString('xtream_playlist_name_$enc') ?? 'Xtream Playlist';
+      final name =
+          prefs.getString('xtream_playlist_name_$enc') ?? 'Xtream Playlist';
       final username = prefs.getString('xtream_username_$enc') ?? '';
       final password = prefs.getString('xtream_password_$enc') ?? '';
       final epgUrl = prefs.getString('xtream_epg_url_$enc') ?? '';
@@ -122,6 +123,7 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
     _firstFocusNode.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -329,8 +331,6 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
     );
   }
 
-
-
   // Playlist editing methods
   void _editPlaylistName(PlaylistInfo playlist) {
     _playlistNameController.text = playlist.name;
@@ -498,14 +498,15 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
     } else {
       try {
         final cleaned = playlist.url.trim();
-          var baseUri = Uri.parse(cleaned);
-          if (baseUri.scheme.isEmpty || baseUri.host.isEmpty) {
-            baseUri = Uri.parse('https://${cleaned.replaceAll(RegExp(r'^https?://'), '')}');
-          }
-          final playlistUri = baseUri.replace(
-            path: (baseUri.path.trim().isEmpty)
-                ? 'xmltv.php'
-                : '${baseUri.path.replaceAll(RegExp(r'^/'), '')}/xmltv.php',
+        var baseUri = Uri.parse(cleaned);
+        if (baseUri.scheme.isEmpty || baseUri.host.isEmpty) {
+          baseUri = Uri.parse(
+              'https://${cleaned.replaceAll(RegExp(r'^https?://'), '')}');
+        }
+        final playlistUri = baseUri.replace(
+          path: (baseUri.path.trim().isEmpty)
+              ? 'xmltv.php'
+              : '${baseUri.path.replaceAll(RegExp(r'^/'), '')}/xmltv.php',
           queryParameters: {
             'username': (playlist.username ?? '').replaceAll(' ', ''),
             'password': (playlist.password ?? '').replaceAll(' ', ''),
@@ -515,7 +516,8 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
         );
         playlistUrl = playlistUri.toString();
       } catch (_) {
-        playlistUrl = '${playlist.url}/get.php?username=${playlist.username}&password=${playlist.password}&type=m3u_plus&output=ts';
+        playlistUrl =
+            '${playlist.url}/get.php?username=${playlist.username}&password=${playlist.password}&type=m3u_plus&output=ts';
       }
     }
 
@@ -547,7 +549,6 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
         ],
       ),
     );
-
 
     if (confirmed == true) {
       final prefs = await SharedPreferences.getInstance();
@@ -690,10 +691,12 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
     final prefs = await SharedPreferences.getInstance();
     final enc = base64Url.encode(utf8.encode(playlist.url));
     if (playlist.type == 'm3u') {
-      await prefs.setString('m3u_playlist_name_$enc', _playlistNameController.text);
+      await prefs.setString(
+          'm3u_playlist_name_$enc', _playlistNameController.text);
       await prefs.remove('m3u_playlist_name_${playlist.url}');
     } else {
-      await prefs.setString('xtream_playlist_name_$enc', _playlistNameController.text);
+      await prefs.setString(
+          'xtream_playlist_name_$enc', _playlistNameController.text);
       await prefs.remove('xtream_playlist_name_${playlist.url}');
     }
 
