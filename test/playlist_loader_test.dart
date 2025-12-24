@@ -1,5 +1,4 @@
-import 'dart:async';
-import 'dart:convert';
+// async APIs are provided by flutter_test
 import 'dart:io';
 
 import 'package:iptv_player/providers/playlist_loader.dart';

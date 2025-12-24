@@ -27,8 +27,9 @@ class PrewarmService {
         final channels = channelProvider.channels;
         if (channels.isNotEmpty) {
           final first = channels.first;
-          if (first.logoUrl != null && first.logoUrl!.isNotEmpty)
+          if (first.logoUrl != null && first.logoUrl!.isNotEmpty) {
             images.add(first.logoUrl!);
+          }
           // Capture featured channel URL synchronously so we don't need to
           // access BuildContext after any `await` in this method.
           try {
@@ -45,18 +46,22 @@ class PrewarmService {
             Provider.of<ContentProvider>(context, listen: false);
         final movies = contentProvider.movies;
         for (final m in movies.take(6)) {
-          if (m.backdropUrl != null && m.backdropUrl!.isNotEmpty)
+          if (m.backdropUrl != null && m.backdropUrl!.isNotEmpty) {
             images.add(m.backdropUrl!);
-          if (m.imageUrl != null && m.imageUrl!.isNotEmpty)
+          }
+          if (m.imageUrl != null && m.imageUrl!.isNotEmpty) {
             images.add(m.imageUrl!);
+          }
         }
 
         final series = contentProvider.series;
         for (final s in series.take(6)) {
-          if (s.backdropUrl != null && s.backdropUrl!.isNotEmpty)
+          if (s.backdropUrl != null && s.backdropUrl!.isNotEmpty) {
             images.add(s.backdropUrl!);
-          if (s.imageUrl != null && s.imageUrl!.isNotEmpty)
+          }
+          if (s.imageUrl != null && s.imageUrl!.isNotEmpty) {
             images.add(s.imageUrl!);
+          }
         }
       } catch (_) {}
 

@@ -1045,11 +1045,14 @@ class IncrementalEpgService extends ChangeNotifier {
       final programs = getProgramsForChannel(epgId, channelName: channelName);
       final now = DateTime.now();
       for (final program in programs) {
-        if (now.isAfter(program.startTime) && now.isBefore(program.endTime))
+        if (now.isAfter(program.startTime) && now.isBefore(program.endTime)) {
           return program;
+        }
       }
       for (final program in programs) {
-        if (program.startTime.isAfter(now)) return program;
+        if (program.startTime.isAfter(now)) {
+          return program;
+        }
       }
       return null;
     }
@@ -1065,13 +1068,16 @@ class IncrementalEpgService extends ChangeNotifier {
       {String? channelName}) async {
     final epgId = _internalToEpgIdMapping[channelId] ??
         _findBestEpgId(channelId, channelName);
-    if (epgId == null) return;
+    if (epgId == null) {
+      return;
+    }
 
     // Cache the mapping
     _internalToEpgIdMapping[channelId] = epgId;
 
-    if (_programsByChannel.containsKey(epgId) || _pendingBatch.contains(epgId))
+    if (_programsByChannel.containsKey(epgId) || _pendingBatch.contains(epgId)) {
       return;
+    }
 
     _pendingBatch.add(epgId);
 

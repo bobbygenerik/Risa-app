@@ -530,15 +530,17 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
                       if (event is! KeyDownEvent) return KeyEventResult.ignored;
                       if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
                         setState(() {
-                          if (_updateFrequencyHours > 1)
+                          if (_updateFrequencyHours > 1) {
                             _updateFrequencyHours--;
+                          }
                         });
                         return KeyEventResult.handled;
                       } else if (event.logicalKey ==
                           LogicalKeyboardKey.arrowRight) {
                         setState(() {
-                          if (_updateFrequencyHours < 168)
+                          if (_updateFrequencyHours < 168) {
                             _updateFrequencyHours++;
+                          }
                         });
                         return KeyEventResult.handled;
                       }

@@ -3,7 +3,6 @@ import '../providers/playlist_isolate.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -69,8 +68,7 @@ Future<void> clearPlaylistCache() async {
 class ChannelProvider with ChangeNotifier {
   static const String _playlistCacheFileName = 'playlist_cache.m3u';
   static const String _playlistCacheFilePathKey = 'cached_playlist_file';
-  static const int _debugCaptureBytes =
-      512 * 1024; // capture 512 KB for previews
+  // Debug preview capture size (unused after refactor)
 
   // Store raw channel data as maps to avoid expensive conversion on main thread
   List<Map<String, dynamic>> _channelMaps = [];

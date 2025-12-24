@@ -407,7 +407,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           icon: const Icon(Icons.cancel),
                           color: Colors.white70,
                           tooltip: 'Cancel load',
-                          onPressed: () => cp.cancelPlaylistLoad(),
+                          onPressed: () {
+                            cp.cancelPlaylistLoad();
+                            _showMessage('Playlist load cancelled');
+                          },
                         )
                       : null,
                 );
@@ -460,7 +463,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           icon: const Icon(Icons.cancel),
                           color: Colors.white70,
                           tooltip: 'Cancel load',
-                          onPressed: () => cp.cancelPlaylistLoad(),
+                          onPressed: () {
+                            cp.cancelPlaylistLoad();
+                            _showMessage('Playlist load cancelled');
+                          },
                         )
                       : null,
                 );

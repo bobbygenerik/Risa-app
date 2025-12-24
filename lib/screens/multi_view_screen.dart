@@ -324,7 +324,9 @@ class _MultiViewScreenState extends State<MultiViewScreen> {
     if (a < 0 ||
         b < 0 ||
         a >= _channelsLocal.length ||
-        b >= _channelsLocal.length) return;
+        b >= _channelsLocal.length) {
+      return;
+    }
     final tmp = _channelsLocal[a];
     _channelsLocal[a] = _channelsLocal[b];
     _channelsLocal[b] = tmp;

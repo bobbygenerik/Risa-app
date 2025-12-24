@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:isolate';
 import 'package:path/path.dart' as p;
 import 'package:iptv_player/providers/playlist_isolate.dart';
 
@@ -8,7 +7,6 @@ import 'package:iptv_player/providers/playlist_isolate.dart';
 /// parses it in a spawned isolate with progress and cancellation support.
 class PlaylistLoader {
   CancelToken? _currentToken;
-  Isolate? _currentIsolate; // kept for potential extension
 
   /// Load playlist from URL, streaming to temporary file to avoid OOM.
   /// onProgress receives parsed channel counts as they arrive from parser.
@@ -41,8 +39,9 @@ class PlaylistLoader {
         totalBytes += chunk.length;
         sink.add(chunk);
         // Yield periodically
-        if (totalBytes % (1024 * 64) == 0)
+        if (totalBytes % (1024 * 64) == 0) {
           await Future.delayed(Duration(milliseconds: 1));
+        }
       }
       await sink.close();
 
@@ -50,7 +49,9 @@ class PlaylistLoader {
       final result = await parsePlaylistCancelable(
           filePath: tmpFile.path,
           onProgress: (count) {
-            if (onProgress != null) onProgress(count);
+            if (onProgress != null) {
+              onProgress(count);
+            }
           },
           cancelToken: token);
 
@@ -62,7 +63,9 @@ class PlaylistLoader {
       return result;
     } finally {
       client.close(force: true);
-      if (_currentToken == token) _currentToken = null;
+      if (_currentToken == token) {
+        _currentToken = null;
+      }
     }
   }
 

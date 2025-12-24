@@ -645,33 +645,61 @@ class M3UParserService {
     final lower = title.toLowerCase();
 
     // Common keywords in titles
-    if (lower.contains('action') || lower.contains('mission'))
+    if (lower.contains('action') || lower.contains('mission')) {
       return ['Action'];
-    if (lower.contains('comedy') || lower.contains('funny')) return ['Comedy'];
-    if (lower.contains('horror') || lower.contains('scary')) return ['Horror'];
-    if (lower.contains('romance') || lower.contains('love')) return ['Romance'];
-    if (lower.contains('thriller')) return ['Thriller'];
-    if (lower.contains('drama')) return ['Drama'];
-    if (lower.contains('adventure')) return ['Adventure'];
-    if (lower.contains('fantasy') || lower.contains('magic'))
+    }
+    if (lower.contains('comedy') || lower.contains('funny')) {
+      return ['Comedy'];
+    }
+    if (lower.contains('horror') || lower.contains('scary')) {
+      return ['Horror'];
+    }
+    if (lower.contains('romance') || lower.contains('love')) {
+      return ['Romance'];
+    }
+    if (lower.contains('thriller')) {
+      return ['Thriller'];
+    }
+    if (lower.contains('drama')) {
+      return ['Drama'];
+    }
+    if (lower.contains('adventure')) {
+      return ['Adventure'];
+    }
+    if (lower.contains('fantasy') || lower.contains('magic')) {
       return ['Fantasy'];
+    }
     if (lower.contains('sci-fi') ||
         lower.contains('scifi') ||
-        lower.contains('space')) return ['Sci-Fi'];
-    if (lower.contains('documentary') || lower.contains('docu'))
+        lower.contains('space')) {
+      return ['Sci-Fi'];
+    }
+    if (lower.contains('documentary') || lower.contains('docu')) {
       return ['Documentary'];
-    if (lower.contains('animation') || lower.contains('cartoon'))
+    }
+    if (lower.contains('animation') || lower.contains('cartoon')) {
       return ['Animation'];
-    if (lower.contains('crime') || lower.contains('detective'))
+    }
+    if (lower.contains('crime') || lower.contains('detective')) {
       return ['Crime'];
-    if (lower.contains('western') || lower.contains('cowboy'))
+    }
+    if (lower.contains('western') || lower.contains('cowboy')) {
       return ['Western'];
-    if (lower.contains('war') || lower.contains('battle')) return ['War'];
+    }
+    if (lower.contains('war') || lower.contains('battle')) {
+      return ['War'];
+    }
     if (lower.contains('superhero') ||
         lower.contains('marvel') ||
-        lower.contains('dc comics')) return ['Superhero'];
-    if (lower.contains('anime')) return ['Anime'];
-    if (lower.contains('bollywood')) return ['Bollywood'];
+        lower.contains('dc comics')) {
+      return ['Superhero'];
+    }
+    if (lower.contains('anime')) {
+      return ['Anime'];
+    }
+    if (lower.contains('bollywood')) {
+      return ['Bollywood'];
+    }
 
     return null;
   }

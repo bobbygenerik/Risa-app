@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import '../services/m3u_parser_service.dart';
 
 /// Legacy compute-compatible entrypoint retained for small payloads

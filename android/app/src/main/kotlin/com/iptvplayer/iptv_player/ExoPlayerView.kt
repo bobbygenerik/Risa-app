@@ -32,6 +32,8 @@ class ExoPlayerView(
     private val mainHandler = Handler(Looper.getMainLooper())
     private var positionUpdateRunnable: Runnable? = null
     private var isDisposed = false
+    private var retriedForTint = false
+    private val prefsKey = "exoplayer_force_platform_${Build.MODEL}"
 
     init {
         // Inflate PlayerView XML. Allow TextureView vs SurfaceView selection via creationParams
@@ -69,15 +71,23 @@ class ExoPlayerView(
         // Configure renderers factory: enable decoder fallback and prefer extension renderers
         // Apply NVIDIA-specific tweaks to prefer extension renderers and allow software fallback earlier
         val isNvidia = Build.MANUFACTURER.equals("NVIDIA", ignoreCase = true)
+        // Allow per-device override (set after an automatic recovery) to prefer platform decoders
+        val shared = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
+        val forcePlatform = shared.getBoolean(prefsKey, false)
         val renderersFactory = object : androidx.media3.exoplayer.DefaultRenderersFactory(context) {
             init {
-                if (isNvidia) {
+                if (isNvidia && !forcePlatform) {
                     // On Shield prefer extension (FFmpeg) renderers and enable decoder fallback
                     setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
                     setEnableDecoderFallback(true)
                     android.util.Log.i("ExoPlayer", "NVIDIA Shield detected: preferring extension renderers and enabling decoder fallback")
+                } else if (forcePlatform) {
+                    // User/device override: force platform renderers only
+                    setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
+                    setEnableDecoderFallback(true)
+                    android.util.Log.i("ExoPlayer", "Per-device override: forcing platform renderers (extensions OFF)")
                 } else {
-                    // Default: do not prefer extensions by default (use ON) and enable decoder fallback
+                    // Default: use extension renderers when available but do not prefer them
                     setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
                     setEnableDecoderFallback(true)
                     android.util.Log.i("ExoPlayer", "Using extension renderer mode: ON (recommended default)")
@@ -127,6 +137,91 @@ class ExoPlayerView(
                                     }
                                 } catch (e: Exception) {
                                     android.util.Log.w("ExoPlayer", "Failed to log format details: ${e.message}")
+                                }
+                                // One-shot heuristic: if we're rendering to a TextureView, capture a bitmap
+                                // and detect gross color tint; if detected, retry with platform renderers only
+                                try {
+                                    val surfaceView = playerView.videoSurfaceView
+                                    if (!retriedForTint && surfaceView is android.view.TextureView && !forcePlatform) {
+                                        val bitmap = surfaceView.bitmap
+                                        if (bitmap != null) {
+                                            val width = bitmap.width
+                                            val height = bitmap.height
+                                            var rSum = 0L
+                                            var gSum = 0L
+                                            var bSum = 0L
+                                            val sampleStep = Math.max(1, (width * height) / 1000)
+                                            var count = 0
+                                            for (x in 0 until width step sampleStep) {
+                                                for (y in 0 until height step sampleStep) {
+                                                    val p = bitmap.getPixel(x, y)
+                                                    rSum += android.graphics.Color.red(p)
+                                                    gSum += android.graphics.Color.green(p)
+                                                    bSum += android.graphics.Color.blue(p)
+                                                    count++
+                                                }
+                                            }
+                                            if (count > 0) {
+                                                val rAvg = rSum / count
+                                                val gAvg = gSum / count
+                                                val bAvg = bSum / count
+                                                android.util.Log.d("ExoPlayer", "Frame avg RGB: $rAvg,$gAvg,$bAvg")
+                                                // If one channel dominates by more than 30 units, consider it a tint
+                                                val max = maxOf(rAvg, gAvg, bAvg)
+                                                val min = minOf(rAvg, gAvg, bAvg)
+                                                if (max - min > 30) {
+                                                    android.util.Log.w("ExoPlayer", "Detected color tint; attempting one-shot recovery by forcing platform decoders")
+                                                    retriedForTint = true
+                                                    // Persist preference for this device to avoid recurring tint
+                                                    try {
+                                                        shared.edit().putBoolean(prefsKey, true).apply()
+                                                    } catch (_: Exception) {}
+                                                    // Recreate player with platform-only renderers
+                                                    mainHandler.post {
+                                                        try {
+                                                            val curMedia = exoPlayer.currentMediaItem
+                                                            val curPos = exoPlayer.currentPosition
+                                                            val wasPlaying = exoPlayer.isPlaying
+                                                            exoPlayer.release()
+                                                            // Build a new player with forcePlatform = true
+                                                            val newFactory = object : androidx.media3.exoplayer.DefaultRenderersFactory(context) {
+                                                                init {
+                                                                    setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
+                                                                    setEnableDecoderFallback(true)
+                                                                }
+                                                            }
+                                                            val newPlayer = ExoPlayer.Builder(context, newFactory)
+                                                                .setMediaSourceFactory(
+                                                                    androidx.media3.exoplayer.source.DefaultMediaSourceFactory(context)
+                                                                        .setDataSourceFactory(dataSourceFactory)
+                                                                )
+                                                                .setTrackSelector(
+                                                                    androidx.media3.exoplayer.trackselection.DefaultTrackSelector(context).apply {
+                                                                        parameters = buildUponParameters()
+                                                                            .setMaxAudioChannelCount(8)
+                                                                            .build()
+                                                                    }
+                                                                )
+                                                                .build()
+                                                            // Attach listeners similar to original
+                                                            newPlayer.playWhenReady = wasPlaying
+                                                            playerView.player = newPlayer
+                                                            if (curMedia != null) {
+                                                                newPlayer.setMediaItem(curMedia)
+                                                                newPlayer.seekTo(curPos)
+                                                                newPlayer.prepare()
+                                                            }
+                                                            android.util.Log.i("ExoPlayer", "Recreated player using platform-only renderers after tint recovery")
+                                                        } catch (e: Exception) {
+                                                            android.util.Log.w("ExoPlayer", "Failed to recreate player for tint recovery: ${e.message}")
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    android.util.Log.w("ExoPlayer", "Tint detection failed: ${e.message}")
                                 }
                             }
                     }
