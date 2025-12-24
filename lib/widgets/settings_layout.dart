@@ -111,37 +111,34 @@ class _SettingsLayoutState extends State<SettingsLayout> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // App Branding / Header
+                      // App Branding / Header (aligned with main sidebar top)
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(40, 48, 24, 0),
+                        padding: const EdgeInsets.fromLTRB(24, 8, 16, 0),
                         child: Text(
                           'Settings',
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineMedium
-                              ?.copyWith(
-                                color: Colors.white,
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                color: AppTheme.textPrimary,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: -0.5,
                               ),
                         ),
                       ),
 
-                      // Vertically center menu items
+                      // Vertically center menu items to match main sidebar layout
                       Expanded(
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
+                            const Spacer(),
                             ListView.builder(
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
                               itemCount: widget.categories.length,
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 24),
+                              padding: const EdgeInsets.symmetric(horizontal: 24),
                               itemBuilder: (context, index) {
                                 return _buildMenuItem(index);
                               },
                             ),
+                            const Spacer(),
                           ],
                         ),
                       ),
@@ -230,7 +227,7 @@ class _SettingsLayoutState extends State<SettingsLayout> {
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeOutCubic,
               margin: const EdgeInsets.symmetric(vertical: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               decoration: BoxDecoration(
                 color: isSelected && isFocused
                     ? Colors.white
