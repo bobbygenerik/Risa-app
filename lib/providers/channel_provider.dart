@@ -127,12 +127,13 @@ class ChannelProvider with ChangeNotifier {
   // Set the IncrementalEpgService reference for EPG loading
   void setEpgService(IncrementalEpgService service) {
     _epgService = service;
-    // Ensure EPG service is initialized when channel provider loads
-    if (service.hasEpgUrl) {
-      service.initialize().catchError((e) {
-        debugLog('EPG Service initialization failed in ChannelProvider: $e');
-      });
-    }
+    // Ensure EPG service is initialized when channel provider loads.
+    // Call initialize unconditionally to avoid a race where the
+    // provider update happens before the async initialization
+    // (which is started elsewhere) has completed.
+    service.initialize().catchError((e) {
+      debugLog('EPG Service initialization failed in ChannelProvider: $e');
+    });
   }
 
   // Watch count tracking (channelId -> count)

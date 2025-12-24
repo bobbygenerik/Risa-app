@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/channel.dart';
 import '../models/content.dart';
 import '../providers/settings_provider.dart';
-import '../utils/tv_focus_helper.dart';
+// tv_focus_helper no longer required here; routing uses explicit backend flag
 import 'enhanced_video_player_screen.dart';
 import 'exoplayer_fullscreen_screen.dart';
 
@@ -39,10 +39,13 @@ class VideoPlayerRouter extends StatelessWidget {
     final settings = context.watch<SettingsProvider>();
     final backend = settings.videoPlayerBackend;
     
-    // Determine which player to use
-    final bool useExoPlayer = _shouldUseExoPlayer(backend);
-    
-    if (useExoPlayer && defaultTargetPlatform == TargetPlatform.android) {
+    // Determine which player to use. Only use the native ExoPlayer fullscreen
+    // view when the user explicitly selects the 'ExoPlayer' backend. For
+    // 'Auto' or 'MediaKit' prefer the Flutter-based EnhancedVideoPlayerScreen
+    // so app overlays remain authoritative.
+    final bool explicitExo = backend == 'ExoPlayer';
+
+    if (explicitExo && defaultTargetPlatform == TargetPlatform.android) {
       return ExoPlayerFullscreenScreen(
         channel: channel,
         content: content,
@@ -65,16 +68,6 @@ class VideoPlayerRouter extends StatelessWidget {
     }
   }
 
-  bool _shouldUseExoPlayer(String backend) {
-    switch (backend) {
-      case 'ExoPlayer':
-        return true;
-      case 'MediaKit':
-        return false;
-      case 'Auto':
-      default:
-        // Auto mode: use ExoPlayer on Android TV, MediaKit elsewhere
-        return TVFocusHelper.isAndroidTV;
-    }
-  }
+  // Note: routing now uses explicit backend == 'ExoPlayer' to choose the
+  // native ExoPlayer fullscreen; helper removed to avoid confusion.
 }

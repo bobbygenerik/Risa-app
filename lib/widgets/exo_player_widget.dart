@@ -64,9 +64,6 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
     });
   }
 
-  void _startHideTimer() {
-    // internal hide timer removed; external overlay controls are authoritative
-  }
 
   @override
   void dispose() {
@@ -81,14 +78,8 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
     super.dispose();
   }
 
-  String _formatDuration(Duration d) {
-    String two(int n) => n.toString().padLeft(2, '0');
-    final h = d.inHours;
-    final m = d.inMinutes.remainder(60);
-    final s = d.inSeconds.remainder(60);
-    if (h > 0) return '${two(h)}:${two(m)}:${two(s)}';
-    return '${two(m)}:${two(s)}';
-  }
+  // Removed unused internal helpers; formatting and hide-timers
+  // are handled by external overlays when needed.
 
   @override
   Widget build(BuildContext context) {
