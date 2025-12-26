@@ -11,6 +11,7 @@ import 'package:iptv_player/utils/startup_probe.dart';
 import 'package:iptv_player/utils/performance_monitor.dart';
 import '../models/channel.dart';
 import '../models/content.dart';
+import 'package:iptv_player/models/saved_playlist.dart';
 // M3U parsing is handled via `playlist_isolate.dart` (streaming/isolate helpers).
 // Keep the local import commented out to avoid unused-import warnings while
 // migration completes.
@@ -695,7 +696,50 @@ class ChannelProvider with ChangeNotifier {
     debugLog('ChannelProvider: Auto-loading playlist...');
     await _ensureDb();
     final prefs = await SharedPreferences.getInstance();
-    final playlistType = prefs.getString('playlist_type');
+    String? playlistType = prefs.getString('playlist_type');
+    // If no legacy playlist type, fall back to saved playlists (active or first)
+    if (playlistType == null) {
+      final savedJson = prefs.getString('saved_playlists');
+      if (savedJson != null && savedJson.trim().isNotEmpty) {
+        try {
+          final List<dynamic> decoded = jsonDecode(savedJson);
+          final saved = decoded
+              .map((j) => SavedPlaylist.fromJson(Map<String, dynamic>.from(j)))
+              .toList();
+          if (saved.isNotEmpty) {
+            final activeId = prefs.getString('active_playlist_id');
+            final chosen = saved.firstWhere(
+                (p) => p.id == activeId,
+                orElse: () => saved.first);
+            playlistType = chosen.type;
+            await prefs.setString('playlist_type', chosen.type);
+            await prefs.setString('active_playlist_id', chosen.id);
+            if (chosen.type == 'm3u') {
+              await prefs.setString('m3u_url', chosen.url);
+            } else {
+              await prefs.setString('xtream_server', chosen.server ?? '');
+              await prefs.setString('xtream_username', chosen.username ?? '');
+              await prefs.setString('xtream_password', chosen.password ?? '');
+            }
+            if (chosen.epgUrl != null && chosen.epgUrl!.isNotEmpty) {
+              await prefs.setString('epg_url', chosen.epgUrl!);
+              await prefs.setString('custom_epg_url', chosen.epgUrl!);
+            } else {
+              await prefs.remove('custom_epg_url');
+            }
+            if (chosen.epgUrlSecondary != null &&
+                chosen.epgUrlSecondary!.isNotEmpty) {
+              await prefs.setString(
+                  'secondary_epg_url', chosen.epgUrlSecondary!);
+            } else {
+              await prefs.remove('secondary_epg_url');
+            }
+          }
+        } catch (_) {
+          // ignore malformed saved playlists
+        }
+      }
+    }
 
     if (playlistType == null) {
       _isLoading = false;

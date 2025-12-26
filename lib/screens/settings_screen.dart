@@ -10,6 +10,7 @@ import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/services/backup_service.dart';
 import 'package:iptv_player/services/whisper_model_service.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
+import 'dart:convert';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 
@@ -20,6 +21,7 @@ import 'package:provider/provider.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:iptv_player/models/saved_playlist.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -40,6 +42,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // Playlist Input Method (0 = M3U, 1 = Xtream)
   int _playlistInputMethod = 0;
+  String _detectedEpgUrl = '';
 
   // EPG Settings
   late final TextEditingController _customEpgUrlController;
@@ -125,9 +128,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _xtreamServerController.text = prefs.getString('xtream_server') ?? '';
       _xtreamUsernameController.text = prefs.getString('xtream_username') ?? '';
       _xtreamPasswordController.text = prefs.getString('xtream_password') ?? '';
-      _customEpgUrlController.text = prefs.getString('custom_epg_url') ?? '';
+      _customEpgUrlController.text =
+          prefs.getString('custom_epg_url') ?? '';
       _secondaryEpgUrlController.text =
           prefs.getString('secondary_epg_url') ?? '';
+      _detectedEpgUrl = prefs.getString('epg_url') ?? '';
       _realDebridApiKeyController.text =
           prefs.getString('realdebrid_api_key') ?? '';
       _openSubtitlesUsernameController.text =
@@ -527,19 +532,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
         SettingsGroup(
           title: 'EPG',
           children: [
-            SettingsInputTile(
-              label: 'Primary EPG URL',
-              hint: 'http://example.com/epg.xml',
-              icon: Icons.tv,
-              controller: _customEpgUrlController,
-              focusNode: _customEpgUrlFocusNode,
+            SettingsActionTile(
+              title: 'Detected EPG URL (from playlist)',
+              subtitle:
+                  _detectedEpgUrl.isNotEmpty ? _detectedEpgUrl : 'None detected',
+              icon: Icons.link,
+              onTap: null,
             ),
-            SettingsInputTile(
-              label: 'Secondary EPG URL',
-              hint: 'Backup EPG source',
-              icon: Icons.tv,
-              controller: _secondaryEpgUrlController,
-              focusNode: _secondaryEpgUrlFocusNode,
+            SettingsActionTile(
+              title: 'Manage per-playlist EPG URLs',
+              subtitle: 'Edit EPG on each playlist in the manager',
+              icon: Icons.settings_input_component,
+              onTap: _showManagePlaylistsDialog,
             ),
             SettingsActionTile(
               title: 'Update EPG Now',
@@ -936,7 +940,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
         }
       } else {
         _m3uUrlController.clear();
-        _showMessage('Playlist loaded successfully!');
+            _showMessage('Playlist loaded successfully!');
+            await _savePlaylistToLibrary(
+              SavedPlaylist(
+                id: DateTime.now().millisecondsSinceEpoch.toString(),
+                name: url,
+                type: 'm3u',
+                url: url,
+                epgUrl: prefs.getString('epg_url'),
+                epgUrlSecondary: prefs.getString('secondary_epg_url'),
+                addedDate: DateTime.now(),
+              ),
+            );
+            // Trigger EPG refresh with the detected URL
+            if (mounted) {
+              unawaited(
+              Provider.of<IncrementalEpgService>(context, listen: false)
+                  .initialize(forceRefresh: true));
+        }
       }
     }
   }
@@ -955,6 +976,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await prefs.setString('xtream_username', username);
     await prefs.setString('xtream_password', password);
     await prefs.setString('playlist_type', 'xtream');
+    String playlistUrlUsed = '';
 
     // Compute and save Xtream EPG URL at credential entry time.
     // Respect user-set `custom_epg_url`: if it's present, do not overwrite `epg_url`.
@@ -1005,10 +1027,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             'output': 'ts'
           },
         );
-        await provider.loadPlaylistFromUrl(playlistUri.toString());
+        playlistUrlUsed = playlistUri.toString();
+        await provider.loadPlaylistFromUrl(playlistUrlUsed);
       } catch (e) {
-        await provider.loadPlaylistFromUrl(
-            '${server.replaceAll(' ', '')}/get.php?username=${username.replaceAll(' ', '')}&password=${password.replaceAll(' ', '')}&type=m3u_plus&output=ts');
+        playlistUrlUsed =
+            '${server.replaceAll(' ', '')}/get.php?username=${username.replaceAll(' ', '')}&password=${password.replaceAll(' ', '')}&type=m3u_plus&output=ts';
+        await provider.loadPlaylistFromUrl(playlistUrlUsed);
       }
       final hasContent = provider.channelCount > 0 ||
           provider.moviesCount > 0 ||
@@ -1028,6 +1052,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
       } else {
         _clearXtreamFields();
         _showMessage('Xtream playlist loaded successfully!');
+        await _savePlaylistToLibrary(
+          SavedPlaylist(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            name: server,
+            type: 'xtream',
+            url: playlistUrlUsed,
+            server: server,
+            username: username,
+            password: password,
+            epgUrl: prefs.getString('epg_url'),
+            epgUrlSecondary: prefs.getString('secondary_epg_url'),
+            addedDate: DateTime.now(),
+          ),
+        );
+        // Trigger EPG refresh with the detected URL
+        if (mounted) {
+          unawaited(
+              Provider.of<IncrementalEpgService>(context, listen: false)
+                  .initialize(forceRefresh: true));
+        }
       }
     }
   }
@@ -1167,6 +1211,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
         }
         break;
     }
+  }
+
+  Future<void> _savePlaylistToLibrary(SavedPlaylist playlist) async {
+    final prefs = await SharedPreferences.getInstance();
+    final existingJson = prefs.getString('saved_playlists');
+    List<SavedPlaylist> list = [];
+    if (existingJson != null && existingJson.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(existingJson) as List<dynamic>;
+        list = decoded
+            .map((j) => SavedPlaylist.fromJson(Map<String, dynamic>.from(j)))
+            .toList();
+      } catch (_) {}
+    }
+
+    int existingIndex = -1;
+    if (playlist.type == 'm3u') {
+      existingIndex = list.indexWhere(
+          (p) => p.type == 'm3u' && p.url.trim() == playlist.url.trim());
+    } else {
+      existingIndex = list.indexWhere((p) =>
+          p.type == 'xtream' &&
+          (p.server ?? '').trim() == (playlist.server ?? '').trim() &&
+          (p.username ?? '').trim() == (playlist.username ?? '').trim());
+    }
+
+    final normalized = SavedPlaylist(
+      id: existingIndex >= 0 ? list[existingIndex].id : playlist.id,
+      name: playlist.name,
+      type: playlist.type,
+      url: playlist.url,
+      server: playlist.server,
+      username: playlist.username,
+      password: playlist.password,
+      epgUrl: playlist.epgUrl,
+      epgUrlSecondary: playlist.epgUrlSecondary,
+      addedDate: existingIndex >= 0
+          ? list[existingIndex].addedDate
+          : playlist.addedDate,
+    );
+
+    if (existingIndex >= 0) {
+      list[existingIndex] = normalized;
+    } else {
+      list.add(normalized);
+    }
+
+    await prefs.setString(
+        'saved_playlists', jsonEncode(list.map((p) => p.toJson()).toList()));
+    await prefs.setString('playlist_type', normalized.type);
+    await prefs.setString('active_playlist_id', normalized.id);
   }
 
   void _adjustEpgCacheDuration(int delta) async {

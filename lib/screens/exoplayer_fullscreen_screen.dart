@@ -266,9 +266,10 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
       'videoUrl': url,
       'autoPlay': true,
       'muted': false,
-      // Use SurfaceView to avoid color tint issues (rainbow artifacts) on some devices
-      // Prefer texture for overlays; tint issues will be handled via native color space
+      // Prefer texture for overlays; secureSurface helps avoid color-space artifacts on some devices
       'surfaceType': 'texture',
+      'secureSurface': true,
+      'forceHdr': false,
     };
 
     return AndroidView(

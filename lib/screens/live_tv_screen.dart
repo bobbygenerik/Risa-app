@@ -882,8 +882,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 width: constraints.maxWidth,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
-                  physics: const ClampingScrollPhysics(),
-                  cacheExtent: 600,
+                  physics: const PageScrollPhysics().applyTo(
+                    const ClampingScrollPhysics(),
+                  ),
+                  cacheExtent: 800,
                   padding: EdgeInsets.only(
                     left: rowInset,
                     right: context.spacingLg(),

@@ -25,6 +25,7 @@ class IncrementalEpgService extends ChangeNotifier {
   String? _error;
   String? _epgUrl;
   bool _hasParsed = false;
+  bool _initInFlight = false;
 
   // Storage for all parsed programs
   final Map<String, List<Program>> _programsByChannel = {};
@@ -66,6 +67,11 @@ class IncrementalEpgService extends ChangeNotifier {
   bool get hasEpgUrl => _epgUrl != null && _epgUrl!.isNotEmpty;
 
   Future<void> initialize({bool forceRefresh = false}) async {
+    if (_initInFlight) {
+      debugLog('EPG: Init skipped (in flight)');
+      return;
+    }
+    _initInFlight = true;
     debugLog('EPG: Initializing...');
     final prefs = await SharedPreferences.getInstance();
     // Try both keys - custom_epg_url (set by user) and epg_url (auto-found in M3U)
@@ -89,6 +95,7 @@ class IncrementalEpgService extends ChangeNotifier {
     // Debug: Log current state
     debugLog(
         'EPG: Service state - URL: $_epgUrl, Available channels: ${_availableChannels.length}, Loaded channels: ${_programsByChannel.length}');
+    _initInFlight = false;
   }
 
   Future<void> _saveNormalizedMappingToPrefs(Map<String, String>? map) async {
@@ -158,6 +165,14 @@ class IncrementalEpgService extends ChangeNotifier {
   }
 
   Future<void> _downloadEpgIfNeeded({bool forceRefresh = false}) async {
+    if (_epgUrl == null || _epgUrl!.isEmpty) {
+      debugLog('EPG: Download skipped, no EPG URL configured.');
+      _isDownloading = false;
+      _isParsing = false;
+      _isLoading = false;
+      notifyListeners();
+      return;
+    }
     if (_epgUrl == null) {
       debugLog('EPG: Download skipped, no EPG URL.');
       return;
@@ -479,7 +494,7 @@ class IncrementalEpgService extends ChangeNotifier {
             parseResult['programsByChannel'] as Map<String, List<Program>>;
         _programsByChannel.addAll(rawData);
 
-        // Persist programs to DB in the background
+        // Persist programs to DB in the background (throttled inside)
         unawaited(_persistProgramsToDb(rawData));
 
         _availableChannels.clear();
@@ -1420,6 +1435,7 @@ class IncrementalEpgService extends ChangeNotifier {
 
   Future<void> _persistProgramsToDb(
       Map<String, List<Program>> programsByChannel) async {
+    const batchSize = 40;
     try {
       for (final entry in programsByChannel.entries) {
         final epgId = entry.key;
@@ -1434,7 +1450,11 @@ class IncrementalEpgService extends ChangeNotifier {
                   'imageUrl': p.imageUrl,
                 })
             .toList();
-        await _db.insertPrograms(epgId, payload, clearExisting: true);
+        for (var i = 0; i < payload.length; i += batchSize) {
+          final slice = payload.sublist(
+              i, i + batchSize > payload.length ? payload.length : i + batchSize);
+          await _db.insertPrograms(epgId, slice, clearExisting: i == 0);
+        }
       }
       debugLog(
           'EPG: Persisted programs to DB (${programsByChannel.length} channels)');

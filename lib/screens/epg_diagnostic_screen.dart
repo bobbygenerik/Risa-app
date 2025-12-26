@@ -6,7 +6,6 @@ import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
-import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'package:iptv_player/services/local_db_service.dart';
 

@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/widgets/compat_pop_scope.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
@@ -43,23 +44,25 @@ class _FavoritesScreenState extends State<FavoritesScreen>
           final favorites = channelProvider.favoriteChannels;
 
           return Scaffold(
-            backgroundColor: Colors.transparent,
-            body: Container(
-              decoration: const BoxDecoration(
-                color: AppTheme.darkBackground,
-              ),
-              child: Column(
-                children: [
-                  _buildGlassAppBar(favorites.length),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSizes.lg),
+            backgroundColor: AppTheme.darkBackground,
+            body: SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: AppSpacing.sidebarCollapsedWidth + AppSizes.md,
+                  right: AppSizes.lg,
+                  top: AppSizes.md,
+                  bottom: AppSizes.lg,
+                ),
+                child: Column(
+                  children: [
+                    _buildGlassAppBar(favorites.length),
+                    Expanded(
                       child: favorites.isEmpty
                           ? _buildEmptyState(context)
                           : _buildFavoritesList(context, favorites),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           );

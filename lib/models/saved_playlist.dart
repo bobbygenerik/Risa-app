@@ -6,6 +6,8 @@ class SavedPlaylist {
   final String? server; // For Xtream
   final String? username; // For Xtream
   final String? password; // For Xtream
+  final String? epgUrl;
+  final String? epgUrlSecondary;
   final DateTime addedDate;
 
   SavedPlaylist({
@@ -16,6 +18,8 @@ class SavedPlaylist {
     this.server,
     this.username,
     this.password,
+    this.epgUrl,
+    this.epgUrlSecondary,
     required this.addedDate,
   });
 
@@ -28,6 +32,8 @@ class SavedPlaylist {
       'server': server,
       'username': username,
       'password': password,
+      'epgUrl': epgUrl,
+      'epgUrlSecondary': epgUrlSecondary,
       'addedDate': addedDate.toIso8601String(),
     };
   }
@@ -41,6 +47,8 @@ class SavedPlaylist {
       server: json['server'] as String?,
       username: json['username'] as String?,
       password: json['password'] as String?,
+      epgUrl: json['epgUrl'] as String?,
+      epgUrlSecondary: json['epgUrlSecondary'] as String?,
       addedDate: DateTime.parse(json['addedDate'] as String),
     );
   }

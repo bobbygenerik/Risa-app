@@ -1,11 +1,13 @@
 import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:io';
 import 'package:path/path.dart' as path;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DownloadsScreen extends StatefulWidget {
   const DownloadsScreen({super.key});
@@ -23,14 +25,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 1), _updateTime);
     _loadFiles();
-  }
-
-  void _updateTime() {
-    if (!mounted) return;
-    setState(() {});
-    Future.delayed(const Duration(seconds: 1), _updateTime);
   }
 
   Future<void> _loadFiles() async {
@@ -46,8 +41,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
       if (_storagePath == null || _storagePath!.isEmpty) {
         setState(() {
           _isLoading = false;
-          _errorMessage =
-              'No storage location configured. Set one in Settings.';
+          _errorMessage = 'No storage location configured. Set one in Settings.';
         });
         return;
       }
@@ -61,24 +55,15 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
         return;
       }
 
-      // Get all video files
-      final files = await dir.list().where((entity) => entity is File).where((
-        file,
-      ) {
+      final files = await dir
+          .list()
+          .where((entity) => entity is File)
+          .where((file) {
         final ext = path.extension(file.path).toLowerCase();
-        return [
-          '.mp4',
-          '.mkv',
-          '.ts',
-          '.m2ts',
-          '.avi',
-          '.mov',
-          '.flv',
-          '.webm',
-        ].contains(ext);
+        return ['.mp4', '.mkv', '.ts', '.m2ts', '.avi', '.mov', '.flv', '.webm']
+            .contains(ext);
       }).toList();
 
-      // Sort by modified date (newest first)
       files.sort((a, b) {
         final aStat = a.statSync();
         final bStat = b.statSync();
@@ -125,7 +110,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     if (confirmed == true) {
       try {
         await file.delete();
-        unawaited(_loadFiles()); // Reload list
+        unawaited(_loadFiles());
         if (mounted) {
           showAppSnackBar(
             context,
@@ -150,12 +135,8 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
   }
 
   String _formatFileSize(int bytes) {
-    if (bytes < 1024) {
-      return '$bytes B';
-    }
-    if (bytes < 1024 * 1024) {
-      return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    }
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
     if (bytes < 1024 * 1024 * 1024) {
       return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
     }
@@ -172,224 +153,199 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
         context.go('/home');
       },
       child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: Container(
-          decoration: const BoxDecoration(
-            color: AppTheme.darkBackground,
-          ),
-          child: Column(
-            children: [
-              // Glass app bar
-              // Top bar - make fully transparent (only text/icons visible)
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                decoration: const BoxDecoration(
+        backgroundColor: AppTheme.darkBackground,
+        body: SafeArea(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: AppSpacing.sidebarCollapsedWidth + AppSizes.md,
+              right: AppSizes.lg,
+              top: AppSizes.md,
+              bottom: AppSizes.lg,
+            ),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppSizes.md, vertical: AppSizes.sm),
                   color: Colors.transparent,
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.download_rounded,
-                        color: AppTheme.primaryBlue, size: 24),
-                    const SizedBox(width: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Downloads & Recordings',
-                          style: TextStyle(
-                            color: AppTheme.textPrimary,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          '${_files.length} items',
-                          style: const TextStyle(
-                            color: AppTheme.textSecondary,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Spacer(),
-                  ],
-                ),
-              ),
-              // removed pink divider to keep top bar visually transparent
-              // Content
-              Expanded(
-                child: _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          color: AppTheme.primaryBlue,
-                        ),
-                      )
-                    : _errorMessage != null
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.error_outline,
-                                  size: 80,
-                                  color: AppTheme.textSecondary
-                                      .withAlpha((0.3 * 255).round()),
-                                ),
-                                const SizedBox(height: 24),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 32),
-                                  child: Text(
-                                    _errorMessage!,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      color: AppTheme.textSecondary,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                  child: Row(
+                    children: [
+                      const Icon(Icons.download_rounded,
+                          color: AppTheme.primaryBlue, size: 24),
+                      const SizedBox(width: AppSizes.sm),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Downloads & Recordings',
+                            style: TextStyle(
+                              color: AppTheme.textPrimary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
                             ),
-                          )
-                        : _files.isEmpty
-                            ? Center(
+                          ),
+                          Text(
+                            '${_files.length} items',
+                            style: const TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Spacer(),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: _isLoading
+                      ? const Center(
+                          child:
+                              CircularProgressIndicator(color: AppTheme.primaryBlue),
+                        )
+                      : _errorMessage != null
+                          ? Center(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 24),
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Icon(
-                                      Icons.download_rounded,
+                                      Icons.error_outline,
                                       size: 80,
                                       color: AppTheme.textSecondary
                                           .withAlpha((0.3 * 255).round()),
                                     ),
                                     const SizedBox(height: 24),
-                                    const Text(
-                                      'No Downloads Yet',
-                                      style: TextStyle(
-                                        color: AppTheme.textPrimary,
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    const Text(
-                                      'Recorded programs will appear here',
-                                      style: TextStyle(
+                                    Text(
+                                      _errorMessage!,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
                                         color: AppTheme.textSecondary,
-                                        fontSize: 14,
+                                        fontSize: 16,
                                       ),
                                     ),
                                   ],
                                 ),
-                              )
-                            : ListView.builder(
-                                itemCount: _files.length,
-                                itemBuilder: (context, index) {
-                                  final file = _files[index];
-                                  final fileName = path.basename(file.path);
-                                  final fileStat = file.statSync();
-                                  final fileSize =
-                                      _formatFileSize(fileStat.size);
-                                  final modDate =
-                                      '${fileStat.modified.month}/${fileStat.modified.day}/${fileStat.modified.year} ${fileStat.modified.hour.toString().padLeft(2, '0')}:${fileStat.modified.minute.toString().padLeft(2, '0')}';
-
-                                  return Container(
-                                    margin: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white
-                                          .withAlpha((0.05 * 255).round()),
-                                      border: Border.all(
-                                        color: Colors.white
-                                            .withAlpha((0.1 * 255).round()),
-                                        width: 1,
-                                      ),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: ListTile(
-                                      leading: const Icon(
-                                        Icons.video_file,
-                                        color: AppTheme.primaryBlue,
-                                        size: 32,
-                                      ),
-                                      title: Text(
-                                        fileName,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          color: AppTheme.textPrimary,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                      subtitle: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            '$fileSize • $modDate',
-                                            style: const TextStyle(
-                                              color: AppTheme.textSecondary,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      trailing: PopupMenuButton(
-                                        color: Colors.white
-                                            .withAlpha((0.08 * 255).round()),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                          side: BorderSide(
-                                            color: Colors.white.withAlpha(
-                                                (0.15 * 255).round()),
-                                            width: 1,
-                                          ),
-                                        ),
-                                        itemBuilder: (context) => [
-                                          PopupMenuItem(
-                                            child: const Row(
-                                              children: [
-                                                Icon(Icons.play_arrow,
-                                                    color: AppTheme.primaryBlue,
-                                                    size: 18),
-                                                SizedBox(width: 8),
-                                                Text('Play',
-                                                    style: TextStyle(
-                                                        color: AppTheme
-                                                            .textSecondary)),
-                                              ],
-                                            ),
-                                            onTap: () {
-                                              context.push('/player',
-                                                  extra: {'url': file.path});
-                                            },
-                                          ),
-                                          PopupMenuItem(
-                                            child: const Row(
-                                              children: [
-                                                Icon(Icons.delete,
-                                                    color: AppTheme.accentRed,
-                                                    size: 18),
-                                                SizedBox(width: 8),
-                                                Text('Delete',
-                                                    style: TextStyle(
-                                                        color: AppTheme
-                                                            .textSecondary)),
-                                              ],
-                                            ),
-                                            onTap: () => _deleteFile(file),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
                               ),
-              ),
-            ],
+                            )
+                          : _files.isEmpty
+                              ? Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.download_rounded,
+                                        size: 80,
+                                        color: AppTheme.textSecondary
+                                            .withAlpha((0.3 * 255).round()),
+                                      ),
+                                      const SizedBox(height: 24),
+                                      const Text(
+                                        'No Downloads Yet',
+                                        style: TextStyle(
+                                          color: AppTheme.textPrimary,
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      const Text(
+                                        'Recorded programs will appear here',
+                                        style: TextStyle(
+                                          color: AppTheme.textSecondary,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : ListView.builder(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: AppSizes.sm),
+                                  itemCount: _files.length,
+                                  itemBuilder: (context, index) {
+                                    final file = _files[index];
+                                    final fileName = path.basename(file.path);
+                                    final fileStat = file.statSync();
+                                    final fileSize =
+                                        _formatFileSize(fileStat.size);
+                                    final modDate =
+                                        '${fileStat.modified.month}/${fileStat.modified.day}/${fileStat.modified.year} ${fileStat.modified.hour.toString().padLeft(2, '0')}:${fileStat.modified.minute.toString().padLeft(2, '0')}';
+
+                                    return Container(
+                                      margin:
+                                          const EdgeInsets.symmetric(vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.cardBackground,
+                                        borderRadius: BorderRadius.circular(
+                                            AppSizes.radiusMd),
+                                      ),
+                                      child: ListTile(
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 16, vertical: 12),
+                                        leading: Container(
+                                          width: 48,
+                                          height: 48,
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.primaryBlue
+                                                .withAlpha(
+                                                    (0.2 * 255).round()),
+                                            borderRadius: BorderRadius.circular(
+                                                AppSizes.radiusSm),
+                                          ),
+                                          child: const Icon(Icons.play_arrow,
+                                              color: Colors.white),
+                                        ),
+                                        title: Text(
+                                          fileName,
+                                          style: const TextStyle(
+                                            color: AppTheme.textPrimary,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        subtitle: Text(
+                                          '$fileSize • $modDate',
+                                          style: const TextStyle(
+                                            color: AppTheme.textSecondary,
+                                          ),
+                                        ),
+                                        trailing: PopupMenuButton<String>(
+                                          icon: const Icon(Icons.more_vert,
+                                              color: AppTheme.textSecondary),
+                                          color: AppTheme.cardBackground,
+                                          onSelected: (value) {
+                                            if (value == 'delete') {
+                                              _deleteFile(file);
+                                            }
+                                          },
+                                          itemBuilder: (context) => [
+                                            const PopupMenuItem(
+                                              value: 'delete',
+                                              child: Row(
+                                                children: [
+                                                  Icon(Icons.delete,
+                                                      color: AppTheme.accentRed),
+                                                  SizedBox(width: 8),
+                                                  Text('Delete'),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        onTap: () {
+                                          GoRouter.of(context)
+                                              .push('/offline-player', extra: file);
+                                        },
+                                      ),
+                                    );
+                                  },
+                                ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

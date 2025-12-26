@@ -134,6 +134,16 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('active_playlist_id', playlist.id);
       await prefs.setString('playlist_type', playlist.type);
+      if (playlist.epgUrl != null && playlist.epgUrl!.isNotEmpty) {
+        await prefs.setString('epg_url', playlist.epgUrl!);
+        await prefs.setString('custom_epg_url', playlist.epgUrl!);
+      }
+      if (playlist.epgUrlSecondary != null &&
+          playlist.epgUrlSecondary!.isNotEmpty) {
+        await prefs.setString('secondary_epg_url', playlist.epgUrlSecondary!);
+      } else {
+        await prefs.remove('secondary_epg_url');
+      }
 
       if (playlist.type == 'm3u') {
         await prefs.setString('m3u_url', playlist.url);
@@ -201,6 +211,70 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _editEpgUrls(SavedPlaylist playlist) async {
+    final primaryController =
+        TextEditingController(text: playlist.epgUrl ?? '');
+    final secondaryController =
+        TextEditingController(text: playlist.epgUrlSecondary ?? '');
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: AppTheme.darkBackground,
+          title: const Text('Edit EPG URLs'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              BrandTextField(
+                controller: primaryController,
+                labelText: 'Primary EPG URL',
+                hintText: 'http://example.com/epg.xml',
+              ),
+              const SizedBox(height: AppSizes.md),
+              BrandTextField(
+                controller: secondaryController,
+                labelText: 'Secondary EPG URL',
+                hintText: 'Optional backup',
+              ),
+            ],
+          ),
+          actions: [
+            BrandSecondaryButton(
+              label: 'Cancel',
+              onPressed: () => Navigator.pop(context, false),
+            ),
+            BrandPrimaryButton(
+              label: 'Save',
+              onPressed: () => Navigator.pop(context, true),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == true) {
+      setState(() {
+        final idx = _playlists.indexWhere((p) => p.id == playlist.id);
+        if (idx != -1) {
+          _playlists[idx] = SavedPlaylist(
+            id: playlist.id,
+            name: playlist.name,
+            type: playlist.type,
+            url: playlist.url,
+            server: playlist.server,
+            username: playlist.username,
+            password: playlist.password,
+            epgUrl: primaryController.text.trim(),
+            epgUrlSecondary: secondaryController.text.trim(),
+            addedDate: playlist.addedDate,
+          );
+        }
+      });
+      await _savePlaylists();
     }
   }
 
@@ -436,6 +510,19 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
                   onTap: () => Future.delayed(
                     Duration.zero,
                     () => _editPlaylist(playlist),
+                  ),
+                ),
+                PopupMenuItem(
+                  child: const Row(
+                    children: [
+                      Icon(Icons.link, color: AppTheme.textPrimary),
+                      SizedBox(width: 8),
+                      Text('Edit EPG URLs'),
+                    ],
+                  ),
+                  onTap: () => Future.delayed(
+                    Duration.zero,
+                    () => _editEpgUrls(playlist),
                   ),
                 ),
                 PopupMenuItem(
