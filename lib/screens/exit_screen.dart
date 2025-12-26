@@ -85,6 +85,10 @@ class _ExitScreenState extends State<ExitScreen> {
   void initState() {
     super.initState();
     _selectedMessage = _exitMessages[Random().nextInt(_exitMessages.length)];
+    // Ensure the Exit button immediately receives focus when this screen appears
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _exitButtonFocus.requestFocus();
+    });
   }
 
   @override
