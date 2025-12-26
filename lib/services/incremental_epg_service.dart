@@ -72,30 +72,33 @@ class IncrementalEpgService extends ChangeNotifier {
       return;
     }
     _initInFlight = true;
-    debugLog('EPG: Initializing...');
-    final prefs = await SharedPreferences.getInstance();
-    // Try both keys - custom_epg_url (set by user) and epg_url (auto-found in M3U)
-    // custom_epg_url takes precedence
-    _epgUrl = prefs.getString('custom_epg_url');
-    if (_epgUrl == null || _epgUrl!.isEmpty) {
-      _epgUrl = prefs.getString('epg_url');
-    }
+    try {
+      debugLog('EPG: Initializing...');
+      final prefs = await SharedPreferences.getInstance();
+      // Try both keys - custom_epg_url (set by user) and epg_url (auto-found in M3U)
+      // custom_epg_url takes precedence
+      _epgUrl = prefs.getString('custom_epg_url');
+      if (_epgUrl == null || _epgUrl!.isEmpty) {
+        _epgUrl = prefs.getString('epg_url');
+      }
 
-    if (_epgUrl != null && _epgUrl!.isNotEmpty) {
-      debugLog('EPG: Initializing with URL: $_epgUrl');
-      // Try loading persisted normalized mapping early to speed up matches
-      await _loadNormalizedMappingFromPrefs();
-      await _loadChannelList(forceRefresh: forceRefresh);
-    } else {
-      debugLog('EPG: No URL configured (checked custom_epg_url and epg_url)');
-      _error = 'No EPG URL configured';
-      notifyListeners();
-    }
+      if (_epgUrl != null && _epgUrl!.isNotEmpty) {
+        debugLog('EPG: Initializing with URL: $_epgUrl');
+        // Try loading persisted normalized mapping early to speed up matches
+        await _loadNormalizedMappingFromPrefs();
+        await _loadChannelList(forceRefresh: forceRefresh);
+      } else {
+        debugLog('EPG: No URL configured (checked custom_epg_url and epg_url)');
+        _error = 'No EPG URL configured';
+        notifyListeners();
+      }
 
-    // Debug: Log current state
-    debugLog(
-        'EPG: Service state - URL: $_epgUrl, Available channels: ${_availableChannels.length}, Loaded channels: ${_programsByChannel.length}');
-    _initInFlight = false;
+      // Debug: Log current state
+      debugLog(
+          'EPG: Service state - URL: $_epgUrl, Available channels: ${_availableChannels.length}, Loaded channels: ${_programsByChannel.length}');
+    } finally {
+      _initInFlight = false;
+    }
   }
 
   Future<void> _saveNormalizedMappingToPrefs(Map<String, String>? map) async {
