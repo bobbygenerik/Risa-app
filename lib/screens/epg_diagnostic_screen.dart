@@ -64,14 +64,17 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
     // If DB isn't ready or mappings are empty, estimate matches in-memory
     if (mappingCount == 0 || epgAvailable == 0) {
       int matched = 0;
-      final sampleSize = totalChannels.clamp(0, 800);
+      final availableInMemory = channelProvider.channels.length;
+      final sampleSize =
+          availableInMemory == 0 ? 0 : availableInMemory.clamp(0, 800);
       for (int i = 0; i < sampleSize; i++) {
         final c = channelProvider.getChannelAt(i);
         if (epgService.hasEpgMatch(c.tvgId ?? c.id, channelName: c.name)) {
           matched++;
         }
       }
-      mappingCount = matched * (totalChannels ~/ (sampleSize == 0 ? 1 : sampleSize));
+      mappingCount =
+          sampleSize == 0 ? 0 : matched * (totalChannels ~/ sampleSize);
     }
 
     // matched is count of mappings; scanned == total (no sampling)
