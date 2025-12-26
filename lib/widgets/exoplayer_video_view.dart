@@ -84,7 +84,10 @@ class _ExoPlayerVideoViewState extends State<ExoPlayerVideoView> {
       'videoUrl': widget.videoUrl,
       'autoPlay': widget.autoPlay,
       'muted': widget.muted,
-      'surfaceType': 'texture',
+      // Default to SurfaceView for better color stability on Android TV (NVIDIA Shield)
+      'surfaceType': 'surface',
+      // Avoid extension renderer PREFER mode; default to OFF for stability. Can be overridden if needed.
+      'extensionRenderers': 'off',
     };
 
     return AndroidView(
