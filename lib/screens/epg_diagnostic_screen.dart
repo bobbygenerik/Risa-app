@@ -8,6 +8,7 @@ import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'package:iptv_player/services/local_db_service.dart';
+import 'dart:math' as math;
 
 class EpgDiagnosticScreen extends StatefulWidget {
   const EpgDiagnosticScreen({super.key});
@@ -63,18 +64,21 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
 
     // If DB isn't ready or mappings are empty, estimate matches in-memory
     if (mappingCount == 0 || epgAvailable == 0) {
-      int matched = 0;
-      final availableInMemory = channelProvider.channels.length;
-      final sampleSize =
-          availableInMemory == 0 ? 0 : availableInMemory.clamp(0, 800);
-      for (int i = 0; i < sampleSize; i++) {
-        final c = channelProvider.getChannelAt(i);
-        if (epgService.hasEpgMatch(c.tvgId ?? c.id, channelName: c.name)) {
-          matched++;
+      final sampleSize = math.min(200, totalChannels);
+      final sample = await channelProvider.getChannelsPage(
+        offset: 0,
+        limit: sampleSize,
+      );
+      if (sample.isNotEmpty) {
+        int matched = 0;
+        for (final c in sample) {
+          if (epgService.hasEpgMatch(c.tvgId ?? c.id, channelName: c.name)) {
+            matched++;
+          }
         }
+        mappingCount =
+            matched * (totalChannels ~/ (sample.isEmpty ? 1 : sample.length));
       }
-      mappingCount =
-          sampleSize == 0 ? 0 : matched * (totalChannels ~/ sampleSize);
     }
 
     // matched is count of mappings; scanned == total (no sampling)
