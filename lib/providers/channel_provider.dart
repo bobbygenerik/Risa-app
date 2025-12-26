@@ -241,7 +241,7 @@ class ChannelProvider with ChangeNotifier {
 
   /// Build and persist channel->EPG mapping in the background (full scan)
   Future<void> _buildEpgMapping() async {
-    if (!_dbReady || _epgService == null) return;
+    if (_epgService == null) return;
     if (_channelMaps.isEmpty) return;
 
     // Wait briefly for EPG availability
@@ -275,7 +275,7 @@ class ChannelProvider with ChangeNotifier {
         batch[channelId] = epgId;
       }
 
-      if (batch.length >= batchSize) {
+      if (_dbReady && batch.length >= batchSize) {
         try {
           await _db.upsertEpgMapping(Map<String, String>.from(batch));
           batch.clear();
@@ -286,7 +286,7 @@ class ChannelProvider with ChangeNotifier {
       }
     }
 
-    if (batch.isNotEmpty) {
+    if (_dbReady && batch.isNotEmpty) {
       try {
         await _db.upsertEpgMapping(batch);
       } catch (e) {
@@ -295,10 +295,12 @@ class ChannelProvider with ChangeNotifier {
     }
 
     debugLog('ChannelProvider: Completed EPG mapping build');
-    try {
-      await _epgService?.loadMappingsFromDb();
-    } catch (e) {
-      debugLog('ChannelProvider: Failed to load mappings into EPG service: $e');
+    if (_dbReady) {
+      try {
+        await _epgService?.loadMappingsFromDb();
+      } catch (e) {
+        debugLog('ChannelProvider: Failed to load mappings into EPG service: $e');
+      }
     }
   }
 

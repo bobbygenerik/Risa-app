@@ -56,8 +56,24 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
       return {'matched': 0, 'total': 0, 'scanned': 0};
     }
 
-    final mappingCount = await db.mappingCount();
+    int mappingCount = 0;
+    try {
+      mappingCount = await db.mappingCount();
+    } catch (_) {}
     final epgAvailable = epgService.availableChannels.length;
+
+    // If DB isn't ready or mappings are empty, estimate matches in-memory
+    if (mappingCount == 0 || epgAvailable == 0) {
+      int matched = 0;
+      final sampleSize = totalChannels.clamp(0, 800);
+      for (int i = 0; i < sampleSize; i++) {
+        final c = channelProvider.getChannelAt(i);
+        if (epgService.hasEpgMatch(c.tvgId ?? c.id, channelName: c.name)) {
+          matched++;
+        }
+      }
+      mappingCount = matched * (totalChannels ~/ (sampleSize == 0 ? 1 : sampleSize));
+    }
 
     // matched is count of mappings; scanned == total (no sampling)
     return {

@@ -83,6 +83,16 @@ class _SettingsLayoutState extends State<SettingsLayout> {
 
   @override
   Widget build(BuildContext context) {
+    // Ensure the sidebar grabs focus when this screen is shown or when focus is lost
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final node =
+          widget.selectedIndex < _menuFocusNodes.length ? _menuFocusNodes[widget.selectedIndex] : null;
+      if (node != null && !node.hasPrimaryFocus) {
+        node.requestFocus();
+      }
+    });
+
     return Scaffold(
       backgroundColor: AppTheme.darkBackground,
       body: Container(
@@ -215,7 +225,7 @@ class _SettingsLayoutState extends State<SettingsLayout> {
               _menuFocusNodes[index].requestFocus();
             },
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
+              duration: const Duration(milliseconds: 120),
               curve: Curves.easeOutCubic,
               margin: const EdgeInsets.symmetric(vertical: 4),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),

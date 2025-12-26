@@ -230,6 +230,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _requestContentFocus() {
+    if (_contentScrollController.hasClients) {
+      _contentScrollController.jumpTo(0);
+    }
     FocusNode? target;
     switch (_selectedIndex) {
       case 0:
