@@ -64,7 +64,8 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
 
     // If DB isn't ready or mappings are empty, estimate matches in-memory
     if (mappingCount == 0 || epgAvailable == 0) {
-      final sampleSize = math.min(200, totalChannels);
+    final sampleSize = math.min(200, totalChannels);
+    try {
       final sample = await channelProvider.getChannelsPage(
         offset: 0,
         limit: sampleSize,
@@ -76,9 +77,12 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
             matched++;
           }
         }
-        mappingCount =
-            matched * (totalChannels ~/ (sample.isEmpty ? 1 : sample.length));
+        mappingCount = matched *
+            (totalChannels ~/ (sample.isEmpty ? 1 : sample.length));
       }
+    } catch (e) {
+      debugLog('EPG Diagnostic: sampling failed: $e');
+    }
     }
 
     // matched is count of mappings; scanned == total (no sampling)
