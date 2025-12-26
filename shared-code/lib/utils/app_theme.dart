@@ -8,7 +8,11 @@ class AppTheme {
   // Using deep blue from logo palette
   static const Color primaryBlue = Color(0xFF2E3192);
   static const Color darkBackground = Color(0xFF1C1C1E);
-  static const Color cardBackground = Color(0x00000000); // fully transparent
+  // Use an opaque dark surface for cards and banners so UI elements
+  // don't borrow colors from the OS or wallpaper. Previously this was
+  // fully transparent which allowed underlying system backgrounds to
+  // bleed through on some TV platforms.
+  static const Color cardBackground = Color(0xFF1E1E22);
   static const Color dialogBackground =
       Color(0xFF1E1E2E); // Solid dark for dialogs/popups
   static const Color sidebarBackground = Color(0xFF141414);
