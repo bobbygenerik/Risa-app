@@ -785,11 +785,22 @@ class IncrementalEpgService extends ChangeNotifier {
     normalized = normalized.replaceAll(
         RegExp(r'(uk|us|ca|au|ie|pt|hk|fr|de|it|es)$'), '');
 
+    // Remove common regional/location tokens to collapse variants like
+    // "bbc1northwest" -> "bbc1"
+    normalized = normalized.replaceAll(
+        RegExp(
+            r'(london|scotland|wales|ireland|ni|manchester|birmingham|leeds|yorkshire|northwest|northeast|southwest|southeast|midlands|central)$'),
+        '');
+
+    // Collapse "plus1"/"plusone" variants
+    normalized = normalized.replaceAll(RegExp(r'(plus1|plusone)$'), '');
+
     return _convertNumberWords(normalized);
   }
 
   static String _convertNumberWords(String text) {
     const conversions = {
+      'zero': '0',
       'one': '1',
       'two': '2',
       'three': '3',
@@ -800,6 +811,16 @@ class IncrementalEpgService extends ChangeNotifier {
       'eight': '8',
       'nine': '9',
       'ten': '10',
+      'eleven': '11',
+      'twelve': '12',
+      'thirteen': '13',
+      'fourteen': '14',
+      'fifteen': '15',
+      'sixteen': '16',
+      'seventeen': '17',
+      'eighteen': '18',
+      'nineteen': '19',
+      'twenty': '20',
       '1st': '1',
       '2nd': '2',
       '3rd': '3',
@@ -819,9 +840,12 @@ class IncrementalEpgService extends ChangeNotifier {
   static String _stripSuffixes(String text) {
     return text
         .replaceAll(
-            RegExp(r'(uhd|fhd|hd|sd|4k|1080p|720p)$', caseSensitive: false), '')
+            RegExp(r'(uhd|fhd|hd|sd|4k|1080p|720p|plus1|plusone)$',
+                caseSensitive: false),
+            '')
         .replaceAll(
-            RegExp(r'(london|scotland|wales|ireland|ni|channelislands)$',
+            RegExp(
+                r'(london|scotland|wales|ireland|ni|channelislands|manchester|birmingham|leeds|yorkshire|north|south|east|west|northeast|northwest|southeast|southwest|midlands)$',
                 caseSensitive: false),
             '')
         .trim();

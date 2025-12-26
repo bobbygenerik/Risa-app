@@ -54,7 +54,12 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
       return {'matched': 0, 'total': totalChannels};
     }
 
-    return channelProvider.computeEpgMatchStats(epgService);
+    // Cap to avoid long-running loops on very large playlists
+    const int maxScan = 25000;
+    return channelProvider.computeEpgMatchStats(
+      epgService,
+      maxChannels: maxScan,
+    );
   }
 
   Future<Map<String, String?>> _getEpgConfiguration() async {
@@ -79,7 +84,6 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
         builder: (context, epgService, channelProvider, _) {
           final totalChannels = channelProvider.channelCount;
           final epgCount = epgService.availableChannels.length;
-          final epgChannels = epgService.availableChannels.take(10).toList();
           _maybeRefreshStats(totalChannels, epgCount);
 
           // Debug info for IncrementalEpgService
@@ -176,33 +180,48 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                   builder: (context, snapshot) {
                     final stats = snapshot.data;
                     final matched = stats?['matched'] ?? 0;
-                    final total = stats?['total'] ?? totalChannels;
-                    final percent = total == 0
+                    final scanned = stats?['scanned'] ?? totalChannels;
+                    final overall = stats?['total'] ?? totalChannels;
+                    final percent = scanned == 0
                         ? '0.0'
-                        : ((matched / total) * 100).toStringAsFixed(1);
+                        : ((matched / scanned) * 100).toStringAsFixed(1);
                     final isLoadingStats =
                         snapshot.connectionState == ConnectionState.waiting;
                     final color =
-                        matched > (total * 0.5) ? Colors.green : Colors.orange;
+                        matched > (scanned * 0.5) ? Colors.green : Colors.orange;
 
-                    return Row(
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Matched: $matched/$total ($percent%)',
-                          style: TextStyle(
-                            color: color,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              'Matched: $matched/$scanned ($percent%)',
+                              style: TextStyle(
+                                color: color,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            if (isLoadingStats) ...[
+                              const SizedBox(width: 8),
+                              const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            ],
+                          ],
                         ),
-                        if (isLoadingStats) ...[
-                          const SizedBox(width: 8),
-                          const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                        if (scanned < overall)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4.0),
+                            child: Text(
+                              'Scanned first $scanned of $overall channels (sampling to keep UI responsive).',
+                              style: const TextStyle(
+                                  color: Colors.white70, fontSize: 12),
+                            ),
                           ),
-                        ],
                       ],
                     );
                   },
@@ -290,26 +309,6 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                     );
                   },
                 ),
-                const SizedBox(height: 20),
-
-                const Text(
-                  'First 10 EPG Channel IDs:',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                ...epgChannels.take(10).map((id) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        id,
-                        style:
-                            const TextStyle(color: Colors.green, fontSize: 14),
-                      ),
-                    )),
-
-                const SizedBox(height: 20),
                 const Text(
                   'First 10 Playlist Channels:',
                   style: TextStyle(

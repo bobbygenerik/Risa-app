@@ -1339,6 +1339,30 @@ class ChannelProvider with ChangeNotifier {
         return;
       }
 
+      // Canonical Xtream XMLTV endpoint using supplied credentials
+      try {
+        final epgUri = Uri.parse(serverUrl).replace(
+          path: (Uri.parse(serverUrl).path.trim().isEmpty)
+              ? 'xmltv.php'
+              : '${Uri.parse(serverUrl).path.replaceAll(RegExp(r'^/'), '')}/xmltv.php',
+          queryParameters: {
+            'username': username.replaceAll(' ', ''),
+            'password': password.replaceAll(' ', ''),
+          },
+        );
+        final prefs = await SharedPreferences.getInstance();
+        final previous = prefs.getString('epg_url');
+        if (previous != epgUri.toString()) {
+          await prefs.setString('epg_url', epgUri.toString());
+          await prefs.setString('custom_epg_url', epgUri.toString());
+          debugLog(
+              'ChannelProvider: Saved Xtream EPG URL from playlist: ${epgUri.toString()}');
+          _scheduleEpgRefresh(forceRefresh: true);
+        }
+      } catch (e) {
+        debugLog('ChannelProvider: Failed to derive Xtream EPG URL: $e');
+      }
+
       debugLog('ChannelProvider: Loading VOD from Xtream Codes API...');
       final xtreamService = XtreamCodesService(
         serverUrl: serverUrl,
@@ -1850,7 +1874,7 @@ class ChannelProvider with ChangeNotifier {
             : total;
 
     if (cappedTotal == 0 || epgService.availableChannels.isEmpty) {
-      return {'matched': 0, 'total': cappedTotal};
+      return {'matched': 0, 'scanned': cappedTotal, 'total': total};
     }
 
     int matched = 0;
@@ -1872,7 +1896,7 @@ class ChannelProvider with ChangeNotifier {
       }
     }
 
-    return {'matched': matched, 'total': cappedTotal};
+    return {'matched': matched, 'scanned': cappedTotal, 'total': total};
   }
 
   /// Start background TMDB enrichment for movies and series
