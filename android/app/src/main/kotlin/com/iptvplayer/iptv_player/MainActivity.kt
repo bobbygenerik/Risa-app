@@ -47,6 +47,10 @@ class MainActivity : FlutterActivity() {
     private var isInPipMode = false
     private var transcriptionSink: EventChannel.EventSink? = null
     private var audioCapturer: ExoPlayerAudioCapturer? = null
+    // Suppress writing crash files during the app startup window to avoid
+    // creating logs for transient startup exceptions. Will be cleared shortly
+    // after `onCreate` finishes.
+    private val _suppressCrashFileWrites = AtomicBoolean(true)
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -212,7 +216,11 @@ class MainActivity : FlutterActivity() {
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             try {
-                writeCrashToFile(thread, throwable)
+                if (!_suppressCrashFileWrites.get()) {
+                    writeCrashToFile(thread, throwable)
+                } else {
+                    Log.w("CrashLogger", "Suppressed crash file write during startup: ${throwable.message}")
+                }
             } catch (e: Exception) {
                 // best-effort logging
                 Log.e("CrashLogger", "Failed to write crash file: ${e.message}")
