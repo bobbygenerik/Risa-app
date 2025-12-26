@@ -9,8 +9,52 @@ import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
 
-class EpgDiagnosticScreen extends StatelessWidget {
+class EpgDiagnosticScreen extends StatefulWidget {
   const EpgDiagnosticScreen({super.key});
+
+  @override
+  State<EpgDiagnosticScreen> createState() => _EpgDiagnosticScreenState();
+}
+
+class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
+  Future<Map<String, int>>? _statsFuture;
+  int _lastChannelCount = -1;
+  int _lastEpgCount = -1;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshStats());
+  }
+
+  void _refreshStats() {
+    setState(() {
+      _statsFuture = _computeStats();
+    });
+  }
+
+  void _maybeRefreshStats(int channelCount, int epgCount) {
+    if (channelCount == _lastChannelCount && epgCount == _lastEpgCount) {
+      return;
+    }
+    _lastChannelCount = channelCount;
+    _lastEpgCount = epgCount;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _refreshStats();
+    });
+  }
+
+  Future<Map<String, int>> _computeStats() async {
+    final channelProvider = context.read<ChannelProvider>();
+    final epgService = context.read<IncrementalEpgService>();
+    final totalChannels = channelProvider.channelCount;
+
+    if (totalChannels == 0 || epgService.availableChannels.isEmpty) {
+      return {'matched': 0, 'total': totalChannels};
+    }
+
+    return channelProvider.computeEpgMatchStats(epgService);
+  }
 
   Future<Map<String, String?>> _getEpgConfiguration() async {
     final prefs = await SharedPreferences.getInstance();
@@ -33,28 +77,16 @@ class EpgDiagnosticScreen extends StatelessWidget {
       body: Consumer2<IncrementalEpgService, ChannelProvider>(
         builder: (context, epgService, channelProvider, _) {
           final totalChannels = channelProvider.channelCount;
-          final previewCount = totalChannels < 10 ? totalChannels : 10;
-          final epgChannels = epgService.getEpgChannelIds();
-          // Calculate basic stats using full channel list
-          var matched = 0;
-          for (var i = 0; i < totalChannels; i++) {
-            final channel = channelProvider.getChannelAt(i);
-            if (epgService.hasEpgMatch(
-              channel.tvgId ?? channel.id,
-              channelName: channel.name,
-            )) {
-              matched++;
-            }
-          }
-          final stats = {'matched': matched, 'total': totalChannels};
+          final epgCount = epgService.availableChannels.length;
+          final epgChannels = epgService.availableChannels.take(10).toList();
+          _maybeRefreshStats(totalChannels, epgCount);
 
           // Debug info for IncrementalEpgService
-          if (totalChannels > 0 && epgService.availableChannels.isNotEmpty) {
+          if (totalChannels > 0 && epgCount > 0) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _writeDebugMarker('epg_postframe_callback');
               print('=== INCREMENTAL EPG DEBUG ===');
-              print(
-                  'EPG available channels: ${epgService.availableChannels.length}');
+              print('EPG available channels: ${epgService.availableChannels.length}');
               print('EPG loaded channels: ${epgService.loadedChannelCount}');
               print('Channel provider channels count: $totalChannels');
 
@@ -95,6 +127,7 @@ class EpgDiagnosticScreen extends StatelessWidget {
                           await _writeDebugMarker('epg_reload_requested');
                           await epgService.initialize(forceRefresh: true);
                           await _writeDebugMarker('epg_reload_completed');
+                          _refreshStats();
                           rootScaffoldMessengerKey.currentState?.showSnackBar(
                               const SnackBar(
                                   content: Text('EPG reload requested')));
@@ -130,22 +163,48 @@ class EpgDiagnosticScreen extends StatelessWidget {
                   ),
                 ],
                 Text(
-                  'EPG Channels: ${epgChannels.length}',
+                  'EPG Channels: $epgCount',
                   style: const TextStyle(color: Colors.white70, fontSize: 16),
                 ),
                 Text(
                   'Playlist Channels: $totalChannels',
                   style: const TextStyle(color: Colors.white70, fontSize: 16),
                 ),
-                Text(
-                  'Matched: ${stats['matched']}/${stats['total']} (${stats['total']! == 0 ? '0.0' : ((stats['matched']! / stats['total']!) * 100).toStringAsFixed(1)}%)',
-                  style: TextStyle(
-                    color: stats['matched']! > stats['total']! * 0.5
-                        ? Colors.green
-                        : Colors.orange,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                FutureBuilder<Map<String, int>>(
+                  future: _statsFuture,
+                  builder: (context, snapshot) {
+                    final stats = snapshot.data;
+                    final matched = stats?['matched'] ?? 0;
+                    final total = stats?['total'] ?? totalChannels;
+                    final percent = total == 0
+                        ? '0.0'
+                        : ((matched / total) * 100).toStringAsFixed(1);
+                    final isLoadingStats =
+                        snapshot.connectionState == ConnectionState.waiting;
+                    final color =
+                        matched > (total * 0.5) ? Colors.green : Colors.orange;
+
+                    return Row(
+                      children: [
+                        Text(
+                          'Matched: $matched/$total ($percent%)',
+                          style: TextStyle(
+                            color: color,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        if (isLoadingStats) ...[
+                          const SizedBox(width: 8),
+                          const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ],
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 20),
 
@@ -326,5 +385,3 @@ class EpgDiagnosticScreen extends StatelessWidget {
   }
 
 }
-
-

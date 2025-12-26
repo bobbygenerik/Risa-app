@@ -71,7 +71,7 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
         bottom: scaledPadding.bottom,
       ),
       constraints: BoxConstraints(
-        minHeight: context.tvSpacing(widget.minHeight ?? 36).clamp(20.0, 44.0),
+        minHeight: context.tvSpacing(widget.minHeight ?? 36).clamp(24.0, 64.0),
       ),
       child: Row(
         mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
@@ -235,7 +235,7 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
           ),
           constraints: BoxConstraints(
             minHeight:
-                context.tvSpacing(widget.minHeight ?? 32).clamp(20.0, 44.0),
+                context.tvSpacing(widget.minHeight ?? 32).clamp(24.0, 64.0),
           ),
           child: Row(
             mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,

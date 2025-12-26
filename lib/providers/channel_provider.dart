@@ -92,6 +92,7 @@ class ChannelProvider with ChangeNotifier {
   // Loading progress for UI feedback
   double _loadingProgress = 0.0;
   String _loadingStatus = '';
+  bool _vodHydrated = false; // Tracks if full VOD lists were pushed to ContentProvider
 
   // TMDB enrichment service for background genre enrichment
   final TMDBEnrichmentService _enrichmentService = TMDBEnrichmentService();
@@ -136,6 +137,34 @@ class ChannelProvider with ChangeNotifier {
     service.initialize().catchError((e) {
       debugLog('EPG Service initialization failed in ChannelProvider: $e');
     });
+  }
+
+  void _scheduleEpgRefresh({bool forceRefresh = false}) {
+    final service = _epgService;
+    if (service == null) return;
+    if (service.isLoading || service.isDownloading || service.isParsing) return;
+
+    unawaited(service.initialize(forceRefresh: forceRefresh).catchError((e) {
+      debugLog('ChannelProvider: EPG refresh failed: $e');
+    }));
+  }
+
+  Future<void> _hydrateContentProviderFromCache() async {
+    if (_contentProvider == null || _vodHydrated) return;
+    if (_moviesCachePath == null || _seriesCachePath == null) return;
+
+    try {
+      final movies = await getMovies(limit: 999999);
+      final series = await getSeries(limit: 999999);
+      if (_disposed) return;
+      _contentProvider!.loadMovies(movies);
+      _contentProvider!.loadSeries(series);
+      _vodHydrated = true;
+      debugLog(
+          'ChannelProvider: Hydrated ContentProvider with ${movies.length} movies and ${series.length} series');
+    } catch (e) {
+      debugLog('ChannelProvider: Failed to hydrate full VOD cache: $e');
+    }
   }
 
   /// Public API to cancel any in-progress playlist load.
@@ -437,6 +466,7 @@ class ChannelProvider with ChangeNotifier {
           _channelMaps = (parsed['channels'] as List<dynamic>)
               .map((c) => Map<String, dynamic>.from(c as Map))
               .toList();
+          _vodHydrated = false;
           _channelCache.clear();
 
           // Extract and save EPG URL from JSON cache
@@ -451,7 +481,7 @@ class ChannelProvider with ChangeNotifier {
             if (_epgService != null) {
               debugLog(
                   'ChannelProvider: Initializing EPG service with URL from cache');
-              await _epgService!.initialize(forceRefresh: urlChanged);
+              _scheduleEpgRefresh(forceRefresh: urlChanged);
             }
           }
 
@@ -502,6 +532,8 @@ class ChannelProvider with ChangeNotifier {
               'ChannelProvider: JSON cache loaded in ${totalCacheLoad.inMilliseconds}ms with ${_channelMaps.length} channels');
           StartupProbe.mark(
               'ChannelProvider.autoLoadPlaylist: JSON cache load finished');
+          _scheduleEpgRefresh(
+              forceRefresh: (_epgService?.availableChannels.isEmpty ?? true));
           return;
         } catch (e) {
           debugLog(
@@ -536,12 +568,13 @@ class ChannelProvider with ChangeNotifier {
             await prefs.setString('epg_url', epgUrl);
             // Ensure EPG service is initialized
             if (_epgService != null) {
-              unawaited(_epgService!.initialize(forceRefresh: urlChanged));
+              _scheduleEpgRefresh(forceRefresh: urlChanged);
             }
           }
 
           // Store raw maps - already in map format from optimized parser
           final mapStart = DateTime.now();
+          _vodHydrated = false;
           _channelMaps = (parsed['channels'] as List<dynamic>)
               .map((c) => Map<String, dynamic>.from(c))
               .toList();
@@ -577,6 +610,7 @@ class ChannelProvider with ChangeNotifier {
           if (_contentProvider != null) {
             _contentProvider!.loadMovies(movies.take(100).toList());
             _contentProvider!.loadSeries(series.take(100).toList());
+            unawaited(_hydrateContentProviderFromCache());
           }
 
           // Save to JSON cache for faster loading next time
@@ -590,6 +624,8 @@ class ChannelProvider with ChangeNotifier {
               'ChannelProvider: File cache loaded in ${totalCacheLoad.inMilliseconds}ms with ${_channelMaps.length} channels');
           StartupProbe.mark(
               'ChannelProvider.autoLoadPlaylist: file cache load finished');
+          _scheduleEpgRefresh(
+              forceRefresh: (_epgService?.availableChannels.isEmpty ?? true));
           return;
         }
       } catch (e) {
@@ -721,6 +757,7 @@ class ChannelProvider with ChangeNotifier {
     _isLoading = true;
     _errorMessage = null;
     _lastM3UContent = null; // Clear old content
+    _vodHydrated = false;
     notifyListeners();
 
     try {
@@ -765,7 +802,7 @@ class ChannelProvider with ChangeNotifier {
         if (_epgService != null) {
           debugLog(
               'ChannelProvider: Initializing EPG service with URL from M3U');
-          await _epgService!.initialize(forceRefresh: urlChanged);
+          _scheduleEpgRefresh(forceRefresh: urlChanged);
         }
       }
 
@@ -846,6 +883,7 @@ class ChannelProvider with ChangeNotifier {
       if (_contentProvider != null) {
         _contentProvider!.loadMovies(movies.take(100).toList());
         _contentProvider!.loadSeries(series.take(100).toList());
+        unawaited(_hydrateContentProviderFromCache());
       }
 
       _loadingStatus = 'Finalizing...';
@@ -874,6 +912,8 @@ class ChannelProvider with ChangeNotifier {
       debugLog(
           'ChannelProvider: Loaded ${_channelMaps.length} channels, cache size: ${_channelCache.length}');
 
+      _scheduleEpgRefresh(
+          forceRefresh: (_epgService?.availableChannels.isEmpty ?? true));
       unawaited(_startBackgroundEnrichment());
     } catch (e, stackTrace) {
       debugLog('ChannelProvider: Error loading playlist: $e');
@@ -929,6 +969,7 @@ class ChannelProvider with ChangeNotifier {
   Future<void> _loadPlaylistWithDirectClient(String url) async {
     _isLoading = true;
     _errorMessage = null;
+    _vodHydrated = false;
     notifyListeners();
 
     final httpClient =
@@ -1024,6 +1065,7 @@ class ChannelProvider with ChangeNotifier {
       if (_contentProvider != null) {
         _contentProvider!.loadMovies(movies.take(100).toList());
         _contentProvider!.loadSeries(series.take(100).toList());
+        unawaited(_hydrateContentProviderFromCache());
       }
 
       // Use the temp file as cache
@@ -1070,6 +1112,8 @@ class ChannelProvider with ChangeNotifier {
       _hasLoadedPlaylist = true;
       notifyListeners();
 
+      _scheduleEpgRefresh(
+          forceRefresh: (_epgService?.availableChannels.isEmpty ?? true));
       // Start background TMDB enrichment (non-blocking)
       unawaited(_startBackgroundEnrichment());
     } catch (e, stackTrace) {
@@ -1088,6 +1132,7 @@ class ChannelProvider with ChangeNotifier {
   Future<void> loadPlaylistFromString(String content) async {
     _isLoading = true;
     _errorMessage = null;
+    _vodHydrated = false;
     notifyListeners();
 
     try {
@@ -1127,6 +1172,7 @@ class ChannelProvider with ChangeNotifier {
       if (_contentProvider != null) {
         _contentProvider!.loadMovies(movies.take(100).toList());
         _contentProvider!.loadSeries(series.take(100).toList());
+        unawaited(_hydrateContentProviderFromCache());
       }
 
       // Auto-save EPG URL from M3U x-tvg-url attribute
@@ -1149,6 +1195,8 @@ class ChannelProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
 
+      _scheduleEpgRefresh(
+          forceRefresh: (_epgService?.availableChannels.isEmpty ?? true));
       // Start background TMDB enrichment (non-blocking)
       unawaited(_startBackgroundEnrichment());
     } catch (e, stackTrace) {
@@ -1275,6 +1323,7 @@ class ChannelProvider with ChangeNotifier {
   /// Load VOD content using Xtream Codes API
   Future<void> _loadXtreamVOD(String m3uUrl) async {
     try {
+      _vodHydrated = false;
       // Extract server, username, password from M3U URL
       // Format: http://server/get.php?username=X&password=Y&type=m3u_plus&output=ts
       final uri = Uri.parse(m3uUrl);
@@ -1704,7 +1753,11 @@ class ChannelProvider with ChangeNotifier {
         final firstSeries = await getSeries(limit: 100);
         _contentProvider!.loadMovies(firstMovies);
         _contentProvider!.loadSeries(firstSeries);
+        unawaited(_hydrateContentProviderFromCache());
       }
+
+      _scheduleEpgRefresh(
+          forceRefresh: (_epgService?.availableChannels.isEmpty ?? true));
     } catch (e) {
       debugLog('ChannelProvider: Error loading Xtream VOD: $e');
       // Don't fail the whole playlist load if VOD fails
@@ -1785,6 +1838,43 @@ class ChannelProvider with ChangeNotifier {
     return null;
   }
 
+  /// Compute EPG match stats asynchronously to avoid freezing the UI
+  Future<Map<String, int>> computeEpgMatchStats(
+    IncrementalEpgService epgService, {
+    int? maxChannels,
+  }) async {
+    final total = _channelMaps.length;
+    final cappedTotal =
+        maxChannels != null && maxChannels > 0 && maxChannels < total
+            ? maxChannels
+            : total;
+
+    if (cappedTotal == 0 || epgService.availableChannels.isEmpty) {
+      return {'matched': 0, 'total': cappedTotal};
+    }
+
+    int matched = 0;
+    for (int i = 0; i < cappedTotal; i++) {
+      final map = _channelMaps[i];
+      final channelId = (map['tvgId'] as String?) ??
+          (map['id'] as String?) ??
+          (map['url'] as String? ?? '');
+      final name = (map['name'] as String?) ?? '';
+
+      if (channelId.isNotEmpty &&
+          epgService.hasEpgMatch(channelId, channelName: name)) {
+        matched++;
+      }
+
+      // Yield periodically to keep UI responsive on large playlists
+      if (i % 400 == 0) {
+        await Future.delayed(Duration.zero);
+      }
+    }
+
+    return {'matched': matched, 'total': cappedTotal};
+  }
+
   /// Start background TMDB enrichment for movies and series
   /// Runs asynchronously without blocking UI
   Future<void> _startBackgroundEnrichment() async {
@@ -1820,12 +1910,14 @@ class ChannelProvider with ChangeNotifier {
         );
 
         // Save enriched content back to cache files
+        _vodHydrated = false;
         await _saveEnrichedContent(enrichedMovies, enrichedSeries);
 
         // Update ContentProvider with enriched data (first 100 for UI)
         if (_contentProvider != null) {
           _contentProvider!.loadMovies(enrichedMovies.take(100).toList());
           _contentProvider!.loadSeries(enrichedSeries.take(100).toList());
+          unawaited(_hydrateContentProviderFromCache());
         }
 
         debugLog('ChannelProvider: Background TMDB enrichment completed');

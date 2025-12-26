@@ -130,26 +130,28 @@ class _ExitScreenState extends State<ExitScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   SizedBox(
-                    height: 44,
+                    height: 52,
+                    width: 180,
                     child: BrandSecondaryButton(
                       focusNode: _backButtonFocus,
                       onPressed: () => context.go('/home'),
                       label: 'Go Back',
-                      minHeight: 44,
+                      minHeight: 48,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 12),
+                          horizontal: 24, vertical: 14),
                     ),
                   ),
                   const SizedBox(width: 24),
                   SizedBox(
-                    height: 44,
+                    height: 52,
+                    width: 180,
                     child: BrandPrimaryButton(
                       focusNode: _exitButtonFocus,
                       onPressed: () => SystemNavigator.pop(),
                       label: 'Exit App',
-                      minHeight: 44,
+                      minHeight: 48,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 12),
+                          horizontal: 24, vertical: 14),
                     ),
                   ),
                 ],
