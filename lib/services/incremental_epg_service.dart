@@ -67,6 +67,10 @@ class IncrementalEpgService extends ChangeNotifier {
   bool get hasEpgUrl => _epgUrl != null && _epgUrl!.isNotEmpty;
 
   Future<void> initialize({bool forceRefresh = false}) async {
+    if (!forceRefresh && (_isLoading || _isDownloading || _isParsing)) {
+      debugLog('EPG: Init skipped (already loading)');
+      return;
+    }
     if (_initInFlight) {
       debugLog('EPG: Init skipped (in flight)');
       return;
@@ -74,6 +78,11 @@ class IncrementalEpgService extends ChangeNotifier {
     _initInFlight = true;
     try {
       debugLog('EPG: Initializing...');
+      try {
+        await _db.init();
+      } catch (e) {
+        debugLog('EPG: DB init failed (continuing without DB cache): $e');
+      }
       final prefs = await SharedPreferences.getInstance();
       // Try both keys - custom_epg_url (set by user) and epg_url (auto-found in M3U)
       // custom_epg_url takes precedence
@@ -86,10 +95,14 @@ class IncrementalEpgService extends ChangeNotifier {
         debugLog('EPG: Initializing with URL: $_epgUrl');
         // Try loading persisted normalized mapping early to speed up matches
         await _loadNormalizedMappingFromPrefs();
+        await loadMappingsFromDb();
         await _loadChannelList(forceRefresh: forceRefresh);
       } else {
         debugLog('EPG: No URL configured (checked custom_epg_url and epg_url)');
         _error = 'No EPG URL configured';
+        _isLoading = false;
+        _isDownloading = false;
+        _isParsing = false;
         notifyListeners();
       }
 
@@ -881,6 +894,20 @@ class IncrementalEpgService extends ChangeNotifier {
     return _convertNumberWords(normalized);
   }
 
+  void _ensureNormalizedMap() {
+    if (_normalizedAvailableChannels != null &&
+        _normalizedAvailableChannels!.isNotEmpty) {
+      return;
+    }
+    if (_availableChannels.isEmpty) return;
+    _normalizedAvailableChannels ??= {};
+    for (final id in _availableChannels) {
+      final normalized = _normalize(id);
+      if (normalized.isEmpty) continue;
+      _normalizedAvailableChannels!.putIfAbsent(normalized, () => id);
+    }
+  }
+
   String _removeDiacritics(String input) {
     const Map<String, String> map = {
       'á': 'a',
@@ -1062,6 +1089,7 @@ class IncrementalEpgService extends ChangeNotifier {
     String? channelName, {
     bool logIfMissing = true,
   }) {
+    _ensureNormalizedMap();
     if (_internalToEpgIdMapping.containsKey(channelId)) {
       return _internalToEpgIdMapping[channelId];
     }

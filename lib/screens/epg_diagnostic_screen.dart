@@ -46,53 +46,60 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
   }
 
   Future<Map<String, int>> _computeStats() async {
-    final channelProvider = context.read<ChannelProvider>();
-    final epgService = context.read<IncrementalEpgService>();
-    final db = LocalDbService.instance;
-    await db.init();
-
-    final totalChannels = await channelProvider.getChannelCountAsync();
-    if (totalChannels == 0) {
-      return {'matched': 0, 'total': 0, 'scanned': 0};
-    }
-
-    int mappingCount = 0;
     try {
-      mappingCount = await db.mappingCount();
-    } catch (_) {}
-    final epgAvailable = epgService.availableChannels.length;
+      final channelProvider = context.read<ChannelProvider>();
+      final epgService = context.read<IncrementalEpgService>();
+      final db = LocalDbService.instance;
+      await db.init();
 
-    // If DB isn't ready or mappings are empty, estimate matches in-memory
-    if (mappingCount == 0 || epgAvailable == 0) {
-      final sampleSize = math.min(200, totalChannels);
-      try {
-        final sample = await channelProvider.getChannelsPage(
-          offset: 0,
-          limit: sampleSize,
-        );
-        if (sample.isNotEmpty) {
-          int matched = 0;
-          for (final c in sample) {
-            if (epgService.hasEpgMatch(c.tvgId ?? c.id, channelName: c.name)) {
-              matched++;
-            }
-          }
-          mappingCount = matched *
-              (totalChannels ~/ (sample.isEmpty ? 1 : sample.length));
-        }
-      } catch (e) {
-        debugLog('EPG Diagnostic: sampling failed: $e');
-        mappingCount = 0;
+      final totalChannels = await channelProvider.getChannelCountAsync();
+      if (totalChannels == 0) {
+        return {'matched': 0, 'total': 0, 'scanned': 0, 'epgChannels': 0};
       }
-    }
 
-    // matched is count of mappings; scanned == total (no sampling)
-    return {
-      'matched': mappingCount,
-      'scanned': totalChannels,
-      'total': totalChannels,
-      'epgChannels': epgAvailable,
-    };
+      int mappingCount = 0;
+      try {
+        mappingCount = await db.mappingCount();
+      } catch (_) {}
+      final epgAvailable = epgService.availableChannels.length;
+
+      // If DB isn't ready or mappings are empty, estimate matches in-memory
+      if (mappingCount == 0 || epgAvailable == 0) {
+        final sampleSize = math.min(200, totalChannels);
+        try {
+          final sample = await channelProvider.getChannelsPage(
+            offset: 0,
+            limit: sampleSize,
+          );
+          if (sample.isNotEmpty) {
+            int matched = 0;
+            for (final c in sample) {
+              if (epgService.hasEpgMatch(
+                  c.tvgId?.trim().isNotEmpty == true ? c.tvgId! : c.id,
+                  channelName: c.name)) {
+                matched++;
+              }
+            }
+            mappingCount =
+                matched * (totalChannels ~/ (sample.isEmpty ? 1 : sample.length));
+          }
+        } catch (e, st) {
+          debugLog('EPG Diagnostic: sampling failed: $e\n$st');
+          mappingCount = 0;
+        }
+      }
+
+      // matched is count of mappings; scanned == total (no sampling)
+      return {
+        'matched': mappingCount,
+        'scanned': totalChannels,
+        'total': totalChannels,
+        'epgChannels': epgAvailable,
+      };
+    } catch (e, st) {
+      debugLog('EPG Diagnostic: computeStats failed: $e\n$st');
+      return {'matched': 0, 'total': 0, 'scanned': 0, 'epgChannels': 0};
+    }
   }
 
   Future<Map<String, String?>> _getEpgConfiguration() async {
@@ -116,8 +123,8 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
       body: Consumer2<IncrementalEpgService, ChannelProvider>(
         builder: (context, epgService, channelProvider, _) {
           final totalChannels = channelProvider.channelCount;
-                  final epgCount = epgService.availableChannels.length;
-                  _maybeRefreshStats(totalChannels, epgCount);
+          final epgCount = epgService.availableChannels.length;
+          _maybeRefreshStats(totalChannels, epgCount);
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -189,6 +196,15 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                 FutureBuilder<Map<String, int>>(
                   future: _statsFuture,
                   builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      debugLog(
+                          'EPG Diagnostic stats error: ${snapshot.error}');
+                      return Text(
+                        'Unable to compute match stats right now.',
+                        style: const TextStyle(
+                            color: Colors.orangeAccent, fontSize: 14),
+                      );
+                    }
                     final stats = snapshot.data;
                     final matched = stats?['matched'] ?? 0;
                     final scanned = stats?['scanned'] ?? totalChannels;
