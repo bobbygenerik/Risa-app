@@ -8,6 +8,7 @@ import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:flutter/services.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
+import 'dart:math';
 
 class EpgDiagnosticScreen extends StatefulWidget {
   const EpgDiagnosticScreen({super.key});
@@ -317,7 +318,7 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                       fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                ...List.generate(previewCount, (index) {
+                ...List.generate(min(10, channelProvider.channelCount), (index) {
                   final channel = channelProvider.getChannelAt(index);
                   final hasEpg = epgService.hasEpgMatch(
                     channel.tvgId ?? channel.id,

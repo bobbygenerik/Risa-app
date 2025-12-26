@@ -201,9 +201,8 @@ class MainActivity : FlutterActivity() {
         try {
             writeStartupMarker()
             postStartupNotification()
-            Handler(Looper.getMainLooper()).post {
-                Toast.makeText(this, "App started (check Downloads/RisaLogs or notification)", Toast.LENGTH_LONG).show()
-            }
+            // Replace the user-facing Toast with a log entry to avoid intrusive UI on startup
+            Log.i("StartupMarker", "App started (check Downloads/RisaLogs or notification)")
         } catch (e: Exception) {
             Log.w("StartupMarker", "failed to write startup marker: ${e.message}")
         }
