@@ -255,6 +255,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 return _buildSkeletonLoader();
               }
               if (_featuredIndex >= previewList.length) _featuredIndex = 0;
+              if (_featuredIndex == 0 && previewList.isNotEmpty) {
+                _featuredIndex = Random().nextInt(previewList.length);
+              }
               final featuredChannel = previewList[_featuredIndex];
 
               final epgService =
@@ -269,13 +272,20 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 builder: (context, groupSnapshot) {
                   final groupedChannels = groupSnapshot.data ??
                       channelProvider.getGroupedChannels();
+                  final hasAnyChannels =
+                      groupedChannels.values.any((c) => c.isNotEmpty);
+                  final fallbackGrouped = hasAnyChannels
+                      ? groupedChannels
+                      : {
+                          'All Channels': previewList,
+                        };
                   final isGrouping = channelProvider.isGroupingChannels;
 
                   return _buildFullScreenHero(
                     context,
                     featuredChannel,
                     previewList,
-                    groupedChannels,
+                    fallbackGrouped,
                     isGrouping,
                   );
                 },

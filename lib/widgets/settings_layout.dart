@@ -84,18 +84,9 @@ class _SettingsLayoutState extends State<SettingsLayout> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppTheme.darkBackground,
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF080808), // Rich Black
-              AppTheme.darkBackground, // True Black
-            ],
-          ),
-        ),
+        color: AppTheme.darkBackground,
         child: Padding(
           padding: EdgeInsets.only(
               left: MediaQuery.of(context).padding.left +
@@ -150,7 +141,7 @@ class _SettingsLayoutState extends State<SettingsLayout> {
               // Right Pane: Content
               Expanded(
                 child: FocusScope(
-                  autofocus: true,
+                  autofocus: false,
                   child: Focus(
                     onKeyEvent: (node, event) {
                       if (event is! KeyDownEvent) return KeyEventResult.ignored;
@@ -163,7 +154,7 @@ class _SettingsLayoutState extends State<SettingsLayout> {
                       return KeyEventResult.ignored;
                     },
                     child: Container(
-                      color: AppTheme.darkBackground,
+                      color: Colors.transparent,
                       child: widget.content,
                     ),
                   ),

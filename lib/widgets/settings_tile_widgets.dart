@@ -104,6 +104,8 @@ class SettingsActionTile extends StatelessWidget {
   final Color? iconColor;
   final Color? titleColor;
   final FocusNode? focusNode;
+  final VoidCallback? onArrowDown;
+  final VoidCallback? onArrowRight;
 
   const SettingsActionTile({
     super.key,
@@ -115,6 +117,8 @@ class SettingsActionTile extends StatelessWidget {
     this.iconColor,
     this.titleColor,
     this.focusNode,
+    this.onArrowDown,
+    this.onArrowRight,
   });
 
   @override
@@ -139,6 +143,16 @@ class SettingsActionTile extends StatelessWidget {
                 event.logicalKey == LogicalKeyboardKey.enter ||
                 event.logicalKey == LogicalKeyboardKey.space) {
               onTap?.call();
+              return KeyEventResult.handled;
+            }
+            if (event.logicalKey == LogicalKeyboardKey.arrowDown &&
+                onArrowDown != null) {
+              onArrowDown!();
+              return KeyEventResult.handled;
+            }
+            if (event.logicalKey == LogicalKeyboardKey.arrowRight &&
+                onArrowRight != null) {
+              onArrowRight!();
               return KeyEventResult.handled;
             }
             // Allow default focus engine to handle other keys (arrows, etc.)
@@ -417,6 +431,11 @@ class _PremiumTextFieldState extends State<_PremiumTextField> {
         alignment: 0.2,
         duration: const Duration(milliseconds: 150),
       );
+      // Ensure no in-field text selection appears when container gains focus.
+      final textLen = widget.controller.text.length;
+      try {
+        widget.controller.selection = TextSelection.collapsed(offset: textLen);
+      } catch (_) {}
     }
   }
 

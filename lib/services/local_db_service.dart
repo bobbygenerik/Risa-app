@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -17,18 +16,14 @@ class LocalDbService {
   Future<void> init() async {
     if (_isInit) return;
 
-    // Enable FFI for desktop/testing environments.
-    // Note: this app targets Android only; desktop FFI initialization
-    // (sqflite_common_ffi) has been removed to avoid pulling desktop-only
-    // native dependencies into Android builds.
-
-    final dir = await getApplicationDocumentsDirectory();
-    final dbPath = p.join(dir.path, 'iptv_local.db');
-    _db = await openDatabase(
-      dbPath,
-      version: 1,
-      onCreate: (db, _) async {
-        await db.execute('''
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final dbPath = p.join(dir.path, 'iptv_local.db');
+      _db = await openDatabase(
+        dbPath,
+        version: 1,
+        onCreate: (db, _) async {
+          await db.execute('''
           CREATE TABLE channels(
             id TEXT PRIMARY KEY,
             name TEXT,
@@ -47,34 +42,34 @@ class LocalDbService {
             idx INTEGER
           )
         ''');
-        await db.execute(
-            'CREATE INDEX IF NOT EXISTS idx_channels_group ON channels(groupTitle)');
-        await db.execute(
-            'CREATE INDEX IF NOT EXISTS idx_channels_name ON channels(name)');
-        await db.execute(
-            'CREATE INDEX IF NOT EXISTS idx_channels_idx ON channels(idx)');
+          await db.execute(
+              'CREATE INDEX IF NOT EXISTS idx_channels_group ON channels(groupTitle)');
+          await db.execute(
+              'CREATE INDEX IF NOT EXISTS idx_channels_name ON channels(name)');
+          await db.execute(
+              'CREATE INDEX IF NOT EXISTS idx_channels_idx ON channels(idx)');
 
-        await db.execute('''
+          await db.execute('''
           CREATE TABLE vod_movies(
             id TEXT PRIMARY KEY,
             title TEXT,
             payload TEXT
           )
         ''');
-        await db.execute(
-            'CREATE INDEX IF NOT EXISTS idx_movies_title ON vod_movies(title)');
+          await db.execute(
+              'CREATE INDEX IF NOT EXISTS idx_movies_title ON vod_movies(title)');
 
-        await db.execute('''
+          await db.execute('''
           CREATE TABLE vod_series(
             id TEXT PRIMARY KEY,
             title TEXT,
             payload TEXT
           )
         ''');
-        await db.execute(
-            'CREATE INDEX IF NOT EXISTS idx_series_title ON vod_series(title)');
+          await db.execute(
+              'CREATE INDEX IF NOT EXISTS idx_series_title ON vod_series(title)');
 
-        await db.execute('''
+          await db.execute('''
           CREATE TABLE epg_programs(
             epgId TEXT,
             startTs INTEGER,
@@ -85,18 +80,25 @@ class LocalDbService {
             PRIMARY KEY (epgId, startTs)
           )
         ''');
-        await db.execute(
-            'CREATE INDEX IF NOT EXISTS idx_epg_times ON epg_programs(startTs, endTs)');
+          await db.execute(
+              'CREATE INDEX IF NOT EXISTS idx_epg_times ON epg_programs(startTs, endTs)');
 
-        await db.execute('''
+          await db.execute('''
           CREATE TABLE epg_mapping(
             channelId TEXT PRIMARY KEY,
             epgId TEXT
           )
         ''');
-      },
-    );
-    _isInit = true;
+        },
+      );
+      _isInit = true;
+    } catch (e) {
+      // Fail softly; fall back to in-memory providers if DB unavailable.
+      // ignore: avoid_print
+      print('LocalDbService: init failed, continuing without DB: $e');
+      _isInit = false;
+      rethrow;
+    }
   }
 
   Database _requireDb() {

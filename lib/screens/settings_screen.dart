@@ -69,6 +69,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _showImages = true;
 
   // Focus nodes
+  final FocusNode _inputMethodFocusNode = FocusNode();
   final FocusNode _m3uUrlFocusNode = FocusNode();
   final FocusNode _xtreamServerFocusNode = FocusNode();
   final FocusNode _xtreamUsernameFocusNode = FocusNode();
@@ -91,6 +92,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // Toggles Focus Nodes (for first items in sections)
   final FocusNode _playbackFirstFocusNode = FocusNode();
   final FocusNode _aiFirstFocusNode = FocusNode();
+  final ScrollController _contentScrollController = ScrollController();
 
   @override
   void initState() {
@@ -182,6 +184,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _openSubtitlesPasswordController.dispose();
     _openSubtitlesPasswordFocusNode.dispose();
 
+    _inputMethodFocusNode.dispose();
     _loadM3uButtonFocusNode.dispose();
     _loadXtreamButtonFocusNode.dispose();
     _clearM3uButtonFocusNode.dispose();
@@ -191,6 +194,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _browseStorageButtonFocusNode.dispose();
     _playbackFirstFocusNode.dispose();
     _aiFirstFocusNode.dispose();
+    _contentScrollController.dispose();
 
     _customEpgUrlFocusNode.dispose();
     _secondaryEpgUrlFocusNode.dispose();
@@ -219,7 +223,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (_selectedIndex == index) return;
     setState(() => _selectedIndex = index);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _requestContentFocus();
+      if (_contentScrollController.hasClients) {
+        _contentScrollController.jumpTo(0);
+      }
     });
   }
 
@@ -227,9 +233,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     FocusNode? target;
     switch (_selectedIndex) {
       case 0:
-        target = _playlistInputMethod == 0
-            ? _m3uUrlFocusNode
-            : _xtreamServerFocusNode;
+        target = _inputMethodFocusNode;
         break;
       case 1:
         target = _playbackFirstFocusNode;
@@ -261,6 +265,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildGeneralSettings() {
     return ListView(
+      controller: _contentScrollController,
       padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
       children: [
         const SettingsSectionHeader(
@@ -392,6 +397,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ? 'Input Method: M3U URL'
                   : 'Input Method: Xtream Codes',
               icon: Icons.swap_horiz,
+              focusNode: _inputMethodFocusNode,
+              onArrowDown: () {
+                (_playlistInputMethod == 0
+                        ? _m3uUrlFocusNode
+                        : _xtreamServerFocusNode)
+                    .requestFocus();
+              },
+              onArrowRight: () {
+                (_playlistInputMethod == 0
+                        ? _m3uUrlFocusNode
+                        : _xtreamServerFocusNode)
+                    .requestFocus();
+              },
               onTap: () {
                 setState(
                   () =>
@@ -621,6 +639,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildPlaybackSettings() {
     return ListView(
+      controller: _contentScrollController,
       padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
       children: [
         const SettingsSectionHeader(
@@ -674,6 +693,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildAISettings() {
     return ListView(
+      controller: _contentScrollController,
       padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
       children: [
         const SettingsSectionHeader(
@@ -772,6 +792,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildRecordingsSettings() {
     return ListView(
+      controller: _contentScrollController,
       padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
       children: [
         const SettingsSectionHeader(

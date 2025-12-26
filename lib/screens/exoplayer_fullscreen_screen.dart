@@ -99,14 +99,20 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
         if (mounted) {
           setState(() {
             _isLoading = state == 'buffering';
+            if (!_isLoading) _showControls = true;
           });
+          _showControlsAndAutoHide();
         }
         break;
 
       case 'onPlayingChanged':
         final isPlaying = call.arguments['isPlaying'] as bool;
         if (mounted) {
-          setState(() => _isPlaying = isPlaying);
+          setState(() {
+            _isPlaying = isPlaying;
+            if (isPlaying) _showControls = true;
+          });
+          _showControlsAndAutoHide();
         }
         break;
 
@@ -260,15 +266,29 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
       'videoUrl': url,
       'autoPlay': true,
       'muted': false,
-      'surfaceType': 'texture',
+      // Use SurfaceView to avoid color tint issues (rainbow artifacts) on some devices
+      'surfaceType': 'surface',
     };
 
-    return AndroidView(
-      viewType: viewType,
-      layoutDirection: TextDirection.ltr,
-      creationParams: creationParams,
-      creationParamsCodec: const StandardMessageCodec(),
-      onPlatformViewCreated: _onPlatformViewCreated,
+    // Wrap in FittedBox to center-crop and eliminate one-sided letterboxing
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return FittedBox(
+          fit: BoxFit.cover,
+          alignment: Alignment.center,
+          child: SizedBox(
+            width: constraints.maxWidth,
+            height: constraints.maxHeight,
+            child: AndroidView(
+              viewType: viewType,
+              layoutDirection: TextDirection.ltr,
+              creationParams: creationParams,
+              creationParamsCodec: const StandardMessageCodec(),
+              onPlatformViewCreated: _onPlatformViewCreated,
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -508,7 +528,7 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
 
   void _hideControlsAfterDelay() {
     _controlsHideTimer?.cancel();
-    _controlsHideTimer = Timer(const Duration(seconds: 4), () {
+    _controlsHideTimer = Timer(const Duration(seconds: 8), () {
       if (mounted) setState(() => _showControls = false);
     });
   }
