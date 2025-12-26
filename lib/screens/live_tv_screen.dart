@@ -53,6 +53,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   late final FocusNode _firstChannelFocus;
   final Map<String, String?> _programArtwork = {};
   final Set<String> _artworkRequests = {};
+  final List<Program> _artworkQueue = [];
+  Timer? _artworkThrottle;
   late final bool _tmdbEnabled;
 
   bool _heroVideoPreview = false;
@@ -92,6 +94,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   @override
   void dispose() {
     _timerService.unregister('live_tv_carousel');
+    _artworkThrottle?.cancel();
+    _artworkQueue.clear();
+    _artworkRequests.clear();
     _scrollController.dispose();
     _focusPool.returnFocusNodes(
       ['live_tv_watch', 'live_tv_settings', 'live_tv_first_card'],
@@ -241,26 +246,41 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             );
           }
 
-          final totalChannels = channelProvider.channelCount;
-          if (_featuredIndex >= totalChannels) _featuredIndex = 0;
-          final featuredChannel = channelProvider.getChannelAt(_featuredIndex);
+          // Load featured + preview and grouped channels asynchronously from DB when available
+          return FutureBuilder<List<Channel>>(
+            future: channelProvider.getChannelsPage(offset: 0, limit: 60),
+            builder: (context, snapshot) {
+              final previewList = snapshot.data ?? channelProvider.channels;
+              if (previewList.isEmpty) {
+                return _buildSkeletonLoader();
+              }
+              if (_featuredIndex >= previewList.length) _featuredIndex = 0;
+              final featuredChannel = previewList[_featuredIndex];
 
-          final epgService =
-              Provider.of<IncrementalEpgService>(context, listen: false);
-          final channelId = featuredChannel.tvgId ?? featuredChannel.id;
-          Future.microtask(() => epgService.ensureChannelLoaded(channelId,
-              channelName: featuredChannel.name));
+              final epgService =
+                  Provider.of<IncrementalEpgService>(context, listen: false);
+              final channelId = featuredChannel.tvgId ?? featuredChannel.id;
+              Future.microtask(() => epgService.ensureChannelLoaded(channelId,
+                  channelName: featuredChannel.name));
 
-          final groupedChannels = channelProvider.getGroupedChannels();
-          final isGrouping = channelProvider.isGroupingChannels;
-          final previewList = channelProvider.channels;
+              return FutureBuilder<Map<String, List<Channel>>>(
+                future: channelProvider.getGroupedChannelsAsync(
+                    categoryLimit: 15, channelLimit: 30),
+                builder: (context, groupSnapshot) {
+                  final groupedChannels = groupSnapshot.data ??
+                      channelProvider.getGroupedChannels();
+                  final isGrouping = channelProvider.isGroupingChannels;
 
-          return _buildFullScreenHero(
-            context,
-            featuredChannel,
-            previewList,
-            groupedChannels,
-            isGrouping,
+                  return _buildFullScreenHero(
+                    context,
+                    featuredChannel,
+                    previewList,
+                    groupedChannels,
+                    isGrouping,
+                  );
+                },
+              );
+            },
           );
         },
       ),
@@ -294,13 +314,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       screenSize.width >= 1920 ? 480.0 : 420.0,
     );
 
-    // Use a Selector to get the current program for the featured channel
-    return Selector<IncrementalEpgService, Program?>(
-      selector: (_, epg) => epg.getProgramForChannel(
+    // Use async fetch to get the current program for the featured channel
+    final epgService =
+        Provider.of<IncrementalEpgService>(context, listen: false);
+    return FutureBuilder<Program?>(
+      future: epgService.getProgramForChannelAsync(
         featuredChannel.tvgId ?? featuredChannel.id,
         channelName: featuredChannel.name,
       ),
-      builder: (context, currentProgram, _) {
+      builder: (context, snapshot) {
+        final currentProgram = snapshot.data;
         final heroImage = _resolveHeroImage(currentProgram);
 
         return FocusTraversalGroup(
@@ -745,27 +768,50 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       return;
     }
     _artworkRequests.add(program.id);
-    try {
-      debugLog('LiveTV: Fetching TMDB art for: "${program.title}"');
-      final image = await TMDBService.getBestBackdrop(program.title);
-      if (!mounted) return;
-      if (image != null) {
-        debugLog('LiveTV: Found TMDB art for "${program.title}": $image');
-      } else {
-        debugLog('LiveTV: No TMDB art found for "${program.title}"');
-      }
-      setState(() {
-        _programArtwork[program.id] = image ?? '';
-      });
-    } catch (e) {
-      debugLog('LiveTV: Error fetching TMDB art for "${program.title}": $e');
-      if (mounted) {
+    _artworkQueue.add(program);
+    _scheduleArtworkDrain();
+  }
+
+  void _scheduleArtworkDrain() {
+    _artworkThrottle ??=
+        Timer(const Duration(milliseconds: 400), _drainArtworkQueue);
+  }
+
+  Future<void> _drainArtworkQueue() async {
+    _artworkThrottle?.cancel();
+    _artworkThrottle = null;
+    if (_artworkQueue.isEmpty || !mounted) return;
+
+    const int batchSize = 3;
+    final batch = _artworkQueue.take(batchSize).toList();
+    _artworkQueue.removeRange(0, batch.length);
+
+    for (final program in batch) {
+      try {
+        debugLog('LiveTV: Fetching TMDB art for: "${program.title}"');
+        final image = await TMDBService.getBestBackdrop(program.title);
+        if (!mounted) return;
+        if (image != null) {
+          debugLog('LiveTV: Found TMDB art for "${program.title}": $image');
+        } else {
+          debugLog('LiveTV: No TMDB art found for "${program.title}"');
+        }
         setState(() {
-          _programArtwork[program.id] = '';
+          _programArtwork[program.id] = image ?? '';
         });
+      } catch (e) {
+        debugLog('LiveTV: Error fetching TMDB art for "${program.title}": $e');
+        if (mounted) {
+          setState(() {
+            _programArtwork[program.id] = '';
+          });
+        }
       }
     }
-    // Don't remove from _artworkRequests - keep it to prevent re-fetching
+
+    if (_artworkQueue.isNotEmpty) {
+      _scheduleArtworkDrain();
+    }
   }
 
   Widget _buildChannelSection(
@@ -780,7 +826,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     const cardFocusScale = 1.02;
     final cardHeight = cardWidth * 0.6;
     final focusExtra = cardHeight * (cardFocusScale - 1);
-    final rowHeight = cardHeight + context.spacingXl() + focusExtra;
+    // Tighter vertical stack similar to major streaming apps
+    final rowHeight = cardHeight + context.spacingSm() + focusExtra;
     final rowInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
 
     return Column(
@@ -901,12 +948,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           }
           return KeyEventResult.ignored;
         },
-        child: Selector<IncrementalEpgService, Program?>(
-          selector: (_, epgService) => epgService.getProgramForChannel(
+        child: FutureBuilder<Program?>(
+          future: Provider.of<IncrementalEpgService>(context, listen: false)
+              .getProgramForChannelAsync(
             channel.tvgId ?? channel.id,
             channelName: channel.name,
           ),
-          builder: (context, currentProgram, _) {
+          builder: (context, snapshot) {
+            final currentProgram = snapshot.data;
             // Trigger lazy load
             if (currentProgram == null) {
               Provider.of<IncrementalEpgService>(context, listen: false)

@@ -271,98 +271,115 @@ class _SettingsScreenState extends State<SettingsScreen> {
         // Playlist Status
         Consumer2<ChannelProvider, ContentProvider>(
           builder: (context, channelProvider, contentProvider, _) {
-            final hasChannels = channelProvider.hasChannels;
-            final totalContent = channelProvider.channelCount +
-                contentProvider.movies.length +
-                contentProvider.series.length;
-            final hasContent = hasChannels ||
-                contentProvider.movies.isNotEmpty ||
-                contentProvider.series.isNotEmpty;
-            final errorMessage = channelProvider.errorMessage;
-            final responsePreview = channelProvider.lastM3UContent;
+            return FutureBuilder<List<int>>(
+              future: Future.wait([
+                channelProvider.getChannelCountAsync(),
+                channelProvider.getMoviesCountAsync(),
+                channelProvider.getSeriesCountAsync(),
+              ]),
+              builder: (context, snapshot) {
+                final channels = snapshot.data != null
+                    ? snapshot.data![0]
+                    : channelProvider.channelCount;
+                final movies = snapshot.data != null
+                    ? snapshot.data![1]
+                    : contentProvider.movies.length;
+                final series = snapshot.data != null
+                    ? snapshot.data![2]
+                    : contentProvider.series.length;
 
-            return Container(
-              padding: const EdgeInsets.all(16),
-              margin: const EdgeInsets.only(bottom: 24),
-              decoration: BoxDecoration(
-                color: hasContent
-                    ? AppTheme.accentGreen.withValues(alpha: 0.1)
-                    : AppTheme.accentRed.withValues(alpha: 0.1),
-                border: Border.all(
-                  color: hasContent
-                      ? AppTheme.accentGreen.withValues(alpha: 0.3)
-                      : AppTheme.accentRed.withValues(alpha: 0.3),
-                ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    hasContent ? Icons.check_circle : Icons.error_outline,
-                    color:
-                        hasContent ? AppTheme.accentGreen : AppTheme.accentRed,
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          hasContent
-                              ? '$totalContent items loaded'
-                              : (errorMessage != null && errorMessage.isNotEmpty
-                                  ? 'Playlist error'
-                                  : 'No playlist loaded'),
-                          style: TextStyle(
-                            color: hasContent
-                                ? AppTheme.accentGreen
-                                : AppTheme.accentRed,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        if (!hasContent &&
-                            errorMessage != null &&
-                            errorMessage.isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          Text(
-                            errorMessage,
-                            style: const TextStyle(
-                              color: AppTheme.textSecondary,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                        if (!hasContent &&
-                            responsePreview != null &&
-                            responsePreview.isNotEmpty) ...[
-                          const SizedBox(height: 10),
-                          BrandSecondaryButton(
-                            label: 'View Response',
-                            onPressed: () =>
-                                _showPlaylistResponsePreview(responsePreview),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 10,
-                            ),
-                          ),
-                        ],
-                        if (hasContent) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            '${channelProvider.channelCount} channels • ${contentProvider.movies.length} movies • ${contentProvider.series.length} series',
-                            style: TextStyle(
-                              color: hasContent
-                                  ? AppTheme.accentGreen
-                                  : AppTheme.accentRed,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ]
-                      ],
+                final hasChannels = channels > 0;
+                final hasContent = hasChannels || movies > 0 || series > 0;
+                final totalContent = channels + movies + series;
+                final errorMessage = channelProvider.errorMessage;
+                final responsePreview = channelProvider.lastM3UContent;
+
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.only(bottom: 24),
+                  decoration: BoxDecoration(
+                    color: hasContent
+                        ? AppTheme.accentGreen.withValues(alpha: 0.1)
+                        : AppTheme.accentRed.withValues(alpha: 0.1),
+                    border: Border.all(
+                      color: hasContent
+                          ? AppTheme.accentGreen.withValues(alpha: 0.3)
+                          : AppTheme.accentRed.withValues(alpha: 0.3),
                     ),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ],
-              ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        hasContent ? Icons.check_circle : Icons.error_outline,
+                        color: hasContent
+                            ? AppTheme.accentGreen
+                            : AppTheme.accentRed,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              hasContent
+                                  ? '$totalContent items loaded'
+                                  : (errorMessage != null &&
+                                          errorMessage.isNotEmpty
+                                      ? 'Playlist error'
+                                      : 'No playlist loaded'),
+                              style: TextStyle(
+                                color: hasContent
+                                    ? AppTheme.accentGreen
+                                    : AppTheme.accentRed,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            if (!hasContent &&
+                                errorMessage != null &&
+                                errorMessage.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                errorMessage,
+                                style: const TextStyle(
+                                  color: AppTheme.textSecondary,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                            if (!hasContent &&
+                                responsePreview != null &&
+                                responsePreview.isNotEmpty) ...[
+                              const SizedBox(height: 10),
+                              BrandSecondaryButton(
+                                label: 'View Response',
+                                onPressed: () =>
+                                    _showPlaylistResponsePreview(responsePreview),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 10,
+                                ),
+                              ),
+                            ],
+                            if (hasContent) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                '$channels channels • $movies movies • $series series',
+                                style: TextStyle(
+                                  color: hasContent
+                                      ? AppTheme.accentGreen
+                                      : AppTheme.accentRed,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ]
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             );
           },
         ),

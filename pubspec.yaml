@@ -14,6 +14,10 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # Local persistence for large playlists/EPG (DB-backed paging)
+  sqflite: ^2.3.3
+  sqflite_common_ffi: ^2.3.3  # desktop/test fallback
+
   cupertino_icons: ^1.0.8
   http: ^1.2.0
   dio: ^5.7.0

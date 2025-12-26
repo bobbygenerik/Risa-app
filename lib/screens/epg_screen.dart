@@ -299,79 +299,88 @@ class _EPGScreenState extends State<EPGScreen>
               ...categoryList
             ]; // Favorites first, then categories
 
-            // Get all filtered channels for pagination
-            List<Channel> allFilteredChannels;
-            if (_epgState.selectedCategory == '⭐ Favorites') {
-              allFilteredChannels = channelProvider.getFilteredChannels(
-                favoriteIds: _epgState.epgFavoriteChannelIds,
-                excludeHidden: true,
-              );
-            } else if (_epgState.selectedCategory != null) {
-              allFilteredChannels = channelProvider.getFilteredChannels(
-                category: _epgState.selectedCategory,
-                excludeHidden: true,
-              );
-            } else {
-              allFilteredChannels = channelProvider.getFilteredChannels(
-                excludeHidden: true,
-              );
-            }
+            return FutureBuilder<List<Channel>>(
+              future: () async {
+                if (_epgState.selectedCategory == '⭐ Favorites') {
+                  return channelProvider.getFilteredChannels(
+                    favoriteIds: _epgState.epgFavoriteChannelIds,
+                    excludeHidden: true,
+                  );
+                } else if (_epgState.selectedCategory != null) {
+                  return channelProvider.getFilteredChannelsAsync(
+                      category: _epgState.selectedCategory,
+                      excludeHidden: true,
+                      limit: 1000);
+                } else {
+                  return channelProvider.getFilteredChannelsAsync(
+                      excludeHidden: true, limit: 1000);
+                }
+              }(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(
+                      child:
+                          CircularProgressIndicator(color: AppTheme.primaryBlue));
+                }
+                final allFilteredChannels = snapshot.data!;
 
-            // Apply pagination
-            _epgState.updatePaginatedChannels(allFilteredChannels);
-            final filteredChannels = _epgState.paginatedChannels;
+                // Apply pagination
+                _epgState.updatePaginatedChannels(allFilteredChannels);
+                final filteredChannels = _epgState.paginatedChannels;
 
             // Calculate header height for offset
             const headerHeight = 72.0; // Approximate header height
 
-            return Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF080808), // Rich Black
-                    AppTheme.darkBackground, // True Black
-                  ],
-                ),
-              ),
-              child: Stack(
-                children: [
-                  // Content layer - starts from top, header overlays on top
-                  Column(
+                return Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFF080808), // Rich Black
+                        AppTheme.darkBackground, // True Black
+                      ],
+                    ),
+                  ),
+                  child: Stack(
                     children: [
-                      // Spacer for header area
-                      const SizedBox(height: headerHeight),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(
-                              left: AppSpacing.sidebarCollapsedWidth),
-                          child: Row(
-                            children: [
-                              // Category sidebar
-                              _buildCategorySidebar(categoryNames),
-                              const SizedBox(width: 16),
-                              // Program grid with channel names
-                              Expanded(
-                                child: _buildProgramGrid(filteredChannels,
-                                    epgService, allFilteredChannels),
+                      // Content layer - starts from top, header overlays on top
+                      Column(
+                        children: [
+                          // Spacer for header area
+                          const SizedBox(height: headerHeight),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(
+                                  left: AppSpacing.sidebarCollapsedWidth),
+                              child: Row(
+                                children: [
+                                  // Category sidebar
+                                  _buildCategorySidebar(categoryNames),
+                                  const SizedBox(width: 16),
+                                  // Program grid with channel names
+                                  Expanded(
+                                    child: _buildProgramGrid(filteredChannels,
+                                        epgService, allFilteredChannels),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
-                        ),
+                        ],
+                      ),
+
+                      // Transparent header overlay
+                      Positioned(
+                        top: 0,
+                        left: AppSpacing.sidebarCollapsedWidth,
+                        right: 0,
+                        child: _buildHeader(epgService),
                       ),
                     ],
                   ),
-
-                  // Transparent header overlay
-                  Positioned(
-                    top: 0,
-                    left: AppSpacing.sidebarCollapsedWidth,
-                    right: 0,
-                    child: _buildHeader(epgService),
-                  ),
-                ],
-              ),
+                );
+              },
             );
           },
         ),

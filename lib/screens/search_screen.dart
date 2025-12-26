@@ -79,21 +79,40 @@ class _SearchScreenState extends State<SearchScreen>
     final contentProvider =
         Provider.of<ContentProvider>(context, listen: false);
 
-    final liveTv = channelProvider.searchChannels(query);
-    final allContent = contentProvider.searchContent(query);
-    final movies =
-        allContent.where((c) => c.type == ContentType.movie).toList();
-    final series =
-        allContent.where((c) => c.type == ContentType.series).toList();
+    channelProvider.searchChannelsAsync(query, limit: 200).then((liveTv) {
+      if (!mounted) return;
+      final allContent = contentProvider.searchContent(query);
+      final movies =
+          allContent.where((c) => c.type == ContentType.movie).toList();
+      final series =
+          allContent.where((c) => c.type == ContentType.series).toList();
 
-    setState(() {
-      _liveTvResults = liveTv;
-      _movieResults = movies;
-      _seriesResults = series;
-      _isSearching = false;
-      _liveTvDisplayCount = _resultsPerSection;
-      _moviesDisplayCount = _resultsPerSection;
-      _seriesDisplayCount = _resultsPerSection;
+      setState(() {
+        _liveTvResults = liveTv;
+        _movieResults = movies;
+        _seriesResults = series;
+        _isSearching = false;
+        _liveTvDisplayCount = _resultsPerSection;
+        _moviesDisplayCount = _resultsPerSection;
+        _seriesDisplayCount = _resultsPerSection;
+      });
+    }).catchError((_) {
+      final liveTv = channelProvider.searchChannels(query);
+      final allContent = contentProvider.searchContent(query);
+      final movies =
+          allContent.where((c) => c.type == ContentType.movie).toList();
+      final series =
+          allContent.where((c) => c.type == ContentType.series).toList();
+
+      setState(() {
+        _liveTvResults = liveTv;
+        _movieResults = movies;
+        _seriesResults = series;
+        _isSearching = false;
+        _liveTvDisplayCount = _resultsPerSection;
+        _moviesDisplayCount = _resultsPerSection;
+        _seriesDisplayCount = _resultsPerSection;
+      });
     });
   }
 

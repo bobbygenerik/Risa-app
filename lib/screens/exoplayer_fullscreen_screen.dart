@@ -547,14 +547,17 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
   void _updateLiveProgress() {
     if (!mounted || widget.channel == null) return;
     final epg = Provider.of<IncrementalEpgService>(context, listen: false);
-    final program = epg.getProgramForChannel(
-      widget.channel!.tvgId ?? widget.channel!.id,
-      channelName: widget.channel!.name,
-    );
-    final nextProgress = program?.progressPercentage ?? 0.0;
-    if (mounted) {
-      setState(() => _liveProgress = nextProgress);
-    }
+    epg
+        .getProgramForChannelAsync(
+          widget.channel!.tvgId ?? widget.channel!.id,
+          channelName: widget.channel!.name,
+        )
+        .then((program) {
+      final nextProgress = program?.progressPercentage ?? 0.0;
+      if (mounted) {
+        setState(() => _liveProgress = nextProgress);
+      }
+    });
   }
 
   void _toggleVideoFit() {

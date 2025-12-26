@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:xml/xml_events.dart';
 import 'package:iptv_player/models/program.dart';
+import 'package:iptv_player/services/local_db_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -27,6 +28,27 @@ class IncrementalEpgService extends ChangeNotifier {
 
   // Storage for all parsed programs
   final Map<String, List<Program>> _programsByChannel = {};
+  final LocalDbService _db = LocalDbService.instance;
+
+  // Provider-style alias map (normalized) to bridge common naming drift
+  static const Map<String, List<String>> _aliasMap = {
+    'bbcone': ['bbc1', 'bbcone', 'bbc1hd', 'bbconehd'],
+    'bbctwo': ['bbc2', 'bbctwo', 'bbc2hd', 'bbctwohd'],
+    'itv1': ['itv', 'itvhd', 'itv1hd'],
+    'skysportsmainevent': [
+      'skysportmainevent',
+      'ssmainevent',
+      'mainevent',
+      'skysportsmaineventhd'
+    ],
+    'skysportsnews': ['ssnews', 'skysportnews', 'skysportsnewshd'],
+    'foxsports1': ['fs1', 'foxsport1', 'foxsportsone'],
+    'foxsports2': ['fs2', 'foxsport2', 'foxsportstwo'],
+    'espn': ['espnusa', 'espn us', 'espnhd'],
+    'tsn1': ['tsn 1', 'tsn one'],
+    'tsn2': ['tsn 2', 'tsn two'],
+    'canalplus': ['canal+', 'canal plus', 'canal plus hd'],
+  };
 
   // legacy prefs keys removed: do not store large EPG data in SharedPreferences
   static const String _epgCacheTimeKey = 'epg_cache_time';
@@ -457,6 +479,9 @@ class IncrementalEpgService extends ChangeNotifier {
             parseResult['programsByChannel'] as Map<String, List<Program>>;
         _programsByChannel.addAll(rawData);
 
+        // Persist programs to DB in the background
+        unawaited(_persistProgramsToDb(rawData));
+
         _availableChannels.clear();
         _availableChannels.addAll(parseResult['channelIds'] as Set<String>);
 
@@ -772,30 +797,172 @@ class IncrementalEpgService extends ChangeNotifier {
 
   String _normalize(String text) {
     if (text.isEmpty) return '';
-    // Strip common prefixes like "UK:", "US|", etc.
-    String clean = text.replaceAll(RegExp(r'^[A-Z]{2,3}[:|]\s*'), '');
-    // Strip common quality prefixes/suffixes
+
+    // Remove diacritics (España -> espana) and bracketed clutter tags.
+    var clean = _removeDiacritics(text);
+    clean = clean.replaceAll(RegExp(r'[\[\(\{].*?[\]\)\}]'), ' ');
+
+    // Strip common prefixes like "UK:", "US|", and leading channel numbers "001-".
+    clean = clean.replaceAll(RegExp(r'^[A-Z]{2,3}[:|]\s*'), '');
+    clean = clean.replaceAll(RegExp(r'^[0-9]+[\s\-_.]*'), '');
+
+    // Strip promo/noise tokens and tech labels.
     clean = clean.replaceAll(
-        RegExp(r'[|]\s*(HD|FHD|UHD|4K|SD|720p|1080p)', caseSensitive: false),
+        RegExp(
+            r'(\bvip\b|\btrial\b|\btest\b|\bbackup\b|\bstable\b|\badult\b|\bxxx\b|\bpromo\b|\bpreview\b|\b24\/7\b)',
+            caseSensitive: false),
+        ' ');
+    clean = clean.replaceAll(
+        RegExp(
+            r'(\bh264\b|\bh265\b|\bhevc\b|\bac3\b|\baac\b|\b4k\b|\buhd\b|\bfhd\b|\bhd\b|\bsd\b|\b720p\b|\b1080p\b)',
+            caseSensitive: false),
+        ' ');
+
+    // Drop language/region suffix tokens (but keep the base).
+    clean = clean.replaceAll(
+        RegExp(
+            r'(\ben\b|\bes\b|\bfr\b|\bar\b|\bit\b|\bde\b|\bru\b|\bpt\b|\btr\b|\bpl\b|\bnl\b|\bse\b|\bno\b|\bdk\b|\bfi\b|\bcz\b|\bsk\b)$',
+            caseSensitive: false),
+        '');
+
+    // Remove common catchup/time-shift markers.
+    clean = clean.replaceAll(
+        RegExp(r'(catchup|timeshift|timeshifted|shifted|rebroadcast)',
+            caseSensitive: false),
+        '');
+
+    // Translate common non-English labels to English keywords.
+    clean = _translateCommonWords(clean);
+
+    // Normalize separators and trim.
+    clean = clean.replaceAll(RegExp(r'[|._]+'), ' ');
+    clean = clean.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+    // Strip quality suffixes after normalization.
+    clean = clean.replaceAll(
+        RegExp(r'[|]\s*(hd|fhd|uhd|4k|sd|720p|1080p)', caseSensitive: false),
         '');
 
     String normalized =
         clean.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-    // Strip common country code suffixes
+
+    // Strip common country code suffixes.
     normalized = normalized.replaceAll(
         RegExp(r'(uk|us|ca|au|ie|pt|hk|fr|de|it|es)$'), '');
 
-    // Remove common regional/location tokens to collapse variants like
-    // "bbc1northwest" -> "bbc1"
+    // Remove regional/location tokens to collapse variants (e.g., bbc1manchester -> bbc1).
     normalized = normalized.replaceAll(
         RegExp(
-            r'(london|scotland|wales|ireland|ni|manchester|birmingham|leeds|yorkshire|northwest|northeast|southwest|southeast|midlands|central)$'),
+            r'(london|scotland|wales|ireland|ni|manchester|birmingham|leeds|yorkshire|northwest|northeast|southwest|southeast|midlands|central|east|west|north|south)$'),
         '');
 
-    // Collapse "plus1"/"plusone" variants
-    normalized = normalized.replaceAll(RegExp(r'(plus1|plusone)$'), '');
+    // Collapse "plus1"/"plusone" and "+1/+2" variants.
+    normalized =
+        normalized.replaceAll(RegExp(r'(plus1|plusone|\+1|\+2)$'), '');
 
     return _convertNumberWords(normalized);
+  }
+
+  String _removeDiacritics(String input) {
+    const Map<String, String> map = {
+      'á': 'a',
+      'à': 'a',
+      'ä': 'a',
+      'â': 'a',
+      'ã': 'a',
+      'å': 'a',
+      'č': 'c',
+      'ç': 'c',
+      'ď': 'd',
+      'é': 'e',
+      'è': 'e',
+      'ë': 'e',
+      'ê': 'e',
+      'ě': 'e',
+      'í': 'i',
+      'ì': 'i',
+      'ï': 'i',
+      'î': 'i',
+      'ľ': 'l',
+      'ĺ': 'l',
+      'ń': 'n',
+      'ň': 'n',
+      'ñ': 'n',
+      'ó': 'o',
+      'ò': 'o',
+      'ö': 'o',
+      'ô': 'o',
+      'õ': 'o',
+      'ř': 'r',
+      'ŕ': 'r',
+      'š': 's',
+      'ś': 's',
+      'ť': 't',
+      'ú': 'u',
+      'ù': 'u',
+      'ü': 'u',
+      'û': 'u',
+      'ý': 'y',
+      'ž': 'z',
+      'ź': 'z',
+    };
+    final buffer = StringBuffer();
+    for (final rune in input.runes) {
+      final ch = String.fromCharCode(rune);
+      final lower = ch.toLowerCase();
+      buffer.write(map[lower] ?? ch);
+    }
+    return buffer.toString();
+  }
+
+  String _translateCommonWords(String input) {
+    final replacements = <String, String>{
+      'noticias': 'news',
+      'newses': 'news',
+      'cine': 'movies',
+      'peliculas': 'movies',
+      'filmes': 'movies',
+      'canal': 'channel',
+      'canale': 'channel',
+      'sport': 'sports',
+      'deportes': 'sports',
+      'futbol': 'football',
+      'fútbol': 'football',
+      'football': 'football',
+      'musica': 'music',
+      'musik': 'music',
+      'kids': 'kids',
+      'ninos': 'kids',
+      'infantil': 'kids',
+    };
+
+    var output = input.toLowerCase();
+    replacements.forEach((k, v) {
+      output = output.replaceAll(RegExp('\\b$k\\b'), v);
+    });
+    return output;
+  }
+
+  /// Resolve normalized aliases to a canonical normalized key (if present).
+  String? _resolveAliasNormalized(String normalized) {
+    if (normalized.isEmpty) return null;
+    if (_aliasMap.containsKey(normalized)) return normalized;
+    for (final entry in _aliasMap.entries) {
+      if (entry.value.contains(normalized)) {
+        return entry.key;
+      }
+    }
+    return null;
+  }
+
+  String? _matchAliasToAvailable(String normalized) {
+    final alias = _resolveAliasNormalized(normalized);
+    if (alias != null &&
+        _normalizedAvailableChannels != null &&
+        _normalizedAvailableChannels!.containsKey(alias)) {
+      return _normalizedAvailableChannels![alias];
+    }
+    return null;
   }
 
   static String _convertNumberWords(String text) {
@@ -896,6 +1063,12 @@ class IncrementalEpgService extends ChangeNotifier {
       return foundId;
     }
 
+    final aliasId = _matchAliasToAvailable(normalizedId);
+    if (aliasId != null) {
+      _internalToEpgIdMapping[channelId] = aliasId;
+      return aliasId;
+    }
+
     // Match without domain suffix (e.g., "BBC1.uk" -> "BBC1")
     if (channelId.contains('.')) {
       final withoutDomain = _normalize(channelId.split('.').first);
@@ -905,6 +1078,12 @@ class IncrementalEpgService extends ChangeNotifier {
         final foundId = _normalizedAvailableChannels![withoutDomain]!;
         _internalToEpgIdMapping[channelId] = foundId;
         return foundId;
+      }
+
+      final aliasWithoutDomain = _matchAliasToAvailable(withoutDomain);
+      if (aliasWithoutDomain != null) {
+        _internalToEpgIdMapping[channelId] = aliasWithoutDomain;
+        return aliasWithoutDomain;
       }
     }
 
@@ -919,6 +1098,12 @@ class IncrementalEpgService extends ChangeNotifier {
         return foundId;
       }
 
+      final aliasFromName = _matchAliasToAvailable(normalizedName);
+      if (aliasFromName != null) {
+        _internalToEpgIdMapping[channelId] = aliasFromName;
+        return aliasFromName;
+      }
+
       final strippedName = _normalize(_stripSuffixes(channelName));
       if (strippedName.isNotEmpty &&
           strippedName != normalizedName &&
@@ -927,6 +1112,12 @@ class IncrementalEpgService extends ChangeNotifier {
         final foundId = _normalizedAvailableChannels![strippedName]!;
         _internalToEpgIdMapping[channelId] = foundId;
         return foundId;
+      }
+
+      final aliasFromStripped = _matchAliasToAvailable(strippedName);
+      if (aliasFromStripped != null) {
+        _internalToEpgIdMapping[channelId] = aliasFromStripped;
+        return aliasFromStripped;
       }
 
       // Try matching the name against exact EPG IDs if they look like names
@@ -1011,6 +1202,18 @@ class IncrementalEpgService extends ChangeNotifier {
     return _availableChannels.contains(channelId);
   }
 
+  /// Resolve and optionally cache the EPG id for a playlist channel
+  String? resolveEpgId(String channelId,
+      {String? channelName, bool cache = true}) {
+    final cached = _internalToEpgIdMapping[channelId];
+    if (cached != null) return cached;
+    final found = _findBestEpgId(channelId, channelName, logIfMissing: false);
+    if (cache && found != null) {
+      _internalToEpgIdMapping[channelId] = found;
+    }
+    return found;
+  }
+
   bool hasEpgMatch(String channelId, {String? channelName}) {
     return _findBestEpgId(
           channelId,
@@ -1066,7 +1269,14 @@ class IncrementalEpgService extends ChangeNotifier {
         _findBestEpgId(channelId, channelName);
     if (epgId != null) {
       // Use programs for resolved EPG id
-      final programs = getProgramsForChannel(epgId, channelName: channelName);
+      var programs = getProgramsForChannel(epgId, channelName: channelName);
+
+      // If no in-memory programs, try to lazy load from DB
+      if (programs.isEmpty) {
+        _loadProgramsFromDb(epgId);
+        programs = getProgramsForChannel(epgId, channelName: channelName);
+      }
+
       final now = DateTime.now();
       for (final program in programs) {
         if (now.isAfter(program.startTime) && now.isBefore(program.endTime)) {
@@ -1083,6 +1293,34 @@ class IncrementalEpgService extends ChangeNotifier {
 
     // Fall back to existing behaviour
     return getCurrentProgram(channelId, channelName: channelName);
+  }
+
+  /// Async version that will await DB fetch if needed
+  Future<Program?> getProgramForChannelAsync(String channelId,
+      {String? channelName}) async {
+    final epgId = _internalToEpgIdMapping[channelId] ??
+        _findBestEpgId(channelId, channelName);
+    if (epgId != null) {
+      var programs = getProgramsForChannel(epgId, channelName: channelName);
+      if (programs.isEmpty) {
+        await _loadProgramsFromDb(epgId);
+        programs = getProgramsForChannel(epgId, channelName: channelName);
+      }
+      final now = DateTime.now();
+      for (final program in programs) {
+        if (now.isAfter(program.startTime) && now.isBefore(program.endTime)) {
+          return program;
+        }
+      }
+      for (final program in programs) {
+        if (program.startTime.isAfter(now)) {
+          return program;
+        }
+      }
+      return null;
+    }
+    await loadMappingsFromDb();
+    return null;
   }
 
   final List<String> _pendingBatch = [];
@@ -1111,6 +1349,11 @@ class IncrementalEpgService extends ChangeNotifier {
       _pendingBatch.clear();
       loadChannelBatch(batch);
     });
+
+    // Ensure programs are populated from DB if not already
+    if (!_programsByChannel.containsKey(epgId)) {
+      unawaited(_loadProgramsFromDb(epgId));
+    }
   }
 
   Future<void> loadChannelsForBatch(List<String> channelIds) async {
@@ -1136,6 +1379,69 @@ class IncrementalEpgService extends ChangeNotifier {
   String? getChannelPreview(String epgChannelId) => null;
   Future<void> setManualMapping(String channelId, String epgChannelId) async {}
   Future<void> removeManualMapping(String channelId) async {}
+
+  Future<void> loadMappingsFromDb() async {
+    try {
+      final mappings = await _db.getAllMappings();
+      _internalToEpgIdMapping.addAll(mappings);
+      debugLog('EPG: Loaded ${mappings.length} mappings from DB');
+    } catch (e) {
+      debugLog('EPG: Failed to load mappings from DB: $e');
+    }
+  }
+
+  Future<void> _loadProgramsFromDb(String epgId) async {
+    try {
+      final rows = await _db.getProgramsForEpgId(epgId, limit: 300);
+      if (rows.isEmpty) return;
+      final programs = rows.map((r) {
+        final startTs = r['startTs'] as int? ?? 0;
+        final endTs = r['endTs'] as int? ?? 0;
+        return Program(
+          id: '${epgId}_$startTs',
+          channelId: epgId,
+          title: (r['title'] as String?) ?? '',
+          description: r['description'] as String?,
+          startTime: DateTime.fromMillisecondsSinceEpoch(startTs),
+          endTime: DateTime.fromMillisecondsSinceEpoch(endTs),
+          imageUrl: r['imageUrl'] as String?,
+          category: null,
+          isLive: null,
+          canRecord: null,
+          catchupUrl: null,
+        );
+      }).toList();
+      _programsByChannel[epgId] = programs;
+      debugLog('EPG: Loaded ${programs.length} programs for $epgId from DB');
+    } catch (e) {
+      debugLog('EPG: Failed to load programs from DB for $epgId: $e');
+    }
+  }
+
+  Future<void> _persistProgramsToDb(
+      Map<String, List<Program>> programsByChannel) async {
+    try {
+      for (final entry in programsByChannel.entries) {
+        final epgId = entry.key;
+        final programs = entry.value;
+        if (programs.isEmpty) continue;
+        final payload = programs
+            .map((p) => {
+                  'startTs': p.startTime.millisecondsSinceEpoch,
+                  'endTs': p.endTime.millisecondsSinceEpoch,
+                  'title': p.title,
+                  'description': p.description,
+                  'imageUrl': p.imageUrl,
+                })
+            .toList();
+        await _db.insertPrograms(epgId, payload, clearExisting: true);
+      }
+      debugLog(
+          'EPG: Persisted programs to DB (${programsByChannel.length} channels)');
+    } catch (e) {
+      debugLog('EPG: Failed to persist programs to DB: $e');
+    }
+  }
 
   @override
   void dispose() {

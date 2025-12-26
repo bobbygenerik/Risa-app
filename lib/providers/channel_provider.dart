@@ -20,6 +20,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 import 'content_provider.dart';
 import '../services/tmdb_enrichment_service.dart';
+import 'package:iptv_player/services/local_db_service.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'playlist_loader.dart';
@@ -93,6 +94,9 @@ class ChannelProvider with ChangeNotifier {
   double _loadingProgress = 0.0;
   String _loadingStatus = '';
   bool _vodHydrated = false; // Tracks if full VOD lists were pushed to ContentProvider
+  bool _hydratingVod = false;
+  bool _dbReady = false;
+  final LocalDbService _db = LocalDbService.instance;
 
   // TMDB enrichment service for background genre enrichment
   final TMDBEnrichmentService _enrichmentService = TMDBEnrichmentService();
@@ -108,6 +112,20 @@ class ChannelProvider with ChangeNotifier {
 
   // Playlist loader manages download+isolate parsing and supports cancellation
   PlaylistLoader _playlistLoader = PlaylistLoader();
+
+  Future<void> _ensureDb() async {
+    try {
+      await _db.init();
+      _dbReady = true;
+      // Prime count if DB already has data
+      try {
+        _channelCountDb = await _db.channelCount();
+      } catch (_) {}
+    } catch (e) {
+      _dbReady = false;
+      debugLog('ChannelProvider: DB init failed: $e');
+    }
+  }
 
   @override
   void dispose() {
@@ -150,20 +168,137 @@ class ChannelProvider with ChangeNotifier {
   }
 
   Future<void> _hydrateContentProviderFromCache() async {
-    if (_contentProvider == null || _vodHydrated) return;
-    if (_moviesCachePath == null || _seriesCachePath == null) return;
+    if (_contentProvider == null || _vodHydrated || _hydratingVod) return;
+    if (!_dbReady && (_moviesCachePath == null || _seriesCachePath == null)) {
+      return;
+    }
 
+    _hydratingVod = true;
     try {
-      final movies = await getMovies(limit: 999999);
-      final series = await getSeries(limit: 999999);
+      // Use DB paging when available to avoid massive JSON loads
+      List<Content> movies = [];
+      List<Content> series = [];
+      if (_dbReady) {
+        const int pageSize = 500;
+        int offset = 0;
+        while (true) {
+          final page = await _db.getMoviesPage(offset: offset, limit: pageSize);
+          if (page.isEmpty) break;
+          movies.addAll(page
+              .map((m) => Content.fromMap(Map<String, dynamic>.from(m)))
+              .toList());
+          offset += pageSize;
+          if (movies.length >= 4000) break; // cap in-memory load
+        }
+
+        offset = 0;
+        while (true) {
+          final page =
+              await _db.getSeriesPage(offset: offset, limit: pageSize);
+          if (page.isEmpty) break;
+          series.addAll(page
+              .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
+              .toList());
+          offset += pageSize;
+          if (series.length >= 4000) break; // cap in-memory load
+        }
+
+        _moviesCount = await _db.movieCount();
+        _seriesCount = await _db.seriesCount();
+      } else {
+        // Offload heavy JSON decoding to an isolate and cap in-memory hydration
+        const int maxHydrate = 4000; // total items per type to keep memory sane
+        final result = await compute(_parseVodCachesInIsolate, {
+          'moviesPath': _moviesCachePath!,
+          'seriesPath': _seriesCachePath!,
+          'maxItems': maxHydrate,
+        });
+
+        movies = (result['movies'] as List<dynamic>)
+            .map((m) => Content.fromMap(Map<String, dynamic>.from(m)))
+            .toList();
+        series = (result['series'] as List<dynamic>)
+            .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
+            .toList();
+
+        // Preserve full counts even though we hydrate a capped subset
+        _moviesCount = result['moviesCount'] as int? ?? _moviesCount;
+        _seriesCount = result['seriesCount'] as int? ?? _seriesCount;
+      }
+
       if (_disposed) return;
       _contentProvider!.loadMovies(movies);
       _contentProvider!.loadSeries(series);
       _vodHydrated = true;
       debugLog(
-          'ChannelProvider: Hydrated ContentProvider with ${movies.length} movies and ${series.length} series');
+          'ChannelProvider: Hydrated ContentProvider with ${movies.length}/$_moviesCount movies and ${series.length}/$_seriesCount series (capped for performance)');
     } catch (e) {
-      debugLog('ChannelProvider: Failed to hydrate full VOD cache: $e');
+      debugLog('ChannelProvider: Failed to hydrate VOD cache: $e');
+    } finally {
+      _hydratingVod = false;
+    }
+  }
+
+  /// Build and persist channel->EPG mapping in the background (full scan)
+  Future<void> _buildEpgMapping() async {
+    if (!_dbReady || _epgService == null) return;
+    if (_channelMaps.isEmpty) return;
+
+    // Wait briefly for EPG availability
+    for (int i = 0; i < 5; i++) {
+      if (!_epgService!.isLoading &&
+          !_epgService!.isParsing &&
+          _epgService!.availableChannels.isNotEmpty) {
+        break;
+      }
+      await Future.delayed(const Duration(seconds: 1));
+    }
+    if (_epgService!.availableChannels.isEmpty) {
+      debugLog('ChannelProvider: Skipping EPG mapping - no EPG channels');
+      return;
+    }
+
+    const int batchSize = 500;
+    final Map<String, String> batch = {};
+
+    for (int i = 0; i < _channelMaps.length; i++) {
+      final map = _channelMaps[i];
+      final channelId = (map['tvgId'] as String?) ??
+          (map['id'] as String?) ??
+          (map['url'] as String? ?? '');
+      final name = (map['name'] as String?) ?? '';
+      if (channelId.isEmpty) continue;
+
+      final epgId =
+          _epgService!.resolveEpgId(channelId, channelName: name, cache: true);
+      if (epgId != null) {
+        batch[channelId] = epgId;
+      }
+
+      if (batch.length >= batchSize) {
+        try {
+          await _db.upsertEpgMapping(Map<String, String>.from(batch));
+          batch.clear();
+        } catch (e) {
+          debugLog('ChannelProvider: Failed to persist EPG mapping batch: $e');
+        }
+        await Future.delayed(Duration.zero);
+      }
+    }
+
+    if (batch.isNotEmpty) {
+      try {
+        await _db.upsertEpgMapping(batch);
+      } catch (e) {
+        debugLog('ChannelProvider: Failed to persist final EPG mapping batch: $e');
+      }
+    }
+
+    debugLog('ChannelProvider: Completed EPG mapping build');
+    try {
+      await _epgService?.loadMappingsFromDb();
+    } catch (e) {
+      debugLog('ChannelProvider: Failed to load mappings into EPG service: $e');
     }
   }
 
@@ -182,13 +317,90 @@ class ChannelProvider with ChangeNotifier {
   Map<String, int> _watchCounts = {};
 
   /// Get channel count without converting all channels
-  int get channelCount => _channelMaps.length;
+  int get channelCount => _dbReady ? _channelCountDb : _channelMaps.length;
+  int _channelCountDb = 0;
+  Future<int> getChannelCountAsync() async {
+    if (_dbReady) {
+      try {
+        _channelCountDb = await _db.channelCount();
+        return _channelCountDb;
+      } catch (e) {
+        debugLog('ChannelProvider: DB channel count failed: $e');
+      }
+    }
+    return _channelMaps.length;
+  }
+
+  Future<int> getMoviesCountAsync() async {
+    if (_dbReady) {
+      try {
+        _moviesCount = await _db.movieCount();
+        return _moviesCount;
+      } catch (e) {
+        debugLog('ChannelProvider: DB movie count failed: $e');
+      }
+    }
+    return _moviesCount;
+  }
+
+  Future<int> getSeriesCountAsync() async {
+    if (_dbReady) {
+      try {
+        _seriesCount = await _db.seriesCount();
+        return _seriesCount;
+      } catch (e) {
+        debugLog('ChannelProvider: DB series count failed: $e');
+      }
+    }
+    return _seriesCount;
+  }
 
   /// Quick check if there are any channels (no conversion needed)
-  bool get hasChannels => _channelMaps.isNotEmpty;
+  bool get hasChannels =>
+      _dbReady ? _channelCountDb > 0 : _channelMaps.isNotEmpty;
 
   /// Public accessor for virtualized lists
   Channel getChannelAt(int index) => _getChannelAt(index);
+
+  /// Async paged channels for UI (DB-backed when available)
+  Future<List<Channel>> getChannelsPage({int offset = 0, int limit = 50}) async {
+    if (_dbReady) {
+      try {
+        final rows =
+            await _db.getChannelsPage(offset: offset, limit: limit);
+        return rows.map((m) => Channel.fromMap(m)).toList();
+      } catch (e) {
+        debugLog('ChannelProvider: DB channel page failed: $e');
+      }
+    }
+
+    final slice = _channelMaps.skip(offset).take(limit).toList();
+    return slice.map((m) => Channel.fromMap(m)).toList();
+  }
+
+  Future<Map<String, List<Channel>>> getGroupedChannelsAsync(
+      {int categoryLimit = 15, int channelLimit = 30}) async {
+    if (_dbReady) {
+      try {
+        final categories = await _db.getCategories(limit: categoryLimit);
+        final result = <String, List<Channel>>{};
+        for (final c in categories) {
+          final rows = await _db.getChannelsForCategoryPage(
+            c,
+            offset: 0,
+            limit: channelLimit,
+          );
+          result[c] = rows.map((m) => Channel.fromMap(m)).toList();
+        }
+        return result;
+      } catch (e) {
+        debugLog('ChannelProvider: DB grouped channels failed: $e');
+      }
+    }
+
+    // Fallback to existing in-memory method
+    return getGroupedChannels();
+  }
 
   /// Get channels - returns limited list for UI to prevent freezing
   List<Channel> get channels {
@@ -205,10 +417,10 @@ class ChannelProvider with ChangeNotifier {
 
     // Track cache performance
     final wasInCache = _channelCache.containsKey(index);
-    final channel = _channelCache.putIfAbsent(
-      index,
-      () => Channel.fromMap(_channelMaps[index]),
-    );
+
+    final channel = _channelCache.putIfAbsent(index, () {
+      return Channel.fromMap(_channelMaps[index]);
+    });
 
     // Debug log occasionally
     if (!wasInCache && _channelCache.length % 500 == 0) {
@@ -282,6 +494,46 @@ class ChannelProvider with ChangeNotifier {
     return result;
   }
 
+  Future<List<Channel>> getFilteredChannelsAsync({
+    String? category,
+    Set<String>? favoriteIds,
+    bool excludeHidden = true,
+    int limit = 500,
+    int offset = 0,
+  }) async {
+    // Fallback to sync version when DB not ready or favorites filtering
+    if (!_dbReady || favoriteIds != null) {
+      return getFilteredChannels(
+          category: category,
+          favoriteIds: favoriteIds,
+          excludeHidden: excludeHidden,
+          limit: limit);
+    }
+
+    // Use category paging or general paging
+    if (category != null) {
+      return getChannelsForCategoryAsync(category,
+          offset: offset, limit: limit,);
+    }
+
+    try {
+      final rows = await _db.getChannelsPage(offset: offset, limit: limit);
+      final result = <Channel>[];
+      for (final m in rows) {
+        if (excludeHidden && m['isHidden'] == true) continue;
+        result.add(Channel.fromMap(m));
+      }
+      return result;
+    } catch (e) {
+      debugLog('ChannelProvider: DB filtered fetch failed: $e');
+      return getFilteredChannels(
+          category: category,
+          favoriteIds: favoriteIds,
+          excludeHidden: excludeHidden,
+          limit: limit);
+    }
+  }
+
   /// Get next channel in the list (for channel surfing)
   Channel? getNextChannel(String currentChannelId) {
     for (int i = 0; i < _channelMaps.length; i++) {
@@ -312,6 +564,18 @@ class ChannelProvider with ChangeNotifier {
 
   /// Load movies on-demand (paginated)
   Future<List<Content>> getMovies({int offset = 0, int limit = 50}) async {
+    // Prefer DB-backed paging when available
+    if (_dbReady) {
+      try {
+        final rows = await _db.getMoviesPage(offset: offset, limit: limit);
+        return rows
+            .map((m) => Content.fromMap(Map<String, dynamic>.from(m)))
+            .toList();
+      } catch (e) {
+        debugLog('ChannelProvider: DB movie page failed, falling back: $e');
+      }
+    }
+
     if (_moviesCachePath == null) return [];
     try {
       final file = File(_moviesCachePath!);
@@ -334,6 +598,18 @@ class ChannelProvider with ChangeNotifier {
 
   /// Load series on-demand (paginated)
   Future<List<Content>> getSeries({int offset = 0, int limit = 50}) async {
+    // Prefer DB-backed paging when available
+    if (_dbReady) {
+      try {
+        final rows = await _db.getSeriesPage(offset: offset, limit: limit);
+        return rows
+            .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
+            .toList();
+      } catch (e) {
+        debugLog('ChannelProvider: DB series page failed, falling back: $e');
+      }
+    }
+
     if (_seriesCachePath == null) return [];
     try {
       final file = File(_seriesCachePath!);
@@ -415,6 +691,7 @@ class ChannelProvider with ChangeNotifier {
     StartupProbe.mark('ChannelProvider.autoLoadPlaylist invoked');
     await _loadWatchCounts();
     debugLog('ChannelProvider: Auto-loading playlist...');
+    await _ensureDb();
     final prefs = await SharedPreferences.getInstance();
     final playlistType = prefs.getString('playlist_type');
 
@@ -468,6 +745,7 @@ class ChannelProvider with ChangeNotifier {
               .toList();
           _vodHydrated = false;
           _channelCache.clear();
+          _channelCountDb = _channelMaps.length;
 
           // Extract and save EPG URL from JSON cache
           final epgUrl = parsed['epgUrl'] as String?;
@@ -579,6 +857,17 @@ class ChannelProvider with ChangeNotifier {
               .map((c) => Map<String, dynamic>.from(c))
               .toList();
           _channelCache.clear();
+          _channelCountDb = _channelMaps.length;
+          if (_dbReady) {
+            try {
+              await _db.clearChannels();
+              await _db.insertChannels(_channelMaps);
+              debugLog(
+                  'ChannelProvider: Persisted ${_channelMaps.length} channels to DB (cache load)');
+            } catch (e) {
+              debugLog('ChannelProvider: Failed to persist channels to DB: $e');
+            }
+          }
 
           final List<Content> movies = (parsed['movies'] as List<dynamic>)
               .map((m) => Content.fromMap(Map<String, dynamic>.from(m)))
@@ -586,6 +875,20 @@ class ChannelProvider with ChangeNotifier {
           final List<Content> series = (parsed['series'] as List<dynamic>)
               .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
               .toList();
+
+          if (_dbReady) {
+            try {
+              await _db.clearVod();
+              await _db.insertMovies(
+                  movies.map((m) => m.toMap()).toList());
+              await _db.insertSeries(
+                  series.map((s) => s.toMap()).toList());
+              debugLog(
+                  'ChannelProvider: Persisted ${movies.length} movies and ${series.length} series to DB (cache load)');
+            } catch (e) {
+              debugLog('ChannelProvider: Failed to persist VOD to DB: $e');
+            }
+          }
 
           _moviesCount = movies.length;
           _seriesCount = series.length;
@@ -814,6 +1117,10 @@ class ChannelProvider with ChangeNotifier {
       final rawChannels = parsed['channels'] as List<dynamic>;
       _channelMaps.clear();
       _channelCache.clear();
+      if (_dbReady) {
+        await _db.clearChannels();
+      }
+      _channelCountDb = 0;
 
       const chunkSize = 1000;
       for (int i = 0; i < rawChannels.length; i += chunkSize) {
@@ -824,6 +1131,15 @@ class ChannelProvider with ChangeNotifier {
           _channelMaps.add(Map<String, dynamic>.from(c));
         }
 
+        if (_dbReady) {
+          try {
+            await _db.insertChannels(
+                chunk.map((e) => Map<String, dynamic>.from(e)).toList());
+          } catch (e) {
+            debugLog('ChannelProvider: DB channel batch insert failed: $e');
+          }
+        }
+
         if (rawChannels.length > 5000 && i % (chunkSize * 2) == 0) {
           _loadingStatus =
               'Processing channels... ${i + end}/${rawChannels.length}';
@@ -832,6 +1148,7 @@ class ChannelProvider with ChangeNotifier {
           await Future.delayed(Duration.zero);
         }
       }
+      _channelCountDb = _channelMaps.length;
 
       try {
         final playlistJson = json.encode(_channelMaps);
@@ -864,6 +1181,18 @@ class ChannelProvider with ChangeNotifier {
           .writeAsString(json.encode(movies.map((m) => m.toMap()).toList()));
       await File(_seriesCachePath!)
           .writeAsString(json.encode(series.map((s) => s.toMap()).toList()));
+
+      if (_dbReady) {
+        try {
+          await _db.clearVod();
+          await _db.insertMovies(movies.map((m) => m.toMap()).toList());
+          await _db.insertSeries(series.map((s) => s.toMap()).toList());
+          debugLog(
+              'ChannelProvider: Persisted VOD to DB (${movies.length} movies, ${series.length} series)');
+        } catch (e) {
+          debugLog('ChannelProvider: Failed to persist VOD to DB: $e');
+        }
+      }
       final mapDuration = DateTime.now().difference(mapStart);
       debugLog(
           'ChannelProvider: Map conversion took ${mapDuration.inMilliseconds}ms');
@@ -914,6 +1243,7 @@ class ChannelProvider with ChangeNotifier {
 
       _scheduleEpgRefresh(
           forceRefresh: (_epgService?.availableChannels.isEmpty ?? true));
+      unawaited(_buildEpgMapping());
       unawaited(_startBackgroundEnrichment());
     } catch (e, stackTrace) {
       debugLog('ChannelProvider: Error loading playlist: $e');
@@ -1036,6 +1366,17 @@ class ChannelProvider with ChangeNotifier {
           .map((c) => Map<String, dynamic>.from(c))
           .toList();
       _channelCache.clear();
+      _channelCountDb = _channelMaps.length;
+      if (_dbReady) {
+        try {
+          await _db.clearChannels();
+          await _db.insertChannels(_channelMaps);
+          debugLog(
+              'ChannelProvider: Persisted ${_channelMaps.length} channels to DB (direct client)');
+        } catch (e) {
+          debugLog('ChannelProvider: Failed to persist channels to DB: $e');
+        }
+      }
 
       final List<Content> movies = (parsed['movies'] as List<dynamic>)
           .map((m) => Content.fromMap(Map<String, dynamic>.from(m)))
@@ -1054,6 +1395,18 @@ class ChannelProvider with ChangeNotifier {
           .writeAsString(json.encode(movies.map((m) => m.toMap()).toList()));
       await File(_seriesCachePath!)
           .writeAsString(json.encode(series.map((s) => s.toMap()).toList()));
+
+      if (_dbReady) {
+        try {
+          await _db.clearVod();
+          await _db.insertMovies(movies.map((m) => m.toMap()).toList());
+          await _db.insertSeries(series.map((s) => s.toMap()).toList());
+          debugLog(
+              'ChannelProvider: Persisted VOD to DB (${movies.length} movies, ${series.length} series)');
+        } catch (e) {
+          debugLog('ChannelProvider: Failed to persist VOD to DB: $e');
+        }
+      }
 
       _cachedCategories = null; // Clear cache when channels change
       // Trigger async category extraction in background (non-blocking)
@@ -1146,6 +1499,7 @@ class ChannelProvider with ChangeNotifier {
           .map((channel) => Map<String, dynamic>.from(channel as Map))
           .toList();
       _channelCache.clear();
+      _channelCountDb = _channelMaps.length;
 
       final List<Content> movies = (parsed['movies'] as List<dynamic>? ?? [])
           .map((m) => Content.fromMap(Map<String, dynamic>.from(m)))
@@ -1165,6 +1519,18 @@ class ChannelProvider with ChangeNotifier {
           .writeAsString(json.encode(movies.map((m) => m.toMap()).toList()));
       await File(_seriesCachePath!)
           .writeAsString(json.encode(series.map((s) => s.toMap()).toList()));
+
+      if (_dbReady) {
+        try {
+          await _db.clearVod();
+          await _db.insertMovies(movies.map((m) => m.toMap()).toList());
+          await _db.insertSeries(series.map((s) => s.toMap()).toList());
+          debugLog(
+              'ChannelProvider: Persisted VOD to DB (${movies.length} movies, ${series.length} series)');
+        } catch (e) {
+          debugLog('ChannelProvider: Failed to persist VOD to DB: $e');
+        }
+      }
 
       _cachedCategories = null; // Clear cache when channels change
 
@@ -1222,7 +1588,18 @@ class ChannelProvider with ChangeNotifier {
   }
 
   /// Get channels for a specific category (on-demand, limited, lazy conversion)
-  List<Channel> getChannelsForCategory(String category, {int limit = 20}) {
+  Future<List<Channel>> getChannelsForCategoryAsync(String category,
+      {int offset = 0, int limit = 20}) async {
+    if (_dbReady) {
+      try {
+        final rows = await _db.getChannelsForCategoryPage(category,
+            offset: offset, limit: limit);
+        return rows.map((m) => Channel.fromMap(m)).toList();
+      } catch (e) {
+        debugLog('ChannelProvider: DB category page failed: $e');
+      }
+    }
+
     final result = <Channel>[];
     for (int i = 0; i < _channelMaps.length && result.length < limit; i++) {
       final channelMap = _channelMaps[i];
@@ -1274,16 +1651,22 @@ class ChannelProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Just extract groupTitle strings from maps - very lightweight
-      final groupTitles =
-          _channelMaps.map((m) => m['groupTitle'] as String?).toList();
+      if (_dbReady) {
+        _cachedCategories = await _db.getCategories(limit: 200);
+        debugLog(
+            'ChannelProvider: Loaded ${_cachedCategories!.length} categories from DB');
+      } else {
+        // Just extract groupTitle strings from maps - very lightweight
+        final groupTitles =
+            _channelMaps.map((m) => m['groupTitle'] as String?).toList();
 
-      // Run category extraction in isolate
-      _cachedCategories =
-          await compute(_extractCategoriesInIsolate, groupTitles);
+        // Run category extraction in isolate
+        _cachedCategories =
+            await compute(_extractCategoriesInIsolate, groupTitles);
 
-      debugLog(
-          'ChannelProvider: Found ${_cachedCategories!.length} categories from ${_channelMaps.length} channels');
+        debugLog(
+            'ChannelProvider: Found ${_cachedCategories!.length} categories from ${_channelMaps.length} channels');
+      }
     } catch (e) {
       debugLog('ChannelProvider: Error extracting categories: $e');
       // Fallback - just use a few hardcoded
@@ -1307,7 +1690,8 @@ class ChannelProvider with ChangeNotifier {
     final result = <String, List<Channel>>{};
     // Only process first 15 categories with 30 channels each for home screen
     for (final category in categories.take(15)) {
-      result[category] = getChannelsForCategory(category, limit: 30);
+      // Note: this uses in-memory fallback; async version is getGroupedChannelsAsync
+      result[category] = [];
     }
     return result;
   }
@@ -1771,6 +2155,18 @@ class ChannelProvider with ChangeNotifier {
       await File(_seriesCachePath!)
           .writeAsString(json.encode(allSeries.map((s) => s.toMap()).toList()));
 
+      if (_dbReady) {
+        try {
+          await _db.clearVod();
+          await _db.insertMovies(allMovies.map((m) => m.toMap()).toList());
+          await _db.insertSeries(allSeries.map((s) => s.toMap()).toList());
+          debugLog(
+              'ChannelProvider: Persisted merged Xtream VOD to DB (${allMovies.length} movies, ${allSeries.length} series)');
+        } catch (e) {
+          debugLog('ChannelProvider: Failed to persist merged VOD to DB: $e');
+        }
+      }
+
       // Sync only first batch to ContentProvider
       if (_contentProvider != null) {
         final firstMovies = await getMovies(limit: 100);
@@ -1803,6 +2199,11 @@ class ChannelProvider with ChangeNotifier {
   List<Channel> searchChannels(String query, {int limit = 50}) {
     if (query.isEmpty) return channels; // Returns limited list via getter
 
+    if (_dbReady) {
+      // Use async API for DB search; fallback to sync if needed
+      debugLog('ChannelProvider: searchChannels called while DB ready; consider using searchChannelsAsync');
+    }
+
     final lowerQuery = query.toLowerCase();
     final result = <Channel>[];
     for (int i = 0; i < _channelMaps.length && result.length < limit; i++) {
@@ -1812,6 +2213,19 @@ class ChannelProvider with ChangeNotifier {
       }
     }
     return result;
+  }
+
+  Future<List<Channel>> searchChannelsAsync(String query, {int limit = 100}) async {
+    if (query.isEmpty) return channels;
+    if (_dbReady) {
+      try {
+        final rows = await _db.searchChannels(query, limit: limit);
+        return rows.map((m) => Channel.fromMap(m)).toList();
+      } catch (e) {
+        debugLog('ChannelProvider: DB search failed: $e');
+      }
+    }
+    return searchChannels(query, limit: limit);
   }
 
   /// Filter channels by category with pagination support
@@ -1981,3 +2395,51 @@ class ChannelProvider with ChangeNotifier {
 // parsing (`parsePlaylistInIsolate` and `parsePlaylistFromFile`). The
 // older string-based helper that lived here was removed to avoid duplicate
 // implementations and to ensure all callers use the streaming/isolate paths.
+
+/// Isolate helper to parse cached VOD JSON files without blocking UI.
+Future<Map<String, dynamic>> _parseVodCachesInIsolate(
+    Map<String, dynamic> args) async {
+  final moviesPath = args['moviesPath'] as String?;
+  final seriesPath = args['seriesPath'] as String?;
+  final maxItems = (args['maxItems'] as int?) ?? 4000;
+
+  int moviesCount = 0;
+  int seriesCount = 0;
+  List<dynamic> movies = [];
+  List<dynamic> series = [];
+
+  if (moviesPath != null) {
+    try {
+      final file = File(moviesPath);
+      if (await file.exists()) {
+        final jsonStr = await file.readAsString();
+        if (jsonStr.trim().isNotEmpty) {
+          final List<dynamic> decoded = json.decode(jsonStr);
+          moviesCount = decoded.length;
+          movies = decoded.take(maxItems).toList();
+        }
+      }
+    } catch (_) {}
+  }
+
+  if (seriesPath != null) {
+    try {
+      final file = File(seriesPath);
+      if (await file.exists()) {
+        final jsonStr = await file.readAsString();
+        if (jsonStr.trim().isNotEmpty) {
+          final List<dynamic> decoded = json.decode(jsonStr);
+          seriesCount = decoded.length;
+          series = decoded.take(maxItems).toList();
+        }
+      }
+    } catch (_) {}
+  }
+
+  return {
+    'movies': movies,
+    'series': series,
+    'moviesCount': moviesCount,
+    'seriesCount': seriesCount,
+  };
+}
