@@ -100,8 +100,6 @@ class ExoPlayerView(
             .build()
 
         exoPlayer = ExoPlayer.Builder(context, renderersFactory)
-            // Ensure tunneling is NOT enabled by default on TV/Shield devices
-            .setTunnelingEnabled(false)
             .setMediaSourceFactory(
                 androidx.media3.exoplayer.source.DefaultMediaSourceFactory(context)
                     .setDataSourceFactory(dataSourceFactory)
