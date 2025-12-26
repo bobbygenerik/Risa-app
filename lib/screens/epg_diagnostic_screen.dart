@@ -114,28 +114,6 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                   final epgCount = epgService.availableChannels.length;
                   _maybeRefreshStats(totalChannels, epgCount);
 
-          // Debug info for IncrementalEpgService
-          if (totalChannels > 0 && epgCount > 0) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              _writeDebugMarker('epg_postframe_callback');
-              print('=== INCREMENTAL EPG DEBUG ===');
-              print('EPG available channels: ${epgService.availableChannels.length}');
-              print('EPG loaded channels: ${epgService.loadedChannelCount}');
-              print('Channel provider channels count: $totalChannels');
-
-              // Test first few channels manually
-              for (int i = 0; i < 5 && i < totalChannels; i++) {
-                final channel = channelProvider.getChannelAt(i);
-                final tvgId = channel.tvgId ?? channel.id;
-                final hasEpg =
-                    epgService.hasEpgMatch(tvgId, channelName: channel.name);
-                print(
-                    'Channel $i: "${channel.name}" (ID: "$tvgId") -> EPG: $hasEpg');
-              }
-              print('=== END INCREMENTAL EPG DEBUG ===');
-            });
-          }
-
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
