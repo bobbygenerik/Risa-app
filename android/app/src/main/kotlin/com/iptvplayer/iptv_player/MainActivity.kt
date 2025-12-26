@@ -79,19 +79,16 @@ class MainActivity : FlutterActivity() {
                 }
             }
 
-            // Debug IO channel to allow Dart to request writing files into Downloads/RisaLogs
+            // Debug IO channel (disabled): writing files from Dart is suppressed to avoid
+            // filling device storage. Method still exists but returns `false` and logs.
             MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.streamhub.iptv/debug_io")
                 .setMethodCallHandler { call, result ->
                     when (call.method) {
                         "writeFile" -> {
                             val name = call.argument<String>("name") ?: "debug.txt"
-                            val content = call.argument<String>("content") ?: ""
-                            try {
-                                val written = writeStringToDownloads(name, content)
-                                result.success(written)
-                            } catch (e: Exception) {
-                                result.error("WRITE_FAILED", e.message, null)
-                            }
+                            Log.i("DebugIO", "Suppressed writeFile request for: $name")
+                            // Do not write to disk; inform caller the write did not occur.
+                            result.success(false)
                         }
                         else -> result.notImplemented()
                     }
@@ -195,21 +192,8 @@ class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setupUncaughtExceptionHandler()
-        // Attempt to copy most recent crash log into Downloads so it's accessible without ADB
-        try {
-            copyLatestCrashToDownloads()
-        } catch (e: Exception) {
-            Log.w("CrashLogger", "copyLatestCrashToDownloads failed: ${e.message}")
-        }
-        // Write a startup marker and post a notification so the user can confirm the app launched
-        try {
-            writeStartupMarker()
-            postStartupNotification()
-            // Replace the user-facing Toast with a log entry to avoid intrusive UI on startup
-            Log.i("StartupMarker", "App started (check Downloads/RisaLogs or notification)")
-        } catch (e: Exception) {
-            Log.w("StartupMarker", "failed to write startup marker: ${e.message}")
-        }
+        // Disabled: avoid creating startup or crash files on device which can fill storage.
+        Log.i("CrashLogger", "Skipping copyLatestCrashToDownloads() and startup marker (writes disabled).")
     }
 
     private fun setupUncaughtExceptionHandler() {
@@ -232,20 +216,9 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun writeCrashToFile(thread: Thread, t: Throwable) {
-        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-        val logsDir = getExternalFilesDir("risa_logs") ?: filesDir
-        val outDir = File(logsDir, "crash")
-        if (!outDir.exists()) outDir.mkdirs()
-
-        val outFile = File(outDir, "crash_$timestamp.txt")
-        val sw = StringWriter()
-        val pw = PrintWriter(sw)
-        pw.println("Thread: ${thread.name} (id=${thread.id})")
-        t.printStackTrace(pw)
-        pw.flush()
-
-        outFile.writeText(sw.toString())
-        Log.i("CrashLogger", "Wrote crash to ${outFile.absolutePath}")
+        // Persisting crash files to disk is disabled to prevent excessive storage usage.
+        Log.i("CrashLogger", "Crash file write suppressed by policy; not writing to disk. Thread: ${thread.name}")
+        return
     }
 
     // Helper used by MethodChannel to write arbitrary text files into Downloads/RisaLogs
