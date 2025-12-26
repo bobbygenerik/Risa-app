@@ -18,8 +18,10 @@ class FlutterAPKServerHandler(SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', '*')
-        # Add headers to force download
-        self.send_header('Content-Disposition', 'attachment')
+        # Add header to force download only for APK files
+        # This prevents the index HTML page from being downloaded as an attachment
+        if self.path.lower().endswith('.apk'):
+            self.send_header('Content-Disposition', 'attachment')
         super().end_headers()
     
     def do_GET(self):

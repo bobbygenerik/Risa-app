@@ -137,85 +137,113 @@ class ExoPlayerView(
                                 } catch (e: Exception) {
                                     android.util.Log.w("ExoPlayer", "Failed to log format details: ${e.message}")
                                 }
-                                // One-shot heuristic: if we're rendering to a TextureView, capture a bitmap
-                                // and detect gross color tint; if detected, retry with platform renderers only
+                                // One-shot heuristic: sample frame off the UI thread and detect gross color tint.
+                                // Use an executor with timeout and a sampling-in-progress guard to avoid blocking UI.
                                 try {
                                     val surfaceView = playerView.videoSurfaceView
+                                    // Sampling guard: avoid concurrent sampling and respect per-device preference
                                     if (!retriedForTint && surfaceView is android.view.TextureView && !forcePlatform) {
-                                        val bitmap = surfaceView.bitmap
-                                        if (bitmap != null) {
-                                            val width = bitmap.width
-                                            val height = bitmap.height
-                                            var rSum = 0L
-                                            var gSum = 0L
-                                            var bSum = 0L
-                                            val sampleStep = Math.max(1, (width * height) / 1000)
-                                            var count = 0
-                                            for (x in 0 until width step sampleStep) {
-                                                for (y in 0 until height step sampleStep) {
-                                                    val p = bitmap.getPixel(x, y)
-                                                    rSum += android.graphics.Color.red(p)
-                                                    gSum += android.graphics.Color.green(p)
-                                                    bSum += android.graphics.Color.blue(p)
-                                                    count++
+                                        // Executor for background sampling
+                                        val executor = java.util.concurrent.Executors.newSingleThreadExecutor()
+                                        val sampling = java.util.concurrent.Callable<Boolean> {
+                                            try {
+                                                // Try to obtain a downsampled bitmap; use the fastest available path
+                                                val raw = try {
+                                                    surfaceView.bitmap
+                                                } catch (ex: Exception) {
+                                                    null
                                                 }
-                                            }
-                                            if (count > 0) {
+                                                if (raw == null) return@Callable false
+
+                                                // Downsample to a small thumbnail to reduce work
+                                                val thumb = android.graphics.Bitmap.createScaledBitmap(raw, 64, 36, true)
+                                                raw.recycle()
+
+                                                var rSum = 0L
+                                                var gSum = 0L
+                                                var bSum = 0L
+                                                val w = thumb.width
+                                                val h = thumb.height
+                                                var count = 0
+                                                for (x in 0 until w) {
+                                                    for (y in 0 until h) {
+                                                        val p = thumb.getPixel(x, y)
+                                                        rSum += android.graphics.Color.red(p)
+                                                        gSum += android.graphics.Color.green(p)
+                                                        bSum += android.graphics.Color.blue(p)
+                                                        count++
+                                                    }
+                                                }
+                                                thumb.recycle()
+                                                if (count == 0) return@Callable false
                                                 val rAvg = rSum / count
                                                 val gAvg = gSum / count
                                                 val bAvg = bSum / count
                                                 android.util.Log.d("ExoPlayer", "Frame avg RGB: $rAvg,$gAvg,$bAvg")
-                                                // If one channel dominates by more than 30 units, consider it a tint
                                                 val max = maxOf(rAvg, gAvg, bAvg)
                                                 val min = minOf(rAvg, gAvg, bAvg)
-                                                if (max - min > 30) {
-                                                        android.util.Log.w("ExoPlayer", "Detected color tint; attempting one-shot recovery by forcing platform decoders")
-                                                        retriedForTint = true
-                                                        // Persist preference for this device to avoid recurring tint
-                                                        try {
-                                                            shared.edit().putBoolean(prefsKey, true).apply()
-                                                        } catch (_: Exception) {}
-                                                        // Recreate player with platform-only renderers
-                                                        mainHandler.post {
-                                                        try {
-                                                            val curMedia = exoPlayer.currentMediaItem
-                                                            val curPos = exoPlayer.currentPosition
-                                                            val wasPlaying = exoPlayer.isPlaying
-                                                            exoPlayer.release()
-                                                            // Build a new player with forcePlatform = true
-                                                            val newFactory = object : androidx.media3.exoplayer.DefaultRenderersFactory(context) {
-                                                                init {
-                                                                    setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
-                                                                    setEnableDecoderFallback(true)
-                                                                }
-                                                            }
-                                                            val newTrackSelector = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(context)
-                                                            newTrackSelector.parameters = newTrackSelector.buildUponParameters()
-                                                                .setMaxAudioChannelCount(8)
-                                                                .build()
+                                                // If one channel dominates by more than 30 units, consider it a tint
+                                                return@Callable (max - min > 30)
+                                            } catch (t: Throwable) {
+                                                android.util.Log.w("ExoPlayer", "Sampling failed: ${t.message}")
+                                                return@Callable false
+                                            }
+                                        }
 
-                                                            val newPlayer = ExoPlayer.Builder(context, newFactory)
-                                                                .setMediaSourceFactory(
-                                                                    androidx.media3.exoplayer.source.DefaultMediaSourceFactory(context)
-                                                                        .setDataSourceFactory(dataSourceFactory)
-                                                                )
-                                                                .setTrackSelector(newTrackSelector)
-                                                                .build()
-                                                            // Attach listeners similar to original
-                                                            newPlayer.playWhenReady = wasPlaying
-                                                            playerView.player = newPlayer
-                                                            if (curMedia != null) {
-                                                                newPlayer.setMediaItem(curMedia)
-                                                                newPlayer.seekTo(curPos)
-                                                                newPlayer.prepare()
+                                        val future = executor.submit(sampling)
+                                        try {
+                                            val tinted = future.get(800, java.util.concurrent.TimeUnit.MILLISECONDS)
+                                            if (tinted) {
+                                                android.util.Log.w("ExoPlayer", "Detected color tint; attempting one-shot recovery by forcing platform decoders")
+                                                retriedForTint = true
+                                                try {
+                                                    shared.edit().putBoolean(prefsKey, true).apply()
+                                                } catch (_: Exception) {}
+                                                // Recreate player on main thread
+                                                mainHandler.post {
+                                                    try {
+                                                        val curMedia = exoPlayer.currentMediaItem
+                                                        val curPos = exoPlayer.currentPosition
+                                                        val wasPlaying = exoPlayer.isPlaying
+                                                        exoPlayer.release()
+                                                        val newFactory = object : androidx.media3.exoplayer.DefaultRenderersFactory(context) {
+                                                            init {
+                                                                setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
+                                                                setEnableDecoderFallback(true)
                                                             }
-                                                            android.util.Log.i("ExoPlayer", "Recreated player using platform-only renderers after tint recovery")
-                                                        } catch (e: Exception) {
-                                                            android.util.Log.w("ExoPlayer", "Failed to recreate player for tint recovery: ${e.message}")
                                                         }
+                                                        val newTrackSelector = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(context)
+                                                        newTrackSelector.parameters = newTrackSelector.buildUponParameters()
+                                                            .setMaxAudioChannelCount(8)
+                                                            .build()
+
+                                                        val newPlayer = ExoPlayer.Builder(context, newFactory)
+                                                            .setMediaSourceFactory(
+                                                                androidx.media3.exoplayer.source.DefaultMediaSourceFactory(context)
+                                                                    .setDataSourceFactory(dataSourceFactory)
+                                                            )
+                                                            .setTrackSelector(newTrackSelector)
+                                                            .build()
+                                                        newPlayer.playWhenReady = wasPlaying
+                                                        playerView.player = newPlayer
+                                                        if (curMedia != null) {
+                                                            newPlayer.setMediaItem(curMedia)
+                                                            newPlayer.seekTo(curPos)
+                                                            newPlayer.prepare()
+                                                        }
+                                                        android.util.Log.i("ExoPlayer", "Recreated player using platform-only renderers after tint recovery")
+                                                    } catch (e: Exception) {
+                                                        android.util.Log.w("ExoPlayer", "Failed to recreate player for tint recovery: ${e.message}")
                                                     }
                                                 }
                                             }
+                                        } catch (te: java.util.concurrent.TimeoutException) {
+                                            future.cancel(true)
+                                            android.util.Log.w("ExoPlayer", "Sampling timed out, skipping tint detection")
+                                        } catch (e: Exception) {
+                                            android.util.Log.w("ExoPlayer", "Sampling error: ${e.message}")
+                                        } finally {
+                                            executor.shutdownNow()
                                         }
                                     }
                                 } catch (e: Exception) {

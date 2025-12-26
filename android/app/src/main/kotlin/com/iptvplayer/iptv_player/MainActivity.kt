@@ -5,10 +5,24 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Build
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.util.Rational
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import androidx.core.app.NotificationCompat
+import android.content.ContentValues
+import android.os.Environment
+import android.provider.MediaStore
+import android.widget.Toast
+import java.io.File
+import java.io.PrintWriter
+import java.io.StringWriter
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import androidx.annotation.NonNull
 import androidx.media3.common.util.UnstableApi
 import io.flutter.embedding.android.FlutterActivity
@@ -60,6 +74,24 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+
+            // Debug IO channel to allow Dart to request writing files into Downloads/RisaLogs
+            MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.streamhub.iptv/debug_io")
+                .setMethodCallHandler { call, result ->
+                    when (call.method) {
+                        "writeFile" -> {
+                            val name = call.argument<String>("name") ?: "debug.txt"
+                            val content = call.argument<String>("content") ?: ""
+                            try {
+                                val written = writeStringToDownloads(name, content)
+                                result.success(written)
+                            } catch (e: Exception) {
+                                result.error("WRITE_FAILED", e.message, null)
+                            }
+                        }
+                        else -> result.notImplemented()
+                    }
+                }
 
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, TRANSCRIPTION_AUDIO_STREAM)
             .setStreamHandler(object : EventChannel.StreamHandler {
@@ -154,6 +186,182 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setupUncaughtExceptionHandler()
+        // Attempt to copy most recent crash log into Downloads so it's accessible without ADB
+        try {
+            copyLatestCrashToDownloads()
+        } catch (e: Exception) {
+            Log.w("CrashLogger", "copyLatestCrashToDownloads failed: ${e.message}")
+        }
+        // Write a startup marker and post a notification so the user can confirm the app launched
+        try {
+            writeStartupMarker()
+            postStartupNotification()
+            Handler(Looper.getMainLooper()).post {
+                Toast.makeText(this, "App started (check Downloads/RisaLogs or notification)", Toast.LENGTH_LONG).show()
+            }
+        } catch (e: Exception) {
+            Log.w("StartupMarker", "failed to write startup marker: ${e.message}")
+        }
+    }
+
+    private fun setupUncaughtExceptionHandler() {
+        val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            try {
+                writeCrashToFile(thread, throwable)
+            } catch (e: Exception) {
+                // best-effort logging
+                Log.e("CrashLogger", "Failed to write crash file: ${e.message}")
+            }
+
+            // give default handler a chance to run (which may kill the process)
+            defaultHandler?.uncaughtException(thread, throwable)
+        }
+    }
+
+    private fun writeCrashToFile(thread: Thread, t: Throwable) {
+        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+        val logsDir = getExternalFilesDir("risa_logs") ?: filesDir
+        val outDir = File(logsDir, "crash")
+        if (!outDir.exists()) outDir.mkdirs()
+
+        val outFile = File(outDir, "crash_$timestamp.txt")
+        val sw = StringWriter()
+        val pw = PrintWriter(sw)
+        pw.println("Thread: ${thread.name} (id=${thread.id})")
+        t.printStackTrace(pw)
+        pw.flush()
+
+        outFile.writeText(sw.toString())
+        Log.i("CrashLogger", "Wrote crash to ${outFile.absolutePath}")
+    }
+
+    // Helper used by MethodChannel to write arbitrary text files into Downloads/RisaLogs
+    private fun writeStringToDownloads(filename: String, content: String): Boolean {
+        return try {
+            val markerName = filename
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val values = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, markerName)
+                    put(MediaStore.MediaColumns.MIME_TYPE, "text/plain")
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/RisaLogs")
+                }
+                val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                if (uri != null) {
+                    contentResolver.openOutputStream(uri).use { os ->
+                        os?.write(content.toByteArray())
+                    }
+                }
+            } else {
+                val downloadsDir = File(Environment.getExternalStorageDirectory(), "Download/RisaLogs")
+                if (!downloadsDir.exists()) downloadsDir.mkdirs()
+                val target = File(downloadsDir, markerName)
+                target.writeText(content)
+            }
+            true
+        } catch (e: Exception) {
+            Log.w("DebugIO", "writeStringToDownloads failed: ${e.message}")
+            false
+        }
+    }
+
+    private fun copyLatestCrashToDownloads() {
+        val logsDir = getExternalFilesDir("risa_logs") ?: filesDir
+        val crashDir = File(logsDir, "crash")
+        if (!crashDir.exists()) return
+
+        val files = crashDir.listFiles()?.filter { it.isFile }?.sortedByDescending { it.lastModified() }
+        val latest = files?.firstOrNull()
+        if (latest == null) {
+            Handler(Looper.getMainLooper()).post {
+                Toast.makeText(this, "No crash logs found to copy", Toast.LENGTH_LONG).show()
+            }
+            return
+        }
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val values = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, latest.name)
+                    put(MediaStore.MediaColumns.MIME_TYPE, "text/plain")
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/RisaLogs")
+                }
+                val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                if (uri != null) {
+                    contentResolver.openOutputStream(uri).use { os ->
+                        latest.inputStream().use { fis ->
+                            fis.copyTo(os!!)
+                        }
+                    }
+                    Handler(Looper.getMainLooper()).post {
+                        Toast.makeText(this, "Crash log copied to Downloads/RisaLogs/${latest.name}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            } else {
+                val downloadsDir = File(Environment.getExternalStorageDirectory(), "Download/RisaLogs")
+                if (!downloadsDir.exists()) downloadsDir.mkdirs()
+                val target = File(downloadsDir, latest.name)
+                latest.copyTo(target, overwrite = true)
+                Handler(Looper.getMainLooper()).post {
+                    Toast.makeText(this, "Crash log copied to ${target.absolutePath}", Toast.LENGTH_LONG).show()
+                }
+            }
+        } catch (e: Exception) {
+            Log.w("CrashLogger", "Failed to copy crash to downloads: ${e.message}")
+        }
+    }
+
+    private fun writeStartupMarker() {
+        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+        val markerName = "startup_$timestamp.txt"
+
+        val content = "Risa app started at $timestamp"
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val values = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, markerName)
+                    put(MediaStore.MediaColumns.MIME_TYPE, "text/plain")
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/RisaLogs")
+                }
+                val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                if (uri != null) {
+                    contentResolver.openOutputStream(uri).use { os ->
+                        os?.write(content.toByteArray())
+                    }
+                }
+            } else {
+                val downloadsDir = File(Environment.getExternalStorageDirectory(), "Download/RisaLogs")
+                if (!downloadsDir.exists()) downloadsDir.mkdirs()
+                val target = File(downloadsDir, markerName)
+                target.writeText(content)
+            }
+        } catch (e: Exception) {
+            Log.w("StartupMarker", "failed: ${e.message}")
+        }
+    }
+
+    private fun postStartupNotification() {
+        val channelId = "risa_startup_channel"
+        val nm = getSystemService(NotificationManager::class.java)
+        if (nm != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val ch = NotificationChannel(channelId, "Risa Startup", NotificationManager.IMPORTANCE_LOW)
+            nm.createNotificationChannel(ch)
+        }
+
+        val notification = NotificationCompat.Builder(this, channelId)
+            .setContentTitle("Risa")
+            .setContentText("App started")
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setAutoCancel(true)
+            .build()
+
+        nm?.notify(1001, notification)
     }
 
     private fun startStreamCapture(sampleRate: Int, channels: Int, streamUrl: String?, result: MethodChannel.Result) {
