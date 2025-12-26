@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 /// Lightweight SQLite wrapper for channels/VOD/EPG data.
 /// Keeps UI responsive on huge playlists by paging from disk.
@@ -19,10 +18,9 @@ class LocalDbService {
     if (_isInit) return;
 
     // Enable FFI for desktop/testing environments.
-    if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
-      sqfliteFfiInit();
-      databaseFactory = databaseFactoryFfi;
-    }
+    // Note: this app targets Android only; desktop FFI initialization
+    // (sqflite_common_ffi) has been removed to avoid pulling desktop-only
+    // native dependencies into Android builds.
 
     final dir = await getApplicationDocumentsDirectory();
     final dbPath = p.join(dir.path, 'iptv_local.db');

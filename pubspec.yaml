@@ -16,7 +16,7 @@ dependencies:
 
   # Local persistence for large playlists/EPG (DB-backed paging)
   sqflite: ^2.3.3
-  sqflite_common_ffi: ^2.3.3  # desktop/test fallback
+  # sqflite_common_ffi: ^2.3.3  # desktop/test fallback (removed for Android-only build)
 
   cupertino_icons: ^1.0.8
   http: ^1.2.0
@@ -73,6 +73,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  sqflite_common_ffi: ^2.3.3
   flutter_launcher_icons: ^0.14.4
 
 flutter:
