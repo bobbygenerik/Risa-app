@@ -32,6 +32,11 @@ class ExoPlayerView(
     private val mainHandler = Handler(Looper.getMainLooper())
     private var positionUpdateRunnable: Runnable? = null
     private var isDisposed = false
+    // Track whether first video frame rendered
+    private var firstFrameRendered = false
+    private var firstFrameTimestamp: Long = 0
+    private val firstFrameTimeoutMs: Long = 5000
+    private var fallbackCheckRunnable: Runnable? = null
     private val prefsKey = "exoplayer_force_platform_${Build.MODEL}"
 
     init {
@@ -68,8 +73,7 @@ class ExoPlayerView(
             .setUserAgent("VLC/3.0.0 LibVLC/3.0.0")
 
         // Configure renderers factory: avoid EXTENSION_RENDERER_MODE_PREFER (problematic on some devices)
-        // Default to OFF for stability; allow override via creationParams or shared prefs but do not auto-recreate player.
-        val isNvidia = Build.MANUFACTURER.equals("NVIDIA", ignoreCase = true)
+        // Default to ON for robustness (allow extensions as fallback), but do NOT prefer them.
         val shared = context.getSharedPreferences("risa_exo_prefs", Context.MODE_PRIVATE)
         val forcePlatform = shared.getBoolean(prefsKey, false)
         val requestedExtensionMode = (creationParams?.get("extensionRenderers") as? String)?.lowercase()
@@ -78,9 +82,7 @@ class ExoPlayerView(
             forcePlatform -> androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
             requestedExtensionMode == "on" -> androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
             requestedExtensionMode == "off" -> androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
-            // Avoid EXTENSION_RENDERER_MODE_PREFER as it can worsen YUV->RGB conversion on Shield
-            isNvidia -> androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
-            else -> androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
+            else -> androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
         }
 
         val renderersFactory = object : androidx.media3.exoplayer.DefaultRenderersFactory(context) {
@@ -110,6 +112,16 @@ class ExoPlayerView(
                 playWhenReady = creationParams?.get("autoPlay") as? Boolean ?: true
                 volume = if (creationParams?.get("muted") as? Boolean == true) 0f else 1f
                 addListener(object : Player.Listener {
+                    override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                        // Treat a video size update as first-frame-rendered indication
+                        if (!firstFrameRendered) {
+                            firstFrameRendered = true
+                            firstFrameTimestamp = System.currentTimeMillis()
+                            android.util.Log.d("ExoPlayer", "First video frame rendered at $firstFrameTimestamp, size=${videoSize.width}x${videoSize.height}")
+                            // Cancel any pending fallback check
+                            fallbackCheckRunnable?.let { mainHandler.removeCallbacks(it) }
+                        }
+                    }
                     override fun onPlaybackStateChanged(state: Int) {
                         val stateName = when (state) {
                             Player.STATE_READY -> "ready"
@@ -134,6 +146,23 @@ class ExoPlayerView(
                                 }
                             } catch (e: Exception) {
                                 android.util.Log.w("ExoPlayer", "Failed to log format details: ${e.message}")
+                            }
+                            // If the app explicitly requested extensions='off', schedule a single non-intrusive fallback check
+                            if (requestedExtensionMode == "off") {
+                                // cancel any previous
+                                fallbackCheckRunnable?.let { mainHandler.removeCallbacks(it) }
+                                firstFrameRendered = false
+                                fallbackCheckRunnable = Runnable {
+                                    try {
+                                        if (!firstFrameRendered && exoPlayer.isPlaying) {
+                                            android.util.Log.w("ExoPlayer", "No video frames rendered within ${firstFrameTimeoutMs}ms while audio plays and extensions were OFF. Signaling diagnostic error to Flutter.")
+                                            methodChannel.invokeMethod("onPlayerError", mapOf("error" to "Video decode failed with extensions off; try extensions on."))
+                                        }
+                                    } catch (t: Throwable) {
+                                        android.util.Log.w("ExoPlayer", "Fallback check failed: ${t.message}")
+                                    }
+                                }
+                                mainHandler.postDelayed(fallbackCheckRunnable!!, firstFrameTimeoutMs)
                             }
                         }
                     }
