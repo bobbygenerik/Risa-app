@@ -354,13 +354,12 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
   }
 
   Future<void> _writeDebugMarker(String name) async {
+    // Disable writing marker files to Downloads by default — this was causing
+    // noisy marker files on user devices. Keep a local debug log instead.
     try {
-      final channel = MethodChannel('com.streamhub.iptv/debug_io');
-      final filename = 'marker_${name}_${DateTime.now().toIso8601String().replaceAll(':', '-')}.txt';
-      await channel.invokeMethod('writeFile', {'name': filename, 'content': name});
-      debugLog('Wrote debug marker: $filename');
+      debugLog('Debug marker: $name');
     } catch (e) {
-      debugLog('Failed to write debug marker $name: $e');
+      // Swallow errors to avoid affecting diagnostics UI
     }
   }
 
