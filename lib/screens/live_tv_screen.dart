@@ -56,6 +56,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   final List<Program> _artworkQueue = [];
   Timer? _artworkThrottle;
   late final bool _tmdbEnabled;
+  bool _initialFocusRequested = false;
 
   bool _heroVideoPreview = false;
   bool _isVideoReady = false;
@@ -87,8 +88,22 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           _scrollController.jumpTo(0);
         }
         _startCarouselIfNeeded();
+        _requestInitialFocus();
       },
     );
+  }
+
+  void _requestInitialFocus() {
+    if (_initialFocusRequested) return;
+    _initialFocusRequested = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_firstChannelFocus.canRequestFocus) {
+        _firstChannelFocus.requestFocus();
+      } else if (_watchButtonFocus.canRequestFocus) {
+        _watchButtonFocus.requestFocus();
+      }
+    });
   }
 
   @override
@@ -115,6 +130,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         if (_scrollController.hasClients) {
           _scrollController.jumpTo(0);
         }
+        _requestInitialFocus();
       });
     }
   }
@@ -134,7 +150,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       _settingsButtonFocus.requestFocus();
       return true;
     }
-    _watchButtonFocus.requestFocus();
+    // Prefer first channel card like major streaming apps
+    if (_firstChannelFocus.canRequestFocus) {
+      _firstChannelFocus.requestFocus();
+    } else {
+      _watchButtonFocus.requestFocus();
+    }
     return true;
   }
 
@@ -861,6 +882,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 width: constraints.maxWidth,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
+                  physics: const ClampingScrollPhysics(),
+                  cacheExtent: 600,
                   padding: EdgeInsets.only(
                     left: rowInset,
                     right: context.spacingLg(),

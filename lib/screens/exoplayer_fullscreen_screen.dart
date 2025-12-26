@@ -267,28 +267,16 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
       'autoPlay': true,
       'muted': false,
       // Use SurfaceView to avoid color tint issues (rainbow artifacts) on some devices
-      'surfaceType': 'surface',
+      // Prefer texture for overlays; tint issues will be handled via native color space
+      'surfaceType': 'texture',
     };
 
-    // Wrap in FittedBox to center-crop and eliminate one-sided letterboxing
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return FittedBox(
-          fit: BoxFit.cover,
-          alignment: Alignment.center,
-          child: SizedBox(
-            width: constraints.maxWidth,
-            height: constraints.maxHeight,
-            child: AndroidView(
-              viewType: viewType,
-              layoutDirection: TextDirection.ltr,
-              creationParams: creationParams,
-              creationParamsCodec: const StandardMessageCodec(),
-              onPlatformViewCreated: _onPlatformViewCreated,
-            ),
-          ),
-        );
-      },
+    return AndroidView(
+      viewType: viewType,
+      layoutDirection: TextDirection.ltr,
+      creationParams: creationParams,
+      creationParamsCodec: const StandardMessageCodec(),
+      onPlatformViewCreated: _onPlatformViewCreated,
     );
   }
 
@@ -321,10 +309,10 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
                 child: Row(
                   children: [
                     // Back button
-                    IconButton(
+                    _buildControlButton(
+                      icon: Icons.arrow_back,
                       onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back,
-                          color: Colors.white, size: 24),
+                      size: 24,
                     ),
                     const Spacer(),
                     // Live badge
