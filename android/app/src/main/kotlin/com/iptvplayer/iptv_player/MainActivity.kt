@@ -34,6 +34,7 @@ import kotlin.concurrent.thread
 import com.risa.iptv.WhisperPlugin
 import com.iptvplayer.iptv_player.ExoPlayerAudioCapturer
 import com.iptvplayer.iptv_player.ExoPlayerViewFactory
+import com.risa.app.NativeCrashHandler
 
 @UnstableApi
 class MainActivity : FlutterActivity() {
@@ -198,21 +199,9 @@ class MainActivity : FlutterActivity() {
 
     private fun setupUncaughtExceptionHandler() {
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
-        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
-            try {
-                if (!_suppressCrashFileWrites.get()) {
-                    writeCrashToFile(thread, throwable)
-                } else {
-                    Log.w("CrashLogger", "Suppressed crash file write during startup: ${throwable.message}")
-                }
-            } catch (e: Exception) {
-                // best-effort logging
-                Log.e("CrashLogger", "Failed to write crash file: ${e.message}")
-            }
-
-            // give default handler a chance to run (which may kill the process)
-            defaultHandler?.uncaughtException(thread, throwable)
-        }
+        val externalDir = getExternalFilesDir(null) ?: filesDir
+        // Use native crash handler to write to /sdcard/Android/data/com.risa.app/files/logs/native_crash.txt
+        Thread.setDefaultUncaughtExceptionHandler(NativeCrashHandler(externalDir, defaultHandler))
     }
 
     private fun writeCrashToFile(thread: Thread, t: Throwable) {

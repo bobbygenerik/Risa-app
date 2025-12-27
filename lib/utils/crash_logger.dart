@@ -8,6 +8,7 @@ class CrashLogger {
 
   File? _logFile;
   bool _initialized = false;
+  String? _lastError;
 
   Future<void> init() async {
     if (_initialized) return;
@@ -26,6 +27,20 @@ class CrashLogger {
   }) async {
     try {
       await init();
+      final file = _logFile;
+      if (file == null) return;
+
+      final key =
+          '${error.toString().hashCode}_${stack?.toString().hashCode ?? 0}_$source';
+      if (_lastError == key) {
+        return; // avoid spamming identical crash entries
+      }
+      _lastError = key;
+
+      if (!await file.exists()) {
+        await file.writeAsString('');
+      }
+
       final buffer = StringBuffer()
         ..writeln('--- ${DateTime.now().toIso8601String()} [$source] ---')
         ..writeln(error.toString());
@@ -33,7 +48,7 @@ class CrashLogger {
         buffer.writeln(stack.toString());
       }
       buffer.writeln();
-      await _logFile!.writeAsString(buffer.toString(), mode: FileMode.append);
+      await file.writeAsString(buffer.toString(), mode: FileMode.append);
       // Mirror to external app storage so logs are easy to pull via adb
       await _writeExternal(buffer.toString());
 
