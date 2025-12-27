@@ -1365,6 +1365,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showManagePlaylistsDialog() {
-    context.push('/playlist-management');
+    // Use the unified playlist manager that reads the new saved_playlists store
+    context.push('/playlist-manager');
   }
 }
