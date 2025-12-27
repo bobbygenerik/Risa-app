@@ -360,7 +360,9 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
       backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Manage Playlists'),
-        backgroundColor: Colors.white.withAlpha((0.08 * 255).round()),
+        backgroundColor: AppTheme.darkBackground,
+        elevation: 0,
+        foregroundColor: AppTheme.textPrimary,
         // No add action here — playlists should be added from Settings → General
         actions: [],
       ),
@@ -498,7 +500,12 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
                     ),
                     onTap: () => Future.delayed(
                       Duration.zero,
-                      () => _loadPlaylist(playlist),
+                      () {
+                        final idx = _playlists.indexWhere((p) => p.id == playlist.id);
+                        if (idx != -1 && mounted) {
+                          _loadPlaylist(_playlists[idx]);
+                        }
+                      },
                     ),
                   ),
                 PopupMenuItem(
@@ -511,7 +518,12 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
                   ),
                   onTap: () => Future.delayed(
                     Duration.zero,
-                    () => _editPlaylist(playlist),
+                    () {
+                      final idx = _playlists.indexWhere((p) => p.id == playlist.id);
+                      if (idx != -1 && mounted) {
+                        _editPlaylist(_playlists[idx]);
+                      }
+                    },
                   ),
                 ),
                 PopupMenuItem(
@@ -524,7 +536,12 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
                   ),
                   onTap: () => Future.delayed(
                     Duration.zero,
-                    () => _editEpgUrls(playlist),
+                    () {
+                      final idx = _playlists.indexWhere((p) => p.id == playlist.id);
+                      if (idx != -1 && mounted) {
+                        _editEpgUrls(_playlists[idx]);
+                      }
+                    },
                   ),
                 ),
                 PopupMenuItem(
@@ -537,7 +554,12 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
                   ),
                   onTap: () => Future.delayed(
                     Duration.zero,
-                    () => _deletePlaylist(playlist),
+                    () {
+                      final idx = _playlists.indexWhere((p) => p.id == playlist.id);
+                      if (idx != -1 && mounted) {
+                        _deletePlaylist(_playlists[idx]);
+                      }
+                    },
                   ),
                 ),
               ],
