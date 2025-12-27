@@ -1,10 +1,12 @@
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'dart:isolate';
+import 'dart:io';
 import 'dart:convert';
 import '../models/channel.dart';
 import '../models/content.dart';
 import '../utils/hash_utils.dart';
+import 'package:path/path.dart' as p;
 
 // Top-level function for isolate-based M3U parsing.
 // This delegates to the streaming/map-based parser so it can be used
@@ -529,6 +531,270 @@ class M3UParserService {
           'M3UParser: (stream) WARNING: No content parsed from the M3U stream.');
     }
     return M3UParseResult(channels: channels, movies: movies, series: series);
+  }
+
+  /// Stream parser that writes results directly to JSONL files to avoid
+  /// large in-memory payloads. Returns file paths and counts.
+  Future<Map<String, dynamic>> parseM3UStreamToFiles(
+    Stream<List<int>> byteStream, {
+    SendPort? progressPort,
+    required Directory outputDir,
+  }) async {
+    final channelsFile =
+        File(p.join(outputDir.path, 'channels_${DateTime.now().millisecondsSinceEpoch}.jsonl'));
+    final moviesFile =
+        File(p.join(outputDir.path, 'movies_${DateTime.now().millisecondsSinceEpoch}.jsonl'));
+    final seriesFile =
+        File(p.join(outputDir.path, 'series_${DateTime.now().millisecondsSinceEpoch}.jsonl'));
+
+    final channelSink = channelsFile.openWrite();
+    final movieSink = moviesFile.openWrite();
+    final seriesSink = seriesFile.openWrite();
+
+    int channelCount = 0;
+    int movieCount = 0;
+    int seriesCount = 0;
+
+    final lineStream =
+        byteStream.transform(utf8.decoder).transform(const LineSplitter());
+
+    _epgUrl = null;
+    String? pendingLine;
+    String? currentInfo;
+    Map<String, String> currentAttributes = {};
+    int logicalIndex = 0;
+    bool headerProcessed = false;
+    final seenUrls = <String>{};
+
+    Future<void> closeSinks() async {
+      await channelSink.flush();
+      await movieSink.flush();
+      await seriesSink.flush();
+      await channelSink.close();
+      await movieSink.close();
+      await seriesSink.close();
+    }
+
+    try {
+      void processLogicalLine(String line) {
+        if (line.isEmpty) return;
+
+        if (!headerProcessed) {
+          headerProcessed = true;
+          final lowerLine = line.toLowerCase();
+          if (lowerLine.contains('url-tvg=') ||
+              lowerLine.contains('x-tvg-url=') ||
+              lowerLine.contains('tvg-url=')) {
+            final urlMatch = _epgUrlRegex.firstMatch(line);
+            if (urlMatch != null) {
+              _epgUrl = urlMatch.group(1);
+            }
+          }
+        }
+
+        void processExtinfSegment(String segment) {
+          final urlMatch = _lastUrlMatch(segment);
+          final infoPart = urlMatch != null
+              ? segment.substring(0, urlMatch.start).trimRight()
+              : segment;
+          currentInfo = _extractExtinfPayload(infoPart);
+          if (currentInfo == null) return;
+          currentAttributes = _parseAttributes(currentInfo!);
+
+          if (urlMatch != null) {
+            final inlineUrl = urlMatch.group(0) ?? '';
+            if (inlineUrl.isNotEmpty) {
+              if (!seenUrls.add(inlineUrl)) {
+                currentInfo = null;
+                currentAttributes = {};
+                return;
+              }
+              final channelName = _extractChannelName(currentInfo!);
+              final groupTitle = currentAttributes['group-title'] ?? '';
+              final isVod = _isVodUrl(inlineUrl, groupTitle);
+              final isSeries =
+                  isVod && _looksLikeSeriesFast(channelName, groupTitle);
+              final isMovie = isVod && !isSeries;
+
+              if (isSeries) {
+                final map = {
+                  'id': 'series_${channelName.hashCode.abs()}_$logicalIndex',
+                  'title': channelName,
+                  'videoUrl': inlineUrl,
+                  'imageUrl': currentAttributes['tvg-logo'],
+                  'type': 'series',
+                  'genres': [groupTitle],
+                  'sortOrder': logicalIndex,
+                };
+                seriesCount++;
+                seriesSink.writeln(json.encode(map));
+              } else if (isMovie) {
+                final map = {
+                  'id': 'movie_${channelName.hashCode.abs()}_$logicalIndex',
+                  'title': channelName,
+                  'videoUrl': inlineUrl,
+                  'imageUrl': currentAttributes['tvg-logo'],
+                  'type': 'movie',
+                  'genres': [groupTitle],
+                  'sortOrder': logicalIndex,
+                };
+                movieCount++;
+                movieSink.writeln(json.encode(map));
+              } else {
+                final map = {
+                  'id': currentAttributes['tvg-id'] ??
+                      stableChannelId(
+                          tvgId: currentAttributes['tvg-id'],
+                          name: channelName,
+                          url: inlineUrl),
+                  'name': channelName,
+                  'url': inlineUrl,
+                  'logoUrl': currentAttributes['tvg-logo'],
+                  'groupTitle': groupTitle,
+                  'tvgId': currentAttributes['tvg-id'],
+                  'attributes': currentAttributes,
+                  'sortOrder': channelCount,
+                  'isFavorite': false,
+                  'isHidden': false,
+                };
+                channelCount++;
+                channelSink.writeln(json.encode(map));
+                if (progressPort != null && channelCount % 50 == 0) {
+                  try {
+                    progressPort
+                        .send({'type': 'progress', 'channels': channelCount});
+                  } catch (_) {}
+                }
+              }
+              currentInfo = null;
+              currentAttributes = {};
+              logicalIndex++;
+            }
+          }
+        }
+
+        if (line.contains('EXTINF:')) {
+          for (final segment in _splitExtinfSegments(line)) {
+            processExtinfSegment(segment);
+          }
+        } else if (!line.startsWith('#') && currentInfo != null) {
+          final urlMatch = _lastUrlMatch(line);
+          if (urlMatch == null) {
+            currentInfo = null;
+            currentAttributes = {};
+            return;
+          }
+          final channelUrl = urlMatch.group(0) ?? '';
+          if (channelUrl.isEmpty) {
+            currentInfo = null;
+            currentAttributes = {};
+            return;
+          }
+
+          final channelName = _extractChannelName(currentInfo!);
+          final groupTitle = currentAttributes['group-title'] ?? '';
+          final isVod = _isVodUrl(channelUrl, groupTitle);
+          final isSeries = isVod && _looksLikeSeriesFast(channelName, groupTitle);
+          final isMovie = isVod && !isSeries;
+
+          if (isSeries) {
+            final map = {
+              'id': 'series_${channelName.hashCode.abs()}_$logicalIndex',
+              'title': channelName,
+              'videoUrl': channelUrl,
+              'imageUrl': currentAttributes['tvg-logo'],
+              'type': 'series',
+              'genres': [groupTitle],
+              'sortOrder': logicalIndex,
+            };
+            seriesCount++;
+            seriesSink.writeln(json.encode(map));
+          } else if (isMovie) {
+            final map = {
+              'id': 'movie_${channelName.hashCode.abs()}_$logicalIndex',
+              'title': channelName,
+              'videoUrl': channelUrl,
+              'imageUrl': currentAttributes['tvg-logo'],
+              'type': 'movie',
+              'genres': [groupTitle],
+              'sortOrder': logicalIndex,
+            };
+            movieCount++;
+            movieSink.writeln(json.encode(map));
+          } else {
+            final map = {
+              'id': currentAttributes['tvg-id'] ??
+                  stableChannelId(
+                      tvgId: currentAttributes['tvg-id'],
+                      name: channelName,
+                      url: channelUrl),
+              'name': channelName,
+              'url': channelUrl,
+              'logoUrl': currentAttributes['tvg-logo'],
+              'groupTitle': groupTitle,
+              'tvgId': currentAttributes['tvg-id'],
+              'attributes': currentAttributes,
+              'sortOrder': channelCount,
+              'isFavorite': false,
+              'isHidden': false,
+            };
+            channelCount++;
+            channelSink.writeln(json.encode(map));
+            if (progressPort != null && channelCount % 50 == 0) {
+              try {
+                progressPort
+                    .send({'type': 'progress', 'channels': channelCount});
+              } catch (_) {}
+            }
+          }
+          currentInfo = null;
+          currentAttributes = {};
+          logicalIndex++;
+        }
+      }
+
+      await for (final line in lineStream) {
+        final trimmed = line.trim();
+
+        if (trimmed.isEmpty) {
+          continue;
+        }
+
+        if (trimmed.contains('#EXTINF:') || trimmed.contains('EXTINF:')) {
+          processLogicalLine(trimmed);
+        } else if (trimmed.startsWith('#EXTM3U')) {
+          // Header - handle EPG in header
+          final urlMatch = _epgUrlRegex.firstMatch(trimmed);
+          if (urlMatch != null) {
+            _epgUrl = urlMatch.group(1);
+          }
+        } else if (trimmed.startsWith('#')) {
+          // Ignore other tags
+          continue;
+        } else {
+          // URL line after EXTINF
+          if (pendingLine != null) {
+            processLogicalLine(pendingLine);
+            pendingLine = null;
+          }
+          processLogicalLine(trimmed);
+        }
+      }
+
+      await closeSinks();
+      return {
+        'channelsFile': channelsFile.path,
+        'moviesFile': moviesFile.path,
+        'seriesFile': seriesFile.path,
+        'channelCount': channelCount,
+        'movieCount': movieCount,
+        'seriesCount': seriesCount,
+        'epgUrl': _epgUrl,
+      };
+    } catch (e) {
+      await closeSinks();
+      rethrow;
+    }
   }
 
   /// Optimized parser that directly returns maps (avoids object creation/conversion overhead)

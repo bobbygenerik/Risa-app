@@ -33,8 +33,10 @@ void _isolateEntry(_IsolateRequest request) async {
       throw Exception('No source provided');
     }
 
+    // Write parsed data to temp JSONL files to avoid huge isolate messages
+    final tempDir = Directory.systemTemp;
     final result =
-        await parser.parseM3UStreamToMaps(stream, progressPort: reply);
+        await parser.parseM3UStreamToFiles(stream, progressPort: reply, outputDir: tempDir);
     reply.send({'type': 'done', 'result': result});
   } catch (e, st) {
     reply

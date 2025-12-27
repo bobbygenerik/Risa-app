@@ -1129,8 +1129,14 @@ class ChannelProvider with ChangeNotifier {
         notifyListeners();
       });
 
+      final channelsFile = parsed['channelsFile'] as String?;
+      final moviesFile = parsed['moviesFile'] as String?;
+      final seriesFile = parsed['seriesFile'] as String?;
+
       // Validate parsed result
-      if (parsed['channels'] == null || (parsed['channels'] as List).isEmpty) {
+      if ((channelsFile == null || channelsFile.isEmpty) &&
+          (parsed['channels'] == null ||
+              (parsed['channels'] as List).isEmpty)) {
         _errorMessage =
             'The playlist file could not be parsed or contains no channels. Please check your playlist source.';
         _isLoading = false;
@@ -1160,7 +1166,6 @@ class ChannelProvider with ChangeNotifier {
       notifyListeners();
 
       final mapStart = DateTime.now();
-      final rawChannels = parsed['channels'] as List<dynamic>;
       _channelMaps.clear();
       _channelCache.clear();
       if (_dbReady) {
@@ -1168,33 +1173,83 @@ class ChannelProvider with ChangeNotifier {
       }
       _channelCountDb = 0;
 
-      const chunkSize = 1000;
-      for (int i = 0; i < rawChannels.length; i += chunkSize) {
-        final end = (i + chunkSize).clamp(0, rawChannels.length);
-        final chunk = rawChannels.sublist(i, end);
-
-        for (final c in chunk) {
-          _channelMaps.add(Map<String, dynamic>.from(c));
-        }
-
-        if (_dbReady) {
+      if (channelsFile != null && channelsFile.isNotEmpty) {
+        final file = File(channelsFile);
+        if (await file.exists()) {
+          final stream =
+              file.openRead().transform(utf8.decoder).transform(const LineSplitter());
+          final List<Map<String, dynamic>> batch = [];
+          int processed = 0;
+          await for (final line in stream) {
+            if (line.trim().isEmpty) continue;
+            final map = Map<String, dynamic>.from(json.decode(line));
+            _channelMaps.add(map);
+            batch.add(map);
+            processed++;
+            if (batch.length >= 500) {
+              if (_dbReady) {
+                try {
+                  await _db.insertChannels(
+                      batch.map((e) => Map<String, dynamic>.from(e)).toList());
+                } catch (e) {
+                  debugLog('ChannelProvider: DB channel batch insert failed: $e');
+                }
+              }
+              batch.clear();
+            }
+            if (processed % 2000 == 0) {
+              _loadingStatus = 'Processing channels... $processed';
+              _loadingProgress = 0.7 +
+                  (0.1 *
+                      (processed.toDouble() /
+                          (parsed['channelCount'] as int? ?? processed)));
+              notifyListeners();
+              await Future.delayed(Duration(milliseconds: 1));
+            }
+          }
+          if (batch.isNotEmpty && _dbReady) {
+            try {
+              await _db.insertChannels(
+                  batch.map((e) => Map<String, dynamic>.from(e)).toList());
+            } catch (e) {
+              debugLog('ChannelProvider: DB channel batch insert failed: $e');
+            }
+          }
+          _channelCountDb = _channelMaps.length;
           try {
-            await _db.insertChannels(
-                chunk.map((e) => Map<String, dynamic>.from(e)).toList());
-          } catch (e) {
-            debugLog('ChannelProvider: DB channel batch insert failed: $e');
+            await file.delete();
+          } catch (_) {}
+        }
+      } else {
+        final rawChannels = parsed['channels'] as List<dynamic>;
+        const chunkSize = 1000;
+        for (int i = 0; i < rawChannels.length; i += chunkSize) {
+          final end = (i + chunkSize).clamp(0, rawChannels.length);
+          final chunk = rawChannels.sublist(i, end);
+
+          for (final c in chunk) {
+            _channelMaps.add(Map<String, dynamic>.from(c));
+          }
+
+          if (_dbReady) {
+            try {
+              await _db.insertChannels(
+                  chunk.map((e) => Map<String, dynamic>.from(e)).toList());
+            } catch (e) {
+              debugLog('ChannelProvider: DB channel batch insert failed: $e');
+            }
+          }
+
+          if (rawChannels.length > 5000 && i % (chunkSize * 2) == 0) {
+            _loadingStatus =
+                'Processing channels... ${i + end}/${rawChannels.length}';
+            _loadingProgress = 0.7 + (0.1 * (i + end) / rawChannels.length);
+            notifyListeners();
+            await Future.delayed(Duration.zero);
           }
         }
-
-        if (rawChannels.length > 5000 && i % (chunkSize * 2) == 0) {
-          _loadingStatus =
-              'Processing channels... ${i + end}/${rawChannels.length}';
-          _loadingProgress = 0.7 + (0.1 * (i + end) / rawChannels.length);
-          notifyListeners();
-          await Future.delayed(Duration.zero);
-        }
+        _channelCountDb = _channelMaps.length;
       }
-      _channelCountDb = _channelMaps.length;
 
       try {
         final playlistJson = json.encode(_channelMaps);
@@ -1206,38 +1261,114 @@ class ChannelProvider with ChangeNotifier {
             'ChannelProvider: Failed to save playlist for Android Auto: $e');
       }
 
-      final List<Content> movies = (parsed['movies'] as List<dynamic>)
-          .map((m) => Content.fromMap(Map<String, dynamic>.from(m)))
-          .toList();
-      final List<Content> series = (parsed['series'] as List<dynamic>)
-          .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
-          .toList();
-
-      _moviesCount = movies.length;
-      _seriesCount = series.length;
-
       _loadingStatus = 'Saving VOD content...';
       _loadingProgress = 0.8;
       notifyListeners();
 
-      final dir = await getApplicationDocumentsDirectory();
-      _moviesCachePath = '${dir.path}/movies_cache.json';
-      _seriesCachePath = '${dir.path}/series_cache.json';
-      await File(_moviesCachePath!)
-          .writeAsString(json.encode(movies.map((m) => m.toMap()).toList()));
-      await File(_seriesCachePath!)
-          .writeAsString(json.encode(series.map((s) => s.toMap()).toList()));
+      final List<Content> moviesPreview = [];
+      final List<Content> seriesPreview = [];
+      _moviesCount = 0;
+      _seriesCount = 0;
+      _moviesCachePath = null;
+      _seriesCachePath = null;
 
-      if (_dbReady) {
-        try {
-          await _db.clearVod();
-          await _db.insertMovies(movies.map((m) => m.toMap()).toList());
-          await _db.insertSeries(series.map((s) => s.toMap()).toList());
-          debugLog(
-              'ChannelProvider: Persisted VOD to DB (${movies.length} movies, ${series.length} series)');
-        } catch (e) {
-          debugLog('ChannelProvider: Failed to persist VOD to DB: $e');
+      Future<void> ingestVodFile(
+          {required String? path,
+          required bool isMovie}) async {
+        if (path == null || path.isEmpty) return;
+        final file = File(path);
+        if (!await file.exists()) return;
+        final stream =
+            file.openRead().transform(utf8.decoder).transform(const LineSplitter());
+        final batch = <Map<String, dynamic>>[];
+        await for (final line in stream) {
+          if (line.trim().isEmpty) continue;
+          final map = Map<String, dynamic>.from(json.decode(line));
+          if (isMovie) {
+            _moviesCount++;
+            if (moviesPreview.length < 100) {
+              moviesPreview.add(Content.fromMap(map));
+            }
+          } else {
+            _seriesCount++;
+            if (seriesPreview.length < 100) {
+              seriesPreview.add(Content.fromMap(map));
+            }
+          }
+          if (_dbReady) {
+            batch.add(map);
+            if (batch.length >= 400) {
+              try {
+                if (isMovie) {
+                  await _db.insertMovies(List<Map<String, dynamic>>.from(batch));
+                } else {
+                  await _db.insertSeries(List<Map<String, dynamic>>.from(batch));
+                }
+              } catch (e) {
+                debugLog('ChannelProvider: DB VOD batch insert failed: $e');
+              }
+              batch.clear();
+            }
+          }
         }
+        if (_dbReady && batch.isNotEmpty) {
+          try {
+            if (isMovie) {
+              await _db.insertMovies(List<Map<String, dynamic>>.from(batch));
+            } else {
+              await _db.insertSeries(List<Map<String, dynamic>>.from(batch));
+            }
+          } catch (e) {
+            debugLog('ChannelProvider: DB VOD batch insert failed: $e');
+          }
+        }
+        try {
+          await file.delete();
+        } catch (_) {}
+      }
+
+      if (moviesFile != null || seriesFile != null) {
+        if (_dbReady) {
+          try {
+            await _db.clearVod();
+          } catch (e) {
+            debugLog('ChannelProvider: Failed to clear VOD tables: $e');
+          }
+        }
+        await ingestVodFile(path: moviesFile, isMovie: true);
+        await ingestVodFile(path: seriesFile, isMovie: false);
+      } else {
+        final List<Content> movies = (parsed['movies'] as List<dynamic>)
+            .map((m) => Content.fromMap(Map<String, dynamic>.from(m)))
+            .toList();
+        final List<Content> series = (parsed['series'] as List<dynamic>)
+            .map((s) => Content.fromMap(Map<String, dynamic>.from(s)))
+            .toList();
+
+        _moviesCount = movies.length;
+        _seriesCount = series.length;
+
+        final dir = await getApplicationDocumentsDirectory();
+        _moviesCachePath = '${dir.path}/movies_cache.json';
+        _seriesCachePath = '${dir.path}/series_cache.json';
+        await File(_moviesCachePath!)
+            .writeAsString(json.encode(movies.map((m) => m.toMap()).toList()));
+        await File(_seriesCachePath!)
+            .writeAsString(json.encode(series.map((s) => s.toMap()).toList()));
+
+        if (_dbReady) {
+          try {
+            await _db.clearVod();
+            await _db.insertMovies(movies.map((m) => m.toMap()).toList());
+            await _db.insertSeries(series.map((s) => s.toMap()).toList());
+            debugLog(
+                'ChannelProvider: Persisted VOD to DB (${movies.length} movies, ${series.length} series)');
+          } catch (e) {
+            debugLog('ChannelProvider: Failed to persist VOD to DB: $e');
+          }
+        }
+        moviesPreview.addAll(movies.take(100));
+        seriesPreview.addAll(series.take(100));
       }
       final mapDuration = DateTime.now().difference(mapStart);
       debugLog(
@@ -1256,8 +1387,8 @@ class ChannelProvider with ChangeNotifier {
       notifyListeners();
 
       if (_contentProvider != null) {
-        _contentProvider!.loadMovies(movies.take(100).toList());
-        _contentProvider!.loadSeries(series.take(100).toList());
+        _contentProvider!.loadMovies(moviesPreview);
+        _contentProvider!.loadSeries(seriesPreview);
         unawaited(_hydrateContentProviderFromCache());
       }
 
@@ -1265,6 +1396,7 @@ class ChannelProvider with ChangeNotifier {
       _loadingProgress = 0.95;
       notifyListeners();
 
+      final dir = await getApplicationDocumentsDirectory();
       final now = DateTime.now().millisecondsSinceEpoch;
       final cacheFile = File('${dir.path}/$_playlistCacheFileName');
       // PlaylistLoader stores temp files internally; we just write cache metadata

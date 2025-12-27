@@ -1,0 +1,25 @@
+
+--- 1766800463256 [native] ---
+java.lang.OutOfMemoryError: Failed to allocate a 16 byte allocation with 469968 free bytes and 458KB until OOM, target footprint 268435456, growth limit 268435456; giving up on allocation because <1% of heap free after GC.
+	at io.flutter.plugin.common.StandardMessageCodec.readValueOfType(StandardMessageCodec.java:381)
+	at io.flutter.plugin.common.StandardMessageCodec.readValue(StandardMessageCodec.java:340)
+	at io.flutter.plugin.common.StandardMessageCodec.readValueOfType(StandardMessageCodec.java:424)
+	at io.flutter.plugin.common.StandardMessageCodec.readValue(StandardMessageCodec.java:340)
+	at io.flutter.plugin.common.StandardMessageCodec.readValueOfType(StandardMessageCodec.java:434)
+	at io.flutter.plugin.common.StandardMessageCodec.readValue(StandardMessageCodec.java:340)
+	at io.flutter.plugin.common.StandardMessageCodec.readValueOfType(StandardMessageCodec.java:424)
+	at io.flutter.plugin.common.StandardMessageCodec.readValue(StandardMessageCodec.java:340)
+	at io.flutter.plugin.common.StandardMessageCodec.readValueOfType(StandardMessageCodec.java:434)
+	at io.flutter.plugin.common.StandardMessageCodec.readValue(StandardMessageCodec.java:340)
+	at io.flutter.plugin.common.StandardMethodCodec.decodeMethodCall(StandardMethodCodec.java:49)
+	at io.flutter.plugin.common.MethodChannel$IncomingMethodCallHandler.onMessage(MethodChannel.java:265)
+	at io.flutter.embedding.engine.dart.DartMessenger.invokeHandler(DartMessenger.java:292)
+	at io.flutter.embedding.engine.dart.DartMessenger.lambda$dispatchMessageToQueue$0$io-flutter-embedding-engine-dart-DartMessenger(DartMessenger.java:319)
+	at io.flutter.embedding.engine.dart.DartMessenger$$ExternalSyntheticLambda0.run(D8$$SyntheticClass:0)
+	at io.flutter.embedding.engine.dart.DartMessenger$SerialTaskQueue.flush(DartMessenger.java:173)
+	at io.flutter.embedding.engine.dart.DartMessenger$SerialTaskQueue.lambda$dispatch$0$io-flutter-embedding-engine-dart-DartMessenger$SerialTaskQueue(DartMessenger.java:163)
+	at io.flutter.embedding.engine.dart.DartMessenger$SerialTaskQueue$$ExternalSyntheticLambda0.run(D8$$SyntheticClass:0)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1156)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:651)
+	at java.lang.Thread.run(Thread.java:1119)
+
