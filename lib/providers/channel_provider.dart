@@ -1797,25 +1797,24 @@ class ChannelProvider with ChangeNotifier {
       final dir = await getApplicationDocumentsDirectory();
       final jsonCacheFile = File('${dir.path}/parsed_playlist_cache.json');
 
-      // For very large playlists, don't save movies/series to main cache
-      // They're already in separate files from lazy loading
-      final channelsData = (parsed['channels'] as List<dynamic>).map((c) {
-        return Map<String, dynamic>.from(c as Map);
-      }).toList();
-
-      // Only save channel data + metadata to main cache
-      // Movies/series are in separate lazy-load files
+      // For very large playlists, avoid caching full channel list to disk via JSON.
+      // Persist minimal metadata only; channels/movies/series live in DB/files.
       final cacheData = {
-        'channels': channelsData,
-        'movies': [], // Empty - loaded from separate file
-        'series': [], // Empty - loaded from separate file
+        'channels': [],
+        'movies': [],
+        'series': [],
         'epgUrl': parsed['epgUrl'],
+        'channelCount': parsed['channelCount'],
+        'movieCount': parsed['movieCount'],
+        'seriesCount': parsed['seriesCount'],
+        'channelsFile': parsed['channelsFile'],
+        'moviesFile': parsed['moviesFile'],
+        'seriesFile': parsed['seriesFile'],
       };
 
       final jsonData = json.encode(cacheData);
       await jsonCacheFile.writeAsString(jsonData);
-      debugLog(
-          'ChannelProvider: Saved JSON cache (channels only, ${jsonData.length} bytes)');
+      debugLog('ChannelProvider: Saved JSON cache metadata only');
     } catch (e) {
       debugLog('ChannelProvider: Failed to save JSON cache: $e');
       // Non-fatal - cache is optional
@@ -2323,34 +2322,37 @@ class ChannelProvider with ChangeNotifier {
         _seriesCachePath = '${dir.path}/series_cache.json';
       }
 
-      // Load existing, append new, save back
-      final existingMovies = await getMovies(limit: 999999); // Get all
-      final existingSeries = await getSeries(limit: 999999);
-      final allMovies = [...existingMovies, ...xtreamMovies];
-      final allSeries = [...existingSeries, ...xtreamSeries];
-      await File(_moviesCachePath!)
-          .writeAsString(json.encode(allMovies.map((m) => m.toMap()).toList()));
-      await File(_seriesCachePath!)
-          .writeAsString(json.encode(allSeries.map((s) => s.toMap()).toList()));
-
+      // Persist XTREAM VOD without loading all existing rows into memory
       if (_dbReady) {
         try {
-          await _db.clearVod();
-          await _db.insertMovies(allMovies.map((m) => m.toMap()).toList());
-          await _db.insertSeries(allSeries.map((s) => s.toMap()).toList());
+          await _db.insertMovies(xtreamMovies.map((m) => m.toMap()).toList());
+          await _db.insertSeries(xtreamSeries.map((s) => s.toMap()).toList());
           debugLog(
-              'ChannelProvider: Persisted merged Xtream VOD to DB (${allMovies.length} movies, ${allSeries.length} series)');
+              'ChannelProvider: Persisted XTREAM VOD to DB (${xtreamMovies.length} movies, ${xtreamSeries.length} series)');
         } catch (e) {
-          debugLog('ChannelProvider: Failed to persist merged VOD to DB: $e');
+          debugLog('ChannelProvider: Failed to persist XTREAM VOD to DB: $e');
         }
+      }
+
+      // Cache only lightweight previews for hydration when DB not ready
+      try {
+        final moviesPreview = xtreamMovies.take(200).toList();
+        final seriesPreview = xtreamSeries.take(200).toList();
+        final dir = await getApplicationDocumentsDirectory();
+        _moviesCachePath = '${dir.path}/movies_cache.json';
+        _seriesCachePath = '${dir.path}/series_cache.json';
+        await File(_moviesCachePath!)
+            .writeAsString(json.encode(moviesPreview.map((m) => m.toMap()).toList()));
+        await File(_seriesCachePath!)
+            .writeAsString(json.encode(seriesPreview.map((s) => s.toMap()).toList()));
+      } catch (_) {
+        // best-effort
       }
 
       // Sync only first batch to ContentProvider
       if (_contentProvider != null) {
-        final firstMovies = await getMovies(limit: 100);
-        final firstSeries = await getSeries(limit: 100);
-        _contentProvider!.loadMovies(firstMovies);
-        _contentProvider!.loadSeries(firstSeries);
+        _contentProvider!.loadMovies(xtreamMovies.take(100).toList());
+        _contentProvider!.loadSeries(xtreamSeries.take(100).toList());
         unawaited(_hydrateContentProviderFromCache());
       }
 
@@ -2503,9 +2505,28 @@ class ChannelProvider with ChangeNotifier {
     // Run in background without awaiting
     unawaited(Future.microtask(() async {
       try {
-        // Load all movies and series for enrichment
-        final allMovies = await getMovies(limit: 999999);
-        final allSeries = await getSeries(limit: 999999);
+        // Load capped set for enrichment to avoid OOM
+        const int enrichCap = 1500;
+        const int pageSize = 300;
+        final allMovies = <Content>[];
+        final allSeries = <Content>[];
+
+        for (int offset = 0;
+            offset < enrichCap && allMovies.length < enrichCap;
+            offset += pageSize) {
+          final page = await getMovies(offset: offset, limit: pageSize);
+          if (page.isEmpty) break;
+          allMovies.addAll(page);
+          if (allMovies.length >= enrichCap) break;
+        }
+        for (int offset = 0;
+            offset < enrichCap && allSeries.length < enrichCap;
+            offset += pageSize) {
+          final page = await getSeries(offset: offset, limit: pageSize);
+          if (page.isEmpty) break;
+          allSeries.addAll(page);
+          if (allSeries.length >= enrichCap) break;
+        }
 
         debugLog('ChannelProvider: Enriching ${allMovies.length} movies...');
         final enrichedMovies = await _enrichmentService.enrichContent(
