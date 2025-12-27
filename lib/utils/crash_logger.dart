@@ -34,6 +34,8 @@ class CrashLogger {
       }
       buffer.writeln();
       await _logFile!.writeAsString(buffer.toString(), mode: FileMode.append);
+      // Mirror to external app storage so logs are easy to pull via adb
+      await _writeExternal(buffer.toString());
 
       // Try to also write to external Downloads/RisaLogs via platform channel
       try {
@@ -48,6 +50,21 @@ class CrashLogger {
       }
     } catch (_) {
       // Ignore logging failures to avoid crashing during crash handling.
+    }
+  }
+
+  Future<void> _writeExternal(String content) async {
+    try {
+      final externalDir = await getExternalStorageDirectory();
+      if (externalDir == null) return;
+      final dir = Directory('${externalDir.path}/logs');
+      if (!await dir.exists()) {
+        await dir.create(recursive: true);
+      }
+      final latest = File('${dir.path}/crash_latest.txt');
+      await latest.writeAsString(content, mode: FileMode.append);
+    } catch (_) {
+      // Best-effort; ignore failures (e.g., permissions).
     }
   }
 }

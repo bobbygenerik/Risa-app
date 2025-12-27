@@ -1,0 +1,229 @@
+--------- beginning of main
+12-26 20:34:37.149 13841 13990 D ReflectedParamUpdater: ignored struct field coding.qp.values
+12-26 20:34:37.150 13841 13990 D ReflectedParamUpdater: ignored struct field vendor.output.configs.portConfigs
+12-26 20:34:37.150 13841 13990 D CCodecConfig: ignoring local param raw.color (0xc2001809) as it is already supported
+12-26 20:34:37.151 13841 13990 D CCodecConfig: ignoring local param coded.average-qp (0xd200401b) as it is already supported
+12-26 20:34:37.151 13841 13990 D CCodecConfig: ignoring local param coded.picture-type (0xd2001810) as it is already supported
+12-26 20:34:37.160 13841 13990 I CCodec  : [c2.qti.hevc.encoder] config->initialize() : 0
+12-26 20:34:37.160  1983 16928 W QC2Interface: [hvcE_331] Failed to query parameters
+12-26 20:34:37.161 13841 13990 I CCodecConfig: query failed after returning 26 values (BAD_INDEX)
+12-26 20:34:37.161 13841 13990 D CCodecConfig: c2 config diff is Dict {
+12-26 20:34:37.161 13841 13990 D CCodecConfig:   c2::u32 algo.bitrate-mode.value = 3
+12-26 20:34:37.161 13841 13990 D CCodecConfig:   c2::u32 algo.complexity.value = 50
+12-26 20:34:37.161 13841 13990 D CCodecConfig:   c2::i32 algo.priority.value = -4
+12-26 20:34:37.161 13841 13990 D CCodecConfig:   c2::u32 algo.quality.value = 90
+12-26 20:34:37.161 13841 13990 D CCodecConfig:   c2::float algo.rate.value = 1
+12-26 20:34:37.161 13841 13990 D CCodecConfig:   c2::u32 algo.secure-mode.value = 0
+12-26 20:34:37.161 13841 13990 D CCodecConfig:   c2::u32 coded.bitrate.value = 20000000
+12-26 20:34:37.161 13841 13990 D CCodecConfig:   c2::float coded.frame-rate.value = 30
+12-26 20:34:37.161 13841 13990 D CCodecConfig:   c2::u32 coded.hdr-format.value = 0
+12-26 20:34:37.161 13841 13990 D CCodecConfig:   c2::u32 coded.pl.level = 0
+12-26 20:34:37.161 13841 13990 D CCodecConfig:   c2::u32 coded.pl.profile = 24576
+12-26 20:34:37.161 13841 13990 D CCodecConfig:   c2::u32 coded.vui.color.matrix = 255
+12-26 20:34:37.161 13841 13990 D CCodecConfig:   c2::u32 coded.vui.color.primaries = 0
+12-26 20:34:37.161 13841 13990 D CCodecConfig:   c2::u32 coded.vui.color.range = 0
+12-26 20:34:37.161 13841 13990 D CCodecConfig:   c2::u32 coded.vui.color.transfer = 255
+12-26 20:34:37.161 13841 13990 D CCodecConfig:   c2::u32 coding.intra-refresh.mode = 0
+12-26 20:34:37.161 13841 13990 D CCodecConfig:   c2::float coding.intra-refresh.period = 0
+12-26 20:34:37.161 13841 13990 D CCodecConfig:   c2::u32 coding.request-sync-frame.value = 0
+12-26 20:34:37.161 13841 13990 D CCodecConfig:   c2::i64 coding.sync-frame-interval.value = 1000000
+12-26 20:34:37.161 13841 13990 D CCodecConfig:   Buffer coding.temporal-layering = {
+12-26 20:34:37.161 13841 13990 D CCodecConfig:     00000000:  10 00 00 00 07 20 01 52  00 00 00 00 00 00 00 00  ..... .R........
+12-26 20:34:37.161 13841 13990 D CCodecConfig:   }
+12-26 20:34:37.161 13841 13990 D CCodecConfig:   c2::u32 default.color.matrix = 0
+12-26 20:34:37.161 13841 13990 D CCodecConfig:   c2::u32 default.color.primaries = 0
+12-26 20:34:37.161 13841 13990 D CCodecConfig:   c2::u32 default.color.range = 0
+12-26 20:34:37.161 13841 13990 D CCodecConfig:   c2::u32 default.color.transfer 
+12-26 20:34:37.162 13841 13990 W ColorUtils: expected specified color aspects (0:0:255:255)
+12-26 20:34:37.162 13841 13990 I CCodec  : [c2.qti.hevc.encoder] config->queryConfiguration()
+12-26 20:34:37.162 13841 13990 I CCodec  : [c2.qti.hevc.encoder] mCallback->onComponentAllocated() IN
+12-26 20:34:37.162 13841 13990 I CCodec  : [c2.qti.hevc.encoder] mCallback->onComponentAllocated() OUT
+12-26 20:34:37.164 13841 13942 W AudioCapabilities: Unsupported mediaType audio/x-ape
+12-26 20:34:37.164 13841 13942 W AudioCapabilities: Unsupported mediaType audio/evrc
+12-26 20:34:37.164 13841 13942 W AudioCapabilities: Unsupported mediaType audio/evrc
+12-26 20:34:37.165 13841 13942 W AudioCapabilities: Unsupported mediaType audio/x-ima
+12-26 20:34:37.165 13841 13942 W AudioCapabilities: Unsupported mediaType audio/mpeg-L1
+12-26 20:34:37.165 13841 13942 W AudioCapabilities: Unsupported mediaType audio/mpeg-L2
+12-26 20:34:37.165 13841 13942 W AudioCapabilities: Unsupported mediaType audio/qcelp
+12-26 20:34:37.165 13841 13942 W AudioCapabilities: Unsupported mediaType audio/qcelp
+12-26 20:34:37.165 13841 13942 W VideoCapabilities: Unsupported mime video/wvc1
+12-26 20:34:37.165 13841 13942 W VideoCapabilities: Unsupported mime video/x-ms-wmv
+12-26 20:34:37.167 13841 13942 W AudioCapabilities: Unsupported mediaType audio/iamf
+12-26 20:34:37.173 13841 13942 W VideoCapabilities: Unsupported mime image/vnd.android.heic
+12-26 20:34:37.173 13841 13942 W VideoCapabilities: Unrecognized profile/level 32768/256 for video/mp4v-es
+12-26 20:34:37.177 13841 13989 I CCodec  : [c2.qti.hevc.encoder] state->set(RELEASING)
+12-26 20:34:37.177 13841 14002 I CCodec  : [release][3409] surface -> component
+12-26 20:34:37.177  1983 16928 W QC2PerfCtrlUtil: QC2PerfLock Empty resource value pair
+12-26 20:34:37.177  1983 16928 W QC2Comp : [hvcE_331] Handling stop: Codec is already gone!
+12-26 20:34:37.178  1983 16928 I QC2Comp : [hvcE_331] NOTE: Release returning: 0 (OK=0)
+12-26 20:34:37.178  1983 16928 I QC2Comp : [hvcE_331] KPI_L1: release: ms=1
+12-26 20:34:37.179 13841 14002 I CCodec  : [c2.qti.hevc.encoder] state->set(RELEASED)
+12-26 20:34:37.179 13841 13990 I Codec2Client: Component destructing
+12-26 20:34:37.179 13841 13990 I hw-BpHwBinder: onLastStrongRef automatically unlinking death recipients
+12-26 20:34:37.179  1983  2948 I hw-BpHwBinder: onLastStrongRef automatically unlinking death recipients
+12-26 20:34:37.179  1983  2948 I QC2CompStore: Deleting component(c2.qti.hevc.encoder) id(331)
+12-26 20:34:37.179  1983  2948 I QC2CompStore: removeIdFromList remove Id[331] from list
+12-26 20:34:37.179  1983  2948 I QC2Comp : [c2.qti.hevc.encoder] KPI_L1: Total component latency: ms=96
+12-26 20:34:37.187 13841 13989 I MediaCodec: Codec shutdown complete
+12-26 20:34:37.188 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=60000000, frameRate=30, width=3840, height=2160, profile=2, bitDepth=10, chromaSubsampling=0, hdrFormat=1}]}
+12-26 20:34:37.188 13841 13942 D BackupHdrProfileEncoderProfilesProvider: Base Bitrate(17000000bps) * Bit Depth Ratio (10 / 8) = 21250000
+12-26 20:34:37.188 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=21250000, frameRate=30, width=1920, height=1080, profile=2, bitDepth=10, chromaSubsampling=0, hdrFormat=1}]}
+12-26 20:34:37.188 13841 13942 D BackupHdrProfileEncoderProfilesProvider: Base Bitrate(12000000bps) * Bit Depth Ratio (10 / 8) = 15000000
+12-26 20:34:37.188 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=15000000, frameRate=30, width=1280, height=720, profile=2, bitDepth=10, chromaSubsampling=0, hdrFormat=1}]}
+12-26 20:34:37.188 13841 13942 D BackupHdrProfileEncoderProfilesProvider: Base Bitrate(3449000bps) * Bit Depth Ratio (10 / 8) = 4311250
+12-26 20:34:37.188 13841 13989 I CCodecBufferChannel: CCodecBufferChannel destructing c2.qti.hevc.encoder#702
+12-26 20:34:37.188 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=4311250, frameRate=30, width=720, height=480, profile=2, bitDepth=10, chromaSubsampling=0, hdrFormat=1}]}
+12-26 20:34:37.188 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=2, mediaType=video/avc, bitrate=48000000, frameRate=30, width=3840, height=2160, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}, VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=40800000, frameRate=30, width=3840, height=2160, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}]}
+12-26 20:34:37.188 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=2, mediaType=video/avc, bitrate=17000000, frameRate=30, width=1920, height=1080, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}, VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=14400000, frameRate=30, width=1920, height=1080, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}]}
+12-26 20:34:37.188 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=2, mediaType=video/avc, bitrate=12000000, frameRate=30, width=1280, height=720, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}, VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=10000000, frameRate=30, width=1280, height=720, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}]}
+12-26 20:34:37.188 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=2, mediaType=video/avc, bitrate=3449000, frameRate=30, width=720, height=480, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}, VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=2940000, frameRate=30, width=720, height=480, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}]}
+12-26 20:34:37.189  2463  2749 I AttributionAndPermissionUtils: checkPermission (forDataDelivery 0 startDataDelivery 0): Permission hard denied for client attribution [uid 10565, pid 13841, packageName "<unknown>"]
+12-26 20:34:37.190  2463  2749 I AttributionAndPermissionUtils: checkPermission (forDataDelivery 0 startDataDelivery 0): Permission hard denied for client attribution [uid 10565, pid 13841, packageName "<unknown>"]
+12-26 20:34:37.191 13841 13942 D DeviceQuirks: extensions DeviceQuirks = CrashWhenOnDisableTooSoon | GetAvailableKeysNeedsOnInit
+12-26 20:34:37.194 13841 13942 D CameraCharacteristicsUtil: isAvailableFeature(mode 202) : false
+12-26 20:34:37.194 13841 13942 I cx/HdrExt#0: isExtensionAvailable: cameraId = 0, false
+12-26 20:34:37.194 13841 13942 D CameraCharacteristicsUtil: isAvailableFeature(mode 201) : false
+12-26 20:34:37.194 13841 13942 I cx/NightExt#1: isExtensionAvailable: cameraId = 0, false
+12-26 20:34:37.194 13841 13942 D CameraCharacteristicsUtil: isAvailableFeature(mode 203) : false
+12-26 20:34:37.194 13841 13942 I cx/SuperNightExt#2: isExtensionAvailable: cameraId = 0, false
+12-26 20:34:37.200 13841 13942 D BackupHdrProfileEncoderProfilesProvider: Base Bitrate(48000000bps) * Bit Depth Ratio (10 / 8) = 60000000
+12-26 20:34:37.200 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=60000000, frameRate=30, width=3840, height=2160, profile=2, bitDepth=10, chromaSubsampling=0, hdrFormat=1}]}
+12-26 20:34:37.200 13841 13942 D BackupHdrProfileEncoderProfilesProvider: Base Bitrate(17000000bps) * Bit Depth Ratio (10 / 8) = 21250000
+12-26 20:34:37.200 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=21250000, frameRate=30, width=1920, height=1080, profile=2, bitDepth=10, chromaSubsampling=0, hdrFormat=1}]}
+12-26 20:34:37.200 13841 13942 D BackupHdrProfileEncoderProfilesProvider: Base Bitrate(12000000bps) * Bit Depth Ratio (10 / 8) = 15000000
+12-26 20:34:37.200 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=15000000, frameRate=30, width=1280, height=720, profile=2, bitDepth=10, chromaSubsampling=0, hdrFormat=1}]}
+12-26 20:34:37.200 13841 13942 D BackupHdrProfileEncoderProfilesProvider: Base Bitrate(3449000bps) * Bit Depth Ratio (10 / 8) = 4311250
+12-26 20:34:37.200 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=4311250, frameRate=30, width=720, height=480, profile=2, bitDepth=10, chromaSubsampling=0, hdrFormat=1}]}
+12-26 20:34:37.200 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=2, mediaType=video/avc, bitrate=48000000, frameRate=30, width=3840, height=2160, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}, VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=40800000, frameRate=30, width=3840, height=2160, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}]}
+12-26 20:34:37.200 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=2, mediaType=video/avc, bitrate=17000000, frameRate=30, width=1920, height=1080, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}, VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=14400000, frameRate=30, width=1920, height=1080, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}]}
+12-26 20:34:37.201 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=2, mediaType=video/avc, bitrate=12000000, frameRate=30, width=1280, height=720, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}, VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=10000000, frameRate=30, width=1280, height=720, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}]}
+12-26 20:34:37.201 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=2, mediaType=video/avc, bitrate=3449000, frameRate=30, width=720, height=480, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}, VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=2940000, frameRate=30, width=720, height=480, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}]}
+12-26 20:34:37.201 13841 13942 D CameraCharacteristicsUtil: isAvailableFeature(mode 202) : false
+12-26 20:34:37.201 13841 13942 I cx/HdrExt#3: isExtensionAvailable: cameraId = 1, false
+12-26 20:34:37.201 13841 13942 D CameraCharacteristicsUtil: isAvailableFeature(mode 201) : false
+12-26 20:34:37.201 13841 13942 I cx/NightExt#4: isExtensionAvailable: cameraId = 1, false
+12-26 20:34:37.201 13841 13942 D CameraCharacteristicsUtil: isAvailableFeature(mode 203) : false
+12-26 20:34:37.201 13841 13942 I cx/SuperNightExt#5: isExtensionAvailable: cameraId = 1, false
+12-26 20:34:37.205 13841 13942 D BackupHdrProfileEncoderProfilesProvider: Base Bitrate(17000000bps) * Bit Depth Ratio (10 / 8) = 21250000
+12-26 20:34:37.205 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=21250000, frameRate=30, width=1920, height=1080, profile=2, bitDepth=10, chromaSubsampling=0, hdrFormat=1}]}
+12-26 20:34:37.205 13841 13942 D BackupHdrProfileEncoderProfilesProvider: Base Bitrate(12000000bps) * Bit Depth Ratio (10 / 8) = 15000000
+12-26 20:34:37.205 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=15000000, frameRate=30, width=1280, height=720, profile=2, bitDepth=10, chromaSubsampling=0, hdrFormat=1}]}
+12-26 20:34:37.205 13841 13942 D BackupHdrProfileEncoderProfilesProvider: Base Bitrate(3449000bps) * Bit Depth Ratio (10 / 8) = 4311250
+12-26 20:34:37.205 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=4311250, frameRate=30, width=720, height=480, profile=2, bitDepth=10, chromaSubsampling=0, hdrFormat=1}]}
+12-26 20:34:37.205 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=2, mediaType=video/avc, bitrate=17000000, frameRate=30, width=1920, height=1080, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}, VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=14400000, frameRate=30, width=1920, height=1080, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}]}
+12-26 20:34:37.206 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=2, mediaType=video/avc, bitrate=12000000, frameRate=30, width=1280, height=720, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}, VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=10000000, frameRate=30, width=1280, height=720, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}]}
+12-26 20:34:37.206 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=2, mediaType=video/avc, bitrate=3449000, frameRate=30, width=720, height=480, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}, VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=2940000, frameRate=30, width=720, height=480, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}]}
+12-26 20:34:37.206 13841 13942 D CameraCharacteristicsUtil: isAvailableFeature(mode 202) : false
+12-26 20:34:37.206 13841 13942 I cx/HdrExt#6: isExtensionAvailable: cameraId = 2, false
+12-26 20:34:37.206 13841 13942 D CameraCharacteristicsUtil: isAvailableFeature(mode 201) : false
+12-26 20:34:37.206 13841 13942 I cx/NightExt#7: isExtensionAvailable: cameraId = 2, false
+12-26 20:34:37.206 13841 13942 D CameraCharacteristicsUtil: isAvailableFeature(mode 203) : false
+12-26 20:34:37.206 13841 13942 I cx/SuperNightExt#8: isExtensionAvailable: cameraId = 2, false
+12-26 20:34:37.209 13841 13942 D BackupHdrProfileEncoderProfilesProvider: Base Bitrate(17000000bps) * Bit Depth Ratio (10 / 8) = 21250000
+12-26 20:34:37.209 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=21250000, frameRate=30, width=1920, height=1080, profile=2, bitDepth=10, chromaSubsampling=0, hdrFormat=1}]}
+12-26 20:34:37.209 13841 13942 D BackupHdrProfileEncoderProfilesProvider: Base Bitrate(12000000bps) * Bit Depth Ratio (10 / 8) = 15000000
+12-26 20:34:37.209 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=15000000, frameRate=30, width=1280, height=720, profile=2, bitDepth=10, chromaSubsampling=0, hdrFormat=1}]}
+12-26 20:34:37.209 13841 13942 D BackupHdrProfileEncoderProfilesProvider: Base Bitrate(3449000bps) * Bit Depth Ratio (10 / 8) = 4311250
+12-26 20:34:37.209 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=4311250, frameRate=30, width=720, height=480, profile=2, bitDepth=10, chromaSubsampling=0, hdrFormat=1}]}
+12-26 20:34:37.209 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=2, mediaType=video/avc, bitrate=17000000, frameRate=30, width=1920, height=1080, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}, VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=14400000, frameRate=30, width=1920, height=1080, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}]}
+12-26 20:34:37.210 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=2, mediaType=video/avc, bitrate=12000000, frameRate=30, width=1280, height=720, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}, VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=10000000, frameRate=30, width=1280, height=720, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}]}
+12-26 20:34:37.210 13841 13942 D CapabilitiesByQuality: profiles = ImmutableEncoderProfilesProxy{defaultDurationSeconds=30, recommendedFileFormat=2, audioProfiles=[AudioProfileProxy{codec=3, mediaType=audio/mp4a-latm, bitrate=256000, sampleRate=48000, channels=2, profile=1}], videoProfiles=[VideoProfileProxy{codec=2, mediaType=video/avc, bitrate=3449000, frameRate=30, width=720, height=480, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}, VideoProfileProxy{codec=5, mediaType=video/hevc, bitrate=2940000, frameRate=30, width=720, height=480, profile=-1, bitDepth=8, chromaSubsampling=0, hdrFormat=0}]}
+12-26 20:34:37.210 13841 13942 D CameraCharacteristicsUtil: isAvailableFeature(mode 202) : false
+12-26 20:34:37.210 13841 13942 I cx/HdrExt#9: isExtensionAvailable: cameraId = 3, false
+12-26 20:34:37.210 13841 13942 D CameraCharacteristicsUtil: isAvailableFeature(mode 201) : false
+12-26 20:34:37.210 13841 13942 I cx/NightExt#10: isExtensionAvailable: cameraId = 3, false
+12-26 20:34:37.210 13841 13942 D CameraCharacteristicsUtil: isAvailableFeature(mode 203) : false
+12-26 20:34:37.210 13841 13942 I cx/SuperNightExt#11: isExtensionAvailable: cameraId = 3, false
+--------- beginning of system
+12-26 20:34:37.222  2812  4526 V MdnieScenarioControlService: mAclOffEnabled : false
+12-26 20:34:37.254  2812  5491 I NSLocationMonitor: getGPSUsingApps() called
+12-26 20:34:37.255  5340 29769 I NSLocationManager_FLP: getGPSUsingApps, No change
+12-26 20:34:37.258  2812  5491 D FreecessHandler: freeze com.sec.android.app.shealth(10332) result : 39
+12-26 20:34:37.261  1953 13958 I HYPER-HAL: [RequestManager.cpp]releaseLocked(): Released ID : 4017217
+12-26 20:34:37.265  1953 13854 I HYPER-HAL: [RequestManager.cpp]releaseLocked(): Released ID : 13263827
+12-26 20:34:37.324  2812  7783 I ActivityManager: Changes in 11189 6 to 10, 128 to 0
+12-26 20:34:37.326  2812  7783 I ActivityManager: Changes in 11189 10 to 6, 0 to 128
+12-26 20:34:37.326  2812  4576 D BackgroundInstallControlService: Package event received: 0
+12-26 20:34:37.326  2812  4576 D BackgroundInstallControlService: Package event received: 0
+12-26 20:34:37.326  2812  4576 D BackgroundInstallControlService: Package event received: 0
+12-26 20:34:37.376 12332 12375 I FontLog : (REDACTED) Received query %s, URI %s
+12-26 20:34:37.376 12332 12375 I FontLog : (REDACTED) Query [%s] resolved to %s
+12-26 20:34:37.377 12332 12375 I FontLog : (REDACTED) Fetch %s end status %s
+12-26 20:34:37.378 12332 12375 I FontLog : (REDACTED) Pulling font file for id = %d, cache size = %d
+12-26 20:34:37.380 12332 12375 I FontLog : (REDACTED) Pulling font file for id = %d, cache size = %d
+12-26 20:34:37.382  2812  6373 D PowerManagerService: [api] release WakeLock DRAW_WAKE_LOCK                    '234:draw' ACQ=-1s2ms (uid=10214 pid=28497 displayId=0 lock=e85086d)
+12-26 20:34:37.437  1176  1176 D io_stats: !@   8,0 r 73749042 1302060652 w 26650211 417731408 d 3620226 287434524 f 745668 1721836 iot 15045192 0 th 0 0 0 pt 0 inp 0 0 267907.678
+12-26 20:34:37.452 13841 13903 I WM-WorkerWrapper: Worker result SUCCESS for Work [ id=4721a6b2-ce32-409d-b027-a3a9cdf81753, tags={ com.classdojo.android.manifest.ManifestWorker } ]
+12-26 20:34:37.473 13841 13874 D SessionConfigFetcher: Fetched settings: {"settings_version":3,"cache_duration":187704,"features":{"collect_logged_exceptions":true,"collect_reports":true,"collect_analytics":false,"prompt_enabled":false,"push_enabled":false,"firebase_crashlytics_enabled":false,"collect_anrs":true,"collect_metric_kit":false,"collect_build_ids":true},"app":{"status":"activated","update_required":false,"report_upload_variant":2,"native_report_upload_variant":2},"fabric":{"org_id":"54b7f507f61d77895e006b50","bundle_id":"com.classdojo.android"},"on_demand_upload_rate_per_minute":10,"on_demand_backoff_base":1.2,"on_demand_backoff_step_duration_seconds":60,"app_quality":{"sessions_enabled":true,"sampling_rate":1,"session_timeout_seconds":1800},"on_demand_thread_recording_suspension_enabled":true}
+12-26 20:34:37.475  2812  3124 D SGM:GameManager: identifyForegroundApp. com.classdojo.android, mCurrentUserId: 0, callerUserId: 0
+12-26 20:34:37.475  2812  3124 D SGM:SemGameManager: isForegroundGame(), ret=false
+12-26 20:34:37.482 13841 13868 D EventGDTLogger: Session Event: {"eventType":1,"sessionData":{"sessionId":"abc7d603409a419badcf197b7ad8a419","firstSessionId":"abc7d603409a419badcf197b7ad8a419","sessionIndex":0,"eventTimestampUs":1766799276966000,"dataCollectionStatus":{"performance":1,"crashlytics":2,"sessionSamplingRate":1.0},"firebaseInstallationId":"eGnAcNl1QY-BG-C22C347C","firebaseAuthenticationToken":"eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBJZCI6IjE6MzI2NTc1NDA5MDMwOmFuZHJvaWQ6ODQxYjk4NTAxNWFjM2I3MyIsImV4cCI6MTc2NzA2MjYwNiwiZmlkIjoiZUduQWNObDFRWS1CRy1DMjJDMzQ3QyIsInByb2plY3ROdW1iZXIiOjMyNjU3NTQwOTAzMH0.AB2LPV8wRQIhANEn4xR9pOIFybV_T5bczhVQHSlqXygoKAYA_MjzydJxAiATbb9oA6Y6W7xTKY74NHplLUJC2jeFZ-NKCmBf4GCwWA"},"applicationInfo":{"appId":"1:326575409030:android:841b985015ac3b73","deviceModel":"SM-S926U","sessionSdkVersion":"2.0.6","osVersion":"16","logEnvironment":3,"androidAppInfo":{"packageName":"com.classdojo.android","versionName":"8.11.0","appBuildVersion":"260081100","deviceManufacturer":"samsung","currentProcessDetails":{"processName":"com.classdojo.android","pid":13841,"importance":100,"defaultProcess":true},"appProcessDetails":[{"processName":"com.classdojo.android","pid":13841,"importance":100,"defaultProcess":true}]}}}
+12-26 20:34:37.482 13841 13868 D SessionFirelogPublisher: Successfully logged Session Start event: abc7d603409a419badcf197b7ad8a419
+12-26 20:34:37.511  8163  8163 I InputMethodService: removeImeSurface
+12-26 20:34:37.511  8163  8163 I InputMethodService: cancelImeSurfaceRemoval: removeCallbacks
+12-26 20:34:37.523  2046  2064 E HeatmapThread: ECT Thread time in milliseconds: 1766799277
+12-26 20:34:37.525  2046  2064 D HeatmapThread: !@ batteryplugType : 0
+12-26 20:34:37.525  2046  2064 D HeatmapThread: !@ batteryLevel : 92  batteryTemperature : 353 
+12-26 20:34:37.525  2046  2064 D HeatmapThread: !@ Heatmap currtime: 29446654
+12-26 20:34:37.525  2046  2064 D HeatmapThread: !@ Heatmap prevtime: 29446640
+12-26 20:34:37.526  2046  2064 D HeatmapThread: !@ Heatmap plugstarttime: 35791394
+12-26 20:34:37.526  2046  2064 D HeatmapThread: !@ Heatmap prevv_dsoh_update_time: 29446591
+12-26 20:34:37.526  2046  2064 E HeatmapThread: !@ CAM New BSOH: 100
+12-26 20:34:37.545 13841 13920 I ReactNativeJS: [CodePush] Reporting binary update (8.11.0)
+12-26 20:34:37.545 13841 13920 I ReactNativeJS: [CodePush] Report status failed: {"previousLabelOrAppVersion":"v153","previousDeploymentKey":"_49Jv-EHMsm5CZyd1Uch9AnL7GtJid_5","appVersion":"8.11.0"}
+12-26 20:34:37.546 13841 13841 W unknown:WrappingUtils: Don't know how to round that drawable: com.facebook.react.views.image.ReactImageDownloadListener$EmptyDrawable@ac0b32e
+12-26 20:34:37.549 13841 13906 W qdgralloc: getInterlacedFlag: getMetaData returned 3, defaulting to interlaced_flag = 0
+12-26 20:34:37.553 13841 14015 D nativeloader: Load /data/app/~~5sEtmn_Wx_hkdZGd_npAYg==/com.classdojo.android-XovGfz0E-PrYMiZ54twVDA==/split_config.arm64_v8a.apk!/lib/arm64-v8a/libimagepipeline.so using class loader ns clns-10 (caller=/data/app/~~5sEtmn_Wx_hkdZGd_npAYg==/com.classdojo.android-XovGfz0E-PrYMiZ54twVDA==/base.apk!classes3.dex): ok
+12-26 20:34:37.557 13841 14015 I Kumiho-Kumiho: getPackageName: com.classdojo.android
+12-26 20:34:37.558 13841 14020 I Kumiho-Kumiho: getPackageName: com.classdojo.android
+12-26 20:34:37.559 13841 14020 I Kumiho-Kumiho: getPackageName: com.classdojo.android
+12-26 20:34:37.576  1953 13857 I HYPER-HAL: [RequestManager.cpp]releaseLocked(): Released ID : 4014382
+12-26 20:34:37.580 13841 13841 I WebViewFactory: Loading com.google.android.webview version 143.0.7499.34 (code 749903433)
+12-26 20:34:37.581 13841 13841 V ResourcesManager: The following library key has been added: ResourcesKey{ mHash=2fffbe90 mResDir=null mSplitDirs=[] mOverlayDirs=[] mLibDirs=[/data/app/~~ImOR-1IYfks7CLqupUUVhA==/com.google.android.webview-vHGcdM7j7LFbAWvJ-FbVvw==/base.apk,/data/app/~~5Pv9Urs0OlGRffqIiSh3Ug==/com.google.android.trichromelibrary_749903433-tRjZYeHm1c0-5nuWw9tA3g==/base.apk] mDisplayId=0 mOverrideConfig=v36 mCompatInfo={450dpi always-compat} mLoaders=[]}
+12-26 20:34:37.582 13841 13841 W assdojo.android: Failed to find entry 'classes.dex': Entry not found
+12-26 20:34:37.583 13841 13841 D nativeloader: Configuring clns-12 for other apk /data/app/~~5Pv9Urs0OlGRffqIiSh3Ug==/com.google.android.trichromelibrary_749903433-tRjZYeHm1c0-5nuWw9tA3g==/base.apk. target_sdk_version=36, uses_libraries=ALL, library_path=/data/app/~~ImOR-1IYfks7CLqupUUVhA==/com.google.android.webview-vHGcdM7j7LFbAWvJ-FbVvw==/lib/arm64:/data/app/~~ImOR-1IYfks7CLqupUUVhA==/com.google.android.webview-vHGcdM7j7LFbAWvJ-FbVvw==/base.apk!/lib/arm64-v8a:/data/app/~~5Pv9Urs0OlGRffqIiSh3Ug==/com.google.android.trichromelibrary_749903433-tRjZYeHm1c0-5nuWw9tA3g==/base.apk!/lib/arm64-v8a, permitted_path=/data:/mnt/expand
+12-26 20:34:37.583 13841 13841 D nativeloader: Extending system_exposed_libraries: libhumantracking.arcsoft.so:libface_recognition.arcsoft.so:libpic_best.arcsoft.so:libPortraitDistortionCorrection.arcsoft.so:libPortraitDistortionCorrectionCali.arcsoft.so:libface_landmark.arcsoft.so:libFacialStickerEngine.arcsoft.so:libfrtracking_engine.arcsoft.so:libFaceRecognition.arcsoft.so:libveengine.arcsoft.so:lib_pet_detection.arcsoft.so:libae_bracket_hdr.arcsoft.so:libdigital_tele_scope.arcsoft.so:libdigital_tele_scope_rawsr.arcsoft.so:libsf_tetra_enhance.arcsoft.so:libmf_bayer_enhance.arcsoft.so:libhybrid_high_dynamic_range.arcsoft.so:libimage_enhancement.arcsoft.so:libFacialAttributeDetection.arcsoft.so:libobjectcapture_jni.arcsoft.so:libobjectcapture.arcsoft.so:libmultisourceseparator.audio.samsung.so:libaudiomirroring_jni.audiomirroring.samsung.so:libBeauty_v4.camera.samsung.so:libexifa.camera.samsung.so:libjpega.camera.samsung.so:libOpenCv.camera.samsung.so:libaifrcInterface.camera.samsung.so:libBestPhoto.camera.samsung.so:libC2paDps.camera.samsung.so:libVide
+12-26 20:34:37.583 13841 13841 D ApplicationLoaders: Returning zygote-cached class loader: /system_ext/framework/androidx.window.extensions.jar
+12-26 20:34:37.584 13841 13841 D nativeloader: Configuring clns-13 for other apk /data/app/~~ImOR-1IYfks7CLqupUUVhA==/com.google.android.webview-vHGcdM7j7LFbAWvJ-FbVvw==/base.apk. target_sdk_version=36, uses_libraries=, library_path=/data/app/~~ImOR-1IYfks7CLqupUUVhA==/com.google.android.webview-vHGcdM7j7LFbAWvJ-FbVvw==/lib/arm64:/data/app/~~ImOR-1IYfks7CLqupUUVhA==/com.google.android.webview-vHGcdM7j7LFbAWvJ-FbVvw==/base.apk!/lib/arm64-v8a:/data/app/~~5Pv9Urs0OlGRffqIiSh3Ug==/com.google.android.trichromelibrary_749903433-tRjZYeHm1c0-5nuWw9tA3g==/base.apk!/lib/arm64-v8a, permitted_path=/data:/mnt/expand
+12-26 20:34:37.594  1953 13809 I HYPER-HAL: [RequestManager.cpp]releaseLocked(): Released ID : 28678974
+12-26 20:34:37.595 13841 13841 I cr_WVCFactoryProvider: version=143.0.7499.34 (749903433) minSdkVersion=29 multiprocess=true packageId=2 splits=config.arm64_v8a,config.en,config.xxhdpi
+12-26 20:34:37.597 13841 13841 D nativeloader: Load /data/app/~~5Pv9Urs0OlGRffqIiSh3Ug==/com.google.android.trichromelibrary_749903433-tRjZYeHm1c0-5nuWw9tA3g==/base.apk!/lib/arm64-v8a/libmonochrome_64.so using class loader ns clns-13 (caller=/data/app/~~ImOR-1IYfks7CLqupUUVhA==/com.google.android.webview-vHGcdM7j7LFbAWvJ-FbVvw==/base.apk): ok
+12-26 20:34:37.598 13841 13841 D nativeloader: Load /system/lib64/libwebviewchromium_plat_support.so using class loader ns clns-13 (caller=/data/app/~~ImOR-1IYfks7CLqupUUVhA==/com.google.android.webview-vHGcdM7j7LFbAWvJ-FbVvw==/base.apk): ok
+12-26 20:34:37.600 13841 13841 I cr_LibraryLoader: Successfully loaded native library
+12-26 20:34:37.600 13841 13841 I cr_CachingUmaRecorder: Flushed 18 samples from 18 histograms, 0 samples were dropped.
+12-26 20:34:37.601  2812  4576 D BackgroundInstallControlService: Package event received: 0
+12-26 20:34:37.602  2812  7912 I ActivityManager: Changes in 10277 19 to 3, 0 to 184
+12-26 20:34:37.604  6155  6193 V OsAgent : broadcastSystemEvent - 7
+12-26 20:34:37.604  2812  4576 D BackgroundInstallControlService: Package event received: 0
+12-26 20:34:37.606  2812  4576 D BackgroundInstallControlService: Package event received: 0
+12-26 20:34:37.608 13841 13906 W qdgralloc: getInterlacedFlag: getMetaData returned 3, defaulting to interlaced_flag = 0
+12-26 20:34:37.611  2812  7912 I ActivityManager: Changes in 10277 3 to 10, 184 to 0
+12-26 20:34:37.612  6155  6193 V OsAgent : broadcastSystemEvent - 7
+12-26 20:34:37.665  2812  6428 D SemWifiUsabilityStatsMonitor: onWifiUsabilityStats - seqNum 21335, isSameBssidAndFreq true
+12-26 20:34:37.665  5572  5572 I EPDG -- SIM0 [SMARTWIFI]: isProfiling, hash=130167218, started=true
+12-26 20:34:37.665  2812  4599 E SemWifiLinkQualityMonitor: Too old or invalid TMI: currentTime=1766799277665 lastDateWindow=1766757268000
+12-26 20:34:37.666  5572  5572 I EPDG -- SIM0 [SMARTWIFI]: isProfiling, hash=130167218, started=true
+12-26 20:34:37.666  2812  4599 I SemWifiLinkQualityMonitor: Link stat: 987 / 17 / 1.04 (25) / 866 / -33.0 || 100.0 : 866.00 / 0.5 : 0.96 / 0.55 : 0.02 / G (G) || 61d35a1f5785: 0.082 / 96.970 / N || N N / 0 0 / N 103.0 / N X 0 / 267907905 0 || 2025-12-26 08:54:28  / 0: 0 0 0 0 0 0 / 0: 0 0 0 0 0 0 / 0: 0 0 0 0 0 0
+12-26 20:34:37.666  2812  4600 D InsDataManager: onOutageCountUpdate() - Outage Data: 0, LQ : N. Outage Triggered: false
+12-26 20:34:37.666  2812  4600 D SemInsManager: {"bssid": "61d35a1f5785","rssi": -33.0,"latency": 0.08249973095878668,"outage_count": 0,"lq_callback_triggered": false,"outage_log": "Link stat: 987 / 17 / 1.04 (25) / 866 / -33.0 || 100.0 : 866.00 / 0.5 : 0.96 / 0.55 : 0.02 / G (G) || 61d35a1f5785: 0.082 / 96.970 / N || N N / 0 0 / N 103.0 / N X 0 / 267907905 0 || 2025-12-26 08:54:28  / 0: 0 0 0 0 0 0 / 0: 0 0 0 0 0 0 / 0: 0 0 0 0 0 0""Magnetic Sensor Events size": "0""Pressure Sensor Events size": "0"}
+12-26 20:34:37.667  5572  5572 I EPDG -- SIM0 [SMARTWIFI]: Rssi : -33 highrange : -71 lowrange : -80 mIsRssiInHystersis : false
+12-26 20:34:37.667  5572  5572 I EPDG -- SIM0 [SMARTWIFI]: Rssi : -33 highrange : -71 lowrange : -80 mIsRssiInHystersis : false
+12-26 20:34:37.667  5572  5572 I EPDG -- SIM0 [SMARTWIFI]: getHandoverThresholdMet: value is: false
+12-26 20:34:37.668  2812  4617 D SGM:GameManager: identifyGamePackage. com.classdojo.android, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.SemGameManager.isGamePackage(SemGameManager.java:106)
+12-26 20:34:37.669  2812  4617 D SGM:SemGameManager: isGamePackage(), pkgName=com.classdojo.android, ret=false
+12-26 20:34:37.742  2812  7783 D TrafficStateDatabaseController: onDnsEvent():  objTrafficStats.size= 51, mInsertList= true
+12-26 20:34:37.750  2812  4657 D NetdEventListenerService: DNS Requested by 184, 10565(com.classdojo.android), SUCCESS, 128ms
+12-26 20:34:37.772  2812  7912 D SGM:GameManager: identifyGamePackage. com.classdojo.android, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.IGameManagerService$Stub.onTransact(IGameManagerService.java:247)
+12-26 20:34:37.987 13841 13923 D ConnectivityManager: StackLog: [android.net.ConnectivityManager.sendRequestForNetwork(ConnectivityManager.java:4736)] [android.net.ConnectivityManager.registerDefaultNetworkCallbackForUid(ConnectivityManager.java:5461)] [android.net.ConnectivityManager.registerDefaultNetworkCallback(ConnectivityManager.java:5428)] [android.net.ConnectivityManager.registerDefaultNetworkCallback(ConnectivityManager.java:5402)] [ft.b.b(CallbackNetworkInfoProvider.kt:44)] [xs.g.y0(CoreFeature.kt:63)] [xs.g.x0(CoreFeature.kt:20)] [xs.g.e0(CoreFeature.kt:127)] [xs.l.J(DatadogCore.kt:91)] [ms.b.j(Datadog.kt:137)] [ms.b.i(Datadog.kt:17)] [zw.d.h(DatadogSDKWrapper.kt:16)] [com.datadog.reactnative.a.o(DdSdkNativeInitialization.kt:62)] [zw.p.n(DdSdkImplementation.kt:28)] [com.datadog.reactnative.DdSdk.initialize(DdSdk.kt:13)] [java.lang.reflect.Method.invoke(Native Method)] [com.facebook.react.bridge.JavaMethodWrapper.invoke(JavaMethodWrapper.java:151)] [com.facebook.react.bridge.JavaModuleWrapper.invoke(JavaModuleWrapper.java:20)] [com.facebook.jni.NativeRunnable.run(Native Method)]
+12-26 20:34:37.987  2812  6373 D ConnectivityService: requestNetwork for uid/pid:10565/13841 activeRequest: null callbackRequest: 21687 [NetworkRequest [ REQUEST id=21688, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10565 RequestorUid: 10565 RequestorPkg: com.classdojo.android UnderlyingNetworks: Null] ]] callback flags: 0 order: 2147483647 isUidTracked: false declaredMethods: AVAIL|LOST|NC
+12-26 20:34:37.988  2812  4514 D ConnectivityService:    accepting network in place of null for NetworkRequest [ REQUEST id=21688, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10565 RequestorUid: 10565 RequestorPkg: com.classdojo.android UnderlyingNetworks: Null] ]
+12-26 20:34:37.988  2812  4495 D OemPaidWifiNetworkFactory: got request NetworkRequest [ REQUEST id=21688, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10565 RequestorUid: 10565 RequestorPkg: com.classdojo.android UnderlyingNetworks: Null] ]
+12-26 20:34:37.989  2812  4495 D MultiInternetWifiNetworkFactory: got request NetworkRequest [ REQUEST id=21688, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10565 RequestorUid: 10565 RequestorPkg: com.classdojo.android UnderlyingNetworks: Null] ]
+12-26 20:34:37.989  2812  4495 D WifiNetworkFactory: got request NetworkRequest [ REQUEST id=21688, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10565 RequestorUid: 10565 RequestorPkg: com.classdojo.android UnderlyingNetworks: Null] ]
+12-26 20:34:37.989  2812  4495 D UntrustedWifiNetworkFactory: got request NetworkRequest [ REQUEST id=21688, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10565 RequestorUid: 10565 RequestorPkg: com.classdojo.android UnderlyingNetworks: Null] ]
+12-26 20:34:37.989  2812  4514 D ConnectivityService: Rematched networks [computed 1ms] [applied 0ms] [issued 1]
+12-26 20:34:37.989  2812  4514 D ConnectivityService: NetworkReassignment :
+12-26 20:34:37.989  2812  4514 D ConnectivityService:   21688 : null → 184
+12-26 20:34:38.037  2812  6373 D TrafficStateDatabaseController: onDnsEvent():  objTrafficStats.size= 52, mInsertList= true
+12-26 20:34:38.041  2812  4657 D NetdEventListenerService: DNS Requested by 184, 10565(com.classdojo.android), SUCCESS, 51ms
+12-26 20:34:38.071  1953 13855 I HYPER-HAL: [RequestManager.cpp]releaseLocked(): Released ID : 28671400
