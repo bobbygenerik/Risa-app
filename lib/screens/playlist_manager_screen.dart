@@ -37,7 +37,9 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
 
     if (playlistsJson != null && playlistsJson.trim().isNotEmpty) {
       final List<dynamic> decoded = jsonDecode(playlistsJson);
-      _playlists = decoded.map((json) => SavedPlaylist.fromJson(json)).toList();
+      _playlists = decoded
+          .map((json) => SavedPlaylist.fromJson(Map<String, dynamic>.from(json)))
+          .toList();
     }
 
     setState(() {

@@ -117,10 +117,11 @@ class LocalDbService {
   Future<List<Map<String, dynamic>>> getChannelsPage(
       {int offset = 0, int limit = 50}) async {
     final db = _requireDb();
+    final safeLimit = limit.clamp(0, 500);
     final rows = await db.query(
       'channels',
       orderBy: 'idx ASC',
-      limit: limit,
+      limit: safeLimit,
       offset: offset,
     );
     return rows.map(_hydrateAttrs).toList();
@@ -131,12 +132,13 @@ class LocalDbService {
       {int offset = 0,
       int limit = 50}) async {
     final db = _requireDb();
+    final safeLimit = limit.clamp(0, 500);
     final rows = await db.query(
       'channels',
       where: 'groupTitle = ?',
       whereArgs: [category],
       orderBy: 'idx ASC',
-      limit: limit,
+      limit: safeLimit,
       offset: offset,
     );
     return rows.map(_hydrateAttrs).toList();
@@ -169,12 +171,13 @@ class LocalDbService {
   Future<List<Map<String, dynamic>>> searchChannels(String query,
       {int limit = 100}) async {
     final db = _requireDb();
+    final safeLimit = limit.clamp(0, 500);
     final rows = await db.query(
       'channels',
       where: 'name LIKE ?',
       whereArgs: ['%$query%'],
       orderBy: 'idx ASC',
-      limit: limit,
+      limit: safeLimit,
     );
     return rows.map(_hydrateAttrs).toList();
   }
@@ -289,10 +292,11 @@ class LocalDbService {
   Future<List<Map<String, dynamic>>> getMoviesPage(
       {int offset = 0, int limit = 50}) async {
     final db = _requireDb();
+    final safeLimit = limit.clamp(0, 500);
     final rows = await db.query(
       'vod_movies',
       orderBy: 'title COLLATE NOCASE ASC',
-      limit: limit,
+      limit: safeLimit,
       offset: offset,
     );
     return rows
@@ -303,10 +307,11 @@ class LocalDbService {
   Future<List<Map<String, dynamic>>> getSeriesPage(
       {int offset = 0, int limit = 50}) async {
     final db = _requireDb();
+    final safeLimit = limit.clamp(0, 500);
     final rows = await db.query(
       'vod_series',
       orderBy: 'title COLLATE NOCASE ASC',
-      limit: limit,
+      limit: safeLimit,
       offset: offset,
     );
     return rows

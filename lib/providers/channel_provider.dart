@@ -1423,6 +1423,8 @@ class ChannelProvider with ChangeNotifier {
           forceRefresh: (_epgService?.availableChannels.isEmpty ?? true));
       unawaited(_buildEpgMapping());
       unawaited(_startBackgroundEnrichment());
+      // Persist playlist entry for Manage Playlists
+      unawaited(_upsertSavedPlaylist(sourceUrl: url, epgUrl: epgUrl));
     } catch (e, stackTrace) {
       debugLog('ChannelProvider: Error loading playlist: $e');
       debugLog('ChannelProvider: Stack trace: $stackTrace');
@@ -1818,6 +1820,87 @@ class ChannelProvider with ChangeNotifier {
     } catch (e) {
       debugLog('ChannelProvider: Failed to save JSON cache: $e');
       // Non-fatal - cache is optional
+    }
+  }
+
+  Future<void> _upsertSavedPlaylist({
+    required String sourceUrl,
+    String? epgUrl,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final type = prefs.getString('playlist_type') ?? 'm3u';
+      final existingJson = prefs.getString('saved_playlists');
+      List<SavedPlaylist> list = [];
+      if (existingJson != null && existingJson.trim().isNotEmpty) {
+        try {
+          final decoded = jsonDecode(existingJson) as List<dynamic>;
+          list = decoded
+              .map((j) => SavedPlaylist.fromJson(Map<String, dynamic>.from(j)))
+              .toList();
+        } catch (_) {}
+      }
+
+      String? name;
+      String? server;
+      String? username;
+      String? password;
+      String url = sourceUrl;
+
+      if (type == 'xtream') {
+        server = prefs.getString('xtream_server') ?? '';
+        username = prefs.getString('xtream_username') ?? '';
+        password = prefs.getString('xtream_password') ?? '';
+        name = server.isNotEmpty ? (Uri.tryParse(server)?.host ?? server) : 'Xtream';
+      } else {
+        name = Uri.tryParse(sourceUrl)?.host ?? 'M3U Playlist';
+      }
+
+      final primaryEpg =
+          epgUrl ?? prefs.getString('custom_epg_url') ?? prefs.getString('epg_url');
+      final secondaryEpg = prefs.getString('secondary_epg_url');
+
+      int existingIndex = -1;
+      if (type == 'm3u') {
+        existingIndex = list.indexWhere(
+            (p) => p.type == 'm3u' && p.url.trim() == url.trim());
+      } else {
+        existingIndex = list.indexWhere((p) =>
+            p.type == 'xtream' &&
+            (p.server ?? '').trim() == (server ?? '').trim() &&
+            (p.username ?? '').trim() == (username ?? '').trim());
+      }
+
+      final now = DateTime.now();
+      final id = existingIndex >= 0
+          ? list[existingIndex].id
+          : prefs.getString('active_playlist_id') ??
+              now.millisecondsSinceEpoch.toString();
+
+      final normalized = SavedPlaylist(
+        id: id,
+        name: name,
+        type: type,
+        url: url,
+        server: server,
+        username: username,
+        password: password,
+        epgUrl: primaryEpg,
+        epgUrlSecondary: secondaryEpg,
+        addedDate: existingIndex >= 0 ? list[existingIndex].addedDate : now,
+      );
+
+      if (existingIndex >= 0) {
+        list[existingIndex] = normalized;
+      } else {
+        list.add(normalized);
+      }
+
+      await prefs.setString(
+          'saved_playlists', jsonEncode(list.map((p) => p.toJson()).toList()));
+      await prefs.setString('active_playlist_id', id);
+    } catch (e) {
+      debugLog('ChannelProvider: Failed to upsert saved playlist: $e');
     }
   }
 
