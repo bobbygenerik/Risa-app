@@ -473,7 +473,7 @@ class IncrementalEpgService extends ChangeNotifier {
   Future<void> _loadChannelList({bool forceRefresh = false}) async {
     if (_epgUrl == null || _epgUrl!.isEmpty) return;
     // Prevent overlapping loads
-    if (_isLoading || _isDownloading) {
+    if (_isLoading || _isDownloading || _isParsing) {
       debugLog('EPG: Load already in progress, skipping concurrent request.');
       return;
     }
