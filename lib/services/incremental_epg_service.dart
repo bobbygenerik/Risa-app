@@ -506,19 +506,21 @@ class IncrementalEpgService extends ChangeNotifier {
         final parseResult = await compute(_parseEpgInIsolate, file.path);
 
         _programsByChannel.clear();
-        final rawData =
-            parseResult['programsByChannel'] as Map<String, List<Program>>;
-        _programsByChannel.addAll(rawData);
 
-        // Persist programs to DB in the background (throttled inside)
-        unawaited(_persistProgramsToDb(rawData));
+        final programFilePath = parseResult['programFilePath'] as String?;
+        final parsedProgramCount = parseResult['programCount'] as int? ?? 0;
+        final channelIds =
+            (parseResult['channelIds'] as List<dynamic>).cast<String>();
 
         _availableChannels.clear();
-        _availableChannels.addAll(parseResult['channelIds'] as Set<String>);
+        _availableChannels.addAll(channelIds);
 
-        _normalizedAvailableChannels =
-            parseResult['normalizedChannels'] as Map<String, String>;
+        _normalizedAvailableChannels = Map<String, String>.from(
+            parseResult['normalizedChannels'] as Map<String, String>);
         _internalToEpgIdMapping.clear();
+
+        // Stream programs from the temp file into memory (capped) and DB in batches
+        await _ingestProgramsFromFile(programFilePath);
 
         _hasParsed = true;
         _isParsing = false;
@@ -532,7 +534,7 @@ class IncrementalEpgService extends ChangeNotifier {
         await _saveNormalizedMappingToPrefs(_normalizedAvailableChannels);
 
         debugLog(
-            'EPG: Successfully parsed ${_programsByChannel.length} channels and ${_availableChannels.length} IDs');
+            'EPG: Successfully parsed ${_programsByChannel.length} channels and ${_availableChannels.length} IDs with ~$parsedProgramCount programs');
         break;
       } catch (e, stack) {
         retryCount++;
@@ -568,9 +570,12 @@ class IncrementalEpgService extends ChangeNotifier {
       throw Exception('EPG cache file not found in isolate');
     }
 
-    final programsByChannel = <String, List<Program>>{};
     final channelIds = <String>{};
     final normalizedChannels = <String, String>{};
+    final tempFile = File(
+        '${Directory.systemTemp.path}/epg_programs_${DateTime.now().millisecondsSinceEpoch}.jsonl');
+    final sink = tempFile.openWrite();
+    int programCount = 0;
 
     // Try parsing using UTF-8 but allow malformed sequences (many EPGs
     // contain stray bytes). If that fails with a FormatException from the
@@ -591,8 +596,10 @@ class IncrementalEpgService extends ChangeNotifier {
         if (startEvent is! XmlStartElementEvent) continue;
 
         if (startEvent.name == 'programme') {
-          _processProgramme(
-              subtreeEvents, programsByChannel, channelIds, normalizedChannels);
+      _processProgramme(
+          subtreeEvents, channelIds, normalizedChannels, sink, () {
+        programCount++;
+      });
         } else if (startEvent.name == 'channel') {
           _processChannel(subtreeEvents, channelIds, normalizedChannels);
         }
@@ -604,11 +611,8 @@ class IncrementalEpgService extends ChangeNotifier {
       await runParseWithDecoder(const Utf8Decoder(allowMalformed: true));
     } on FormatException catch (e) {
       debugLog('EPG: UTF-8 parse failed (will retry with Latin1): $e');
-      // Clear any partial results and retry with latin1
-      programsByChannel.clear();
       channelIds.clear();
       normalizedChannels.clear();
-
       try {
         await runParseWithDecoder(latin1.decoder);
       } catch (e2, s2) {
@@ -623,15 +627,13 @@ class IncrementalEpgService extends ChangeNotifier {
       rethrow;
     }
 
-    // Sort programs
-    for (final channelId in programsByChannel.keys) {
-      programsByChannel[channelId]!
-          .sort((a, b) => a.startTime.compareTo(b.startTime));
-    }
+    await sink.flush();
+    await sink.close();
 
     return {
-      'programsByChannel': programsByChannel,
-      'channelIds': channelIds,
+      'programFilePath': tempFile.path,
+      'programCount': programCount,
+      'channelIds': channelIds.toList(),
       'normalizedChannels': normalizedChannels,
     };
   }
@@ -684,9 +686,10 @@ class IncrementalEpgService extends ChangeNotifier {
 
   static void _processProgramme(
       List<XmlEvent> events,
-      Map<String, List<Program>> programsByChannel,
       Set<String> channelIds,
-      Map<String, String> normalizedChannels) {
+      Map<String, String> normalizedChannels,
+      IOSink sink,
+      void Function() onProgram) {
     // Parse programme subtree
     // <programme start="..." stop="..." channel="..."> ... </programme>
     final startEvent = events.first as XmlStartElementEvent;
@@ -767,20 +770,19 @@ class IncrementalEpgService extends ChangeNotifier {
       normalizedChannels[normalized] = channelId;
     }
 
-    final program = Program(
-      id: '${channelId}_$startStr',
-      channelId: channelId,
-      title: title,
-      description: description,
-      startTime: _staticParseTime(startStr),
-      endTime: _staticParseTime(stopStr),
-      imageUrl: icon,
-      category: category,
-      isLive: false,
-      canRecord: true,
-    );
-
-    programsByChannel.putIfAbsent(channelId, () => []).add(program);
+    final start = _staticParseTime(startStr).millisecondsSinceEpoch;
+    final end = _staticParseTime(stopStr).millisecondsSinceEpoch;
+    final payload = {
+      'epgId': channelId,
+      'startTs': start,
+      'endTs': end,
+      'title': title,
+      'description': description,
+      'imageUrl': icon,
+      'category': category,
+    };
+    sink.writeln(jsonEncode(payload));
+    onProgram();
   }
 
   static DateTime _staticParseTime(String timeStr) {
@@ -1436,6 +1438,88 @@ class IncrementalEpgService extends ChangeNotifier {
     }
   }
 
+  Future<void> _ingestProgramsFromFile(String? path) async {
+    if (path == null || path.isEmpty) {
+      debugLog('EPG: No program temp file path provided');
+      return;
+    }
+    final file = File(path);
+    if (!await file.exists()) {
+      debugLog('EPG: Program temp file missing at $path');
+      return;
+    }
+
+    const int batchSize = 40;
+    final Map<String, List<Map<String, dynamic>>> buffer = {};
+    final Map<String, bool> cleared = {};
+
+    try {
+      await for (final line
+          in file.openRead().transform(utf8.decoder).transform(const LineSplitter())) {
+        if (line.trim().isEmpty) continue;
+        Map<String, dynamic> data;
+        try {
+          data = jsonDecode(line) as Map<String, dynamic>;
+        } catch (_) {
+          continue;
+        }
+
+        final epgId =
+            (data['epgId'] ?? data['channelId'] ?? '')?.toString() ?? '';
+        if (epgId.isEmpty) continue;
+
+        final startTs = data['startTs'] as int? ?? 0;
+        final endTs = data['endTs'] as int? ?? 0;
+        final title = (data['title'] as String?) ?? 'Unknown';
+
+        final program = Program(
+          id: '${epgId}_$startTs',
+          channelId: epgId,
+          title: title,
+          description: data['description'] as String?,
+          startTime: DateTime.fromMillisecondsSinceEpoch(startTs),
+          endTime: DateTime.fromMillisecondsSinceEpoch(endTs),
+          imageUrl: data['imageUrl'] as String?,
+          category: data['category'] as String?,
+          isLive: false,
+          canRecord: true,
+        );
+
+        final list = _programsByChannel.putIfAbsent(epgId, () => []);
+        if (list.length < 200) {
+          list.add(program);
+        }
+
+        final payload = buffer.putIfAbsent(epgId, () => []);
+        payload.add({
+          'startTs': startTs,
+          'endTs': endTs,
+          'title': title,
+          'description': data['description'],
+          'imageUrl': data['imageUrl'],
+        });
+        if (payload.length >= batchSize) {
+          await _db.insertPrograms(epgId, payload,
+              clearExisting: cleared[epgId] != false);
+          payload.clear();
+          cleared[epgId] = false;
+        }
+      }
+
+      for (final entry in buffer.entries) {
+        if (entry.value.isEmpty) continue;
+        await _db.insertPrograms(entry.key, entry.value,
+            clearExisting: cleared[entry.key] != false);
+      }
+    } catch (e) {
+      debugLog('EPG: Failed to ingest programs from temp file: $e');
+    } finally {
+      try {
+        await file.delete();
+      } catch (_) {}
+    }
+  }
+
   Future<void> _loadProgramsFromDb(String epgId) async {
     try {
       final rows = await _db.getProgramsForEpgId(epgId, limit: 300);
@@ -1461,36 +1545,6 @@ class IncrementalEpgService extends ChangeNotifier {
       debugLog('EPG: Loaded ${programs.length} programs for $epgId from DB');
     } catch (e) {
       debugLog('EPG: Failed to load programs from DB for $epgId: $e');
-    }
-  }
-
-  Future<void> _persistProgramsToDb(
-      Map<String, List<Program>> programsByChannel) async {
-    const batchSize = 40;
-    try {
-      for (final entry in programsByChannel.entries) {
-        final epgId = entry.key;
-        final programs = entry.value;
-        if (programs.isEmpty) continue;
-        final payload = programs
-            .map((p) => {
-                  'startTs': p.startTime.millisecondsSinceEpoch,
-                  'endTs': p.endTime.millisecondsSinceEpoch,
-                  'title': p.title,
-                  'description': p.description,
-                  'imageUrl': p.imageUrl,
-                })
-            .toList();
-        for (var i = 0; i < payload.length; i += batchSize) {
-          final slice = payload.sublist(
-              i, i + batchSize > payload.length ? payload.length : i + batchSize);
-          await _db.insertPrograms(epgId, slice, clearExisting: i == 0);
-        }
-      }
-      debugLog(
-          'EPG: Persisted programs to DB (${programsByChannel.length} channels)');
-    } catch (e) {
-      debugLog('EPG: Failed to persist programs to DB: $e');
     }
   }
 

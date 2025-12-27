@@ -1,0 +1,370 @@
+12-26 18:26:12.676 25091 25139 E AndroidRuntime: FATAL EXCEPTION: flutter-worker-0
+12-26 18:26:12.676 25091 25139 E AndroidRuntime: Process: com.risa.app, PID: 25091
+12-26 18:26:12.676 25091 25139 E AndroidRuntime: 	at io.flutter.plugin.common.StandardMessageCodec.readBytes(StandardMessageCodec.java:320)
+12-26 18:26:12.676 25091 25139 E AndroidRuntime: 	at io.flutter.plugin.common.StandardMessageCodec.readValueOfType(StandardMessageCodec.java:380)
+12-26 18:26:12.676 25091 25139 E AndroidRuntime: 	at io.flutter.plugin.common.StandardMessageCodec.readValue(StandardMessageCodec.java:340)
+12-26 18:26:12.676 25091 25139 E AndroidRuntime: 	at io.flutter.plugin.common.StandardMessageCodec.readValueOfType(StandardMessageCodec.java:434)
+12-26 18:26:12.676 25091 25139 E AndroidRuntime: 	at io.flutter.plugin.common.StandardMessageCodec.readValue(StandardMessageCodec.java:340)
+12-26 18:26:12.676 25091 25139 E AndroidRuntime: 	at io.flutter.plugin.common.StandardMessageCodec.readValueOfType(StandardMessageCodec.java:424)
+12-26 18:26:12.676 25091 25139 E AndroidRuntime: 	at io.flutter.plugin.common.StandardMessageCodec.readValue(StandardMessageCodec.java:340)
+12-26 18:26:12.676 25091 25139 E AndroidRuntime: 	at io.flutter.plugin.common.StandardMessageCodec.readValueOfType(StandardMessageCodec.java:434)
+12-26 18:26:12.676 25091 25139 E AndroidRuntime: 	at io.flutter.plugin.common.StandardMessageCodec.readValue(StandardMessageCodec.java:340)
+12-26 18:26:12.676 25091 25139 E AndroidRuntime: 	at io.flutter.plugin.common.StandardMethodCodec.decodeMethodCall(StandardMethodCodec.java:49)
+12-26 18:26:12.676 25091 25139 E AndroidRuntime: 	at io.flutter.plugin.common.MethodChannel$IncomingMethodCallHandler.onMessage(MethodChannel.java:265)
+12-26 18:26:12.676 25091 25139 E AndroidRuntime: 	at io.flutter.embedding.engine.dart.DartMessenger.invokeHandler(DartMessenger.java:292)
+12-26 18:26:12.676 25091 25139 E AndroidRuntime: 	at io.flutter.embedding.engine.dart.DartMessenger.lambda$dispatchMessageToQueue$0$io-flutter-embedding-engine-dart-DartMessenger(DartMessenger.java:319)
+12-26 18:26:12.676 25091 25139 E AndroidRuntime: 	at io.flutter.embedding.engine.dart.DartMessenger$$ExternalSyntheticLambda0.run(D8$$SyntheticClass:0)
+12-26 18:26:12.676 25091 25139 E AndroidRuntime: 	at io.flutter.embedding.engine.dart.DartMessenger$SerialTaskQueue.flush(DartMessenger.java:173)
+12-26 18:26:12.676 25091 25139 E AndroidRuntime: 	at io.flutter.embedding.engine.dart.DartMessenger$SerialTaskQueue.lambda$dispatch$0$io-flutter-embedding-engine-dart-DartMessenger$SerialTaskQueue(DartMessenger.java:163)
+12-26 18:26:12.676 25091 25139 E AndroidRuntime: 	at io.flutter.embedding.engine.dart.DartMessenger$SerialTaskQueue$$ExternalSyntheticLambda0.run(D8$$SyntheticClass:0)
+12-26 18:29:03.323 27620 27620 E AndroidRuntime: Process: com.risa.app, PID: 27620
+12-26 18:56:55.024 12871 12871 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.025 23173 23173 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.025  8527  8527 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.025  3814  3814 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.026  6155  6155 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.026  4948  4948 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.027  3743  3743 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.027  7521  7521 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.027  7527  7527 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.027  5016  5016 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.027  5028  5028 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.028  5022  5022 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.028  5003  5003 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.029  1498  1498 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.029 16486 16486 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.029 13710 13710 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.029  4414  4414 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.030 30810 30810 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.030 27684 27684 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.030  5328  5328 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.030 10305 10305 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.030  5849  5849 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.030  8927  8927 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.030 30540 30540 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.031  4247  4247 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.031 10253 10253 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.031  4156  4156 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.031  4743  4743 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.031 14448 14448 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.031 24216 24216 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.031  7518  7518 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.032 24178 24178 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.032 23559 23559 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.033 29290 29290 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.033  8685  8685 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.034 23908 23908 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.034 16270 16270 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.034 29290 29290 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.034  7495  7495 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.034  7494  7494 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.034 12787 12787 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.034 13228 13228 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.034  4350  4350 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.035 32244 32244 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.035 26502 26502 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.035  1616  1616 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.038 28497 28497 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.038 26600 26600 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.038 10202 10202 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.039 16927 16927 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.039 22853 22853 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.039 15200 15200 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.039 26639 26639 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.039  9356  9356 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.039  8281  8281 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.040  9230  9230 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.040  6133  6133 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.041  3044  3044 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.041 32113 32113 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.041  7438  7438 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.041  8182  8182 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.041  6765  6765 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.041  6771  6771 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.041 28266 28266 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.041 26218 26218 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.041 26396 26396 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.042  6777  6777 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.042 13117 13117 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.042  8390  8390 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.042 27659 27659 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.042 30034 30034 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.042 16127 16127 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.042 11281 11281 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.043 31344 31344 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.043 22006 22006 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.043  8073  8073 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.043  7841  7841 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.043 17334 17334 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.044  3484  3484 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.044 23173 23173 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.044 30536 30536 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.044 32688 32688 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.044  8685  8685 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.044  7521  7521 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.044  3814  3814 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.044 30387 30387 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.044 17231 17231 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.045  8527  8527 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.045 12871 12871 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.045 26458 26458 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.047  5022  5022 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.047  6155  6155 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.047  5016  5016 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.047  5003  5003 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.047  4968  4968 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.048  5028  5028 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.048  4948  4948 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.048  4743  4743 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.048  3743  3743 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.048  4968  4968 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.048 10575 10575 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.048 18684 18684 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.049 12332 12332 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.049  7527  7527 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.049 12114 12114 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.049 12332 12332 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.054  2812  2812 I Telecom : SamsungOpenCommunicationPlatformPolicyPackageBroadcastReceiver : action : android.intent.action.PACKAGE_ADDED / packageName : com.risa.app
+12-26 18:56:55.056  2812  4712 D SGM:GameManager: identifyGamePackage. com.risa.app, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.SemGameManager.isGamePackage(SemGameManager.java:106)
+12-26 18:56:55.056  2812  4712 D SGM:SemGameManager: isGamePackage(), pkgName=com.risa.app, ret=false
+12-26 18:56:55.056  2812  4712 I Pageboost: appinfo : com.risa.app 0 0 0 0
+12-26 18:56:55.056  2812  4712 D SGM:GameManager: identifyGamePackage. com.risa.app, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.SemGameManager.isGamePackage(SemGameManager.java:106)
+12-26 18:56:55.056  2812  4712 D SGM:SemGameManager: isGamePackage(), pkgName=com.risa.app, ret=false
+12-26 18:56:55.056  2812  4712 I Pageboost: Reset this app info : com.risa.app 
+12-26 18:56:55.056  2812  4712 I Pageboost: db create : CREATE TABLE IF NOT EXISTS comrisaapp (FILENAME TEXT, OFFSET INTEGER, SIZE INTEGER, FORVRAMDISK INTEGER, BITMAP BLOB, unique (FILENAME, OFFSET) );
+12-26 18:56:55.058  2812  5489 I Telecom : SamsungOpenCommunicationPlatformPolicyPackageHandler : handleMessage : { when=-4ms what=0 obj=com.risa.app target=com.samsung.server.telecom.advancedcall.ocp.policy.broadcast.SamsungOpenCommunicationPlatformPolicyPackageHandler }.what
+12-26 18:56:55.067  2812  4624 D SGM:GameManager: identifyGamePackage. com.risa.app, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.SemGameManager.isGamePackage(SemGameManager.java:106)
+12-26 18:56:55.067  2812  4624 D SGM:SemGameManager: isGamePackage(), pkgName=com.risa.app, ret=false
+12-26 18:56:55.070  2812  4712 I Pageboost: add app to global @ runtime: com.risa.app
+12-26 18:56:55.073 22204 22204 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.074 22204 22204 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.146  2812  2812 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.149  2812  4624 D SGM:GameManager: identifyGamePackage. com.risa.app, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.SemGameManager.isGamePackage(SemGameManager.java:106)
+12-26 18:56:55.149  2812  4624 D SGM:SemGameManager: isGamePackage(), pkgName=com.risa.app, ret=false
+12-26 18:56:55.151  2812  2812 W AlarmManager: Package com.risa.app, uid 11278 lost permission to set exact alarms!
+12-26 18:56:55.151  2812  2812 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.151  2812  2812 D ActivityThread: Package [com.risa.app] reported as REPLACED, but missing application info. Assuming REMOVED.
+12-26 18:56:55.168 17551 17628 I SWT_ValidatorService: It doesn't support color theme, com.risa.app
+12-26 18:56:55.562  2812  3152 I SGM:GameManager: PkgUpdateReceiver, onPackageAdded : com.risa.app userHandle : UserHandle{0} userId : 0
+12-26 18:56:55.562  2812  3152 D SGM:GosNotifyThread: sendPackageMessage(), changeType=0, pkgName=com.risa.app, userHandleId=0
+12-26 18:56:55.562  2812  4229 D SGM:GosNotifyThread: notifyPackageChangedToGos(), before send intent to GOS. type:15, changeType: 0, pkgName:com.risa.app, userHandleId:0
+12-26 18:56:55.562  2812  4229 D SGM:PmAppCategoryManager: getManifestCategory(), manifestCategory=-1, packageName=com.risa.app
+12-26 18:56:55.562  2812  4229 D SGM:PmAppCategoryManager: getCategoryOverride(), categoryOverride=-1, packageName=com.risa.app
+12-26 18:56:55.562  2812  4229 I SGM:GosNotifyThread: notifyPackageChangedToGos(), category from pm: com.risa.app, [-1/-1]
+12-26 18:56:55.677  2812  3152 D MetaDataCollector: onReceive: done pkgName=com.risa.app
+12-26 18:56:55.679  2812  3152 I SGM:GameManager: PkgUpdateReceiver, onPackageReplaced : com.risa.app userID : UserHandle{0}
+12-26 18:56:55.679  2812  3152 D SGM:GosNotifyThread: sendPackageMessage(), changeType=8, pkgName=com.risa.app, userHandleId=0
+12-26 18:56:55.679  2812  4229 D SGM:GosNotifyThread: notifyPackageChangedToGos(), before send intent to GOS. type:15, changeType: 8, pkgName:com.risa.app, userHandleId:0
+12-26 18:56:55.679  2812  4229 D SGM:PmAppCategoryManager: getManifestCategory(), manifestCategory=-1, packageName=com.risa.app
+12-26 18:56:55.679  2812  4229 D SGM:PmAppCategoryManager: getCategoryOverride(), categoryOverride=-1, packageName=com.risa.app
+12-26 18:56:55.679  2812  4229 I SGM:GosNotifyThread: notifyPackageChangedToGos(), category from pm: com.risa.app, [-1/-1]
+12-26 18:56:55.680  2812  3152 D MetaDataCollector: onReceive: done pkgName=com.risa.app
+12-26 18:56:55.693  2812  7912 D SGM:GameManager: setPackageConfigurations(). category=-1, pkgName=com.risa.app
+12-26 18:56:55.693  2812  7912 D SGM:GameManager: setPackageConfiguration(). configuration: packageName: com.risa.app, performancePolicyForSsrm: null, optimalAspectRatio: 1.7777778, dynamicSurfaceScaling: 1.0, category: -1, categoryByUser: -1, fillBlackSurfaceOnMargins: false, userId: null
+12-26 18:56:55.693  2812  7912 D SGM:GameManager: setPackageConfiguration(). pkgName=com.risa.app
+12-26 18:56:55.693  2812  7912 D SGM:Util: isPkgInstalled(). pkgName=com.risa.app, userId=0, installed=true
+12-26 18:56:57.682  2812  7912 I Pageboost: onAppLaunch : com.risa.app
+12-26 18:56:57.682  2812  4712 I Pageboost: Record App IO : com.risa.app pid 0
+12-26 18:56:57.687  2812  7912 V WindowManager: Collecting in transition 5699: ActivityRecord{81368132 u0 com.risa.app/.MainActivity, caller=com.android.server.wm.TransitionController.collect:7 com.android.server.wm.ActivityStarter.startActivityUnchecked:98 com.android.server.wm.ActivityStarter.executeRequest:3651 com.android.server.wm.ActivityStarter.execute:1752 com.android.server.wm.ActivityTaskManagerService.startActivityAsUser:95 
+12-26 18:56:57.687  2812  7912 D ActivityTaskManager: DesktopModeLaunchParamsModifier: task=null activity=ActivityRecord{81368132 u0 com.risa.app/.MainActivity t-1} task null, skipping
+12-26 18:56:57.687  2812  7912 D ActivityTaskManager: TaskLaunchParamsModifier:task=null activity=ActivityRecord{81368132 u0 com.risa.app/.MainActivity t-1} display-area-from-source=DefaultTaskDisplayArea_d0@90254262 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@90254262
+12-26 18:56:57.687  2812  7912 D ActivityTaskManager: DesktopModeLaunchParamsModifier: task=null activity=ActivityRecord{81368132 u0 com.risa.app/.MainActivity t-1} task null, skipping
+12-26 18:56:57.687  2812  7912 D ActivityTaskManager: TaskLaunchParamsModifier:task=null activity=ActivityRecord{81368132 u0 com.risa.app/.MainActivity t-1} display-area-from-source=DefaultTaskDisplayArea_d0@90254262 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@90254262 inherit-from-source=fullscreen non-freeform-task-display-area display-area=DefaultTaskDisplayArea_d0@90254262 activity-requested-landscape freeform-size-mismatch=Rect(81, 559 - 999, 1729)
+12-26 18:56:57.690  2812  7912 D ActivityTaskManager: DesktopModeLaunchParamsModifier: task=Task{2efebf3 #21285 type=standard I=com.risa.app/.MainActivity} activity=ActivityRecord{81368132 u0 com.risa.app/.MainActivity t-1} non-desktop, skipping
+12-26 18:56:57.690  2812  7912 D ActivityTaskManager: TaskLaunchParamsModifier:task=Task{2efebf3 #21285 type=standard I=com.risa.app/.MainActivity} activity=ActivityRecord{81368132 u0 com.risa.app/.MainActivity t-1} display-area-from-source=DefaultTaskDisplayArea_d0@90254262 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@90254262 inherit-from-source=fullscreen non-freeform-task-display-area display-area=DefaultTaskDisplayArea_d0@90254262 activity-requested-landscape freeform-size-mismatch=Rect(81, 559 - 999, 1729)
+12-26 18:56:57.691  2812  7912 V WindowManager: Collecting in transition 5699: Task{2efebf3 #21285 type=standard I=com.risa.app/.MainActivity}, caller=com.android.server.wm.Transition.collectExistenceChange:40 com.android.server.wm.ActivityStarter.startActivityInner:293 com.android.server.wm.ActivityStarter.startActivityUnchecked:111 com.android.server.wm.ActivityStarter.executeRequest:3651 com.android.server.wm.ActivityStarter.execute:1752 
+12-26 18:56:57.692  2812  7912 V WindowManager: Add starting ActivityRecord{81368132 u0 com.risa.app/.MainActivity t21285}: startingData=SplashScreenStartingData{1fa0b29 removeAfterTransaction= 0}
+12-26 18:56:57.693  2812  7912 V WindowManager: Added starting ActivityRecord{81368132 u0 com.risa.app/.MainActivity t21285}: startingWindow=null startingView=com.android.server.wm.StartingSurfaceController$StartingSurface@1936eae
+12-26 18:56:57.695  2812  7912 V WindowManager: Collecting in transition 5699: ActivityRecord{81368132 u0 com.risa.app/.MainActivity t21285}, caller=com.android.server.wm.Transition.collectExistenceChange:40 com.android.server.wm.ActivityStarter.handleStartResult:761 com.android.server.wm.ActivityStarter.startActivityUnchecked:124 com.android.server.wm.ActivityStarter.executeRequest:3651 com.android.server.wm.ActivityStarter.execute:1752 
+12-26 18:56:57.695  2812  7912 V WindowManager:    ChangeInfo{527dc container=Task{2efebf3 #21285 type=standard I=com.risa.app/.MainActivity} flags=0x0}
+12-26 18:56:57.695  2812  7912 V WindowManager:    ChangeInfo{47f30e5 container=ActivityRecord{81368132 u0 com.risa.app/.MainActivity t21285} flags=0x0}
+12-26 18:56:57.695  2812  7912 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x34000000 xflg=0x4 pkg=com.risa.app cmp=com.risa.app/.MainActivity} with LAUNCH_SINGLE_TOP from uid 10082 (sr=226186808) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+12-26 18:56:57.696  4743  4800 V WindowManagerShell: Transition requested (#5699): android.os.BinderProxy@9665ec TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=21285 effectiveUid=11278 displayId=0 isRunning=true baseIntent=Intent { act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x34000000 pkg=com.risa.app cmp=com.risa.app/.MainActivity } baseActivity=ComponentInfo{com.risa.app/com.risa.app.MainActivity} topActivity=ComponentInfo{com.risa.app/com.risa.app.MainActivity} origActivity=null realActivity=ComponentInfo{com.risa.app/com.risa.app.MainActivity} numActivities=1 lastActiveTime=321135886 supportsMultiWindow=true resizeMode=2 isResizeable=true minWidth=-1 minHeight=-1 maxWidth=-1 maxHeight=-1 defaultMinSize=220 desktopDefaultMinSize=304 token=WCT{android.window.IWindowContainerToken$Stub$Proxy@39f7db5} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=Rect(0, 84 - 0, 0) topActivityInfo=ActivityInfo{233dc4a com.risa.app.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=false isVisible=false isVisibleRequested=false isTopActivityNoDisplay=false isSleeping=false locusId=null displayAreaFeatureId=1 isTopActivityTransparent=false isActivityStackTransparent=false lastNonFullscreenBounds=Rect(81, 559 - 999, 1729) capturedLink=null capturedLinkTimestamp=0 requestedVisibleTypes=-9 topActivityRequestOpenInBrowserEducationTimestamp=0 appCompatTaskInfo=AppCompatTaskInfo { topActivityInSizeCompat=false eligibleForLetterboxEducation= false isLetterboxEducationEnabled= false isLetterboxDoubleTapEnabled= false eligibleForUserAspectRatioButton= false topActivityBoundsLetterboxed= false isFromLetterboxDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 topActivityAppBounds=Rect(0, 0 - 1080, 2340) isUserFullscreenOverrideEnabled=false isSystemFullscreenOverrideEnabled=false hasMinAspectRatioOverride=false topActivityLetterboxBounds=null cameraCompatTaskInfo=CameraCompatTaskInfo { freeformCameraCompatMode=inactive} topActivityBounds=null topActivityInDisplayCompat=false singleTapFromLetterbox=false} topActivityMainWindowFrame=null originallySupportedMultiWindow=true hasWallpaper=false rootAffinity=null isTopTaskInStage=false CoverLauncherWidgetTask=false LaunchedFromAppsCoverLauncherTask=false LaunchedFromMultistarCoverLauncherTask=false isAllowedSeamlessRotation=false isTopTransparentActivity=false isAliasManaged=false hasConfigChanged=false snappingGuideBounds=null isAiKeyRemoveAppTask=false lastDesktopWindowingBounds=null lastExternalDesktopWindowingBounds=null safeCutoutInsets=null}, pipChange = null, remoteTransition = null, displayChange = null, flags = 0, debugId = 5699 }
+12-26 18:56:57.702  2812  4150 V WindowManager: Collecting in transition 5699: ActivityRecord{81368132 u0 com.risa.app/.MainActivity t21285}, caller=com.android.server.wm.TransitionController.collect:7 com.android.server.wm.ActivityRecord.setVisibility:132 com.android.server.wm.EnsureActivitiesVisibleHelper.process:459 com.android.server.wm.TaskFragment.updateActivityVisibilities:12 com.android.server.wm.Task$$ExternalSyntheticLambda37.accept:37 
+12-26 18:56:57.704  2812  7912 D WindowManager: prepareSync <SYNC_STATE_WAITING_FOR_DRAW>, mPrepareSyncSeqId=0, win=Window{ebb7e3 u0 Splash Screen com.risa.app}
+12-26 18:56:57.705  2812  7912 V WindowManager: addWindow: ActivityRecord{81368132 u0 com.risa.app/.MainActivity t21285} startingWindow=Window{ebb7e3 u0 Splash Screen com.risa.app}
+12-26 18:56:57.705  2812  7912 D WindowManager: rotationForOrientation, orientationSource=ActivityRecord{81368132 u0 com.risa.app/.MainActivity t21285}
+12-26 18:56:57.705  2812  7912 D ActivityTaskManager: applyFixedRotationTransform, r=ActivityRecord{81368132 u0 com.risa.app/.MainActivity t21285}, caller=com.android.server.wm.ActivityRecord.applyFixedRotationTransform:20 com.android.server.wm.DisplayContent.startFixedRotationTransform:63 com.android.server.wm.DisplayContent.setFixedRotationLaunchingApp:47 com.android.server.wm.DisplayContent.handleTopActivityLaunchingInDifferentOrientation:286 com.android.server.wm.DisplayContent.updateOrientation:40 
+12-26 18:56:57.706  2812  7912 D WindowManager: setFixedRotationLaunchingAppUnchecked, rotation=1, r=ActivityRecord{81368132 u0 com.risa.app/.MainActivity t21285}, caller=com.android.server.wm.DisplayContent.setFixedRotationLaunchingAppUnchecked:131 com.android.server.wm.DisplayContent.setFixedRotationLaunchingApp:50 com.android.server.wm.DisplayContent.handleTopActivityLaunchingInDifferentOrientation:286 com.android.server.wm.DisplayContent.updateOrientation:40 com.android.server.wm.WindowManagerService.addWindowInner:690 
+12-26 18:56:57.717  2812  6374 D WindowManager: makeSurface duration=0 name=Splash Screen com.risa.app$_4743
+12-26 18:56:57.727  2812  3154 I ActivityManager: Start proc 17725:com.risa.app/u0a1278 for next-top-activity {com.risa.app/com.risa.app.MainActivity}
+12-26 18:56:57.737  2812  2858 D WindowManager: finishDrawingWindow: Window{ebb7e3 u0 Splash Screen com.risa.app} mDrawState=DRAW_PENDING seqId=0
+12-26 18:56:57.737  2812  2858 V WindowManager: Finishing drawing window Window{ebb7e3 u0 Splash Screen com.risa.app}: mDrawState=DRAW_PENDING
+12-26 18:56:57.737  2812  2858 V WindowManager: Draw state now committed in Window{ebb7e3 u0 Splash Screen com.risa.app}
+12-26 18:56:57.738  2812  3125 V WindowManager: performShowLocked: mDrawState=HAS_DRAWN in Window{ebb7e3 u0 Splash Screen com.risa.app}
+12-26 18:56:57.738  2812  3125 D WindowManagerServiceExt: updateTaskbarTargetIfNeeded: cn=ComponentInfo{com.risa.app/com.risa.app.MainActivity} occludesParent=true isInSplitScreenMode=false
+12-26 18:56:57.738  2812  3125 D ChangeTransitionController:    ChangeInfo{527dc container=Task{2efebf3 #21285 type=standard I=com.risa.app/.MainActivity} flags=0x0}
+12-26 18:56:57.738  2812  3125 D ChangeTransitionController:    ChangeInfo{47f30e5 container=ActivityRecord{81368132 u0 com.risa.app/.MainActivity t21285} flags=0x0}
+12-26 18:56:57.738  2812  3125 V WindowManager: Start calculating TransitionInfo based on participants: {Task{2efebf3 #21285 type=standard I=com.risa.app/.MainActivity}, ActivityRecord{81368132 u0 com.risa.app/.MainActivity t21285}, ActivityRecord{181778710 u0 com.android.chrome/com.google.android.apps.chrome.Main t21270}, ActivityRecord{212531921 u0 com.google.android.packageinstaller/com.android.packageinstaller.DeleteStagedFileOnResult t21284}, ActivityRecord{226186808 u0 com.google.android.packageinstaller/com.android.packageinstaller.InstallSuccess t21284 f}}}
+12-26 18:56:57.738  2812  3125 V WindowManager:   Final targets: [ChangeInfo{527dc container=Task{2efebf3 #21285 type=standard I=com.risa.app/.MainActivity} flags=0x10}, ChangeInfo{357d734 container=Task{538a148 #21284 type=standard A=10082:com.google.android.packageinstaller} flags=0x10}, ChangeInfo{630a95d container=Task{868b297 #21270 type=standard A=10275:com.android.chrome} flags=0x10}]
+12-26 18:56:57.739  2812  3125 V WindowManager:         {WCT{RemoteToken{534a715 Task{2efebf3 #21285 type=standard I=com.risa.app/.MainActivity}}} m=OPEN f=NONE leash=Surface(name=Task=21285)/@0x3ee72ff sb=Rect(0, 0 - 1080, 2340) eb=Rect(0, 0 - 1080, 2340) epz=Point(1080, 2340) d=0 endFixedRotation=1 taskParent=-1 inset=Rect(84, 84 - 0, 0) dim=true},
+12-26 18:56:57.762  2812  3121 V WindowManager: Sent Transition (#5699) createdAt=12-26 18:56:57.686 via request=TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=21285 effectiveUid=11278 displayId=0 isRunning=true baseIntent=Intent { act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x34000000 pkg=com.risa.app cmp=com.risa.app/.MainActivity } baseActivity=ComponentInfo{com.risa.app/com.risa.app.MainActivity} topActivity=ComponentInfo{com.risa.app/com.risa.app.MainActivity} origActivity=null realActivity=ComponentInfo{com.risa.app/com.risa.app.MainActivity} numActivities=1 lastActiveTime=321135886 supportsMultiWindow=true resizeMode=2 isResizeable=true minWidth=-1 minHeight=-1 maxWidth=-1 maxHeight=-1 defaultMinSize=220 desktopDefaultMinSize=304 token=WCT{RemoteToken{534a715 Task{2efebf3 #21285 type=standard I=com.risa.app/.MainActivity}}} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=Rect(0, 84 - 0, 0) topActivityInfo=ActivityInfo{69afce8 com.risa.app.MainActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=false isVisible=false isVisibleRequested=false isTopActivityNoDisplay=false isSleeping=false locusId=null displayAreaFeatureId=1 isTopActivityTransparent=false isActivityStackTransparent=false lastNonFullscreenBounds=Rect(81, 559 - 999, 1729) capturedLink=null capturedLinkTimestamp=0 requestedVisibleTypes=-9 topActivityRequestOpenInBrowserEducationTimestamp=0 appCompatTaskInfo=AppCompatTaskInfo { topActivityInSizeCompat=false eligibleForLetterboxEducation= false isLetterboxEducationEnabled= false isLetterboxDoubleTapEnabled= false eligibleForUserAspectRatioButton= false topActivityBoundsLetterboxed= false isFromLetterboxDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 topActivityAppBounds=Rect(0, 0 - 1080, 2340) isUserFullscreenOverrideEnabled=false isSystemFullscreenOverrideEnabled=false hasMinAspectRatioOverride=false topActivityLetterboxBounds=null cameraCompatTaskInfo=CameraCompatTaskInfo { freeformCameraCompatMode=inactive} topActivityBounds=null topActivityInDisplayCompat=false singleTapFromLetterbox=false} topActivityMainWindowFrame=null originallySupportedMultiWindow=true hasWallpaper=false rootAffinity=null isTopTaskInStage=false CoverLauncherWidgetTask=false LaunchedFromAppsCoverLauncherTask=false LaunchedFromMultistarCoverLauncherTask=false isAllowedSeamlessRotation=false isTopTransparentActivity=false isAliasManaged=false hasConfigChanged=false snappingGuideBounds=null isAiKeyRemoveAppTask=false lastDesktopWindowingBounds=null lastExternalDesktopWindowingBounds=null safeCutoutInsets=null}, pipChange = null, remoteTransition = null, displayChange = null, flags = 0, debugId = 5699 }
+12-26 18:56:57.762  2812  3121 V WindowManager:         {WCT{RemoteToken{534a715 Task{2efebf3 #21285 type=standard I=com.risa.app/.MainActivity}}} m=OPEN f=NONE leash=Surface(name=Task=21285)/@0x3ee72ff sb=Rect(0, 0 - 1080, 2340) eb=Rect(0, 0 - 1080, 2340) epz=Point(1080, 2340) d=0 endFixedRotation=1 taskParent=-1 inset=Rect(84, 84 - 0, 0) dim=true},
+12-26 18:56:57.763  2812  3125 D InsetsSourceProvider: updateControlForTarget: control=InsetsSourceControl: {4c0000 mType=statusBars initiallyVisible mSurfacePosition=Point(0, 0) mInsetsHint=Insets{left=0, top=84, right=0, bottom=0}}, target=Window{ebb7e3 u0 Splash Screen com.risa.app}, from=com.android.server.wm.InsetsStateController.onControlTargetChanged:83 com.android.server.wm.InsetsPolicy.updateBarControlTarget:212 com.android.server.wm.DisplayPolicy.updateSystemBarAttributes:262 com.android.server.wm.DisplayPolicy.finishPostLayoutPolicyLw:17 com.android.server.wm.RootWindowContainer.applySurfaceChangesTransaction$1:195 
+12-26 18:56:57.766  2812  3125 D InsetsSourceProvider: updateControlForTarget: control=InsetsSourceControl: {e4a90001 mType=navigationBars initiallyVisible mSurfacePosition=Point(0, 2205) mInsetsHint=Insets{left=0, top=0, right=0, bottom=135}}, target=Window{ebb7e3 u0 Splash Screen com.risa.app}, from=com.android.server.wm.InsetsStateController.onControlTargetChanged:83 com.android.server.wm.InsetsPolicy.updateBarControlTarget:225 com.android.server.wm.DisplayPolicy.updateSystemBarAttributes:262 com.android.server.wm.DisplayPolicy.finishPostLayoutPolicyLw:17 com.android.server.wm.RootWindowContainer.applySurfaceChangesTransaction$1:195 
+12-26 18:56:57.766  2812  3125 D WindowManager: updateSystemBarAttributes: displayId=0, focusedCanBeNavColorWin=false, win=Window{ebb7e3 u0 Splash Screen com.risa.app}, navColorWin=Window{ebb7e3 u0 Splash Screen com.risa.app}, caller=com.android.server.wm.DisplayPolicy.finishPostLayoutPolicyLw:17 com.android.server.wm.RootWindowContainer.applySurfaceChangesTransaction$1:195 com.android.server.wm.RootWindowContainer.performSurfacePlacementNoTrace:59 
+12-26 18:56:57.783  2812  3125 I WindowManager: notifyInsetsControlChanged, removed=false, win=Window{ebb7e3 u0 Splash Screen com.risa.app}, caller=com.android.server.wm.InsetsStateController$$ExternalSyntheticLambda1.run:137 com.android.server.wm.WindowAnimator$$ExternalSyntheticLambda2.onTransactionCommitted:26 android.view.SurfaceControl$Transaction$$ExternalSyntheticLambda4.run:0 android.os.Handler.handleCallback:995 android.os.Handler.dispatchMessage:103 android.os.Looper.loopOnce:273 
+12-26 18:56:57.805  2812  7578 D SGM:GameManager: identifyGamePackage. com.risa.app, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.IGameManagerService$Stub.onTransact(IGameManagerService.java:247)
+12-26 18:56:57.869  2812  5188 D SGM:GameManager: identifyGamePackage. com.risa.app, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.IGameManagerService$Stub.onTransact(IGameManagerService.java:247)
+12-26 18:56:57.925  2812  4526 D MdnieScenarioControlService:  packageName : com.risa.app    className : com.risa.app.MainActivity
+12-26 18:56:58.012  2812  2858 D SGM:FgCheckThread: notifyAppCreated(), packageName: com.risa.app, userId: 0, sendRet: true
+12-26 18:56:58.012  2812  4227 D SGM:FgCheckThread: onLooperPrepared(), msg: MSG_APP_CREATE, pkgName: com.risa.app, userId: 0
+12-26 18:56:58.013  2812  2858 D SGM:FgCheckThread:   sendRunningComponentFocus(), pkgName: com.risa.app, userId: 0
+12-26 18:56:58.013  2812  4227 D SGM:FgCheckThread: onLooperPrepared(), msg: MSG_TASK_FOCUSED, pkgName: com.risa.app, userId: 0
+12-26 18:56:58.013  2812  4227 D SGM:FgCheckThread:   handleTaskFocused(), pkgName: com.risa.app, userID:0
+12-26 18:56:58.014  2812  4227 D SGM:FgCheckThread:   handleResume(). pkgName: com.risa.app, userId: 0, category: non-game
+12-26 18:56:58.014  2812  4227 D SGM:FgCheckThread: notifyFocusInOut(). of pkg: com.risa.app, type: 4, isSecGameFamily: false, userId: 0
+12-26 18:56:58.014  2812  2858 D ActivityTaskManager: scheduleTopResumedActivityChanged, onTop=true, r=ActivityRecord{81368132 u0 com.risa.app/.MainActivity t21285}, caller=com.android.server.wm.ActivityTaskSupervisor.scheduleTopResumedActivityStateIfNeeded:18 com.android.server.wm.ActivityTaskSupervisor.updateTopResumedActivityIfNeeded:54 com.android.server.wm.TaskFragment.setResumedActivity:30 com.android.server.wm.ActivityRecord.setState:100 com.android.server.wm.ActivityTaskSupervisor.realStartActivityLocked:477 com.android.server.wm.RootWindowContainer.attachApplication:92 
+12-26 18:56:58.015  2812  3124 D SGM:FgCheckThread: noteResumeComponent(), received pkgName: com.risa.app, userId: 0
+12-26 18:56:58.015 17725 17725 D ActivityThread: com.risa.app will use render engine as VK
+12-26 18:56:58.015  2812  4227 D SGM:FgCheckThread: onLooperPrepared(), msg: MSG_APP_RESUME, pkgName: com.risa.app, userid: 0
+12-26 18:56:58.015  2812  4150 V WindowManager:    ChangeInfo{527dc container=Task{2efebf3 #21285 type=standard I=com.risa.app/.MainActivity} flags=0x10}
+12-26 18:56:58.015  2812  4150 V WindowManager:    ChangeInfo{47f30e5 container=ActivityRecord{81368132 u0 com.risa.app/.MainActivity t21285} flags=0x0}
+12-26 18:56:58.018  2812  4150 D WindowManager: prepareSync <SYNC_STATE_WAITING_FOR_DRAW>, mPrepareSyncSeqId=0, win=Window{ebb7e3 u0 Splash Screen com.risa.app}
+12-26 18:56:58.018  2812  4150 V WindowManager: Override sync-method for ebb7e3 Splash Screen com.risa.app because seamless rotating, caller=com.android.server.wm.DisplayContent.setSeamlessTransitionForFixedRotation:22 com.android.server.wm.DisplayContent.requestChangeTransition:96 com.android.server.wm.DisplayRotation.updateRotationUnchecked:760 com.android.server.wm.DisplayRotation.updateOrientation:79 com.android.server.wm.DisplayContent.continueUpdateOrientationForDiffOrienLaunchingApp:63 
+12-26 18:56:58.019  2812  4150 D ChangeTransitionController:    ChangeInfo{527dc container=Task{2efebf3 #21285 type=standard I=com.risa.app/.MainActivity} flags=0x10}
+12-26 18:56:58.019  2812  4150 D ChangeTransitionController:    ChangeInfo{47f30e5 container=ActivityRecord{81368132 u0 com.risa.app/.MainActivity t21285} flags=0x0}
+12-26 18:56:58.020  2812  3124 D SGM:GameManager: identifyGamePackage. com.risa.app, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.SemGameManager.isGamePackage(SemGameManager.java:106)
+12-26 18:56:58.020  2812  3124 D SGM:SemGameManager: isGamePackage(), pkgName=com.risa.app, ret=false
+12-26 18:56:58.022  7550  8085 I SDHMS:k : handleResumeComponent : put = com.risa.app, userid = 0 instanceid =184398000
+12-26 18:56:58.070  2812  3124 V WindowManager: Collecting in transition 5700: Task{2efebf3 #21285 type=standard I=com.risa.app/.MainActivity}, caller=com.android.server.wm.TransitionController$$ExternalSyntheticLambda2.accept:34 com.android.server.wm.Task.forAllLeafTasks:6 com.android.server.wm.WindowContainer.forAllLeafTasks:4 com.android.server.wm.DisplayArea.forAllLeafTasks:4 com.android.server.wm.WindowContainer.forAllLeafTasks:4 
+12-26 18:56:58.070  2812  3124 V WindowManager: Collecting in transition 5700: ActivityRecord{81368132 u0 com.risa.app/.MainActivity t21285}, caller=com.android.server.wm.TransitionController$$ExternalSyntheticLambda2.accept:21 com.android.server.wm.ActivityRecord.forAllActivities:2 com.android.server.wm.WindowContainer.forAllActivities:8 com.android.server.wm.WindowContainer.forAllActivities:6 com.android.server.wm.TransitionController$$ExternalSyntheticLambda2.accept:107 
+12-26 18:56:58.103  2812  3124 D ChangeTransitionController:    ChangeInfo{dd3caf3 container=Task{2efebf3 #21285 type=standard I=com.risa.app/.MainActivity} flags=0x0}
+12-26 18:56:58.103  2812  3124 D ChangeTransitionController:    ChangeInfo{5f5a3b0 container=ActivityRecord{81368132 u0 com.risa.app/.MainActivity t21285} flags=0x0}
+12-26 18:56:58.103  2812  3124 V WindowManager: Start calculating TransitionInfo based on participants: {Task{2efebf3 #21285 type=standard I=com.risa.app/.MainActivity}, ActivityRecord{81368132 u0 com.risa.app/.MainActivity t21285}, Display{#0 state=ON size=2340x1080 ROTATION_90}}
+12-26 18:56:58.103  2812  3124 V WindowManager:   Final targets: [ChangeInfo{dd3caf3 container=Task{2efebf3 #21285 type=standard I=com.risa.app/.MainActivity} flags=0x0}, ChangeInfo{b968229 container=DefaultTaskDisplayArea_d0@90254262 flags=0x10}, ChangeInfo{f7419ae container=Display{#0 state=ON size=2340x1080 ROTATION_90} flags=0x1}]
+12-26 18:56:58.104  2812  3124 V WindowManager:         {WCT{RemoteToken{534a715 Task{2efebf3 #21285 type=standard I=com.risa.app/.MainActivity}}} m=CHANGE f=NONE p=WCT{RemoteToken{70b963d DefaultTaskDisplayArea_d0@90254262}} leash=Surface(name=Task=21285)/@0x3ee72ff sb=Rect(0, 0 - 1080, 2340) eb=Rect(0, 0 - 2340, 1080) epz=Point(2340, 1080) d=0 r=0->1:-1 taskParent=-1 inset=Rect(84, 84 - 135, 0)},
+12-26 18:56:58.105  2812  3121 V WindowManager:         {WCT{RemoteToken{534a715 Task{2efebf3 #21285 type=standard I=com.risa.app/.MainActivity}}} m=CHANGE f=NONE p=WCT{RemoteToken{70b963d DefaultTaskDisplayArea_d0@90254262}} leash=Surface(name=Task=21285)/@0x3ee72ff sb=Rect(0, 0 - 1080, 2340) eb=Rect(0, 0 - 2340, 1080) epz=Point(2340, 1080) d=0 r=0->1:-1 taskParent=-1 inset=Rect(84, 84 - 135, 0)},
+12-26 18:56:58.122  2812  7625 V WindowManager:    ChangeInfo{dd3caf3 container=Task{2efebf3 #21285 type=standard I=com.risa.app/.MainActivity} flags=0x0}
+12-26 18:56:58.122  2812  7625 V WindowManager:    ChangeInfo{5f5a3b0 container=ActivityRecord{81368132 u0 com.risa.app/.MainActivity t21285} flags=0x0}
+12-26 18:56:58.122  2812  7625 D ChangeTransitionController:    ChangeInfo{dd3caf3 container=Task{2efebf3 #21285 type=standard I=com.risa.app/.MainActivity} flags=0x0}
+12-26 18:56:58.122  2812  7625 D ChangeTransitionController:    ChangeInfo{5f5a3b0 container=ActivityRecord{81368132 u0 com.risa.app/.MainActivity t21285} flags=0x0}
+12-26 18:56:58.122  2812  7625 D WindowManager: rotationForOrientation, orientationSource=ActivityRecord{81368132 u0 com.risa.app/.MainActivity t21285}
+12-26 18:56:58.317  2812  3125 I WindowManager: notifyInsetsControlChanged, removed=false, win=Window{ebb7e3 u0 Splash Screen com.risa.app}, caller=com.android.server.wm.InsetsStateController$$ExternalSyntheticLambda1.run:137 com.android.server.wm.WindowAnimator$$ExternalSyntheticLambda2.onTransactionCommitted:26 android.view.SurfaceControl$Transaction$$ExternalSyntheticLambda4.run:0 android.os.Handler.handleCallback:995 android.os.Handler.dispatchMessage:103 android.os.Looper.loopOnce:273 
+12-26 18:56:59.146  2812  4617 D SGM:GameManager: identifyGamePackage. com.risa.app, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.SemGameManager.isGamePackage(SemGameManager.java:106)
+12-26 18:56:59.146  2812  4617 D SGM:SemGameManager: isGamePackage(), pkgName=com.risa.app, ret=false
+12-26 18:56:59.335  2812  7578 D CoreBackPreview: Window{7961135 u0 com.risa.app/com.risa.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@6c8affc, mPriority=-1, mIsAnimationCallback=false, mOverrideBehavior=0}
+12-26 18:56:59.350  2812  6029 D WindowManager: makeSurface duration=0 name=com.risa.app/com.risa.app.MainActivity$_17725
+12-26 18:56:59.351  2812  6029 D WindowManager: Changing focus from null to Window{7961135 u0 com.risa.app/com.risa.app.MainActivity} displayId=0 Callers=com.android.server.wm.WindowManagerService.relayoutWindow:1350 com.android.server.wm.Session.relayout:27 android.view.IWindowSession$Stub.onTransact:829 com.android.server.wm.Session.onTransact:1 
+12-26 18:56:59.352  2812  6029 D InsetsSourceProvider: updateControlForTarget: control=InsetsSourceControl: {4c0000 mType=statusBars initiallyVisible mSurfacePosition=Point(0, 0) mInsetsHint=Insets{left=0, top=84, right=0, bottom=0}}, target=Window{7961135 u0 com.risa.app/com.risa.app.MainActivity}, from=com.android.server.wm.InsetsStateController.onControlTargetChanged:83 com.android.server.wm.InsetsPolicy.updateBarControlTarget:212 com.android.server.wm.DisplayPolicy.updateSystemBarAttributes:262 com.android.server.wm.WindowManagerService.updateFocusedWindowLocked:372 com.android.server.wm.WindowManagerService.relayoutWindow:1350 
+12-26 18:56:59.352  2812  6029 D InsetsSourceProvider: updateControlForTarget: control=InsetsSourceControl: {e4a90001 mType=navigationBars initiallyVisible mSurfacePosition=Point(2205, 0) mInsetsHint=Insets{left=0, top=0, right=135, bottom=0}}, target=Window{7961135 u0 com.risa.app/com.risa.app.MainActivity}, from=com.android.server.wm.InsetsStateController.onControlTargetChanged:83 com.android.server.wm.InsetsPolicy.updateBarControlTarget:225 com.android.server.wm.DisplayPolicy.updateSystemBarAttributes:262 com.android.server.wm.WindowManagerService.updateFocusedWindowLocked:372 com.android.server.wm.WindowManagerService.relayoutWindow:1350 
+12-26 18:56:59.352  2812  6029 V SystemKeyManager: updateFocusedWindow() is called, com.risa.app/com.risa.app.MainActivity
+12-26 18:56:59.384  2812  3125 I WindowManager: notifyInsetsControlChanged, removed=false, win=Window{ebb7e3 u0 Splash Screen com.risa.app}, caller=com.android.server.wm.InsetsStateController$$ExternalSyntheticLambda1.run:137 com.android.server.wm.WindowAnimator$$ExternalSyntheticLambda2.onTransactionCommitted:26 android.view.SurfaceControl$Transaction$$ExternalSyntheticLambda4.run:0 android.os.Handler.handleCallback:995 android.os.Handler.dispatchMessage:103 android.os.Looper.loopOnce:273 
+12-26 18:56:59.455  2812  6029 D WindowManager: rotationForOrientation, orientationSource=ActivityRecord{81368132 u0 com.risa.app/.MainActivity t21285}
+12-26 18:56:59.504  2812  4741 D WindowManager: finishDrawingWindow: Window{7961135 u0 com.risa.app/com.risa.app.MainActivity} mDrawState=DRAW_PENDING seqId=0
+12-26 18:56:59.509  2812  3125 V WindowManager: Finish starting ActivityRecord{81368132 u0 com.risa.app/.MainActivity t21285}: first real window is shown, no animation
+12-26 18:56:59.509  2812  3125 V WindowManager: Schedule remove starting ActivityRecord{81368132 u0 com.risa.app/.MainActivity t21285} startingWindow=Window{ebb7e3 u0 Splash Screen com.risa.app} animate=true Callers=com.android.server.wm.ActivityRecord.removeStartingWindow:178 com.android.server.wm.WindowState.performShowLocked:155 com.android.server.wm.WindowStateAnimator.commitFinishDrawingLocked:73 com.android.server.wm.DisplayContent$$ExternalSyntheticLambda1.accept$com$android$server$wm$DisplayContent$$ExternalSyntheticLambda37:23 com.android.server.wm.DisplayContent$$ExternalSyntheticLambda1.accept:143 
+12-26 18:56:59.510  2812  3125 D TaskOrganizerController: applyStartingWindowAnimation, window=Window{7961135 u0 com.risa.app/com.risa.app.MainActivity}, caller=com.android.server.wm.TaskOrganizerController.removeStartingWindow:132 com.android.server.wm.StartingSurfaceController$StartingSurface.remove:23 com.android.server.wm.ActivityRecord.removeStartingWindowAnimation:171 
+12-26 18:56:59.510  2812  3125 I WindowManager: Reparenting to leash, surface=Surface(name=7961135 com.risa.app/com.risa.app.MainActivity)/@0x66f2d32, leashParent=Surface(name=ActivityRecord{81368132 u0 com.risa.app/.MainActivity t21285})/@0x3c7aa83
+12-26 18:56:59.510  2812  3125 D WindowManager: makeSurface duration=0 leash=Surface(name=Surface(name=7961135 com.risa.app/com.risa.app.MainActivity)/@0x66f2d32 - animation-leash of starting_reveal)/@0x649b400
+12-26 18:56:59.512  2812  3125 V WindowManager: performShowLocked: mDrawState=HAS_DRAWN in Window{7961135 u0 com.risa.app/com.risa.app.MainActivity}
+12-26 18:56:59.514  2812  3121 I Pageboost: Launch time gathered : pid 17725 com.risa.app 1828
+12-26 18:56:59.575  2812  7578 D WindowManager: Starting window removed Window{ebb7e3 u0 Splash Screen com.risa.app}
+12-26 18:56:59.575  2812  7578 I WindowManager: Cancelling animation restarting=false, leash=Surface(name=Surface(name=7961135 com.risa.app/com.risa.app.MainActivity)/@0x66f2d32 - animation-leash of starting_reveal)/@0x649b400
+12-26 18:56:59.575  2812  7578 I WindowManager: Reparenting to original parent: Surface(name=ActivityRecord{81368132 u0 com.risa.app/.MainActivity t21285})/@0x3c7aa83, destroy=false, surface=Surface(name=7961135 com.risa.app/com.risa.app.MainActivity)/@0x66f2d32
+12-26 18:56:59.576  2812  7578 V WindowManager: Remove Window{ebb7e3 u0 Splash Screen com.risa.app}: mSurfaceControl=Surface(name=Splash Screen com.risa.app$_4743)/@0xfb83a73 mAnimatingExit=false mRemoveOnExit=false mHasSurface=true surfaceShowing=true animating=false app-animation=false callers=com.android.server.wm.Session.remove:16 android.view.IWindowSession$Stub.onTransact:804 com.android.server.wm.Session.onTransact:1 android.os.Binder.execTransactInternal:1462 android.os.Binder.execTransact:1401 <bottom of call stack> 
+12-26 18:56:59.581  2812  7578 D InsetsSourceProvider: updateControlForTarget: control=InsetsSourceControl: {3 mType=ime mSurfacePosition=Point(0, 84) mInsetsHint=Insets{left=0, top=0, right=0, bottom=1008}}, target=Window{7961135 u0 com.risa.app/com.risa.app.MainActivity}, from=com.android.server.wm.ImeInsetsSourceProvider.updateControlForTarget:17 com.android.server.wm.InsetsStateController.onControlTargetChanged:83 com.android.server.wm.DisplayContent.updateImeControlTarget:21 com.android.server.wm.DisplayContent.updateImeInputAndControlTarget:156 com.android.server.wm.WindowManagerService$LocalService.updateInputMethodTargetWindow:64 
+12-26 18:56:59.611  2812  3124 D SGM:FgCheckThread: getForegroundApp(), foregroundPkgName=com.risa.app
+12-26 18:56:59.612  2812  3124 D SGM:FgCheckThread: noteStopComponent(), received pkgName: com.google.android.packageinstaller, focusedPkgName: com.risa.app, userId: 0
+12-26 18:56:59.614  2812  3124 D SGM:FgCheckThread: getForegroundApp(), foregroundPkgName=com.risa.app
+12-26 18:56:59.615  2812  3122 D SGM:GameManager: identifyForegroundApp. com.risa.app, mCurrentUserId: 0, callerUserId: 0
+12-26 18:56:59.617  2812  3122 D SGM:GameManager: identifyForegroundApp. com.risa.app, mCurrentUserId: 0, callerUserId: 0
+12-26 18:56:59.622  2812  3124 D SGM:FgCheckThread: noteStopComponent(), received pkgName: com.android.chrome, focusedPkgName: com.risa.app, userId: 0
+12-26 18:56:59.624  2812  3124 D SGM:FgCheckThread: getForegroundApp(), foregroundPkgName=com.risa.app
+12-26 18:56:59.624  2812  3124 D SGM:FgCheckThread: noteStopComponent(), received pkgName: com.google.android.packageinstaller, focusedPkgName: com.risa.app, userId: 0
+12-26 18:56:59.646  2812  7625 D CoreBackPreview: Window{7961135 u0 com.risa.app/com.risa.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@de497d5, mPriority=0, mIsAnimationCallback=true, mOverrideBehavior=0}
+12-26 18:56:59.646  2812  7625 D CoreBackPreview: Window{7961135 u0 com.risa.app/com.risa.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@455bbea, mPriority=-1, mIsAnimationCallback=false, mOverrideBehavior=0}
+12-26 18:56:59.675  2812  3122 D SGM:GameManager: identifyForegroundApp. com.risa.app, mCurrentUserId: 0, callerUserId: 0
+12-26 18:56:59.675  2812  3122 D SGM:GameManager: identifyForegroundApp. com.risa.app, mCurrentUserId: 0, callerUserId: 0
+12-26 18:56:59.805  2812  4526 D MdnieScenarioControlService:  packageName : com.risa.app    className : com.risa.app.MainActivity
+12-26 18:57:00.082  2812  3124 D SGM:GameManager: identifyForegroundApp. com.risa.app, mCurrentUserId: 0, callerUserId: 0
+12-26 18:57:01.517  1176  1176 D io_stats: !@ Read_top(KB): com.risa.app(17725) 89772 .gms.persistent(12332) 18160 ndroid.systemui(4743) 14608
+12-26 18:57:01.517  1176  1176 D io_stats: !@ Write_top(KB): com.risa.app(17725) 20856 kworker/u16:2(2374) 3320 .android.chrome(13710) 1208
+12-26 18:57:01.759  2812  6029 D CoreBackPreview: Window{7961135 u0 com.risa.app/com.risa.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@8d2d397, mPriority=0, mIsAnimationCallback=true, mOverrideBehavior=0}
+12-26 18:57:01.759  2812  6029 D CoreBackPreview: Window{7961135 u0 com.risa.app/com.risa.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@c064984, mPriority=-1, mIsAnimationCallback=false, mOverrideBehavior=0}
+12-26 18:57:01.760  2812  6029 D CoreBackPreview: Window{7961135 u0 com.risa.app/com.risa.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@92bb56d, mPriority=0, mIsAnimationCallback=true, mOverrideBehavior=0}
+12-26 18:57:01.970  2812  8483 D CoreBackPreview: Window{7961135 u0 com.risa.app/com.risa.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@c894ab, mPriority=-1, mIsAnimationCallback=false, mOverrideBehavior=0}
+12-26 18:57:02.163  2812  4617 D SGM:GameManager: identifyGamePackage. com.risa.app, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.SemGameManager.isGamePackage(SemGameManager.java:106)
+12-26 18:57:02.163  2812  4617 D SGM:SemGameManager: isGamePackage(), pkgName=com.risa.app, ret=false
+12-26 18:57:03.077  2812  4712 I Pageboost: db create : CREATE TABLE IF NOT EXISTS comrisaapp (FILENAME TEXT, OFFSET INTEGER, SIZE INTEGER, FORVRAMDISK INTEGER, BITMAP BLOB, unique (FILENAME, OFFSET) );
+12-26 18:57:03.083  2812  4712 I Pageboost: db create : CREATE TABLE IF NOT EXISTS comrisaapp (FILENAME TEXT, OFFSET INTEGER, SIZE INTEGER, FORVRAMDISK INTEGER, BITMAP BLOB, unique (FILENAME, OFFSET) );
+12-26 18:57:03.155  2812  4712 I Pageboost: db update :com.risa.app ret 1
+12-26 18:57:03.191  2812  4712 I Pageboost: memUsage collected : 240168 60652 26928 for com.risa.app 17725
+12-26 18:57:04.012  2812  8608 D CoreBackPreview: Window{7961135 u0 com.risa.app/com.risa.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@75fafb9, mPriority=0, mIsAnimationCallback=true, mOverrideBehavior=0}
+12-26 18:57:05.178  2812  4617 D SGM:GameManager: identifyGamePackage. com.risa.app, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.SemGameManager.isGamePackage(SemGameManager.java:106)
+12-26 18:57:05.178  2812  4617 D SGM:SemGameManager: isGamePackage(), pkgName=com.risa.app, ret=false
+12-26 18:57:05.519  1176  1176 D io_stats: !@ Read_top(KB): kworker/u16:8(21553) 29008 kworker/u16:2(2374) 25348 com.risa.app(17725) 14804
+12-26 18:57:05.519  1176  1176 D io_stats: !@ Write_top(KB): kworker/u16:3(16099) 60960 com.risa.app(17725) 54916 kworker/u16:0(27360) 39168
+12-26 18:57:08.188  2812  4617 D SGM:GameManager: identifyGamePackage. com.risa.app, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.SemGameManager.isGamePackage(SemGameManager.java:106)
+12-26 18:57:08.188  2812  4617 D SGM:SemGameManager: isGamePackage(), pkgName=com.risa.app, ret=false
+12-26 18:57:09.521  1176  1176 D io_stats: !@ Write_top(KB): com.risa.app(17725) 74732 kworker/u16:2(2374) 7068 mobile.tuesdays(6765) 16
+12-26 18:57:11.204  2812  4617 D SGM:GameManager: identifyGamePackage. com.risa.app, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.SemGameManager.isGamePackage(SemGameManager.java:106)
+12-26 18:57:11.204  2812  4617 D SGM:SemGameManager: isGamePackage(), pkgName=com.risa.app, ret=false
+12-26 18:57:13.523  1176  1176 D io_stats: !@ Write_top(KB): com.risa.app(17725) 71548 kworker/u16:3(16099) 668 kworker/u16:8(21553) 20
+12-26 18:57:14.216  2812  4617 D SGM:GameManager: identifyGamePackage. com.risa.app, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.SemGameManager.isGamePackage(SemGameManager.java:106)
+12-26 18:57:14.216  2812  4617 D SGM:SemGameManager: isGamePackage(), pkgName=com.risa.app, ret=false
+12-26 18:57:16.859  2812  8608 D CoreBackPreview: startBackNavigation currentTask=Task{2efebf3 #21285 type=standard I=com.risa.app/.MainActivity}, topRunningActivity=ActivityRecord{81368132 u0 com.risa.app/.MainActivity t21285}, callbackInfo=OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@75fafb9, mPriority=0, mIsAnimationCallback=true, mOverrideBehavior=0}, currentFocus=Window{7961135 u0 com.risa.app/com.risa.app.MainActivity}
+12-26 18:57:16.941  2812  8608 D CoreBackPreview: Window{7961135 u0 com.risa.app/com.risa.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@c3f9e22, mPriority=-1, mIsAnimationCallback=false, mOverrideBehavior=0}
+12-26 18:57:16.942  2812  8608 D CoreBackPreview: Window{7961135 u0 com.risa.app/com.risa.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@990e0b3, mPriority=0, mIsAnimationCallback=true, mOverrideBehavior=0}
+12-26 18:57:16.943  2812  8608 D CoreBackPreview: Window{7961135 u0 com.risa.app/com.risa.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@4986670, mPriority=-1, mIsAnimationCallback=false, mOverrideBehavior=0}
+12-26 18:57:17.224  2812  4617 D SGM:GameManager: identifyGamePackage. com.risa.app, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.SemGameManager.isGamePackage(SemGameManager.java:106)
+12-26 18:57:17.224  2812  4617 D SGM:SemGameManager: isGamePackage(), pkgName=com.risa.app, ret=false
+12-26 18:57:17.237  2812  6029 D CoreBackPreview: Window{7961135 u0 com.risa.app/com.risa.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@1ad2359, mPriority=0, mIsAnimationCallback=true, mOverrideBehavior=0}
+12-26 18:57:17.525  1176  1176 D io_stats: !@ Write_top(KB): com.risa.app(17725) 44148 kworker/u16:3(16099) 20696 kworker/u16:8(21553) 12212
+12-26 18:57:20.227  2812  4617 D SGM:GameManager: identifyGamePackage. com.risa.app, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.SemGameManager.isGamePackage(SemGameManager.java:106)
+12-26 18:57:20.227  2812  4617 D SGM:SemGameManager: isGamePackage(), pkgName=com.risa.app, ret=false
+12-26 18:57:21.528  1176  1176 D io_stats: !@ Write_top(KB): com.risa.app(17725) 35312 kworker/u16:8(21553) 34488 kworker/u16:0(27360) 26728
+12-26 18:57:23.258  2812  4617 D SGM:GameManager: identifyGamePackage. com.risa.app, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.SemGameManager.isGamePackage(SemGameManager.java:106)
+12-26 18:57:23.258  2812  4617 D SGM:SemGameManager: isGamePackage(), pkgName=com.risa.app, ret=false
+12-26 18:57:25.529  1176  1176 D io_stats: !@ Write_top(KB): kworker/u16:0(27360) 43852 com.risa.app(17725) 33332 kworker/u16:2(2374) 5264
+12-26 18:57:26.273  2812  4617 D SGM:GameManager: identifyGamePackage. com.risa.app, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.SemGameManager.isGamePackage(SemGameManager.java:106)
+12-26 18:57:26.273  2812  4617 D SGM:SemGameManager: isGamePackage(), pkgName=com.risa.app, ret=false
+12-26 18:57:29.275  2812  4617 D SGM:GameManager: identifyGamePackage. com.risa.app, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.SemGameManager.isGamePackage(SemGameManager.java:106)
+12-26 18:57:29.275  2812  4617 D SGM:SemGameManager: isGamePackage(), pkgName=com.risa.app, ret=false
+12-26 18:57:29.530  1176  1176 D io_stats: !@ Write_top(KB): com.risa.app(17725) 44680 kworker/u16:3(16099) 10164 kworker/u16:2(2374) 16
+12-26 18:57:32.287  2812  4617 D SGM:GameManager: identifyGamePackage. com.risa.app, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.SemGameManager.isGamePackage(SemGameManager.java:106)
+12-26 18:57:32.287  2812  4617 D SGM:SemGameManager: isGamePackage(), pkgName=com.risa.app, ret=false
+12-26 18:57:33.532  1176  1176 D io_stats: !@ Read_top(KB): com.risa.app(17725) 10636 kworker/u16:3(16099) 512 rdash.driverapp(4350) 508
+12-26 18:57:33.532  1176  1176 D io_stats: !@ Write_top(KB): com.risa.app(17725) 64816 kworker/u16:3(16099) 4612 f2fs_ckpt-254:6(1290) 356
+12-26 18:57:35.309  2812  4617 D SGM:GameManager: identifyGamePackage. com.risa.app, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.SemGameManager.isGamePackage(SemGameManager.java:106)
+12-26 18:57:35.310  2812  4617 D SGM:SemGameManager: isGamePackage(), pkgName=com.risa.app, ret=false
+12-26 18:57:37.533  1176  1176 D io_stats: !@ Write_top(KB): com.risa.app(17725) 45288 kworker/u16:0(27360) 588 sait.sohservice(29486) 36
+12-26 18:57:38.306  2812  4617 D SGM:GameManager: identifyGamePackage. com.risa.app, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.SemGameManager.isGamePackage(SemGameManager.java:106)
+12-26 18:57:38.306  2812  4617 D SGM:SemGameManager: isGamePackage(), pkgName=com.risa.app, ret=false
+12-26 18:57:41.331  2812  4617 D SGM:GameManager: identifyGamePackage. com.risa.app, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.SemGameManager.isGamePackage(SemGameManager.java:106)
+12-26 18:57:41.332  2812  4617 D SGM:SemGameManager: isGamePackage(), pkgName=com.risa.app, ret=false
+12-26 18:57:41.536  1176  1176 D io_stats: !@ Write_top(KB): com.risa.app(17725) 18700 kworker/u16:2(2374) 3716 jbd2/sda9-8(1164) 24
+12-26 18:57:44.362  2812  4617 D SGM:GameManager: identifyGamePackage. com.risa.app, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.SemGameManager.isGamePackage(SemGameManager.java:106)
+12-26 18:57:44.363  2812  4617 D SGM:SemGameManager: isGamePackage(), pkgName=com.risa.app, ret=false
+12-26 18:57:45.537  1176  1176 D io_stats: !@ Read_top(KB): com.risa.app(17725) 15372 kworker/u16:8(21553) 264 system_server(2812) 220
+12-26 18:57:47.374  2812  4617 D SGM:GameManager: identifyGamePackage. com.risa.app, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.SemGameManager.isGamePackage(SemGameManager.java:106)
+12-26 18:57:47.374  2812  4617 D SGM:SemGameManager: isGamePackage(), pkgName=com.risa.app, ret=false
+12-26 18:57:49.540  1176  1176 D io_stats: !@ Write_top(KB): kworker/u16:1(21549) 21900 com.risa.app(17725) 17580 mobile.tuesdays(6765) 16
+12-26 18:57:50.411  2812  4617 D SGM:GameManager: identifyGamePackage. com.risa.app, mCurrentUserId: 0, callingMethodInfo: com.samsung.android.game.SemGameManager.isGamePackage(SemGameManager.java:106)
+12-26 18:57:50.411  2812  4617 D SGM:SemGameManager: isGamePackage(), pkgName=com.risa.app, ret=false
+12-26 18:57:53.054 17725 18189 E AndroidRuntime: FATAL EXCEPTION: flutter-worker-2
+12-26 18:57:53.054 17725 18189 E AndroidRuntime: Process: com.risa.app, PID: 17725
+12-26 18:57:53.054 17725 18189 E AndroidRuntime: 	at io.flutter.plugin.common.StandardMessageCodec.readBytes(StandardMessageCodec.java:320)
+12-26 18:57:53.054 17725 18189 E AndroidRuntime: 	at io.flutter.plugin.common.StandardMessageCodec.readValueOfType(StandardMessageCodec.java:380)
+12-26 18:57:53.054 17725 18189 E AndroidRuntime: 	at io.flutter.plugin.common.StandardMessageCodec.readValue(StandardMessageCodec.java:340)
+12-26 18:57:53.054 17725 18189 E AndroidRuntime: 	at io.flutter.plugin.common.StandardMessageCodec.readValueOfType(StandardMessageCodec.java:424)
+12-26 18:57:53.054 17725 18189 E AndroidRuntime: 	at io.flutter.plugin.common.StandardMessageCodec.readValue(StandardMessageCodec.java:340)
+12-26 18:57:53.054 17725 18189 E AndroidRuntime: 	at io.flutter.plugin.common.StandardMessageCodec.readValueOfType(StandardMessageCodec.java:434)
+12-26 18:57:53.054 17725 18189 E AndroidRuntime: 	at io.flutter.plugin.common.StandardMessageCodec.readValue(StandardMessageCodec.java:340)
+12-26 18:57:53.054 17725 18189 E AndroidRuntime: 	at io.flutter.plugin.common.StandardMessageCodec.readValueOfType(StandardMessageCodec.java:424)
+12-26 18:57:53.054 17725 18189 E AndroidRuntime: 	at io.flutter.plugin.common.StandardMessageCodec.readValue(StandardMessageCodec.java:340)
+12-26 18:57:53.054 17725 18189 E AndroidRuntime: 	at io.flutter.plugin.common.StandardMessageCodec.readValueOfType(StandardMessageCodec.java:434)
+12-26 18:57:53.054 17725 18189 E AndroidRuntime: 	at io.flutter.plugin.common.StandardMessageCodec.readValue(StandardMessageCodec.java:340)
+12-26 18:57:53.054 17725 18189 E AndroidRuntime: 	at io.flutter.plugin.common.StandardMethodCodec.decodeMethodCall(StandardMethodCodec.java:49)
+12-26 18:57:53.054 17725 18189 E AndroidRuntime: 	at io.flutter.plugin.common.MethodChannel$IncomingMethodCallHandler.onMessage(MethodChannel.java:265)
+12-26 18:57:53.054 17725 18189 E AndroidRuntime: 	at io.flutter.embedding.engine.dart.DartMessenger.invokeHandler(DartMessenger.java:292)
+12-26 18:57:53.054 17725 18189 E AndroidRuntime: 	at io.flutter.embedding.engine.dart.DartMessenger.lambda$dispatchMessageToQueue$0$io-flutter-embedding-engine-dart-DartMessenger(DartMessenger.java:319)
+12-26 18:57:53.054 17725 18189 E AndroidRuntime: 	at io.flutter.embedding.engine.dart.DartMessenger$$ExternalSyntheticLambda0.run(D8$$SyntheticClass:0)
+12-26 18:57:53.054 17725 18189 E AndroidRuntime: 	at io.flutter.embedding.engine.dart.DartMessenger$SerialTaskQueue.flush(DartMessenger.java:173)
+12-26 18:57:53.054 17725 18189 E AndroidRuntime: 	at io.flutter.embedding.engine.dart.DartMessenger$SerialTaskQueue.lambda$dispatch$0$io-flutter-embedding-engine-dart-DartMessenger$SerialTaskQueue(DartMessenger.java:163)
+12-26 18:57:53.054 17725 18189 E AndroidRuntime: 	at io.flutter.embedding.engine.dart.DartMessenger$SerialTaskQueue$$ExternalSyntheticLambda0.run(D8$$SyntheticClass:0)
+12-26 18:57:53.071  2812 18238 W ActivityManager: crash : com.risa.app,11278
+12-26 18:57:53.072  2812  5188 W ActivityTaskManager:   Force finishing activity com.risa.app/.MainActivity
+12-26 18:57:53.076  2812  5188 V WindowManager: Collecting in transition 5701: Task{2efebf3 #21285 type=standard I=com.risa.app/.MainActivity}, caller=com.android.server.wm.Transition.collectExistenceChange:40 com.android.server.wm.Transition.collectClose:7 com.android.server.wm.ActivityRecord.finishIfPossible:50 com.android.server.wm.ActivityRecord.finishIfPossible:1 com.android.server.wm.RootWindowContainer$$ExternalSyntheticLambda34.accept:179 
+12-26 18:57:53.076  2812  5188 D WindowManager: prepareSync <SYNC_STATE_WAITING_FOR_DRAW>, mPrepareSyncSeqId=0, win=Window{7961135 u0 com.risa.app/com.risa.app.MainActivity}
+12-26 18:57:53.077  4743  4800 V WindowManagerShell: Transition requested (#5701): android.os.BinderProxy@93267f3 TransitionRequestInfo { type = CLOSE, triggerTask = TaskInfo{userId=0 taskId=21285 effectiveUid=11278 displayId=0 isRunning=true baseIntent=Intent { act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x34000000 pkg=com.risa.app cmp=com.risa.app/.MainActivity } baseActivity=ComponentInfo{com.risa.app/com.risa.app.MainActivity} topActivity=ComponentInfo{com.risa.app/com.risa.app.MainActivity} origActivity=null realActivity=ComponentInfo{com.risa.app/com.risa.app.MainActivity} numActivities=1 lastActiveTime=321136204 supportsMultiWindow=true resizeMode=2 isResizeable=true minWidth=-1 minHeight=-1 maxWidth=-1 maxHeight=-1 defaultMinSize=220 desktopDefa
