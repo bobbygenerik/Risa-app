@@ -8,7 +8,6 @@ import 'package:iptv_player/services/opensubtitles_service.dart';
 import 'package:iptv_player/services/real_debrid_service.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/services/backup_service.dart';
-import 'package:iptv_player/services/whisper_model_service.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'dart:convert';
 import 'package:iptv_player/utils/app_theme.dart';
@@ -928,47 +927,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       '\\r: $crCount',
       'has #EXTM3U: $hasM3uHeader',
     ].join('\n');
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.darkBackground,
-        title: const Text('Playlist Response Preview'),
-        content: ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: 360),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  diagnostics,
-                  style: const TextStyle(
-                    color: AppTheme.textSecondary,
-                    fontFamily: 'monospace',
-                    fontSize: 11,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const Divider(color: AppTheme.divider),
-                const SizedBox(height: 12),
-                Text(
-                  truncatedPreview,
-                  style: const TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontFamily: 'monospace',
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => _PlaylistResponsePreviewScreen(
+          diagnostics: diagnostics,
+          preview: truncatedPreview,
         ),
-        actions: [
-          BrandSecondaryButton(
-            label: 'Close',
-            onPressed: () => Navigator.pop(context),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          ),
-        ],
       ),
     );
   }
@@ -1401,43 +1365,84 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showLanguageModelsDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => const AlertDialog(
-        backgroundColor: AppTheme.darkBackground,
-        title:
-            Text('Translation Models', style: TextStyle(color: Colors.white)),
-        content: Text('Model management dialog placeholder',
-            style: TextStyle(color: Colors.white70)),
-      ),
-    );
+    context.push('/ai-models');
   }
 
   void _showSpeechModelsDialog() {
-    // Re-implement or call existing dialog logic if needed
-    // For brevity in this massive refactor, triggering the same logic as before
-    // Ideally this would reuse the _buildWhisperModelTile logic from previous version
-    // But simplifying for the rewrite to fit in one go.
-    showDialog(
-        context: context,
-        builder: (context) => Consumer<WhisperModelService>(
-              builder: (context, whisperService, _) => AlertDialog(
-                backgroundColor: AppTheme.darkBackground,
-                title: const Text('Speech Recognition Models',
-                    style: TextStyle(color: AppTheme.textPrimary)),
-                content: const Text('Manage models here',
-                    style: TextStyle(color: Colors.white70)),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Close'))
-                ],
-              ),
-            ));
+    context.push('/ai-models');
   }
 
   void _showManagePlaylistsDialog() {
     // Use the unified playlist manager that reads the new saved_playlists store
     context.push('/playlist-manager');
+  }
+}
+
+class _PlaylistResponsePreviewScreen extends StatelessWidget {
+  final String diagnostics;
+  final String preview;
+
+  const _PlaylistResponsePreviewScreen({
+    required this.diagnostics,
+    required this.preview,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.darkBackground,
+      appBar: AppBar(
+        title: const Text('Playlist Response Preview'),
+        backgroundColor: Colors.white.withAlpha((0.08 * 255).round()),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        children: [
+          const SettingsSectionHeader(
+            title: 'Diagnostics',
+            subtitle: 'Response summary and raw preview',
+          ),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.black.withAlpha((0.25 * 255).round()),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white12),
+            ),
+            child: Text(
+              diagnostics,
+              style: const TextStyle(
+                color: AppTheme.textSecondary,
+                fontFamily: 'monospace',
+                fontSize: 12,
+                height: 1.4,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          const SettingsSectionHeader(
+            title: 'Preview',
+            subtitle: 'First part of the response payload',
+          ),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.black.withAlpha((0.2 * 255).round()),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white12),
+            ),
+            child: Text(
+              preview,
+              style: const TextStyle(
+                color: AppTheme.textPrimary,
+                fontFamily: 'monospace',
+                fontSize: 12,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
