@@ -52,6 +52,7 @@ Future<void> clearPlaylistCache() async {
   // Remove SharedPreferences cache
   await prefs.remove('cached_playlist');
   await prefs.remove('cache_timestamp');
+  await prefs.remove('playlist_cache_version');
   // Remove file-based cache
   final cacheFilePath =
       prefs.getString(ChannelProvider._playlistCacheFilePathKey);
@@ -62,12 +63,19 @@ Future<void> clearPlaylistCache() async {
     }
     await prefs.remove(ChannelProvider._playlistCacheFilePathKey);
   }
+  // Remove JSON preview cache
+  final dir = await getApplicationDocumentsDirectory();
+  final jsonCacheFile = File('${dir.path}/parsed_playlist_cache.json');
+  if (await jsonCacheFile.exists()) {
+    await jsonCacheFile.delete();
+  }
   debugLog('ChannelProvider: Playlist cache cleared');
 }
 
 class ChannelProvider with ChangeNotifier {
   static const String _playlistCacheFileName = 'playlist_cache.m3u';
   static const String _playlistCacheFilePathKey = 'cached_playlist_file';
+  static const int _playlistCacheVersion = 2;
   static const int _vodInitialPageSize = 500;
   // Debug preview capture size (unused after refactor)
 
@@ -1396,6 +1404,13 @@ class ChannelProvider with ChangeNotifier {
       }
 
       // Load from file-based cache (handles large playlists via streaming)
+      final cacheVersion =
+          prefs.getInt('playlist_cache_version') ?? 0;
+      if (cacheVersion != _playlistCacheVersion) {
+        debugLog(
+            'ChannelProvider: Cache version changed ($cacheVersion -> $_playlistCacheVersion), clearing caches');
+        await clearPlaylistCache();
+      }
       final cacheTimestamp = prefs.getInt('cache_timestamp');
       final cacheFilePath = prefs.getString(_playlistCacheFilePathKey);
       final cacheAge = cacheTimestamp != null
@@ -2010,6 +2025,7 @@ class ChannelProvider with ChangeNotifier {
       if (_channelMaps.isNotEmpty) {
         await prefs.setString(_playlistCacheFilePathKey, cacheFile.path);
         await prefs.setInt('cache_timestamp', now);
+        await prefs.setInt('playlist_cache_version', _playlistCacheVersion);
       }
 
       unawaited(_saveJsonCache(parsed));
@@ -2224,6 +2240,7 @@ class ChannelProvider with ChangeNotifier {
         await tempFile.rename(cacheFile.path);
         await prefs.setString(_playlistCacheFilePathKey, cacheFile.path);
         await prefs.setInt('cache_timestamp', now);
+        await prefs.setInt('playlist_cache_version', _playlistCacheVersion);
         await prefs.remove('cached_playlist');
         debugLog(
             'ChannelProvider: Playlist cached to file (${cacheFile.path}, $totalBytes bytes)');
