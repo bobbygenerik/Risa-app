@@ -389,7 +389,7 @@ class _SeriesScreenState extends State<SeriesScreen>
             _curatedSeries.isNotEmpty ? _curatedSeries : series;
         if (_featuredIndex >= displaySeries.length) _featuredIndex = 0;
         final featured = displaySeries[_featuredIndex];
-        _ensureHeroDetails(featured);
+        unawaited(_ensureHeroDetails(featured));
 
         return _buildFullScreenHero(
           context,
@@ -402,41 +402,38 @@ class _SeriesScreenState extends State<SeriesScreen>
     );
   }
 
-  void _ensureHeroDetails(Content item) {
+  Future<void> _ensureHeroDetails(Content item) async {
     if (!ServiceValidator.isTmdbAvailable) return;
     if (_heroDetailsRequests.contains(item.id)) return;
     if (item.description != null && item.description!.isNotEmpty) return;
     _heroDetailsRequests.add(item.id);
 
-    unawaited(() async {
-      try {
-        final details = await TMDBService.getTVDetails(
-          item.title,
-          year: item.year,
-        );
-        if (details == null) return;
-        final patched = item.copyWith(
-          description: item.description ?? details['overview'],
-          rating: item.rating ?? details['rating'],
-          genres: item.genres ?? details['genres'],
-          imageUrl: item.imageUrl ?? details['poster'],
-          backdropUrl: item.backdropUrl ?? details['backdrop'],
-        );
-        if (!mounted) return;
-        final provider = Provider.of<ContentProvider>(context, listen: false);
-        final updatedSeries = provider.series
-            .map((s) => s.id == item.id ? patched : s)
-            .toList();
-        provider.loadSeries(updatedSeries);
-        if (_curatedSeries.isNotEmpty) {
-          setState(() {
-            _curatedSeries = _curatedSeries
-                .map((s) => s.id == item.id ? patched : s)
-                .toList();
-          });
-        }
-      } catch (_) {}
-    });
+    try {
+      final details = await TMDBService.getTVDetails(
+        item.title,
+        year: item.year,
+      );
+      if (details == null) return;
+      final patched = item.copyWith(
+        description: item.description ?? details['overview'],
+        rating: item.rating ?? details['rating'],
+        genres: item.genres ?? details['genres'],
+        imageUrl: item.imageUrl ?? details['poster'],
+        backdropUrl: item.backdropUrl ?? details['backdrop'],
+      );
+      if (!mounted) return;
+      final provider = Provider.of<ContentProvider>(context, listen: false);
+      final updatedSeries =
+          provider.series.map((s) => s.id == item.id ? patched : s).toList();
+      provider.loadSeries(updatedSeries);
+      if (_curatedSeries.isNotEmpty) {
+        setState(() {
+          _curatedSeries = _curatedSeries
+              .map((s) => s.id == item.id ? patched : s)
+              .toList();
+        });
+      }
+    } catch (_) {}
   }
 
   Widget _buildEmptyState(BuildContext context) {

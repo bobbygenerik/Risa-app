@@ -125,22 +125,17 @@ class _SettingsLayoutState extends State<SettingsLayout> {
                         ),
                       ),
 
-                      // Vertically center menu items to match main sidebar layout
+                      // Allow menu to scroll when the keyboard is visible
                       Expanded(
-                        child: Column(
-                          children: [
-                            const Spacer(),
-                            ListView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: widget.categories.length,
-                              padding: const EdgeInsets.symmetric(horizontal: 24),
-                              itemBuilder: (context, index) {
-                                return _buildMenuItem(index);
-                              },
-                            ),
-                            const Spacer(),
-                          ],
+                        child: ListView.builder(
+                          itemCount: widget.categories.length,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 16,
+                          ),
+                          itemBuilder: (context, index) {
+                            return _buildMenuItem(index);
+                          },
                         ),
                       ),
                     ],

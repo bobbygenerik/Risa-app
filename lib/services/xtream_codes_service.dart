@@ -63,6 +63,51 @@ class XtreamCodesService {
     _client.close();
   }
 
+  int? _parseCount(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    return null;
+  }
+
+  /// Fetch lightweight account info counts (channels/movies/series) if provided.
+  Future<Map<String, int>?> getPanelCounts() async {
+    try {
+      final url = '$_apiBase?username=$username&password=$password';
+      final response = await _makeRequest(url);
+      if (response.statusCode != 200) return null;
+      final data = json.decode(response.body) as Map<String, dynamic>;
+
+      final userInfo = data['user_info'] as Map<String, dynamic>? ?? {};
+      final serverInfo = data['server_info'] as Map<String, dynamic>? ?? {};
+
+      final channels = _parseCount(userInfo['available_channels']) ??
+          _parseCount(serverInfo['total_channels']) ??
+          _parseCount(data['available_channels']);
+      final movies = _parseCount(userInfo['available_vod']) ??
+          _parseCount(userInfo['total_movies']) ??
+          _parseCount(serverInfo['total_movies']) ??
+          _parseCount(data['total_movies']);
+      final series = _parseCount(userInfo['available_series']) ??
+          _parseCount(userInfo['total_series']) ??
+          _parseCount(serverInfo['total_series']) ??
+          _parseCount(data['total_series']);
+
+      if (channels == null && movies == null && series == null) {
+        return null;
+      }
+      return {
+        if (channels != null) 'channels': channels,
+        if (movies != null) 'movies': movies,
+        if (series != null) 'series': series,
+      };
+    } catch (e) {
+      debugLog('XtreamCodes: Error fetching panel counts: $e');
+      return null;
+    }
+  }
+
   /// Base API endpoint for Xtream Codes (ensures the path is correct)
   String get _apiBase {
     final trimmed = serverUrl.endsWith('/')

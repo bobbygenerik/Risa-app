@@ -293,7 +293,7 @@ class _MoviesScreenState extends State<MoviesScreen>
             _curatedMovies.isNotEmpty ? _curatedMovies : movies;
         if (_featuredIndex >= displayMovies.length) _featuredIndex = 0;
         final featured = displayMovies[_featuredIndex];
-        _ensureHeroDetails(featured);
+        unawaited(_ensureHeroDetails(featured));
 
         return _buildFullScreenHero(
           context,
@@ -308,41 +308,38 @@ class _MoviesScreenState extends State<MoviesScreen>
     );
   }
 
-  void _ensureHeroDetails(Content item) {
+  Future<void> _ensureHeroDetails(Content item) async {
     if (!ServiceValidator.isTmdbAvailable) return;
     if (_heroDetailsRequests.contains(item.id)) return;
     if (item.description != null && item.description!.isNotEmpty) return;
     _heroDetailsRequests.add(item.id);
 
-    unawaited(() async {
-      try {
-        final details = await TMDBService.getMovieDetails(
-          item.title,
-          year: item.year,
-        );
-        if (details == null) return;
-        final patched = item.copyWith(
-          description: item.description ?? details['overview'],
-          rating: item.rating ?? details['rating'],
-          genres: item.genres ?? details['genres'],
-          imageUrl: item.imageUrl ?? details['poster'],
-          backdropUrl: item.backdropUrl ?? details['backdrop'],
-        );
-        if (!mounted) return;
-        final provider = Provider.of<ContentProvider>(context, listen: false);
-        final updatedMovies = provider.movies
-            .map((m) => m.id == item.id ? patched : m)
-            .toList();
-        provider.loadMovies(updatedMovies);
-        if (_curatedMovies.isNotEmpty) {
-          setState(() {
-            _curatedMovies = _curatedMovies
-                .map((m) => m.id == item.id ? patched : m)
-                .toList();
-          });
-        }
-      } catch (_) {}
-    });
+    try {
+      final details = await TMDBService.getMovieDetails(
+        item.title,
+        year: item.year,
+      );
+      if (details == null) return;
+      final patched = item.copyWith(
+        description: item.description ?? details['overview'],
+        rating: item.rating ?? details['rating'],
+        genres: item.genres ?? details['genres'],
+        imageUrl: item.imageUrl ?? details['poster'],
+        backdropUrl: item.backdropUrl ?? details['backdrop'],
+      );
+      if (!mounted) return;
+      final provider = Provider.of<ContentProvider>(context, listen: false);
+      final updatedMovies =
+          provider.movies.map((m) => m.id == item.id ? patched : m).toList();
+      provider.loadMovies(updatedMovies);
+      if (_curatedMovies.isNotEmpty) {
+        setState(() {
+          _curatedMovies = _curatedMovies
+              .map((m) => m.id == item.id ? patched : m)
+              .toList();
+        });
+      }
+    } catch (_) {}
   }
 
   Widget _buildEmptyState(BuildContext context) {

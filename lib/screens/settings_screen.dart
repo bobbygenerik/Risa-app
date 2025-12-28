@@ -15,6 +15,7 @@ import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 
 import 'package:iptv_player/widgets/settings_layout.dart';
+import 'package:iptv_player/widgets/compat_pop_scope.dart';
 import 'package:iptv_player/widgets/settings_tile_widgets.dart';
 import 'package:iptv_player/providers/settings_provider.dart';
 import 'package:provider/provider.dart';
@@ -22,6 +23,7 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:iptv_player/models/saved_playlist.dart';
+import 'package:iptv_player/services/xtream_codes_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -96,6 +98,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final FocusNode _playbackFirstFocusNode = FocusNode();
   final FocusNode _aiFirstFocusNode = FocusNode();
   final ScrollController _contentScrollController = ScrollController();
+  Map<String, int>? _xtreamPanelCounts;
+  DateTime? _xtreamPanelCountsFetchedAt;
+  bool _xtreamPanelCountsInFlight = false;
 
   @override
   void initState() {
@@ -208,19 +213,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return SettingsLayout(
-      autoFocusOnShow: true,
-      selectedIndex: _selectedIndex,
-      onCategorySelected: _handleCategorySelected,
-      onBackToHome: () => context.go('/home'),
-      onRequestContentFocus: _requestContentFocus,
-      categories: const [
-        SettingsCategory(title: 'General', icon: Icons.settings),
-        SettingsCategory(title: 'Playback', icon: Icons.play_circle),
-        SettingsCategory(title: 'AI Features', icon: Icons.auto_awesome),
-        SettingsCategory(title: 'Recordings', icon: Icons.fiber_manual_record),
-      ],
-      content: _buildActiveContent(),
+    return CompatPopScope(
+      onWillPop: () async {
+        context.go('/home');
+        return false;
+      },
+      child: SettingsLayout(
+        autoFocusOnShow: true,
+        selectedIndex: _selectedIndex,
+        onCategorySelected: _handleCategorySelected,
+        onBackToHome: () => context.go('/home'),
+        onRequestContentFocus: _requestContentFocus,
+        categories: const [
+          SettingsCategory(title: 'General', icon: Icons.settings),
+          SettingsCategory(title: 'Playback', icon: Icons.play_circle),
+          SettingsCategory(title: 'AI Features', icon: Icons.auto_awesome),
+          SettingsCategory(title: 'Recordings', icon: Icons.fiber_manual_record),
+        ],
+        content: _buildActiveContent(),
+      ),
     );
   }
 
@@ -284,22 +295,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
         // Playlist Status
         Consumer2<ChannelProvider, ContentProvider>(
           builder: (context, channelProvider, contentProvider, _) {
-            return FutureBuilder<List<int>>(
+            return FutureBuilder<List<dynamic>>(
               future: Future.wait([
                 channelProvider.getChannelCountAsync(),
                 channelProvider.getMoviesCountAsync(),
                 channelProvider.getSeriesCountAsync(),
+                _fetchXtreamPanelCounts(),
               ]),
               builder: (context, snapshot) {
-                final channels = snapshot.data != null
-                    ? snapshot.data![0]
+                final data = snapshot.data;
+                final rawChannels = data != null
+                    ? data[0] as int
                     : channelProvider.channelCount;
-                final movies = snapshot.data != null
-                    ? snapshot.data![1]
+                final rawMovies = data != null
+                    ? data[1] as int
                     : contentProvider.movies.length;
-                final series = snapshot.data != null
-                    ? snapshot.data![2]
+                final rawSeries = data != null
+                    ? data[2] as int
                     : contentProvider.series.length;
+                final xtreamCounts =
+                    data != null ? data[3] as Map<String, int>? : null;
+
+                final channels =
+                    xtreamCounts?['channels'] ?? rawChannels;
+                final movies = xtreamCounts?['movies'] ?? rawMovies;
+                final series = xtreamCounts?['series'] ?? rawSeries;
 
                 final hasChannels = channels > 0;
                 final hasContent = hasChannels || movies > 0 || series > 0;
@@ -658,6 +678,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ],
     );
+  }
+
+  Future<Map<String, int>?> _fetchXtreamPanelCounts() async {
+    final server = _xtreamServerController.text.trim();
+    final username = _xtreamUsernameController.text.trim();
+    final password = _xtreamPasswordController.text.trim();
+    if (server.isEmpty || username.isEmpty || password.isEmpty) {
+      return null;
+    }
+
+    if (_xtreamPanelCounts != null &&
+        _xtreamPanelCountsFetchedAt != null &&
+        DateTime.now().difference(_xtreamPanelCountsFetchedAt!) <
+            const Duration(minutes: 5)) {
+      return _xtreamPanelCounts;
+    }
+
+    if (_xtreamPanelCountsInFlight) return _xtreamPanelCounts;
+    _xtreamPanelCountsInFlight = true;
+
+    try {
+      final service = XtreamCodesService(
+        serverUrl: server,
+        username: username,
+        password: password,
+      );
+      final counts = await service.getPanelCounts();
+      service.dispose();
+      if (counts != null) {
+        _xtreamPanelCounts = counts;
+        _xtreamPanelCountsFetchedAt = DateTime.now();
+      }
+      return counts;
+    } finally {
+      _xtreamPanelCountsInFlight = false;
+    }
   }
 
   Widget _buildPlaybackSettings() {

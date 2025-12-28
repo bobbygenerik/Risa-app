@@ -41,7 +41,9 @@ class HeroInfoBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final compactButtonPadding =
-        const EdgeInsets.symmetric(horizontal: 10, vertical: 6);
+        const EdgeInsets.symmetric(horizontal: 8, vertical: 4);
+    final maxHeight = MediaQuery.of(context).size.height * 0.45;
+    final descriptionMaxHeight = context.spacingXl() * 1.5;
     final titleStyle = AppTypography.heroTitle(context).copyWith(
       shadows: [
         Shadow(
@@ -60,9 +62,10 @@ class HeroInfoBox extends StatelessWidget {
         ),
       ],
     );
-    return Container(
+    return ConstrainedBox(
       constraints: BoxConstraints(
         maxWidth: context.heroInfoWidth(),
+        maxHeight: maxHeight,
       ),
       child: Container(
         padding: EdgeInsets.all(context.spacingSm()),
@@ -88,7 +91,7 @@ class HeroInfoBox extends StatelessWidget {
               Text(
                 title,
                 style: titleStyle,
-                maxLines: 4,
+                maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               ),
 
@@ -107,11 +110,42 @@ class HeroInfoBox extends StatelessWidget {
 
             // Description
             if (description != null && description!.isNotEmpty) ...[
-              Text(
-                description!,
-                style: descriptionStyle,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
+              SizedBox(
+                height: descriptionMaxHeight,
+                child: ClipRect(
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: Text(
+                          description!,
+                          style: descriptionStyle,
+                          softWrap: true,
+                        ),
+                      ),
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        height: context.spacingMd(),
+                        child: IgnorePointer(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  AppTheme.darkBackground
+                                      .withAlpha((0.85 * 255).round()),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
               SizedBox(height: context.spacingMd()),
             ],
@@ -132,9 +166,9 @@ class HeroInfoBox extends StatelessWidget {
 
             // Action Buttons
             Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: Focus(
+                Focus(
                     autofocus: autofocusWatchButton,
                     canRequestFocus: !autofocusWatchButton,
                     skipTraversal: !autofocusWatchButton,
@@ -153,16 +187,14 @@ class HeroInfoBox extends StatelessWidget {
                       icon: Icons.play_arrow_rounded,
                       padding: compactButtonPadding,
                       fontSize: 12,
-                      minHeight: 24,
+                      minHeight: 22,
                       focusNode: primaryButtonFocusNode,
-                      expand: true,
+                      expand: false,
                     ),
                   ),
-                ),
                 if (onMoreInfoPressed != null) ...[
                   SizedBox(width: context.spacingSm()),
-                  Expanded(
-                    child: Focus(
+                  Focus(
                       canRequestFocus: false,
                       skipTraversal: true,
                       onKeyEvent: (node, event) {
@@ -180,12 +212,11 @@ class HeroInfoBox extends StatelessWidget {
                         icon: Icons.info_outline_rounded,
                         padding: compactButtonPadding,
                         fontSize: 12,
-                        minHeight: 24,
+                        minHeight: 22,
                         focusNode: secondaryButtonFocusNode,
-                        expand: true,
+                        expand: false,
                       ),
                     ),
-                  ),
                 ],
                 if (trailing != null) ...[
                   const Spacer(),

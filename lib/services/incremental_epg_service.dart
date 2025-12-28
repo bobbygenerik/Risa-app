@@ -658,8 +658,22 @@ class IncrementalEpgService extends ChangeNotifier {
         if (_allowedChannelIdsNormalized.isNotEmpty &&
             (initialProgramCount == 0 || initialChannelIds.isEmpty)) {
           debugLog(
-              'EPG: Filtered parse returned no data; retrying without channel filter.');
-          parseResult = await parseEpg(<String>{});
+              'EPG: Filtered parse returned no data; scanning channel IDs for targeted fallback.');
+          final scanResult = await compute(_scanEpgChannelIdsInIsolate, {
+            'filePath': file.path,
+          });
+          final normalizedIds =
+              (scanResult['normalizedIds'] as List<dynamic>)
+                  .cast<String>()
+                  .toSet();
+          final targetedAllowed =
+              _allowedChannelIdsNormalized.intersection(normalizedIds);
+          if (targetedAllowed.isNotEmpty) {
+            parseResult = await parseEpg(targetedAllowed);
+          } else {
+            debugLog(
+                'EPG: Targeted fallback found no matching IDs; skipping full parse.');
+          }
         }
 
         _programsByChannel.clear();
@@ -1056,6 +1070,57 @@ class IncrementalEpgService extends ChangeNotifier {
       'programCount': programCount,
       'channelIds': channelIds.toList(),
       'normalizedChannels': normalizedChannels,
+    };
+  }
+
+  static Future<Map<String, dynamic>> _scanEpgChannelIdsInIsolate(
+      Map<String, dynamic> args) async {
+    final filePath = args['filePath'] as String? ?? '';
+    final file = File(filePath);
+    if (!await file.exists()) {
+      throw Exception('EPG cache file not found in isolate');
+    }
+
+    final normalizedIds = <String>{};
+    final channelIds = <String>{};
+
+    try {
+      final stream =
+          file.openRead().transform(const Utf8Decoder(allowMalformed: true));
+      final events = stream.toXmlEvents();
+      await for (final event in events) {
+        if (event is! XmlStartElementEvent) continue;
+        if (event.name.endsWith('channel')) {
+          final id = event.attributes
+              .firstWhere((a) => a.name == 'id',
+                  orElse: () => XmlEventAttribute(
+                      'id', '', XmlAttributeType.DOUBLE_QUOTE))
+              .value;
+          if (id.isNotEmpty) {
+            channelIds.add(id);
+            final normalized = normalizeForFilter(id);
+            if (normalized.isNotEmpty) normalizedIds.add(normalized);
+          }
+        } else if (event.name.endsWith('programme')) {
+          final id = event.attributes
+              .firstWhere((a) => a.name == 'channel',
+                  orElse: () => XmlEventAttribute(
+                      'channel', '', XmlAttributeType.DOUBLE_QUOTE))
+              .value;
+          if (id.isNotEmpty) {
+            channelIds.add(id);
+            final normalized = normalizeForFilter(id);
+            if (normalized.isNotEmpty) normalizedIds.add(normalized);
+          }
+        }
+      }
+    } catch (e) {
+      debugLog('EPG: Channel ID scan failed: $e');
+    }
+
+    return {
+      'channelIds': channelIds.toList(),
+      'normalizedIds': normalizedIds.toList(),
     };
   }
 
