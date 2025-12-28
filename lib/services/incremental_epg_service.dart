@@ -87,6 +87,7 @@ class IncrementalEpgService extends ChangeNotifier {
   Set<String> get availableChannels => _availableChannels;
   int get loadedChannelCount => _loadedChannels.length;
   bool get hasEpgUrl => _epgUrl != null && _epgUrl!.isNotEmpty;
+  String? get currentUrl => _epgUrl;
   int get allowedChannelCount => _allowedChannelCount;
   int get catchupChannelCount => _catchupByNormalizedId.length;
 
@@ -156,7 +157,9 @@ class IncrementalEpgService extends ChangeNotifier {
       debugLog('EPG: Init skipped (in flight)');
       return;
     }
-    if (!forceRefresh) {
+    final allowImmediate =
+        _awaitingAllowedChannels && _allowedChannelIdsNormalized.isNotEmpty;
+    if (!forceRefresh && !allowImmediate) {
       final now = DateTime.now();
       if (_lastInitAttempt != null &&
           now.difference(_lastInitAttempt!).inSeconds < 5) {

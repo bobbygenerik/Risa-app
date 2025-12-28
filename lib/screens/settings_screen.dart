@@ -282,9 +282,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildGeneralSettings() {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     return ListView(
       controller: _contentScrollController,
-      padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
+      padding: EdgeInsets.fromLTRB(48, 24, 48, 24 + bottomInset),
       children: [
         const SettingsSectionHeader(
           title: 'General Settings',
@@ -567,12 +568,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
         SettingsGroup(
           title: 'EPG',
           children: [
-            SettingsActionTile(
-              title: 'Detected EPG URL (from playlist)',
-              subtitle:
-                  _detectedEpgUrl.isNotEmpty ? _detectedEpgUrl : 'None detected',
-              icon: Icons.link,
-              onTap: null,
+            Consumer<IncrementalEpgService>(
+              builder: (context, epgService, _) {
+                final detected = epgService.currentUrl ?? _detectedEpgUrl;
+                return SettingsActionTile(
+                  title: 'Detected EPG URL (from playlist)',
+                  subtitle: detected != null && detected.isNotEmpty
+                      ? detected
+                      : 'None detected',
+                  icon: Icons.link,
+                  onTap: null,
+                );
+              },
             ),
             SettingsActionTile(
               title: 'Manage per-playlist EPG URLs',

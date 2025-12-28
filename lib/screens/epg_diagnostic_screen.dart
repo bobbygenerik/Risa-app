@@ -7,7 +7,6 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
-import 'package:iptv_player/services/local_db_service.dart';
 import 'dart:math' as math;
 
 class EpgDiagnosticScreen extends StatefulWidget {
@@ -21,6 +20,8 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
   Future<Map<String, int>>? _statsFuture;
   int _lastChannelCount = -1;
   int _lastEpgCount = -1;
+  bool _statsInFlight = false;
+  DateTime? _lastRefreshAt;
 
   @override
   void initState() {
@@ -29,13 +30,24 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
   }
 
   void _refreshStats() {
+    if (_statsInFlight) return;
+    final now = DateTime.now();
+    if (_lastRefreshAt != null &&
+        now.difference(_lastRefreshAt!).inMilliseconds < 750) {
+      return;
+    }
+    _lastRefreshAt = now;
     setState(() {
       _statsFuture = _computeStats();
     });
   }
 
-  void _maybeRefreshStats(int channelCount, int epgCount) {
+  void _maybeRefreshStats(
+      int channelCount, int epgCount, bool isEpgBusy, bool isPlaylistBusy) {
     if (channelCount == _lastChannelCount && epgCount == _lastEpgCount) {
+      return;
+    }
+    if (isEpgBusy || isPlaylistBusy) {
       return;
     }
     _lastChannelCount = channelCount;
@@ -46,25 +58,28 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
   }
 
   Future<Map<String, int>> _computeStats() async {
+    _statsInFlight = true;
     try {
       final channelProvider = context.read<ChannelProvider>();
       final epgService = context.read<IncrementalEpgService>();
-      final db = LocalDbService.instance;
-      await db.init();
 
       final totalChannels = await channelProvider.getChannelCountAsync();
       if (totalChannels == 0) {
         return {'matched': 0, 'total': 0, 'scanned': 0, 'epgChannels': 0};
       }
 
-      int mappingCount = 0;
-      try {
-        mappingCount = await db.mappingCount();
-      } catch (_) {}
       final epgAvailable = epgService.availableChannels.length;
 
-      // If DB isn't ready or mappings are empty, estimate matches in-memory
-      if (mappingCount == 0 || epgAvailable == 0) {
+      int mappingCount = 0;
+      // Estimate matches in-memory to avoid DB locks during heavy parsing
+      if (epgAvailable == 0) {
+        return {
+          'matched': 0,
+          'scanned': totalChannels,
+          'total': totalChannels,
+          'epgChannels': epgAvailable,
+        };
+      } else {
         final sampleSize = math.min(200, totalChannels);
         try {
           final sample = await channelProvider.getChannelsPage(
@@ -99,6 +114,8 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
     } catch (e, st) {
       debugLog('EPG Diagnostic: computeStats failed: $e\n$st');
       return {'matched': 0, 'total': 0, 'scanned': 0, 'epgChannels': 0};
+    } finally {
+      _statsInFlight = false;
     }
   }
 
@@ -124,7 +141,11 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
         builder: (context, epgService, channelProvider, _) {
           final totalChannels = channelProvider.channelCount;
           final epgCount = epgService.availableChannels.length;
-          _maybeRefreshStats(totalChannels, epgCount);
+          final isEpgBusy = epgService.isDownloading ||
+              epgService.isParsing ||
+              epgService.isLoading;
+          _maybeRefreshStats(
+              totalChannels, epgCount, isEpgBusy, channelProvider.isLoading);
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
