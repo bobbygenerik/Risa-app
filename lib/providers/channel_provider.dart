@@ -124,6 +124,14 @@ class ChannelProvider with ChangeNotifier {
   final TMDBEnrichmentService _enrichmentService = TMDBEnrichmentService();
   bool _isEnriching = false;
   bool get isEnriching => _isEnriching;
+  List<Map<String, dynamic>> getChannelSampleMaps(int limit) {
+    if (_channelMaps.isEmpty || limit <= 0) return const [];
+    final count = limit.clamp(0, _channelMaps.length);
+    return _channelMaps
+        .take(count)
+        .map((m) => Map<String, dynamic>.from(m))
+        .toList();
+  }
 
   // Cached category list (lightweight - just strings)
   List<String>? _cachedCategories;
@@ -689,6 +697,7 @@ class ChannelProvider with ChangeNotifier {
           _updateEpgAllowedChannels();
           notifyListeners();
           unawaited(_saveXtreamEpgMap(streamIdToEpgId, nameToEpgId));
+          _scheduleEpgRefresh(forceRefresh: true);
           final service = _epgService;
           if (service != null &&
               (service.isLoading || service.isDownloading || service.isParsing)) {
@@ -2493,6 +2502,7 @@ class ChannelProvider with ChangeNotifier {
     _channelCountDb = _channelMaps.length;
     _cachedCategories = null;
     _updateEpgAllowedChannels();
+    _scheduleEpgRefresh(forceRefresh: true);
     unawaited(_computeCategoriesAsync());
     if (!_disposed) notifyListeners();
   }

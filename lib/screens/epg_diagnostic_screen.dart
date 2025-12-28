@@ -63,7 +63,7 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
       final channelProvider = context.read<ChannelProvider>();
       final epgService = context.read<IncrementalEpgService>();
 
-      final totalChannels = await channelProvider.getChannelCountAsync();
+      final totalChannels = channelProvider.channelCount;
       if (totalChannels == 0) {
         return {'matched': 0, 'total': 0, 'scanned': 0, 'epgChannels': 0};
       }
@@ -80,18 +80,18 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
           'epgChannels': epgAvailable,
         };
       } else {
-        final sampleSize = math.min(200, totalChannels);
+        final sampleSize = math.min(120, totalChannels);
         try {
-          final sample = await channelProvider.getChannelsPage(
-            offset: 0,
-            limit: sampleSize,
-          );
+          final sample = channelProvider.getChannelSampleMaps(sampleSize);
           if (sample.isNotEmpty) {
             int matched = 0;
-            for (final c in sample) {
-              if (epgService.hasEpgMatch(
-                  c.tvgId?.trim().isNotEmpty == true ? c.tvgId! : c.id,
-                  channelName: c.name)) {
+            for (final map in sample) {
+              final tvgId = (map['tvgId'] as String?) ?? '';
+              final id = (map['id'] as String?) ?? '';
+              final name = (map['name'] as String?) ?? '';
+              final channelId = tvgId.trim().isNotEmpty ? tvgId : id;
+              if (channelId.isEmpty) continue;
+              if (epgService.hasEpgMatch(channelId, channelName: name)) {
                 matched++;
               }
             }
