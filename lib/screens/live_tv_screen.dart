@@ -695,10 +695,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   String? _getChannelCardImage(
       Program? program, Channel? channel, bool allowPrefetch) {
-    // Prefer TMDB/OMDb program artwork first.
+    // Prefer program artwork when it's not a poster/portrait image.
     if (program != null) {
       final cached = _programArtwork[program.id];
-      if (cached != null && cached.isNotEmpty) {
+      if (cached != null &&
+          cached.isNotEmpty &&
+          !_isLikelyPosterUrl(cached)) {
         return cached;
       }
 
@@ -711,8 +713,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       }
 
       // Fall back to EPG-provided art while TMDB is resolving.
-      if (program.imageUrl != null && program.imageUrl!.isNotEmpty) {
-        return program.imageUrl;
+      final programImage = program.imageUrl;
+      if (programImage != null &&
+          programImage.isNotEmpty &&
+          !_isLikelyPosterUrl(programImage)) {
+        return programImage;
       }
     }
 
@@ -720,7 +725,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (channel != null) {
       final channelKey = 'channel_${channel.id}';
       final cachedChannelArt = _programArtwork[channelKey];
-      if (cachedChannelArt != null && cachedChannelArt.isNotEmpty) {
+      if (cachedChannelArt != null &&
+          cachedChannelArt.isNotEmpty &&
+          !_isLikelyPosterUrl(cachedChannelArt)) {
         return cachedChannelArt;
       }
 
@@ -733,18 +740,35 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       }
     }
 
-    // Final fallback: channel logo.
+    // Final fallback: channel logo (avoid poster-like logos).
     if (channel?.logoUrl != null && channel!.logoUrl!.isNotEmpty) {
-      return channel.logoUrl;
+      final logo = channel.logoUrl!;
+      if (!_isLikelyPosterUrl(logo)) {
+        return logo;
+      }
     }
     return null;
+  }
+
+  bool _isLikelyPosterUrl(String url) {
+    final lower = url.toLowerCase();
+    if (lower.contains('/w500') ||
+        lower.contains('/w342') ||
+        lower.contains('/w300') ||
+        lower.contains('/w185') ||
+        lower.contains('poster') ||
+        lower.contains('portrait') ||
+        lower.contains('cover')) {
+      return true;
+    }
+    return false;
   }
 
   String? _resolveHeroImage(Program? program) {
     // Prefer TMDB/OMDb program artwork first.
     if (program != null) {
       final cached = _programArtwork[program.id];
-      if (cached != null && cached.isNotEmpty) {
+      if (cached != null && cached.isNotEmpty && !_isLikelyPosterUrl(cached)) {
         return cached;
       }
 
@@ -754,7 +778,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
       // Fall back to EPG art while TMDB resolves.
       final direct = program.imageUrl;
-      if (direct != null && direct.isNotEmpty) return direct;
+      if (direct != null &&
+          direct.isNotEmpty &&
+          !_isLikelyPosterUrl(direct)) {
+        return direct;
+      }
     }
 
     // Fallback: try channel-based artwork if no program or program has no image.
@@ -762,7 +790,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (channel != null) {
       final channelKey = 'channel_${channel.id}';
       final cachedChannelArt = _programArtwork[channelKey];
-      if (cachedChannelArt != null && cachedChannelArt.isNotEmpty) {
+      if (cachedChannelArt != null &&
+          cachedChannelArt.isNotEmpty &&
+          !_isLikelyPosterUrl(cachedChannelArt)) {
         return cachedChannelArt;
       }
 
@@ -772,7 +802,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       }
 
       // Final fallback to channel logo if nothing else exists.
-      if (channel.logoUrl != null && channel.logoUrl!.isNotEmpty) {
+      if (channel.logoUrl != null &&
+          channel.logoUrl!.isNotEmpty &&
+          !_isLikelyPosterUrl(channel.logoUrl!)) {
         return channel.logoUrl;
       }
     }
@@ -913,8 +945,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     const cardFocusScale = 1.02;
     final cardHeight = cardWidth * 0.6;
     final focusExtra = cardHeight * (cardFocusScale - 1);
+    final titleStyle = AppTypography.programTitle(context);
+    final timeStyle = AppTypography.programTime(context);
+    final titleHeight =
+        (titleStyle.fontSize ?? context.tvTextSize(16)) *
+            (titleStyle.height ?? 1.2);
+    final timeHeight =
+        (timeStyle.fontSize ?? context.tvTextSize(13)) *
+            (timeStyle.height ?? 1.2);
+    final infoHeight =
+        titleHeight + timeHeight + (context.spacingSm() * 2);
     // Tighter vertical stack similar to major streaming apps
-    final rowHeight = cardHeight + context.spacingSm() + focusExtra;
+    final rowHeight =
+        cardHeight + context.spacingSm() + infoHeight + focusExtra;
     final rowInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
 
     final sectionKey = title;
@@ -1205,7 +1248,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                 height: 24,
                                 padding: const EdgeInsets.all(2),
                                 child: channel.logoUrl != null &&
-                                        channel.logoUrl!.isNotEmpty
+                                        channel.logoUrl!.isNotEmpty &&
+                                        !_isLikelyPosterUrl(channel.logoUrl!)
                                     ? CachedNetworkImage(
                                         imageUrl: channel.logoUrl!,
                                         fit: BoxFit.contain,

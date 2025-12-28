@@ -1058,7 +1058,7 @@ class M3UParserService {
       }
       if (i >= len || i == keyStart) break;
 
-      final key = info.substring(keyStart, i);
+      final key = info.substring(keyStart, i).toLowerCase();
 
       // Skip whitespace
       while (i < len && info.codeUnitAt(i) == 32) {

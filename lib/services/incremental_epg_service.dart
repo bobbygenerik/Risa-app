@@ -91,10 +91,7 @@ class IncrementalEpgService extends ChangeNotifier {
   int get catchupChannelCount => _catchupByNormalizedId.length;
 
   static String normalizeForFilter(String input) {
-    final cleaned = input
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]'), '');
-    return cleaned;
+    return _normalizeForMatch(input);
   }
 
   void _handleDbError(Object error) {
@@ -1465,80 +1462,7 @@ class IncrementalEpgService extends ChangeNotifier {
   }
 
   String _normalize(String text) {
-    if (text.isEmpty) return '';
-
-    // Remove diacritics (España -> espana) and bracketed clutter tags.
-    var clean = _removeDiacritics(text);
-    clean = clean.replaceAll(RegExp(r'[\[\(\{].*?[\]\)\}]'), ' ');
-
-    // Strip common prefixes like "UK:", "US|", and leading channel numbers "001-".
-    clean = clean.replaceAll(
-        RegExp(r'^[A-Z]{2,3}[:|]\s*', caseSensitive: false), '');
-    clean = clean.replaceAll(RegExp(r'^[0-9]+[\s\-_.]*'), '');
-
-    // Strip promo/noise tokens and tech labels.
-    clean = clean.replaceAll(
-        RegExp(
-            r'(\bvip\b|\btrial\b|\btest\b|\bbackup\b|\bstable\b|\badult\b|\bxxx\b|\bpromo\b|\bpreview\b|\b24\/7\b)',
-            caseSensitive: false),
-        ' ');
-    clean = clean.replaceAll(
-        RegExp(
-            r'(\bh264\b|\bh265\b|\bhevc\b|\bac3\b|\baac\b|\b4k\b|\buhd\b|\bfhd\b|\bhd\b|\bsd\b|\b720p\b|\b1080p\b)',
-            caseSensitive: false),
-        ' ');
-
-    // Drop language/region suffix tokens (but keep the base).
-    clean = clean.replaceAll(
-        RegExp(
-            r'(\ben\b|\bes\b|\bfr\b|\bar\b|\bit\b|\bde\b|\bru\b|\bpt\b|\btr\b|\bpl\b|\bnl\b|\bse\b|\bno\b|\bdk\b|\bfi\b|\bcz\b|\bsk\b)$',
-            caseSensitive: false),
-        '');
-
-    // Remove common catchup/time-shift markers.
-    clean = clean.replaceAll(
-        RegExp(r'(catchup|timeshift|timeshifted|shifted|rebroadcast)',
-            caseSensitive: false),
-        '');
-
-    // Translate common non-English labels to English keywords.
-    clean = _translateCommonWords(clean);
-
-    // Normalize separators and trim.
-    clean = clean.replaceAll(RegExp(r'[|._]+'), ' ');
-    clean = clean.replaceAll(RegExp(r'\s+'), ' ').trim();
-
-    // Strip quality suffixes after normalization.
-    clean = clean.replaceAll(
-        RegExp(r'[|]\s*(hd|fhd|uhd|4k|sd|720p|1080p)', caseSensitive: false),
-        '');
-
-    String normalized =
-        clean.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-
-    // Strip technical channel prefixes like "ch_" or "channel" when followed
-    // by a long numeric/hex identifier (common in XMLTV ids).
-    final techPrefix = RegExp(r'^(ch|channel)([0-9a-f]{6,}|\d{3,})$');
-    final match = techPrefix.firstMatch(normalized);
-    if (match != null) {
-      normalized = match.group(2) ?? normalized;
-    }
-
-    // Strip common country code suffixes.
-    normalized = normalized.replaceAll(
-        RegExp(r'(uk|us|ca|au|ie|pt|hk|fr|de|it|es)$'), '');
-
-    // Remove regional/location tokens to collapse variants (e.g., bbc1manchester -> bbc1).
-    normalized = normalized.replaceAll(
-        RegExp(
-            r'(london|scotland|wales|ireland|ni|manchester|birmingham|leeds|yorkshire|northwest|northeast|southwest|southeast|midlands|central|east|west|north|south)$'),
-        '');
-
-    // Collapse "plus1"/"plusone" and "+1/+2" variants.
-    normalized =
-        normalized.replaceAll(RegExp(r'(plus1|plusone|\+1|\+2)$'), '');
-
-    return _convertNumberWords(normalized);
+    return _normalizeForMatch(text);
   }
 
   void _ensureNormalizedMap() {
@@ -1551,7 +1475,7 @@ class IncrementalEpgService extends ChangeNotifier {
     }
   }
 
-  String _removeDiacritics(String input) {
+  static String _removeDiacritics(String input) {
     const Map<String, String> map = {
       'á': 'a',
       'à': 'a',
@@ -1603,7 +1527,7 @@ class IncrementalEpgService extends ChangeNotifier {
     return buffer.toString();
   }
 
-  String _translateCommonWords(String input) {
+  static String _translateCommonWords(String input) {
     final replacements = <String, String>{
       'noticias': 'news',
       'newses': 'news',
@@ -1725,6 +1649,83 @@ class IncrementalEpgService extends ChangeNotifier {
     final union = aTr.length + bTr.length - inter;
     if (union == 0) return 0.0;
     return inter / union;
+  }
+
+  static String _normalizeForMatch(String text) {
+    if (text.isEmpty) return '';
+
+    // Remove diacritics (España -> espana) and bracketed clutter tags.
+    var clean = _removeDiacritics(text);
+    clean = clean.replaceAll(RegExp(r'[\[\(\{].*?[\]\)\}]'), ' ');
+
+    // Strip common prefixes like "UK:", "US|", and leading channel numbers "001-".
+    clean = clean.replaceAll(
+        RegExp(r'^[A-Z]{2,3}[:|]\s*', caseSensitive: false), '');
+    clean = clean.replaceAll(RegExp(r'^[0-9]+[\s\-_.]*'), '');
+
+    // Strip promo/noise tokens and tech labels.
+    clean = clean.replaceAll(
+        RegExp(
+            r'(\bvip\b|\btrial\b|\btest\b|\bbackup\b|\bstable\b|\badult\b|\bxxx\b|\bpromo\b|\bpreview\b|\b24\/7\b)',
+            caseSensitive: false),
+        ' ');
+    clean = clean.replaceAll(
+        RegExp(
+            r'(\bh264\b|\bh265\b|\bhevc\b|\bac3\b|\baac\b|\b4k\b|\buhd\b|\bfhd\b|\bhd\b|\bsd\b|\b720p\b|\b1080p\b)',
+            caseSensitive: false),
+        ' ');
+
+    // Drop language/region suffix tokens (but keep the base).
+    clean = clean.replaceAll(
+        RegExp(
+            r'(\ben\b|\bes\b|\bfr\b|\bar\b|\bit\b|\bde\b|\bru\b|\bpt\b|\btr\b|\bpl\b|\bnl\b|\bse\b|\bno\b|\bdk\b|\bfi\b|\bcz\b|\bsk\b)$',
+            caseSensitive: false),
+        '');
+
+    // Remove common catchup/time-shift markers.
+    clean = clean.replaceAll(
+        RegExp(r'(catchup|timeshift|timeshifted|shifted|rebroadcast)',
+            caseSensitive: false),
+        '');
+
+    // Translate common non-English labels to English keywords.
+    clean = _translateCommonWords(clean);
+
+    // Normalize separators and trim.
+    clean = clean.replaceAll(RegExp(r'[|._]+'), ' ');
+    clean = clean.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+    // Strip quality suffixes after normalization.
+    clean = clean.replaceAll(
+        RegExp(r'[|]\s*(hd|fhd|uhd|4k|sd|720p|1080p)', caseSensitive: false),
+        '');
+
+    String normalized =
+        clean.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+    // Strip technical channel prefixes like "ch_" or "channel" when followed
+    // by a long numeric/hex identifier (common in XMLTV ids).
+    final techPrefix = RegExp(r'^(ch|channel)([0-9a-f]{6,}|\d{3,})$');
+    final match = techPrefix.firstMatch(normalized);
+    if (match != null) {
+      normalized = match.group(2) ?? normalized;
+    }
+
+    // Strip common country code suffixes.
+    normalized = normalized.replaceAll(
+        RegExp(r'(uk|us|ca|au|ie|pt|hk|fr|de|it|es)$'), '');
+
+    // Remove regional/location tokens to collapse variants (e.g., bbc1manchester -> bbc1).
+    normalized = normalized.replaceAll(
+        RegExp(
+            r'(london|scotland|wales|ireland|ni|manchester|birmingham|leeds|yorkshire|northwest|northeast|southwest|southeast|midlands|central|east|west|north|south)$'),
+        '');
+
+    // Collapse "plus1"/"plusone" and "+1/+2" variants.
+    normalized =
+        normalized.replaceAll(RegExp(r'(plus1|plusone|\+1|\+2)$'), '');
+
+    return _convertNumberWords(normalized);
   }
 
   String? _findBestEpgId(

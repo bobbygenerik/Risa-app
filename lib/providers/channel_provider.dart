@@ -1455,6 +1455,19 @@ class ChannelProvider with ChangeNotifier {
             _moviesCachePath = '${dir.path}/movies_cache.json';
             _seriesCachePath = '${dir.path}/series_cache.json';
 
+            // If JSON cache only has the preview list, hydrate full channels
+            // from the cached JSONL file in the background.
+            final channelsFile = parsed['channelsFile'] as String?;
+            final totalChannels = parsed['channelCount'] as int? ?? 0;
+            if (channelsFile != null &&
+                channelsFile.isNotEmpty &&
+                totalChannels > _channelMaps.length) {
+              unawaited(_hydrateChannelsFromCacheFile(
+                channelsFile,
+                totalChannels: totalChannels,
+              ));
+            }
+
             // Asynchronously read counts from VOD cache files without blocking
             unawaited(Future.microtask(() async {
               if (_moviesCachePath != null) {
@@ -2437,6 +2450,34 @@ class ChannelProvider with ChangeNotifier {
       debugLog('ChannelProvider: Failed to save JSON cache: $e');
       // Non-fatal - cache is optional
     }
+  }
+
+  Future<void> _hydrateChannelsFromCacheFile(String channelsFile,
+      {required int totalChannels}) async {
+    final file = File(channelsFile);
+    if (!await file.exists()) return;
+    debugLog(
+        'ChannelProvider: Hydrating full channel list from cache file ($totalChannels)');
+    final List<Map<String, dynamic>> hydrated = [];
+    try {
+      final stream =
+          file.openRead().transform(utf8.decoder).transform(const LineSplitter());
+      await for (final line in stream) {
+        if (line.trim().isEmpty) continue;
+        hydrated.add(Map<String, dynamic>.from(json.decode(line)));
+      }
+    } catch (e) {
+      debugLog('ChannelProvider: Failed to hydrate channels from cache: $e');
+      return;
+    }
+    if (hydrated.isEmpty) return;
+    _channelMaps = hydrated;
+    _channelCache.clear();
+    _channelCountDb = _channelMaps.length;
+    _cachedCategories = null;
+    _updateEpgAllowedChannels();
+    unawaited(_computeCategoriesAsync());
+    if (!_disposed) notifyListeners();
   }
 
   Future<void> _stageVodJsonl({

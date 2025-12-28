@@ -935,7 +935,8 @@ class _EPGScreenState extends State<EPGScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Program image
-              if (program.imageUrl != null)
+              if (program.imageUrl != null &&
+                  !_isLikelyPosterUrl(program.imageUrl!))
                 CachedImage(
                   imageUrl: program.imageUrl!,
                   height: 200,
@@ -1547,5 +1548,19 @@ class _EPGScreenState extends State<EPGScreen>
 
     // Navigate to player with catch-up stream
     context.push('/player', extra: catchupChannel);
+  }
+
+  bool _isLikelyPosterUrl(String url) {
+    final lower = url.toLowerCase();
+    if (lower.contains('/w500') ||
+        lower.contains('/w342') ||
+        lower.contains('/w300') ||
+        lower.contains('/w185') ||
+        lower.contains('poster') ||
+        lower.contains('portrait') ||
+        lower.contains('cover')) {
+      return true;
+    }
+    return false;
   }
 }
