@@ -57,6 +57,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Timer? _artworkThrottle;
   late final bool _tmdbEnabled;
   bool _initialFocusRequested = false;
+  final Map<String, int> _focusedIndexBySection = {};
+  final Map<String, DateTime> _artworkRetryAfter = {};
 
   bool _heroVideoPreview = false;
   bool _isVideoReady = false;
@@ -298,7 +300,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   final fallbackGrouped = hasAnyChannels
                       ? groupedChannels
                       : {
-                          'All Channels': previewList,
+                          'Featured': previewList,
                         };
                   final isGrouping = channelProvider.isGroupingChannels;
 
@@ -388,12 +390,31 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                             0.0,
                             _heroVideoPreview,
                           ),
+                          // Left-side scrim for readability near sidebar/info box
+                          Positioned.fill(
+                            child: IgnorePointer(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.centerLeft,
+                                    end: Alignment.centerRight,
+                                    colors: [
+                                      AppTheme.darkBackground
+                                          .withAlpha((0.7 * 255).round()),
+                                      Colors.transparent,
+                                    ],
+                                    stops: const [0.0, 0.5],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                           // Gradient fade at bottom
                           Positioned(
                             bottom: 0,
                             left: 0,
                             right: 0,
-                            height: 120,
+                            height: 180,
                             child: Container(
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
@@ -672,73 +693,77 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
-  String? _getChannelCardImage(Program? program, Channel? channel) {
-    // Try program artwork first
+  String? _getChannelCardImage(
+      Program? program, Channel? channel, bool allowPrefetch) {
+    // Prefer TMDB/OMDb program artwork first.
     if (program != null) {
-      // Try cached TMDB image first (higher quality)
       final cached = _programArtwork[program.id];
       if (cached != null && cached.isNotEmpty) {
         return cached;
       }
 
-      // Try direct program image
+      // Fetch TMDB image if enabled and not already cached.
+      if (_tmdbEnabled &&
+          allowPrefetch &&
+          (!_programArtwork.containsKey(program.id) ||
+              _shouldRetryArtwork(program.id))) {
+        _fetchProgramArtwork(program);
+      }
+
+      // Fall back to EPG-provided art while TMDB is resolving.
       if (program.imageUrl != null && program.imageUrl!.isNotEmpty) {
         return program.imageUrl;
       }
-
-      // Fetch TMDB image if enabled and not already cached
-      if (_tmdbEnabled && !_programArtwork.containsKey(program.id)) {
-        _fetchProgramArtwork(program);
-      }
     }
 
-    // Only use channel-based TMDB artwork if no program artwork found
-    // Don't fall back to channel logos for cards
-    if (channel != null && program != null) {
+    // Use channel-based TMDB artwork if program artwork isn't available.
+    if (channel != null) {
       final channelKey = 'channel_${channel.id}';
       final cachedChannelArt = _programArtwork[channelKey];
       if (cachedChannelArt != null && cachedChannelArt.isNotEmpty) {
         return cachedChannelArt;
       }
 
-      // Fetch TMDB artwork based on channel name if enabled
-      if (_tmdbEnabled && !_artworkRequests.contains(channelKey)) {
+      // Fetch TMDB artwork based on channel name if enabled.
+      if (_tmdbEnabled &&
+          allowPrefetch &&
+          (!_programArtwork.containsKey(channelKey) ||
+              _shouldRetryArtwork(channelKey))) {
         _fetchChannelArtwork(channel);
       }
     }
 
-    // Return null instead of falling back to channel logo
+    // Final fallback: channel logo.
+    if (channel?.logoUrl != null && channel!.logoUrl!.isNotEmpty) {
+      return channel.logoUrl;
+    }
     return null;
   }
 
   String? _resolveHeroImage(Program? program) {
-    // Try program image first
+    // Prefer TMDB/OMDb program artwork first.
     if (program != null) {
-      final direct = program.imageUrl;
-      if (direct != null && direct.isNotEmpty) return direct;
-
       final cached = _programArtwork[program.id];
-      if (cached != null) {
-        return cached.isNotEmpty ? cached : null;
+      if (cached != null && cached.isNotEmpty) {
+        return cached;
       }
 
       if (_tmdbEnabled) {
         _fetchProgramArtwork(program);
       }
+
+      // Fall back to EPG art while TMDB resolves.
+      final direct = program.imageUrl;
+      if (direct != null && direct.isNotEmpty) return direct;
     }
 
-    // Fallback: try channel-based artwork if no program or program has no image
+    // Fallback: try channel-based artwork if no program or program has no image.
     final channel = _getCurrentFeaturedChannel();
     if (channel != null) {
       final channelKey = 'channel_${channel.id}';
       final cachedChannelArt = _programArtwork[channelKey];
-      // If we have a cached result (including empty string meaning "not found"), use it
-      if (_programArtwork.containsKey(channelKey)) {
-        if (cachedChannelArt?.isNotEmpty == true) {
-          return cachedChannelArt;
-        }
-        // TMDB returned nothing - don't use low-quality channel logo for hero banner
-        return null;
+      if (cachedChannelArt != null && cachedChannelArt.isNotEmpty) {
+        return cachedChannelArt;
       }
 
       // Fetch TMDB artwork based on channel name if enabled and not already fetching
@@ -746,8 +771,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         _fetchChannelArtwork(channel);
       }
 
-      // While waiting for TMDB, don't use channel logo (too low quality for hero banner)
-      return null;
+      // Final fallback to channel logo if nothing else exists.
+      if (channel.logoUrl != null && channel.logoUrl!.isNotEmpty) {
+        return channel.logoUrl;
+      }
     }
 
     return null;
@@ -767,6 +794,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         _programArtwork.containsKey(channelKey)) {
       return;
     }
+    if (!_shouldAttemptArtwork(channelKey)) return;
     _artworkRequests.add(channelKey);
     try {
       debugLog('LiveTV: Fetching TMDB art for channel: "${channel.name}"');
@@ -789,8 +817,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           _programArtwork[channelKey] = '';
         });
       }
+      _markArtworkFailure(channelKey);
     }
-    // Don't remove from _artworkRequests - keep it to prevent re-fetching
+    _artworkRequests.remove(channelKey);
   }
 
   Future<void> _fetchProgramArtwork(Program program) async {
@@ -798,6 +827,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         _programArtwork.containsKey(program.id)) {
       return;
     }
+    if (!_shouldAttemptArtwork(program.id)) return;
     _artworkRequests.add(program.id);
     _artworkQueue.add(program);
     _scheduleArtworkDrain();
@@ -837,12 +867,38 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             _programArtwork[program.id] = '';
           });
         }
+        _markArtworkFailure(program.id);
       }
+      _artworkRequests.remove(program.id);
     }
 
     if (_artworkQueue.isNotEmpty) {
       _scheduleArtworkDrain();
     }
+  }
+
+  bool _shouldAttemptArtwork(String key) {
+    final retryAfter = _artworkRetryAfter[key];
+    if (retryAfter == null) return true;
+    return DateTime.now().isAfter(retryAfter);
+  }
+
+  bool _shouldRetryArtwork(String key) {
+    if (!_programArtwork.containsKey(key)) return true;
+    if (_programArtwork[key]?.isNotEmpty == true) return false;
+    return _shouldAttemptArtwork(key);
+  }
+
+  void _markArtworkFailure(String key) {
+    _artworkRetryAfter[key] = DateTime.now().add(const Duration(minutes: 10));
+  }
+
+  bool _shouldPrefetchArt(String sectionKey, int index) {
+    final focusedIndex = _focusedIndexBySection[sectionKey];
+    if (focusedIndex == null) {
+      return index < 6;
+    }
+    return (index - focusedIndex).abs() <= 4;
   }
 
   Widget _buildChannelSection(
@@ -861,6 +917,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final rowHeight = cardHeight + context.spacingSm() + focusExtra;
     final rowInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
 
+    final sectionKey = title;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -895,13 +952,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   itemBuilder: (context, index) {
                     final focusNode =
                         isFirstRow && index == 0 ? _firstChannelFocus : null;
+                    final allowPrefetch =
+                        _shouldPrefetchArt(sectionKey, index);
                     return _buildChannelCard(
                       context,
                       channels[index],
                       cardWidth,
                       cardHeight,
+                      sectionKey,
                       index,
                       channels.length,
+                      allowPrefetch,
                       focusNode: focusNode,
                     );
                   },
@@ -949,8 +1010,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return sections;
   }
 
-  Widget _buildChannelCard(BuildContext context, Channel channel,
-      double cardWidth, double cardHeight, int index, int totalCount,
+  Widget _buildChannelCard(
+      BuildContext context,
+      Channel channel,
+      double cardWidth,
+      double cardHeight,
+      String sectionKey,
+      int index,
+      int totalCount,
+      bool allowPrefetch,
       {FocusNode? focusNode}) {
     return SizedBox(
       width: cardWidth,
@@ -959,6 +1027,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         canRequestFocus: true,
         onFocusChange: (hasFocus) {
           if (hasFocus) {
+            if (_focusedIndexBySection[sectionKey] != index) {
+              setState(() {
+                _focusedIndexBySection[sectionKey] = index;
+              });
+            }
             _scrollToHeroPeekOnFocus();
           }
         },
@@ -1015,7 +1088,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             }
             final isFocused = Focus.of(context).hasFocus;
             final progress = currentProgram?.progressPercentage ?? 0.0;
-            final imageUrl = _getChannelCardImage(currentProgram, channel);
+            final imageUrl =
+                _getChannelCardImage(currentProgram, channel, allowPrefetch);
 
             const cardFocusScale = 1.02;
             return GestureDetector(
@@ -1250,7 +1324,24 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Widget _buildDefaultHeroBackground() {
     return Container(
-      color: AppColors.background,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF2a2a3e),
+            Color(0xFF1a1a2e),
+            AppTheme.cardBackground,
+          ],
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          Icons.tv,
+          size: 80,
+          color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
+        ),
+      ),
     );
   }
 

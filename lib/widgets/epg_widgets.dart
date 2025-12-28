@@ -237,6 +237,7 @@ class EPGProgramRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final channelKey = channel.tvgId ?? channel.id;
+    epgService.ensureChannelLoaded(channelKey, channelName: channel.name);
     final programs =
         epgService.getProgramsForChannel(channelKey, channelName: channel.name);
 

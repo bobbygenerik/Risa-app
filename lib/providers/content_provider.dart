@@ -10,7 +10,7 @@ class ContentProvider with ChangeNotifier {
   List<Content> _series = [];
   List<Content> _continueWatching = [];
   List<Content> _highlights = [];
-  final bool _isLoading = false;
+  bool _isLoading = false;
   String? _errorMessage;
   bool _disposed = false; // Add this line
 
@@ -33,6 +33,12 @@ class ContentProvider with ChangeNotifier {
   List<Content> get highlights => _highlights;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+
+  void setLoading(bool value) {
+    if (_isLoading == value) return;
+    _isLoading = value;
+    notifyListeners();
+  }
 
   // Get recently added series (last 30 days)
   List<Content> get recentlyAddedSeries {
@@ -69,9 +75,30 @@ class ContentProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Append movies without duplicating existing items.
+  void appendMovies(List<Content> movies) {
+    if (movies.isEmpty) return;
+    final existingIds = _movies.map((m) => m.id).toSet();
+    final toAdd = movies.where((m) => !existingIds.contains(m.id)).toList();
+    if (toAdd.isEmpty) return;
+    _movies.addAll(toAdd);
+    _updateHighlights();
+    notifyListeners();
+  }
+
   /// Load series from M3U VOD or Xtream API
   void loadSeries(List<Content> series) {
     _series = series;
+    notifyListeners();
+  }
+
+  /// Append series without duplicating existing items.
+  void appendSeries(List<Content> series) {
+    if (series.isEmpty) return;
+    final existingIds = _series.map((s) => s.id).toSet();
+    final toAdd = series.where((s) => !existingIds.contains(s.id)).toList();
+    if (toAdd.isEmpty) return;
+    _series.addAll(toAdd);
     notifyListeners();
   }
 

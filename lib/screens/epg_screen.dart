@@ -293,7 +293,14 @@ class _EPGScreenState extends State<EPGScreen>
             }
 
             // Get category names (lightweight - no channel grouping)
-            final categoryList = channelProvider.getAllCategoryNames();
+            final rawCategories = channelProvider.getAllCategoryNames();
+            final seen = <String>{};
+            final categoryList = <String>[];
+            for (final name in rawCategories) {
+              final trimmed = name.trim();
+              if (trimmed.isEmpty || trimmed == '⭐ Favorites') continue;
+              if (seen.add(trimmed)) categoryList.add(trimmed);
+            }
             final categoryNames = [
               '⭐ Favorites',
               ...categoryList
@@ -301,19 +308,23 @@ class _EPGScreenState extends State<EPGScreen>
 
             return FutureBuilder<List<Channel>>(
               future: () async {
+                final pageSize = _epgState.channelsPerPage;
+                final expected = (_epgState.currentPage + 1) * pageSize;
+                final fetchLimit = expected + 1;
                 if (_epgState.selectedCategory == '⭐ Favorites') {
                   return channelProvider.getFilteredChannels(
                     favoriteIds: _epgState.epgFavoriteChannelIds,
                     excludeHidden: true,
+                    limit: fetchLimit,
                   );
                 } else if (_epgState.selectedCategory != null) {
                   return channelProvider.getFilteredChannelsAsync(
                       category: _epgState.selectedCategory,
                       excludeHidden: true,
-                      limit: 1000);
+                      limit: fetchLimit);
                 } else {
                   return channelProvider.getFilteredChannelsAsync(
-                      excludeHidden: true, limit: 1000);
+                      excludeHidden: true, limit: fetchLimit);
                 }
               }(),
               builder: (context, snapshot) {
@@ -322,9 +333,14 @@ class _EPGScreenState extends State<EPGScreen>
                       child:
                           CircularProgressIndicator(color: AppTheme.primaryBlue));
                 }
-                final allFilteredChannels = snapshot.data!;
+                final pageSize = _epgState.channelsPerPage;
+                final expected = (_epgState.currentPage + 1) * pageSize;
+                final rawChannels = snapshot.data!;
+                final hasMore = rawChannels.length > expected;
+                final allFilteredChannels =
+                    rawChannels.take(expected).toList();
 
-                // Apply pagination
+                _epgState.setHasMore(hasMore);
                 _epgState.updatePaginatedChannels(allFilteredChannels);
                 final filteredChannels = _epgState.paginatedChannels;
 
@@ -600,7 +616,16 @@ class _EPGScreenState extends State<EPGScreen>
   Widget _buildCategorySidebar(List<String> categories) {
     return Container(
       width: context.categoryBarWidth(),
-      child: ListView.builder(
+      decoration: BoxDecoration(
+        color: AppTheme.sidebarBackground,
+        border: Border(
+          right: BorderSide(
+            color: Colors.white.withValues(alpha: 0.06),
+            width: 1,
+          ),
+        ),
+      ),
+      child: ListView.separated(
         itemCount: categories.length,
         itemBuilder: (context, index) {
           final category = categories[index];
@@ -613,6 +638,16 @@ class _EPGScreenState extends State<EPGScreen>
               // Scroll channel list to top
               _scrollChannelListToTop();
             },
+          );
+        },
+        separatorBuilder: (context, index) {
+          return Padding(
+            padding: EdgeInsets.symmetric(horizontal: context.spacingSm()),
+            child: Divider(
+              height: 1,
+              thickness: 1,
+              color: Colors.white.withValues(alpha: 0.06),
+            ),
           );
         },
       ),
@@ -655,11 +690,11 @@ class _EPGScreenState extends State<EPGScreen>
           child: Container(
             margin: EdgeInsets.symmetric(
               horizontal: context.spacingSm(),
-              vertical: context.spacingXs(),
+              vertical: context.spacingXs() * 0.25,
             ),
             padding: EdgeInsets.symmetric(
               horizontal: context.spacingSm(),
-              vertical: context.spacingSm(),
+              vertical: context.spacingXs(),
             ),
             child: Text(
               name,
@@ -761,8 +796,12 @@ class _EPGScreenState extends State<EPGScreen>
                           child: EPGChannelSidebar(
                             channels: channels,
                             isLoadingMore: _epgState.isLoadingMore,
-                            onLoadMore: () =>
-                                _epgState.loadMoreChannels(allChannels),
+                            onLoadMore: () {
+                              if (!_epgState.hasMore) return;
+                              setState(() {
+                                _epgState.loadMoreChannels();
+                              });
+                            },
                             onChannelTap: (channel) {
                               context.push('/player', extra: channel);
                             },

@@ -42,26 +42,30 @@ class HeroInfoBox extends StatelessWidget {
   Widget build(BuildContext context) {
     final compactButtonPadding =
         const EdgeInsets.symmetric(horizontal: 10, vertical: 6);
-    final actionWidth = context.cardWidth() * 0.5;
+    final titleStyle = AppTypography.heroTitle(context).copyWith(
+      shadows: [
+        Shadow(
+          color: Colors.black.withValues(alpha: 0.8),
+          blurRadius: 12,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    );
+    final descriptionStyle = AppTypography.heroDescription(context).copyWith(
+      shadows: [
+        Shadow(
+          color: Colors.black.withValues(alpha: 0.65),
+          blurRadius: 8,
+          offset: const Offset(0, 1),
+        ),
+      ],
+    );
     return Container(
       constraints: BoxConstraints(
         maxWidth: context.heroInfoWidth(),
       ),
       child: Container(
         padding: EdgeInsets.all(context.spacingSm()),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          gradient: LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: [
-              Colors.black.withValues(alpha: 0.85),
-              Colors.black.withValues(alpha: 0.4),
-              Colors.transparent,
-            ],
-            stops: const [0.0, 0.7, 1.0],
-          ),
-        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -80,12 +84,13 @@ class HeroInfoBox extends StatelessWidget {
             ],
 
             // Title
-            Text(
-              title,
-              style: AppTypography.heroTitle(context),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
+            if (channelLogoUrl == null)
+              Text(
+                title,
+                style: titleStyle,
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
+              ),
 
             SizedBox(height: context.spacingSm()),
 
@@ -104,8 +109,8 @@ class HeroInfoBox extends StatelessWidget {
             if (description != null && description!.isNotEmpty) ...[
               Text(
                 description!,
-                style: AppTypography.heroDescription(context),
-                maxLines: 1,
+                style: descriptionStyle,
+                maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               ),
               SizedBox(height: context.spacingMd()),
@@ -128,37 +133,11 @@ class HeroInfoBox extends StatelessWidget {
             // Action Buttons
             Row(
               children: [
-                Focus(
-                  autofocus: autofocusWatchButton,
-                  canRequestFocus: !autofocusWatchButton,
-                  skipTraversal: !autofocusWatchButton,
-                  onKeyEvent: (node, event) {
-                    if (event is KeyDownEvent &&
-                        event.logicalKey == LogicalKeyboardKey.arrowRight &&
-                        nextFocusOnRight != null) {
-                      nextFocusOnRight!.requestFocus();
-                      return KeyEventResult.handled;
-                    }
-                    return KeyEventResult.ignored;
-                  },
-                  child: SizedBox(
-                    width: actionWidth,
-                    child: BrandPrimaryButton(
-                      onPressed: onWatchPressed,
-                      label: 'Watch Now',
-                      icon: Icons.play_arrow_rounded,
-                      padding: compactButtonPadding,
-                      fontSize: 12,
-                      minHeight: 24,
-                      focusNode: primaryButtonFocusNode,
-                    ),
-                  ),
-                ),
-                if (onMoreInfoPressed != null) ...[
-                  SizedBox(width: context.spacingSm()),
-                  Focus(
-                    canRequestFocus: false,
-                    skipTraversal: true,
+                Expanded(
+                  child: Focus(
+                    autofocus: autofocusWatchButton,
+                    canRequestFocus: !autofocusWatchButton,
+                    skipTraversal: !autofocusWatchButton,
                     onKeyEvent: (node, event) {
                       if (event is KeyDownEvent &&
                           event.logicalKey == LogicalKeyboardKey.arrowRight &&
@@ -168,8 +147,33 @@ class HeroInfoBox extends StatelessWidget {
                       }
                       return KeyEventResult.ignored;
                     },
-                    child: SizedBox(
-                      width: actionWidth,
+                    child: BrandPrimaryButton(
+                      onPressed: onWatchPressed,
+                      label: 'Watch',
+                      icon: Icons.play_arrow_rounded,
+                      padding: compactButtonPadding,
+                      fontSize: 12,
+                      minHeight: 24,
+                      focusNode: primaryButtonFocusNode,
+                      expand: true,
+                    ),
+                  ),
+                ),
+                if (onMoreInfoPressed != null) ...[
+                  SizedBox(width: context.spacingSm()),
+                  Expanded(
+                    child: Focus(
+                      canRequestFocus: false,
+                      skipTraversal: true,
+                      onKeyEvent: (node, event) {
+                        if (event is KeyDownEvent &&
+                            event.logicalKey == LogicalKeyboardKey.arrowRight &&
+                            nextFocusOnRight != null) {
+                          nextFocusOnRight!.requestFocus();
+                          return KeyEventResult.handled;
+                        }
+                        return KeyEventResult.ignored;
+                      },
                       child: BrandSecondaryButton(
                         onPressed: onMoreInfoPressed!,
                         label: 'More Info',
@@ -178,6 +182,7 @@ class HeroInfoBox extends StatelessWidget {
                         fontSize: 12,
                         minHeight: 24,
                         focusNode: secondaryButtonFocusNode,
+                        expand: true,
                       ),
                     ),
                   ),

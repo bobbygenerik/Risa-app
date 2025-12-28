@@ -240,9 +240,14 @@ class _MainShellState extends State<MainShell> {
                     onNavFocusRegistration: _setNavFocusRequester,
                     onExpandRegistration: (_) {},
                     onExpansionChanged: (isExpanded) {
-                      if (_isSidebarExpanded != isExpanded) {
-                        setState(() => _isSidebarExpanded = isExpanded);
-                      }
+                      if (_isSidebarExpanded == isExpanded) return;
+                      // Defer to avoid setState during build.
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (!mounted) return;
+                        if (_isSidebarExpanded != isExpanded) {
+                          setState(() => _isSidebarExpanded = isExpanded);
+                        }
+                      });
                     },
                   ),
                 ),

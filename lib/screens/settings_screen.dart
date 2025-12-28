@@ -438,6 +438,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               Builder(builder: (context) {
                 final cp = Provider.of<ChannelProvider>(context);
+                final progressPercent =
+                    (cp.loadingProgress * 100).clamp(0, 100).round();
+                final statusText = cp.loadingStatus.isNotEmpty
+                    ? cp.loadingStatus
+                    : 'Loading...';
                 return SettingsActionTile(
                   title: 'Load Playlist',
                   icon: Icons.download,
@@ -445,6 +450,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   titleColor: AppTheme.primaryBlue,
                   focusNode: _loadM3uButtonFocusNode,
                   onTap: _loadM3uPlaylist,
+                  subtitle: cp.isLoading
+                      ? '$statusText ($progressPercent%)'
+                      : null,
                   trailing: cp.isLoading
                       ? IconButton(
                           icon: const Icon(Icons.cancel),
@@ -494,6 +502,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               Builder(builder: (context) {
                 final cp = Provider.of<ChannelProvider>(context);
+                final progressPercent =
+                    (cp.loadingProgress * 100).clamp(0, 100).round();
+                final statusText = cp.loadingStatus.isNotEmpty
+                    ? cp.loadingStatus
+                    : 'Loading...';
                 return SettingsActionTile(
                   title: 'Load Xtream Playlist',
                   icon: Icons.download,
@@ -501,6 +514,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   titleColor: AppTheme.primaryBlue,
                   focusNode: _loadXtreamButtonFocusNode,
                   onTap: _loadXtreamPlaylist,
+                  subtitle: cp.isLoading
+                      ? '$statusText ($progressPercent%)'
+                      : null,
                   trailing: cp.isLoading
                       ? IconButton(
                           icon: const Icon(Icons.cancel),

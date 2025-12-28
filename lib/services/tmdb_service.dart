@@ -73,8 +73,23 @@ class TMDBService {
     37: 'Western',
   };
 
+  static String _normalizeTitle(String title) {
+    var output = title.trim();
+    output = output.replaceAll(
+        RegExp(r'\s*[\(\[\{](19|20)\d{2}[\)\]\}]\s*$'), '');
+    output =
+        output.replaceAll(RegExp(r'[\s\-_:]+(19|20)\d{2}$'), '');
+    output = output.replaceAll(
+        RegExp(r'\b(4k|uhd|fhd|hd|sd|1080p|720p|2160p)\b',
+            caseSensitive: false),
+        '');
+    output = output.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return output;
+  }
+
   static String _cacheKey(String prefix, String query, {int? year}) {
-    return '$prefix:${query.toLowerCase().trim()}:${year ?? ''}';
+    final normalized = _normalizeTitle(query);
+    return '$prefix:${normalized.toLowerCase().trim()}:${year ?? ''}';
   }
 
   static Map<String, dynamic>? _getFromCache(String key) {
@@ -169,14 +184,15 @@ class TMDBService {
   static Future<double?> getMovieRating(String title, {int? year}) async {
     await init();
     try {
-      final cachedKey = _cacheKey('rating:movie', title, year: year);
+      final normalizedTitle = _normalizeTitle(title);
+      final cachedKey = _cacheKey('rating:movie', normalizedTitle, year: year);
       final cached = _getFromCache(cachedKey);
       if (cached != null && cached.containsKey('rating')) {
         return (cached['rating'] as num?)?.toDouble();
       }
       // Search for movie by title
       var searchUrl =
-          '$_baseUrl/search/movie?api_key=$_apiKey&language=en-US&query=${Uri.encodeComponent(title)}';
+          '$_baseUrl/search/movie?api_key=$_apiKey&language=en-US&query=${Uri.encodeComponent(normalizedTitle)}';
       if (year != null) {
         searchUrl += '&year=$year';
       }
@@ -205,14 +221,15 @@ class TMDBService {
   static Future<double?> getTVShowRating(String title, {int? year}) async {
     await init();
     try {
-      final cachedKey = _cacheKey('rating:tv', title, year: year);
+      final normalizedTitle = _normalizeTitle(title);
+      final cachedKey = _cacheKey('rating:tv', normalizedTitle, year: year);
       final cached = _getFromCache(cachedKey);
       if (cached != null && cached.containsKey('rating')) {
         return (cached['rating'] as num?)?.toDouble();
       }
       // Search for TV show by title
       var searchUrl =
-          '$_baseUrl/search/tv?api_key=$_apiKey&language=en-US&query=${Uri.encodeComponent(title)}';
+          '$_baseUrl/search/tv?api_key=$_apiKey&language=en-US&query=${Uri.encodeComponent(normalizedTitle)}';
       if (year != null) {
         searchUrl += '&first_air_date_year=$year';
       }
@@ -243,12 +260,14 @@ class TMDBService {
   }) async {
     await init();
     try {
-      final cacheKey = _cacheKey('movie:details', title, year: year);
+      final normalizedTitle = _normalizeTitle(title);
+      final cacheKey = _cacheKey('movie:details', normalizedTitle, year: year);
       final cached = _getFromCache(cacheKey);
       if (cached != null) return cached;
 
       final searchUrl =
-          '$_baseUrl/search/movie?api_key=$_apiKey&language=en-US&query=${Uri.encodeComponent(title)}';
+          '$_baseUrl/search/movie?api_key=$_apiKey&language=en-US&query=${Uri.encodeComponent(normalizedTitle)}' +
+              (year != null ? '&year=$year' : '');
 
       final response = await http.get(Uri.parse(searchUrl));
 
@@ -342,12 +361,13 @@ class TMDBService {
   }) async {
     await init();
     try {
-      final cacheKey = _cacheKey('tv:details', title, year: year);
+      final normalizedTitle = _normalizeTitle(title);
+      final cacheKey = _cacheKey('tv:details', normalizedTitle, year: year);
       final cached = _getFromCache(cacheKey);
       if (cached != null) return cached;
 
       var searchUrl =
-          '$_baseUrl/search/tv?api_key=$_apiKey&language=en-US&query=${Uri.encodeComponent(title)}';
+          '$_baseUrl/search/tv?api_key=$_apiKey&language=en-US&query=${Uri.encodeComponent(normalizedTitle)}';
       if (year != null) {
         searchUrl += '&first_air_date_year=$year';
       }
@@ -399,7 +419,8 @@ class TMDBService {
   /// This version batches requests to reduce API calls.
   static Future<String?> getBestBackdrop(String title, {int? year}) async {
     await init();
-    final cacheKey = _cacheKey('art:best', title, year: year);
+    final normalizedTitle = _normalizeTitle(title);
+    final cacheKey = _cacheKey('art:best', normalizedTitle, year: year);
     final cached = _getFromCache(cacheKey);
     if (cached != null && cached.containsKey('image')) {
       return (cached['image'] as String?)?.isNotEmpty == true
@@ -423,18 +444,18 @@ class TMDBService {
       String? companyLogoUrl;
 
       // Try TV/movie content first for better backdrop quality
-      if (title.length <= 4) {
-        details = await getTVDetails('$title channel', year: year);
+      if (normalizedTitle.length <= 4) {
+        details = await getTVDetails('$normalizedTitle channel', year: year);
       } else {
-        details = await getTVDetails(title, year: year);
+        details = await getTVDetails(normalizedTitle, year: year);
       }
-      details ??= await getMovieDetails(title, year: year);
+      details ??= await getMovieDetails(normalizedTitle, year: year);
 
       // Only use company logos as last resort if no backdrop/poster found
       if (details == null ||
           (details['backdrop'] == null && details['poster'] == null)) {
         final companySearchUrl =
-            '$_baseUrl/search/company?api_key=$_apiKey&query=${Uri.encodeComponent(title)}';
+            '$_baseUrl/search/company?api_key=$_apiKey&query=${Uri.encodeComponent(normalizedTitle)}';
         final companyResponse = await http.get(Uri.parse(companySearchUrl));
         if (companyResponse.statusCode == 200) {
           final companyData = json.decode(companyResponse.body);
@@ -459,20 +480,21 @@ class TMDBService {
       // If TMDB didn't find anything, try OMDb as fallback
       if (details == null ||
           (details['backdrop'] == null && details['poster'] == null)) {
-        debugLog('TMDB miss for "$title", trying OMDb as fallback...');
-        final omdbTV = await _getOMDbDetails(title, year: year, type: 'series');
+        debugLog('TMDB miss for "$normalizedTitle", trying OMDb as fallback...');
+        final omdbTV =
+            await _getOMDbDetails(normalizedTitle, year: year, type: 'series');
         final omdbMovie =
-            await _getOMDbDetails(title, year: year, type: 'movie');
+            await _getOMDbDetails(normalizedTitle, year: year, type: 'movie');
         details = omdbTV ?? omdbMovie;
         if (details != null) {
           debugLog(
-              'OMDb found artwork for "$title": ${details['backdrop'] ?? details['poster']}');
+              'OMDb found artwork for "$normalizedTitle": ${details['backdrop'] ?? details['poster']}');
         } else {
-          debugLog('No artwork found for "$title" in TMDB or OMDb');
+          debugLog('No artwork found for "$normalizedTitle" in TMDB or OMDb');
         }
       } else {
         debugLog(
-            'TMDB found artwork for "$title": ${details['backdrop'] ?? details['poster']}');
+            'TMDB found artwork for "$normalizedTitle": ${details['backdrop'] ?? details['poster']}');
       }
 
       final image =

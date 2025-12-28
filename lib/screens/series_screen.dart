@@ -1,17 +1,18 @@
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/providers/content_provider.dart';
+import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/go_to_settings_button.dart';
 import 'package:iptv_player/widgets/hero_info_box.dart';
 import 'package:iptv_player/widgets/brand_badge.dart';
-import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/services/tmdb_service.dart';
 import 'package:iptv_player/services/service_validator.dart';
 import 'package:go_router/go_router.dart';
@@ -30,6 +31,12 @@ class SeriesScreen extends StatefulWidget {
   State<SeriesScreen> createState() => _SeriesScreenState();
 }
 
+class _HeroArt {
+  final String? url;
+  final bool isBackdrop;
+  const _HeroArt(this.url, {this.isBackdrop = true});
+}
+
 class _SeriesScreenState extends State<SeriesScreen>
     with ContentFocusRegistrant<SeriesScreen> {
   Timer? _carouselTimer;
@@ -41,10 +48,15 @@ class _SeriesScreenState extends State<SeriesScreen>
   final FocusNode _firstRowFocus = FocusNode();
   List<Content> _curatedSeries = [];
   final Map<String, String?> _tmdbArtCache = {};
+  final Set<String> _heroDetailsRequests = {};
 
   // Pagination for genre sections
   final Map<String, int> _genreDisplayCounts = {};
+  final Map<String, int> _genrePrefetchCounts = {};
+  final Map<String, int> _focusedIndexBySection = {};
   static const int _itemsPerPage = 12;
+  static const int _vodPageSize = 200;
+  bool _isLoadingMore = false;
 
   @override
   void dispose() {
@@ -85,6 +97,7 @@ class _SeriesScreenState extends State<SeriesScreen>
     _watchFocus.addListener(_onWatchFocusChange);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      Provider.of<ChannelProvider>(context, listen: false).ensureVodLoaded();
 
       // Prioritize newly added content with artwork for hero banner
       final provider = Provider.of<ContentProvider>(context, listen: false);
@@ -142,24 +155,86 @@ class _SeriesScreenState extends State<SeriesScreen>
     }
   }
 
-  String? _resolveHeroImage(Content movie) {
+  Future<void> _loadMoreSeries() async {
+    if (_isLoadingMore || !mounted) return;
+    final channelProvider =
+        Provider.of<ChannelProvider>(context, listen: false);
+    final contentProvider =
+        Provider.of<ContentProvider>(context, listen: false);
+    final offset = contentProvider.series.length;
+    final total = channelProvider.seriesCount;
+    if (total > 0 && offset >= total) return;
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+    try {
+      final page = await channelProvider.getSeries(
+        offset: offset,
+        limit: _vodPageSize,
+      );
+      if (page.isNotEmpty) {
+        contentProvider.appendSeries(page);
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingMore = false;
+        });
+      }
+    }
+  }
+
+  void _maybePrefetchGenre({
+    required String genre,
+    required int index,
+    required int displayCount,
+    required int genreCount,
+    required bool hasMoreOverall,
+  }) {
+    if (index < displayCount - 3) return;
+    final lastTriggered = _genrePrefetchCounts[genre];
+    if (lastTriggered != null && lastTriggered == displayCount) return;
+
+    final nextDisplay = displayCount + _itemsPerPage;
+    _genrePrefetchCounts[genre] = displayCount;
+    setState(() {
+      _genreDisplayCounts[genre] = nextDisplay;
+    });
+
+    if (hasMoreOverall && genreCount <= displayCount) {
+      unawaited(_loadMoreSeries());
+    }
+  }
+
+  bool _shouldPrefetchArt(String sectionKey, int index) {
+    final focusedIndex = _focusedIndexBySection[sectionKey];
+    if (focusedIndex == null) {
+      return index < 6;
+    }
+    return (index - focusedIndex).abs() <= 4;
+  }
+
+  _HeroArt _resolveHeroArt(Content movie) {
     // 1. Try pre-fetched TMDB cache (usually higher quality backdrops)
     if (_tmdbArtCache.containsKey(movie.title)) {
       final cached = _tmdbArtCache[movie.title];
-      if (cached != null && cached.isNotEmpty) return cached;
+      if (cached != null && cached.isNotEmpty) {
+        return _HeroArt(cached, isBackdrop: true);
+      }
     }
 
     // 2. Try content's own backdrop URL
     if (movie.backdropUrl != null && movie.backdropUrl!.isNotEmpty) {
-      return movie.backdropUrl;
+      return _HeroArt(movie.backdropUrl, isBackdrop: true);
     }
 
     // 3. Try content's image URL (poster) as a last resort
     if (movie.imageUrl != null && movie.imageUrl!.isNotEmpty) {
-      return movie.imageUrl;
+      return _HeroArt(movie.imageUrl, isBackdrop: false);
     }
 
-    return null;
+    return const _HeroArt(null, isBackdrop: true);
   }
 
   void _startCarousel() {
@@ -295,8 +370,12 @@ class _SeriesScreenState extends State<SeriesScreen>
   Widget build(BuildContext context) {
     return Consumer<ContentProvider>(
       builder: (context, contentProvider, child) {
+        final channelProvider =
+            Provider.of<ChannelProvider>(context, listen: false);
         final series = contentProvider.series;
         final recentSeries = contentProvider.recentlyAddedSeries;
+        final hasMoreOverall = channelProvider.seriesCount > 0 &&
+            series.length < channelProvider.seriesCount;
 
         if (series.isEmpty && contentProvider.isLoading) {
           return _buildSkeletonLoader();
@@ -310,15 +389,54 @@ class _SeriesScreenState extends State<SeriesScreen>
             _curatedSeries.isNotEmpty ? _curatedSeries : series;
         if (_featuredIndex >= displaySeries.length) _featuredIndex = 0;
         final featured = displaySeries[_featuredIndex];
+        _ensureHeroDetails(featured);
 
         return _buildFullScreenHero(
           context,
           featured,
           series,
           recentSeries,
+          hasMoreOverall: hasMoreOverall,
         );
       },
     );
+  }
+
+  void _ensureHeroDetails(Content item) {
+    if (!ServiceValidator.isTmdbAvailable) return;
+    if (_heroDetailsRequests.contains(item.id)) return;
+    if (item.description != null && item.description!.isNotEmpty) return;
+    _heroDetailsRequests.add(item.id);
+
+    unawaited(() async {
+      try {
+        final details = await TMDBService.getTVDetails(
+          item.title,
+          year: item.year,
+        );
+        if (details == null) return;
+        final patched = item.copyWith(
+          description: item.description ?? details['overview'],
+          rating: item.rating ?? details['rating'],
+          genres: item.genres ?? details['genres'],
+          imageUrl: item.imageUrl ?? details['poster'],
+          backdropUrl: item.backdropUrl ?? details['backdrop'],
+        );
+        if (!mounted) return;
+        final provider = Provider.of<ContentProvider>(context, listen: false);
+        final updatedSeries = provider.series
+            .map((s) => s.id == item.id ? patched : s)
+            .toList();
+        provider.loadSeries(updatedSeries);
+        if (_curatedSeries.isNotEmpty) {
+          setState(() {
+            _curatedSeries = _curatedSeries
+                .map((s) => s.id == item.id ? patched : s)
+                .toList();
+          });
+        }
+      } catch (_) {}
+    });
   }
 
   Widget _buildEmptyState(BuildContext context) {
@@ -403,6 +521,9 @@ class _SeriesScreenState extends State<SeriesScreen>
     BuildContext context,
     List<Content> series, {
     FocusNode? firstCardFocusNode,
+    ValueChanged<int>? onItemFocus,
+    VoidCallback? onNearEnd,
+    String? sectionKey,
   }) {
     final seriesMap = <String, List<Content>>{};
     for (final episode in series) {
@@ -418,23 +539,39 @@ class _SeriesScreenState extends State<SeriesScreen>
 
     return SizedBox(
       height: rowHeight,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: EdgeInsets.only(left: inset, right: context.spacingLg()),
-        clipBehavior: Clip.none,
-        itemCount: seriesMap.length,
-        itemBuilder: (context, index) {
-          final entry = seriesMap.entries.elementAt(index);
-          return _buildSeriesCard(
-            context,
-            entry.key,
-            entry.value,
-            index,
-            focusNode: index == 0 ? firstCardFocusNode : null,
-          );
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          if (notification.metrics.maxScrollExtent <= 0) return false;
+          final remaining = notification.metrics.maxScrollExtent -
+              notification.metrics.pixels;
+          if (remaining < context.cardGap() * 6) {
+            onNearEnd?.call();
+          }
+          return false;
         },
-        separatorBuilder: (context, index) =>
-            SizedBox(width: context.cardGap()),
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: EdgeInsets.only(left: inset, right: context.spacingLg()),
+          clipBehavior: Clip.none,
+          itemCount: seriesMap.length,
+          itemBuilder: (context, index) {
+            final entry = seriesMap.entries.elementAt(index);
+            final allowPrefetch = sectionKey == null
+                ? true
+                : _shouldPrefetchArt(sectionKey, index);
+            return _buildSeriesCard(
+              context,
+              entry.key,
+              entry.value,
+              index,
+              onItemFocus: onItemFocus,
+              allowPrefetch: allowPrefetch,
+              focusNode: index == 0 ? firstCardFocusNode : null,
+            );
+          },
+          separatorBuilder: (context, index) =>
+              SizedBox(width: context.cardGap()),
+        ),
       ),
     );
   }
@@ -445,6 +582,8 @@ class _SeriesScreenState extends State<SeriesScreen>
     List<Content> episodes,
     int index, {
     FocusNode? focusNode,
+    ValueChanged<int>? onItemFocus,
+    required bool allowPrefetch,
   }) {
     final firstEpisode = episodes.first;
     final cardWidth = context.cardWidth();
@@ -455,6 +594,11 @@ class _SeriesScreenState extends State<SeriesScreen>
       child: Focus(
         focusNode: focusNode,
         canRequestFocus: true,
+        onFocusChange: (hasFocus) {
+          if (hasFocus && onItemFocus != null) {
+            onItemFocus(index);
+          }
+        },
         onKeyEvent: (node, event) {
           if (event is KeyDownEvent) {
             if (event.logicalKey == LogicalKeyboardKey.select ||
@@ -513,6 +657,7 @@ class _SeriesScreenState extends State<SeriesScreen>
                               child: VodCardImage(
                                 content: firstEpisode,
                                 fit: BoxFit.cover,
+                                allowPrefetch: allowPrefetch,
                                 placeholder: _buildPlaceholder(title),
                               ),
                             ),
@@ -631,6 +776,7 @@ class _SeriesScreenState extends State<SeriesScreen>
   List<Widget> _buildGenreSections(
     BuildContext context,
     List<Content> series, {
+    required bool hasMoreOverall,
     FocusNode? firstRowFocusNode,
   }) {
     // Filter out series without proper info
@@ -677,48 +823,33 @@ class _SeriesScreenState extends State<SeriesScreen>
       sections.addAll([
         _buildSectionHeader(context, genre),
         SizedBox(height: context.spacingXs()),
-        _buildSeriesRow(context, displaySeries,
-            firstCardFocusNode: rowFocusNode),
-        if (allSeries.length > displayCount)
-          Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: context.tvSpacing(8)),
-              child: Focus(
-                autofocus: false,
-                child: Builder(
-                  builder: (context) {
-                    final isFocused = Focus.of(context).hasFocus;
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: isFocused
-                            ? [
-                                BoxShadow(
-                                  color: AppTheme.primaryBlue
-                                      .withAlpha((0.6 * 255).round()),
-                                  blurRadius: 20,
-                                  spreadRadius: 2,
-                                ),
-                              ]
-                            : null,
-                      ),
-                      child: BrandSecondaryButton(
-                        label: 'Load More ($genre)',
-                        onPressed: () {
-                          debugLog('Load More pressed for genre: $genre');
-                          setState(() {
-                            _genreDisplayCounts[genre] =
-                                displayCount + _itemsPerPage;
-                          });
-                        },
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
+        _buildSeriesRow(
+          context,
+          displaySeries,
+          sectionKey: genre,
+          firstCardFocusNode: rowFocusNode,
+          onItemFocus: (index) {
+            if (_focusedIndexBySection[genre] != index) {
+              setState(() {
+                _focusedIndexBySection[genre] = index;
+              });
+            }
+            _maybePrefetchGenre(
+              genre: genre,
+              index: index,
+              displayCount: displayCount,
+              genreCount: allSeries.length,
+              hasMoreOverall: hasMoreOverall,
+            );
+          },
+          onNearEnd: () => _maybePrefetchGenre(
+            genre: genre,
+            index: displayCount - 1,
+            displayCount: displayCount,
+            genreCount: allSeries.length,
+            hasMoreOverall: hasMoreOverall,
           ),
+        ),
         SizedBox(height: context.spacingSm()),
       ]);
     }
@@ -731,8 +862,9 @@ class _SeriesScreenState extends State<SeriesScreen>
     Content featuredSeries,
     List<Content> allSeries,
     List<Content> recentSeries,
+    {required bool hasMoreOverall}
   ) {
-    final heroImage = _resolveHeroImage(featuredSeries);
+    final heroArt = _resolveHeroArt(featuredSeries);
     final heroHeight = context.heroHeight();
     final cardPeek = context.spacingXl();
     final contentInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
@@ -805,13 +937,32 @@ class _SeriesScreenState extends State<SeriesScreen>
                           },
                           child: Stack(
                             children: [
-                              _buildHeroContent(featuredSeries, heroImage, 0.0),
+                              _buildHeroContent(featuredSeries, heroArt, 0.0),
+                              // Left-side scrim for readability near sidebar/info box
+                              Positioned.fill(
+                                child: IgnorePointer(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.centerLeft,
+                                        end: Alignment.centerRight,
+                                        colors: [
+                                          AppTheme.darkBackground
+                                              .withAlpha((0.7 * 255).round()),
+                                          Colors.transparent,
+                                        ],
+                                        stops: const [0.0, 0.5],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
                               // Gradient fade at bottom
                               Positioned(
                                 bottom: 0,
                                 left: 0,
                                 right: 0,
-                                height: 120,
+                                height: 180,
                                 child: Container(
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
@@ -894,13 +1045,24 @@ class _SeriesScreenState extends State<SeriesScreen>
                                 _buildSeriesRow(
                                   context,
                                   recentSeries,
+                                  sectionKey: 'recent_series',
                                   firstCardFocusNode: _firstRowFocus,
+                                  onItemFocus: (index) {
+                                    if (_focusedIndexBySection['recent_series'] !=
+                                        index) {
+                                      setState(() {
+                                        _focusedIndexBySection['recent_series'] =
+                                            index;
+                                      });
+                                    }
+                                  },
                                 ),
                                 SizedBox(height: context.sectionSpacing()),
                               ],
                               ..._buildGenreSections(
                                 context,
                                 allSeries,
+                                hasMoreOverall: hasMoreOverall,
                                 firstRowFocusNode: recentSeries.isEmpty
                                     ? _firstRowFocus
                                     : null,
@@ -922,9 +1084,29 @@ class _SeriesScreenState extends State<SeriesScreen>
   }
 
   Widget _buildHeroContent(
-      Content featuredSeries, String? heroImage, double scrollProgress) {
-    return heroImage != null
-        ? Positioned.fill(
+      Content featuredSeries, _HeroArt heroArt, double scrollProgress) {
+    final heroImage = heroArt.url;
+    if (heroImage == null) {
+      return _buildBannerPlaceholder();
+    }
+    if (heroArt.isBackdrop) {
+      return Positioned.fill(
+        child: CachedNetworkImage(
+          imageUrl: heroImage,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+          placeholder: (_, __) => _buildBannerPlaceholder(),
+          errorWidget: (_, __, ___) => _buildBannerPlaceholder(),
+        ),
+      );
+    }
+    return Positioned.fill(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ImageFiltered(
+            imageFilter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
             child: CachedNetworkImage(
               imageUrl: heroImage,
               fit: BoxFit.cover,
@@ -933,13 +1115,30 @@ class _SeriesScreenState extends State<SeriesScreen>
               placeholder: (_, __) => _buildBannerPlaceholder(),
               errorWidget: (_, __, ___) => _buildBannerPlaceholder(),
             ),
-          )
-        : _buildBannerPlaceholder();
+          ),
+          Container(
+            color: Colors.black.withValues(alpha: 0.25),
+          ),
+          Center(
+            child: CachedNetworkImage(
+              imageUrl: heroImage,
+              fit: BoxFit.contain,
+              width: double.infinity,
+              height: double.infinity,
+              placeholder: (_, __) => _buildBannerPlaceholder(),
+              errorWidget: (_, __, ___) => _buildBannerPlaceholder(),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildHeroInfo(BuildContext context, Content featuredSeries) {
     return HeroInfoBox(
-      title: featuredSeries.title,
+      title: featuredSeries.displayTitle,
+      channelLogoUrl:
+          featuredSeries.logoUrl?.isNotEmpty == true ? featuredSeries.logoUrl : null,
       description: featuredSeries.description,
       metadata: [
         if (featuredSeries.rating != null)

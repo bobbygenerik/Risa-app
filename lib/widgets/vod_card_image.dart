@@ -10,12 +10,14 @@ class VodCardImage extends StatefulWidget {
   final Content content;
   final Widget placeholder;
   final BoxFit fit;
+  final bool allowPrefetch;
 
   const VodCardImage({
     super.key,
     required this.content,
     required this.placeholder,
     this.fit = BoxFit.cover,
+    this.allowPrefetch = true,
   });
 
   @override
@@ -23,21 +25,34 @@ class VodCardImage extends StatefulWidget {
 }
 
 class _VodCardImageState extends State<VodCardImage> {
+  static final Map<String, DateTime> _retryAfter = {};
+  static final Set<String> _inFlight = {};
   String? _tmdbPosterUrl;
   bool _fetchedTmdb = false;
-  bool _isFetching = false;
 
   @override
   void initState() {
     super.initState();
-    // Always try to fetch TMDB poster for better quality
-    // M3U tvg-logo URLs are often broken or low quality
-    _fetchTmdbPoster();
+    if (widget.allowPrefetch) {
+      _fetchTmdbPoster();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant VodCardImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.allowPrefetch && widget.allowPrefetch && !_fetchedTmdb) {
+      _fetchTmdbPoster();
+    }
   }
 
   Future<void> _fetchTmdbPoster() async {
-    if (_isFetching || _fetchedTmdb) return;
-    _isFetching = true;
+    if (_fetchedTmdb) return;
+    final cacheKey = widget.content.id;
+    if (_inFlight.contains(cacheKey)) return;
+    final retryAt = _retryAfter[cacheKey];
+    if (retryAt != null && DateTime.now().isBefore(retryAt)) return;
+    _inFlight.add(cacheKey);
 
     try {
       debugLog('VodCardImage: Fetching artwork for "${widget.content.title}"');
@@ -57,13 +72,16 @@ class _VodCardImageState extends State<VodCardImage> {
         debugLog(
             'VodCardImage: No artwork found for "${widget.content.title}"');
         _fetchedTmdb = true;
+        _retryAfter[cacheKey] =
+            DateTime.now().add(const Duration(minutes: 10));
       }
     } catch (e) {
       debugLog(
           'VodCardImage: Failed to fetch artwork for ${widget.content.title}: $e');
       _fetchedTmdb = true;
+      _retryAfter[cacheKey] = DateTime.now().add(const Duration(minutes: 10));
     } finally {
-      _isFetching = false;
+      _inFlight.remove(cacheKey);
     }
   }
 

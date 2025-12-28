@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -12,16 +14,49 @@ class LocalDbService {
 
   Database? _db;
   bool _isInit = false;
+  bool _resetting = false;
+  String? _dbPath;
+  Future<void> _writeQueue = Future.value();
+
+  bool get isReady => _isInit && _db != null;
+
+  Future<String> _resolveDbPath() async {
+    final cacheDir = await getApplicationCacheDirectory();
+    final cachePath = p.join(cacheDir.path, 'iptv_local.db');
+    final cacheFile = File(cachePath);
+    if (!await cacheFile.exists()) {
+      // Best-effort migration from legacy documents dir.
+      final docsDir = await getApplicationDocumentsDirectory();
+      final docsPath = p.join(docsDir.path, 'iptv_local.db');
+      final docsFile = File(docsPath);
+      if (await docsFile.exists()) {
+        try {
+          await docsFile.copy(cachePath);
+        } catch (_) {}
+      }
+    }
+    return cachePath;
+  }
 
   Future<void> init() async {
     if (_isInit) return;
 
     try {
-      final dir = await getApplicationDocumentsDirectory();
-      final dbPath = p.join(dir.path, 'iptv_local.db');
+      final dbPath = await _resolveDbPath();
+      _dbPath = dbPath;
       _db = await openDatabase(
         dbPath,
         version: 1,
+        onConfigure: (db) async {
+          try {
+            // PRAGMA journal_mode returns rows; use rawQuery to avoid errors.
+            await db.rawQuery('PRAGMA journal_mode=WAL');
+            await db.rawQuery('PRAGMA synchronous=NORMAL');
+            await db.rawQuery('PRAGMA busy_timeout=3000');
+          } catch (_) {
+            // Best-effort; continue without WAL if platform rejects PRAGMA.
+          }
+        },
         onCreate: (db, _) async {
           await db.execute('''
           CREATE TABLE channels(
@@ -109,21 +144,114 @@ class LocalDbService {
     return db;
   }
 
-  Future<void> clearChannels() async {
+  Future<T> _withDb<T>(Future<T> Function(Database db) action) async {
     final db = _requireDb();
-    await db.delete('channels');
+    try {
+      return await action(db);
+    } catch (e) {
+      if (_isClosedError(e)) {
+        await init();
+        return await action(_requireDb());
+      }
+      if (_isReadOnlyError(e) && !_resetting) {
+        await _resetDatabase();
+        final retryDb = _requireDb();
+        return await action(retryDb);
+      }
+      rethrow;
+    }
+  }
+
+  Future<T> _withDbRead<T>(Future<T> Function(Database db) action) async {
+    if (!_isInit) {
+      await init();
+    }
+    // Avoid read/write contention during long write transactions.
+    await _writeQueue;
+    return _withDb(action);
+  }
+
+  Future<T> _queueWrite<T>(Future<T> Function(Database db) action) {
+    final completer = Completer<T>();
+    _writeQueue = _writeQueue.then((_) async {
+      try {
+        if (!_isInit) {
+          await init();
+        }
+        final result = await _withDb(action);
+        completer.complete(result);
+      } catch (e, st) {
+        completer.completeError(e, st);
+      }
+    });
+    return completer.future;
+  }
+
+  bool _isReadOnlyError(Object e) {
+    final message = e.toString().toLowerCase();
+    return message.contains('read-only') ||
+        message.contains('read only') ||
+        message.contains('readonly');
+  }
+
+  bool _isClosedError(Object e) {
+    final message = e.toString().toLowerCase();
+    return message.contains('database_closed') ||
+        message.contains('database closed') ||
+        message.contains('not initialized');
+  }
+
+  Future<void> _resetDatabase() async {
+    if (_resetting) return;
+    _resetting = true;
+    try {
+      // ignore: avoid_print
+      print('LocalDbService: resetting read-only database');
+      final db = _db;
+      _db = null;
+      _isInit = false;
+      try {
+        await db?.close();
+      } catch (_) {}
+      var path = _dbPath;
+      if (path == null || path.isEmpty) {
+        final dir = await getApplicationDocumentsDirectory();
+        path = p.join(dir.path, 'iptv_local.db');
+        _dbPath = path;
+      }
+      try {
+        await deleteDatabase(path);
+      } catch (_) {}
+      await init();
+    } finally {
+      _resetting = false;
+    }
+  }
+
+  Future<bool> recoverFromReadOnly() async {
+    try {
+      await _resetDatabase();
+      return _isInit;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> clearChannels() async {
+    await _queueWrite((db) => db.delete('channels'));
   }
 
   Future<List<Map<String, dynamic>>> getChannelsPage(
       {int offset = 0, int limit = 50}) async {
-    final db = _requireDb();
     final safeLimit = limit.clamp(0, 500);
-    final rows = await db.query(
-      'channels',
-      orderBy: 'idx ASC',
-      limit: safeLimit,
-      offset: offset,
-    );
+    final rows = await _withDbRead((db) {
+      return db.query(
+        'channels',
+        orderBy: 'idx ASC',
+        limit: safeLimit,
+        offset: offset,
+      );
+    });
     return rows.map(_hydrateAttrs).toList();
   }
 
@@ -131,174 +259,182 @@ class LocalDbService {
       String category,
       {int offset = 0,
       int limit = 50}) async {
-    final db = _requireDb();
     final safeLimit = limit.clamp(0, 500);
-    final rows = await db.query(
-      'channels',
-      where: 'groupTitle = ?',
-      whereArgs: [category],
-      orderBy: 'idx ASC',
-      limit: safeLimit,
-      offset: offset,
-    );
+    final rows = await _withDbRead((db) {
+      return db.query(
+        'channels',
+        where: 'groupTitle = ?',
+        whereArgs: [category],
+        orderBy: 'idx ASC',
+        limit: safeLimit,
+        offset: offset,
+      );
+    });
     return rows.map(_hydrateAttrs).toList();
   }
 
   Future<List<String>> getCategories({int limit = 50}) async {
-    final db = _requireDb();
-    final rows = await db.rawQuery(
-        'SELECT DISTINCT groupTitle FROM channels WHERE groupTitle IS NOT NULL ORDER BY groupTitle LIMIT ?',
-        [limit]);
+    final rows = await _withDbRead((db) {
+      return db.rawQuery(
+          'SELECT DISTINCT groupTitle FROM channels WHERE groupTitle IS NOT NULL ORDER BY groupTitle LIMIT ?',
+          [limit]);
+    });
     return rows
         .map((r) => (r['groupTitle'] as String?) ?? 'Uncategorized')
         .toList();
   }
 
   Future<int> channelCount() async {
-    final db = _requireDb();
-    final result =
-        await db.rawQuery('SELECT COUNT(*) as c FROM channels');
+    final result = await _withDbRead(
+        (db) => db.rawQuery('SELECT COUNT(*) as c FROM channels'));
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
   Future<int> channelCountForCategory(String category) async {
-    final db = _requireDb();
-    final result = await db.rawQuery(
-        'SELECT COUNT(*) as c FROM channels WHERE groupTitle = ?', [category]);
+    final result = await _withDbRead((db) {
+      return db.rawQuery(
+          'SELECT COUNT(*) as c FROM channels WHERE groupTitle = ?', [category]);
+    });
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
   Future<List<Map<String, dynamic>>> searchChannels(String query,
       {int limit = 100}) async {
-    final db = _requireDb();
     final safeLimit = limit.clamp(0, 500);
-    final rows = await db.query(
-      'channels',
-      where: 'name LIKE ?',
-      whereArgs: ['%$query%'],
-      orderBy: 'idx ASC',
-      limit: safeLimit,
-    );
+    final rows = await _withDbRead((db) {
+      return db.query(
+        'channels',
+        where: 'name LIKE ?',
+        whereArgs: ['%$query%'],
+        orderBy: 'idx ASC',
+        limit: safeLimit,
+      );
+    });
     return rows.map(_hydrateAttrs).toList();
   }
 
   Future<List<Map<String, dynamic>>> getProgramsForEpgId(String epgId,
-      {int limit = 200}) async {
-    final db = _requireDb();
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final rows = await db.query(
-      'epg_programs',
-      where: 'epgId = ? AND endTs >= ?',
-      whereArgs: [epgId, now - const Duration(hours: 6).inMilliseconds],
-      orderBy: 'startTs ASC',
-      limit: limit,
-    );
+      {required int startMs, required int endMs, int limit = 200, int offset = 0}) async {
+    final rows = await _withDbRead((db) {
+      return db.query(
+        'epg_programs',
+        where: 'epgId = ? AND endTs >= ? AND startTs < ?',
+        whereArgs: [epgId, startMs, endMs],
+        orderBy: 'startTs ASC',
+        limit: limit.clamp(0, 500),
+        offset: offset.clamp(0, 1000000),
+      );
+    });
     return rows;
   }
 
   Future<void> insertChannels(List<Map<String, dynamic>> channels) async {
     if (channels.isEmpty) return;
-    final db = _requireDb();
-    await db.transaction((txn) async {
-      final batch = txn.batch();
-      for (var i = 0; i < channels.length; i++) {
-        final c = channels[i];
-        batch.insert(
-          'channels',
-          {
-            'id': c['id'],
-            'name': c['name'],
-            'url': c['url'],
-            'logoUrl': c['logoUrl'],
-            'groupTitle': c['groupTitle'],
-            'tvgId': c['tvgId'],
-            'channelNumber': c['channelNumber'],
-            'attrs': c['attributes'] != null ? json.encode(c['attributes']) : null,
-            'isHD': c['isHD'] == true ? 1 : 0,
-            'isFavorite': c['isFavorite'] == true ? 1 : 0,
-            'language': c['language'],
-            'country': c['country'],
-            'isHidden': c['isHidden'] == true ? 1 : 0,
-            'sortOrder': c['sortOrder'],
-            'idx': i,
-          },
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
-      await batch.commit(noResult: true);
+    await _queueWrite((db) async {
+      await db.transaction((txn) async {
+        final batch = txn.batch();
+        for (var i = 0; i < channels.length; i++) {
+          final c = channels[i];
+          batch.insert(
+            'channels',
+            {
+              'id': c['id'],
+              'name': c['name'],
+              'url': c['url'],
+              'logoUrl': c['logoUrl'],
+              'groupTitle': c['groupTitle'],
+              'tvgId': c['tvgId'],
+              'channelNumber': c['channelNumber'],
+              'attrs':
+                  c['attributes'] != null ? json.encode(c['attributes']) : null,
+              'isHD': c['isHD'] == true ? 1 : 0,
+              'isFavorite': c['isFavorite'] == true ? 1 : 0,
+              'language': c['language'],
+              'country': c['country'],
+              'isHidden': c['isHidden'] == true ? 1 : 0,
+              'sortOrder': c['sortOrder'],
+              'idx': i,
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+        await batch.commit(noResult: true);
+      });
     });
   }
 
   Future<void> clearVod() async {
-    final db = _requireDb();
-    await db.delete('vod_movies');
-    await db.delete('vod_series');
+    await _queueWrite((db) async {
+      await db.delete('vod_movies');
+      await db.delete('vod_series');
+    });
   }
 
   Future<void> insertMovies(List<Map<String, dynamic>> movies) async {
     if (movies.isEmpty) return;
-    final db = _requireDb();
-    await db.transaction((txn) async {
-      final batch = txn.batch();
-      for (final m in movies) {
-        batch.insert(
-          'vod_movies',
-          {
-            'id': m['id'],
-            'title': m['title'] ?? '',
-            'payload': json.encode(m),
-          },
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
-      await batch.commit(noResult: true);
+    await _queueWrite((db) async {
+      await db.transaction((txn) async {
+        final batch = txn.batch();
+        for (final m in movies) {
+          batch.insert(
+            'vod_movies',
+            {
+              'id': m['id'],
+              'title': m['title'] ?? '',
+              'payload': json.encode(m),
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+        await batch.commit(noResult: true);
+      });
     });
   }
 
   Future<void> insertSeries(List<Map<String, dynamic>> series) async {
     if (series.isEmpty) return;
-    final db = _requireDb();
-    await db.transaction((txn) async {
-      final batch = txn.batch();
-      for (final s in series) {
-        batch.insert(
-          'vod_series',
-          {
-            'id': s['id'],
-            'title': s['title'] ?? '',
-            'payload': json.encode(s),
-          },
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
-      await batch.commit(noResult: true);
+    await _queueWrite((db) async {
+      await db.transaction((txn) async {
+        final batch = txn.batch();
+        for (final s in series) {
+          batch.insert(
+            'vod_series',
+            {
+              'id': s['id'],
+              'title': s['title'] ?? '',
+              'payload': json.encode(s),
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+        await batch.commit(noResult: true);
+      });
     });
   }
 
   Future<int> movieCount() async {
-    final db = _requireDb();
-    final result =
-        await db.rawQuery('SELECT COUNT(*) as c FROM vod_movies');
+    final result = await _withDbRead(
+        (db) => db.rawQuery('SELECT COUNT(*) as c FROM vod_movies'));
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
   Future<int> seriesCount() async {
-    final db = _requireDb();
-    final result =
-        await db.rawQuery('SELECT COUNT(*) as c FROM vod_series');
+    final result = await _withDbRead(
+        (db) => db.rawQuery('SELECT COUNT(*) as c FROM vod_series'));
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
   Future<List<Map<String, dynamic>>> getMoviesPage(
       {int offset = 0, int limit = 50}) async {
-    final db = _requireDb();
     final safeLimit = limit.clamp(0, 500);
-    final rows = await db.query(
-      'vod_movies',
-      orderBy: 'title COLLATE NOCASE ASC',
-      limit: safeLimit,
-      offset: offset,
-    );
+    final rows = await _withDbRead((db) {
+      return db.query(
+        'vod_movies',
+        orderBy: 'title COLLATE NOCASE ASC',
+        limit: safeLimit,
+        offset: offset,
+      );
+    });
     return rows
         .map((r) => json.decode(r['payload'] as String) as Map<String, dynamic>)
         .toList();
@@ -306,51 +442,52 @@ class LocalDbService {
 
   Future<List<Map<String, dynamic>>> getSeriesPage(
       {int offset = 0, int limit = 50}) async {
-    final db = _requireDb();
     final safeLimit = limit.clamp(0, 500);
-    final rows = await db.query(
-      'vod_series',
-      orderBy: 'title COLLATE NOCASE ASC',
-      limit: safeLimit,
-      offset: offset,
-    );
+    final rows = await _withDbRead((db) {
+      return db.query(
+        'vod_series',
+        orderBy: 'title COLLATE NOCASE ASC',
+        limit: safeLimit,
+        offset: offset,
+      );
+    });
     return rows
         .map((r) => json.decode(r['payload'] as String) as Map<String, dynamic>)
         .toList();
   }
 
   Future<void> clearEpg() async {
-    final db = _requireDb();
-    await db.delete('epg_programs');
-    await db.delete('epg_mapping');
+    await _queueWrite((db) async {
+      await db.delete('epg_programs');
+      await db.delete('epg_mapping');
+    });
   }
 
   Future<int> mappingCount() async {
-    final db = _requireDb();
-    final result =
-        await db.rawQuery('SELECT COUNT(*) as c FROM epg_mapping');
+    final result = await _withDbRead(
+        (db) => db.rawQuery('SELECT COUNT(*) as c FROM epg_mapping'));
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
   Future<void> upsertEpgMapping(Map<String, String> mappings) async {
     if (mappings.isEmpty) return;
-    final db = _requireDb();
-    await db.transaction((txn) async {
-      final batch = txn.batch();
-      mappings.forEach((channelId, epgId) {
-        batch.insert(
-          'epg_mapping',
-          {'channelId': channelId, 'epgId': epgId},
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
+    await _queueWrite((db) async {
+      await db.transaction((txn) async {
+        final batch = txn.batch();
+        mappings.forEach((channelId, epgId) {
+          batch.insert(
+            'epg_mapping',
+            {'channelId': channelId, 'epgId': epgId},
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        });
+        await batch.commit(noResult: true);
       });
-      await batch.commit(noResult: true);
     });
   }
 
   Future<Map<String, String>> getAllMappings() async {
-    final db = _requireDb();
-    final rows = await db.query('epg_mapping');
+    final rows = await _withDbRead((db) => db.query('epg_mapping'));
     return {
       for (final r in rows) r['channelId'] as String: r['epgId'] as String
     };
@@ -359,41 +496,43 @@ class LocalDbService {
   Future<void> insertPrograms(String epgId, List<Map<String, dynamic>> programs,
       {bool clearExisting = false}) async {
     if (programs.isEmpty) return;
-    final db = _requireDb();
-    await db.transaction((txn) async {
-      if (clearExisting) {
-        await txn
-            .delete('epg_programs', where: 'epgId = ?', whereArgs: [epgId]);
-      }
-      final batch = txn.batch();
-      for (final p in programs) {
-        batch.insert(
-          'epg_programs',
-          {
-            'epgId': epgId,
-            'startTs': p['startTs'],
-            'endTs': p['endTs'],
-            'title': p['title'],
-            'description': p['description'],
-            'imageUrl': p['imageUrl'],
-          },
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
-      await batch.commit(noResult: true);
+    await _queueWrite((db) async {
+      await db.transaction((txn) async {
+        if (clearExisting) {
+          await txn
+              .delete('epg_programs', where: 'epgId = ?', whereArgs: [epgId]);
+        }
+        final batch = txn.batch();
+        for (final p in programs) {
+          batch.insert(
+            'epg_programs',
+            {
+              'epgId': epgId,
+              'startTs': p['startTs'],
+              'endTs': p['endTs'],
+              'title': p['title'],
+              'description': p['description'],
+              'imageUrl': p['imageUrl'],
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+        await batch.commit(noResult: true);
+      });
     });
   }
 
   Future<Map<String, dynamic>?> getCurrentProgram(String epgId) async {
-    final db = _requireDb();
     final now = DateTime.now().millisecondsSinceEpoch;
-    final rows = await db.query(
-      'epg_programs',
-      where: 'epgId = ? AND startTs <= ? AND endTs >= ?',
-      whereArgs: [epgId, now, now],
-      orderBy: 'startTs DESC',
-      limit: 1,
-    );
+    final rows = await _withDbRead((db) {
+      return db.query(
+        'epg_programs',
+        where: 'epgId = ? AND startTs <= ? AND endTs >= ?',
+        whereArgs: [epgId, now, now],
+        orderBy: 'startTs DESC',
+        limit: 1,
+      );
+    });
     if (rows.isEmpty) return null;
     return rows.first;
   }

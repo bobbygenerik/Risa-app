@@ -328,7 +328,7 @@ class SettingsProvider extends ChangeNotifier {
       'm3u_url': prefs.getString('m3u_url'),
       'xtream_server': prefs.getString('xtream_server'),
       'epg_update_interval': prefs.getInt('epg_update_interval') ?? 12,
-      'epg_past_days': prefs.getInt('epg_past_days') ?? 1,
+      'epg_past_days': prefs.getInt('epg_past_days') ?? 0,
       'store_descriptions': prefs.getBool('store_program_descriptions') ?? true,
       'show_channel_logos': prefs.getBool('show_channel_logos') ?? true,
       'show_program_images': prefs.getBool('show_program_images') ?? true,

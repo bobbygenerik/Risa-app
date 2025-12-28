@@ -15,6 +15,7 @@ class EPGScreenState extends ChangeNotifier {
   int _currentPage = 0;
   bool _isLoadingMore = false;
   List<Channel> _paginatedChannels = [];
+  bool _hasMore = true;
 
   // Scroll synchronization
   bool _syncingScroll = false;
@@ -29,6 +30,7 @@ class EPGScreenState extends ChangeNotifier {
   List<Channel> get paginatedChannels => _paginatedChannels;
   bool get syncingScroll => _syncingScroll;
   int get channelsPerPage => _channelsPerPage;
+  bool get hasMore => _hasMore;
 
   // Category management
   void setSelectedCategory(String? category) {
@@ -61,43 +63,23 @@ class EPGScreenState extends ChangeNotifier {
   }
 
   void updatePaginatedChannels(List<Channel> allChannels) {
-    // Sort channels first
-    allChannels.sort((a, b) {
-      if (a.sortOrder != null && b.sortOrder != null) {
-        return a.sortOrder!.compareTo(b.sortOrder!);
-      }
-      if (a.channelNumber != null && b.channelNumber != null) {
-        return a.channelNumber!.compareTo(b.channelNumber!);
-      }
-      return a.name.compareTo(b.name);
-    });
-
-    // Reset pagination when category changes
-    _currentPage = 0;
-    _paginatedChannels = allChannels.take(_channelsPerPage).toList();
+    _paginatedChannels = allChannels;
     notifyListeners();
   }
 
-  void loadMoreChannels(List<Channel> allChannels) {
-    if (_isLoadingMore) return;
-
-    final startIndex = (_currentPage + 1) * _channelsPerPage;
-    if (startIndex >= allChannels.length) return;
-
+  void loadMoreChannels() {
+    if (_isLoadingMore || !_hasMore) return;
     _isLoadingMore = true;
+    _currentPage++;
     notifyListeners();
-
-    // Simulate loading delay for smooth UX
-    Future.delayed(const Duration(milliseconds: 300), () {
-      final endIndex =
-          (startIndex + _channelsPerPage).clamp(0, allChannels.length);
-      final newChannels = allChannels.sublist(startIndex, endIndex);
-
-      _paginatedChannels.addAll(newChannels);
-      _currentPage++;
+    Future.delayed(const Duration(milliseconds: 250), () {
       _isLoadingMore = false;
       notifyListeners();
     });
+  }
+
+  void setHasMore(bool value) {
+    _hasMore = value;
   }
 
   // Scroll synchronization

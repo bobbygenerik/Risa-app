@@ -51,12 +51,22 @@ class Content {
       watchProgress != null && watchProgress! > 0.0 && watchProgress! < 0.95;
 
   String get displayTitle {
+    String stripYearSuffix(String input) {
+      var output = input.trim();
+      output = output.replaceAll(
+          RegExp(r'\s*[\(\[\{](19|20)\d{2}[\)\]\}]\s*$'), '');
+      output =
+          output.replaceAll(RegExp(r'[\s\-_:]+(19|20)\d{2}$'), '');
+      return output.trim();
+    }
+
+    final baseTitle = stripYearSuffix(title);
     if (type == ContentType.series &&
         seasonNumber != null &&
         episodeNumber != null) {
-      return '$title - S${seasonNumber}E$episodeNumber';
+      return '$baseTitle - S${seasonNumber}E$episodeNumber';
     }
-    return title;
+    return baseTitle;
   }
 
   String? get genre {

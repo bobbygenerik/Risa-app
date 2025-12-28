@@ -104,7 +104,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
     if (newIndex != _activeTabIndex) {
       _activeTabIndex = newIndex;
 
-      _setExpanded(false);
+      _setExpanded(false, defer: true);
       WidgetsBinding.instance.addPostFrameCallback((_) => _focusActiveTab());
     }
     if (oldWidget.onNavFocusRegistration != widget.onNavFocusRegistration &&
@@ -124,19 +124,24 @@ class SidebarNavigationState extends State<SidebarNavigation> {
     if (_lastRoutePath != routePath) {
       _lastRoutePath = routePath;
       if (_isExpanded) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            _setExpanded(false);
-          }
-        });
+        _setExpanded(false, defer: true);
       }
     }
   }
 
   bool get isExpanded => _isExpanded;
 
-  void _setExpanded(bool value) {
+  void _setExpanded(bool value, {bool defer = false}) {
     if (_isExpanded == value) return;
+    if (defer) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (_isExpanded == value) return;
+        setState(() => _isExpanded = value);
+        widget.onExpansionChanged?.call(value);
+      });
+      return;
+    }
     setState(() => _isExpanded = value);
     widget.onExpansionChanged?.call(value);
   }
