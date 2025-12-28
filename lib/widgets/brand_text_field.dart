@@ -37,7 +37,8 @@ class BrandTextField extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget field = Builder(
       builder: (context) {
-        final isFocused = isFocusedOverride ?? Focus.of(context).hasFocus;
+        final isFocused =
+            isFocusedOverride ?? (Focus.maybeOf(context)?.hasFocus ?? false);
         final borderRadius = BorderRadius.circular(12);
         final theme = Theme.of(context);
         final selectionTheme = theme.textSelectionTheme.copyWith(

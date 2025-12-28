@@ -150,7 +150,17 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
           onShowHoverHighlight: (_) {},
           mouseCursor: SystemMouseCursors.click,
           onFocusChange: (v) => setState(() => _focused = v),
-          child: content,
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(widget.borderRadius),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(widget.borderRadius),
+              splashColor: Colors.white.withValues(alpha: 0.15),
+              highlightColor: Colors.white.withValues(alpha: 0.08),
+              onTap: widget.onPressed,
+              child: content,
+            ),
+          ),
         ),
       ),
     );

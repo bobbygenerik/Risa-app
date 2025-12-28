@@ -225,35 +225,81 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          backgroundColor: AppTheme.darkBackground,
-          title: const Text('Edit EPG URLs'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              BrandTextField(
-                controller: primaryController,
-                labelText: 'Primary EPG URL',
-                hintText: 'http://example.com/epg.xml',
+        final insets = MediaQuery.of(context).viewInsets;
+        final maxHeight =
+            MediaQuery.of(context).size.height - insets.bottom - 48;
+        return AnimatedPadding(
+          padding:
+              insets + const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: 560, maxHeight: maxHeight),
+              child: Material(
+                color: AppTheme.darkBackground,
+                borderRadius: BorderRadius.circular(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(24, 24, 24, 12),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Edit EPG URLs',
+                          style: TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            BrandTextField(
+                              controller: primaryController,
+                              labelText: 'Primary EPG URL',
+                              hintText: 'http://example.com/epg.xml',
+                            ),
+                            const SizedBox(height: AppSizes.md),
+                            BrandTextField(
+                              controller: secondaryController,
+                              labelText: 'Secondary EPG URL',
+                              hintText: 'Optional backup',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                      child: Column(
+                        children: [
+                          BrandSecondaryButton(
+                            label: 'Cancel',
+                            onPressed: () => Navigator.pop(context, false),
+                            expand: true,
+                          ),
+                          const SizedBox(height: 12),
+                          BrandPrimaryButton(
+                            label: 'Save',
+                            onPressed: () => Navigator.pop(context, true),
+                            expand: true,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: AppSizes.md),
-              BrandTextField(
-                controller: secondaryController,
-                labelText: 'Secondary EPG URL',
-                hintText: 'Optional backup',
-              ),
-            ],
+            ),
           ),
-          actions: [
-            BrandSecondaryButton(
-              label: 'Cancel',
-              onPressed: () => Navigator.pop(context, false),
-            ),
-            BrandPrimaryButton(
-              label: 'Save',
-              onPressed: () => Navigator.pop(context, true),
-            ),
-          ],
         );
       },
     );
@@ -285,27 +331,45 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
 
     final result = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.darkBackground,
-        title: const Text('Edit Playlist Name'),
-        content: BrandTextField(
-          controller: nameController,
-          labelText: 'Playlist Name',
-          hintText: 'Enter playlist name',
-        ),
-        actions: [
-          BrandSecondaryButton(
-            label: 'Cancel',
-            onPressed: () => Navigator.pop(context),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      builder: (context) {
+        return AnimatedPadding(
+          padding: MediaQuery.of(context).viewInsets +
+              const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: AlertDialog(
+                insetPadding: EdgeInsets.zero,
+                backgroundColor: AppTheme.darkBackground,
+                title: const Text('Edit Playlist Name'),
+                content: SingleChildScrollView(
+                  child: BrandTextField(
+                    controller: nameController,
+                    labelText: 'Playlist Name',
+                    hintText: 'Enter playlist name',
+                  ),
+                ),
+                actions: [
+                  BrandSecondaryButton(
+                    label: 'Cancel',
+                    onPressed: () => Navigator.pop(context),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                  BrandPrimaryButton(
+                    label: 'Save',
+                    onPressed: () => Navigator.pop(context, nameController.text),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                ],
+              ),
+            ),
           ),
-          BrandPrimaryButton(
-            label: 'Save',
-            onPressed: () => Navigator.pop(context, nameController.text),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          ),
-        ],
-      ),
+        );
+      },
     );
 
     if (result != null && result.isNotEmpty) {

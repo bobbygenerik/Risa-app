@@ -1088,29 +1088,31 @@ class IncrementalEpgService extends ChangeNotifier {
       final stream =
           file.openRead().transform(const Utf8Decoder(allowMalformed: true));
       final events = stream.toXmlEvents();
-      await for (final event in events) {
-        if (event is! XmlStartElementEvent) continue;
-        if (event.name.endsWith('channel')) {
-          final id = event.attributes
-              .firstWhere((a) => a.name == 'id',
-                  orElse: () => XmlEventAttribute(
-                      'id', '', XmlAttributeType.DOUBLE_QUOTE))
-              .value;
-          if (id.isNotEmpty) {
-            channelIds.add(id);
-            final normalized = normalizeForFilter(id);
-            if (normalized.isNotEmpty) normalizedIds.add(normalized);
-          }
-        } else if (event.name.endsWith('programme')) {
-          final id = event.attributes
-              .firstWhere((a) => a.name == 'channel',
-                  orElse: () => XmlEventAttribute(
-                      'channel', '', XmlAttributeType.DOUBLE_QUOTE))
-              .value;
-          if (id.isNotEmpty) {
-            channelIds.add(id);
-            final normalized = normalizeForFilter(id);
-            if (normalized.isNotEmpty) normalizedIds.add(normalized);
+      await for (final batch in events) {
+        for (final event in batch) {
+          if (event is! XmlStartElementEvent) continue;
+          if (event.name.endsWith('channel')) {
+            final id = event.attributes
+                .firstWhere((a) => a.name == 'id',
+                    orElse: () => XmlEventAttribute(
+                        'id', '', XmlAttributeType.DOUBLE_QUOTE))
+                .value;
+            if (id.isNotEmpty) {
+              channelIds.add(id);
+              final normalized = normalizeForFilter(id);
+              if (normalized.isNotEmpty) normalizedIds.add(normalized);
+            }
+          } else if (event.name.endsWith('programme')) {
+            final id = event.attributes
+                .firstWhere((a) => a.name == 'channel',
+                    orElse: () => XmlEventAttribute(
+                        'channel', '', XmlAttributeType.DOUBLE_QUOTE))
+                .value;
+            if (id.isNotEmpty) {
+              channelIds.add(id);
+              final normalized = normalizeForFilter(id);
+              if (normalized.isNotEmpty) normalizedIds.add(normalized);
+            }
           }
         }
       }
