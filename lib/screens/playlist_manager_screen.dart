@@ -42,10 +42,84 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
           .toList();
     }
 
+    await _migrateLegacyPlaylistsIfNeeded(prefs);
+
     setState(() {
       _activePlaylistId = activeId;
       _isLoading = false;
     });
+  }
+
+  Future<void> _migrateLegacyPlaylistsIfNeeded(
+      SharedPreferences prefs) async {
+    final alreadyMigrated =
+        prefs.getBool('legacy_playlists_migrated') ?? false;
+    final legacyM3u = prefs.getStringList('saved_m3u_playlists') ?? [];
+    final legacyXtream = prefs.getStringList('saved_xtream_servers') ?? [];
+    if (alreadyMigrated || (legacyM3u.isEmpty && legacyXtream.isEmpty)) {
+      return;
+    }
+
+    final existingKeys = _playlists
+        .map((p) => '${p.type}:${p.url}')
+        .toSet();
+    final migrated = <SavedPlaylist>[];
+
+    for (final url in legacyM3u) {
+      final key = 'm3u:$url';
+      if (existingKeys.contains(key)) continue;
+      final enc = base64Url.encode(utf8.encode(url));
+      final name = prefs.getString('m3u_playlist_name_$enc') ?? 'M3U Playlist';
+      final epgUrl = prefs.getString('m3u_epg_url_$enc') ?? '';
+      final secondary = prefs.getString('m3u_secondary_epg_$enc') ?? '';
+      migrated.add(
+        SavedPlaylist(
+          id: '${url.hashCode}',
+          name: name,
+          type: 'm3u',
+          url: url,
+          server: null,
+          username: null,
+          password: null,
+          epgUrl: epgUrl.isEmpty ? null : epgUrl,
+          epgUrlSecondary: secondary.isEmpty ? null : secondary,
+          addedDate: DateTime.now(),
+        ),
+      );
+    }
+
+    for (final server in legacyXtream) {
+      final key = 'xtream:$server';
+      if (existingKeys.contains(key)) continue;
+      final enc = base64Url.encode(utf8.encode(server));
+      final name =
+          prefs.getString('xtream_playlist_name_$enc') ?? 'Xtream Playlist';
+      final username = prefs.getString('xtream_username_$enc') ?? '';
+      final password = prefs.getString('xtream_password_$enc') ?? '';
+      final epgUrl = prefs.getString('xtream_epg_url_$enc') ?? '';
+      final secondary = prefs.getString('xtream_secondary_epg_$enc') ?? '';
+      migrated.add(
+        SavedPlaylist(
+          id: '${server.hashCode}',
+          name: name,
+          type: 'xtream',
+          url: server,
+          server: server,
+          username: username.isEmpty ? null : username,
+          password: password.isEmpty ? null : password,
+          epgUrl: epgUrl.isEmpty ? null : epgUrl,
+          epgUrlSecondary: secondary.isEmpty ? null : secondary,
+          addedDate: DateTime.now(),
+        ),
+      );
+    }
+
+    if (migrated.isNotEmpty) {
+      _playlists = [..._playlists, ...migrated];
+      await _savePlaylists();
+    }
+
+    await prefs.setBool('legacy_playlists_migrated', true);
   }
 
   Future<void> _savePlaylists() async {
@@ -246,6 +320,22 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
         }
       });
       await _savePlaylists();
+      if (_activePlaylistId == playlist.id) {
+        final prefs = await SharedPreferences.getInstance();
+        final primary = result.primary.trim();
+        final secondary = result.secondary.trim();
+        if (primary.isNotEmpty) {
+          await prefs.setString('epg_url', primary);
+          await prefs.setString('custom_epg_url', primary);
+        } else {
+          await prefs.remove('custom_epg_url');
+        }
+        if (secondary.isNotEmpty) {
+          await prefs.setString('secondary_epg_url', secondary);
+        } else {
+          await prefs.remove('secondary_epg_url');
+        }
+      }
     }
   }
 
