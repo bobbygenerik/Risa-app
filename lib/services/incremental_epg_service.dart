@@ -74,6 +74,7 @@ class IncrementalEpgService extends ChangeNotifier {
 
   // legacy prefs keys removed: do not store large EPG data in SharedPreferences
   static const String _epgCacheTimeKey = 'epg_cache_time';
+  static const String _epgCacheUrlKey = 'epg_cache_url';
   static const String _normalizedMapFileName = 'epg_normalized.json';
   static const int _channelsPerBatch = 50;
   static const int _maxRetries = 3;
@@ -183,6 +184,7 @@ class IncrementalEpgService extends ChangeNotifier {
       if (_epgUrl == null || _epgUrl!.isEmpty) {
         _epgUrl = prefs.getString('epg_url');
       }
+      await _handleCacheUrlChange(prefs);
       _epgFutureHours = 24;
 
       if (_epgUrl != null && _epgUrl!.isNotEmpty) {
@@ -226,6 +228,32 @@ class IncrementalEpgService extends ChangeNotifier {
         _pendingAllowedRefresh = false;
         unawaited(initialize(forceRefresh: false));
       }
+    }
+  }
+
+  Future<void> _handleCacheUrlChange(SharedPreferences prefs) async {
+    final currentUrl = _epgUrl ?? '';
+    final cachedUrl = prefs.getString(_epgCacheUrlKey) ?? '';
+    if (currentUrl.isEmpty) return;
+    if (cachedUrl.isNotEmpty && cachedUrl != currentUrl) {
+      debugLog(
+          'EPG: URL changed; clearing cache (old=$cachedUrl, new=$currentUrl)');
+      await prefs.remove(_epgCacheTimeKey);
+      await prefs.setString(_epgCacheUrlKey, currentUrl);
+      try {
+        final cacheFile = await _getCacheFile();
+        if (await cacheFile.exists()) await cacheFile.delete();
+      } catch (e) {
+        debugLog('EPG: Failed to delete cache file: $e');
+      }
+      await _saveNormalizedMappingToPrefs(null);
+      _normalizedAvailableChannels = null;
+      _availableChannels.clear();
+      _internalToEpgIdMapping.clear();
+      _programsByChannel.clear();
+      _hasParsed = false;
+    } else if (cachedUrl.isEmpty) {
+      await prefs.setString(_epgCacheUrlKey, currentUrl);
     }
   }
 
@@ -701,6 +729,9 @@ class IncrementalEpgService extends ChangeNotifier {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(
             _epgCacheTimeKey, DateTime.now().toIso8601String());
+        if (_epgUrl != null && _epgUrl!.isNotEmpty) {
+          await prefs.setString(_epgCacheUrlKey, _epgUrl!);
+        }
         // Persist normalized mapping to file for faster startup
         await _saveNormalizedMappingToPrefs(_normalizedAvailableChannels);
 
