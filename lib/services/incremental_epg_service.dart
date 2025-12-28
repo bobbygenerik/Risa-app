@@ -683,6 +683,7 @@ class IncrementalEpgService extends ChangeNotifier {
             parseResult['programCount'] as int? ?? 0;
         final initialChannelIds =
             (parseResult['channelIds'] as List<dynamic>).cast<String>();
+        bool noMatchingIdsForPlaylist = false;
         if (_allowedChannelIdsNormalized.isNotEmpty &&
             (initialProgramCount == 0 || initialChannelIds.isEmpty)) {
           debugLog(
@@ -694,6 +695,16 @@ class IncrementalEpgService extends ChangeNotifier {
               (scanResult['normalizedIds'] as List<dynamic>)
                   .cast<String>()
                   .toSet();
+          final scannedChannelIds =
+              (scanResult['channelIds'] as List<dynamic>).cast<String>();
+          final scannedNormalizedChannels = <String, String>{};
+          for (final id in scannedChannelIds) {
+            final normalized = normalizeForFilter(id);
+            if (normalized.isNotEmpty &&
+                !scannedNormalizedChannels.containsKey(normalized)) {
+              scannedNormalizedChannels[normalized] = id;
+            }
+          }
           final targetedAllowed =
               _allowedChannelIdsNormalized.intersection(normalizedIds);
           if (targetedAllowed.isNotEmpty) {
@@ -701,6 +712,13 @@ class IncrementalEpgService extends ChangeNotifier {
           } else {
             debugLog(
                 'EPG: Targeted fallback found no matching IDs; skipping full parse.');
+            noMatchingIdsForPlaylist = true;
+            parseResult = {
+              'programFilePath': null,
+              'programCount': 0,
+              'channelIds': scannedChannelIds,
+              'normalizedChannels': scannedNormalizedChannels,
+            };
           }
         }
 
@@ -723,7 +741,9 @@ class IncrementalEpgService extends ChangeNotifier {
 
         _hasParsed = true;
         _isParsing = false;
-        _error = null;
+        _error = noMatchingIdsForPlaylist
+            ? 'No matching EPG IDs for this playlist. Check tvg-id or mapping.'
+            : null;
 
         // Persist cache timestamp (do NOT store full EPG or channel lists in prefs)
         final prefs = await SharedPreferences.getInstance();
