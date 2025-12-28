@@ -4,7 +4,6 @@ import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
@@ -23,7 +22,6 @@ import 'content_provider.dart';
 import '../services/tmdb_enrichment_service.dart';
 import 'package:iptv_player/services/local_db_service.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
-import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'playlist_loader.dart';
 
 /// Isolate function to extract unique category names only (fast)
@@ -341,10 +339,6 @@ class ChannelProvider with ChangeNotifier {
       } catch (_) {
         return null;
       }
-    }
-
-    if (username == null) {
-      return null;
     }
 
     return {

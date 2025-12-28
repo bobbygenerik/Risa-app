@@ -266,8 +266,7 @@ class TMDBService {
       if (cached != null) return cached;
 
       final searchUrl =
-          '$_baseUrl/search/movie?api_key=$_apiKey&language=en-US&query=${Uri.encodeComponent(normalizedTitle)}' +
-              (year != null ? '&year=$year' : '');
+          '$_baseUrl/search/movie?api_key=$_apiKey&language=en-US&query=${Uri.encodeComponent(normalizedTitle)}${year != null ? '&year=$year' : ''}';
 
       final response = await http.get(Uri.parse(searchUrl));
 
