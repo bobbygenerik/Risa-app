@@ -690,6 +690,7 @@ class IncrementalEpgService extends ChangeNotifier {
               'EPG: Filtered parse returned no data; scanning channel IDs for targeted fallback.');
           final scanResult = await compute(_scanEpgChannelIdsInIsolate, {
             'filePath': file.path,
+            'allowedNormalized': _allowedChannelIdsNormalized.toList(),
           });
           final normalizedIds =
               (scanResult['normalizedIds'] as List<dynamic>)
@@ -697,6 +698,9 @@ class IncrementalEpgService extends ChangeNotifier {
                   .toSet();
           final scannedChannelIds =
               (scanResult['channelIds'] as List<dynamic>).cast<String>();
+          final matchedChannelIds =
+              (scanResult['matchedChannelIds'] as List<dynamic>)
+                  .cast<String>();
           final scannedNormalizedChannels = <String, String>{};
           for (final id in scannedChannelIds) {
             final normalized = normalizeForFilter(id);
@@ -709,6 +713,12 @@ class IncrementalEpgService extends ChangeNotifier {
               _allowedChannelIdsNormalized.intersection(normalizedIds);
           if (targetedAllowed.isNotEmpty) {
             parseResult = await parseEpg(targetedAllowed);
+          } else if (matchedChannelIds.isNotEmpty) {
+            final matchedAllowed = matchedChannelIds
+                .map((id) => normalizeForFilter(id))
+                .where((id) => id.isNotEmpty)
+                .toSet();
+            parseResult = await parseEpg(matchedAllowed);
           } else {
             debugLog(
                 'EPG: Targeted fallback found no matching IDs; skipping full parse.');
@@ -1134,35 +1144,60 @@ class IncrementalEpgService extends ChangeNotifier {
 
     final normalizedIds = <String>{};
     final channelIds = <String>{};
+    final matchedChannelIds = <String>{};
+    final allowedNormalized =
+        (args['allowedNormalized'] as List<dynamic>? ?? const [])
+            .map((e) => e.toString())
+            .toSet();
 
     try {
       final stream =
           file.openRead().transform(const Utf8Decoder(allowMalformed: true));
-      final events = stream.toXmlEvents();
-      await for (final batch in events) {
-        for (final event in batch) {
-          if (event is! XmlStartElementEvent) continue;
-          if (event.name.endsWith('channel')) {
-            final id = event.attributes
-                .firstWhere((a) => a.name == 'id',
-                    orElse: () => XmlEventAttribute(
-                        'id', '', XmlAttributeType.DOUBLE_QUOTE))
-                .value;
-            if (id.isNotEmpty) {
-              channelIds.add(id);
-              final normalized = normalizeForFilter(id);
-              if (normalized.isNotEmpty) normalizedIds.add(normalized);
+      final events = stream.toXmlEvents().withParentEvents();
+      final channelSubtrees =
+          events.selectSubtreeEvents((event) => event.name.endsWith('channel'));
+
+      await for (final subtree in channelSubtrees) {
+        if (subtree.isEmpty) continue;
+        final startEvent = subtree.first;
+        if (startEvent is! XmlStartElementEvent) continue;
+        final id = startEvent.attributes
+            .firstWhere((a) => a.name == 'id',
+                orElse: () =>
+                    XmlEventAttribute('id', '', XmlAttributeType.DOUBLE_QUOTE))
+            .value;
+        if (id.isEmpty) continue;
+        channelIds.add(id);
+        final normalizedId = normalizeForFilter(id);
+        if (normalizedId.isNotEmpty) {
+          normalizedIds.add(normalizedId);
+          if (allowedNormalized.contains(normalizedId)) {
+            matchedChannelIds.add(id);
+          }
+        }
+
+        String? displayName;
+        for (final event in subtree) {
+          if (event is XmlStartElementEvent && event.name == 'display-name') {
+            final idx = subtree.indexOf(event);
+            if (idx + 1 < subtree.length) {
+              final next = subtree[idx + 1];
+              if (next is XmlTextEvent) {
+                displayName = next.value.trim();
+                if (displayName.isNotEmpty) break;
+              }
             }
-          } else if (event.name.endsWith('programme')) {
-            final id = event.attributes
-                .firstWhere((a) => a.name == 'channel',
-                    orElse: () => XmlEventAttribute(
-                        'channel', '', XmlAttributeType.DOUBLE_QUOTE))
-                .value;
-            if (id.isNotEmpty) {
-              channelIds.add(id);
-              final normalized = normalizeForFilter(id);
-              if (normalized.isNotEmpty) normalizedIds.add(normalized);
+          }
+        }
+        if (displayName != null && displayName.isNotEmpty) {
+          final stripped = _stripSuffixes(displayName);
+          String normalizedDisplay =
+              stripped.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+          normalizedDisplay = _convertNumberWords(normalizedDisplay);
+          if (normalizedDisplay.isNotEmpty) {
+            normalizedIds.add(normalizedDisplay);
+            if (allowedNormalized.contains(normalizedDisplay)) {
+              matchedChannelIds.add(id);
             }
           }
         }
@@ -1174,6 +1209,7 @@ class IncrementalEpgService extends ChangeNotifier {
     return {
       'channelIds': channelIds.toList(),
       'normalizedIds': normalizedIds.toList(),
+      'matchedChannelIds': matchedChannelIds.toList(),
     };
   }
 
