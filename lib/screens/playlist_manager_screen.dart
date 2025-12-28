@@ -8,6 +8,7 @@ import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
 import 'package:iptv_player/widgets/brand_text_field.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
+import 'package:iptv_player/widgets/settings_tile_widgets.dart';
 import 'package:go_router/go_router.dart';
 
 class PlaylistManagerScreen extends StatefulWidget {
@@ -217,94 +218,17 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
   }
 
   Future<void> _editEpgUrls(SavedPlaylist playlist) async {
-    final primaryController =
-        TextEditingController(text: playlist.epgUrl ?? '');
-    final secondaryController =
-        TextEditingController(text: playlist.epgUrlSecondary ?? '');
-
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        final insets = MediaQuery.of(context).viewInsets;
-        final maxHeight =
-            MediaQuery.of(context).size.height - insets.bottom - 48;
-        return AnimatedPadding(
-          padding:
-              insets + const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: 560, maxHeight: maxHeight),
-              child: Material(
-                color: AppTheme.darkBackground,
-                borderRadius: BorderRadius.circular(16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(24, 24, 24, 12),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Edit EPG URLs',
-                          style: TextStyle(
-                            color: AppTheme.textPrimary,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    Flexible(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            BrandTextField(
-                              controller: primaryController,
-                              labelText: 'Primary EPG URL',
-                              hintText: 'http://example.com/epg.xml',
-                            ),
-                            const SizedBox(height: AppSizes.md),
-                            BrandTextField(
-                              controller: secondaryController,
-                              labelText: 'Secondary EPG URL',
-                              hintText: 'Optional backup',
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                      child: Column(
-                        children: [
-                          BrandSecondaryButton(
-                            label: 'Cancel',
-                            onPressed: () => Navigator.pop(context, false),
-                            expand: true,
-                          ),
-                          const SizedBox(height: 12),
-                          BrandPrimaryButton(
-                            label: 'Save',
-                            onPressed: () => Navigator.pop(context, true),
-                            expand: true,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
+    final result = await Navigator.of(context).push<_EpgEditResult>(
+      MaterialPageRoute(
+        builder: (context) => _PlaylistEpgEditScreen(
+          playlistName: playlist.name,
+          primaryEpgUrl: playlist.epgUrl ?? '',
+          secondaryEpgUrl: playlist.epgUrlSecondary ?? '',
+        ),
+      ),
     );
 
-    if (result == true) {
+    if (result != null) {
       setState(() {
         final idx = _playlists.indexWhere((p) => p.id == playlist.id);
         if (idx != -1) {
@@ -316,8 +240,8 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
             server: playlist.server,
             username: playlist.username,
             password: playlist.password,
-            epgUrl: primaryController.text.trim(),
-            epgUrlSecondary: secondaryController.text.trim(),
+            epgUrl: result.primary.trim(),
+            epgUrlSecondary: result.secondary.trim(),
             addedDate: playlist.addedDate,
           );
         }
@@ -631,6 +555,120 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+class _EpgEditResult {
+  final String primary;
+  final String secondary;
+
+  const _EpgEditResult({
+    required this.primary,
+    required this.secondary,
+  });
+}
+
+class _PlaylistEpgEditScreen extends StatefulWidget {
+  final String playlistName;
+  final String primaryEpgUrl;
+  final String secondaryEpgUrl;
+
+  const _PlaylistEpgEditScreen({
+    required this.playlistName,
+    required this.primaryEpgUrl,
+    required this.secondaryEpgUrl,
+  });
+
+  @override
+  State<_PlaylistEpgEditScreen> createState() => _PlaylistEpgEditScreenState();
+}
+
+class _PlaylistEpgEditScreenState extends State<_PlaylistEpgEditScreen> {
+  late final TextEditingController _primaryController;
+  late final TextEditingController _secondaryController;
+  final FocusNode _primaryFocus = FocusNode();
+  final FocusNode _secondaryFocus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _primaryController = TextEditingController(text: widget.primaryEpgUrl);
+    _secondaryController = TextEditingController(text: widget.secondaryEpgUrl);
+  }
+
+  @override
+  void dispose() {
+    _primaryController.dispose();
+    _secondaryController.dispose();
+    _primaryFocus.dispose();
+    _secondaryFocus.dispose();
+    super.dispose();
+  }
+
+  void _handleSave() {
+    Navigator.pop(
+      context,
+      _EpgEditResult(
+        primary: _primaryController.text,
+        secondary: _secondaryController.text,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.darkBackground,
+      appBar: AppBar(
+        title: const Text('Edit EPG URLs'),
+        backgroundColor: Colors.white.withValues(alpha: 0.08),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        children: [
+          SettingsSectionHeader(
+            title: widget.playlistName,
+            subtitle: 'Update primary and secondary EPG sources',
+          ),
+          SettingsGroup(
+            title: 'EPG URLs',
+            children: [
+              SettingsInputTile(
+                label: 'Primary EPG URL',
+                hint: 'http://example.com/epg.xml',
+                icon: Icons.tv,
+                controller: _primaryController,
+                focusNode: _primaryFocus,
+              ),
+              SettingsInputTile(
+                label: 'Secondary EPG URL',
+                hint: 'Optional backup',
+                icon: Icons.tv,
+                controller: _secondaryController,
+                focusNode: _secondaryFocus,
+              ),
+            ],
+          ),
+          SettingsGroup(
+            title: 'Actions',
+            children: [
+              SettingsActionTile(
+                title: 'Cancel',
+                icon: Icons.close,
+                onTap: () => Navigator.pop(context),
+              ),
+              SettingsActionTile(
+                title: 'Save EPG URLs',
+                icon: Icons.save,
+                iconColor: AppTheme.primaryBlue,
+                titleColor: AppTheme.primaryBlue,
+                onTap: _handleSave,
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
