@@ -5,8 +5,6 @@ import 'dart:convert';
 import 'package:iptv_player/models/saved_playlist.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/utils/app_theme.dart';
-import 'package:iptv_player/widgets/brand_button.dart';
-import 'package:iptv_player/widgets/brand_text_field.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/widgets/settings_tile_widgets.dart';
 import 'package:go_router/go_router.dart';
@@ -251,49 +249,13 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
   }
 
   Future<void> _editPlaylist(SavedPlaylist playlist) async {
-    final nameController = TextEditingController(text: playlist.name);
-
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) {
-        return AnimatedPadding(
-          padding: MediaQuery.of(context).viewInsets +
-              const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
-              child: AlertDialog(
-                insetPadding: EdgeInsets.zero,
-                backgroundColor: AppTheme.darkBackground,
-                title: const Text('Edit Playlist Name'),
-                content: SingleChildScrollView(
-                  child: BrandTextField(
-                    controller: nameController,
-                    labelText: 'Playlist Name',
-                    hintText: 'Enter playlist name',
-                  ),
-                ),
-                actions: [
-                  BrandSecondaryButton(
-                    label: 'Cancel',
-                    onPressed: () => Navigator.pop(context),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  ),
-                  BrandPrimaryButton(
-                    label: 'Save',
-                    onPressed: () => Navigator.pop(context, nameController.text),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+    final result = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (context) => _PlaylistNameEditScreen(
+          initialName: playlist.name,
+          playlistName: playlist.name,
+        ),
+      ),
     );
 
     if (result != null && result.isNotEmpty) {
@@ -582,6 +544,90 @@ class _PlaylistEpgEditScreen extends StatefulWidget {
 
   @override
   State<_PlaylistEpgEditScreen> createState() => _PlaylistEpgEditScreenState();
+}
+
+class _PlaylistNameEditScreen extends StatefulWidget {
+  final String playlistName;
+  final String initialName;
+
+  const _PlaylistNameEditScreen({
+    required this.playlistName,
+    required this.initialName,
+  });
+
+  @override
+  State<_PlaylistNameEditScreen> createState() => _PlaylistNameEditScreenState();
+}
+
+class _PlaylistNameEditScreenState extends State<_PlaylistNameEditScreen> {
+  late final TextEditingController _nameController;
+  final FocusNode _nameFocus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialName);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _nameFocus.dispose();
+    super.dispose();
+  }
+
+  void _handleSave() {
+    Navigator.pop(context, _nameController.text);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.darkBackground,
+      appBar: AppBar(
+        title: const Text('Rename Playlist'),
+        backgroundColor: Colors.white.withValues(alpha: 0.08),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        children: [
+          SettingsSectionHeader(
+            title: widget.playlistName,
+            subtitle: 'Update the display name for this playlist',
+          ),
+          SettingsGroup(
+            title: 'Playlist Name',
+            children: [
+              SettingsInputTile(
+                label: 'Name',
+                hint: 'Enter playlist name',
+                icon: Icons.edit,
+                controller: _nameController,
+                focusNode: _nameFocus,
+              ),
+            ],
+          ),
+          SettingsGroup(
+            title: 'Actions',
+            children: [
+              SettingsActionTile(
+                title: 'Cancel',
+                icon: Icons.close,
+                onTap: () => Navigator.pop(context),
+              ),
+              SettingsActionTile(
+                title: 'Save Name',
+                icon: Icons.save,
+                iconColor: AppTheme.primaryBlue,
+                titleColor: AppTheme.primaryBlue,
+                onTap: _handleSave,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _PlaylistEpgEditScreenState extends State<_PlaylistEpgEditScreen> {

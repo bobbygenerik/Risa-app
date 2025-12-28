@@ -8,7 +8,6 @@ import 'package:iptv_player/providers/channel_provider.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/app_theme.dart';
-import 'package:iptv_player/utils/no_text_selection_controls.dart';
 
 // removed unused imports
 // Note: This screen intentionally does not use `SettingsLayout` to avoid
@@ -41,10 +40,6 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
   // (Add-dialog controllers removed — creation handled via Settings → General)
 
   // Focus nodes
-  final FocusNode _playlistNameFocusNode = FocusNode();
-  final FocusNode _playlistUrlFocusNode = FocusNode();
-  final FocusNode _epgUrlFocusNode = FocusNode();
-  final FocusNode _secondaryEpgUrlFocusNode = FocusNode();
   final FocusNode _firstFocusNode = FocusNode();
 
   @override
@@ -116,10 +111,6 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
     _playlistUrlController.dispose();
     _epgUrlController.dispose();
     _secondaryEpgUrlController.dispose();
-    _playlistNameFocusNode.dispose();
-    _playlistUrlFocusNode.dispose();
-    _epgUrlFocusNode.dispose();
-    _secondaryEpgUrlFocusNode.dispose();
     _firstFocusNode.dispose();
     super.dispose();
   }
@@ -333,203 +324,91 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
 
   // Playlist editing methods
   void _editPlaylistName(PlaylistInfo playlist) {
-    _playlistNameController.text = playlist.name;
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AnimatedPadding(
-          padding: MediaQuery.of(context).viewInsets +
-              const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
-              child: AlertDialog(
-                insetPadding: EdgeInsets.zero,
-                backgroundColor: AppTheme.darkBackground,
-                title: const Text('Edit Playlist Name',
-                    style: TextStyle(color: Colors.white)),
-                content: SingleChildScrollView(
-                  child: SizedBox(
-                    width: double.maxFinite,
-                    child: _buildInputField(
-                      controller: _playlistNameController,
-                      focusNode: _playlistNameFocusNode,
-                      label: 'Playlist Name',
-                      hint: 'Enter playlist name',
-                      icon: Icons.edit,
-                    ),
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child:
-                        const Text('Cancel', style: TextStyle(color: Colors.white)),
-                  ),
-                  TextButton(
-                    onPressed: () => _savePlaylistName(playlist),
-                    child:
-                        const Text('Save', style: TextStyle(color: Colors.white)),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
+    Navigator.of(context)
+        .push<String>(
+      MaterialPageRoute(
+        builder: (context) => _PlaylistFieldEditScreen(
+          title: 'Edit Playlist Name',
+          playlistName: playlist.name,
+          label: 'Playlist Name',
+          hint: 'Enter playlist name',
+          icon: Icons.edit,
+          initialValue: playlist.name,
+          saveLabel: 'Save Name',
+        ),
+      ),
+    )
+        .then((value) {
+      if (value == null || value.trim().isEmpty) return;
+      _playlistNameController.text = value.trim();
+      _savePlaylistName(playlist);
+    });
   }
 
   void _editPlaylistUrl(PlaylistInfo playlist) {
-    _playlistUrlController.text = playlist.url;
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AnimatedPadding(
-          padding: MediaQuery.of(context).viewInsets +
-              const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
-              child: AlertDialog(
-                insetPadding: EdgeInsets.zero,
-                backgroundColor: AppTheme.darkBackground,
-                title: const Text('Edit Playlist URL',
-                    style: TextStyle(color: Colors.white)),
-                content: SingleChildScrollView(
-                  child: SizedBox(
-                    width: double.maxFinite,
-                    child: _buildInputField(
-                      controller: _playlistUrlController,
-                      focusNode: _playlistUrlFocusNode,
-                      label: 'Playlist URL',
-                      hint: 'Enter playlist URL',
-                      icon: Icons.link,
-                    ),
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child:
-                        const Text('Cancel', style: TextStyle(color: Colors.white)),
-                  ),
-                  TextButton(
-                    onPressed: () => _savePlaylistUrl(playlist),
-                    child:
-                        const Text('Save', style: TextStyle(color: Colors.white)),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
+    Navigator.of(context)
+        .push<String>(
+      MaterialPageRoute(
+        builder: (context) => _PlaylistFieldEditScreen(
+          title: 'Edit Playlist URL',
+          playlistName: playlist.name,
+          label: 'Playlist URL',
+          hint: 'Enter playlist URL',
+          icon: Icons.link,
+          initialValue: playlist.url,
+          saveLabel: 'Save URL',
+        ),
+      ),
+    )
+        .then((value) {
+      if (value == null || value.trim().isEmpty) return;
+      _playlistUrlController.text = value.trim();
+      _savePlaylistUrl(playlist);
+    });
   }
 
   void _editPlaylistEpg(PlaylistInfo playlist) {
-    _epgUrlController.text = playlist.epgUrl;
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AnimatedPadding(
-          padding: MediaQuery.of(context).viewInsets +
-              const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
-              child: AlertDialog(
-                insetPadding: EdgeInsets.zero,
-                backgroundColor: AppTheme.darkBackground,
-                title: const Text('Edit Primary EPG URL',
-                    style: TextStyle(color: Colors.white)),
-                content: SingleChildScrollView(
-                  child: SizedBox(
-                    width: double.maxFinite,
-                    child: _buildInputField(
-                      controller: _epgUrlController,
-                      focusNode: _epgUrlFocusNode,
-                      label: 'Primary EPG URL',
-                      hint: 'Enter EPG URL',
-                      icon: Icons.tv,
-                    ),
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child:
-                        const Text('Cancel', style: TextStyle(color: Colors.white)),
-                  ),
-                  TextButton(
-                    onPressed: () => _savePlaylistEpg(playlist),
-                    child:
-                        const Text('Save', style: TextStyle(color: Colors.white)),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
+    Navigator.of(context)
+        .push<String>(
+      MaterialPageRoute(
+        builder: (context) => _PlaylistFieldEditScreen(
+          title: 'Edit Primary EPG URL',
+          playlistName: playlist.name,
+          label: 'Primary EPG URL',
+          hint: 'Enter EPG URL',
+          icon: Icons.tv,
+          initialValue: playlist.epgUrl,
+          saveLabel: 'Save Primary URL',
+        ),
+      ),
+    )
+        .then((value) {
+      if (value == null) return;
+      _epgUrlController.text = value.trim();
+      _savePlaylistEpg(playlist);
+    });
   }
 
   void _editPlaylistSecondaryEpg(PlaylistInfo playlist) {
-    _secondaryEpgUrlController.text = playlist.secondaryEpgUrl;
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AnimatedPadding(
-          padding: MediaQuery.of(context).viewInsets +
-              const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
-              child: AlertDialog(
-                insetPadding: EdgeInsets.zero,
-                backgroundColor: AppTheme.darkBackground,
-                title: const Text('Edit Secondary EPG URL',
-                    style: TextStyle(color: Colors.white)),
-                content: SingleChildScrollView(
-                  child: SizedBox(
-                    width: double.maxFinite,
-                    child: _buildInputField(
-                      controller: _secondaryEpgUrlController,
-                      focusNode: _secondaryEpgUrlFocusNode,
-                      label: 'Secondary EPG URL',
-                      hint: 'Enter secondary EPG URL',
-                      icon: Icons.tv,
-                    ),
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child:
-                        const Text('Cancel', style: TextStyle(color: Colors.white)),
-                  ),
-                  TextButton(
-                    onPressed: () => _savePlaylistSecondaryEpg(playlist),
-                    child:
-                        const Text('Save', style: TextStyle(color: Colors.white)),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
+    Navigator.of(context)
+        .push<String>(
+      MaterialPageRoute(
+        builder: (context) => _PlaylistFieldEditScreen(
+          title: 'Edit Secondary EPG URL',
+          playlistName: playlist.name,
+          label: 'Secondary EPG URL',
+          hint: 'Enter secondary EPG URL',
+          icon: Icons.tv,
+          initialValue: playlist.secondaryEpgUrl,
+          saveLabel: 'Save Secondary URL',
+        ),
+      ),
+    )
+        .then((value) {
+      if (value == null) return;
+      _secondaryEpgUrlController.text = value.trim();
+      _savePlaylistSecondaryEpg(playlist);
+    });
   }
 
   void _updatePlaylistFrequency(PlaylistInfo playlist, int delta) async {
@@ -667,98 +546,6 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
 
   // Add-dialogs removed: playlist creation handled via Settings → General
 
-  Widget _buildInputField({
-    required TextEditingController controller,
-    required FocusNode focusNode,
-    required String label,
-    required String hint,
-    required IconData icon,
-    bool obscureText = false,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 13,
-            color: Colors.white70,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Focus(
-          focusNode: focusNode,
-          onFocusChange: (hasFocus) {
-            if (hasFocus) {
-              final text = controller.text;
-              controller.selection =
-                  TextSelection.collapsed(offset: text.length);
-            }
-          },
-          child: AnimatedBuilder(
-            animation: focusNode,
-            builder: (context, _) {
-              final isFocused = focusNode.hasFocus;
-              return GestureDetector(
-                onTap: () => focusNode.requestFocus(),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: isFocused ? AppTheme.highlight : Colors.black26,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isFocused ? AppTheme.primaryBlue : Colors.white10,
-                      width: isFocused ? 2 : 1,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        icon,
-                        size: 20,
-                        color: Colors.white54,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextField(
-                          controller: controller,
-                          focusNode: focusNode,
-                          enableInteractiveSelection: false,
-                          selectionControls: NoTextSelectionControls(),
-                          showCursor: false,
-                          cursorColor: Colors.transparent,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                          ),
-                          onTap: () {
-                            final text = controller.text;
-                            controller.selection =
-                                TextSelection.collapsed(offset: text.length);
-                          },
-                          obscureText: obscureText,
-                          decoration: InputDecoration.collapsed(
-                            hintText: hint,
-                            hintStyle: const TextStyle(
-                              color: Colors.white30,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
   // Save methods
   Future<void> _savePlaylistName(PlaylistInfo playlist) async {
     final prefs = await SharedPreferences.getInstance();
@@ -778,7 +565,6 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
         playlist.name = _playlistNameController.text;
       });
 
-      Navigator.of(context).pop();
       _showMessage('Playlist name updated');
     }
   }
@@ -802,7 +588,6 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
         playlist.url = newUrl;
       });
 
-      Navigator.of(context).pop();
       _showMessage('Playlist URL updated');
     }
   }
@@ -825,7 +610,6 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
         playlist.epgUrl = epgUrl;
       });
 
-      Navigator.of(context).pop();
       _showMessage('EPG URL updated');
     }
   }
@@ -848,7 +632,6 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
         playlist.secondaryEpgUrl = secondaryEpgUrl;
       });
 
-      Navigator.of(context).pop();
       _showMessage('Secondary EPG URL updated');
     }
   }
@@ -891,4 +674,99 @@ class PlaylistInfo {
     this.username,
     this.password,
   });
+}
+
+class _PlaylistFieldEditScreen extends StatefulWidget {
+  final String title;
+  final String playlistName;
+  final String label;
+  final String hint;
+  final IconData icon;
+  final String initialValue;
+  final String saveLabel;
+
+  const _PlaylistFieldEditScreen({
+    required this.title,
+    required this.playlistName,
+    required this.label,
+    required this.hint,
+    required this.icon,
+    required this.initialValue,
+    required this.saveLabel,
+  });
+
+  @override
+  State<_PlaylistFieldEditScreen> createState() =>
+      _PlaylistFieldEditScreenState();
+}
+
+class _PlaylistFieldEditScreenState extends State<_PlaylistFieldEditScreen> {
+  late final TextEditingController _controller;
+  final FocusNode _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialValue);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _handleSave() {
+    Navigator.pop(context, _controller.text);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.darkBackground,
+      appBar: AppBar(
+        title: Text(widget.title),
+        backgroundColor: Colors.white.withAlpha((0.08 * 255).round()),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        children: [
+          SettingsSectionHeader(
+            title: widget.playlistName,
+            subtitle: widget.label,
+          ),
+          SettingsGroup(
+            title: widget.label,
+            children: [
+              SettingsInputTile(
+                label: widget.label,
+                hint: widget.hint,
+                icon: widget.icon,
+                controller: _controller,
+                focusNode: _focusNode,
+              ),
+            ],
+          ),
+          SettingsGroup(
+            title: 'Actions',
+            children: [
+              SettingsActionTile(
+                title: 'Cancel',
+                icon: Icons.close,
+                onTap: () => Navigator.pop(context),
+              ),
+              SettingsActionTile(
+                title: widget.saveLabel,
+                icon: Icons.save,
+                iconColor: AppTheme.primaryBlue,
+                titleColor: AppTheme.primaryBlue,
+                onTap: _handleSave,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
