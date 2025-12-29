@@ -91,7 +91,7 @@ class HeroInfoBox extends StatelessWidget {
               Text(
                 title,
                 style: titleStyle,
-                maxLines: 3,
+                maxLines: 4,
                 overflow: TextOverflow.ellipsis,
               ),
 

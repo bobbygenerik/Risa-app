@@ -100,8 +100,7 @@ class EPGScreenState extends ChangeNotifier {
   double calculateGridWidth() {
     final hours = _isHourlyView ? 24 : 48;
     final cellWidth = _isHourlyView ? 120.0 : 60.0;
-    const channelSidebarWidth = 80.0;
-    return channelSidebarWidth + (hours * cellWidth);
+    return hours * cellWidth;
   }
 
   double calculateProgramsGridWidth() {

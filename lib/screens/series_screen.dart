@@ -114,6 +114,8 @@ class _SeriesScreenState extends State<SeriesScreen>
   static const int _vodPageSize = 200;
   bool _isLoadingMore = false;
   bool _vodRetryRequested = false;
+  int _heroImageSkipCount = 0;
+  bool _heroSkipScheduled = false;
 
   @override
   void dispose() {
@@ -224,6 +226,20 @@ class _SeriesScreenState extends State<SeriesScreen>
     } catch (e) {
       debugLog('SeriesScreen: Error batch-fetching TMDB art: $e');
     }
+  }
+
+  void _skipHeroWithNoImage(List<Content> candidates) {
+    if (_heroSkipScheduled || candidates.isEmpty) return;
+    if (_heroImageSkipCount >= candidates.length) return;
+    _heroSkipScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _featuredIndex = (_featuredIndex + 1) % candidates.length;
+        _heroImageSkipCount++;
+        _heroSkipScheduled = false;
+      });
+    });
   }
 
   Future<void> _loadMoreSeries() async {
@@ -544,6 +560,7 @@ class _SeriesScreenState extends State<SeriesScreen>
         return _buildFullScreenHero(
           context,
           featured,
+          displaySeries,
           series,
           recentSeries,
           hasMoreOverall: hasMoreOverall,
@@ -996,11 +1013,20 @@ class _SeriesScreenState extends State<SeriesScreen>
   Widget _buildFullScreenHero(
     BuildContext context,
     Content featuredSeries,
+    List<Content> heroCandidates,
     List<Content> allSeries,
     List<Content> recentSeries,
     {required bool hasMoreOverall}
   ) {
     final heroArt = _resolveHeroArt(featuredSeries);
+    if (heroArt.url == null || heroArt.url!.isEmpty) {
+      _skipHeroWithNoImage(heroCandidates);
+      if (_heroImageSkipCount < heroCandidates.length) {
+        return _buildSkeletonLoader();
+      }
+    } else {
+      _heroImageSkipCount = 0;
+    }
     final heroHeight = context.heroHeight();
     final cardPeek = context.spacingXl();
     final contentTop = (heroHeight - cardPeek).clamp(0.0, heroHeight);

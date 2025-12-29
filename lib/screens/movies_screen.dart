@@ -110,6 +110,8 @@ class _MoviesScreenState extends State<MoviesScreen>
   static const int _vodPageSize = 200;
   bool _isLoadingMore = false;
   bool _vodRetryRequested = false;
+  int _heroImageSkipCount = 0;
+  bool _heroSkipScheduled = false;
 
   @override
   void dispose() {
@@ -278,6 +280,20 @@ class _MoviesScreenState extends State<MoviesScreen>
     }
   }
 
+  void _skipHeroWithNoImage(List<Content> candidates) {
+    if (_heroSkipScheduled || candidates.isEmpty) return;
+    if (_heroImageSkipCount >= candidates.length) return;
+    _heroSkipScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _featuredIndex = (_featuredIndex + 1) % candidates.length;
+        _heroImageSkipCount++;
+        _heroSkipScheduled = false;
+      });
+    });
+  }
+
   Future<void> _loadMoreMovies() async {
     if (_isLoadingMore || !mounted) return;
     final channelProvider =
@@ -442,6 +458,7 @@ class _MoviesScreenState extends State<MoviesScreen>
         return _buildFullScreenHero(
           context,
           featured,
+          displayMovies,
           movies,
           recentMovies,
           hasMoreOverall: hasMoreOverall,
@@ -886,10 +903,19 @@ class _MoviesScreenState extends State<MoviesScreen>
   Widget _buildFullScreenHero(
     BuildContext context,
     Content featuredMovie,
+    List<Content> heroCandidates,
     List<Content> allMovies,
     List<Content> recentMovies,
     {required bool hasMoreOverall}) {
     final heroArt = _resolveHeroArt(featuredMovie);
+    if (heroArt.url == null || heroArt.url!.isEmpty) {
+      _skipHeroWithNoImage(heroCandidates);
+      if (_heroImageSkipCount < heroCandidates.length) {
+        return _buildSkeletonLoader();
+      }
+    } else {
+      _heroImageSkipCount = 0;
+    }
     final heroHeight = context.heroHeight();
     final cardPeek = context.spacingXl();
     final contentTop = (heroHeight - cardPeek).clamp(0.0, heroHeight);

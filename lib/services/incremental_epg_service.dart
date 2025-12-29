@@ -107,6 +107,17 @@ class IncrementalEpgService extends ChangeNotifier {
     }
   }
 
+  String _normalizeEpgUrl(String input) {
+    var url = input.trim();
+    if (url.startsWith('//')) {
+      url = 'https:$url';
+    }
+    if (!url.contains('://')) {
+      url = 'https://$url';
+    }
+    return url;
+  }
+
   void setAllowedChannelIds(Set<String> channelIds,
       {bool triggerRefresh = false}) {
     _allowedChannelIdsNormalized = channelIds;
@@ -180,9 +191,38 @@ class IncrementalEpgService extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       // Try both keys - custom_epg_url (set by user) and epg_url (auto-found in M3U)
       // custom_epg_url takes precedence
-      _epgUrl = prefs.getString('custom_epg_url');
+      final customEpgUrl = prefs.getString('custom_epg_url');
+      final storedEpgUrl = prefs.getString('epg_url');
+      _epgUrl = customEpgUrl;
       if (_epgUrl == null || _epgUrl!.isEmpty) {
-        _epgUrl = prefs.getString('epg_url');
+        _epgUrl = storedEpgUrl;
+      }
+      _epgUrl = _epgUrl?.trim();
+      if (_epgUrl != null && _epgUrl!.isNotEmpty) {
+        final normalized = _normalizeEpgUrl(_epgUrl!);
+        if (normalized != _epgUrl) {
+          _epgUrl = normalized;
+          if (customEpgUrl != null && customEpgUrl.isNotEmpty) {
+            await prefs.setString('custom_epg_url', normalized);
+          } else if (storedEpgUrl != null && storedEpgUrl.isNotEmpty) {
+            await prefs.setString('epg_url', normalized);
+          }
+        } else {
+          _epgUrl = normalized;
+        }
+        final uri = Uri.tryParse(_epgUrl!);
+        final scheme = uri?.scheme ?? '';
+        final schemeValid = scheme.isNotEmpty &&
+            RegExp(r'^[A-Za-z]').hasMatch(scheme);
+        if (uri == null || !schemeValid) {
+          _error = 'Invalid EPG URL';
+          debugLog('EPG: Invalid URL configured: $_epgUrl');
+          _isLoading = false;
+          _isDownloading = false;
+          _isParsing = false;
+          notifyListeners();
+          return;
+        }
       }
       await _handleCacheUrlChange(prefs);
       _epgFutureHours = 24;
@@ -380,7 +420,11 @@ class IncrementalEpgService extends ChangeNotifier {
       // 2) Content-Type sanity check
       final contentTypeHeader =
           response.headers.value('content-type')?.toLowerCase();
-      if (contentTypeHeader == null || !contentTypeHeader.contains('xml')) {
+      final isXml = contentTypeHeader != null && contentTypeHeader.contains('xml');
+      final isGzip = contentTypeHeader != null &&
+          (contentTypeHeader.contains('gzip') ||
+              contentTypeHeader.contains('application/x-gzip'));
+      if (!isXml && !isGzip) {
         _error =
             'EPG response is not XML (Content-Type: ${contentTypeHeader ?? 'unknown'})';
         debugLog('EPG: $_error');

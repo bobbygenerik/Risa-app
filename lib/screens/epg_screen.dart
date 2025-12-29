@@ -402,7 +402,11 @@ class _EPGScreenState extends State<EPGScreen>
                                   // Category sidebar
                                   _buildCategorySidebar(categoryNames),
                                   const SizedBox(width: 16),
-                                  // Program grid with channel names
+                                  SizedBox(
+                                    width: context.channelSidebarWidth(),
+                                    child: _buildChannelColumn(filteredChannels),
+                                  ),
+                                  const SizedBox(width: 12),
                                   Expanded(
                                     child: _buildProgramGrid(filteredChannels,
                                         epgService, allFilteredChannels),
@@ -508,12 +512,12 @@ class _EPGScreenState extends State<EPGScreen>
 
   Widget _buildHeader(IncrementalEpgService epgService) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(56, 12, 24, 12),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       decoration: const BoxDecoration(
         color: Colors.transparent,
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // Left side - Guide title
           Row(
@@ -754,7 +758,6 @@ class _EPGScreenState extends State<EPGScreen>
 
     // Show loading overlay but still display the grid structure
     final bool isLoading = epgService.isLoading;
-    const channelSidebarWidth = 80.0;
 
     // Show loading indicator when EPG is loading
     return Stack(
@@ -782,107 +785,35 @@ class _EPGScreenState extends State<EPGScreen>
                   ],
                 ),
               ),
-            // Main EPG grid with fixed channel sidebar
+            // Main EPG grid
             Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Column(
                 children: [
-                  // FIXED channel sidebar (scrolls vertically with list)
-                  SizedBox(
-                    width: channelSidebarWidth,
-                    child: Column(
-                      children: [
-                        // Today header
-                        Container(
-                          height: 64,
-                          margin: const EdgeInsets.only(bottom: 4, right: 4),
-                          decoration: BoxDecoration(
-                            color:
-                                const Color(0xFF2a2a3e).withValues(alpha: 0.4),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.1),
-                                width: 1),
-                          ),
-                          child: Center(
-                            child: Text(
-                              _epgState.selectedDate.day ==
-                                          DateTime.now().day &&
-                                      _epgState.selectedDate.month ==
-                                          DateTime.now().month &&
-                                      _epgState.selectedDate.year ==
-                                          DateTime.now().year
-                                  ? 'Today'
-                                  : '${_epgState.selectedDate.month}/${_epgState.selectedDate.day}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                                color: Colors.white.withValues(alpha: 0.9),
-                              ),
-                            ),
-                          ),
-                        ),
-                        // Channel list with pagination
-                        Expanded(
-                          child: EPGChannelSidebar(
-                            channels: channels,
-                            isLoadingMore: _epgState.isLoadingMore,
-                            onLoadMore: () {
-                              if (!_epgState.hasMore) return;
-                              setState(() {
-                                _epgState.loadMoreChannels();
-                              });
-                            },
-                            onChannelTap: (channel) {
-                              context.push('/player', extra: channel);
-                            },
-                            onChannelLongPress: (channel) =>
-                                _showChannelContextMenu(context, channel),
-                            firstChannelFocusNode: _firstChannelFocus,
-                            onFocusCategories: () =>
-                                _firstCategoryFocus.requestFocus(),
-                            onFocusRefresh: () =>
-                                _refreshButtonFocus.requestFocus(),
-                            onFocusPrograms: () =>
-                                _firstProgramFocus.requestFocus(),
-                            controller: _sidebarController,
-                          ),
-                        ),
-                      ],
+                  // Time header (scrolls horizontally)
+                  Container(
+                    height: 64,
+                    margin: const EdgeInsets.only(bottom: 4),
+                    child: SingleChildScrollView(
+                      controller: _timeHeaderScrollController,
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      child: SizedBox(
+                        width: _epgState.calculateProgramsGridWidth(),
+                        child: _buildTimeHeaderOnly(),
+                      ),
                     ),
                   ),
-                  // SCROLLABLE time header + programs section
+                  // Programs grid (lazy loaded with synchronized scroll)
                   Expanded(
-                    child: Column(
-                      children: [
-                        // Time header (scrolls horizontally)
-                        Container(
-                          height: 64,
-                          margin: const EdgeInsets.only(bottom: 4),
-                          child: SingleChildScrollView(
-                            controller: _timeHeaderScrollController,
-                            scrollDirection: Axis.horizontal,
-                            physics: const BouncingScrollPhysics(),
-                            child: SizedBox(
-                              width: _epgState.calculateProgramsGridWidth(),
-                              child: _buildTimeHeaderOnly(),
-                            ),
-                          ),
-                        ),
-                        // Programs grid (lazy loaded with synchronized scroll)
-                        Expanded(
-                          child: EPGProgramsGrid(
-                            channels: channels,
-                            epgService: epgService,
-                            isLoadingMore: _epgState.isLoadingMore,
-                            horizontalController: _horizontalScrollController,
-                            verticalController: _verticalScrollController,
-                            gridWidth: _epgState.calculateProgramsGridWidth(),
-                            onProgramTap: _showProgramDetails,
-                            firstProgramFocusNode: _firstProgramFocus,
-                          ),
-                        ),
-                      ],
+                    child: EPGProgramsGrid(
+                      channels: channels,
+                      epgService: epgService,
+                      isLoadingMore: _epgState.isLoadingMore,
+                      horizontalController: _horizontalScrollController,
+                      verticalController: _verticalScrollController,
+                      gridWidth: _epgState.calculateProgramsGridWidth(),
+                      onProgramTap: _showProgramDetails,
+                      firstProgramFocusNode: _firstProgramFocus,
                     ),
                   ),
                 ],
@@ -908,6 +839,59 @@ class _EPGScreenState extends State<EPGScreen>
               ),
             ),
           ),
+      ],
+    );
+  }
+
+  Widget _buildChannelColumn(List<Channel> channels) {
+    return Column(
+      children: [
+        Container(
+          height: 64,
+          margin: const EdgeInsets.only(bottom: 4, right: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFF2a2a3e).withValues(alpha: 0.4),
+            borderRadius: BorderRadius.circular(8),
+            border:
+                Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
+          ),
+          child: Center(
+            child: Text(
+              _epgState.selectedDate.day == DateTime.now().day &&
+                      _epgState.selectedDate.month == DateTime.now().month &&
+                      _epgState.selectedDate.year == DateTime.now().year
+                  ? 'Today'
+                  : '${_epgState.selectedDate.month}/${_epgState.selectedDate.day}',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: Colors.white.withValues(alpha: 0.9),
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: EPGChannelSidebar(
+            channels: channels,
+            isLoadingMore: _epgState.isLoadingMore,
+            onLoadMore: () {
+              if (!_epgState.hasMore) return;
+              setState(() {
+                _epgState.loadMoreChannels();
+              });
+            },
+            onChannelTap: (channel) {
+              context.push('/player', extra: channel);
+            },
+            onChannelLongPress: (channel) =>
+                _showChannelContextMenu(context, channel),
+            firstChannelFocusNode: _firstChannelFocus,
+            onFocusCategories: () => _firstCategoryFocus.requestFocus(),
+            onFocusRefresh: () => _refreshButtonFocus.requestFocus(),
+            onFocusPrograms: () => _firstProgramFocus.requestFocus(),
+            controller: _sidebarController,
+          ),
+        ),
       ],
     );
   }

@@ -878,7 +878,10 @@ class ChannelProvider with ChangeNotifier {
     final contentProvider = _contentProvider;
     final hasContent = contentProvider != null &&
         (contentProvider.movies.isNotEmpty || contentProvider.series.isNotEmpty);
-    final hasCache = _moviesCachePath != null || _seriesCachePath != null;
+    final hasCache = _moviesCachePath != null ||
+        _seriesCachePath != null ||
+        _moviesJsonlPath != null ||
+        _seriesJsonlPath != null;
     final url = _lastPlaylistUrl;
 
     if (_vodLoadRequested && !force) {
@@ -949,7 +952,11 @@ class ChannelProvider with ChangeNotifier {
 
   Future<void> _hydrateContentProviderFromCache({int maxItems = 4000}) async {
     if (_contentProvider == null || _vodHydrated || _hydratingVod) return;
-    if (!_dbReady && (_moviesCachePath == null || _seriesCachePath == null)) {
+    if (!_dbReady &&
+        _moviesCachePath == null &&
+        _seriesCachePath == null &&
+        _moviesJsonlPath == null &&
+        _seriesJsonlPath == null) {
       return;
     }
 
@@ -994,11 +1001,38 @@ class ChannelProvider with ChangeNotifier {
         _seriesCount = await _db.seriesCount();
       }
 
+      final shouldFallbackToJsonl = (movies.isEmpty && series.isEmpty) &&
+          (_moviesJsonlPath != null || _seriesJsonlPath != null);
       final shouldFallbackToCache = (movies.isEmpty && series.isEmpty) &&
           _moviesCachePath != null &&
           _seriesCachePath != null;
 
-      if (!_dbReady || shouldFallbackToCache) {
+      if (shouldFallbackToJsonl) {
+        const int pageSize = 500;
+        int offset = 0;
+        while (true) {
+          if (_moviesJsonlPath == null) break;
+          final page = await _loadJsonlPage(_moviesJsonlPath!, offset, pageSize);
+          if (page.isEmpty) break;
+          final remaining = maxItems - movies.length;
+          if (remaining <= 0) break;
+          movies.addAll(page.take(remaining));
+          offset += pageSize;
+          if (movies.length >= maxItems) break;
+        }
+
+        offset = 0;
+        while (true) {
+          if (_seriesJsonlPath == null) break;
+          final page = await _loadJsonlPage(_seriesJsonlPath!, offset, pageSize);
+          if (page.isEmpty) break;
+          final remaining = maxItems - series.length;
+          if (remaining <= 0) break;
+          series.addAll(page.take(remaining));
+          offset += pageSize;
+          if (series.length >= maxItems) break;
+        }
+      } else if (!_dbReady || shouldFallbackToCache) {
         // Offload heavy JSON decoding to an isolate and cap in-memory hydration
         final result = await compute(_parseVodCachesInIsolate, {
           'moviesPath': _moviesCachePath!,

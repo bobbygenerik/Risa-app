@@ -78,6 +78,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   final Map<String, ValueNotifier<int>> _categoryRowNotifiers = {};
   Future<List<Channel>>? _previewFuture;
   int _lastPreviewChannelCount = -1;
+  final Map<String, ScrollController> _rowScrollControllers = {};
+  final Set<String> _rowScrollInitialized = {};
+  int _heroImageSkipCount = 0;
+  bool _heroSkipScheduled = false;
 
   bool _categoryPrefetchRequested = false;
 
@@ -169,6 +173,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _artworkQueue.clear();
     _artworkRequests.clear();
     _scrollController.dispose();
+    for (final controller in _rowScrollControllers.values) {
+      controller.dispose();
+    }
+    _rowScrollControllers.clear();
     _focusPool.returnFocusNodes(
       ['live_tv_watch', 'live_tv_settings', 'live_tv_first_card'],
     );
@@ -188,6 +196,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     _categoryNames = categories;
     _loadingCategories = false;
     _categoryRowNotifiers.clear();
+    _rowScrollInitialized.clear();
     _lastPrefetchAnchor = -1;
     _visibleCategoryCount =
         math.min(_initialCategoryPrefetchCount, _categoryNames.length);
@@ -267,8 +276,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         if (_scrollController.hasClients) {
           _scrollController.jumpTo(0);
         }
+        _resetRowScrollOffsets();
         _requestInitialFocus();
       });
+    }
+  }
+
+  void _resetRowScrollOffsets() {
+    for (final controller in _rowScrollControllers.values) {
+      if (controller.hasClients) {
+        controller.jumpTo(0);
+      }
     }
   }
 
@@ -418,10 +436,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             builder: (context, snapshot) {
               final previewList = snapshot.data ?? channelProvider.channels;
               if (previewList.isEmpty) {
-                if (channelProvider.isLoading) {
-                  return _buildSkeletonLoader();
-                }
-                return _buildStalledLoaderState(context);
+                return _buildSkeletonLoader();
               }
               if (_featuredIndex >= previewList.length) _featuredIndex = 0;
               if (_featuredIndex == 0 && previewList.isNotEmpty) {
@@ -483,6 +498,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       builder: (context, snapshot) {
         final currentProgram = snapshot.data;
         final heroImage = _resolveHeroImage(currentProgram);
+        if (heroImage == null || heroImage.isEmpty) {
+          _skipHeroWithNoImage(allChannels);
+          if (_heroImageSkipCount < allChannels.length) {
+            return _buildSkeletonLoader();
+          }
+        } else {
+          _heroImageSkipCount = 0;
+        }
 
         return FocusTraversalGroup(
           policy: WidgetOrderTraversalPolicy(),
@@ -709,35 +732,23 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         mainAxisSize: MainAxisSize.min,
         children: [
           // Title - flexible height with max limit
-          Container(
-            constraints: BoxConstraints(
-              maxHeight: context.tvTextSize(24) * 1.3 * 2,
-            ),
-            child: Text(
-              title,
-              style: AppTypography.heroTitle(context),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
+          Text(
+            title,
+            style: AppTypography.heroTitle(context),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
           ),
           SizedBox(height: context.tvSpacing(8)),
           // Description - flexible height with max limit
-          Container(
-            constraints: BoxConstraints(
-              maxHeight: context.tvTextSize(14) * 1.3 * 3,
-            ),
-            child: Text(
-              description.isNotEmpty ? description : 'No description available',
-              style: AppTypography.heroDescription(context).copyWith(
-                fontStyle:
-                    description.isEmpty ? FontStyle.italic : FontStyle.normal,
-                color: description.isEmpty ? Colors.white60 : null,
-              ),
+          if (description.isNotEmpty) ...[
+            Text(
+              description,
+              style: AppTypography.heroDescription(context),
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
             ),
-          ),
-          SizedBox(height: context.tvSpacing(8)),
+            SizedBox(height: context.tvSpacing(8)),
+          ],
           // Progress bar - fixed height
           SizedBox(
             height: 6,
@@ -814,6 +825,20 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
+  void _skipHeroWithNoImage(List<Channel> allChannels) {
+    if (_heroSkipScheduled || allChannels.isEmpty) return;
+    if (_heroImageSkipCount >= allChannels.length) return;
+    _heroSkipScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _featuredIndex = (_featuredIndex + 1) % allChannels.length;
+        _heroImageSkipCount++;
+        _heroSkipScheduled = false;
+      });
+    });
+  }
+
   Widget _buildChannelLogo(BuildContext context, Channel channel) {
     return Container(
       height: 64,
@@ -877,13 +902,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       }
     }
 
-    // Final fallback: channel logo (avoid poster-like logos).
-    if (channel?.logoUrl != null && channel!.logoUrl!.isNotEmpty) {
-      final logo = channel.logoUrl!;
-      if (!_isLikelyPosterUrl(logo)) {
-        return logo;
-      }
-    }
     return null;
   }
 
@@ -1072,6 +1090,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       BuildContext context, String title, List<Channel> channels,
       {bool isFirstRow = false}) {
     if (channels.isEmpty) return const SizedBox.shrink();
+    final epgService = context.watch<IncrementalEpgService>();
+    final filteredChannels = channels.where((channel) {
+      final program = epgService.getCurrentProgram(
+        channel.tvgId ?? channel.id,
+        channelName: channel.name,
+      );
+      final image = _getChannelCardImage(program, channel, false);
+      return image != null && image.isNotEmpty;
+    }).toList();
+    if (filteredChannels.isEmpty) return const SizedBox.shrink();
 
     final screenWidth = MediaQuery.of(context).size.width;
     final maxCardWidth =
@@ -1093,6 +1121,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final rowInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
 
     final sectionKey = title;
+    final rowController = _rowScrollControllers.putIfAbsent(
+      sectionKey,
+      () => ScrollController(keepScrollOffset: false),
+    );
+    if (!_rowScrollInitialized.contains(sectionKey)) {
+      _rowScrollInitialized.add(sectionKey);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (rowController.hasClients) {
+          rowController.jumpTo(0);
+        }
+      });
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1106,6 +1147,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             ),
           ),
         ),
+        Padding(
+          padding: EdgeInsets.only(left: rowInset, bottom: context.spacingSm()),
+          child: Container(
+            height: 3,
+            width: context.spacingXl(),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryBlue.withValues(alpha: 0.35),
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+        ),
         SizedBox(
           height: rowHeight,
           child: LayoutBuilder(
@@ -1113,29 +1165,29 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               return SizedBox(
                 width: constraints.maxWidth,
                 child: ListView.separated(
+                  controller: rowController,
+                  key: ValueKey<String>('live_tv_row_$sectionKey'),
                   scrollDirection: Axis.horizontal,
-                  physics: const PageScrollPhysics().applyTo(
-                    const ClampingScrollPhysics(),
-                  ),
+                  physics: const ClampingScrollPhysics(),
                   cacheExtent: 800,
                   padding: EdgeInsets.only(
                     left: rowInset,
                     right: context.spacingLg(),
                   ),
                   clipBehavior: Clip.none,
-                  itemCount: channels.length,
+                  itemCount: filteredChannels.length,
                   itemBuilder: (context, index) {
                     final focusNode =
                         isFirstRow && index == 0 ? _firstChannelFocus : null;
                     final allowPrefetch = _shouldPrefetchArt(sectionKey, index);
                     return _buildChannelCard(
                       context,
-                      channels[index],
+                      filteredChannels[index],
                       cardWidth,
                       cardHeight,
                       sectionKey,
                       index,
-                      channels.length,
+                      filteredChannels.length,
                       allowPrefetch,
                       focusNode: focusNode,
                     );
@@ -1313,37 +1365,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           }
           return KeyEventResult.ignored;
         },
-        child: FutureBuilder<Program?>(
-          future: Provider.of<IncrementalEpgService>(context, listen: false)
-              .getProgramForChannelAsync(
-            channel.tvgId ?? channel.id,
-            channelName: channel.name,
-          ),
-          builder: (context, snapshot) {
-            final currentProgram = snapshot.data;
-            // Trigger lazy load
-            if (currentProgram == null) {
-              Provider.of<IncrementalEpgService>(context, listen: false)
-                  .ensureChannelLoaded(
+        child: Consumer<IncrementalEpgService>(
+          builder: (context, epgService, _) {
+            final isFocused = Focus.of(context).hasFocus;
+            final currentProgram = epgService.getCurrentProgram(
+              channel.tvgId ?? channel.id,
+              channelName: channel.name,
+            );
+            if (isFocused) {
+              unawaited(epgService.ensureChannelLoaded(
                 channel.tvgId ?? channel.id,
                 channelName: channel.name,
-              );
+              ));
             }
-            // DEBUG: show quick epg diagnostics in logs when focused
-            final epgService =
-                Provider.of<IncrementalEpgService>(context, listen: false);
-            if (Focus.of(context).hasFocus) {
-              final hasMatch = epgService.hasEpgMatch(
-                  channel.tvgId ?? channel.id,
-                  channelName: channel.name);
-              final progCount = epgService
-                  .getProgramsForChannel(channel.tvgId ?? channel.id,
-                      channelName: channel.name)
-                  .length;
-              debugPrint(
-                  'EPG DEBUG: channel=${channel.id} tvg=${channel.tvgId} hasMatch=$hasMatch progCount=$progCount currentProgram=${currentProgram?.title ?? 'null'}');
-            }
-            final isFocused = Focus.of(context).hasFocus;
             final progress = currentProgram?.progressPercentage ?? 0.0;
             final imageUrl =
                 _getChannelCardImage(currentProgram, channel, allowPrefetch);
@@ -1644,42 +1678,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             ),
           )
         : _buildDefaultHeroBackground();
-  }
-
-  Widget _buildStalledLoaderState(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: context.spacingXl()),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            context.iconXxl(
-              AppIcons.liveTV,
-              color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
-            ),
-            SizedBox(height: context.tvSpacing(20)),
-            Text(
-              'Still loading channels',
-              style: Theme.of(context).textTheme.headlineSmall,
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: context.tvSpacing(8)),
-            Text(
-              'Your playlist is taking longer than expected. You can re-open Settings to refresh.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.textSecondary,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: context.tvSpacing(20)),
-            GoToSettingsButton(
-              onPressed: _goToSettings,
-              focusNode: _settingsButtonFocus,
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _buildSkeletonLoader() {

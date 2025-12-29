@@ -191,7 +191,7 @@ class HeroInfoBox extends StatelessWidget {
           Text(
             title,
             style: AppTypography.heroTitle(context),
-            maxLines: 3,
+            maxLines: 4,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 8),
