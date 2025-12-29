@@ -100,67 +100,75 @@ class _ExitScreenState extends State<ExitScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
-      body: Container(
-        decoration: const BoxDecoration(
-          color: AppTheme.darkBackground,
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // App logo or icon
-              Image.asset(
-                'assets/images/croppedlogo2.png',
-                height: 80,
-              ),
-              const SizedBox(height: 32),
-
-              // Exit message
-              Text(
-                _selectedMessage,
-                style: const TextStyle(
-                  color: AppTheme.textPrimary,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w600,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          context.go('/home');
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppTheme.darkBackground,
+        body: Container(
+          decoration: const BoxDecoration(
+            color: AppTheme.darkBackground,
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // App logo or icon
+                Image.asset(
+                  'assets/images/croppedlogo2.png',
+                  height: 80,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 48),
+                const SizedBox(height: 32),
 
-              // Buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    height: 52,
-                    width: 180,
-                    child: BrandSecondaryButton(
-                      focusNode: _backButtonFocus,
-                      onPressed: () => context.go('/home'),
-                      label: 'Go Back',
-                      minHeight: 48,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 14),
-                    ),
+                // Exit message
+                Text(
+                  _selectedMessage,
+                  style: const TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w600,
                   ),
-                  const SizedBox(width: 24),
-                  SizedBox(
-                    height: 52,
-                    width: 180,
-                    child: BrandPrimaryButton(
-                      focusNode: _exitButtonFocus,
-                      onPressed: () => SystemNavigator.pop(),
-                      label: 'Exit App',
-                      minHeight: 48,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 14),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 48),
+
+                // Buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      height: 52,
+                      width: 180,
+                      child: BrandSecondaryButton(
+                        focusNode: _backButtonFocus,
+                        onPressed: () => context.go('/home'),
+                        label: 'Go Back',
+                        minHeight: 48,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 14),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                    const SizedBox(width: 24),
+                    SizedBox(
+                      height: 52,
+                      width: 180,
+                      child: BrandPrimaryButton(
+                        focusNode: _exitButtonFocus,
+                        onPressed: () => SystemNavigator.pop(),
+                        label: 'Exit App',
+                        minHeight: 48,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 14),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

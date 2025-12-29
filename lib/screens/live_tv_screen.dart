@@ -138,6 +138,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     unawaited(_prefetchInitialRows());
   }
 
+  bool _areVisibleCategoriesLoaded() {
+    if (_categoryNames.isEmpty) return false;
+    final visibleCount = math.min(_visibleCategoryCount, _categoryNames.length);
+    for (var i = 0; i < visibleCount; i++) {
+      final category = _categoryNames[i];
+      final channels = _categoryChannelCache[category];
+      if (channels == null || channels.isEmpty) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   void _handleScrollPrefetch() {
     if (!_scrollController.hasClients || _categoryNames.isEmpty) return;
     final heroHeight = context.heroHeight();
@@ -419,6 +432,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           }
 
           _requestCategoryPrefetch();
+          if (_loadingCategories || !_areVisibleCategoriesLoaded()) {
+            return _buildSkeletonLoader();
+          }
 
           final previewCount = channelProvider.channelCount;
           if (_previewFuture == null ||
@@ -661,33 +677,28 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     SliverToBoxAdapter(
                       child: SizedBox(height: contentTop),
                     ),
-                    if (_loadingCategories && _categoryNames.isEmpty)
-                      SliverToBoxAdapter(
-                        child: _buildCategoryLoadingIndicator(),
-                      )
-                    else
-                      SliverPadding(
-                        padding: EdgeInsets.only(
-                          left: 0,
-                          right: rightInset,
-                          bottom: context.spacingXl(),
-                        ),
-                        sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                              return _buildCategoryRowWidget(
-                                context,
-                                _categoryNames[index],
-                                index,
-                              );
-                            },
-                            childCount: math.min(
-                              _visibleCategoryCount,
-                              _categoryNames.length,
-                            ),
+                    SliverPadding(
+                      padding: EdgeInsets.only(
+                        left: 0,
+                        right: rightInset,
+                        bottom: context.spacingXl(),
+                      ),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            return _buildCategoryRowWidget(
+                              context,
+                              _categoryNames[index],
+                              index,
+                            );
+                          },
+                          childCount: math.min(
+                            _visibleCategoryCount,
+                            _categoryNames.length,
                           ),
                         ),
                       ),
+                    ),
                     SliverToBoxAdapter(
                       child: SizedBox(height: context.sectionSpacing()),
                     ),
@@ -1187,7 +1198,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         final channels = _categoryChannelCache[category];
         if (channels == null || channels.isEmpty) {
           _enqueueCategoryLoad(category);
-          return _buildRowSkeleton(context, category);
+          return const SizedBox.shrink();
         }
         _prefetchEpgForRow(category, channels);
         return FocusTraversalGroup(
@@ -1241,53 +1252,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         channelNames: channelNames,
       ));
     });
-  }
-
-  Widget _buildRowSkeleton(BuildContext context, String title) {
-    final rowInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
-    return Padding(
-      padding: EdgeInsets.only(bottom: context.spacingXs()),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding:
-                EdgeInsets.only(left: rowInset, bottom: context.spacingXs()),
-            child: Text(
-              title,
-              style: AppTypography.caption(context).copyWith(
-                color: AppTheme.textPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          SizedBox(
-            height: 108,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              physics: const ClampingScrollPhysics(),
-              padding: EdgeInsets.only(
-                left: rowInset,
-                right: context.spacingLg(),
-              ),
-              itemBuilder: (context, index) {
-                return Container(
-                  width: 180,
-                  height: 96,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                );
-              },
-              separatorBuilder: (context, index) =>
-                  SizedBox(width: context.cardGap()),
-              itemCount: 6,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildChannelCard(
@@ -1560,34 +1524,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               ),
             );
           },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryLoadingIndicator() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 32),
-      child: Center(
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  AppTheme.primaryBlue.withAlpha((0.7 * 255).round()),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              'Loading categories...',
-              style: AppTypography.loadingText(context),
-            ),
-          ],
         ),
       ),
     );

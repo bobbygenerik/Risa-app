@@ -23,6 +23,8 @@ class IncrementalEpgService extends ChangeNotifier {
   final Set<String> _availableChannels = {};
   final Set<String> _loadedChannels = {};
   final Map<String, String> _internalToEpgIdMapping = {};
+  final Map<String, String> _pendingEpgMappings = {};
+  Timer? _mappingFlushTimer;
   Map<String, String>?
       _normalizedAvailableChannels; // normalizedId -> originalId
   bool _isLoading = false;
@@ -345,6 +347,23 @@ class IncrementalEpgService extends ChangeNotifier {
     } catch (e) {
       debugLog('EPG: Failed to save normalized mapping: $e');
     }
+  }
+
+  void _queueMappingPersist(String channelId, String epgId) {
+    if (channelId.isEmpty || epgId.isEmpty) return;
+    _pendingEpgMappings[channelId] = epgId;
+    _mappingFlushTimer?.cancel();
+    _mappingFlushTimer = Timer(const Duration(seconds: 1), () {
+      final snapshot = Map<String, String>.from(_pendingEpgMappings);
+      _pendingEpgMappings.clear();
+      unawaited(_db.upsertEpgMapping(snapshot));
+    });
+  }
+
+  String _cacheResolvedMapping(String channelId, String epgId) {
+    _internalToEpgIdMapping[channelId] = epgId;
+    _queueMappingPersist(channelId, epgId);
+    return epgId;
   }
 
   Future<void> _loadNormalizedMappingFromPrefs() async {
@@ -850,7 +869,6 @@ class IncrementalEpgService extends ChangeNotifier {
 
         _normalizedAvailableChannels = Map<String, String>.from(
             parseResult['normalizedChannels'] as Map<String, String>);
-        _internalToEpgIdMapping.clear();
 
         // Stream programs from the temp file into memory (capped) and DB in batches
         await _ingestProgramsFromFile(programFilePath);
@@ -1844,13 +1862,16 @@ class IncrementalEpgService extends ChangeNotifier {
     bool allowLoose = true,
   }) {
     _ensureNormalizedMap();
-    if (_internalToEpgIdMapping.containsKey(channelId)) {
-      return _internalToEpgIdMapping[channelId];
+    final cached = _internalToEpgIdMapping[channelId];
+    if (cached != null) {
+      if (_availableChannels.isEmpty || _availableChannels.contains(cached)) {
+        return cached;
+      }
+      _internalToEpgIdMapping.remove(channelId);
     }
     // 1. Exact match
     if (_availableChannels.contains(channelId)) {
-      _internalToEpgIdMapping[channelId] = channelId;
-      return channelId;
+      return _cacheResolvedMapping(channelId, channelId);
     }
 
     // 2. Normalized ID match
@@ -1859,14 +1880,12 @@ class IncrementalEpgService extends ChangeNotifier {
         _normalizedAvailableChannels != null &&
         _normalizedAvailableChannels!.containsKey(normalizedId)) {
       final foundId = _normalizedAvailableChannels![normalizedId]!;
-      _internalToEpgIdMapping[channelId] = foundId;
-      return foundId;
+      return _cacheResolvedMapping(channelId, foundId);
     }
 
     final aliasId = _matchAliasToAvailable(normalizedId);
     if (aliasId != null) {
-      _internalToEpgIdMapping[channelId] = aliasId;
-      return aliasId;
+      return _cacheResolvedMapping(channelId, aliasId);
     }
 
     // Match without domain suffix (e.g., "BBC1.uk" -> "BBC1")
@@ -1876,14 +1895,12 @@ class IncrementalEpgService extends ChangeNotifier {
           _normalizedAvailableChannels != null &&
           _normalizedAvailableChannels!.containsKey(withoutDomain)) {
         final foundId = _normalizedAvailableChannels![withoutDomain]!;
-        _internalToEpgIdMapping[channelId] = foundId;
-        return foundId;
+        return _cacheResolvedMapping(channelId, foundId);
       }
 
       final aliasWithoutDomain = _matchAliasToAvailable(withoutDomain);
       if (aliasWithoutDomain != null) {
-        _internalToEpgIdMapping[channelId] = aliasWithoutDomain;
-        return aliasWithoutDomain;
+        return _cacheResolvedMapping(channelId, aliasWithoutDomain);
       }
     }
 
@@ -1894,14 +1911,12 @@ class IncrementalEpgService extends ChangeNotifier {
           _normalizedAvailableChannels != null &&
           _normalizedAvailableChannels!.containsKey(normalizedName)) {
         final foundId = _normalizedAvailableChannels![normalizedName]!;
-        _internalToEpgIdMapping[channelId] = foundId;
-        return foundId;
+        return _cacheResolvedMapping(channelId, foundId);
       }
 
       final aliasFromName = _matchAliasToAvailable(normalizedName);
       if (aliasFromName != null) {
-        _internalToEpgIdMapping[channelId] = aliasFromName;
-        return aliasFromName;
+        return _cacheResolvedMapping(channelId, aliasFromName);
       }
 
       final strippedName = _normalize(_stripSuffixes(channelName));
@@ -1910,22 +1925,19 @@ class IncrementalEpgService extends ChangeNotifier {
           _normalizedAvailableChannels != null &&
           _normalizedAvailableChannels!.containsKey(strippedName)) {
         final foundId = _normalizedAvailableChannels![strippedName]!;
-        _internalToEpgIdMapping[channelId] = foundId;
-        return foundId;
+        return _cacheResolvedMapping(channelId, foundId);
       }
 
       final aliasFromStripped = _matchAliasToAvailable(strippedName);
       if (aliasFromStripped != null) {
-        _internalToEpgIdMapping[channelId] = aliasFromStripped;
-        return aliasFromStripped;
+        return _cacheResolvedMapping(channelId, aliasFromStripped);
       }
 
       if (allowLoose) {
         // Try matching the name against exact EPG IDs if they look like names
         for (final epgId in _availableChannels) {
           if (_normalize(epgId) == normalizedName) {
-            _internalToEpgIdMapping[channelId] = epgId;
-            return epgId;
+            return _cacheResolvedMapping(channelId, epgId);
           }
         }
 
@@ -1935,8 +1947,7 @@ class IncrementalEpgService extends ChangeNotifier {
           for (final entry in _normalizedAvailableChannels!.entries) {
             if (entry.key.startsWith(normalizedName) ||
                 normalizedName.startsWith(entry.key)) {
-              _internalToEpgIdMapping[channelId] = entry.value;
-              return entry.value;
+              return _cacheResolvedMapping(channelId, entry.value);
             }
           }
         }
@@ -1956,8 +1967,7 @@ class IncrementalEpgService extends ChangeNotifier {
             }
             const double threshold = 0.60; // tuned conservative threshold
             if (bestScore >= threshold && bestId != null) {
-              _internalToEpgIdMapping[channelId] = bestId;
-              return bestId;
+              return _cacheResolvedMapping(channelId, bestId);
             }
           }
         }
@@ -1982,7 +1992,7 @@ class IncrementalEpgService extends ChangeNotifier {
 
     // Try direct lookup with channel ID
     if (_programsByChannel.containsKey(channelId)) {
-      _internalToEpgIdMapping[channelId] = channelId;
+      _cacheResolvedMapping(channelId, channelId);
       return _programsByChannel[channelId] ?? [];
     }
 
@@ -1991,7 +2001,7 @@ class IncrementalEpgService extends ChangeNotifier {
     for (final key in _programsByChannel.keys) {
       final normalizedKey = _normalize(key);
       if (normalizedKey == normalizedId) {
-        _internalToEpgIdMapping[channelId] = key;
+        _cacheResolvedMapping(channelId, key);
         return _programsByChannel[key] ?? [];
       }
     }
@@ -2017,7 +2027,12 @@ class IncrementalEpgService extends ChangeNotifier {
     bool allowLoose = true,
   }) {
     final cached = _internalToEpgIdMapping[channelId];
-    if (cached != null) return cached;
+    if (cached != null) {
+      if (_availableChannels.isEmpty || _availableChannels.contains(cached)) {
+        return cached;
+      }
+      _internalToEpgIdMapping.remove(channelId);
+    }
     final found = _findBestEpgId(
       channelId,
       channelName,
@@ -2025,7 +2040,7 @@ class IncrementalEpgService extends ChangeNotifier {
       allowLoose: allowLoose,
     );
     if (cache && found != null) {
-      _internalToEpgIdMapping[channelId] = found;
+      _cacheResolvedMapping(channelId, found);
     }
     return found;
   }
@@ -2090,7 +2105,7 @@ class IncrementalEpgService extends ChangeNotifier {
     }
 
     // Cache the mapping
-    _internalToEpgIdMapping[channelId] = epgId;
+    _cacheResolvedMapping(channelId, epgId);
 
     final programs = getProgramsForChannel(epgId);
     final now = DateTime.now();
@@ -2125,6 +2140,7 @@ class IncrementalEpgService extends ChangeNotifier {
     final epgId = _internalToEpgIdMapping[channelId] ??
         _findBestEpgId(channelId, channelName);
     if (epgId != null) {
+      _cacheResolvedMapping(channelId, epgId);
       // Use programs for resolved EPG id
       var programs = getProgramsForChannel(epgId, channelName: channelName);
 
@@ -2158,6 +2174,7 @@ class IncrementalEpgService extends ChangeNotifier {
     final epgId = _internalToEpgIdMapping[channelId] ??
         _findBestEpgId(channelId, channelName);
     if (epgId != null) {
+      _cacheResolvedMapping(channelId, epgId);
       var programs = getProgramsForChannel(epgId, channelName: channelName);
       if (programs.isEmpty) {
         await _loadProgramsFromDb(epgId);
@@ -2192,7 +2209,7 @@ class IncrementalEpgService extends ChangeNotifier {
     }
 
     // Cache the mapping
-    _internalToEpgIdMapping[channelId] = epgId;
+    _cacheResolvedMapping(channelId, epgId);
 
     if (_programsByChannel.containsKey(epgId) || _pendingBatch.contains(epgId)) {
       return;
@@ -2232,7 +2249,7 @@ class IncrementalEpgService extends ChangeNotifier {
           _findBestEpgId(channelId, name);
       if (epgId == null) continue;
 
-      _internalToEpgIdMapping[channelId] = epgId;
+      _cacheResolvedMapping(channelId, epgId);
       if (_programsByChannel.containsKey(epgId) ||
           _pendingBatch.contains(epgId)) {
         continue;
