@@ -743,8 +743,11 @@ class _MyAppState extends State<MyApp> {
               _prewarmStarted = true;
               _runDeferred(
                 () async {
-                  await PrewarmService.prewarmMainScreens(context);
-                  await PrewarmService.prewarmHomeData(context);
+                  final appContext = context;
+                  if (!appContext.mounted) return;
+                  await PrewarmService.prewarmMainScreens(appContext);
+                  if (!appContext.mounted) return;
+                  await PrewarmService.prewarmHomeData(appContext);
                 },
                 delay: const Duration(milliseconds: 500),
               );

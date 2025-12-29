@@ -110,7 +110,12 @@ class IncrementalEpgService extends ChangeNotifier {
   String _normalizeEpgUrl(String input) {
     var url = input.trim();
     url = url.replaceAll('\uFEFF', '');
-    url = url.replaceAll(RegExp(r'^[\'"]+|[\'"]+$'), '');
+    while (url.startsWith('"') || url.startsWith("'")) {
+      url = url.substring(1);
+    }
+    while (url.endsWith('"') || url.endsWith("'")) {
+      url = url.substring(0, url.length - 1);
+    }
     final httpIndex = url.indexOf(RegExp(r'https?://', caseSensitive: false));
     if (httpIndex > 0) {
       url = url.substring(httpIndex);
@@ -122,6 +127,28 @@ class IncrementalEpgService extends ChangeNotifier {
       url = 'https://$url';
     }
     return url;
+  }
+
+  bool _looksLikeGzip(List<int> bytes) {
+    return bytes.length >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b;
+  }
+
+  Future<bool> _maybeDecompressGzipFile(File file) async {
+    try {
+      final header = await file.openRead(0, 2).first;
+      if (!_looksLikeGzip(header)) return false;
+      final tempFile = File('${file.path}.xml');
+      final sink = tempFile.openWrite();
+      await file.openRead().transform(gzip.decoder).pipe(sink);
+      if (await file.exists()) {
+        await file.delete();
+      }
+      await tempFile.rename(file.path);
+      return true;
+    } catch (e) {
+      debugLog('EPG: Failed to decompress gzip body: $e');
+      return false;
+    }
   }
 
   void setAllowedChannelIds(Set<String> channelIds,
@@ -439,6 +466,7 @@ class IncrementalEpgService extends ChangeNotifier {
 
       final file = await _getCacheFile();
       var received = 0;
+      var maybeGzipBody = false;
 
       // Respect Content-Encoding header and avoid double-decompress.
       final encHeader =
@@ -477,6 +505,13 @@ class IncrementalEpgService extends ChangeNotifier {
               firstBuffer.addAll(data);
               // If we have enough or this is the last chunk, inspect.
               if (firstBuffer.length >= requiredInspectBytes) {
+                if (_looksLikeGzip(firstBuffer)) {
+                  maybeGzipBody = true;
+                  sink.add(firstBuffer);
+                  headerChecked = true;
+                  return;
+                }
+
                 final preview = utf8
                     .decode(firstBuffer, allowMalformed: true)
                     .trimLeft()
@@ -542,6 +577,14 @@ class IncrementalEpgService extends ChangeNotifier {
         }, onDone: () async {
           // If header wasn't checked yet (small content), check now
           if (!headerChecked) {
+            if (_looksLikeGzip(firstBuffer)) {
+              maybeGzipBody = true;
+              sink.add(firstBuffer);
+              headerChecked = true;
+              await sink.close();
+              return;
+            }
+
             final preview = utf8
                 .decode(firstBuffer, allowMalformed: true)
                 .trimLeft()
@@ -606,6 +649,19 @@ class IncrementalEpgService extends ChangeNotifier {
           if (await file.exists()) await file.delete();
         } catch (_) {}
         return;
+      }
+
+      // If the body looks gzipped but no headers indicated it, decompress now.
+      if (maybeGzipBody) {
+        final decompressed = await _maybeDecompressGzipFile(file);
+        if (!decompressed) {
+          _error = 'EPG response does not start with XML';
+          debugLog('EPG: $_error');
+          try {
+            if (await file.exists()) await file.delete();
+          } catch (_) {}
+          return;
+        }
       }
 
       // Read a small prefix to validate structure (avoid loading full file)

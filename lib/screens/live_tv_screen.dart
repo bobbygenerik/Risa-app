@@ -60,7 +60,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   bool _initialFocusRequested = false;
   final Map<String, int> _focusedIndexBySection = {};
   final Map<String, DateTime> _artworkRetryAfter = {};
-  Map<String, List<Channel>> _categoryChannelCache = {};
+  final Map<String, List<Channel>> _categoryChannelCache = {};
   final Set<String> _categoryChannelLoading = {};
   List<String> _categoryNames = [];
   final Set<String> _epgPrefetchedRows = {};
@@ -944,14 +944,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return null;
   }
 
-  Channel? _getCurrentFeaturedChannel() {
-    final channelProvider =
-        Provider.of<ChannelProvider>(context, listen: false);
-    final channels = channelProvider.channels;
-    if (channels.isEmpty || _featuredIndex >= channels.length) return null;
-    return channels[_featuredIndex];
-  }
-
   Future<void> _fetchChannelArtwork(Channel channel) async {
     final channelKey = 'channel_${channel.id}';
     if (_artworkRequests.contains(channelKey) ||
@@ -1673,26 +1665,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               color: AppColors.background,
             ),
           ),
-          // Hero background placeholder
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: heroHeight,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.white.withValues(alpha: 0.05),
-                    Colors.white.withValues(alpha: 0.02),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // Info box placeholder
+          // Info box placeholder (no hero background)
           Positioned(
             left: contentInset,
             bottom: heroHeight * 0.15,
@@ -1707,8 +1680,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    width: 220,
-                    height: 18,
+                    width: 240,
+                    height: 20,
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
@@ -1716,7 +1689,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   ),
                   SizedBox(height: context.spacingSm()),
                   Container(
-                    width: 160,
+                    width: 180,
                     height: 12,
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.1),
@@ -1738,6 +1711,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     height: 10,
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                    ),
+                  ),
+                  SizedBox(height: context.spacingMd()),
+                  Container(
+                    width: 120,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                     ),
                   ),
