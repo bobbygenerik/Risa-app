@@ -273,11 +273,16 @@ class LocalDbService {
     return rows.map(_hydrateAttrs).toList();
   }
 
-  Future<List<String>> getCategories({int limit = 50}) async {
+  Future<List<String>> getCategories({int? limit}) async {
+    final query = StringBuffer(
+        'SELECT DISTINCT groupTitle FROM channels WHERE groupTitle IS NOT NULL ORDER BY groupTitle');
+    final args = <Object>[];
+    if (limit != null && limit > 0) {
+      query.write(' LIMIT ?');
+      args.add(limit);
+    }
     final rows = await _withDbRead((db) {
-      return db.rawQuery(
-          'SELECT DISTINCT groupTitle FROM channels WHERE groupTitle IS NOT NULL ORDER BY groupTitle LIMIT ?',
-          [limit]);
+      return db.rawQuery(query.toString(), args);
     });
     return rows
         .map((r) => (r['groupTitle'] as String?) ?? 'Uncategorized')

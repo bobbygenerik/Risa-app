@@ -62,11 +62,14 @@ class _EPGScreenState extends State<EPGScreen>
   late final FocusNode _firstChannelFocus;
   late final FocusNode _firstProgramFocus;
   bool _refreshPressed = false;
+  Future<List<Channel>>? _channelPageFuture;
+  String _channelPageKey = '';
 
   @override
   void initState() {
     super.initState();
     _epgState = EPGScreenState();
+    _epgState.addListener(_handleEpgStateChanged);
     _refreshAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
@@ -213,8 +216,14 @@ class _EPGScreenState extends State<EPGScreen>
       ],
     );
     _timerService.unregister('epg_auto_refresh');
+    _epgState.removeListener(_handleEpgStateChanged);
     _epgState.dispose();
     super.dispose();
+  }
+
+  void _handleEpgStateChanged() {
+    if (!mounted) return;
+    setState(() {});
   }
 
   /// Scroll the channel list back to the top when category changes
@@ -273,6 +282,42 @@ class _EPGScreenState extends State<EPGScreen>
         'epg_favorite_channels', _epgState.epgFavoriteChannelIds.toList());
   }
 
+  Future<List<Channel>> _ensureChannelPageFuture(
+      ChannelProvider channelProvider) {
+    final categoryKey = _epgState.selectedCategory ?? 'all';
+    final favorites = _epgState.epgFavoriteChannelIds;
+    final favoritesKey =
+        favorites.isEmpty ? '0' : favorites.take(8).join('|');
+    final pageKey = '$categoryKey|${_epgState.currentPage}|$favoritesKey';
+    if (_channelPageFuture == null || _channelPageKey != pageKey) {
+      _channelPageKey = pageKey;
+      _channelPageFuture = () async {
+        final pageSize = _epgState.channelsPerPage;
+        final expected = (_epgState.currentPage + 1) * pageSize;
+        final fetchLimit = expected + 1;
+        if (_epgState.selectedCategory == '⭐ Favorites') {
+          return channelProvider.getFilteredChannels(
+            favoriteIds: _epgState.epgFavoriteChannelIds,
+            excludeHidden: true,
+            limit: fetchLimit,
+          );
+        }
+        if (_epgState.selectedCategory != null) {
+          return channelProvider.getFilteredChannelsAsync(
+            category: _epgState.selectedCategory,
+            excludeHidden: true,
+            limit: fetchLimit,
+          );
+        }
+        return channelProvider.getFilteredChannelsAsync(
+          excludeHidden: true,
+          limit: fetchLimit,
+        );
+      }();
+    }
+    return _channelPageFuture!;
+  }
+
   @override
   Widget build(BuildContext context) {
     // Keep using WillPopScope for now to remain compatible with current SDK.
@@ -306,27 +351,10 @@ class _EPGScreenState extends State<EPGScreen>
               ...categoryList
             ]; // Favorites first, then categories
 
+            final channelPageFuture =
+                _ensureChannelPageFuture(channelProvider);
             return FutureBuilder<List<Channel>>(
-              future: () async {
-                final pageSize = _epgState.channelsPerPage;
-                final expected = (_epgState.currentPage + 1) * pageSize;
-                final fetchLimit = expected + 1;
-                if (_epgState.selectedCategory == '⭐ Favorites') {
-                  return channelProvider.getFilteredChannels(
-                    favoriteIds: _epgState.epgFavoriteChannelIds,
-                    excludeHidden: true,
-                    limit: fetchLimit,
-                  );
-                } else if (_epgState.selectedCategory != null) {
-                  return channelProvider.getFilteredChannelsAsync(
-                      category: _epgState.selectedCategory,
-                      excludeHidden: true,
-                      limit: fetchLimit);
-                } else {
-                  return channelProvider.getFilteredChannelsAsync(
-                      excludeHidden: true, limit: fetchLimit);
-                }
-              }(),
+              future: channelPageFuture,
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const Center(
@@ -626,6 +654,9 @@ class _EPGScreenState extends State<EPGScreen>
         ),
       ),
       child: ListView.separated(
+        key: const PageStorageKey<String>('epg_category_list'),
+        physics: const BouncingScrollPhysics(),
+        primary: false,
         itemCount: categories.length,
         itemBuilder: (context, index) {
           final category = categories[index];
@@ -922,171 +953,201 @@ class _EPGScreenState extends State<EPGScreen>
 
   void _showProgramDetails(Program program) {
     final rootContext = context; // Capture parent context for snackbars
-    unawaited(showDialog(
+    final catchupFocus = FocusNode(debugLabel: 'EpgCatchup');
+    final recordFocus = FocusNode(debugLabel: 'EpgRecord');
+    final remindFocus = FocusNode(debugLabel: 'EpgRemind');
+    final dialogFuture = showDialog(
       context: context,
-      builder: (dialogContext) => Dialog(
-        backgroundColor: AppColors.cardDark,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Container(
-          width: 600,
-          padding: const EdgeInsets.all(AppSizes.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Program image
-              if (program.imageUrl != null &&
-                  !_isLikelyPosterUrl(program.imageUrl!))
-                CachedImage(
-                  imageUrl: program.imageUrl!,
-                  height: 200,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-                  errorWidget: Container(
+      builder: (dialogContext) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!dialogContext.mounted) return;
+          if (program.hasCatchup) {
+            if (catchupFocus.canRequestFocus) {
+              catchupFocus.requestFocus();
+            }
+          } else if (program.isFutureProgram) {
+            if (recordFocus.canRequestFocus) {
+              recordFocus.requestFocus();
+            }
+          }
+        });
+        return Dialog(
+          backgroundColor: AppColors.cardDark,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Container(
+            width: 600,
+            padding: const EdgeInsets.all(AppSizes.lg),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Program image
+                if (program.imageUrl != null &&
+                    !_isLikelyPosterUrl(program.imageUrl!))
+                  CachedImage(
+                    imageUrl: program.imageUrl!,
                     height: 200,
-                    decoration: const BoxDecoration(
-                      color: AppTheme.darkBackground,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                    errorWidget: Container(
+                      height: 200,
+                      decoration: const BoxDecoration(
+                        color: AppTheme.darkBackground,
+                      ),
+                      child: const Icon(Icons.dvr, size: 64),
                     ),
-                    child: const Icon(Icons.dvr, size: 64),
                   ),
+
+                const SizedBox(height: AppSizes.lg),
+
+                // Title
+                Text(
+                  program.title,
+                  style: Theme.of(context).textTheme.headlineSmall,
                 ),
 
-              const SizedBox(height: AppSizes.lg),
+                const SizedBox(height: AppSizes.sm),
 
-              // Title
-              Text(
-                program.title,
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
+                // Time and status
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.access_time,
+                      size: 16,
+                      color: AppTheme.textSecondary,
+                    ),
+                    const SizedBox(width: AppSizes.xs),
+                    Text(
+                      '${DateFormat.jm().format(program.startTime)} - ${DateFormat.jm().format(program.endTime)}',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(width: AppSizes.md),
+                    if (program.isCurrentlyPlaying)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSizes.sm,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.accentRed,
+                          borderRadius:
+                              BorderRadius.circular(AppSizes.radiusSm),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.fiber_manual_record,
+                              size: 8,
+                              color: Colors.white,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              'LIVE',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
 
-              const SizedBox(height: AppSizes.sm),
+                const SizedBox(height: AppSizes.md),
 
-              // Time and status
-              Row(
-                children: [
-                  const Icon(
-                    Icons.access_time,
-                    size: 16,
-                    color: AppTheme.textSecondary,
-                  ),
-                  const SizedBox(width: AppSizes.xs),
+                // Description
+                if (program.description != null)
                   Text(
-                    '${DateFormat.jm().format(program.startTime)} - ${DateFormat.jm().format(program.endTime)}',
+                    program.description!,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
-                  const SizedBox(width: AppSizes.md),
-                  if (program.isCurrentlyPlaying)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSizes.sm,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.accentRed,
-                        borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.fiber_manual_record,
-                            size: 8,
-                            color: Colors.white,
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            'LIVE',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
 
-              const SizedBox(height: AppSizes.md),
+                const SizedBox(height: AppSizes.xl),
 
-              // Description
-              if (program.description != null)
-                Text(
-                  program.description!,
-                  style: Theme.of(context).textTheme.bodyMedium,
+                // Action buttons
+                FocusTraversalGroup(
+                  policy: WidgetOrderTraversalPolicy(),
+                  child: Row(
+                    children: [
+                      // Watch Catch-up button (only for catchup programs)
+                      if (program.hasCatchup)
+                        Expanded(
+                          child: BrandPrimaryButton(
+                            focusNode: catchupFocus,
+                            onPressed: () {
+                              Navigator.pop(dialogContext);
+                              _playCatchup(program);
+                            },
+                            icon: AppIcons.replay,
+                            label: 'Watch Catch-up',
+                            expand: true,
+                          ),
+                        ),
+                      if (program.hasCatchup && program.isFutureProgram)
+                        const SizedBox(width: AppSizes.sm),
+                      // Record button (only for future programs)
+                      if (program.isFutureProgram)
+                        Expanded(
+                          child: BrandSecondaryButton(
+                            focusNode: recordFocus,
+                            onPressed: () {
+                              // Record functionality
+                              Navigator.pop(dialogContext);
+                              showAppSnackBar(
+                                rootContext,
+                                SnackBar(
+                                  content: Text(
+                                    'Recording scheduled for ${program.title}',
+                                  ),
+                                ),
+                              );
+                            },
+                            icon: AppIcons.record,
+                            label: 'Record',
+                            expand: true,
+                          ),
+                        ),
+                      // Remind button (only for future programs)
+                      if (program.isFutureProgram) ...[
+                        const SizedBox(width: AppSizes.sm),
+                        Expanded(
+                          child: BrandSecondaryButton(
+                            focusNode: remindFocus,
+                            onPressed: () {
+                              // Set reminder
+                              Navigator.pop(dialogContext);
+                              showAppSnackBar(
+                                rootContext,
+                                SnackBar(
+                                  content: Text(
+                                    'Reminder set for ${program.title}',
+                                  ),
+                                ),
+                              );
+                            },
+                            icon: AppIcons.alarm,
+                            label: 'Remind',
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-
-              const SizedBox(height: AppSizes.xl),
-
-              // Action buttons
-              Row(
-                children: [
-                  // Watch Catch-up button (only for catchup programs)
-                  if (program.hasCatchup)
-                    Expanded(
-                      child: BrandPrimaryButton(
-                        onPressed: () {
-                          Navigator.pop(dialogContext);
-                          _playCatchup(program);
-                        },
-                        icon: AppIcons.replay,
-                        label: 'Watch Catch-up',
-                        expand: true,
-                      ),
-                    ),
-                  if (program.hasCatchup && program.isFutureProgram)
-                    const SizedBox(width: AppSizes.sm),
-                  // Record button (only for future programs)
-                  if (program.isFutureProgram)
-                    Expanded(
-                      child: BrandSecondaryButton(
-                        onPressed: () {
-                          // Record functionality
-                          Navigator.pop(dialogContext);
-                          showAppSnackBar(
-                            rootContext,
-                            SnackBar(
-                              content: Text(
-                                'Recording scheduled for ${program.title}',
-                              ),
-                            ),
-                          );
-                        },
-                        icon: AppIcons.record,
-                        label: 'Record',
-                        expand: true,
-                      ),
-                    ),
-                  // Remind button (only for future programs)
-                  if (program.isFutureProgram) ...[
-                    const SizedBox(width: AppSizes.sm),
-                    Expanded(
-                      child: BrandSecondaryButton(
-                        onPressed: () {
-                          // Set reminder
-                          Navigator.pop(dialogContext);
-                          showAppSnackBar(
-                            rootContext,
-                            SnackBar(
-                              content: Text(
-                                'Reminder set for ${program.title}',
-                              ),
-                            ),
-                          );
-                        },
-                        icon: AppIcons.alarm,
-                        label: 'Remind',
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ),
-    ));
+        );
+      },
+    );
+    unawaited(dialogFuture.whenComplete(() {
+      catchupFocus.dispose();
+      recordFocus.dispose();
+      remindFocus.dispose();
+    }));
   }
 
   /// Show context menu for channel long press
@@ -1255,6 +1316,7 @@ class _EPGScreenState extends State<EPGScreen>
                   selectionControls: NoTextSelectionControls(),
                   showCursor: false,
                   cursorColor: Colors.transparent,
+                  autofocus: true,
                   style: const TextStyle(color: Colors.white),
                   onTap: () {
                     final text = searchController.text;
@@ -1355,61 +1417,85 @@ class _EPGScreenState extends State<EPGScreen>
 
                         return Column(
                           children: [
-                            ListTile(
-                              dense: true,
-                              leading: isCurrentlyMapped
-                                  ? const Icon(Icons.check_circle,
-                                      color: AppTheme.accentGreen)
-                                  : isSuggested
-                                      ? Icon(
-                                          Icons.stars,
-                                          color: suggestionScore > 0.7
-                                              ? AppTheme.accentGreen
-                                              : suggestionScore > 0.4
-                                                  ? AppTheme.primaryBlue
-                                                  : AppTheme.textSecondary,
-                                        )
-                                      : const Icon(Icons.tv_outlined,
-                                          color: AppTheme.textSecondary),
-                              title: Text(
-                                _getDisplayNameForEpgId(epgId),
-                                style: TextStyle(
-                                  fontWeight: isCurrentlyMapped || isSuggested
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  color: isCurrentlyMapped
-                                      ? AppTheme.accentGreen
-                                      : AppTheme.textPrimary,
+                            FocusableActionDetector(
+                              actions: <Type, Action<Intent>>{
+                                ActivateIntent: CallbackAction<ActivateIntent>(
+                                  onInvoke: (intent) {
+                                    Navigator.pop(dialogContext);
+                                    _setEpgMapping(channel, epgId);
+                                    return null;
+                                  },
                                 ),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (preview != null)
-                                    Text(
-                                      'Now: $preview',
-                                      style: const TextStyle(
-                                          fontSize: 12,
-                                          color: AppTheme.textSecondary),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
+                              },
+                              child: Builder(
+                                builder: (context) {
+                                  final isFocused =
+                                      Focus.of(context).hasFocus;
+                                  return ListTile(
+                                    dense: true,
+                                    selected: isFocused,
+                                    selectedTileColor:
+                                        AppTheme.primaryBlue.withValues(
+                                      alpha: 0.16,
                                     ),
-                                  if (isSuggested)
-                                    Text(
-                                      'Match: ${(suggestionScore * 100).toInt()}%',
+                                    leading: isCurrentlyMapped
+                                        ? const Icon(Icons.check_circle,
+                                            color: AppTheme.accentGreen)
+                                        : isSuggested
+                                            ? Icon(
+                                                Icons.stars,
+                                                color: suggestionScore > 0.7
+                                                    ? AppTheme.accentGreen
+                                                    : suggestionScore > 0.4
+                                                        ? AppTheme.primaryBlue
+                                                        : AppTheme.textSecondary,
+                                              )
+                                            : const Icon(Icons.tv_outlined,
+                                                color: AppTheme.textSecondary),
+                                    title: Text(
+                                      _getDisplayNameForEpgId(epgId),
                                       style: TextStyle(
-                                        fontSize: 12,
-                                        color: suggestionScore > 0.7
+                                        fontWeight:
+                                            isCurrentlyMapped || isSuggested
+                                                ? FontWeight.bold
+                                                : FontWeight.normal,
+                                        color: isCurrentlyMapped
                                             ? AppTheme.accentGreen
-                                            : AppTheme.textSecondary,
+                                            : AppTheme.textPrimary,
                                       ),
                                     ),
-                                ],
+                                    subtitle: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        if (preview != null)
+                                          Text(
+                                            'Now: $preview',
+                                            style: const TextStyle(
+                                                fontSize: 12,
+                                                color: AppTheme.textSecondary),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        if (isSuggested)
+                                          Text(
+                                            'Match: ${(suggestionScore * 100).toInt()}%',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: suggestionScore > 0.7
+                                                  ? AppTheme.accentGreen
+                                                  : AppTheme.textSecondary,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    onTap: () {
+                                      Navigator.pop(dialogContext);
+                                      _setEpgMapping(channel, epgId);
+                                    },
+                                  );
+                                },
                               ),
-                              onTap: () {
-                                Navigator.pop(dialogContext);
-                                _setEpgMapping(channel, epgId);
-                              },
                             ),
                             if (showDivider)
                               Padding(

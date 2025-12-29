@@ -17,6 +17,10 @@ import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformView
+import androidx.media3.common.C
+import androidx.media3.common.TrackSelectionOverride
+import androidx.media3.common.TrackSelectionOverrides
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 
 @UnstableApi
 class ExoPlayerView(
@@ -29,6 +33,7 @@ class ExoPlayerView(
     private lateinit var playerView: PlayerView
     private val exoPlayer: ExoPlayer
     private val methodChannel: MethodChannel
+    private lateinit var trackSelector: DefaultTrackSelector
     private val mainHandler = Handler(Looper.getMainLooper())
     private var positionUpdateRunnable: Runnable? = null
     private var isDisposed = false
@@ -94,7 +99,7 @@ class ExoPlayerView(
         }
 
         // Build ExoPlayer with our custom renderers factory
-        val trackSelector = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(context)
+        trackSelector = DefaultTrackSelector(context)
         trackSelector.parameters = trackSelector.buildUponParameters()
             .setMaxAudioChannelCount(8)
             .build()
@@ -315,7 +320,7 @@ class ExoPlayerView(
                 val trackGroups = exoPlayer.currentTracks
                 
                 for (group in trackGroups.groups) {
-                    if (group.type == androidx.media3.common.C.TRACK_TYPE_AUDIO) {
+                    if (group.type == C.TRACK_TYPE_AUDIO) {
                         for (i in 0 until group.length) {
                             val format = group.getTrackFormat(i)
                             tracks.add(mapOf(
@@ -328,6 +333,64 @@ class ExoPlayerView(
                     }
                 }
                 result.success(tracks)
+            }
+            "listSubtitleTracks" -> {
+                val tracks = mutableListOf<Map<String, Any>>()
+                val trackGroups = exoPlayer.currentTracks
+                for ((groupIndex, group) in trackGroups.groups.withIndex()) {
+                    if (group.type == C.TRACK_TYPE_TEXT) {
+                        val mediaGroup = group.mediaTrackGroup
+                        if (mediaGroup != null) {
+                            for (i in 0 until mediaGroup.length) {
+                                val format = mediaGroup.getFormat(i)
+                                tracks.add(mapOf(
+                                    "label" to (format.label ?: "Subtitle ${i + 1}"),
+                                    "language" to (format.language ?: "und"),
+                                    "groupIndex" to groupIndex,
+                                    "trackIndex" to i
+                                ))
+                            }
+                        }
+                    }
+                }
+                result.success(tracks)
+            }
+            "selectSubtitleTrack" -> {
+                val groupIndex = call.argument<Int>("groupIndex") ?: -1
+                val trackIndex = call.argument<Int>("trackIndex") ?: -1
+                val trackGroups = exoPlayer.currentTracks
+                if (groupIndex < 0 || groupIndex >= trackGroups.groups.size) {
+                    result.success(mapOf("success" to false, "message" to "invalid_group"))
+                    return
+                }
+                val group = trackGroups.groups[groupIndex]
+                val mediaGroup = group.mediaTrackGroup
+                if (group.type != C.TRACK_TYPE_TEXT || mediaGroup == null) {
+                    result.success(mapOf("success" to false, "message" to "no_text_group"))
+                    return
+                }
+                if (trackIndex < 0 || trackIndex >= mediaGroup.length) {
+                    result.success(mapOf("success" to false, "message" to "invalid_track"))
+                    return
+                }
+                val override = TrackSelectionOverride(mediaGroup, listOf(trackIndex))
+                val overridesBuilder = TrackSelectionOverrides.Builder(trackSelector.parameters.trackSelectionOverrides)
+                overridesBuilder.clearOverridesOfType(C.TRACK_TYPE_TEXT)
+                overridesBuilder.addOverride(override)
+                trackSelector.parameters = trackSelector.buildUponParameters()
+                    .setRendererDisabled(C.TRACK_TYPE_TEXT, false)
+                    .setTrackSelectionOverrides(overridesBuilder.build())
+                    .build()
+                result.success(mapOf("success" to true))
+            }
+            "disableSubtitles" -> {
+                val overridesBuilder = TrackSelectionOverrides.Builder(trackSelector.parameters.trackSelectionOverrides)
+                overridesBuilder.clearOverridesOfType(C.TRACK_TYPE_TEXT)
+                trackSelector.parameters = trackSelector.buildUponParameters()
+                    .setRendererDisabled(C.TRACK_TYPE_TEXT, true)
+                    .setTrackSelectionOverrides(overridesBuilder.build())
+                    .build()
+                result.success(mapOf("success" to true))
             }
             "setVolume" -> {
                 val volume = call.argument<Double>("volume")?.toFloat() ?: 1f
@@ -349,4 +412,3 @@ class ExoPlayerView(
         }
     }
 }
-

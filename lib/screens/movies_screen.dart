@@ -2,6 +2,7 @@ import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'dart:math';
 import 'dart:ui';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -23,6 +24,33 @@ import 'package:iptv_player/utils/app_typography.dart';
 import 'package:iptv_player/widgets/hero_info_box.dart';
 import 'package:iptv_player/widgets/brand_badge.dart';
 
+List<Map<String, dynamic>> _buildMovieGenreBucketsIsolate(
+    List<Map<String, dynamic>> items) {
+  final Map<String, List<int>> genreMap = {};
+  for (var i = 0; i < items.length; i++) {
+    final item = items[i];
+    final title = (item['title'] as String?)?.toLowerCase() ?? '';
+    if (title == 'movie' ||
+        title == 'movie to be announced' ||
+        title.startsWith('movie ') ||
+        title.contains('to be announced')) {
+      continue;
+    }
+    final genres =
+        (item['genres'] as List<dynamic>?)?.cast<String>() ?? const [];
+    if (genres.isEmpty) {
+      genreMap.putIfAbsent('Other', () => []).add(i);
+      continue;
+    }
+    for (final genre in genres) {
+      genreMap.putIfAbsent(genre, () => []).add(i);
+    }
+  }
+  return genreMap.entries
+      .map((entry) => {'genre': entry.key, 'indices': entry.value})
+      .toList();
+}
+
 class MoviesScreen extends StatefulWidget {
   const MoviesScreen({super.key});
 
@@ -36,8 +64,26 @@ class _HeroArt {
   const _HeroArt(this.url, {this.isBackdrop = true});
 }
 
+class _SectionConfig {
+  final String title;
+  final List<Content> items;
+  final String sectionKey;
+  final FocusNode? firstFocusNode;
+  final ValueChanged<int>? onItemFocus;
+  final VoidCallback? onNearEnd;
+
+  const _SectionConfig({
+    required this.title,
+    required this.items,
+    required this.sectionKey,
+    this.firstFocusNode,
+    this.onItemFocus,
+    this.onNearEnd,
+  });
+}
+
 class _MoviesScreenState extends State<MoviesScreen>
-    with ContentFocusRegistrant<MoviesScreen> {
+    with ContentFocusRegistrant<MoviesScreen>, AutomaticKeepAliveClientMixin {
   Timer? _carouselTimer;
   int _featuredIndex = 0;
   final ScrollController _scrollController = ScrollController();
@@ -48,6 +94,13 @@ class _MoviesScreenState extends State<MoviesScreen>
   List<Content> _curatedMovies = [];
   final Map<String, String?> _tmdbArtCache = {};
   final Set<String> _heroDetailsRequests = {};
+  Map<String, List<int>> _genreBuckets = {};
+  String _genreBucketsSignature = '';
+  bool _genreBucketsLoading = false;
+  int _sectionTotal = 0;
+  int _visibleSectionCount = 6;
+  static const int _sectionChunkSize = 6;
+  static const double _sectionPrefetchExtent = 800;
 
   // Pagination for genre sections
   final Map<String, int> _genreDisplayCounts = {};
@@ -60,6 +113,7 @@ class _MoviesScreenState extends State<MoviesScreen>
   @override
   void dispose() {
     _carouselTimer?.cancel();
+    _scrollController.removeListener(_handleSectionPrefetch);
     _scrollController.dispose();
     _playFocus.removeListener(_onPlayFocusChange);
     _playFocus.dispose();
@@ -127,6 +181,7 @@ class _MoviesScreenState extends State<MoviesScreen>
   void initState() {
     super.initState();
     _playFocus.addListener(_onPlayFocusChange);
+    _scrollController.addListener(_handleSectionPrefetch);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       Provider.of<ChannelProvider>(context, listen: false).ensureVodLoaded();
@@ -142,6 +197,18 @@ class _MoviesScreenState extends State<MoviesScreen>
       _prepareCuratedList();
       _preloadTMDBArtwork();
       // Focus is managed by navigation bar - don't auto-focus content
+    });
+  }
+
+  void _handleSectionPrefetch() {
+    if (!_scrollController.hasClients) return;
+    if (_sectionTotal == 0) return;
+    if (_visibleSectionCount >= _sectionTotal) return;
+    final extentAfter = _scrollController.position.extentAfter;
+    if (extentAfter > _sectionPrefetchExtent) return;
+    setState(() {
+      _visibleSectionCount =
+          (_visibleSectionCount + _sectionChunkSize).clamp(0, _sectionTotal);
     });
   }
 
@@ -262,6 +329,66 @@ class _MoviesScreenState extends State<MoviesScreen>
     }
   }
 
+  String _buildGenreSignature(List<Content> items) {
+    if (items.isEmpty) return 'empty';
+    final firstId = items.first.id;
+    final lastId = items.last.id;
+    return '${items.length}|$firstId|$lastId';
+  }
+
+  void _ensureGenreBuckets(List<Content> items) {
+    final signature = _buildGenreSignature(items);
+    if (_genreBucketsSignature == signature || _genreBucketsLoading) return;
+    _genreBucketsLoading = true;
+    final payload = items
+        .map((movie) => {
+              'title': movie.title,
+              'genres': movie.allGenres,
+            })
+        .toList();
+    unawaited(compute(_buildMovieGenreBucketsIsolate, payload).then((result) {
+      if (!mounted) return;
+      final Map<String, List<int>> buckets = {};
+      for (final entry in result) {
+        final genre = entry['genre'] as String?;
+        final indices = entry['indices'] as List<dynamic>?;
+        if (genre == null || indices == null) continue;
+        buckets[genre] = indices.cast<int>();
+      }
+      setState(() {
+        _genreBuckets = buckets;
+        _genreBucketsSignature = signature;
+        _genreBucketsLoading = false;
+      });
+    }).catchError((error) {
+      _genreBucketsLoading = false;
+      debugLog('Movies: genre bucket isolate failed: $error');
+    }));
+  }
+
+  Map<String, List<Content>> _buildGenreMapFallback(List<Content> movies) {
+    final sample = movies.length <= 200 ? movies : movies.take(200).toList();
+    final Map<String, List<Content>> genreMap = {};
+    for (final movie in sample) {
+      final title = movie.title.toLowerCase();
+      if (title == 'movie' ||
+          title == 'movie to be announced' ||
+          title.startsWith('movie ') ||
+          title.contains('to be announced')) {
+        continue;
+      }
+      final movieGenres = movie.allGenres;
+      if (movieGenres.isNotEmpty) {
+        for (final genre in movieGenres) {
+          genreMap.putIfAbsent(genre, () => []).add(movie);
+        }
+      } else {
+        genreMap.putIfAbsent('Other', () => []).add(movie);
+      }
+    }
+    return genreMap;
+  }
+
   bool _shouldPrefetchArt(String sectionKey, int index) {
     final focusedIndex = _focusedIndexBySection[sectionKey];
     if (focusedIndex == null) {
@@ -272,6 +399,7 @@ class _MoviesScreenState extends State<MoviesScreen>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Consumer<ContentProvider>(
       builder: (context, contentProvider, child) {
         final channelProvider =
@@ -307,6 +435,9 @@ class _MoviesScreenState extends State<MoviesScreen>
       },
     );
   }
+
+  @override
+  bool get wantKeepAlive => true;
 
   Future<void> _ensureHeroDetails(Content item) async {
     if (!ServiceValidator.isTmdbAvailable) return;
@@ -653,41 +784,35 @@ class _MoviesScreenState extends State<MoviesScreen>
     );
   }
 
-  List<Widget> _buildGenreSections(
+  List<_SectionConfig> _buildGenreSections(
     BuildContext context,
     List<Content> movies, {
     required bool hasMoreOverall,
     FocusNode? firstRowFocusNode,
   }) {
-    // Filter out movies without proper info
-    final validMovies = movies.where((movie) {
-      // Skip movies with generic/placeholder titles
-      final title = movie.title.toLowerCase();
-      if (title == 'movie' ||
-          title == 'movie to be announced' ||
-          title.startsWith('movie ') ||
-          title.contains('to be announced')) {
-        return false;
-      }
-      return true;
-    }).toList();
-
-    // Group movies by genre (prefer TMDB genres, fallback to M3U genres)
+    _ensureGenreBuckets(movies);
+    final signature = _buildGenreSignature(movies);
+    final hasBuckets =
+        _genreBucketsSignature == signature && _genreBuckets.isNotEmpty;
     final genreMap = <String, List<Content>>{};
-    for (final movie in validMovies) {
-      // Use allGenres getter which prefers tmdbGenres over genres
-      final movieGenres = movie.allGenres;
-      if (movieGenres.isNotEmpty) {
-        for (final genre in movieGenres) {
-          genreMap.putIfAbsent(genre, () => []).add(movie);
+    if (hasBuckets) {
+      for (final entry in _genreBuckets.entries) {
+        final items = <Content>[];
+        for (final index in entry.value) {
+          if (index >= 0 && index < movies.length) {
+            items.add(movies[index]);
+          }
         }
-      } else {
-        genreMap.putIfAbsent('Other', () => []).add(movie);
+        if (items.isNotEmpty) {
+          genreMap[entry.key] = items;
+        }
       }
+    } else {
+      genreMap.addAll(_buildGenreMapFallback(movies));
     }
 
     debugLog(
-        'Movies: Total=${movies.length}, Valid=${validMovies.length}, Genres=${genreMap.keys.join(", ")}');
+        'Movies: Total=${movies.length}, Genres=${genreMap.keys.join(", ")}');
     for (final entry in genreMap.entries) {
       debugLog('  ${entry.key}: ${entry.value.length} movies');
     }
@@ -702,7 +827,7 @@ class _MoviesScreenState extends State<MoviesScreen>
     }
 
     // Build section for each genre with pagination
-    final sections = <Widget>[];
+    final sections = <_SectionConfig>[];
     var usedFocusNode = false;
     for (final entry in genreMap.entries) {
       final genre = entry.key;
@@ -712,20 +837,14 @@ class _MoviesScreenState extends State<MoviesScreen>
       final rowFocusNode = !usedFocusNode ? firstRowFocusNode : null;
       usedFocusNode = usedFocusNode || rowFocusNode != null;
 
-      sections.addAll([
-        _buildSectionHeader(context, genre),
-        SizedBox(height: context.spacingXs()),
-        _buildMoviesRow(
-          context,
-          displayMovies,
+      sections.add(
+        _SectionConfig(
+          title: genre,
+          items: displayMovies,
           sectionKey: genre,
-          firstCardFocusNode: rowFocusNode,
+          firstFocusNode: rowFocusNode,
           onItemFocus: (index) {
-            if (_focusedIndexBySection[genre] != index) {
-              setState(() {
-                _focusedIndexBySection[genre] = index;
-              });
-            }
+            _focusedIndexBySection[genre] = index;
             _maybePrefetchGenre(
               genre: genre,
               index: index,
@@ -742,8 +861,7 @@ class _MoviesScreenState extends State<MoviesScreen>
             hasMoreOverall: hasMoreOverall,
           ),
         ),
-        const SizedBox(height: 16),
-      ]);
+      );
     }
 
     return sections;
@@ -758,7 +876,34 @@ class _MoviesScreenState extends State<MoviesScreen>
     final heroArt = _resolveHeroArt(featuredMovie);
     final heroHeight = context.heroHeight();
     final cardPeek = context.spacingXl();
+    final contentTop = (heroHeight - cardPeek).clamp(0.0, heroHeight);
     final contentInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
+
+    final sections = <_SectionConfig>[];
+    if (recentMovies.isNotEmpty) {
+      sections.add(
+        _SectionConfig(
+          title: 'Recently Added',
+          items: recentMovies,
+          sectionKey: 'recent_movies',
+          firstFocusNode: _firstRowFocus,
+          onItemFocus: (index) {
+            _focusedIndexBySection['recent_movies'] = index;
+          },
+        ),
+      );
+    }
+    sections.addAll(
+      _buildGenreSections(
+        context,
+        allMovies,
+        hasMoreOverall: hasMoreOverall,
+        firstRowFocusNode: recentMovies.isEmpty ? _firstRowFocus : null,
+      ),
+    );
+    _sectionTotal = sections.length;
+    final visibleSections =
+        sections.take(min(_visibleSectionCount, sections.length)).toList();
 
     return Focus(
       canRequestFocus: false,
@@ -876,6 +1021,26 @@ class _MoviesScreenState extends State<MoviesScreen>
                     ),
                   ),
                 ),
+                Positioned(
+                  top: contentTop,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          AppTheme.darkBackground,
+                          AppTheme.darkBackground,
+                        ],
+                        stops: [0.0, 0.2, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
                 // Featured info overlay
                 Positioned(
                   bottom: context.spacingXl(),
@@ -898,71 +1063,34 @@ class _MoviesScreenState extends State<MoviesScreen>
                 ),
                 // Scrollable content
                 Positioned.fill(
-                  child: SingleChildScrollView(
+                  child: CustomScrollView(
+                    key: const PageStorageKey<String>('movies_scroll'),
                     controller: _scrollController,
                     physics: const AlwaysScrollableScrollPhysics(),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                            height:
-                                (heroHeight - cardPeek).clamp(0.0, heroHeight)),
-                        Container(
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.transparent,
-                                AppTheme.darkBackground,
-                                AppTheme.darkBackground,
-                              ],
-                              stops: [0.0, 0.2, 1.0],
-                            ),
-                          ),
-                          padding: EdgeInsets.only(
-                            left: 0,
-                            right: context.spacingLg(),
-                            bottom: context.spacingXxl(),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 0),
-                              if (recentMovies.isNotEmpty) ...[
-                                _buildSectionHeader(context, 'Recently Added'),
-                                SizedBox(height: context.spacingXs()),
-                                _buildMoviesRow(
-                                  context,
-                                  recentMovies,
-                                  sectionKey: 'recent_movies',
-                                  firstCardFocusNode: _firstRowFocus,
-                                  onItemFocus: (index) {
-                                    if (_focusedIndexBySection['recent_movies'] !=
-                                        index) {
-                                      setState(() {
-                                        _focusedIndexBySection['recent_movies'] =
-                                            index;
-                                      });
-                                    }
-                                  },
-                                ),
-                                SizedBox(height: context.sectionSpacing()),
-                              ],
-                              ..._buildGenreSections(
-                                context,
-                                allMovies,
-                                hasMoreOverall: hasMoreOverall,
-                                firstRowFocusNode: recentMovies.isEmpty
-                                    ? _firstRowFocus
-                                    : null,
-                              ),
-                              SizedBox(height: context.sectionSpacing()),
-                            ],
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: SizedBox(height: contentTop),
+                      ),
+                      SliverPadding(
+                        padding: EdgeInsets.only(
+                          left: 0,
+                          right: context.spacingLg(),
+                          bottom: context.spacingXxl(),
+                        ),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final section = visibleSections[index];
+                              return _buildSectionBlock(context, section);
+                            },
+                            childCount: visibleSections.length,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                      SliverToBoxAdapter(
+                        child: SizedBox(height: context.sectionSpacing()),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -973,9 +1101,32 @@ class _MoviesScreenState extends State<MoviesScreen>
     );
   }
 
+  Widget _buildSectionBlock(BuildContext context, _SectionConfig section) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(context, section.title),
+        SizedBox(height: context.spacingXs()),
+        _buildMoviesRow(
+          context,
+          section.items,
+          sectionKey: section.sectionKey,
+          firstCardFocusNode: section.firstFocusNode,
+          onItemFocus: section.onItemFocus,
+          onNearEnd: section.onNearEnd,
+        ),
+        SizedBox(height: context.sectionSpacing()),
+      ],
+    );
+  }
   Widget _buildHeroContent(
       Content featuredMovie, _HeroArt heroArt, double scrollProgress) {
     final heroImage = heroArt.url;
+    final dpr = MediaQuery.of(context).devicePixelRatio;
+    final heroWidth = MediaQuery.sizeOf(context).width;
+    final heroHeight = context.heroHeight();
+    final heroCacheWidth = (heroWidth * dpr).round();
+    final heroCacheHeight = (heroHeight * dpr).round();
     if (heroImage == null) {
       return _buildBannerPlaceholder();
     }
@@ -986,6 +1137,8 @@ class _MoviesScreenState extends State<MoviesScreen>
           fit: BoxFit.cover,
           width: double.infinity,
           height: double.infinity,
+          memCacheWidth: heroCacheWidth,
+          memCacheHeight: heroCacheHeight,
           placeholder: (_, __) => _buildBannerPlaceholder(),
           errorWidget: (_, __, ___) => _buildBannerPlaceholder(),
         ),
@@ -1002,6 +1155,8 @@ class _MoviesScreenState extends State<MoviesScreen>
               fit: BoxFit.cover,
               width: double.infinity,
               height: double.infinity,
+              memCacheWidth: heroCacheWidth,
+              memCacheHeight: heroCacheHeight,
               placeholder: (_, __) => _buildBannerPlaceholder(),
               errorWidget: (_, __, ___) => _buildBannerPlaceholder(),
             ),
@@ -1015,6 +1170,8 @@ class _MoviesScreenState extends State<MoviesScreen>
               fit: BoxFit.contain,
               width: double.infinity,
               height: double.infinity,
+              memCacheWidth: heroCacheWidth,
+              memCacheHeight: heroCacheHeight,
               placeholder: (_, __) => _buildBannerPlaceholder(),
               errorWidget: (_, __, ___) => _buildBannerPlaceholder(),
             ),

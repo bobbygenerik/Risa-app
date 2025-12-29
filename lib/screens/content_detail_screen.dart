@@ -3,9 +3,15 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:iptv_player/utils/app_theme.dart';
+import 'package:iptv_player/utils/app_spacing.dart';
+import 'package:iptv_player/utils/app_typography.dart';
 import 'package:iptv_player/models/content.dart';
 import 'package:iptv_player/providers/content_provider.dart';
 import 'package:iptv_player/widgets/brand_button.dart';
+import 'package:iptv_player/widgets/brand_badge.dart';
+import 'package:iptv_player/widgets/cached_image.dart';
+import 'package:iptv_player/widgets/hero_info_box.dart';
+import 'package:iptv_player/widgets/vod_card_image.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 
@@ -48,12 +54,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
       backgroundColor: AppTheme.darkBackground,
       body: Focus(
         onKeyEvent: (node, event) {
-          if (event is KeyDownEvent &&
-              event.logicalKey == LogicalKeyboardKey.goBack) {
-            Navigator.pop(context);
-            return KeyEventResult.handled;
-          }
-          return KeyEventResult.ignored;
+          return TVFocusHelper.handleBackButton(context, event);
         },
         child: SingleChildScrollView(
           child: Column(
@@ -72,33 +73,27 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
 
   Widget _buildHeroBanner() {
     final heroImage = widget.content.backdropUrl;
+    final contentInset = context.spacingXl();
+    final metadata = _buildHeroMetadata(context);
     return Stack(
       children: [
         // Background image
         Container(
-          height: context.tvSpacing(600),
+          height: context.heroHeight(),
           width: double.infinity,
           decoration: const BoxDecoration(color: AppTheme.cardBackground),
           child: heroImage != null
               ? Stack(
                   fit: StackFit.expand,
                   children: [
-                    Image.network(
-                      heroImage,
+                    CachedImage(
+                      imageUrl: heroImage,
                       fit: BoxFit.cover,
                       width: double.infinity,
                       height: double.infinity,
-                      errorBuilder: (_, __, ___) => _buildHeroPlaceholder(),
+                      errorWidget: _buildHeroPlaceholder(),
                     ),
-                    Container(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [Colors.transparent, AppTheme.darkBackground],
-                        ),
-                      ),
-                    ),
+                    _buildHeroScrims(),
                   ],
                 )
               : _buildHeroPlaceholder(),
@@ -111,8 +106,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
           right: 0,
           child: SafeArea(
             child: Padding(
-              padding: EdgeInsets.all(
-                  context.tvSpacing(20)), // AppSizes.md assumed 20
+              padding: EdgeInsets.all(context.spacingLg()),
               child: Row(
                 children: [
                   Container(
@@ -122,15 +116,6 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                     ),
                     child: Focus(
                       focusNode: _backButtonFocus,
-                      onKeyEvent: (node, event) {
-                        if (event is KeyDownEvent &&
-                            (event.logicalKey == LogicalKeyboardKey.select ||
-                                event.logicalKey == LogicalKeyboardKey.enter)) {
-                          Navigator.pop(context);
-                          return KeyEventResult.handled;
-                        }
-                        return KeyEventResult.ignored;
-                      },
                       child: IconButton(
                         icon: Icon(
                           Icons.arrow_back,
@@ -150,144 +135,128 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
 
         // Content info overlay
         Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
+          bottom: context.spacingXl(),
+          left: contentInset,
           child: Padding(
-            padding: EdgeInsets.all(
-                context.tvSpacing(40)), // AppSizes.xxl assumed 40
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Title
-                Text(
-                  widget.content.title,
-                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: context.tvTextSize(56),
-                    shadows: [
-                      Shadow(
-                        color: Colors.black.withAlpha((0.8 * 255).round()),
-                        offset:
-                            Offset(context.tvSpacing(2), context.tvSpacing(2)),
-                        blurRadius: context.tvSpacing(8),
-                      ),
-                    ],
-                  ),
-                ),
-
-                SizedBox(height: context.tvSpacing(20)),
-
-                // Metadata
-                _buildMetadataRow(),
-
-                SizedBox(height: context.tvSpacing(40)),
-
-                // Action buttons
-                Row(
-                  children: [
-                    // Play button
-                    Focus(
-                      focusNode: _playButtonFocus,
-                      onKeyEvent: (node, event) {
-                        if (event is KeyDownEvent) {
-                          if (event.logicalKey ==
-                              LogicalKeyboardKey.arrowLeft) {
-                            _backButtonFocus.requestFocus();
-                            return KeyEventResult.handled;
-                          }
-                          if (event.logicalKey ==
-                              LogicalKeyboardKey.arrowRight) {
-                            _myListButtonFocus.requestFocus();
-                            return KeyEventResult.handled;
-                          }
-                        }
-                        return KeyEventResult.ignored;
-                      },
-                      child: BrandPrimaryButton(
-                        icon: Icons.play_arrow,
-                        label: 'Play',
-                        onPressed: () {
-                          if (widget.content.videoUrl != null) {
-                            context.push('/player', extra: widget.content);
-                          } else {
-                            showAppSnackBar(
-                              context,
-                              const SnackBar(
-                                content: Text('Video URL not available'),
-                              ),
-                            );
-                          }
-                        },
-                      ),
-                    ),
-
-                    SizedBox(width: context.tvSpacing(20)),
-
-                    // My List button
-                    Focus(
-                      focusNode: _myListButtonFocus,
-                      onKeyEvent: (node, event) {
-                        if (event is KeyDownEvent) {
-                          if (event.logicalKey ==
-                              LogicalKeyboardKey.arrowLeft) {
-                            _playButtonFocus.requestFocus();
-                            return KeyEventResult.handled;
-                          }
-                          if (event.logicalKey ==
-                              LogicalKeyboardKey.arrowRight) {
-                            _downloadButtonFocus.requestFocus();
-                            return KeyEventResult.handled;
-                          }
-                        }
-                        return KeyEventResult.ignored;
-                      },
-                      child: Consumer<ContentProvider>(
-                        builder: (context, contentProvider, child) {
-                          final isInMyList =
-                              contentProvider.isInFavorites(widget.content.id);
-                          return BrandSecondaryButton(
-                            onPressed: () async {
-                              await contentProvider
-                                  .toggleFavorite(widget.content.id);
-                            },
-                            icon: isInMyList ? Icons.check : Icons.add,
-                            label: 'My List',
+            padding: EdgeInsets.zero,
+            child: HeroInfoBox(
+              title: widget.content.displayTitle,
+              description: null,
+              metadata: metadata,
+              onWatchPressed: _handlePlayPressed,
+              primaryButtonFocusNode: _playButtonFocus,
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Consumer<ContentProvider>(
+                    builder: (context, contentProvider, child) {
+                      final isInMyList =
+                          contentProvider.isInFavorites(widget.content.id);
+                      return BrandSecondaryButton(
+                        focusNode: _myListButtonFocus,
+                        onPressed: () async {
+                          await contentProvider.toggleFavorite(
+                            widget.content.id,
                           );
                         },
-                      ),
+                        icon: isInMyList ? Icons.check : Icons.add,
+                        label: 'My List',
+                        fontSize: 12,
+                        minHeight: 22,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                      );
+                    },
+                  ),
+                  SizedBox(width: context.spacingSm()),
+                  BrandSecondaryButton(
+                    focusNode: _downloadButtonFocus,
+                    onPressed: () {
+                      setState(() {
+                        _isDownloaded = !_isDownloaded;
+                      });
+                    },
+                    icon: _isDownloaded ? Icons.download_done : Icons.download,
+                    label: _isDownloaded ? 'Downloaded' : 'Download',
+                    fontSize: 12,
+                    minHeight: 22,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
                     ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
-                    SizedBox(width: context.tvSpacing(20)),
-
-                    // Download button
-                    Focus(
-                      focusNode: _downloadButtonFocus,
-                      onKeyEvent: (node, event) {
-                        if (event is KeyDownEvent) {
-                          if (event.logicalKey ==
-                              LogicalKeyboardKey.arrowLeft) {
-                            _myListButtonFocus.requestFocus();
-                            return KeyEventResult.handled;
-                          }
-                        }
-                        return KeyEventResult.ignored;
-                      },
-                      child: BrandSecondaryButton(
-                        onPressed: () {
-                          setState(() {
-                            _isDownloaded = !_isDownloaded;
-                          });
-                        },
-                        icon: _isDownloaded
-                            ? Icons.download_done
-                            : Icons.download,
-                        label: _isDownloaded ? 'Downloaded' : 'Download',
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+  List<Widget> _buildHeroMetadata(BuildContext context) {
+    final widgets = <Widget>[];
+    if (widget.content.rating != null) {
+      widgets.add(
+        BrandBadge(
+          text: '★ ${widget.content.rating!.toStringAsFixed(1)}',
+          backgroundColor: Colors.amber.withValues(alpha: 0.2),
+          textColor: Colors.amber,
+        ),
+      );
+    }
+    if (widget.content.year != null) {
+      widgets.add(Text('${widget.content.year}',
+          style: AppTypography.smallText(context)));
+    }
+    widgets.add(const BrandBadge.hd());
+    final genres = widget.content.allGenres;
+    if (genres.isNotEmpty) {
+      widgets.addAll(
+        genres.take(2).map(
+              (g) => BrandBadge(
+                text: g.toUpperCase(),
+                backgroundColor: Colors.white10,
+                textColor: Colors.white70,
+              ),
+            ),
+      );
+    }
+    return widgets;
+  }
+  Widget _buildHeroScrims() {
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  AppTheme.darkBackground.withAlpha((0.7 * 255).round()),
+                  AppTheme.darkBackground,
+                ],
+                stops: const [0.0, 0.65, 1.0],
+              ),
+            ),
+          ),
+        ),
+        Positioned.fill(
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  AppTheme.darkBackground.withAlpha((0.75 * 255).round()),
+                  Colors.transparent,
+                ],
+                stops: const [0.0, 0.55],
+              ),
             ),
           ),
         ),
@@ -310,106 +279,34 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
     );
   }
 
-  Widget _buildMetadataChip(String text) {
-    return Container(
-      margin: const EdgeInsets.only(right: AppSizes.sm),
-      padding: const EdgeInsets.symmetric(horizontal: AppSizes.sm, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.black.withAlpha((0.5 * 255).round()),
-        borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: AppTheme.textPrimary,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMetadataRow() {
-    final durationLabel = _formatDurationLabel();
-    return Row(
-      children: [
-        if (widget.content.year != null)
-          _buildMetadataChip(widget.content.year.toString()),
-        if (widget.content.genre != null)
-          _buildMetadataChip(widget.content.genre!),
-        if (widget.content.rating != null)
-          _buildMetadataChip('IMDb ${widget.content.ratingDisplay}'),
-        if (durationLabel != null) _buildMetadataChip(durationLabel),
-        Container(
-          margin: const EdgeInsets.only(left: AppSizes.sm),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSizes.sm,
-            vertical: 4,
-          ),
-          decoration: BoxDecoration(
-            border: Border.all(color: AppTheme.textPrimary, width: 2),
-            borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-          ),
-          child: const Text(
-            'HD',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimary,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  String? _formatDurationLabel() {
-    final duration = widget.content.duration;
-    if (duration == null) return null;
-    final trimmed = duration.trim();
-    if (trimmed.isEmpty) return null;
-    final parsed = int.tryParse(trimmed);
-    return parsed != null ? '$parsed min' : trimmed;
-  }
-
   Widget _buildContentInfo() {
     return Padding(
-      padding: const EdgeInsets.all(AppSizes.xxl),
+      padding: EdgeInsets.symmetric(
+        horizontal: context.spacingXl(),
+        vertical: context.spacingLg(),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Description
           Text(
             _resolveDescription(),
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  height: 1.6,
-                  color: AppTheme.textSecondary,
-                ),
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
+            style: AppTypography.bodySecondary(context).copyWith(height: 1.6),
           ),
 
-          const SizedBox(height: AppSizes.xl),
+          context.spacingLgBox,
 
           // Additional info
           _buildInfoRow('Cast', _resolveCast()),
-          const SizedBox(height: AppSizes.md),
+          context.spacingSmBox,
           _buildInfoRow('Director', _resolveDirector()),
-          const SizedBox(height: AppSizes.md),
+          context.spacingSmBox,
           _buildInfoRow('Genres', _resolveGenres()),
 
-          const SizedBox(height: AppSizes.xl),
+          context.spacingMdBox,
 
           // Tags
-          Wrap(
-            spacing: AppSizes.sm,
-            runSpacing: AppSizes.sm,
-            children: [
-              _buildTag('Exciting'),
-              _buildTag('Visually Stunning'),
-              _buildTag('Epic'),
-            ],
-          ),
+          _buildGenreTags(),
         ],
       ),
     );
@@ -420,36 +317,43 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          width: 100,
+          width: context.spacingXxl(),
           child: Text(
             label,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: AppTheme.textTertiary),
+            style: AppTypography.smallText(context)
+                .copyWith(color: AppTheme.textTertiary),
           ),
         ),
         Expanded(
-          child: Text(value, style: Theme.of(context).textTheme.bodyMedium),
+          child: Text(value, style: AppTypography.bodyText(context)),
         ),
       ],
     );
   }
 
+  Widget _buildGenreTags() {
+    final tags = widget.content.allGenres;
+    if (tags.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Wrap(
+      spacing: context.spacingSm(),
+      runSpacing: context.spacingSm(),
+      children: tags.map(_buildTag).toList(),
+    );
+  }
+
   Widget _buildTag(String text) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSizes.md,
-        vertical: AppSizes.sm,
-      ),
+      padding:
+          EdgeInsets.symmetric(horizontal: context.spacingSm(), vertical: 6),
       decoration: BoxDecoration(
-        color: AppTheme.highlight,
-        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+        color: AppTheme.cardBackground,
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         text,
-        style: Theme.of(
-          context,
-        ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
+        style: AppTypography.smallText(context),
       ),
     );
   }
@@ -459,48 +363,352 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
       return const SizedBox.shrink();
     }
 
-    final selectionParts = <String>[];
-    if (widget.content.seasonNumber != null) {
-      selectionParts.add('Season ${widget.content.seasonNumber}');
-    }
-    if (widget.content.episodeNumber != null) {
-      selectionParts.add('Episode ${widget.content.episodeNumber}');
-    }
-    final currentSelection =
-        selectionParts.isEmpty ? null : selectionParts.join(', ');
-
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSizes.xxl),
+      padding: EdgeInsets.symmetric(horizontal: context.spacingXl()),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Divider(color: AppTheme.divider),
-          const SizedBox(height: AppSizes.xl),
-          Text('Episodes', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: AppSizes.md),
-          if (currentSelection != null) ...[
-            Text(
-              'Currently tuned to $currentSelection',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
-            ),
-            const SizedBox(height: AppSizes.md),
-          ],
-          Text(
-            'Episode listings are not provided by this playlist. Use Play to start streaming the selected entry.',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
-          ),
-          const SizedBox(height: AppSizes.xl),
+          context.spacingLgBox,
+          Text('Episodes', style: AppTypography.sectionHeader(context)),
+          context.spacingSmBox,
+          _buildEpisodePicker(),
+          context.spacingLgBox,
         ],
       ),
     );
   }
 
+  Widget _buildEpisodePicker() {
+    return Consumer<ContentProvider>(
+      builder: (context, contentProvider, child) {
+        final episodes = contentProvider.series
+            .where((item) => item.title == widget.content.title)
+            .toList();
+        episodes.sort((a, b) {
+          final seasonCompare =
+              (a.seasonNumber ?? 0).compareTo(b.seasonNumber ?? 0);
+          if (seasonCompare != 0) return seasonCompare;
+          return (a.episodeNumber ?? 0).compareTo(b.episodeNumber ?? 0);
+        });
+
+        if (episodes.isEmpty) {
+          return Text(
+            'No episode list available for this series.',
+            style: AppTypography.bodySecondary(context),
+          );
+        }
+
+        final cardWidth = context.cardWidth().clamp(180.0, 320.0);
+        final cardHeight = cardWidth * 0.6;
+        return SizedBox(
+          height: cardHeight + context.spacingLg(),
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: EdgeInsets.zero,
+            itemBuilder: (context, index) {
+              final episode = episodes[index];
+              return _buildEpisodeCard(
+                episode,
+                width: cardWidth,
+                height: cardHeight,
+              );
+            },
+            separatorBuilder: (context, index) =>
+                SizedBox(width: context.spacingSm()),
+            itemCount: episodes.length,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEpisodeCard(
+    Content episode, {
+    required double width,
+    required double height,
+  }) {
+    final title = _formatEpisodeTitle(episode);
+    return Shortcuts(
+      shortcuts: const {
+        SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
+      },
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (intent) {
+              context.push('/player', extra: episode);
+              return null;
+            },
+          ),
+        },
+        child: FocusableActionDetector(
+          child: Builder(
+            builder: (context) {
+              final isFocused = Focus.of(context).hasFocus;
+              final card = AnimatedContainer(
+                duration: AppSpacing.animationFast,
+                width: width,
+                decoration: BoxDecoration(
+                  color: AppTheme.cardBackground,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                  border: isFocused
+                      ? Border.all(color: AppTheme.primaryBlue, width: 2)
+                      : null,
+                  boxShadow: isFocused
+                      ? [
+                          BoxShadow(
+                            color:
+                                AppTheme.primaryBlue.withValues(alpha: 0.25),
+                            blurRadius: 16,
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      height: height,
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(AppSpacing.radiusLg),
+                        ),
+                        child: VodCardImage(
+                          content: episode,
+                          placeholder: _buildEpisodePlaceholder(),
+                          fit: BoxFit.cover,
+                          allowPrefetch: false,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.all(context.spacingSm()),
+                      child: Text(
+                        title,
+                        style: AppTypography.smallText(context),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+              return Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                  onTap: () => context.push('/player', extra: episode),
+                  child: card,
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEpisodePlaceholder() {
+    return Container(
+      color: AppTheme.cardBackground,
+      child: Center(
+        child: Icon(
+          Icons.tv,
+          color: AppTheme.primaryBlue.withValues(alpha: 0.35),
+          size: 32,
+        ),
+      ),
+    );
+  }
+
+  String _formatEpisodeTitle(Content episode) {
+    final season = episode.seasonNumber;
+    final ep = episode.episodeNumber;
+    if (season != null && ep != null) {
+      return 'S$season • E$ep';
+    }
+    return episode.displayTitle;
+  }
+
   Widget _buildMoreLikeThis() {
-    return const SizedBox.shrink();
+    return Consumer<ContentProvider>(
+      builder: (context, contentProvider, child) {
+        final recommendations = _buildRecommendations(contentProvider);
+        if (recommendations.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        final cardWidth = context.cardWidth().clamp(180.0, 320.0);
+        final cardHeight = cardWidth * 1.4;
+        return Padding(
+          padding: EdgeInsets.only(
+            left: context.spacingXl(),
+            right: context.spacingXl(),
+            bottom: context.spacingXl(),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('More Like This', style: AppTypography.sectionHeader(context)),
+              context.spacingSmBox,
+              SizedBox(
+                height: cardHeight + context.spacingLg(),
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: recommendations.length,
+                  separatorBuilder: (context, index) =>
+                      SizedBox(width: context.spacingSm()),
+                  itemBuilder: (context, index) {
+                    final item = recommendations[index];
+                    return _buildRecommendationCard(
+                      item,
+                      width: cardWidth,
+                      height: cardHeight,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  List<Content> _buildRecommendations(ContentProvider contentProvider) {
+    final current = widget.content;
+    final genres = current.allGenres
+        .map((g) => g.toLowerCase())
+        .toSet();
+    final isSeries = current.type == ContentType.series;
+    final source =
+        isSeries ? contentProvider.series : contentProvider.movies;
+
+    final seenTitles = <String>{};
+    final candidates = <Content>[];
+    for (final item in source) {
+      if (item.id == current.id) continue;
+      if (isSeries) {
+        if (item.title == current.title) {
+          continue;
+        }
+        if (seenTitles.contains(item.title)) {
+          continue;
+        }
+        seenTitles.add(item.title);
+      }
+      candidates.add(item);
+    }
+
+    int score(Content item) {
+      if (genres.isEmpty) return 0;
+      final itemGenres =
+          item.allGenres.map((g) => g.toLowerCase()).toSet();
+      return itemGenres.intersection(genres).length;
+    }
+
+    candidates.sort((a, b) {
+      final scoreCompare = score(b).compareTo(score(a));
+      if (scoreCompare != 0) return scoreCompare;
+      final ratingA = a.rating ?? 0.0;
+      final ratingB = b.rating ?? 0.0;
+      return ratingB.compareTo(ratingA);
+    });
+
+    return candidates.take(12).toList();
+  }
+
+  Widget _buildRecommendationCard(
+    Content item, {
+    required double width,
+    required double height,
+  }) {
+    return Shortcuts(
+      shortcuts: const {
+        SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
+      },
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (intent) {
+              final encodedId = Uri.encodeComponent(item.id);
+              context.push('/content/$encodedId', extra: item);
+              return null;
+            },
+          ),
+        },
+        child: FocusableActionDetector(
+          child: Builder(
+            builder: (context) {
+              final isFocused = Focus.of(context).hasFocus;
+              final card = AnimatedContainer(
+                duration: AppSpacing.animationFast,
+                width: width,
+                decoration: BoxDecoration(
+                  color: AppTheme.cardBackground,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                  border: isFocused
+                      ? Border.all(color: AppTheme.primaryBlue, width: 2)
+                      : null,
+                  boxShadow: isFocused
+                      ? [
+                          BoxShadow(
+                            color:
+                                AppTheme.primaryBlue.withValues(alpha: 0.25),
+                            blurRadius: 16,
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      height: height,
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(AppSpacing.radiusLg),
+                        ),
+                        child: VodCardImage(
+                          content: item,
+                          placeholder: _buildEpisodePlaceholder(),
+                          fit: BoxFit.cover,
+                          allowPrefetch: false,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.all(context.spacingSm()),
+                      child: Text(
+                        item.displayTitle,
+                        style: AppTypography.smallText(context),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+              return Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                  onTap: () {
+                    final encodedId = Uri.encodeComponent(item.id);
+                    context.push('/content/$encodedId', extra: item);
+                  },
+                  child: card,
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
   }
 
   String _resolveDescription() {
@@ -528,13 +736,22 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
   }
 
   String _resolveGenres() {
-    final genres = widget.content.genres;
-    if (genres != null && genres.isNotEmpty) {
+    final genres = widget.content.allGenres;
+    if (genres.isNotEmpty) {
       return genres.join(', ');
     }
-    if (widget.content.genre != null) {
-      return widget.content.genre!;
-    }
     return 'Genre unavailable';
+  }
+
+  void _handlePlayPressed() {
+    final url = widget.content.videoUrl;
+    if (url != null && url.isNotEmpty) {
+      context.push('/player', extra: widget.content);
+      return;
+    }
+    showAppSnackBar(
+      context,
+      const SnackBar(content: Text('Video URL not available')),
+    );
   }
 }

@@ -61,6 +61,7 @@ import 'package:iptv_player/services/background_task_manager.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/services/ssl_handler.dart';
 import 'package:iptv_player/services/http_client_service.dart';
+import 'package:iptv_player/services/prewarm_service.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -118,9 +119,9 @@ void main() {
       // Optimize image cache for IPTV with many channel logos
       final memoryInfo = await _getDeviceMemoryInfo();
       PaintingBinding.instance.imageCache.maximumSize =
-          memoryInfo.isLowMemory ? 150 : 300;
+          memoryInfo.isLowMemory ? 150 : 400;
       PaintingBinding.instance.imageCache.maximumSizeBytes =
-          memoryInfo.isLowMemory ? 75 << 20 : 150 << 20;
+          memoryInfo.isLowMemory ? 75 << 20 : 200 << 20;
       StartupProbe.mark('Image cache limits configured');
 
       // Initialize SSL handler for IPTV providers with certificate issues
@@ -388,6 +389,7 @@ class _MyAppState extends State<MyApp> {
   bool _loading = true;
   // ignore: unused_field
   bool _hasPlaylist = false;
+  bool _prewarmStarted = false;
 
   void _runDeferred(
     FutureOr<void> Function() action, {
@@ -737,6 +739,16 @@ class _MyAppState extends State<MyApp> {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               BackgroundTaskManager.start(context);
             });
+            if (!_prewarmStarted) {
+              _prewarmStarted = true;
+              _runDeferred(
+                () async {
+                  await PrewarmService.prewarmMainScreens(context);
+                  await PrewarmService.prewarmHomeData(context);
+                },
+                delay: const Duration(milliseconds: 500),
+              );
+            }
             return MaterialApp.router(
               title: 'RISA IPTV Player',
               debugShowCheckedModeBanner: false,

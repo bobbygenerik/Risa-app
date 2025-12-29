@@ -65,28 +65,41 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
   }
 
   Future<void> _clearAllEpgData() async {
+    final cancelFocus = FocusNode(debugLabel: 'EpgClearCancel');
+    final confirmFocus = FocusNode(debugLabel: 'EpgClearConfirm');
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.darkBackground,
-        title: const Text('Clear All EPG Data',
-            style: TextStyle(color: AppTheme.textPrimary)),
-        content: const Text(
-          'This will remove all EPG data and channel mappings. You will need to reload EPG from settings.',
-          style: TextStyle(color: AppTheme.textSecondary),
-        ),
-        actions: [
-          BrandSecondaryButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            label: 'Cancel',
+      builder: (context) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (cancelFocus.canRequestFocus) {
+            cancelFocus.requestFocus();
+          }
+        });
+        return AlertDialog(
+          backgroundColor: AppTheme.darkBackground,
+          title: const Text('Clear All EPG Data',
+              style: TextStyle(color: AppTheme.textPrimary)),
+          content: const Text(
+            'This will remove all EPG data and channel mappings. You will need to reload EPG from settings.',
+            style: TextStyle(color: AppTheme.textSecondary),
           ),
-          BrandPrimaryButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            label: 'Clear All',
-          ),
-        ],
-      ),
+          actions: [
+            BrandSecondaryButton(
+              focusNode: cancelFocus,
+              onPressed: () => Navigator.of(context).pop(false),
+              label: 'Cancel',
+            ),
+            BrandPrimaryButton(
+              focusNode: confirmFocus,
+              onPressed: () => Navigator.of(context).pop(true),
+              label: 'Clear All',
+            ),
+          ],
+        );
+      },
     );
+    cancelFocus.dispose();
+    confirmFocus.dispose();
 
     if (confirmed == true && mounted) {
       setState(() {

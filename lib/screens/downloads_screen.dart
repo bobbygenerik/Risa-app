@@ -94,6 +94,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
+            autofocus: true,
             child: const Text('Cancel'),
           ),
           ElevatedButton(
@@ -261,93 +262,156 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                                     ],
                                   ),
                                 )
-                              : ListView.builder(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: AppSizes.sm),
-                                  itemCount: _files.length,
-                                  itemBuilder: (context, index) {
-                                    final file = _files[index];
-                                    final fileName = path.basename(file.path);
-                                    final fileStat = file.statSync();
-                                    final fileSize =
-                                        _formatFileSize(fileStat.size);
-                                    final modDate =
-                                        '${fileStat.modified.month}/${fileStat.modified.day}/${fileStat.modified.year} ${fileStat.modified.hour.toString().padLeft(2, '0')}:${fileStat.modified.minute.toString().padLeft(2, '0')}';
+                              : FocusTraversalGroup(
+                                  policy: WidgetOrderTraversalPolicy(),
+                                  child: ListView.builder(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: AppSizes.sm),
+                                    itemCount: _files.length,
+                                    itemBuilder: (context, index) {
+                                      final file = _files[index];
+                                      final fileName =
+                                          path.basename(file.path);
+                                      final fileStat = file.statSync();
+                                      final fileSize =
+                                          _formatFileSize(fileStat.size);
+                                      final modDate =
+                                          '${fileStat.modified.month}/${fileStat.modified.day}/${fileStat.modified.year} ${fileStat.modified.hour.toString().padLeft(2, '0')}:${fileStat.modified.minute.toString().padLeft(2, '0')}';
 
-                                    return Container(
-                                      margin:
-                                          const EdgeInsets.symmetric(vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.cardBackground,
-                                        borderRadius: BorderRadius.circular(
-                                            AppSizes.radiusMd),
-                                      ),
-                                      child: ListTile(
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                                horizontal: 16, vertical: 12),
-                                        leading: Container(
-                                          width: 48,
-                                          height: 48,
-                                          decoration: BoxDecoration(
-                                            color: AppTheme.primaryBlue
-                                                .withAlpha(
-                                                    (0.2 * 255).round()),
-                                            borderRadius: BorderRadius.circular(
-                                                AppSizes.radiusSm),
-                                          ),
-                                          child: const Icon(Icons.play_arrow,
-                                              color: Colors.white),
-                                        ),
-                                        title: Text(
-                                          fileName,
-                                          style: const TextStyle(
-                                            color: AppTheme.textPrimary,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        subtitle: Text(
-                                          '$fileSize • $modDate',
-                                          style: const TextStyle(
-                                            color: AppTheme.textSecondary,
-                                          ),
-                                        ),
-                                        trailing: PopupMenuButton<String>(
-                                          icon: const Icon(Icons.more_vert,
-                                              color: AppTheme.textSecondary),
-                                          color: AppTheme.cardBackground,
-                                          onSelected: (value) {
-                                            if (value == 'delete') {
-                                              _deleteFile(file);
-                                            }
-                                          },
-                                          itemBuilder: (context) => [
-                                            const PopupMenuItem(
-                                              value: 'delete',
-                                              child: Row(
-                                                children: [
-                                                  Icon(Icons.delete,
-                                                      color: AppTheme.accentRed),
-                                                  SizedBox(width: 8),
-                                                  Text('Delete'),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        onTap: () {
-                                          GoRouter.of(context)
-                                              .push('/offline-player', extra: file);
-                                        },
-                                      ),
-                                    );
-                                  },
+                                      return _buildFocusableDownloadTile(
+                                        file: file,
+                                        fileName: fileName,
+                                        subtitle: '$fileSize • $modDate',
+                                      );
+                                    },
+                                  ),
                                 ),
                 ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildFocusableDownloadTile({
+    required FileSystemEntity file,
+    required String fileName,
+    required String subtitle,
+  }) {
+    return FocusableActionDetector(
+      actions: <Type, Action<Intent>>{
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (intent) {
+            GoRouter.of(context).push('/offline-player', extra: file);
+            return null;
+          },
+        ),
+      },
+      child: Builder(
+        builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
+          return Container(
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            decoration: BoxDecoration(
+              color: AppTheme.cardBackground,
+              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+              border: isFocused
+                  ? Border.all(color: AppTheme.primaryBlue, width: 2)
+                  : null,
+            ),
+            child: ListTile(
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              leading: Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryBlue.withAlpha((0.2 * 255).round()),
+                  borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                ),
+                child: const Icon(Icons.play_arrow, color: Colors.white),
+              ),
+              title: Text(
+                fileName,
+                style: const TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              subtitle: Text(
+                subtitle,
+                style: const TextStyle(
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildTrailingIconButton(
+                    icon: Icons.play_arrow,
+                    label: 'Play',
+                    color: AppTheme.primaryBlue,
+                    onPressed: () {
+                      GoRouter.of(context)
+                          .push('/offline-player', extra: file);
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  _buildTrailingIconButton(
+                    icon: Icons.delete_outline,
+                    label: 'Delete',
+                    color: AppTheme.accentRed,
+                    onPressed: () => _deleteFile(file),
+                  ),
+                ],
+              ),
+              onTap: () {
+                GoRouter.of(context).push('/offline-player', extra: file);
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildTrailingIconButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return FocusableActionDetector(
+      actions: <Type, Action<Intent>>{
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (intent) {
+            onPressed();
+            return null;
+          },
+        ),
+      },
+      child: Builder(
+        builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOutCubic,
+            decoration: BoxDecoration(
+              color: isFocused ? color.withAlpha((0.2 * 255).round()) : null,
+              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+              border: isFocused
+                  ? Border.all(color: color, width: 2)
+                  : null,
+            ),
+            child: IconButton(
+              tooltip: label,
+              onPressed: onPressed,
+              icon: Icon(icon, color: color),
+            ),
+          );
+        },
       ),
     );
   }

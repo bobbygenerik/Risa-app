@@ -490,6 +490,7 @@ class _PlaylistManagementScreenState extends State<PlaylistManagementScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
+            autofocus: true,
             child: const Text('Cancel', style: TextStyle(color: Colors.white)),
           ),
           TextButton(

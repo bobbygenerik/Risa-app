@@ -1933,6 +1933,47 @@ class IncrementalEpgService extends ChangeNotifier {
         null;
   }
 
+  /// Fast match estimator for diagnostics (no fuzzy or trigram matching).
+  int estimateMatchesFast(List<Map<String, dynamic>> channelMaps) {
+    _ensureNormalizedMap();
+    if (_normalizedAvailableChannels == null ||
+        _normalizedAvailableChannels!.isEmpty) {
+      return 0;
+    }
+    int matched = 0;
+    for (final map in channelMaps) {
+      final tvgId = (map['tvgId'] as String?) ?? '';
+      final id = (map['id'] as String?) ?? '';
+      final name = (map['name'] as String?) ?? '';
+      final primary = tvgId.trim().isNotEmpty ? tvgId : id;
+      if (primary.trim().isNotEmpty) {
+        final normalized = _normalize(primary);
+        if (normalized.isNotEmpty &&
+            _normalizedAvailableChannels!.containsKey(normalized)) {
+          matched++;
+          continue;
+        }
+        if (_matchAliasToAvailable(normalized) != null) {
+          matched++;
+          continue;
+        }
+      }
+      if (name.trim().isNotEmpty) {
+        final normalizedName = _normalize(name);
+        if (normalizedName.isNotEmpty &&
+            _normalizedAvailableChannels!.containsKey(normalizedName)) {
+          matched++;
+          continue;
+        }
+        if (_matchAliasToAvailable(normalizedName) != null) {
+          matched++;
+          continue;
+        }
+      }
+    }
+    return matched;
+  }
+
   Program? getCurrentProgram(String channelId, {String? channelName}) {
     final epgId = _internalToEpgIdMapping[channelId] ??
         _findBestEpgId(channelId, channelName);
@@ -2066,6 +2107,50 @@ class IncrementalEpgService extends ChangeNotifier {
     }
   }
 
+  Future<void> ensureChannelsLoadedBatch(
+    List<String> channelIds, {
+    List<String?>? channelNames,
+  }) async {
+    if (channelIds.isEmpty) return;
+    final effectiveNames =
+        channelNames != null && channelNames.length == channelIds.length
+            ? channelNames
+            : null;
+    final List<String> epgIdsToLoad = [];
+    final Set<String> seen = {};
+
+    for (var i = 0; i < channelIds.length; i++) {
+      final channelId = channelIds[i];
+      final name = effectiveNames != null ? effectiveNames[i] : null;
+      final epgId = _internalToEpgIdMapping[channelId] ??
+          _findBestEpgId(channelId, name);
+      if (epgId == null) continue;
+
+      _internalToEpgIdMapping[channelId] = epgId;
+      if (_programsByChannel.containsKey(epgId) ||
+          _pendingBatch.contains(epgId)) {
+        continue;
+      }
+      if (!seen.add(epgId)) continue;
+      epgIdsToLoad.add(epgId);
+    }
+
+    if (epgIdsToLoad.isEmpty) return;
+    _pendingBatch.addAll(epgIdsToLoad);
+    _batchTimer?.cancel();
+    _batchTimer = Timer(const Duration(milliseconds: 300), () {
+      final batch = List<String>.from(_pendingBatch);
+      _pendingBatch.clear();
+      loadChannelBatch(batch);
+    });
+
+    for (final epgId in epgIdsToLoad) {
+      if (!_programsByChannel.containsKey(epgId)) {
+        unawaited(_loadProgramsFromDb(epgId));
+      }
+    }
+  }
+
   Future<void> loadChannelsForBatch(List<String> channelIds) async {
     final batches = <List<String>>[];
     for (int i = 0; i < channelIds.length; i += _channelsPerBatch) {
@@ -2132,8 +2217,12 @@ class IncrementalEpgService extends ChangeNotifier {
     final Map<String, bool> cleared = {};
 
     try {
-      await for (final line
-          in file.openRead().transform(utf8.decoder).transform(const LineSplitter())) {
+      int processed = 0;
+      final yieldClock = Stopwatch()..start();
+      await for (final line in file
+          .openRead()
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())) {
         if (line.trim().isEmpty) continue;
         Map<String, dynamic> data;
         try {
@@ -2189,6 +2278,13 @@ class IncrementalEpgService extends ChangeNotifier {
           }
           payload.clear();
           cleared[epgId] = false;
+        }
+
+        processed++;
+        if (yieldClock.elapsedMilliseconds >= 8 || processed % 200 == 0) {
+          // Yield frequently to keep input responsive during large EPG ingests.
+          await Future.delayed(const Duration(milliseconds: 1));
+          yieldClock.reset();
         }
       }
 

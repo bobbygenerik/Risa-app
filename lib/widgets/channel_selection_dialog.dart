@@ -21,6 +21,16 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
   final FocusNode _searchFocusNode = FocusNode();
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _searchFocusNode.requestFocus();
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     _searchFocusNode.dispose();
@@ -71,7 +81,15 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
                       ),
                     ),
                     Spacer(),
-                    Focus(
+                    FocusableActionDetector(
+                      actions: <Type, Action<Intent>>{
+                        ActivateIntent: CallbackAction<ActivateIntent>(
+                          onInvoke: (intent) {
+                            Navigator.pop(context);
+                            return null;
+                          },
+                        ),
+                      },
                       child: Builder(
                         builder: (context) {
                           final isFocused = Focus.of(context).hasFocus;
@@ -185,7 +203,15 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
                           itemCount: filteredChannels.length,
                           itemBuilder: (context, index) {
                             final channel = filteredChannels[index];
-                            return Focus(
+                            return FocusableActionDetector(
+                              actions: <Type, Action<Intent>>{
+                                ActivateIntent: CallbackAction<ActivateIntent>(
+                                  onInvoke: (intent) {
+                                    Navigator.pop(context, channel);
+                                    return null;
+                                  },
+                                ),
+                              },
                               child: Builder(
                                 builder: (context) {
                                   final isFocused = Focus.of(context).hasFocus;
@@ -247,7 +273,17 @@ class _ChannelSelectionDialogState extends State<ChannelSelectionDialog> {
     final isSelected = _selectedCategory == category;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
-      child: Focus(
+      child: FocusableActionDetector(
+        actions: <Type, Action<Intent>>{
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (intent) {
+              setState(() {
+                _selectedCategory = isSelected ? null : category;
+              });
+              return null;
+            },
+          ),
+        },
         child: Builder(
           builder: (context) {
             final isFocused = Focus.of(context).hasFocus;

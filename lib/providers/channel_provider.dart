@@ -46,6 +46,66 @@ List<String> _extractCategoriesInIsolate(List<String?> groupTitles) {
   return categories;
 }
 
+List<int> _filterCategoryIndicesInIsolate(Map<String, dynamic> args) {
+  final titles = args['titles'] as List<String?>? ?? const [];
+  final category = args['category'] as String? ?? 'Uncategorized';
+  final offset = args['offset'] as int? ?? 0;
+  final limit = args['limit'] as int? ?? 0;
+  final indices = <int>[];
+  if (limit <= 0) return indices;
+  int matched = 0;
+  for (int i = 0; i < titles.length; i++) {
+    final title = titles[i] ?? 'Uncategorized';
+    if (title != category) continue;
+    if (matched < offset) {
+      matched++;
+      continue;
+    }
+    indices.add(i);
+    if (indices.length >= limit) break;
+  }
+  return indices;
+}
+
+List<int> _filterChannelIndicesInIsolate(Map<String, dynamic> args) {
+  final titles = args['titles'] as List<String?>? ?? const [];
+  final ids = args['ids'] as List<String?>? ?? const [];
+  final hidden = args['hidden'] as List<bool>? ?? const [];
+  final category = args['category'] as String?;
+  final favoriteIds = (args['favoriteIds'] as List<dynamic>?)
+          ?.map((e) => e.toString())
+          .toSet() ??
+      const <String>{};
+  final excludeHidden = args['excludeHidden'] as bool? ?? true;
+  final offset = args['offset'] as int? ?? 0;
+  final limit = args['limit'] as int? ?? 0;
+  final indices = <int>[];
+  if (limit <= 0) return indices;
+  int matched = 0;
+  for (int i = 0; i < titles.length; i++) {
+    if (excludeHidden && i < hidden.length && hidden[i]) {
+      continue;
+    }
+    if (category != null) {
+      final title = titles[i] ?? 'Uncategorized';
+      if (title != category) continue;
+    }
+    if (favoriteIds.isNotEmpty) {
+      final id = i < ids.length ? ids[i] : null;
+      if (id == null || !favoriteIds.contains(id)) {
+        continue;
+      }
+    }
+    if (matched < offset) {
+      matched++;
+      continue;
+    }
+    indices.add(i);
+    if (indices.length >= limit) break;
+  }
+  return indices;
+}
+
 /// Clear both SharedPreferences and file-based playlist cache
 Future<void> clearPlaylistCache() async {
   final prefs = await SharedPreferences.getInstance();
@@ -75,7 +135,9 @@ Future<void> clearPlaylistCache() async {
 class ChannelProvider with ChangeNotifier {
   static const String _playlistCacheFileName = 'playlist_cache.m3u';
   static const String _playlistCacheFilePathKey = 'cached_playlist_file';
-  static const int _playlistCacheVersion = 2;
+  static const int _playlistCacheVersion = 3;
+  static const String _epgMapSignaturePrefix = 'epg_map_signature_';
+  static const String _epgMapCountPrefix = 'epg_map_count_';
   static const int _vodInitialPageSize = 500;
   // Debug preview capture size (unused after refactor)
 
@@ -108,6 +170,9 @@ class ChannelProvider with ChangeNotifier {
   bool _vodLoadRequested = false;
   bool _vodLoading = false;
   String? _lastPlaylistUrl;
+  String? _currentEpgMapSignature;
+  String? _currentEpgMapSignatureKey;
+  String? _currentEpgMapCountKey;
   bool _hydratingVod = false;
   bool _xtreamEpgMapLoaded = false;
   static const String _xtreamEpgMapFileName = 'xtream_epg_map.json';
@@ -118,7 +183,33 @@ class ChannelProvider with ChangeNotifier {
   bool _xtreamLiveMetadataLoaded = false;
   String? _xtreamLiveMetadataKey;
   bool _epgRefreshPending = false;
+  String? _channelsJsonlPath;
   final LocalDbService _db = LocalDbService.instance;
+  String? _extractStreamIdFromUrl(String url) {
+    if (url.isEmpty) return null;
+    try {
+      final uri = Uri.parse(url);
+      final segments =
+          uri.pathSegments.where((segment) => segment.isNotEmpty).toList();
+      if (segments.isEmpty) return null;
+      var last = segments.last;
+      final dotIndex = last.indexOf('.');
+      if (dotIndex > 0) {
+        last = last.substring(0, dotIndex);
+      }
+      return last.isNotEmpty ? last : null;
+    } catch (_) {
+      final clean = url.split('?').first;
+      final parts = clean.split('/').where((p) => p.isNotEmpty).toList();
+      if (parts.isEmpty) return null;
+      var last = parts.last;
+      final dotIndex = last.indexOf('.');
+      if (dotIndex > 0) {
+        last = last.substring(0, dotIndex);
+      }
+      return last.isNotEmpty ? last : null;
+    }
+  }
 
   // TMDB enrichment service for background genre enrichment
   final TMDBEnrichmentService _enrichmentService = TMDBEnrichmentService();
@@ -132,9 +223,27 @@ class ChannelProvider with ChangeNotifier {
         .map((m) => Map<String, dynamic>.from(m))
         .toList();
   }
+  List<Map<String, dynamic>> getChannelSampleMapsByStride(int limit) {
+    if (_channelMaps.isEmpty || limit <= 0) return const [];
+    final total = _channelMaps.length;
+    final count = limit.clamp(0, total);
+    final step = (total / count).ceil().clamp(1, total);
+    final sampled = <Map<String, dynamic>>[];
+    for (int i = 0; i < total && sampled.length < count; i += step) {
+      sampled.add(Map<String, dynamic>.from(_channelMaps[i]));
+    }
+    if (sampled.isEmpty && _channelMaps.isNotEmpty) {
+      sampled.add(Map<String, dynamic>.from(_channelMaps.first));
+    }
+    return sampled;
+  }
 
   // Cached category list (lightweight - just strings)
   List<String>? _cachedCategories;
+  List<String?>? _categoryTitleCache;
+  List<String?>? _channelIdCache;
+  List<bool>? _hiddenFlagCache;
+  Completer<List<String>>? _categoriesCompleter;
 
   // Flag to track if categories are being computed
   bool _isGroupingChannels = false;
@@ -285,17 +394,14 @@ class ChannelProvider with ChangeNotifier {
       final url = (map['url'] as String?) ?? '';
       final name = (map['name'] as String?) ?? '';
 
-      String? streamIdFromUrl;
-      try {
-        final uri = Uri.parse(url);
-        final parts =
-            uri.path.split('/').where((p) => p.isNotEmpty).toList();
-        if (parts.isNotEmpty) streamIdFromUrl = parts.last;
-      } catch (_) {}
+      final streamIdFromUrl = _extractStreamIdFromUrl(url);
+      final normalizedName =
+          IncrementalEpgService.normalizeForFilter(name);
 
       final epgId = (streamIdFromUrl != null
               ? byStreamId[streamIdFromUrl]
               : null) ??
+          (normalizedName.isNotEmpty ? byName[normalizedName] : null) ??
           byName[name];
       if (epgId != null) {
         map['tvgId'] = epgId;
@@ -472,6 +578,7 @@ class ChannelProvider with ChangeNotifier {
       // Collect potential EPG URL candidates and per-stream EPG IDs
       final Set<String> epgUrls = {};
       final Map<String, String> streamIdToEpgId = {};
+      final Map<String, String> nameToEpgId = {};
       final Map<String, CatchupInfo> catchupConfig = {};
       int maxCatchupHours = 0;
 
@@ -524,14 +631,20 @@ class ChannelProvider with ChangeNotifier {
               epgUrls.add(resolved);
             } catch (_) {}
           } else {
-            final key = (s['stream_id'] ?? s['name'] ?? '').toString();
-            if (key.isNotEmpty) streamIdToEpgId[key] = epgCandidate;
+            if (streamId.isNotEmpty) {
+              streamIdToEpgId[streamId] = epgCandidate;
+            }
           }
         }
         final epgId = (s['epg_channel_id'] ?? s['epg_id'])?.toString();
         if (epgId != null && epgId.isNotEmpty) {
-          final key = (s['stream_id'] ?? s['name'] ?? '').toString();
-          if (key.isNotEmpty) streamIdToEpgId[key] = epgId;
+          if (streamId.isNotEmpty) streamIdToEpgId[streamId] = epgId;
+          final rawName = (s['name'] ?? '').toString();
+          final normalizedName =
+              IncrementalEpgService.normalizeForFilter(rawName);
+          if (normalizedName.isNotEmpty) {
+            nameToEpgId[normalizedName] = epgId;
+          }
         }
       }
 
@@ -661,33 +774,26 @@ class ChannelProvider with ChangeNotifier {
       }
 
       // Map per-stream epg IDs into channel maps by matching stream id or name.
-      if (streamIdToEpgId.isNotEmpty && _channelMaps.isNotEmpty) {
+      if ((streamIdToEpgId.isNotEmpty || nameToEpgId.isNotEmpty) &&
+          _channelMaps.isNotEmpty) {
         var mapped = 0;
-        final nameToEpgId = <String, String>{};
         for (int i = 0; i < _channelMaps.length; i++) {
           final map = _channelMaps[i];
           final url = (map['url'] as String?) ?? '';
           final name = (map['name'] as String?) ?? '';
 
-          String? streamIdFromUrl;
-          try {
-            final uri = Uri.parse(url);
-            final parts =
-                uri.path.split('/').where((p) => p.isNotEmpty).toList();
-            if (parts.isNotEmpty) streamIdFromUrl = parts.last;
-          } catch (_) {}
+          final streamIdFromUrl = _extractStreamIdFromUrl(url);
+          final normalizedName =
+              IncrementalEpgService.normalizeForFilter(name);
 
           final epgId = (streamIdFromUrl != null
                   ? streamIdToEpgId[streamIdFromUrl]
                   : null) ??
-              streamIdToEpgId[name];
+              (normalizedName.isNotEmpty ? nameToEpgId[normalizedName] : null);
 
           if (epgId != null) {
             map['tvgId'] = epgId;
             mapped++;
-            if (name.isNotEmpty) {
-              nameToEpgId[name] = epgId;
-            }
           }
         }
         if (mapped > 0) {
@@ -723,44 +829,58 @@ class ChannelProvider with ChangeNotifier {
 
   Future<void> ensureVodLoaded({bool force = false}) async {
     if (_vodLoading) return;
-    if (_vodLoadRequested && !force) {
-      if (_contentProvider != null) {
-        final hasContent = _contentProvider!.movies.isNotEmpty ||
-            _contentProvider!.series.isNotEmpty;
-        if (!hasContent) {
-          unawaited(_hydrateContentProviderFromCache(
-              maxItems: _vodInitialPageSize));
-        }
-      }
-      return;
-    }
-    _vodLoadRequested = true;
-
-    if (_contentProvider != null) {
-      if (_contentProvider!.movies.isEmpty && _contentProvider!.series.isEmpty) {
-        _contentProvider!.setLoading(true);
-      }
-      unawaited(_hydrateContentProviderFromCache(
-          maxItems: _vodInitialPageSize));
-    }
-
+    final contentProvider = _contentProvider;
+    final hasContent = contentProvider != null &&
+        (contentProvider.movies.isNotEmpty || contentProvider.series.isNotEmpty);
     final hasCache = _moviesCachePath != null || _seriesCachePath != null;
-    if (hasCache || _vodHydrated) {
-      if (_contentProvider != null) {
-        _contentProvider!.setLoading(false);
+    final url = _lastPlaylistUrl;
+
+    if (_vodLoadRequested && !force) {
+      if (!hasContent && contentProvider != null) {
+        contentProvider.setLoading(true);
+        unawaited(_hydrateContentProviderFromCache(
+            maxItems: _vodInitialPageSize));
       }
-      return;
+      if (hasContent || hasCache || _vodHydrated) {
+        return;
+      }
+      if (url == null || url.isEmpty) {
+        if (contentProvider != null) {
+          contentProvider.setLoading(false);
+        }
+        return;
+      }
+    } else {
+      _vodLoadRequested = true;
+
+      if (contentProvider != null) {
+        if (!hasContent) {
+          contentProvider.setLoading(true);
+        }
+        unawaited(_hydrateContentProviderFromCache(
+            maxItems: _vodInitialPageSize));
+      }
+      if (hasCache || _vodHydrated) {
+        if (contentProvider != null && hasContent) {
+          contentProvider.setLoading(false);
+        }
+        return;
+      }
+      if (url == null || url.isEmpty) {
+        if (contentProvider != null) {
+          contentProvider.setLoading(false);
+        }
+        return;
+      }
     }
 
-    final url = _lastPlaylistUrl;
-    if (url == null || url.isEmpty) return;
     _vodLoading = true;
     try {
       await _loadXtreamVOD(url);
     } finally {
       _vodLoading = false;
-      if (_contentProvider != null) {
-        _contentProvider!.setLoading(false);
+      if (contentProvider != null) {
+        contentProvider.setLoading(false);
       }
     }
   }
@@ -868,6 +988,9 @@ class ChannelProvider with ChangeNotifier {
   Future<void> _buildEpgMapping() async {
     if (_epgService == null) return;
     if (_channelMaps.isEmpty) return;
+    if (await _tryReuseEpgMapping()) {
+      return;
+    }
 
     // Wait briefly for EPG availability
     for (int i = 0; i < 5; i++) {
@@ -936,6 +1059,108 @@ class ChannelProvider with ChangeNotifier {
         debugLog('ChannelProvider: Failed to load mappings into EPG service: $e');
       }
     }
+
+    await _persistEpgMappingSignature();
+  }
+
+  Future<bool> _tryReuseEpgMapping() async {
+    if (!_dbReady) return false;
+    if (_currentEpgMapSignature == null ||
+        _currentEpgMapSignatureKey == null) {
+      return false;
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final stored = prefs.getString(_currentEpgMapSignatureKey!);
+      if (stored == null || stored != _currentEpgMapSignature) {
+        return false;
+      }
+      final count = await _db.mappingCount();
+      if (count <= 0) return false;
+      _currentEpgMapCountKey ??=
+          _currentEpgMapSignatureKey!.replaceFirst(
+              _epgMapSignaturePrefix, _epgMapCountPrefix);
+      debugLog(
+          'ChannelProvider: Reusing persisted EPG mapping ($count entries)');
+      await _epgService?.loadMappingsFromDb();
+      return true;
+    } catch (e) {
+      debugLog('ChannelProvider: Failed to reuse EPG mapping: $e');
+      return false;
+    }
+  }
+
+  Future<void> _persistEpgMappingSignature() async {
+    if (_currentEpgMapSignature == null ||
+        _currentEpgMapSignatureKey == null ||
+        !_dbReady) {
+      return;
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final count = await _db.mappingCount();
+      _currentEpgMapCountKey ??=
+          _currentEpgMapSignatureKey!.replaceFirst(
+              _epgMapSignaturePrefix, _epgMapCountPrefix);
+      await prefs.setString(
+          _currentEpgMapSignatureKey!, _currentEpgMapSignature!);
+      await prefs.setInt(_currentEpgMapCountKey!, count);
+    } catch (e) {
+      debugLog('ChannelProvider: Failed to persist EPG map signature: $e');
+    }
+  }
+
+  Future<void> _setCurrentEpgMapSignature({
+    required SharedPreferences prefs,
+    required String? playlistUrl,
+    required String? epgUrl,
+    required int channelCount,
+    String? channelsFile,
+  }) async {
+    final keySource = prefs.getString('active_playlist_id')?.trim();
+    final keyBase = (keySource != null && keySource.isNotEmpty)
+        ? keySource
+        : (playlistUrl?.trim().isNotEmpty == true
+            ? playlistUrl!.trim()
+            : 'default');
+    final signatureKey =
+        '$_epgMapSignaturePrefix${Uri.encodeComponent(keyBase)}';
+    _currentEpgMapSignatureKey = signatureKey;
+    _currentEpgMapCountKey =
+        '$_epgMapCountPrefix${Uri.encodeComponent(keyBase)}';
+    _currentEpgMapSignature = await _computeEpgMapSignature(
+      playlistUrl: playlistUrl,
+      epgUrl: epgUrl,
+      channelCount: channelCount,
+      channelsFile: channelsFile,
+    );
+  }
+
+  Future<String> _computeEpgMapSignature({
+    required String? playlistUrl,
+    required String? epgUrl,
+    required int channelCount,
+    String? channelsFile,
+  }) async {
+    final buffer = StringBuffer();
+    buffer.write(playlistUrl?.trim() ?? '');
+    buffer.write('|');
+    buffer.write(epgUrl?.trim() ?? '');
+    buffer.write('|');
+    buffer.write(channelCount);
+    if (channelsFile != null && channelsFile.isNotEmpty) {
+      final file = File(channelsFile);
+      if (await file.exists()) {
+        try {
+          final stat = await file.stat();
+          buffer.write('|');
+          buffer.write(stat.size);
+          buffer.write('|');
+          buffer.write(stat.modified.millisecondsSinceEpoch);
+        } catch (_) {}
+      }
+    }
+    return buffer.toString();
   }
 
   /// Public API to cancel any in-progress playlist load.
@@ -996,7 +1221,7 @@ class ChannelProvider with ChangeNotifier {
 
   /// Quick check if there are any channels (no conversion needed)
   bool get hasChannels =>
-      _dbReady ? _channelCountDb > 0 : _channelMaps.isNotEmpty;
+      _dbReady ? (_channelCountDb > 0 || _channelMaps.isNotEmpty) : _channelMaps.isNotEmpty;
 
   /// Public accessor for virtualized lists
   Channel getChannelAt(int index) => _getChannelAt(index);
@@ -1142,13 +1367,20 @@ class ChannelProvider with ChangeNotifier {
     int limit = 500,
     int offset = 0,
   }) async {
-    // Fallback to sync version when DB not ready or favorites filtering
+    // Fallback to isolate filtering when DB not ready or favorites filtering
     if (!_dbReady || favoriteIds != null) {
-      return getFilteredChannels(
-          category: category,
-          favoriteIds: favoriteIds,
-          excludeHidden: excludeHidden,
-          limit: limit);
+      final indices = await compute(_filterChannelIndicesInIsolate, {
+        'titles': _getCategoryTitleCache(),
+        'ids': _getChannelIdCache(),
+        'hidden': _getHiddenFlagCache(),
+        'category': category,
+        'favoriteIds': favoriteIds?.toList() ?? const [],
+        'excludeHidden': excludeHidden,
+        'limit': limit,
+        'offset': offset,
+      });
+      if (indices.isEmpty) return const [];
+      return indices.map(_getChannelAt).toList();
     }
 
     // Use category paging or general paging
@@ -1451,12 +1683,31 @@ class ChannelProvider with ChangeNotifier {
                   'ChannelProvider: JSON cache contains metadata only; falling back to M3U cache');
               throw const FormatException('JSON cache metadata only');
             }
+            final totalChannels = parsed['channelCount'] as int? ?? cachedChannels.length;
+            final channelsFile = parsed['channelsFile'] as String?;
+            if (totalChannels > cachedChannels.length) {
+              if (channelsFile == null ||
+                  channelsFile.isEmpty ||
+                  !await File(channelsFile).exists()) {
+                debugLog(
+                    'ChannelProvider: JSON cache missing channel file; falling back to M3U cache');
+                throw const FormatException('JSON cache missing channel file');
+              }
+            }
             _channelMaps = cachedChannels;
             _vodHydrated = false;
             _channelCache.clear();
             _channelCountDb = _channelMaps.length;
+            _invalidateCategoryCaches();
             await _applyXtreamEpgMapFromCache();
             _updateEpgAllowedChannels();
+            await _setCurrentEpgMapSignature(
+              prefs: prefs,
+              playlistUrl: _lastPlaylistUrl,
+              epgUrl: parsed['epgUrl'] as String?,
+              channelCount: totalChannels,
+              channelsFile: channelsFile,
+            );
 
             // Extract and save EPG URL from JSON cache
             final epgUrl = parsed['epgUrl'] as String?;
@@ -1481,8 +1732,9 @@ class ChannelProvider with ChangeNotifier {
 
             // If JSON cache only has the preview list, hydrate full channels
             // from the cached JSONL file in the background.
-            final channelsFile = parsed['channelsFile'] as String?;
-            final totalChannels = parsed['channelCount'] as int? ?? 0;
+            if (channelsFile != null && channelsFile.isNotEmpty) {
+              _channelsJsonlPath = channelsFile;
+            }
             if (channelsFile != null &&
                 channelsFile.isNotEmpty &&
                 totalChannels > _channelMaps.length) {
@@ -1520,7 +1772,7 @@ class ChannelProvider with ChangeNotifier {
               }
             }));
 
-            _cachedCategories = null;
+            _invalidateCategoryCaches();
             unawaited(_computeCategoriesAsync());
 
             // VOD is loaded on demand by UI, no need to preload here
@@ -1582,6 +1834,13 @@ class ChannelProvider with ChangeNotifier {
             _channelCache.clear();
             _channelCountDb = _channelMaps.length;
             _updateEpgAllowedChannels();
+            await _setCurrentEpgMapSignature(
+              prefs: prefs,
+              playlistUrl: _lastPlaylistUrl,
+              epgUrl: parsed['epgUrl'] as String?,
+              channelCount: parsed['channelCount'] as int? ?? _channelMaps.length,
+              channelsFile: parsed['channelsFile'] as String?,
+            );
             if (_dbReady) {
               try {
                 await _db.clearChannels();
@@ -1630,7 +1889,7 @@ class ChannelProvider with ChangeNotifier {
             debugLog(
                 'ChannelProvider: Cache map conversion took ${mapDuration.inMilliseconds}ms');
 
-            _cachedCategories = null; // Clear cache when channels change
+            _invalidateCategoryCaches();
             // Trigger async category extraction in background (non-blocking)
             unawaited(_computeCategoriesAsync());
 
@@ -1815,9 +2074,17 @@ class ChannelProvider with ChangeNotifier {
         notifyListeners();
       });
 
-      final channelsFile = parsed['channelsFile'] as String?;
+      var channelsFile = parsed['channelsFile'] as String?;
       final moviesFile = parsed['moviesFile'] as String?;
       final seriesFile = parsed['seriesFile'] as String?;
+
+      if (channelsFile != null && channelsFile.isNotEmpty) {
+        final staged = await _stageChannelsJsonl(channelsFile);
+        if (staged != null && staged.isNotEmpty) {
+          channelsFile = staged;
+          parsed['channelsFile'] = staged;
+        }
+      }
 
       // Validate parsed result
       if ((channelsFile == null || channelsFile.isEmpty) &&
@@ -1854,6 +2121,7 @@ class ChannelProvider with ChangeNotifier {
       final mapStart = DateTime.now();
       _channelMaps.clear();
       _channelCache.clear();
+      _invalidateCategoryCaches();
       if (_dbReady) {
         await _db.clearChannels();
       }
@@ -1902,9 +2170,18 @@ class ChannelProvider with ChangeNotifier {
             }
           }
           _channelCountDb = _channelMaps.length;
-          try {
-            await file.delete();
-          } catch (_) {}
+          await _setCurrentEpgMapSignature(
+            prefs: prefs,
+            playlistUrl: url,
+            epgUrl: epgUrl,
+            channelCount: parsed['channelCount'] as int? ?? _channelMaps.length,
+            channelsFile: channelsFile,
+          );
+          if (_channelsJsonlPath == null || file.path != _channelsJsonlPath) {
+            try {
+              await file.delete();
+            } catch (_) {}
+          }
         }
       } else {
         final rawChannels = parsed['channels'] as List<dynamic>;
@@ -1935,6 +2212,13 @@ class ChannelProvider with ChangeNotifier {
           }
         }
         _channelCountDb = _channelMaps.length;
+        await _setCurrentEpgMapSignature(
+          prefs: prefs,
+          playlistUrl: url,
+          epgUrl: epgUrl,
+          channelCount: parsed['channelCount'] as int? ?? _channelMaps.length,
+          channelsFile: channelsFile,
+        );
       }
       await _applyXtreamEpgMapFromCache();
       _updateEpgAllowedChannels();
@@ -2421,16 +2705,15 @@ class ChannelProvider with ChangeNotifier {
       }
     }
 
-    final result = <Channel>[];
-    for (int i = 0; i < _channelMaps.length && result.length < limit; i++) {
-      final channelMap = _channelMaps[i];
-      final channelCategory =
-          (channelMap['groupTitle'] as String?) ?? 'Uncategorized';
-      if (channelCategory == category) {
-        result.add(_getChannelAt(i));
-      }
-    }
-    return result;
+    final titles = _getCategoryTitleCache();
+    final indices = await compute(_filterCategoryIndicesInIsolate, {
+      'titles': titles,
+      'category': category,
+      'offset': offset,
+      'limit': limit,
+    });
+    if (indices.isEmpty) return const [];
+    return indices.map(_getChannelAt).toList();
   }
 
   /// Save parsed playlist data to JSON cache for fast loading
@@ -2500,11 +2783,31 @@ class ChannelProvider with ChangeNotifier {
     _channelMaps = hydrated;
     _channelCache.clear();
     _channelCountDb = _channelMaps.length;
-    _cachedCategories = null;
+    _invalidateCategoryCaches();
     _updateEpgAllowedChannels();
     _scheduleEpgRefresh(forceRefresh: true);
     unawaited(_computeCategoriesAsync());
     if (!_disposed) notifyListeners();
+  }
+
+  Future<String?> _stageChannelsJsonl(String source) async {
+    final dir = await getApplicationDocumentsDirectory();
+    final target = File('${dir.path}/channels_cache.jsonl');
+    final sourceFile = File(source);
+    if (!await sourceFile.exists()) return null;
+    try {
+      if (await target.exists()) {
+        await target.delete();
+      }
+      await sourceFile.rename(target.path);
+    } catch (_) {
+      await sourceFile.copy(target.path);
+      try {
+        await sourceFile.delete();
+      } catch (_) {}
+    }
+    _channelsJsonlPath = target.path;
+    return target.path;
   }
 
   Future<void> _stageVodJsonl({
@@ -2675,17 +2978,17 @@ class ChannelProvider with ChangeNotifier {
   Future<void> _computeCategoriesAsync() async {
     if (_cachedCategories != null || _isGroupingChannels) return;
     _isGroupingChannels = true;
+    _categoriesCompleter = Completer<List<String>>();
     _notifyListenersSafe();
 
     try {
       if (_dbReady) {
-        _cachedCategories = await _db.getCategories(limit: 200);
+        _cachedCategories = await _db.getCategories();
         debugLog(
             'ChannelProvider: Loaded ${_cachedCategories!.length} categories from DB');
       } else {
         // Just extract groupTitle strings from maps - very lightweight
-        final groupTitles =
-            _channelMaps.map((m) => m['groupTitle'] as String?).toList();
+        final groupTitles = _getCategoryTitleCache();
 
         // Run category extraction in isolate
         _cachedCategories =
@@ -2700,7 +3003,58 @@ class ChannelProvider with ChangeNotifier {
     }
 
     _isGroupingChannels = false;
+    if (_categoriesCompleter != null &&
+        !_categoriesCompleter!.isCompleted) {
+      _categoriesCompleter!.complete(_cachedCategories ?? []);
+    }
     _notifyListenersSafe();
+  }
+
+  List<String?> _getCategoryTitleCache() {
+    if (_categoryTitleCache == null ||
+        _categoryTitleCache!.length != _channelMaps.length) {
+      _categoryTitleCache =
+          _channelMaps.map((m) => m['groupTitle'] as String?).toList();
+    }
+    return _categoryTitleCache ?? const [];
+  }
+
+  List<String?> _getChannelIdCache() {
+    if (_channelIdCache == null ||
+        _channelIdCache!.length != _channelMaps.length) {
+      _channelIdCache = _channelMaps.map((m) => m['id'] as String?).toList();
+    }
+    return _channelIdCache ?? const [];
+  }
+
+  List<bool> _getHiddenFlagCache() {
+    if (_hiddenFlagCache == null ||
+        _hiddenFlagCache!.length != _channelMaps.length) {
+      _hiddenFlagCache = _channelMaps
+          .map((m) => m['isHidden'] == true)
+          .toList(growable: false);
+    }
+    return _hiddenFlagCache ?? const [];
+  }
+
+  Future<List<String>> getAllCategoryNamesAsync() async {
+    if (_cachedCategories != null) return _cachedCategories!;
+    if (_categoriesCompleter != null) {
+      return _categoriesCompleter!.future;
+    }
+    unawaited(_computeCategoriesAsync());
+    if (_categoriesCompleter != null) {
+      return _categoriesCompleter!.future;
+    }
+    return [];
+  }
+
+  void _invalidateCategoryCaches() {
+    _cachedCategories = null;
+    _categoryTitleCache = null;
+    _channelIdCache = null;
+    _hiddenFlagCache = null;
+    _categoriesCompleter = null;
   }
 
   /// Get all category names for dropdowns/selectors (returns cached list)

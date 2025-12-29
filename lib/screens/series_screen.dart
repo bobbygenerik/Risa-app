@@ -2,6 +2,7 @@ import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
 import 'dart:math';
 import 'dart:ui';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:iptv_player/utils/tv_focus_helper.dart';
 import 'package:flutter/services.dart';
@@ -24,6 +25,36 @@ import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:iptv_player/utils/app_icons.dart';
 import 'package:iptv_player/utils/app_typography.dart';
 
+List<Map<String, dynamic>> _buildSeriesGenreBucketsIsolate(
+    List<Map<String, dynamic>> items) {
+  final Map<String, List<int>> genreMap = {};
+  for (var i = 0; i < items.length; i++) {
+    final item = items[i];
+    final title = (item['title'] as String?)?.toLowerCase() ?? '';
+    if (title == 'series' ||
+        title == 'show' ||
+        title == 'series to be announced' ||
+        title == 'show to be announced' ||
+        title.startsWith('series ') ||
+        title.startsWith('show ') ||
+        title.contains('to be announced')) {
+      continue;
+    }
+    final genres =
+        (item['genres'] as List<dynamic>?)?.cast<String>() ?? const [];
+    if (genres.isEmpty) {
+      genreMap.putIfAbsent('Other', () => []).add(i);
+      continue;
+    }
+    for (final genre in genres) {
+      genreMap.putIfAbsent(genre, () => []).add(i);
+    }
+  }
+  return genreMap.entries
+      .map((entry) => {'genre': entry.key, 'indices': entry.value})
+      .toList();
+}
+
 class SeriesScreen extends StatefulWidget {
   const SeriesScreen({super.key});
 
@@ -37,8 +68,26 @@ class _HeroArt {
   const _HeroArt(this.url, {this.isBackdrop = true});
 }
 
+class _SectionConfig {
+  final String title;
+  final List<Content> items;
+  final String sectionKey;
+  final FocusNode? firstFocusNode;
+  final ValueChanged<int>? onItemFocus;
+  final VoidCallback? onNearEnd;
+
+  const _SectionConfig({
+    required this.title,
+    required this.items,
+    required this.sectionKey,
+    this.firstFocusNode,
+    this.onItemFocus,
+    this.onNearEnd,
+  });
+}
+
 class _SeriesScreenState extends State<SeriesScreen>
-    with ContentFocusRegistrant<SeriesScreen> {
+    with ContentFocusRegistrant<SeriesScreen>, AutomaticKeepAliveClientMixin {
   Timer? _carouselTimer;
   int _featuredIndex = 0;
   final ScrollController _scrollController = ScrollController();
@@ -49,6 +98,13 @@ class _SeriesScreenState extends State<SeriesScreen>
   List<Content> _curatedSeries = [];
   final Map<String, String?> _tmdbArtCache = {};
   final Set<String> _heroDetailsRequests = {};
+  Map<String, List<int>> _genreBuckets = {};
+  String _genreBucketsSignature = '';
+  bool _genreBucketsLoading = false;
+  int _sectionTotal = 0;
+  int _visibleSectionCount = 6;
+  static const int _sectionChunkSize = 6;
+  static const double _sectionPrefetchExtent = 800;
 
   // Pagination for genre sections
   final Map<String, int> _genreDisplayCounts = {};
@@ -61,6 +117,7 @@ class _SeriesScreenState extends State<SeriesScreen>
   @override
   void dispose() {
     _carouselTimer?.cancel();
+    _scrollController.removeListener(_handleSectionPrefetch);
     _scrollController.dispose();
     _watchFocus.removeListener(_onWatchFocusChange);
     _watchFocus.dispose();
@@ -95,6 +152,7 @@ class _SeriesScreenState extends State<SeriesScreen>
   void initState() {
     super.initState();
     _watchFocus.addListener(_onWatchFocusChange);
+    _scrollController.addListener(_handleSectionPrefetch);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       Provider.of<ChannelProvider>(context, listen: false).ensureVodLoaded();
@@ -109,6 +167,18 @@ class _SeriesScreenState extends State<SeriesScreen>
       _prepareCuratedSeriesList();
       _preloadTMDBArtwork();
       // Focus is managed by navigation bar - don't auto-focus content
+    });
+  }
+
+  void _handleSectionPrefetch() {
+    if (!_scrollController.hasClients) return;
+    if (_sectionTotal == 0) return;
+    if (_visibleSectionCount >= _sectionTotal) return;
+    final extentAfter = _scrollController.position.extentAfter;
+    if (extentAfter > _sectionPrefetchExtent) return;
+    setState(() {
+      _visibleSectionCount =
+          (_visibleSectionCount + _sectionChunkSize).clamp(0, _sectionTotal);
     });
   }
 
@@ -205,6 +275,69 @@ class _SeriesScreenState extends State<SeriesScreen>
     if (hasMoreOverall && genreCount <= displayCount) {
       unawaited(_loadMoreSeries());
     }
+  }
+
+  String _buildGenreSignature(List<Content> items) {
+    if (items.isEmpty) return 'empty';
+    final firstId = items.first.id;
+    final lastId = items.last.id;
+    return '${items.length}|$firstId|$lastId';
+  }
+
+  void _ensureGenreBuckets(List<Content> items) {
+    final signature = _buildGenreSignature(items);
+    if (_genreBucketsSignature == signature || _genreBucketsLoading) return;
+    _genreBucketsLoading = true;
+    final payload = items
+        .map((show) => {
+              'title': show.title,
+              'genres': show.allGenres,
+            })
+        .toList();
+    unawaited(compute(_buildSeriesGenreBucketsIsolate, payload).then((result) {
+      if (!mounted) return;
+      final Map<String, List<int>> buckets = {};
+      for (final entry in result) {
+        final genre = entry['genre'] as String?;
+        final indices = entry['indices'] as List<dynamic>?;
+        if (genre == null || indices == null) continue;
+        buckets[genre] = indices.cast<int>();
+      }
+      setState(() {
+        _genreBuckets = buckets;
+        _genreBucketsSignature = signature;
+        _genreBucketsLoading = false;
+      });
+    }).catchError((error) {
+      _genreBucketsLoading = false;
+      debugLog('Series: genre bucket isolate failed: $error');
+    }));
+  }
+
+  Map<String, List<Content>> _buildGenreMapFallback(List<Content> series) {
+    final sample = series.length <= 200 ? series : series.take(200).toList();
+    final Map<String, List<Content>> genreMap = {};
+    for (final show in sample) {
+      final title = show.title.toLowerCase();
+      if (title == 'series' ||
+          title == 'show' ||
+          title == 'series to be announced' ||
+          title == 'show to be announced' ||
+          title.startsWith('series ') ||
+          title.startsWith('show ') ||
+          title.contains('to be announced')) {
+        continue;
+      }
+      final showGenres = show.allGenres;
+      if (showGenres.isNotEmpty) {
+        for (final genre in showGenres) {
+          genreMap.putIfAbsent(genre, () => []).add(show);
+        }
+      } else {
+        genreMap.putIfAbsent('Other', () => []).add(show);
+      }
+    }
+    return genreMap;
   }
 
   bool _shouldPrefetchArt(String sectionKey, int index) {
@@ -368,6 +501,7 @@ class _SeriesScreenState extends State<SeriesScreen>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Consumer<ContentProvider>(
       builder: (context, contentProvider, child) {
         final channelProvider =
@@ -401,6 +535,9 @@ class _SeriesScreenState extends State<SeriesScreen>
       },
     );
   }
+
+  @override
+  bool get wantKeepAlive => true;
 
   Future<void> _ensureHeroDetails(Content item) async {
     if (!ServiceValidator.isTmdbAvailable) return;
@@ -770,44 +907,35 @@ class _SeriesScreenState extends State<SeriesScreen>
     );
   }
 
-  List<Widget> _buildGenreSections(
+  List<_SectionConfig> _buildGenreSections(
     BuildContext context,
     List<Content> series, {
     required bool hasMoreOverall,
     FocusNode? firstRowFocusNode,
   }) {
-    // Filter out series without proper info
-    final validSeries = series.where((show) {
-      // Skip shows with generic/placeholder titles
-      final title = show.title.toLowerCase();
-      if (title == 'series' ||
-          title == 'show' ||
-          title == 'series to be announced' ||
-          title == 'show to be announced' ||
-          title.startsWith('series ') ||
-          title.startsWith('show ') ||
-          title.contains('to be announced')) {
-        return false;
-      }
-      return true;
-    }).toList();
-
-    // Group series by genre (prefer TMDB genres, fallback to M3U genres)
+    _ensureGenreBuckets(series);
+    final signature = _buildGenreSignature(series);
+    final hasBuckets =
+        _genreBucketsSignature == signature && _genreBuckets.isNotEmpty;
     final genreMap = <String, List<Content>>{};
-    for (final show in validSeries) {
-      // Use allGenres getter which prefers tmdbGenres over genres
-      final showGenres = show.allGenres;
-      if (showGenres.isNotEmpty) {
-        for (final genre in showGenres) {
-          genreMap.putIfAbsent(genre, () => []).add(show);
+    if (hasBuckets) {
+      for (final entry in _genreBuckets.entries) {
+        final items = <Content>[];
+        for (final index in entry.value) {
+          if (index >= 0 && index < series.length) {
+            items.add(series[index]);
+          }
         }
-      } else {
-        genreMap.putIfAbsent('Other', () => []).add(show);
+        if (items.isNotEmpty) {
+          genreMap[entry.key] = items;
+        }
       }
+    } else {
+      genreMap.addAll(_buildGenreMapFallback(series));
     }
 
     // Build section for each genre with pagination
-    final sections = <Widget>[];
+    final sections = <_SectionConfig>[];
     var usedFocusNode = false;
     for (final entry in genreMap.entries) {
       final genre = entry.key;
@@ -817,19 +945,15 @@ class _SeriesScreenState extends State<SeriesScreen>
       final rowFocusNode = !usedFocusNode ? firstRowFocusNode : null;
       usedFocusNode = usedFocusNode || rowFocusNode != null;
 
-      sections.addAll([
-        _buildSectionHeader(context, genre),
-        SizedBox(height: context.spacingXs()),
-        _buildSeriesRow(
-          context,
-          displaySeries,
+      sections.add(
+        _SectionConfig(
+          title: genre,
+          items: displaySeries,
           sectionKey: genre,
-          firstCardFocusNode: rowFocusNode,
+          firstFocusNode: rowFocusNode,
           onItemFocus: (index) {
             if (_focusedIndexBySection[genre] != index) {
-              setState(() {
-                _focusedIndexBySection[genre] = index;
-              });
+              _focusedIndexBySection[genre] = index;
             }
             _maybePrefetchGenre(
               genre: genre,
@@ -847,8 +971,7 @@ class _SeriesScreenState extends State<SeriesScreen>
             hasMoreOverall: hasMoreOverall,
           ),
         ),
-        SizedBox(height: context.spacingSm()),
-      ]);
+      );
     }
 
     return sections;
@@ -864,7 +987,36 @@ class _SeriesScreenState extends State<SeriesScreen>
     final heroArt = _resolveHeroArt(featuredSeries);
     final heroHeight = context.heroHeight();
     final cardPeek = context.spacingXl();
+    final contentTop = (heroHeight - cardPeek).clamp(0.0, heroHeight);
     final contentInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
+
+    final sections = <_SectionConfig>[];
+    if (recentSeries.isNotEmpty) {
+      sections.add(
+        _SectionConfig(
+          title: 'Recently Added Series',
+          items: recentSeries,
+          sectionKey: 'recent_series',
+          firstFocusNode: _firstRowFocus,
+          onItemFocus: (index) {
+            if (_focusedIndexBySection['recent_series'] != index) {
+              _focusedIndexBySection['recent_series'] = index;
+            }
+          },
+        ),
+      );
+    }
+    sections.addAll(
+      _buildGenreSections(
+        context,
+        allSeries,
+        hasMoreOverall: hasMoreOverall,
+        firstRowFocusNode: recentSeries.isEmpty ? _firstRowFocus : null,
+      ),
+    );
+    _sectionTotal = sections.length;
+    final visibleSections =
+        sections.take(min(_visibleSectionCount, sections.length)).toList();
 
     return Focus(
       canRequestFocus: false,
@@ -982,6 +1134,26 @@ class _SeriesScreenState extends State<SeriesScreen>
                     ),
                   ),
                 ),
+                Positioned(
+                  top: contentTop,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          AppTheme.darkBackground,
+                          AppTheme.darkBackground,
+                        ],
+                        stops: [0.0, 0.2, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
                 // Featured info overlay
                 Positioned(
                   bottom: context.spacingXl(),
@@ -1004,72 +1176,34 @@ class _SeriesScreenState extends State<SeriesScreen>
                 ),
                 // Scrollable content
                 Positioned.fill(
-                  child: SingleChildScrollView(
+                  child: CustomScrollView(
+                    key: const PageStorageKey<String>('series_scroll'),
                     controller: _scrollController,
                     physics: const AlwaysScrollableScrollPhysics(),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                            height:
-                                (heroHeight - cardPeek).clamp(0.0, heroHeight)),
-                        Container(
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.transparent,
-                                AppTheme.darkBackground,
-                                AppTheme.darkBackground,
-                              ],
-                              stops: [0.0, 0.2, 1.0],
-                            ),
-                          ),
-                          padding: EdgeInsets.only(
-                            left: 0,
-                            right: context.spacingLg(),
-                            bottom: context.spacingXxl(),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 0),
-                              if (recentSeries.isNotEmpty) ...[
-                                _buildSectionHeader(
-                                    context, 'Recently Added Series'),
-                                SizedBox(height: context.spacingXs()),
-                                _buildSeriesRow(
-                                  context,
-                                  recentSeries,
-                                  sectionKey: 'recent_series',
-                                  firstCardFocusNode: _firstRowFocus,
-                                  onItemFocus: (index) {
-                                    if (_focusedIndexBySection['recent_series'] !=
-                                        index) {
-                                      setState(() {
-                                        _focusedIndexBySection['recent_series'] =
-                                            index;
-                                      });
-                                    }
-                                  },
-                                ),
-                                SizedBox(height: context.sectionSpacing()),
-                              ],
-                              ..._buildGenreSections(
-                                context,
-                                allSeries,
-                                hasMoreOverall: hasMoreOverall,
-                                firstRowFocusNode: recentSeries.isEmpty
-                                    ? _firstRowFocus
-                                    : null,
-                              ),
-                              SizedBox(height: context.sectionSpacing()),
-                            ],
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: SizedBox(height: contentTop),
+                      ),
+                      SliverPadding(
+                        padding: EdgeInsets.only(
+                          left: 0,
+                          right: context.spacingLg(),
+                          bottom: context.spacingXxl(),
+                        ),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final section = visibleSections[index];
+                              return _buildSectionBlock(context, section);
+                            },
+                            childCount: visibleSections.length,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                      SliverToBoxAdapter(
+                        child: SizedBox(height: context.sectionSpacing()),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -1080,9 +1214,32 @@ class _SeriesScreenState extends State<SeriesScreen>
     );
   }
 
+  Widget _buildSectionBlock(BuildContext context, _SectionConfig section) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(context, section.title),
+        SizedBox(height: context.spacingXs()),
+        _buildSeriesRow(
+          context,
+          section.items,
+          sectionKey: section.sectionKey,
+          firstCardFocusNode: section.firstFocusNode,
+          onItemFocus: section.onItemFocus,
+          onNearEnd: section.onNearEnd,
+        ),
+        SizedBox(height: context.spacingSm()),
+      ],
+    );
+  }
   Widget _buildHeroContent(
       Content featuredSeries, _HeroArt heroArt, double scrollProgress) {
     final heroImage = heroArt.url;
+    final dpr = MediaQuery.of(context).devicePixelRatio;
+    final heroWidth = MediaQuery.sizeOf(context).width;
+    final heroHeight = context.heroHeight();
+    final heroCacheWidth = (heroWidth * dpr).round();
+    final heroCacheHeight = (heroHeight * dpr).round();
     if (heroImage == null) {
       return _buildBannerPlaceholder();
     }
@@ -1093,6 +1250,8 @@ class _SeriesScreenState extends State<SeriesScreen>
           fit: BoxFit.cover,
           width: double.infinity,
           height: double.infinity,
+          memCacheWidth: heroCacheWidth,
+          memCacheHeight: heroCacheHeight,
           placeholder: (_, __) => _buildBannerPlaceholder(),
           errorWidget: (_, __, ___) => _buildBannerPlaceholder(),
         ),
@@ -1109,6 +1268,8 @@ class _SeriesScreenState extends State<SeriesScreen>
               fit: BoxFit.cover,
               width: double.infinity,
               height: double.infinity,
+              memCacheWidth: heroCacheWidth,
+              memCacheHeight: heroCacheHeight,
               placeholder: (_, __) => _buildBannerPlaceholder(),
               errorWidget: (_, __, ___) => _buildBannerPlaceholder(),
             ),
@@ -1122,6 +1283,8 @@ class _SeriesScreenState extends State<SeriesScreen>
               fit: BoxFit.contain,
               width: double.infinity,
               height: double.infinity,
+              memCacheWidth: heroCacheWidth,
+              memCacheHeight: heroCacheHeight,
               placeholder: (_, __) => _buildBannerPlaceholder(),
               errorWidget: (_, __, ___) => _buildBannerPlaceholder(),
             ),

@@ -1,5 +1,6 @@
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 // import 'package:media_kit/media_kit.dart'; // REMOVED: switching to alternative video player
@@ -141,5 +142,30 @@ class PrewarmService {
       // _prewarmedPlayer = null; // REMOVED: MediaKit player reference
       debugLog('PrewarmService dispose: MediaKit player cleanup disabled');
     } catch (_) {}
+  }
+
+  /// Prewarm category data for the Live TV screen to reduce first-load jank.
+  static Future<void> prewarmHomeData(
+    BuildContext context, {
+    int categoryCount = 6,
+    int channelsPerCategory = 20,
+  }) async {
+    try {
+      final channelProvider =
+          Provider.of<ChannelProvider>(context, listen: false);
+      final categories = await channelProvider.getAllCategoryNamesAsync();
+      if (categories.isEmpty) return;
+      final count = min(categoryCount, categories.length);
+      for (var i = 0; i < count; i++) {
+        unawaited(channelProvider.getChannelsForCategoryAsync(
+          categories[i],
+          offset: 0,
+          limit: channelsPerCategory,
+        ));
+      }
+      debugLog('PrewarmService: prefetched $count categories');
+    } catch (e) {
+      debugLog('PrewarmService prewarmHomeData failed: $e');
+    }
   }
 }

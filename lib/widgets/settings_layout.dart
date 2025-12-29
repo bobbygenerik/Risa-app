@@ -83,6 +83,7 @@ class _SettingsLayoutState extends State<SettingsLayout> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     // Ensure the sidebar grabs focus when this screen is shown or when focus is lost
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -95,12 +96,17 @@ class _SettingsLayoutState extends State<SettingsLayout> {
 
     return Scaffold(
       backgroundColor: AppTheme.darkBackground,
+      resizeToAvoidBottomInset: true,
       body: Container(
         color: AppTheme.darkBackground,
-        child: Padding(
+        child: AnimatedPadding(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
           padding: EdgeInsets.only(
-              left: MediaQuery.of(context).padding.left +
-                  AppSpacing.sidebarCollapsedWidth),
+            left: MediaQuery.of(context).padding.left +
+                AppSpacing.sidebarCollapsedWidth,
+            bottom: bottomInset,
+          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -117,11 +123,12 @@ class _SettingsLayoutState extends State<SettingsLayout> {
                         padding: const EdgeInsets.fromLTRB(24, 8, 16, 0),
                         child: Text(
                           'Settings',
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                color: AppTheme.textPrimary,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -0.5,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                    color: AppTheme.textPrimary,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: -0.5,
+                                  ),
                         ),
                       ),
 

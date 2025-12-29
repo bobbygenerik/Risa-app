@@ -221,6 +221,7 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
+                autofocus: true,
                 child: const Text('OK'),
               ),
             ],
@@ -242,6 +243,7 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
+            autofocus: true,
             child: const Text('Cancel'),
           ),
           ElevatedButton(

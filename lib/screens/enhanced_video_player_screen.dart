@@ -1,11 +1,17 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../models/channel.dart';
 import '../models/content.dart';
 import '../utils/debug_helper.dart';
+import '../utils/app_theme.dart';
+import '../utils/snackbar_helper.dart';
+import '../widgets/brand_badge.dart';
+import '../widgets/cached_image.dart';
 import '../widgets/live_subtitle_overlay.dart';
 import '../services/integrated_transcription_service.dart';
+import 'epg_screen.dart';
 
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:video_player/video_player.dart';
@@ -40,10 +46,22 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   bool _isLoading = true;
   final ValueNotifier<VideoPlayerController?> _playerControllerNotifier =
       ValueNotifier(null);
+  bool _showControls = true;
+  bool _isPlaying = false;
+  bool _showGuide = false;
+  double _progress = 0.0;
+  Duration _duration = Duration.zero;
+  Duration _position = Duration.zero;
+  BoxFit _videoFit = BoxFit.contain;
+  VideoPlayerController? _playerController;
+  VoidCallback? _playerListener;
+  Timer? _controlsHideTimer;
+  EnhancedSubtitleMode _subtitleMode = EnhancedSubtitleMode.off;
 
   @override
   void initState() {
     super.initState();
+    _playerControllerNotifier.addListener(_handleControllerUpdate);
     _initializePlayer();
   }
 
@@ -86,6 +104,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
     if (_transcriptionServiceRef != null && _transcriptionListener != null) {
       _transcriptionServiceRef!.removeListener(_transcriptionListener!);
     }
+    _controlsHideTimer?.cancel();
+    _playerControllerNotifier.removeListener(_handleControllerUpdate);
+    _detachPlayerController();
     super.dispose();
   }
 
@@ -119,6 +140,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
 
     // Keep wakelock active while playing
     await WakelockPlus.enable();
+    _hideControlsAfterDelay();
 
     // Auto-load VOD subtitles if found (fire-and-forget)
     if (subtitleUrl != null && subtitleUrl.isNotEmpty) {
@@ -145,6 +167,7 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
               Navigator.pop(context);
               Navigator.pop(context);
             },
+            autofocus: true,
             child: const Text('Close'),
           ),
         ],
@@ -156,99 +179,614 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        actions: [
-          IconButton(
-            tooltip: 'Export SRT',
-            onPressed: () => _showSrtDialog(),
-            icon: const Icon(Icons.file_download, color: Colors.white),
-          ),
-        ],
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
-        ),
-        title: Text(
-          widget.title ?? 'Video Player',
-          style: const TextStyle(color: Colors.white, fontSize: 18),
+      body: Focus(
+        autofocus: true,
+        onKeyEvent: (node, event) {
+          // Show controls on any key event (avoid referencing undefined KeyDownEvent)
+          _showControlsAndAutoHide();
+          return KeyEventResult.ignored;
+        },
+        child: GestureDetector(
+          onTap: _toggleControls,
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Stack(
+                  children: [
+                    // Player fills the available area
+                    Positioned.fill(
+                      child: ExoPlayerWidget(
+                        url: widget.videoUrl ??
+                            widget.content?.videoUrl ??
+                            widget.streamUrl ??
+                            widget.channel?.url ??
+                            '',
+                        isLive: widget.isLive,
+                        transcriptionService:
+                            Provider.of<IntegratedTranscriptionService>(context,
+                                listen: false),
+                        controllerNotifier: _playerControllerNotifier,
+                        fit: _videoFit,
+                      ),
+                    ),
+                    // Live subtitle overlay positioned at bottom center
+                    if (_subtitleMode == EnhancedSubtitleMode.liveTranslation)
+                      Positioned(
+                        left: 16,
+                        right: 16,
+                        bottom: 80,
+                        child: LiveSubtitleOverlay(
+                          showSubtitles: true,
+                        ),
+                      ),
+                    if (_subtitleMode == EnhancedSubtitleMode.regular)
+                      Positioned(
+                        left: 16,
+                        right: 16,
+                        bottom: 80,
+                        child: _buildRegularSubtitleOverlay(),
+                      ),
+                    // Modern streaming controls
+                    if (_showControls && !_isLoading) _buildModernControls(),
+                    // Guide overlay
+                    if (_showGuide) _buildGuideOverlay(),
+                  ],
+                ),
         ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Stack(
-              children: [
-                // Player fills the available area
-                Positioned.fill(
-                  child: ExoPlayerWidget(
-                    url: widget.videoUrl ??
-                        widget.content?.videoUrl ??
-                        widget.streamUrl ??
-                        widget.channel?.url ??
-                        '',
-                    isLive: widget.isLive,
-                    transcriptionService:
-                        Provider.of<IntegratedTranscriptionService>(context,
-                            listen: false),
-                    controllerNotifier: _playerControllerNotifier,
-                  ),
-                ),
-                // Live subtitle overlay positioned at bottom center
-                Positioned(
-                  left: 16,
-                  right: 16,
-                  bottom: 80,
-                  child: LiveSubtitleOverlay(
-                    showSubtitles: true,
-                  ),
-                ),
-                // Note: custom control overlay removed to preserve the app's original overlay.
-                // Player controls are provided by ExoPlayerWidget
-              ],
-            ),
     );
   }
 
-  Future<void> _showSrtDialog() async {
-    final service =
-        Provider.of<IntegratedTranscriptionService>(context, listen: false);
-    final srt = service.exportAsSRT();
-
-    await showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text('Export SRT', style: TextStyle(color: Colors.white)),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: SingleChildScrollView(
-            child: SelectableText(
-              srt.isEmpty ? '<No subtitles available>' : srt,
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
+  Widget _buildModernControls() {
+    final logoUrl = widget.channel?.logoUrl ?? widget.content?.imageUrl;
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.black.withValues(alpha: 0.7),
+            Colors.transparent,
+            Colors.transparent,
+            Colors.black.withValues(alpha: 0.8),
+          ],
+          stops: const [0.0, 0.3, 0.7, 1.0],
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: Row(
+                  children: [
+                    _buildControlButton(
+                      icon: Icons.arrow_back,
+                      onPressed: () => Navigator.pop(context),
+                      size: 24,
+                    ),
+                    if (logoUrl != null && logoUrl.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      CachedChannelLogo(
+                        logoUrl: logoUrl,
+                        size: 32,
+                        fallbackIcon: Icons.tv,
+                      ),
+                    ],
+                    const Spacer(),
+                    if (widget.isLive) ...[
+                      const BrandBadge.live(),
+                      const SizedBox(width: 16),
+                    ],
+                    IconButton(
+                      onPressed: _toggleGuide,
+                      icon:
+                          const Icon(Icons.dvr, color: Colors.white, size: 24),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              // Close the dialog first (use dialog context synchronously)
-              Navigator.of(context).pop();
-              await Clipboard.setData(ClipboardData(text: srt));
-              if (!mounted) return;
-              ScaffoldMessenger.of(this.context).showSnackBar(
-                  const SnackBar(content: Text('SRT copied to clipboard')));
-            },
-            child: const Text('Copy'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: _buildBottomControls(),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildBottomControls() {
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: FocusTraversalGroup(
+              policy: WidgetOrderTraversalPolicy(),
+              child: Row(
+                children: [
+                  _buildControlButton(
+                    icon: Icons.replay_10,
+                    onPressed: _rewind,
+                  ),
+                  const SizedBox(width: 12),
+                  _buildControlButton(
+                    icon: _isPlaying ? Icons.pause : Icons.play_arrow,
+                    onPressed: _togglePlayPause,
+                    autofocus: true,
+                  ),
+                  const SizedBox(width: 12),
+                  _buildControlButton(
+                    icon: Icons.forward_10,
+                    onPressed: _fastForward,
+                  ),
+                  const SizedBox(width: 24),
+                  _buildControlButton(
+                    icon: Icons.audiotrack,
+                    onPressed: _toggleAudio,
+                  ),
+                  const SizedBox(width: 12),
+                  _buildControlButton(
+                    icon: _subtitleMode == EnhancedSubtitleMode.off
+                        ? Icons.subtitles_outlined
+                        : Icons.subtitles,
+                    onPressed: _showSubtitleMenu,
+                  ),
+                  const SizedBox(width: 12),
+                  _buildControlButton(
+                    icon: Icons.grid_view,
+                    onPressed: _toggleMultiView,
+                  ),
+                  const SizedBox(width: 12),
+                  _buildControlButton(
+                    icon: Icons.aspect_ratio,
+                    onPressed: _toggleVideoFit,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: SizedBox(
+              height: 4,
+              width: double.infinity,
+              child: LinearProgressIndicator(
+                value: _progress.clamp(0.0, 1.0),
+                backgroundColor: Colors.white.withValues(alpha: 0.3),
+                valueColor:
+                    const AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildControlButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+    double size = 20,
+    bool autofocus = false,
+  }) {
+    return FocusableActionDetector(
+      autofocus: autofocus,
+      actions: <Type, Action<Intent>>{
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (intent) {
+            onPressed();
+            return null;
+          },
+        ),
+      },
+      child: Builder(
+        builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOutCubic,
+            decoration: BoxDecoration(
+              color: isFocused ? Colors.white : null,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: IconButton(
+              onPressed: onPressed,
+              icon: Icon(
+                icon,
+                color: isFocused ? Colors.black : Colors.white,
+                size: size,
+              ),
+              padding: const EdgeInsets.all(8),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildGuideOverlay() {
+    return Container(
+      color: Colors.black.withValues(alpha: 0.7),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: EPGScreen(
+              initialChannel: widget.channel,
+              continuePlayback: true,
+            ),
+          ),
+          Positioned(
+            top: 40,
+            right: 20,
+            child: SafeArea(
+              child: IconButton(
+                onPressed: _toggleGuide,
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 24),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleControllerUpdate() {
+    final controller = _playerControllerNotifier.value;
+    if (controller == _playerController) return;
+    _detachPlayerController();
+    _playerController = controller;
+    if (controller == null) return;
+    _playerListener = () {
+      final value = controller.value;
+      if (!mounted) return;
+      setState(() {
+        _isPlaying = value.isPlaying;
+        _position = value.position;
+        _duration = value.duration;
+        if (value.duration.inMilliseconds > 0) {
+          _progress =
+              value.position.inMilliseconds / value.duration.inMilliseconds;
+        } else {
+          _progress = 0.0;
+        }
+      });
+    };
+    controller.addListener(_playerListener!);
+  }
+
+  void _detachPlayerController() {
+    if (_playerController != null && _playerListener != null) {
+      _playerController!.removeListener(_playerListener!);
+    }
+    _playerController = null;
+    _playerListener = null;
+  }
+
+  void _hideControlsAfterDelay() {
+    _controlsHideTimer?.cancel();
+    _controlsHideTimer = Timer(const Duration(seconds: 8), () {
+      if (mounted) setState(() => _showControls = false);
+    });
+  }
+
+  void _showControlsAndAutoHide() {
+    if (mounted && !_showControls) {
+      setState(() => _showControls = true);
+    }
+    _hideControlsAfterDelay();
+  }
+
+  void _toggleControls() {
+    setState(() => _showControls = !_showControls);
+    if (_showControls) {
+      _hideControlsAfterDelay();
+    }
+  }
+
+  void _togglePlayPause() {
+    final controller = _playerController;
+    if (controller == null) return;
+    if (controller.value.isPlaying) {
+      controller.pause();
+    } else {
+      controller.play();
+    }
+    _showControlsAndAutoHide();
+  }
+
+  void _rewind() {
+    final controller = _playerController;
+    if (controller == null) return;
+    final next = _position - const Duration(seconds: 10);
+    controller.seekTo(next.isNegative ? Duration.zero : next);
+    _showControlsAndAutoHide();
+  }
+
+  void _fastForward() {
+    final controller = _playerController;
+    if (controller == null) return;
+    final next = _position + const Duration(seconds: 10);
+    if (_duration.inMilliseconds > 0 && next > _duration) {
+      controller.seekTo(_duration);
+    } else {
+      controller.seekTo(next);
+    }
+    _showControlsAndAutoHide();
+  }
+
+  void _toggleAudio() {
+    showAppSnackBar(
+      context,
+      const SnackBar(
+          content: Text('Audio tracks not available in this player')),
+    );
+  }
+
+  void _toggleMultiView() {
+    if (mounted) context.push('/multi-view');
+  }
+
+  void _toggleVideoFit() {
+    setState(() {
+      if (_videoFit == BoxFit.contain) {
+        _videoFit = BoxFit.cover;
+      } else if (_videoFit == BoxFit.cover) {
+        _videoFit = BoxFit.fill;
+      } else {
+        _videoFit = BoxFit.contain;
+      }
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          _videoFit == BoxFit.contain
+              ? 'Scale: Fit'
+              : (_videoFit == BoxFit.cover ? 'Scale: Zoom' : 'Scale: Stretch'),
+        ),
+        duration: const Duration(seconds: 1),
+        backgroundColor: Colors.black87,
+      ),
+    );
+  }
+
+  void _showSubtitleMenu() {
+    showDialog(
+      context: context,
+      builder: (context) => _buildSubtitleMenu(),
+    );
+  }
+
+  void _setSubtitleMode(EnhancedSubtitleMode mode) async {
+    setState(() => _subtitleMode = mode);
+    final service =
+        Provider.of<IntegratedTranscriptionService>(context, listen: false);
+    try {
+      if (mode == EnhancedSubtitleMode.regular) {
+        await service.stopTranscription();
+      } else if (mode == EnhancedSubtitleMode.liveTranslation) {
+        if (!service.isInitialized) {
+          final initialized = await service.initialize();
+          if (!initialized) {
+            throw Exception('Failed to initialize transcription service');
+          }
+        }
+        service.setTranslationEnabled(true);
+        final streamUrl = widget.videoUrl ?? widget.channel?.url;
+        if (streamUrl != null) {
+          await service.transcribeVideoStream(streamUrl);
+        }
+      } else {
+        await service.stopTranscription();
+      }
+    } catch (e) {
+      debugLog('Transcription error: $e');
+      setState(() => _subtitleMode = EnhancedSubtitleMode.off);
+      if (mounted) {
+        showAppSnackBar(
+          context,
+          const SnackBar(content: Text('Live translation error')),
+        );
+      }
+    }
+  }
+
+  Widget _buildSubtitleMenu() {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 280),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.9),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildMenuOption(
+                'Off',
+                Icons.subtitles_off_outlined,
+                _subtitleMode == EnhancedSubtitleMode.off,
+                () => _setSubtitleMode(EnhancedSubtitleMode.off),
+                autofocus: true,
+              ),
+              _buildMenuOption(
+                'Regular Subtitles',
+                Icons.closed_caption_outlined,
+                _subtitleMode == EnhancedSubtitleMode.regular,
+                _showRegularSubtitlePicker,
+              ),
+              _buildMenuOption(
+                'Live Translation',
+                Icons.translate,
+                _subtitleMode == EnhancedSubtitleMode.liveTranslation,
+                () => _setSubtitleMode(EnhancedSubtitleMode.liveTranslation),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMenuOption(
+      String title, IconData icon, bool selected, VoidCallback onTap,
+      {bool autofocus = false}) {
+    return FocusableActionDetector(
+      autofocus: autofocus,
+      actions: <Type, Action<Intent>>{
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (intent) {
+            Navigator.pop(context);
+            onTap();
+            return null;
+          },
+        ),
+      },
+      child: Builder(
+        builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
+          return Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                Navigator.pop(context);
+                onTap();
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: BoxDecoration(
+                  color: isFocused
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                  border: isFocused
+                      ? Border.all(
+                          color: AppTheme.primaryBlue.withValues(alpha: 0.8),
+                          width: 1.5,
+                        )
+                      : null,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      icon,
+                      color: selected ? AppTheme.primaryBlue : Colors.white70,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          color: selected ? AppTheme.primaryBlue : Colors.white,
+                          fontSize: 16,
+                          fontWeight:
+                              selected ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                    if (selected)
+                      Icon(
+                        Icons.check,
+                        color: AppTheme.primaryBlue,
+                        size: 18,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _toggleGuide() {
+    setState(() => _showGuide = !_showGuide);
+  }
+
+  Future<void> _showRegularSubtitlePicker() async {
+    Navigator.pop(context);
+    final captionText = _playerController?.value.caption.text ?? '';
+    if (captionText.isEmpty) {
+      showAppSnackBar(
+        context,
+        const SnackBar(content: Text('No embedded subtitles detected yet')),
+      );
+      return;
+    }
+    final selected = await showDialog<bool>(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 280),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.9),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildMenuOption(
+                'Embedded Subtitles',
+                Icons.closed_caption,
+                false,
+                () => Navigator.pop(context, true),
+                autofocus: true,
+              ),
+              _buildMenuOption(
+                'Cancel',
+                Icons.close,
+                false,
+                () => Navigator.pop(context, false),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (selected == true) {
+      _setSubtitleMode(EnhancedSubtitleMode.regular);
+    }
+  }
+
+  Widget _buildRegularSubtitleOverlay() {
+    final captionText = _playerController?.value.caption.text ?? '';
+    if (captionText.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.black87,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ClosedCaption(text: captionText),
     );
   }
 
   // Manual SRT loading removed per user preference; VOD subtitles are automatically
   // used if provided by the content metadata. Function intentionally removed.
 }
+
+enum EnhancedSubtitleMode { off, regular, liveTranslation }

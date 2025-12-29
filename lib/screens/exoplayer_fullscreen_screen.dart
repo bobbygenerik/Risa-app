@@ -642,11 +642,10 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
   }
 
   void _setSubtitleMode(ExoSubtitleMode mode) async {
-    setState(() => _subtitleMode = mode);
-
     try {
       if (mode == ExoSubtitleMode.liveTranslation &&
           _transcriptionService != null) {
+        await _channel?.invokeMethod('disableSubtitles');
         if (!_transcriptionService!.isInitialized) {
           final initialized = await _transcriptionService!.initialize();
           if (!initialized) {
@@ -659,8 +658,11 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
         if (streamUrl != null) {
           await _transcriptionService!.transcribeVideoStream(streamUrl);
         }
-      } else if (_transcriptionService != null) {
-        await _transcriptionService!.stopTranscription();
+        setState(() => _subtitleMode = mode);
+      } else {
+        await _channel?.invokeMethod('disableSubtitles');
+        await _transcriptionService?.stopTranscription();
+        setState(() => _subtitleMode = mode);
       }
     } catch (e) {
       debugLog('Transcription error: $e');
@@ -711,6 +713,7 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
               _channel?.invokeMethod(
                   'loadVideo', {'videoUrl': url, 'autoPlay': true});
             },
+            autofocus: true,
             child: const Text('Retry'),
           ),
         ],
@@ -736,12 +739,13 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
               Icons.subtitles_off_outlined,
               _subtitleMode == ExoSubtitleMode.off,
               () => _setSubtitleMode(ExoSubtitleMode.off),
+              autofocus: true,
             ),
             _buildMenuOption(
               'Regular Subtitles',
               Icons.closed_caption_outlined,
               _subtitleMode == ExoSubtitleMode.regular,
-              () => _setSubtitleMode(ExoSubtitleMode.regular),
+              _showRegularSubtitlePicker,
             ),
             _buildMenuOption(
               'Live Translation',
@@ -756,44 +760,133 @@ class _ExoPlayerFullscreenScreenState extends State<ExoPlayerFullscreenScreen> {
   }
 
   Widget _buildMenuOption(
-      String title, IconData icon, bool selected, VoidCallback onTap) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          Navigator.pop(context);
-          onTap();
+      String title, IconData icon, bool selected, VoidCallback onTap,
+      {bool autofocus = false}) {
+    return FocusableActionDetector(
+      autofocus: autofocus,
+      actions: <Type, Action<Intent>>{
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (intent) {
+            Navigator.pop(context);
+            onTap();
+            return null;
+          },
+        ),
+      },
+      child: Builder(
+        builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
+          return Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                Navigator.pop(context);
+                onTap();
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: BoxDecoration(
+                  color: isFocused
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                  border: isFocused
+                      ? Border.all(
+                          color: AppTheme.primaryBlue.withValues(alpha: 0.8),
+                          width: 1.5,
+                        )
+                      : null,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      icon,
+                      color: selected ? AppTheme.primaryBlue : Colors.white70,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          color: selected ? AppTheme.primaryBlue : Colors.white,
+                          fontSize: 16,
+                          fontWeight:
+                              selected ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                    if (selected)
+                      Icon(
+                        Icons.check,
+                        color: AppTheme.primaryBlue,
+                        size: 18,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          );
         },
+      ),
+    );
+  }
+
+  Future<void> _showRegularSubtitlePicker() async {
+    Navigator.pop(context);
+    final tracks = await _channel?.invokeMethod('listSubtitleTracks') as List?;
+    if (!mounted) return;
+    if (tracks == null || tracks.isEmpty) {
+      showAppSnackBar(
+        context,
+        const SnackBar(content: Text('No subtitle tracks found')),
+      );
+      return;
+    }
+    final selected = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Row(
+          constraints: const BoxConstraints(maxWidth: 320),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.9),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                icon,
-                color: selected ? AppTheme.primaryBlue : Colors.white70,
-                size: 20,
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    color: selected ? AppTheme.primaryBlue : Colors.white,
-                    fontSize: 16,
-                    fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+              for (var i = 0; i < tracks.length; i++)
+                _buildMenuOption(
+                  '${tracks[i]['label']} (${tracks[i]['language'] ?? 'und'})',
+                  Icons.closed_caption,
+                  false,
+                  () => Navigator.pop(
+                    context,
+                    {
+                      'groupIndex': tracks[i]['groupIndex'],
+                      'trackIndex': tracks[i]['trackIndex'],
+                    },
                   ),
+                  autofocus: i == 0,
                 ),
+              _buildMenuOption(
+                'Cancel',
+                Icons.close,
+                false,
+                () => Navigator.pop(context),
               ),
-              if (selected)
-                Icon(
-                  Icons.check,
-                  color: AppTheme.primaryBlue,
-                  size: 18,
-                ),
             ],
           ),
         ),
       ),
     );
+    if (selected == null) return;
+    await _transcriptionService?.stopTranscription();
+    await _channel?.invokeMethod('selectSubtitleTrack', selected);
+    if (mounted) {
+      setState(() => _subtitleMode = ExoSubtitleMode.regular);
+    }
   }
 }

@@ -573,7 +573,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 final detected = epgService.currentUrl ?? _detectedEpgUrl;
                 return SettingsActionTile(
                   title: 'Detected EPG URL (from playlist)',
-                  subtitle: detected != null && detected.isNotEmpty
+                  subtitle: detected.isNotEmpty
                       ? detected
                       : 'None detected',
                   icon: Icons.link,

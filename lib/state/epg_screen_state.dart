@@ -63,6 +63,16 @@ class EPGScreenState extends ChangeNotifier {
   }
 
   void updatePaginatedChannels(List<Channel> allChannels) {
+    final sameLength = _paginatedChannels.length == allChannels.length;
+    if (sameLength && allChannels.isNotEmpty) {
+      final sameFirst = _paginatedChannels.first.id == allChannels.first.id;
+      final sameLast = _paginatedChannels.last.id == allChannels.last.id;
+      if (sameFirst && sameLast) {
+        return;
+      }
+    } else if (sameLength && allChannels.isEmpty) {
+      return;
+    }
     _paginatedChannels = allChannels;
     notifyListeners();
   }

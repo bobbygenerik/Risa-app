@@ -13,6 +13,7 @@ class LegalDisclaimerDialog extends StatefulWidget {
 
 class _LegalDisclaimerDialogState extends State<LegalDisclaimerDialog> {
   bool _accepted = false;
+  final FocusNode _exitFocusNode = FocusNode();
 
   @override
   Widget build(BuildContext context) {
@@ -138,6 +139,7 @@ By continuing, you confirm you will only use this app for legal purposes and com
               children: [
                 Expanded(
                   child: BrandSecondaryButton(
+                    focusNode: _exitFocusNode,
                     onPressed: () => Navigator.of(context).pop(false),
                     label: 'Exit App',
                     expand: true,
@@ -169,5 +171,21 @@ By continuing, you confirm you will only use this app for legal purposes and com
         ),
       ),
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_exitFocusNode.canRequestFocus) {
+        _exitFocusNode.requestFocus();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _exitFocusNode.dispose();
+    super.dispose();
   }
 }

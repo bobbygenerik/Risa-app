@@ -129,26 +129,39 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
   }
 
   Future<void> _deletePlaylist(SavedPlaylist playlist) async {
+    final cancelFocus = FocusNode(debugLabel: 'PlaylistDeleteCancel');
+    final confirmFocus = FocusNode(debugLabel: 'PlaylistDeleteConfirm');
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.darkBackground,
-        title: const Text('Delete Playlist'),
-        content: Text('Are you sure you want to delete "${playlist.name}"?'),
-        actions: [
-          BrandSecondaryButton(
-            label: 'Cancel',
-            onPressed: () => Navigator.pop(context, false),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          ),
-          BrandPrimaryButton(
-            label: 'Delete',
-            onPressed: () => Navigator.pop(context, true),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          ),
-        ],
-      ),
+      builder: (context) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (cancelFocus.canRequestFocus) {
+            cancelFocus.requestFocus();
+          }
+        });
+        return AlertDialog(
+          backgroundColor: AppTheme.darkBackground,
+          title: const Text('Delete Playlist'),
+          content: Text('Are you sure you want to delete "${playlist.name}"?'),
+          actions: [
+            BrandSecondaryButton(
+              focusNode: cancelFocus,
+              label: 'Cancel',
+              onPressed: () => Navigator.pop(context, false),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            BrandPrimaryButton(
+              focusNode: confirmFocus,
+              label: 'Delete',
+              onPressed: () => Navigator.pop(context, true),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+          ],
+        );
+      },
     );
+    cancelFocus.dispose();
+    confirmFocus.dispose();
 
     if (confirmed == true) {
       setState(() {
@@ -451,163 +464,194 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
   }
 
   Widget _buildPlaylistList() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(AppSizes.lg),
-      itemCount: _playlists.length,
-      itemBuilder: (context, index) {
-        final playlist = _playlists[index];
-        final isActive = playlist.id == _activePlaylistId;
+    return FocusTraversalGroup(
+      policy: WidgetOrderTraversalPolicy(),
+      child: ListView.builder(
+        padding: const EdgeInsets.all(AppSizes.lg),
+        itemCount: _playlists.length,
+        itemBuilder: (context, index) {
+          final playlist = _playlists[index];
+          final isActive = playlist.id == _activePlaylistId;
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: AppSizes.md),
-          child: ListTile(
-            contentPadding: const EdgeInsets.all(AppSizes.md),
-            leading: Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: isActive
-                    ? AppTheme.primaryBlue
-                    : AppTheme.primaryBlue.withAlpha((0.35 * 255).round()),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                playlist.type == 'm3u' ? Icons.link : Icons.cast,
-                color: Colors.white,
-                size: 28,
-              ),
+          return _buildFocusablePlaylistTile(
+            playlist: playlist,
+            isActive: isActive,
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFocusablePlaylistTile({
+    required SavedPlaylist playlist,
+    required bool isActive,
+  }) {
+    return FocusableActionDetector(
+      actions: <Type, Action<Intent>>{
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (intent) {
+            if (!isActive) {
+              _loadPlaylist(playlist);
+            }
+            return null;
+          },
+        ),
+      },
+      child: Builder(
+        builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
+          return Container(
+            margin: const EdgeInsets.only(bottom: AppSizes.md),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: isFocused
+                  ? Border.all(color: AppTheme.primaryBlue, width: 2)
+                  : null,
             ),
-            title: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    playlist.name,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
+            child: ListTile(
+              contentPadding: const EdgeInsets.all(AppSizes.md),
+              leading: Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? AppTheme.primaryBlue
+                      : AppTheme.primaryBlue.withAlpha((0.35 * 255).round()),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                if (isActive)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppTheme.accentGreen,
-                      borderRadius: BorderRadius.circular(4),
+                child: Icon(
+                  playlist.type == 'm3u' ? Icons.link : Icons.cast,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+              title: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      playlist.name,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16),
                     ),
-                    child: const Text(
-                      'ACTIVE',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
+                  ),
+                  if (isActive)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentGreen,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'ACTIVE',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                  ),
-              ],
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 4),
-                Text(
-                  playlist.type == 'm3u' ? 'M3U Playlist' : 'Xtream Codes',
-                  style: const TextStyle(
-                      color: AppTheme.textSecondary, fontSize: 12),
-                ),
-                if (playlist.type == 'xtream' && playlist.server != null)
+                ],
+              ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 4),
                   Text(
-                    playlist.server!,
+                    playlist.type == 'm3u' ? 'M3U Playlist' : 'Xtream Codes',
                     style: const TextStyle(
-                      color: AppTheme.textSecondary,
-                      fontSize: 11,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                        color: AppTheme.textSecondary, fontSize: 12),
                   ),
-              ],
+                  if (playlist.type == 'xtream' && playlist.server != null)
+                    Text(
+                      playlist.server!,
+                      style: const TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 11,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (!isActive)
+                    _buildPlaylistActionButton(
+                      icon: Icons.play_arrow,
+                      color: AppTheme.primaryBlue,
+                      tooltip: 'Load',
+                      onPressed: () => _loadPlaylist(playlist),
+                    ),
+                  _buildPlaylistActionButton(
+                    icon: Icons.edit,
+                    color: AppTheme.textPrimary,
+                    tooltip: 'Rename',
+                    onPressed: () => _editPlaylist(playlist),
+                  ),
+                  _buildPlaylistActionButton(
+                    icon: Icons.link,
+                    color: AppTheme.textPrimary,
+                    tooltip: 'Edit EPG URLs',
+                    onPressed: () => _editEpgUrls(playlist),
+                  ),
+                  _buildPlaylistActionButton(
+                    icon: Icons.delete,
+                    color: AppTheme.accentRed,
+                    tooltip: 'Delete',
+                    onPressed: () => _deletePlaylist(playlist),
+                  ),
+                ],
+              ),
+              onTap: () {
+                if (!isActive) {
+                  _loadPlaylist(playlist);
+                }
+              },
             ),
-            trailing: PopupMenuButton(
-              icon: const Icon(Icons.more_vert, color: AppTheme.textPrimary),
-              color: AppTheme.darkBackground,
-              itemBuilder: (context) => [
-                if (!isActive)
-                  PopupMenuItem(
-                    child: const Row(
-                      children: [
-                        Icon(Icons.play_arrow, color: AppTheme.primaryBlue),
-                        SizedBox(width: 8),
-                        Text('Load'),
-                      ],
-                    ),
-                    onTap: () => Future.delayed(
-                      Duration.zero,
-                      () {
-                        final idx = _playlists.indexWhere((p) => p.id == playlist.id);
-                        if (idx != -1 && mounted) {
-                          _loadPlaylist(_playlists[idx]);
-                        }
-                      },
-                    ),
-                  ),
-                PopupMenuItem(
-                  child: const Row(
-                    children: [
-                      Icon(Icons.edit, color: AppTheme.textPrimary),
-                      SizedBox(width: 8),
-                      Text('Rename'),
-                    ],
-                  ),
-                  onTap: () => Future.delayed(
-                    Duration.zero,
-                    () {
-                      final idx = _playlists.indexWhere((p) => p.id == playlist.id);
-                      if (idx != -1 && mounted) {
-                        _editPlaylist(_playlists[idx]);
-                      }
-                    },
-                  ),
-                ),
-                PopupMenuItem(
-                  child: const Row(
-                    children: [
-                      Icon(Icons.link, color: AppTheme.textPrimary),
-                      SizedBox(width: 8),
-                      Text('Edit EPG URLs'),
-                    ],
-                  ),
-                  onTap: () => Future.delayed(
-                    Duration.zero,
-                    () {
-                      final idx = _playlists.indexWhere((p) => p.id == playlist.id);
-                      if (idx != -1 && mounted) {
-                        _editEpgUrls(_playlists[idx]);
-                      }
-                    },
-                  ),
-                ),
-                PopupMenuItem(
-                  child: const Row(
-                    children: [
-                      Icon(Icons.delete, color: AppTheme.accentRed),
-                      SizedBox(width: 8),
-                      Text('Delete'),
-                    ],
-                  ),
-                  onTap: () => Future.delayed(
-                    Duration.zero,
-                    () {
-                      final idx = _playlists.indexWhere((p) => p.id == playlist.id);
-                      if (idx != -1 && mounted) {
-                        _deletePlaylist(_playlists[idx]);
-                      }
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildPlaylistActionButton({
+    required IconData icon,
+    required Color color,
+    required String tooltip,
+    required VoidCallback onPressed,
+  }) {
+    return FocusableActionDetector(
+      actions: <Type, Action<Intent>>{
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (intent) {
+            onPressed();
+            return null;
+          },
+        ),
       },
+      child: Builder(
+        builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOutCubic,
+            decoration: BoxDecoration(
+              color: isFocused ? color.withAlpha((0.2 * 255).round()) : null,
+              borderRadius: BorderRadius.circular(8),
+              border: isFocused
+                  ? Border.all(color: color, width: 2)
+                  : null,
+            ),
+            child: IconButton(
+              tooltip: tooltip,
+              icon: Icon(icon, color: color),
+              onPressed: onPressed,
+            ),
+          );
+        },
+      ),
     );
   }
 }

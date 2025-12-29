@@ -427,6 +427,7 @@ class _AIModelsScreenState extends State<AIModelsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
+            autofocus: true,
             child: const Text('Cancel'),
           ),
           ElevatedButton(

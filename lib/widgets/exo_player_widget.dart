@@ -11,6 +11,7 @@ class ExoPlayerWidget extends StatefulWidget {
   final IntegratedTranscriptionService? transcriptionService;
   final ValueNotifier<VideoPlayerController?>? controllerNotifier;
   final bool showInternalControls;
+  final BoxFit fit;
 
   const ExoPlayerWidget({
     super.key,
@@ -19,6 +20,7 @@ class ExoPlayerWidget extends StatefulWidget {
     this.transcriptionService,
     this.controllerNotifier,
     this.showInternalControls = false,
+    this.fit = BoxFit.cover,
   });
 
   @override
@@ -100,7 +102,7 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
             // Fill available area while preserving aspect via FittedBox
             SizedBox.expand(
               child: FittedBox(
-                fit: BoxFit.cover,
+                fit: widget.fit,
                 alignment: Alignment.center,
                 child: SizedBox(
                   width: value.size.width > 0 ? value.size.width : 16,

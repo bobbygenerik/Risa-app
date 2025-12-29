@@ -52,14 +52,17 @@ class AppDialog extends StatelessWidget {
               const SizedBox(height: 8),
               Padding(
                 padding: const EdgeInsets.all(12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: actions!
-                      .map((action) => Padding(
-                            padding: const EdgeInsets.only(left: 8),
-                            child: action,
-                          ))
-                      .toList(),
+                child: FocusTraversalGroup(
+                  policy: WidgetOrderTraversalPolicy(),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: actions!
+                        .map((action) => Padding(
+                              padding: const EdgeInsets.only(left: 8),
+                              child: action,
+                            ))
+                        .toList(),
+                  ),
                 ),
               ),
             ],
@@ -74,17 +77,28 @@ class AppDialogButton extends StatelessWidget {
   final String text;
   final VoidCallback? onPressed;
   final bool isPrimary;
+  final bool autofocus;
 
   const AppDialogButton({
     super.key,
     required this.text,
     this.onPressed,
     this.isPrimary = false,
+    this.autofocus = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Focus(
+    return FocusableActionDetector(
+      autofocus: autofocus || isPrimary,
+      actions: <Type, Action<Intent>>{
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (intent) {
+            onPressed?.call();
+            return null;
+          },
+        ),
+      },
       child: Builder(
         builder: (context) {
           final isFocused = Focus.of(context).hasFocus;
@@ -99,6 +113,9 @@ class AppDialogButton extends StatelessWidget {
                       ? Colors.white.withValues(alpha: 0.1)
                       : Colors.transparent),
               borderRadius: BorderRadius.circular(6),
+              border: isFocused && !isPrimary
+                  ? Border.all(color: Colors.white.withValues(alpha: 0.3))
+                  : null,
             ),
             child: Material(
               color: Colors.transparent,

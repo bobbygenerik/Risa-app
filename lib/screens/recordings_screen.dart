@@ -111,6 +111,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
+            autofocus: true,
             child: const Text('Cancel'),
           ),
           ElevatedButton(
@@ -373,114 +374,164 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
       );
     }
 
-    return ListView.builder(
-      padding: EdgeInsets.all(context.tvSpacing(16)),
-      itemCount: _recordings.length,
-      itemBuilder: (context, index) {
-        final file = _recordings[index];
-        final fileName = path.basename(file.path);
-        final stat = file.statSync();
-        final fileSize = _formatFileSize(stat.size);
-        final modifiedDate = stat.modified;
+    return FocusTraversalGroup(
+      policy: WidgetOrderTraversalPolicy(),
+      child: ListView.builder(
+        padding: EdgeInsets.all(context.tvSpacing(16)),
+        itemCount: _recordings.length,
+        itemBuilder: (context, index) {
+          final file = _recordings[index];
+          final fileName = path.basename(file.path);
+          final stat = file.statSync();
+          final fileSize = _formatFileSize(stat.size);
+          final modifiedDate = stat.modified;
 
-        return Card(
-          margin: EdgeInsets.only(bottom: context.tvSpacing(12)),
-          child: ListTile(
-            contentPadding: EdgeInsets.all(context.tvSpacing(16)),
-            leading: Container(
-              width: context.tvSpacing(80),
-              height: context.tvSpacing(60),
-              decoration: BoxDecoration(
-                color: AppTheme.sidebarBackground,
-                borderRadius: BorderRadius.circular(context.tvSpacing(8)),
-              ),
-              child: Icon(
-                Icons.movie,
-                color: AppTheme.primaryBlue,
-                size: context.tvIconSize(32),
-              ),
-            ),
-            title: Text(
-              fileName,
-              style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: context.tvTextSize(16)),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(height: context.tvSpacing(8)),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.storage,
-                      size: context.tvIconSize(14),
-                      color: AppTheme.textTertiary,
-                    ),
-                    SizedBox(width: context.tvSpacing(4)),
-                    Text(
-                      fileSize,
-                      style: TextStyle(
-                        fontSize: context.tvTextSize(12),
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                    SizedBox(width: context.tvSpacing(16)),
-                    Icon(
-                      Icons.access_time,
-                      size: context.tvIconSize(14),
-                      color: AppTheme.textTertiary,
-                    ),
-                    SizedBox(width: context.tvSpacing(4)),
-                    Text(
-                      '${modifiedDate.day}/${modifiedDate.month}/${modifiedDate.year} ${modifiedDate.hour}:${modifiedDate.minute.toString().padLeft(2, '0')}',
-                      style: TextStyle(
-                        fontSize: context.tvTextSize(12),
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: Icon(
-                    Icons.play_arrow,
-                    color: AppTheme.primaryBlue,
-                    size: context.tvIconSize(24),
-                  ),
-                  onPressed: () {
-                    context.push('/player', extra: {
-                      'videoUrl': file.path,
-                      'title': fileName,
-                      'isLive': false,
-                    });
-                    showAppSnackBar(
-                      context,
-                      SnackBar(content: Text('Playing recording...')),
-                    );
-                  },
-                  tooltip: 'Play',
-                ),
-                IconButton(
-                  icon: Icon(
-                    Icons.delete_outline,
-                    color: AppTheme.accentRed,
-                    size: context.tvIconSize(24),
-                  ),
-                  onPressed: () => _deleteRecording(file),
-                  tooltip: 'Delete',
-                ),
-              ],
-            ),
-          ),
-        );
+          return _buildFocusableRecordingTile(
+            file: file,
+            fileName: fileName,
+            subtitle:
+                '${modifiedDate.day}/${modifiedDate.month}/${modifiedDate.year} ${modifiedDate.hour}:${modifiedDate.minute.toString().padLeft(2, '0')} • $fileSize',
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFocusableRecordingTile({
+    required FileSystemEntity file,
+    required String fileName,
+    required String subtitle,
+  }) {
+    return FocusableActionDetector(
+      actions: <Type, Action<Intent>>{
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (intent) {
+            _playRecording(file, fileName);
+            return null;
+          },
+        ),
       },
+      child: Builder(
+        builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
+          return Card(
+            margin: EdgeInsets.only(bottom: context.tvSpacing(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(context.tvSpacing(8)),
+              side: isFocused
+                  ? BorderSide(
+                      color: AppTheme.primaryBlue,
+                      width: context.tvSpacing(2),
+                    )
+                  : BorderSide.none,
+            ),
+            child: ListTile(
+              contentPadding: EdgeInsets.all(context.tvSpacing(16)),
+              leading: Container(
+                width: context.tvSpacing(80),
+                height: context.tvSpacing(60),
+                decoration: BoxDecoration(
+                  color: AppTheme.sidebarBackground,
+                  borderRadius: BorderRadius.circular(context.tvSpacing(8)),
+                ),
+                child: Icon(
+                  Icons.movie,
+                  color: AppTheme.primaryBlue,
+                  size: context.tvIconSize(32),
+                ),
+              ),
+              title: Text(
+                fileName,
+                style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: context.tvTextSize(16)),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              subtitle: Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: context.tvTextSize(12),
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildFocusableIconButton(
+                    icon: Icons.play_arrow,
+                    color: AppTheme.primaryBlue,
+                    tooltip: 'Play',
+                    onPressed: () => _playRecording(file, fileName),
+                  ),
+                  _buildFocusableIconButton(
+                    icon: Icons.delete_outline,
+                    color: AppTheme.accentRed,
+                    tooltip: 'Delete',
+                    onPressed: () => _deleteRecording(file),
+                  ),
+                ],
+              ),
+              onTap: () => _playRecording(file, fileName),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFocusableIconButton({
+    required IconData icon,
+    required Color color,
+    required String tooltip,
+    required VoidCallback onPressed,
+  }) {
+    return FocusableActionDetector(
+      actions: <Type, Action<Intent>>{
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (intent) {
+            onPressed();
+            return null;
+          },
+        ),
+      },
+      child: Builder(
+        builder: (context) {
+          final isFocused = Focus.of(context).hasFocus;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOutCubic,
+            decoration: BoxDecoration(
+              color: isFocused ? color.withAlpha((0.2 * 255).round()) : null,
+              borderRadius: BorderRadius.circular(context.tvSpacing(8)),
+              border: isFocused
+                  ? Border.all(color: color, width: context.tvSpacing(2))
+                  : null,
+            ),
+            child: IconButton(
+              tooltip: tooltip,
+              icon: Icon(
+                icon,
+                color: color,
+                size: context.tvIconSize(24),
+              ),
+              onPressed: onPressed,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _playRecording(FileSystemEntity file, String fileName) {
+    context.push('/player', extra: {
+      'videoUrl': file.path,
+      'title': fileName,
+      'isLive': false,
+    });
+    showAppSnackBar(
+      context,
+      const SnackBar(content: Text('Playing recording...')),
     );
   }
 }

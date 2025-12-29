@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iptv_player/models/channel.dart';
@@ -320,8 +322,13 @@ class EPGVirtualProgramRow extends StatelessWidget {
             programStart.difference(displayStart).inMinutes;
         final leftOffset = (minutesFromStart / 60) * cellWidth;
         final visibleDuration = programEnd.difference(programStart).inMinutes;
-        final width = ((visibleDuration / 60) * cellWidth)
-            .clamp(30.0, totalWidth - leftOffset);
+        if (leftOffset >= totalWidth || visibleDuration <= 0) {
+          return const SizedBox.shrink();
+        }
+        const minWidth = 30.0;
+        final rawWidth = (visibleDuration / 60) * cellWidth;
+        final maxWidth = math.max(minWidth, totalWidth - leftOffset);
+        final width = rawWidth.clamp(minWidth, maxWidth);
 
         final focusNode =
             isFirstRow && programIndex == 0 ? firstProgramFocusNode : null;

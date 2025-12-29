@@ -89,24 +89,30 @@ class _VodCardImageState extends State<VodCardImage> {
   Widget build(BuildContext context) {
     // Show original image immediately if available, TMDB will replace when loaded
     final tmdbUrl = _tmdbPosterUrl;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cacheSize = _resolveCacheSize(context, constraints);
+        // If we have TMDB image, use it (higher quality)
+        if (tmdbUrl != null && tmdbUrl.isNotEmpty) {
+          return CachedNetworkImage(
+            imageUrl: tmdbUrl,
+            fit: widget.fit,
+            width: double.infinity,
+            height: double.infinity,
+            memCacheWidth: cacheSize.width,
+            memCacheHeight: cacheSize.height,
+            placeholder: (context, url) => widget.placeholder,
+            errorWidget: (context, url, error) => _buildOriginalImageFallback(),
+          );
+        }
 
-    // If we have TMDB image, use it (higher quality)
-    if (tmdbUrl != null && tmdbUrl.isNotEmpty) {
-      return CachedNetworkImage(
-        imageUrl: tmdbUrl,
-        fit: widget.fit,
-        width: double.infinity,
-        height: double.infinity,
-        placeholder: (context, url) => widget.placeholder,
-        errorWidget: (context, url, error) => _buildOriginalImageFallback(),
-      );
-    }
-
-    // Fallback to original image
-    return _buildOriginalImageFallback();
+        // Fallback to original image
+        return _buildOriginalImageFallback(cacheSize: cacheSize);
+      },
+    );
   }
 
-  Widget _buildOriginalImageFallback() {
+  Widget _buildOriginalImageFallback({_CacheSize? cacheSize}) {
     final originalUrl = widget.content.imageUrl ?? widget.content.backdropUrl;
     if (originalUrl != null && originalUrl.isNotEmpty) {
       return CachedNetworkImage(
@@ -114,10 +120,30 @@ class _VodCardImageState extends State<VodCardImage> {
         fit: widget.fit,
         width: double.infinity,
         height: double.infinity,
+        memCacheWidth: cacheSize?.width,
+        memCacheHeight: cacheSize?.height,
         placeholder: (context, url) => widget.placeholder,
         errorWidget: (context, url, error) => widget.placeholder,
       );
     }
     return widget.placeholder;
   }
+
+  _CacheSize _resolveCacheSize(
+    BuildContext context,
+    BoxConstraints constraints,
+  ) {
+    final dpr = MediaQuery.of(context).devicePixelRatio;
+    final width = constraints.hasBoundedWidth ? constraints.maxWidth : 0.0;
+    final height = constraints.hasBoundedHeight ? constraints.maxHeight : 0.0;
+    final cacheWidth = width > 0 ? (width * dpr).round() : null;
+    final cacheHeight = height > 0 ? (height * dpr).round() : null;
+    return _CacheSize(cacheWidth, cacheHeight);
+  }
+}
+
+class _CacheSize {
+  final int? width;
+  final int? height;
+  const _CacheSize(this.width, this.height);
 }

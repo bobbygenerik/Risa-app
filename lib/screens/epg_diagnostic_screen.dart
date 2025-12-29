@@ -4,10 +4,25 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iptv_player/services/incremental_epg_service.dart';
 import 'package:iptv_player/providers/channel_provider.dart';
+import 'package:iptv_player/models/channel.dart';
 import 'package:iptv_player/utils/app_theme.dart';
 import 'package:iptv_player/utils/snackbar_helper.dart';
 import 'package:iptv_player/utils/debug_helper.dart';
 import 'dart:math' as math;
+
+enum _MatchFilter { all, matched, unmatched }
+
+class _MatchEntry {
+  final Channel channel;
+  final bool matched;
+  final String id;
+
+  const _MatchEntry({
+    required this.channel,
+    required this.matched,
+    required this.id,
+  });
+}
 
 class EpgDiagnosticScreen extends StatefulWidget {
   const EpgDiagnosticScreen({super.key});
@@ -22,6 +37,14 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
   int _lastEpgCount = -1;
   bool _statsInFlight = false;
   DateTime? _lastRefreshAt;
+  final List<_MatchEntry> _pageEntries = [];
+  int _pageOffset = 0;
+  bool _pageLoading = false;
+  bool _pageHasMore = true;
+  _MatchFilter _matchFilter = _MatchFilter.all;
+  String _pageSignature = '';
+  static const int _pageSize = 100;
+  static const int _scanChunkSize = 200;
 
   @override
   void initState() {
@@ -31,6 +54,14 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
 
   void _refreshStats() {
     if (_statsInFlight) return;
+    final epgService = context.read<IncrementalEpgService>();
+    final channelProvider = context.read<ChannelProvider>();
+    final isEpgBusy = epgService.isDownloading ||
+        epgService.isParsing ||
+        epgService.isLoading;
+    if (isEpgBusy || channelProvider.isLoading) {
+      return;
+    }
     final now = DateTime.now();
     if (_lastRefreshAt != null &&
         now.difference(_lastRefreshAt!).inMilliseconds < 750) {
@@ -39,6 +70,71 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
     _lastRefreshAt = now;
     setState(() {
       _statsFuture = _computeStats();
+    });
+  }
+
+  void _resetPagedMatches() {
+    _pageEntries.clear();
+    _pageOffset = 0;
+    _pageHasMore = true;
+    _pageLoading = false;
+  }
+
+  void _updatePageSignature(int channelCount, int epgCount) {
+    final signature = '$channelCount|$epgCount|${_matchFilter.name}';
+    if (_pageSignature == signature) return;
+    _pageSignature = signature;
+    setState(_resetPagedMatches);
+  }
+
+  Future<void> _loadNextMatchPage() async {
+    if (_pageLoading || !_pageHasMore) return;
+    final epgService = context.read<IncrementalEpgService>();
+    final channelProvider = context.read<ChannelProvider>();
+    final isEpgBusy = epgService.isDownloading ||
+        epgService.isParsing ||
+        epgService.isLoading;
+    if (isEpgBusy || channelProvider.isLoading) return;
+    setState(() => _pageLoading = true);
+
+    final totalChannels = channelProvider.channelCount;
+    final List<_MatchEntry> next = [];
+    var offset = _pageOffset;
+    var iterations = 0;
+
+    try {
+      while (next.length < _pageSize &&
+          offset < totalChannels &&
+          iterations < 5) {
+        final batch = await channelProvider.getChannelsPage(
+          offset: offset,
+          limit: _scanChunkSize,
+        );
+        if (batch.isEmpty) break;
+        offset += batch.length;
+        for (final channel in batch) {
+          final id = channel.tvgId ?? channel.id;
+          final matched =
+              epgService.hasEpgMatch(id, channelName: channel.name);
+          final passes = _matchFilter == _MatchFilter.all ||
+              (_matchFilter == _MatchFilter.matched && matched) ||
+              (_matchFilter == _MatchFilter.unmatched && !matched);
+          if (!passes) continue;
+          next.add(_MatchEntry(channel: channel, matched: matched, id: id));
+          if (next.length >= _pageSize) break;
+        }
+        iterations++;
+      }
+    } catch (e, st) {
+      debugLog('EPG Diagnostic: load page failed: $e\n$st');
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _pageEntries.addAll(next);
+      _pageOffset = offset;
+      _pageHasMore = _pageOffset < totalChannels;
+      _pageLoading = false;
     });
   }
 
@@ -80,21 +176,12 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
           'epgChannels': epgAvailable,
         };
       } else {
-        final sampleSize = math.min(120, totalChannels);
+        final sampleSize = math.min(200, totalChannels);
         try {
-          final sample = channelProvider.getChannelSampleMaps(sampleSize);
+          final sample =
+              channelProvider.getChannelSampleMapsByStride(sampleSize);
           if (sample.isNotEmpty) {
-            int matched = 0;
-            for (final map in sample) {
-              final tvgId = (map['tvgId'] as String?) ?? '';
-              final id = (map['id'] as String?) ?? '';
-              final name = (map['name'] as String?) ?? '';
-              final channelId = tvgId.trim().isNotEmpty ? tvgId : id;
-              if (channelId.isEmpty) continue;
-              if (epgService.hasEpgMatch(channelId, channelName: name)) {
-                matched++;
-              }
-            }
+            final matched = epgService.estimateMatchesFast(sample);
             mappingCount =
                 matched * (totalChannels ~/ (sample.isEmpty ? 1 : sample.length));
           }
@@ -146,6 +233,18 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
               epgService.isLoading;
           _maybeRefreshStats(
               totalChannels, epgCount, isEpgBusy, channelProvider.isLoading);
+          _updatePageSignature(totalChannels, epgCount);
+          if (_pageEntries.isEmpty &&
+              !_pageLoading &&
+              _pageHasMore &&
+              !isEpgBusy &&
+              !channelProvider.isLoading) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                _loadNextMatchPage();
+              }
+            });
+          }
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -371,6 +470,160 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                   '• Matching: we normalize IDs/names, strip regional suffixes (Manchester, Yorkshire, etc.), collapse plus-one variants, and convert number words ("ONE" -> 1) to improve hit rate.',
                   style: TextStyle(color: Colors.white70, height: 1.35),
                 ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Match Samples',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      'Loaded: ${_pageEntries.length}',
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ChoiceChip(
+                      label: const Text('All'),
+                      selected: _matchFilter == _MatchFilter.all,
+                      onSelected: (_) {
+                        setState(() {
+                          _matchFilter = _MatchFilter.all;
+                          _resetPagedMatches();
+                        });
+                      },
+                    ),
+                    ChoiceChip(
+                      label: const Text('Matched'),
+                      selected: _matchFilter == _MatchFilter.matched,
+                      onSelected: (_) {
+                        setState(() {
+                          _matchFilter = _MatchFilter.matched;
+                          _resetPagedMatches();
+                        });
+                      },
+                    ),
+                    ChoiceChip(
+                      label: const Text('Unmatched'),
+                      selected: _matchFilter == _MatchFilter.unmatched,
+                      onSelected: (_) {
+                        setState(() {
+                          _matchFilter = _MatchFilter.unmatched;
+                          _resetPagedMatches();
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (_pageEntries.isEmpty && _pageLoading)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
+                else if (_pageEntries.isEmpty)
+                  const Text(
+                    'No samples loaded yet.',
+                    style: TextStyle(color: Colors.white70),
+                  )
+                else
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _pageEntries.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final entry = _pageEntries[index];
+                      final statusColor =
+                          entry.matched ? Colors.green : Colors.orange;
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppTheme.cardBackground,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: statusColor.withAlpha(120),
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              entry.matched ? Icons.check_circle : Icons.error,
+                              color: statusColor,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    entry.channel.name,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'ID: ${entry.id}',
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  Text(
+                                    entry.matched
+                                        ? 'Matched'
+                                        : 'No match found',
+                                    style: TextStyle(
+                                      color: statusColor,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                const SizedBox(height: 12),
+                if (_pageLoading)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
+                else if (_pageHasMore)
+                  Center(
+                    child: ElevatedButton.icon(
+                      onPressed: _loadNextMatchPage,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Load more'),
+                    ),
+                  )
+                else
+                  const Center(
+                    child: Text(
+                      'No more results.',
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                  ),
               ],
             ),
           );

@@ -355,6 +355,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
+              autofocus: true,
               child: const Text('OK',
                   style: TextStyle(color: AppTheme.primaryBlue)),
             ),
@@ -463,6 +464,7 @@ class _PlaylistLoginScreenState extends State<PlaylistLoginScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
+            autofocus: true,
             child: const Text('Close'),
           ),
         ],
