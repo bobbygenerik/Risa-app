@@ -106,6 +106,8 @@ class _MoviesScreenState extends State<MoviesScreen>
   final Map<String, int> _genreDisplayCounts = {};
   final Map<String, int> _genrePrefetchCounts = {};
   final Map<String, int> _focusedIndexBySection = {};
+  final Map<String, int> _rowVisibleCountBySection = {};
+  static const int _rowVisibleBuffer = 2;
   static const int _itemsPerPage = 12;
   static const int _vodPageSize = 200;
   bool _isLoadingMore = false;
@@ -584,6 +586,32 @@ class _MoviesScreenState extends State<MoviesScreen>
     return KeyEventResult.ignored;
   }
 
+  int _initialRowVisibleCount(BuildContext context) {
+    final cardWidth = context.cardWidth();
+    final inset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
+    final available =
+        MediaQuery.of(context).size.width - inset - context.spacingLg();
+    final perRow = (available / (cardWidth + context.cardGap())).floor();
+    return (perRow + _rowVisibleBuffer).clamp(6, 12);
+  }
+
+  int _rowVisibleCountFor(BuildContext context, String sectionKey) {
+    return _rowVisibleCountBySection.putIfAbsent(
+      sectionKey,
+      () => _initialRowVisibleCount(context),
+    );
+  }
+
+  void _bumpRowVisibleCount(
+      BuildContext context, String sectionKey, int totalCount, int index) {
+    final current = _rowVisibleCountFor(context, sectionKey);
+    if (index < current - 2) return;
+    final next = (current + _rowVisibleBuffer).clamp(0, totalCount);
+    if (next != current && mounted) {
+      setState(() => _rowVisibleCountBySection[sectionKey] = next);
+    }
+  }
+
   Widget _buildMoviesRow(
     BuildContext context,
     List<Content> movies, {
@@ -598,6 +626,11 @@ class _MoviesScreenState extends State<MoviesScreen>
     final inset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
     final cardHeight = context.cardHeight();
     final rowHeight = context.rowHeight() + (cardHeight * (cardFocusScale - 1));
+    final effectiveSectionKey = sectionKey;
+    final visibleCount = effectiveSectionKey != null
+        ? _rowVisibleCountFor(context, effectiveSectionKey)
+        : movies.length;
+    final effectiveItemCount = min(movies.length, visibleCount);
 
     return SizedBox(
       height: rowHeight,
@@ -607,6 +640,10 @@ class _MoviesScreenState extends State<MoviesScreen>
           final remaining = notification.metrics.maxScrollExtent -
               notification.metrics.pixels;
           if (remaining < context.cardGap() * 6) {
+            if (effectiveSectionKey != null) {
+              _bumpRowVisibleCount(
+                  context, effectiveSectionKey, movies.length, movies.length - 1);
+            }
             onNearEnd?.call();
           }
           return false;
@@ -615,7 +652,7 @@ class _MoviesScreenState extends State<MoviesScreen>
           scrollDirection: Axis.horizontal,
           padding: EdgeInsets.only(left: inset, right: context.spacingLg()),
           clipBehavior: Clip.none,
-          itemCount: movies.length,
+          itemCount: effectiveItemCount,
           itemBuilder: (context, index) {
             final allowPrefetch = sectionKey == null
                 ? true
@@ -624,7 +661,13 @@ class _MoviesScreenState extends State<MoviesScreen>
               context,
               movies[index],
               index,
-              onItemFocus: onItemFocus,
+              onItemFocus: (focusedIndex) {
+                if (effectiveSectionKey != null) {
+                  _bumpRowVisibleCount(
+                      context, effectiveSectionKey, movies.length, focusedIndex);
+                }
+                onItemFocus?.call(focusedIndex);
+              },
               allowPrefetch: allowPrefetch,
               focusNode: index == 0 ? firstCardFocusNode : null,
             );

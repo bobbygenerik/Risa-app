@@ -273,11 +273,18 @@ class _EpgDiagnosticScreenState extends State<EpgDiagnosticScreen> {
                           _refreshStats();
                           rootScaffoldMessengerKey.currentState?.showSnackBar(
                               const SnackBar(
-                                  content: Text('EPG reload requested')));
+                                content: Text('EPG reload requested'),
+                                backgroundColor: Color(0xFF1E2328),
+                                behavior: SnackBarBehavior.floating,
+                              ));
                         } catch (e) {
                           await _writeDebugMarker('epg_reload_failed');
                           rootScaffoldMessengerKey.currentState?.showSnackBar(
-                              SnackBar(content: Text('EPG reload failed: $e')));
+                              SnackBar(
+                                content: Text('EPG reload failed: $e'),
+                                backgroundColor: const Color(0xFF1E2328),
+                                behavior: SnackBarBehavior.floating,
+                              ));
                         }
                       },
                       icon: const Icon(Icons.refresh, size: 16),

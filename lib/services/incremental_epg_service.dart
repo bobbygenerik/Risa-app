@@ -23,8 +23,6 @@ class IncrementalEpgService extends ChangeNotifier {
   final Set<String> _availableChannels = {};
   final Set<String> _loadedChannels = {};
   final Map<String, String> _internalToEpgIdMapping = {};
-  final Map<String, String> _pendingEpgMappings = {};
-  Timer? _mappingFlushTimer;
   Map<String, String>?
       _normalizedAvailableChannels; // normalizedId -> originalId
   bool _isLoading = false;
@@ -351,13 +349,8 @@ class IncrementalEpgService extends ChangeNotifier {
 
   void _queueMappingPersist(String channelId, String epgId) {
     if (channelId.isEmpty || epgId.isEmpty) return;
-    _pendingEpgMappings[channelId] = epgId;
-    _mappingFlushTimer?.cancel();
-    _mappingFlushTimer = Timer(const Duration(seconds: 1), () {
-      final snapshot = Map<String, String>.from(_pendingEpgMappings);
-      _pendingEpgMappings.clear();
-      unawaited(_db.upsertEpgMapping(snapshot));
-    });
+    if (_dbDisabled || !_db.isReady) return;
+    unawaited(_db.upsertEpgMapping({channelId: epgId}));
   }
 
   String _cacheResolvedMapping(String channelId, String epgId) {
