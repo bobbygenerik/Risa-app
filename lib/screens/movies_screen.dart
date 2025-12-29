@@ -109,6 +109,7 @@ class _MoviesScreenState extends State<MoviesScreen>
   static const int _itemsPerPage = 12;
   static const int _vodPageSize = 200;
   bool _isLoadingMore = false;
+  bool _vodRetryRequested = false;
 
   @override
   void dispose() {
@@ -413,12 +414,27 @@ class _MoviesScreenState extends State<MoviesScreen>
           return _buildSkeletonLoader();
         }
 
+        if (movies.isEmpty && channelProvider.moviesCount > 0) {
+          if (!_vodRetryRequested) {
+            _vodRetryRequested = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              Provider.of<ChannelProvider>(context, listen: false)
+                  .ensureVodLoaded();
+            });
+          }
+          return _buildSkeletonLoader();
+        }
+
         if (movies.isEmpty) {
           return _wrapWithDirectionalFocus(_buildEmptyState(context));
         }
 
         final displayMovies =
             _curatedMovies.isNotEmpty ? _curatedMovies : movies;
+        if (_vodRetryRequested) {
+          _vodRetryRequested = false;
+        }
         if (_featuredIndex >= displayMovies.length) _featuredIndex = 0;
         final featured = displayMovies[_featuredIndex];
         unawaited(_ensureHeroDetails(featured));

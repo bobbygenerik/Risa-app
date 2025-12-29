@@ -113,6 +113,7 @@ class _SeriesScreenState extends State<SeriesScreen>
   static const int _itemsPerPage = 12;
   static const int _vodPageSize = 200;
   bool _isLoadingMore = false;
+  bool _vodRetryRequested = false;
 
   @override
   void dispose() {
@@ -515,12 +516,27 @@ class _SeriesScreenState extends State<SeriesScreen>
           return _buildSkeletonLoader();
         }
 
+        if (series.isEmpty && channelProvider.seriesCount > 0) {
+          if (!_vodRetryRequested) {
+            _vodRetryRequested = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              Provider.of<ChannelProvider>(context, listen: false)
+                  .ensureVodLoaded();
+            });
+          }
+          return _buildSkeletonLoader();
+        }
+
         if (series.isEmpty) {
           return _wrapWithDirectionalFocus(_buildEmptyState(context));
         }
 
         final displaySeries =
             _curatedSeries.isNotEmpty ? _curatedSeries : series;
+        if (_vodRetryRequested) {
+          _vodRetryRequested = false;
+        }
         if (_featuredIndex >= displaySeries.length) _featuredIndex = 0;
         final featured = displaySeries[_featuredIndex];
         unawaited(_ensureHeroDetails(featured));

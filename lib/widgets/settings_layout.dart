@@ -120,7 +120,12 @@ class _SettingsLayoutState extends State<SettingsLayout> {
                     children: [
                       // App Branding / Header (aligned with main sidebar top)
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 8, 16, 0),
+                        padding: EdgeInsets.fromLTRB(
+                          24,
+                          context.spacingLg(),
+                          16,
+                          0,
+                        ),
                         child: Text(
                           'Settings',
                           style:
@@ -136,9 +141,9 @@ class _SettingsLayoutState extends State<SettingsLayout> {
                       Expanded(
                         child: ListView.builder(
                           itemCount: widget.categories.length,
-                          padding: const EdgeInsets.symmetric(
+                          padding: EdgeInsets.symmetric(
                             horizontal: 24,
-                            vertical: 16,
+                            vertical: context.spacingSm(),
                           ),
                           itemBuilder: (context, index) {
                             return _buildMenuItem(index);

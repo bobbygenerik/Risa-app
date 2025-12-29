@@ -18,8 +18,6 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformView
 import androidx.media3.common.C
-import androidx.media3.common.TrackSelectionOverride
-import androidx.media3.common.TrackSelectionOverrides
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 
 @UnstableApi
@@ -373,23 +371,20 @@ class ExoPlayerView(
                     result.success(mapOf("success" to false, "message" to "invalid_track"))
                     return
                 }
-                val override = TrackSelectionOverride(mediaGroup, listOf(trackIndex))
-                val overridesBuilder = TrackSelectionOverrides.Builder(trackSelector.parameters.trackSelectionOverrides)
-                overridesBuilder.clearOverridesOfType(C.TRACK_TYPE_TEXT)
-                overridesBuilder.addOverride(override)
-                trackSelector.parameters = trackSelector.buildUponParameters()
+                val selectedFormat = mediaGroup.getFormat(trackIndex)
+                val preferredLanguage = selectedFormat.language
+                val builder = trackSelector.buildUponParameters()
                     .setRendererDisabled(C.TRACK_TYPE_TEXT, false)
-                    .setTrackSelectionOverrides(overridesBuilder.build())
-                    .build()
+                if (!preferredLanguage.isNullOrEmpty()) {
+                    builder.setPreferredTextLanguage(preferredLanguage)
+                }
+                trackSelector.parameters = builder.build()
                 result.success(mapOf("success" to true))
             }
             "disableSubtitles" -> {
-                val overridesBuilder = TrackSelectionOverrides.Builder(trackSelector.parameters.trackSelectionOverrides)
-                overridesBuilder.clearOverridesOfType(C.TRACK_TYPE_TEXT)
-                trackSelector.parameters = trackSelector.buildUponParameters()
+                val builder = trackSelector.buildUponParameters()
                     .setRendererDisabled(C.TRACK_TYPE_TEXT, true)
-                    .setTrackSelectionOverrides(overridesBuilder.build())
-                    .build()
+                trackSelector.parameters = builder.build()
                 result.success(mapOf("success" to true))
             }
             "setVolume" -> {

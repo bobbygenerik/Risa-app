@@ -273,6 +273,21 @@ class LocalDbService {
     return rows.map(_hydrateAttrs).toList();
   }
 
+  Future<List<Map<String, dynamic>>> getChannelIdentifiersPage(
+      {int offset = 0, int limit = 1000}) async {
+    final safeLimit = limit.clamp(0, 2000);
+    final rows = await _withDbRead((db) {
+      return db.query(
+        'channels',
+        columns: const ['id', 'tvgId', 'name'],
+        orderBy: 'idx ASC',
+        limit: safeLimit,
+        offset: offset,
+      );
+    });
+    return rows;
+  }
+
   Future<List<String>> getCategories({int? limit}) async {
     final query = StringBuffer(
         'SELECT DISTINCT groupTitle FROM channels WHERE groupTitle IS NOT NULL ORDER BY groupTitle');

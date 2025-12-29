@@ -418,7 +418,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             builder: (context, snapshot) {
               final previewList = snapshot.data ?? channelProvider.channels;
               if (previewList.isEmpty) {
-                return _buildSkeletonLoader();
+                if (channelProvider.isLoading) {
+                  return _buildSkeletonLoader();
+                }
+                return _buildStalledLoaderState(context);
               }
               if (_featuredIndex >= previewList.length) _featuredIndex = 0;
               if (_featuredIndex == 0 && previewList.isNotEmpty) {
@@ -1641,6 +1644,42 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             ),
           )
         : _buildDefaultHeroBackground();
+  }
+
+  Widget _buildStalledLoaderState(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: context.spacingXl()),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            context.iconXxl(
+              AppIcons.liveTV,
+              color: AppTheme.primaryBlue.withAlpha((0.5 * 255).round()),
+            ),
+            SizedBox(height: context.tvSpacing(20)),
+            Text(
+              'Still loading channels',
+              style: Theme.of(context).textTheme.headlineSmall,
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: context.tvSpacing(8)),
+            Text(
+              'Your playlist is taking longer than expected. You can re-open Settings to refresh.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.textSecondary,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: context.tvSpacing(20)),
+            GoToSettingsButton(
+              onPressed: _goToSettings,
+              focusNode: _settingsButtonFocus,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildSkeletonLoader() {

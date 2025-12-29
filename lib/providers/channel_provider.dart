@@ -184,6 +184,7 @@ class ChannelProvider with ChangeNotifier {
   String? _xtreamLiveMetadataKey;
   bool _epgRefreshPending = false;
   String? _channelsJsonlPath;
+  bool _epgAllowedChannelsFromDbInFlight = false;
   final LocalDbService _db = LocalDbService.instance;
   String? _extractStreamIdFromUrl(String url) {
     if (url.isEmpty) return null;
@@ -324,7 +325,10 @@ class ChannelProvider with ChangeNotifier {
   void _updateEpgAllowedChannels() {
     final service = _epgService;
     if (service == null) return;
-    if (_channelMaps.isEmpty) return;
+    if (_channelMaps.isEmpty) {
+      unawaited(_loadAllowedChannelsFromDb());
+      return;
+    }
     final allowed = <String>{};
     for (final map in _channelMaps) {
       final tvgId = (map['tvgId'] as String?) ?? '';
@@ -341,6 +345,48 @@ class ChannelProvider with ChangeNotifier {
       }
     }
     service.setAllowedChannelIds(allowed, triggerRefresh: true);
+  }
+
+  Future<void> _loadAllowedChannelsFromDb() async {
+    if (!_dbReady || _epgAllowedChannelsFromDbInFlight) return;
+    _epgAllowedChannelsFromDbInFlight = true;
+    try {
+      final service = _epgService;
+      if (service == null) return;
+      final allowed = <String>{};
+      const int pageSize = 1000;
+      int offset = 0;
+      while (true) {
+        final rows = await _db.getChannelIdentifiersPage(
+          offset: offset,
+          limit: pageSize,
+        );
+        if (rows.isEmpty) break;
+        for (final row in rows) {
+          final tvgId = (row['tvgId'] as String?) ?? '';
+          final id = (row['id'] as String?) ?? '';
+          final name = (row['name'] as String?) ?? '';
+          if (tvgId.isNotEmpty) {
+            allowed.add(IncrementalEpgService.normalizeForFilter(tvgId));
+          }
+          if (id.isNotEmpty) {
+            allowed.add(IncrementalEpgService.normalizeForFilter(id));
+          }
+          if (name.isNotEmpty) {
+            allowed.add(IncrementalEpgService.normalizeForFilter(name));
+          }
+        }
+        if (rows.length < pageSize) break;
+        offset += pageSize;
+      }
+      if (allowed.isNotEmpty) {
+        service.setAllowedChannelIds(allowed, triggerRefresh: true);
+      }
+    } catch (e) {
+      debugLog('ChannelProvider: Failed to load EPG allowed channels from DB: $e');
+    } finally {
+      _epgAllowedChannelsFromDbInFlight = false;
+    }
   }
 
   Future<Map<String, Map<String, String>>> _loadXtreamEpgMap() async {
@@ -946,7 +992,13 @@ class ChannelProvider with ChangeNotifier {
 
         _moviesCount = await _db.movieCount();
         _seriesCount = await _db.seriesCount();
-      } else {
+      }
+
+      final shouldFallbackToCache = (movies.isEmpty && series.isEmpty) &&
+          _moviesCachePath != null &&
+          _seriesCachePath != null;
+
+      if (!_dbReady || shouldFallbackToCache) {
         // Offload heavy JSON decoding to an isolate and cap in-memory hydration
         final result = await compute(_parseVodCachesInIsolate, {
           'moviesPath': _moviesCachePath!,
@@ -1183,7 +1235,11 @@ class ChannelProvider with ChangeNotifier {
   Future<int> getChannelCountAsync() async {
     if (_dbReady) {
       try {
-        _channelCountDb = await _db.channelCount();
+        final dbCount = await _db.channelCount();
+        _channelCountDb = dbCount;
+        if (_channelMaps.isNotEmpty && _channelCountDb < _channelMaps.length) {
+          _channelCountDb = _channelMaps.length;
+        }
         return _channelCountDb;
       } catch (e) {
         debugLog('ChannelProvider: DB channel count failed: $e');
@@ -1196,7 +1252,14 @@ class ChannelProvider with ChangeNotifier {
   Future<int> getMoviesCountAsync() async {
     if (_dbReady) {
       try {
-        _moviesCount = await _db.movieCount();
+        final dbCount = await _db.movieCount();
+        if (dbCount > _moviesCount) {
+          _moviesCount = dbCount;
+        }
+        final contentCount = _contentProvider?.movies.length ?? 0;
+        if (contentCount > _moviesCount) {
+          _moviesCount = contentCount;
+        }
         return _moviesCount;
       } catch (e) {
         debugLog('ChannelProvider: DB movie count failed: $e');
@@ -1209,7 +1272,14 @@ class ChannelProvider with ChangeNotifier {
   Future<int> getSeriesCountAsync() async {
     if (_dbReady) {
       try {
-        _seriesCount = await _db.seriesCount();
+        final dbCount = await _db.seriesCount();
+        if (dbCount > _seriesCount) {
+          _seriesCount = dbCount;
+        }
+        final contentCount = _contentProvider?.series.length ?? 0;
+        if (contentCount > _seriesCount) {
+          _seriesCount = contentCount;
+        }
         return _seriesCount;
       } catch (e) {
         debugLog('ChannelProvider: DB series count failed: $e');
@@ -1232,7 +1302,14 @@ class ChannelProvider with ChangeNotifier {
       try {
         final rows =
             await _db.getChannelsPage(offset: offset, limit: limit);
-        return rows.map((m) => Channel.fromMap(m)).toList();
+        if (rows.isNotEmpty) {
+          return rows.map((m) => Channel.fromMap(m)).toList();
+        }
+        if (_channelMaps.isNotEmpty) {
+          final slice = _channelMaps.skip(offset).take(limit).toList();
+          return slice.map((m) => Channel.fromMap(m)).toList();
+        }
+        return const [];
       } catch (e) {
         debugLog('ChannelProvider: DB channel page failed: $e');
         _recoverReadOnlyDb(e);
@@ -2698,7 +2775,13 @@ class ChannelProvider with ChangeNotifier {
       try {
         final rows = await _db.getChannelsForCategoryPage(category,
             offset: offset, limit: limit);
-        return rows.map((m) => Channel.fromMap(m)).toList();
+        if (rows.isNotEmpty) {
+          return rows.map((m) => Channel.fromMap(m)).toList();
+        }
+        if (_channelMaps.isNotEmpty) {
+          return filterByCategory(category, offset: offset, limit: limit);
+        }
+        return const [];
       } catch (e) {
         debugLog('ChannelProvider: DB category page failed: $e');
         _recoverReadOnlyDb(e);
@@ -2984,6 +3067,11 @@ class ChannelProvider with ChangeNotifier {
     try {
       if (_dbReady) {
         _cachedCategories = await _db.getCategories();
+        if ((_cachedCategories?.isEmpty ?? true) && _channelMaps.isNotEmpty) {
+          final groupTitles = _getCategoryTitleCache();
+          _cachedCategories =
+              await compute(_extractCategoriesInIsolate, groupTitles);
+        }
         debugLog(
             'ChannelProvider: Loaded ${_cachedCategories!.length} categories from DB');
       } else {
