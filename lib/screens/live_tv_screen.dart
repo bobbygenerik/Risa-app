@@ -497,6 +497,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       ),
       builder: (context, snapshot) {
         final currentProgram = snapshot.data;
+        if (snapshot.connectionState != ConnectionState.done ||
+            currentProgram == null) {
+          return _buildSkeletonLoader();
+        }
         final heroImage = _resolveHeroImage(currentProgram);
         if (heroImage == null || heroImage.isEmpty) {
           _skipHeroWithNoImage(allChannels);
@@ -722,55 +726,54 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         : '';
     final progress = program?.progressPercentage ?? 0.0;
 
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: 0,
-        vertical: context.spacingLg(),
+    final maxBoxHeight = MediaQuery.of(context).size.height * 0.4;
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: context.heroInfoWidth(),
+        maxHeight: maxBoxHeight,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Title - flexible height with max limit
-          Text(
-            title,
-            style: AppTypography.heroTitle(context),
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-          ),
-          SizedBox(height: context.tvSpacing(8)),
-          // Description - flexible height with max limit
-          if (description.isNotEmpty) ...[
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: 0,
+          vertical: context.spacingLg(),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Text(
-              description,
-              style: AppTypography.heroDescription(context),
+              title,
+              style: AppTypography.heroTitle(context),
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
             ),
             SizedBox(height: context.tvSpacing(8)),
-          ],
-          // Progress bar - fixed height
-          SizedBox(
-            height: 6,
-            child: program != null
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      backgroundColor: AppColors.progressBackground,
-                      color: AppColors.progressForeground,
-                      minHeight: 6,
-                    ),
-                  )
-                : Container(),
-          ),
-          SizedBox(height: context.tvSpacing(4)),
-          // Time range with LIVE badge - flexible height
-          Container(
-            constraints: BoxConstraints(
-              maxHeight: context.tvTextSize(13) * 1.5,
+            if (description.isNotEmpty) ...[
+              Flexible(
+                child: Text(
+                  description,
+                  style: AppTypography.heroDescription(context),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              SizedBox(height: context.tvSpacing(8)),
+            ],
+            SizedBox(
+              height: 6,
+              child: program != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        backgroundColor: AppColors.progressBackground,
+                        color: AppColors.progressForeground,
+                        minHeight: 6,
+                      ),
+                    )
+                  : const SizedBox.shrink(),
             ),
-            child: Row(
+            SizedBox(height: context.tvSpacing(4)),
+            Row(
               children: [
                 if (program != null) ...[
                   const BrandBadge.live(),
@@ -786,41 +789,41 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 16),
-          Focus(
-            autofocus: true,
-            onKeyEvent: (node, event) {
-              if (event is KeyDownEvent) {
-                if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-                  _nextHero();
-                  return KeyEventResult.handled;
+            const SizedBox(height: 16),
+            Focus(
+              autofocus: true,
+              onKeyEvent: (node, event) {
+                if (event is KeyDownEvent) {
+                  if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                    _nextHero();
+                    return KeyEventResult.handled;
+                  }
+                  if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                    _prevHero();
+                    return KeyEventResult.handled;
+                  }
+                  if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                    _firstChannelFocus.requestFocus();
+                    return KeyEventResult.handled;
+                  }
                 }
-                if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                  _prevHero();
-                  return KeyEventResult.handled;
-                }
-                if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                  _firstChannelFocus.requestFocus();
-                  return KeyEventResult.handled;
-                }
-              }
-              return KeyEventResult.ignored;
-            },
-            child: SizedBox(
-              width: context.cardWidth() * 0.5,
-              child: BrandPrimaryButton(
-                onPressed: () => context.push('/player', extra: channel),
-                label: 'Watch',
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                fontSize: 12,
-                minHeight: 24,
-                focusNode: _watchButtonFocus,
+                return KeyEventResult.ignored;
+              },
+              child: SizedBox(
+                width: context.cardWidth() * 0.5,
+                child: BrandPrimaryButton(
+                  onPressed: () => context.push('/player', extra: channel),
+                  label: 'Watch',
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  fontSize: 12,
+                  minHeight: 24,
+                  focusNode: _watchButtonFocus,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -935,30 +938,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       final direct = program.imageUrl;
       if (direct != null && direct.isNotEmpty && !_isLikelyPosterUrl(direct)) {
         return direct;
-      }
-    }
-
-    // Fallback: try channel-based artwork if no program or program has no image.
-    final channel = _getCurrentFeaturedChannel();
-    if (channel != null) {
-      final channelKey = 'channel_${channel.id}';
-      final cachedChannelArt = _programArtwork[channelKey];
-      if (cachedChannelArt != null &&
-          cachedChannelArt.isNotEmpty &&
-          !_isLikelyPosterUrl(cachedChannelArt)) {
-        return cachedChannelArt;
-      }
-
-      // Fetch TMDB artwork based on channel name if enabled and not already fetching
-      if (_tmdbEnabled && !_artworkRequests.contains(channelKey)) {
-        _fetchChannelArtwork(channel);
-      }
-
-      // Final fallback to channel logo if nothing else exists.
-      if (channel.logoUrl != null &&
-          channel.logoUrl!.isNotEmpty &&
-          !_isLikelyPosterUrl(channel.logoUrl!)) {
-        return channel.logoUrl;
       }
     }
 

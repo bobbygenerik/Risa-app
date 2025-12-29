@@ -109,6 +109,12 @@ class IncrementalEpgService extends ChangeNotifier {
 
   String _normalizeEpgUrl(String input) {
     var url = input.trim();
+    url = url.replaceAll('\uFEFF', '');
+    url = url.replaceAll(RegExp(r'^[\'"]+|[\'"]+$'), '');
+    final httpIndex = url.indexOf(RegExp(r'https?://', caseSensitive: false));
+    if (httpIndex > 0) {
+      url = url.substring(httpIndex);
+    }
     if (url.startsWith('//')) {
       url = 'https:$url';
     }
