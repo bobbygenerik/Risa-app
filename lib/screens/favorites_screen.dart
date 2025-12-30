@@ -195,7 +195,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(AppSizes.radiusMd),
                 border: isFocused
-                    ? Border.all(color: AppTheme.primaryBlue, width: 3)
+                    ? Border.all(color: AppTheme.focusBorder, width: 3)
                     : null,
               ),
               child: Card(

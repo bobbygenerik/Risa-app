@@ -455,7 +455,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                   color: AppTheme.cardBackground,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
                   border: isFocused
-                      ? Border.all(color: AppTheme.primaryBlue, width: 2)
+                      ? Border.all(color: AppTheme.focusBorder, width: 2)
                       : null,
                   boxShadow: isFocused
                       ? [
@@ -652,7 +652,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                   color: AppTheme.cardBackground,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
                   border: isFocused
-                      ? Border.all(color: AppTheme.primaryBlue, width: 2)
+                      ? Border.all(color: AppTheme.focusBorder, width: 2)
                       : null,
                   boxShadow: isFocused
                       ? [

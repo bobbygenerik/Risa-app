@@ -505,7 +505,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               border: isFocused
-                  ? Border.all(color: AppTheme.primaryBlue, width: 2)
+                  ? Border.all(color: AppTheme.focusBorder, width: 2)
                   : null,
             ),
             child: ListTile(

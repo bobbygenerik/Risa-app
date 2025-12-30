@@ -141,7 +141,7 @@ class EPGChannelItem extends StatelessWidget {
                 color: const Color(0xFF2a2a3e).withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(8),
                 border: isFocused
-                    ? Border.all(color: AppTheme.primaryBlue, width: 2)
+                    ? Border.all(color: AppTheme.focusBorder, width: 2)
                     : Border.all(
                         color: Colors.white.withValues(alpha: 0.1), width: 1),
                 // Optimization: No shadow here
@@ -387,7 +387,7 @@ class EPGProgramCell extends StatelessWidget {
                       : const Color(0xFF2a2a3e).withValues(alpha: 0.6),
               borderRadius: BorderRadius.circular(8),
               border: isFocused
-                  ? Border.all(color: AppTheme.primaryBlue, width: 2)
+                  ? Border.all(color: AppTheme.focusBorder, width: 2)
                   : Border.all(
                       color: Colors.white.withValues(alpha: 0.1), width: 1),
             ),

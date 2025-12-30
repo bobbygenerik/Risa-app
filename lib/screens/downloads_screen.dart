@@ -318,7 +318,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
               color: AppTheme.cardBackground,
               borderRadius: BorderRadius.circular(AppSizes.radiusMd),
               border: isFocused
-                  ? Border.all(color: AppTheme.primaryBlue, width: 2)
+                  ? Border.all(color: AppTheme.focusBorder, width: 2)
                   : null,
             ),
             child: ListTile(

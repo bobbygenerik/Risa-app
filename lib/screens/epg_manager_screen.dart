@@ -444,7 +444,7 @@ class _EpgManagerScreenState extends State<EpgManagerScreen> {
       decoration: BoxDecoration(
         color: AppTheme.primaryBlue.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.3)),
+        border: Border.all(color: AppTheme.focusBorder.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [

@@ -57,7 +57,7 @@ class BrandCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(
                       borderRadius ?? context.tvSpacing(12)),
                   border: isFocused
-                      ? Border.all(color: AppTheme.primaryBlue, width: 3)
+                      ? Border.all(color: AppTheme.focusBorder, width: 3)
                       : null,
                   boxShadow: isFocused
                       ? [

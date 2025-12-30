@@ -43,7 +43,7 @@ class TVFocusHelper {
           return AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 200),
             style: TextStyle(
-              color: isFocused ? AppTheme.primaryBlue : null,
+              color: isFocused ? AppTheme.focusBorder : null,
               fontWeight: isFocused ? FontWeight.bold : FontWeight.normal,
             ),
             child: child,
@@ -115,7 +115,7 @@ class TVFocusHelper {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
                 side: isFocused
-                    ? const BorderSide(color: AppTheme.primaryBlue, width: 3)
+                    ? const BorderSide(color: AppTheme.focusBorder, width: 3)
                     : BorderSide.none,
               ),
             ),

@@ -7,7 +7,7 @@ class TVFocusStyle {
   static const Duration animationDuration = Duration(milliseconds: 150);
   static const Curve animationCurve = Curves.easeOutCubic;
   static const Color glowColor = Color(0x60FFFFFF); // Increased opacity
-  static const Color focusRingColor = AppTheme.primaryBlue;
+  static const Color focusRingColor = AppTheme.focusBorder;
 
   static List<BoxShadow> get focusedShadow => [
         BoxShadow(

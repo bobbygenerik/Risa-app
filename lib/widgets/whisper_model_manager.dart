@@ -89,7 +89,7 @@ class _WhisperModelManagerState extends State<WhisperModelManager> {
         color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(8),
         border: isSelected
-            ? Border.all(color: AppTheme.primaryBlue, width: 1)
+            ? Border.all(color: AppTheme.focusBorder, width: 1)
             : null,
       ),
       child: ListTile(

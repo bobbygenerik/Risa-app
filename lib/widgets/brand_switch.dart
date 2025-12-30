@@ -39,7 +39,7 @@ class BrandSwitchTile extends StatelessWidget {
                   ? Colors.white.withValues(alpha: 0.2)
                   : Colors.transparent,
               border: isFocused
-                  ? Border.all(color: AppTheme.primaryBlue, width: 2)
+                  ? Border.all(color: AppTheme.focusBorder, width: 2)
                   : null,
               borderRadius: BorderRadius.circular(4),
             ),

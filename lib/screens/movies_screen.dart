@@ -743,7 +743,7 @@ class _MoviesScreenState extends State<MoviesScreen>
                         borderRadius: BorderRadius.circular(12),
                         color: AppTheme.cardBackground,
                         border: isFocused
-                            ? Border.all(color: AppTheme.primaryBlue, width: 3)
+                            ? Border.all(color: AppTheme.focusBorder, width: 3)
                             : null,
                         boxShadow: isFocused
                             ? TVFocusStyle.focusedShadow
