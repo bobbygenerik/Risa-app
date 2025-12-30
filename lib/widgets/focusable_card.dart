@@ -15,7 +15,7 @@ class FocusableCard extends StatefulWidget {
     this.onTap,
     required this.child,
     this.borderRadius = AppSizes.radiusLg,
-    this.focusBorderColor = AppTheme.primaryBlue,
+    this.focusBorderColor = AppTheme.focusBorder,
     this.idleBorderColor = Colors.transparent,
     this.focusBorderWidth = 4,
     this.idleBorderWidth = 4,

@@ -30,6 +30,18 @@ import 'package:iptv_player/services/timer_service.dart';
 import 'package:iptv_player/services/focus_pool_service.dart';
 import 'package:iptv_player/widgets/shimmer.dart';
 
+class _HeroCandidate {
+  final Channel channel;
+  final Program program;
+  final String heroImage;
+
+  const _HeroCandidate({
+    required this.channel,
+    required this.program,
+    required this.heroImage,
+  });
+}
+
 /// A focused Live TV screen. Shows a hero for the currently airing program
 /// on a featured channel, plus channel rows below.
 class LiveTVScreen extends StatefulWidget {
@@ -86,8 +98,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   final Map<String, int> _categoryOffsets = {};
   final Map<String, bool> _categoryHasMore = {};
   final Set<String> _categoryAppendQueue = {};
-  int _heroImageSkipCount = 0;
-  bool _heroSkipScheduled = false;
+  bool _userHasScrolled = false;
+  int _lastCategoryChannelCount = 0;
+  int _lastHeroCandidateCount = 0;
 
   bool _categoryPrefetchRequested = false;
 
@@ -144,32 +157,37 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     unawaited(_prefetchInitialRows());
   }
 
-  bool _isInitialContentReady() {
-    if (_categoryNames.isEmpty) return false;
-    final firstCategory = _categoryNames.first;
-    final channels = _categoryChannelCache[firstCategory];
-    return channels != null && channels.isNotEmpty;
+  void _maybeRefreshCategories(int channelCount) {
+    if (channelCount <= 0) return;
+    if (_categoryNames.isNotEmpty) return;
+    if (_loadingCategories) return;
+    if (_categoryPrefetchRequested &&
+        channelCount == _lastCategoryChannelCount) {
+      return;
+    }
+    _lastCategoryChannelCount = channelCount;
+    _categoryPrefetchRequested = false;
+    _requestCategoryPrefetch();
   }
 
   int _initialRowVisibleCount(
       BuildContext context, double cardWidth, double rowInset) {
     final screenWidth = MediaQuery.of(context).size.width;
     final availableWidth = screenWidth - rowInset - context.spacingLg();
-    final perRow =
-        (availableWidth / (cardWidth + context.cardGap())).floor();
+    final perRow = (availableWidth / (cardWidth + context.cardGap())).floor();
     return (perRow + _rowVisibleBuffer).clamp(6, 12);
   }
 
-  int _rowVisibleCountFor(
-      BuildContext context, String sectionKey, double cardWidth, double rowInset) {
+  int _rowVisibleCountFor(BuildContext context, String sectionKey,
+      double cardWidth, double rowInset) {
     return _rowVisibleCountBySection.putIfAbsent(
       sectionKey,
       () => _initialRowVisibleCount(context, cardWidth, rowInset),
     );
   }
 
-  void _bumpRowVisibleCount(
-      String sectionKey, int totalCount, int index, double cardWidth, double rowInset) {
+  void _bumpRowVisibleCount(String sectionKey, int totalCount, int index,
+      double cardWidth, double rowInset) {
     final current =
         _rowVisibleCountFor(context, sectionKey, cardWidth, rowInset);
     if (index < current - 2) return;
@@ -188,6 +206,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   void _handleScrollPrefetch() {
     if (!_scrollController.hasClients || _categoryNames.isEmpty) return;
+    if (_scrollController.position.isScrollingNotifier.value) {
+      _userHasScrolled = true;
+    }
     final heroHeight = context.heroHeight();
     final cardPeek = context.spacingXl();
     final contentTop = (heroHeight - cardPeek).clamp(0.0, heroHeight);
@@ -392,6 +413,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   void _scrollToHeroPeekOnFocus() {
+    if (!_userHasScrolled) return;
     if (!mounted || !_scrollController.hasClients) return;
     final heroHeight = context.heroHeight();
     final targetOffset = heroHeight * 0.2;
@@ -417,9 +439,12 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       listen: false,
     );
     if (!channelProvider.hasChannels) return;
+    final heroCount =
+        _lastHeroCandidateCount > 0 ? _lastHeroCandidateCount : null;
     setState(() {
-      // Simply cycle to next channel without EPG dependency
-      _featuredIndex = (_featuredIndex + 1) % channelProvider.channelCount;
+      // Cycle through ready hero candidates when available.
+      final divisor = heroCount ?? channelProvider.channelCount;
+      _featuredIndex = (_featuredIndex + 1) % divisor;
     });
   }
 
@@ -429,9 +454,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       listen: false,
     );
     if (!channelProvider.hasChannels) return;
+    final heroCount =
+        _lastHeroCandidateCount > 0 ? _lastHeroCandidateCount : null;
     setState(() {
-      _featuredIndex = (_featuredIndex - 1 + channelProvider.channelCount) %
-          channelProvider.channelCount;
+      final divisor = heroCount ?? channelProvider.channelCount;
+      _featuredIndex = (_featuredIndex - 1 + divisor) % divisor;
     });
   }
 
@@ -489,10 +516,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           }
 
           _requestCategoryPrefetch();
-          if (_loadingCategories || !_isInitialContentReady()) {
-            return _buildSkeletonLoader();
-          }
-
+          _maybeRefreshCategories(channelProvider.channelCount);
           final previewCount = channelProvider.channelCount;
           if (_previewFuture == null ||
               _lastPreviewChannelCount != previewCount) {
@@ -535,6 +559,22 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
+  Widget _buildFeaturedRow(
+      BuildContext context, List<Channel> fallbackChannels) {
+    final channelProvider =
+        Provider.of<ChannelProvider>(context, listen: false);
+    final mostWatched = channelProvider.mostWatchedChannels;
+    final candidates = mostWatched.isNotEmpty ? mostWatched : fallbackChannels;
+    if (candidates.isEmpty) return const SizedBox.shrink();
+    return _buildChannelSection(
+      context,
+      'Featured',
+      candidates,
+      isFirstRow: true,
+      allowCategoryPaging: false,
+    );
+  }
+
   Widget _buildFullScreenHero(
     BuildContext context,
     Channel featuredChannel,
@@ -562,239 +602,247 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       screenSize.width >= 1920 ? 480.0 : 420.0,
     );
 
-    // Use async fetch to get the current program for the featured channel
-    final epgService =
-        Provider.of<IncrementalEpgService>(context, listen: false);
-    return FutureBuilder<Program?>(
-      future: epgService.getProgramForChannelAsync(
-        featuredChannel.tvgId ?? featuredChannel.id,
-        channelName: featuredChannel.name,
-      ),
-      builder: (context, snapshot) {
-        final currentProgram = snapshot.data;
-        if (snapshot.connectionState != ConnectionState.done ||
-            currentProgram == null) {
-          return _buildSkeletonLoader();
-        }
-        final heroImage = _resolveHeroImage(currentProgram);
-        if (heroImage == null || heroImage.isEmpty) {
-          _skipHeroWithNoImage(allChannels);
-          if (_heroImageSkipCount < allChannels.length) {
-            return _buildSkeletonLoader();
-          }
-        } else {
-          _heroImageSkipCount = 0;
-        }
+    final epgService = context.watch<IncrementalEpgService>();
+    final heroCandidates = _buildHeroCandidates(allChannels, epgService);
+    _lastHeroCandidateCount = heroCandidates.length;
+    if (_lastHeroCandidateCount == 0) {
+      _featuredIndex = 0;
+    } else if (_featuredIndex >= _lastHeroCandidateCount) {
+      _featuredIndex = 0;
+    }
+    final selectedHero = _lastHeroCandidateCount == 0
+        ? null
+        : heroCandidates[_featuredIndex % _lastHeroCandidateCount];
+    final activeChannel = selectedHero?.channel ?? featuredChannel;
+    final currentProgram = selectedHero?.program;
+    final heroImage = selectedHero?.heroImage;
+    return FocusTraversalGroup(
+      policy: WidgetOrderTraversalPolicy(),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Hero Background & Gradient
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: heroHeight,
+            child: AnimatedBuilder(
+              animation: _scrollController,
+              child: Builder(builder: (context) {
+                final scrollPos = _scrollController.hasClients
+                    ? _scrollController.offset
+                    : 0.0;
+                final fadeProgress =
+                    (scrollPos / (heroHeight * 0.3)).clamp(0.0, 1.0);
 
-        return FocusTraversalGroup(
-          policy: WidgetOrderTraversalPolicy(),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              // Hero Background & Gradient
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                height: heroHeight,
-                child: AnimatedBuilder(
-                  animation: _scrollController,
-                  child: Builder(builder: (context) {
-                    final scrollPos = _scrollController.hasClients
-                        ? _scrollController.offset
-                        : 0.0;
-                    final fadeProgress =
-                        (scrollPos / (heroHeight * 0.3)).clamp(0.0, 1.0);
-
-                    return Opacity(
-                      opacity: 1.0 - fadeProgress,
-                      child: Stack(
-                        children: [
-                          _buildHeroContent(
-                            featuredChannel,
-                            currentProgram,
-                            heroImage,
-                            0.0,
-                          ),
-                          // Left-side scrim for readability near sidebar/info box
-                          Positioned.fill(
-                            child: IgnorePointer(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.centerLeft,
-                                    end: Alignment.centerRight,
-                                    colors: [
-                                      AppTheme.darkBackground
-                                          .withAlpha((0.7 * 255).round()),
-                                      Colors.transparent,
-                                    ],
-                                    stops: const [0.0, 0.5],
-                                  ),
-                                ),
+                return Opacity(
+                  opacity: 1.0 - fadeProgress,
+                  child: Stack(
+                    children: [
+                      _buildHeroContent(
+                        activeChannel,
+                        currentProgram,
+                        heroImage,
+                        0.0,
+                      ),
+                      // Left-side scrim for readability near sidebar/info box
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                                colors: [
+                                  AppTheme.darkBackground
+                                      .withAlpha((0.7 * 255).round()),
+                                  Colors.transparent,
+                                ],
+                                stops: const [0.0, 0.5],
                               ),
                             ),
-                          ),
-                          // Gradient fade at bottom
-                          Positioned(
-                            bottom: 0,
-                            left: 0,
-                            right: 0,
-                            height: 180,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Colors.transparent,
-                                    AppTheme.darkBackground
-                                        .withAlpha((0.8 * 255).round()),
-                                    AppTheme.darkBackground,
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                  builder: (context, child) {
-                    final scrollPos = _scrollController.hasClients
-                        ? _scrollController.offset
-                        : 0.0;
-                    return Transform.translate(
-                      offset: Offset(0, -scrollPos),
-                      child: child,
-                    );
-                  },
-                ),
-              ),
-              Positioned(
-                top: contentTop,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        AppTheme.darkBackground,
-                        AppTheme.darkBackground,
-                      ],
-                      stops: [0.0, 0.2, 1.0],
-                    ),
-                  ),
-                ),
-              ),
-              // Hero info overlay
-              Positioned(
-                bottom: infoBoxBottom,
-                left: contentInset,
-                width: heroInfoWidth,
-                child: AnimatedBuilder(
-                  animation: _scrollController,
-                  child: Builder(builder: (context) {
-                    final scrollPos = _scrollController.hasClients
-                        ? _scrollController.offset
-                        : 0.0;
-                    final fadeProgress =
-                        (scrollPos / (heroHeight * 0.12)).clamp(0.0, 1.0);
-                    final opacity = 1.0 - fadeProgress;
-                    if (opacity <= 0.01) {
-                      return const SizedBox.shrink();
-                    }
-                    return Opacity(
-                      opacity: opacity,
-                      child: _buildFeaturedInfo(
-                          context, featuredChannel, currentProgram),
-                    );
-                  }),
-                  builder: (context, child) {
-                    final scrollPos = _scrollController.hasClients
-                        ? _scrollController.offset
-                        : 0.0;
-                    return Transform.translate(
-                      offset: Offset(0, -scrollPos),
-                      child: child,
-                    );
-                  },
-                ),
-              ),
-              // Scrollable content
-              Positioned.fill(
-                child: CustomScrollView(
-                  key: const PageStorageKey<String>('live_tv_scroll'),
-                  controller: _scrollController,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: SizedBox(height: contentTop),
-                    ),
-                    SliverPadding(
-                      padding: EdgeInsets.only(
-                        left: 0,
-                        right: rightInset,
-                        bottom: context.spacingXl(),
-                      ),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            return _buildCategoryRowWidget(
-                              context,
-                              _categoryNames[index],
-                              index,
-                            );
-                          },
-                          childCount: math.min(
-                            _visibleCategoryCount,
-                            _categoryNames.length,
                           ),
                         ),
                       ),
-                    ),
-                    SliverToBoxAdapter(
-                      child: SizedBox(height: context.sectionSpacing()),
-                    ),
+                      // Gradient fade at bottom
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        height: 180,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                AppTheme.darkBackground
+                                    .withAlpha((0.8 * 255).round()),
+                                AppTheme.darkBackground,
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+              builder: (context, child) {
+                final scrollPos = _scrollController.hasClients
+                    ? _scrollController.offset
+                    : 0.0;
+                return Transform.translate(
+                  offset: Offset(0, -scrollPos),
+                  child: child,
+                );
+              },
+            ),
+          ),
+          Positioned(
+            top: contentTop,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    AppTheme.darkBackground,
+                    AppTheme.darkBackground,
                   ],
+                  stops: [0.0, 0.2, 1.0],
                 ),
               ),
-              // Channel logo
-              Positioned(
-                top: AppSizes.lg,
-                right: AppSizes.lg,
-                child: Builder(builder: (context) {
-                  final scrollPos = _scrollController.hasClients
-                      ? _scrollController.offset
-                      : 0.0;
-                  final fadeProgress =
-                      (scrollPos / (heroHeight * 0.3)).clamp(0.0, 1.0);
-                  return Opacity(
-                    opacity: 1.0 - fadeProgress,
-                    child: _buildChannelLogo(context, featuredChannel),
-                  );
-                }),
-              ),
-            ],
+            ),
           ),
-        );
-      },
+          // Hero info overlay
+          Positioned(
+            bottom: infoBoxBottom,
+            left: contentInset,
+            width: heroInfoWidth,
+            child: AnimatedBuilder(
+              animation: _scrollController,
+              child: Builder(builder: (context) {
+                if (currentProgram == null) {
+                  return const SizedBox.shrink();
+                }
+                final scrollPos = _scrollController.hasClients
+                    ? _scrollController.offset
+                    : 0.0;
+                final fadeProgress =
+                    (scrollPos / (heroHeight * 0.12)).clamp(0.0, 1.0);
+                final opacity = 1.0 - fadeProgress;
+                if (opacity <= 0.01) {
+                  return const SizedBox.shrink();
+                }
+                return Opacity(
+                  opacity: opacity,
+                  child: _buildFeaturedInfo(
+                      context, activeChannel, currentProgram),
+                );
+              }),
+              builder: (context, child) {
+                final scrollPos = _scrollController.hasClients
+                    ? _scrollController.offset
+                    : 0.0;
+                return Transform.translate(
+                  offset: Offset(0, -scrollPos),
+                  child: child,
+                );
+              },
+            ),
+          ),
+          // Scrollable content
+          Positioned.fill(
+            child: CustomScrollView(
+              key: const PageStorageKey<String>('live_tv_scroll'),
+              controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverToBoxAdapter(
+                  child: SizedBox(height: contentTop),
+                ),
+                SliverPadding(
+                  padding: EdgeInsets.only(
+                    left: 0,
+                    right: rightInset,
+                    bottom: context.spacingXl(),
+                  ),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        if (index == 0) {
+                          return _buildFeaturedRow(context, allChannels);
+                        }
+                        final categoryIndex = index - 1;
+                        if (categoryIndex < 0 ||
+                            categoryIndex >= _categoryNames.length) {
+                          return const SizedBox.shrink();
+                        }
+                        return _buildCategoryRowWidget(
+                          context,
+                          _categoryNames[categoryIndex],
+                          categoryIndex,
+                          isFirstRow: false,
+                        );
+                      },
+                      childCount: math.min(
+                              _visibleCategoryCount, _categoryNames.length) +
+                          1,
+                    ),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: SizedBox(height: context.sectionSpacing()),
+                ),
+              ],
+            ),
+          ),
+          // Channel logo
+          Positioned(
+            top: AppSizes.lg,
+            right: AppSizes.lg,
+            child: Builder(builder: (context) {
+              final scrollPos =
+                  _scrollController.hasClients ? _scrollController.offset : 0.0;
+              final fadeProgress =
+                  (scrollPos / (heroHeight * 0.3)).clamp(0.0, 1.0);
+              return Opacity(
+                opacity: 1.0 - fadeProgress,
+                child: _buildChannelLogo(context, activeChannel),
+              );
+            }),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildFeaturedInfo(
       BuildContext context, Channel channel, Program? program) {
-    final title = program?.title ?? channel.name;
-    final description = program?.description ?? '';
-    final timeRange = program != null
-        ? '${_formatTime(program.startTime)} - ${_formatTime(program.endTime)}'
-        : '';
-    final progress = program?.progressPercentage ?? 0.0;
+    if (program == null) {
+      return const SizedBox.shrink();
+    }
+    final title = program.title;
+    final description = program.description ?? '';
+    final timeRange =
+        '${_formatTime(program.startTime)} - ${_formatTime(program.endTime)}';
+    final progress = program.progressPercentage;
     final titleLogoUrl = _resolveProgramTitleLogo(program, channel);
+    final titleStyle = AppTypography.heroTitle(context);
+    final descriptionStyle = AppTypography.heroDescription(context);
+    final titleLineHeight = (titleStyle.fontSize ?? context.tvTextSize(28)) *
+        (titleStyle.height ?? 1.2);
+    final descriptionLineHeight =
+        (descriptionStyle.fontSize ?? context.tvTextSize(16)) *
+            (descriptionStyle.height ?? 1.4);
+    final logoSlotHeight = context.tvSpacing(36);
 
     final maxBoxHeight = MediaQuery.of(context).size.height * 0.4;
     return ConstrainedBox(
@@ -810,55 +858,57 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (titleLogoUrl != null) ...[
-              CachedImage(
-                imageUrl: titleLogoUrl,
-                height: context.tvSpacing(36),
-                fit: BoxFit.contain,
-                placeholder: const SizedBox.shrink(),
-                errorWidget: const SizedBox.shrink(),
-              ),
-              SizedBox(height: context.tvSpacing(8)),
-            ],
-            Text(
-              title,
-              style: AppTypography.heroTitle(context),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
+            // Lock text block heights so the info box doesn't resize on updates.
+            SizedBox(
+              height: logoSlotHeight,
+              child: titleLogoUrl == null
+                  ? const SizedBox.shrink()
+                  : CachedImage(
+                      imageUrl: titleLogoUrl,
+                      height: logoSlotHeight,
+                      fit: BoxFit.contain,
+                      placeholder: const SizedBox.shrink(),
+                      errorWidget: const SizedBox.shrink(),
+                    ),
             ),
             SizedBox(height: context.tvSpacing(8)),
-            if (description.isNotEmpty) ...[
-              Flexible(
-                child: Text(
-                  description,
-                  style: AppTypography.heroDescription(context),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
+            SizedBox(
+              height: titleLineHeight * 3,
+              child: Text(
+                title,
+                style: titleStyle,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
-              SizedBox(height: context.tvSpacing(8)),
-            ],
+            ),
+            SizedBox(height: context.tvSpacing(8)),
+            SizedBox(
+              height: descriptionLineHeight * 2,
+              child: Text(
+                description,
+                style: descriptionStyle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            SizedBox(height: context.tvSpacing(8)),
             SizedBox(
               height: 6,
-              child: program != null
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: LinearProgressIndicator(
-                        value: progress,
-                        backgroundColor: AppColors.progressBackground,
-                        color: AppColors.progressForeground,
-                        minHeight: 6,
-                      ),
-                    )
-                  : const SizedBox.shrink(),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  backgroundColor: AppColors.progressBackground,
+                  color: AppColors.progressForeground,
+                  minHeight: 6,
+                ),
+              ),
             ),
             SizedBox(height: context.tvSpacing(4)),
             Row(
               children: [
-                if (program != null) ...[
-                  const BrandBadge.live(),
-                  const SizedBox(width: 8),
-                ],
+                const BrandBadge.live(),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     timeRange,
@@ -908,21 +958,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
-  void _skipHeroWithNoImage(List<Channel> allChannels) {
-    if (_heroSkipScheduled || allChannels.isEmpty) return;
-    if (_heroImageSkipCount >= allChannels.length) return;
-    _heroSkipScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      setState(() {
-        _featuredIndex = (_featuredIndex + 1) % allChannels.length;
-        _heroImageSkipCount++;
-        _heroSkipScheduled = false;
-      });
-    });
-  }
-
   Widget _buildChannelLogo(BuildContext context, Channel channel) {
+    if (channel.logoUrl == null || channel.logoUrl!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final dpr = MediaQuery.of(context).devicePixelRatio;
+    final logoCacheWidth = (40 * dpr).round();
+    final logoCacheHeight = (24 * dpr).round();
     return Container(
       height: 64,
       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
@@ -931,10 +973,13 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         borderRadius: BorderRadius.circular(8),
       ),
       child: Center(
-        child: CachedChannelLogo(
-          logoUrl: channel.logoUrl,
-          size: 40,
-          fallbackIcon: Icons.tv,
+        child: CachedNetworkImage(
+          imageUrl: channel.logoUrl!,
+          fit: BoxFit.contain,
+          memCacheWidth: logoCacheWidth,
+          memCacheHeight: logoCacheHeight,
+          placeholder: (_, __) => const SizedBox.shrink(),
+          errorWidget: (_, __, ___) => const SizedBox.shrink(),
         ),
       ),
     );
@@ -1022,7 +1067,45 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return null;
   }
 
-  String? _resolveHeroImage(Program? program) {
+  bool _hasChannelLogo(Channel channel) {
+    return channel.logoUrl != null && channel.logoUrl!.isNotEmpty;
+  }
+
+  List<_HeroCandidate> _buildHeroCandidates(
+    List<Channel> channels,
+    IncrementalEpgService epgService,
+  ) {
+    final candidates = <_HeroCandidate>[];
+    for (final channel in channels) {
+      final channelId = channel.tvgId ?? channel.id;
+      final program = epgService.getCurrentProgram(
+        channelId,
+        channelName: channel.name,
+      );
+      if (program == null) {
+        unawaited(epgService.ensureChannelLoaded(
+          channelId,
+          channelName: channel.name,
+        ));
+        continue;
+      }
+      if (program.title.isEmpty ||
+          (program.description?.trim().isNotEmpty != true)) {
+        continue;
+      }
+      if (!_hasChannelLogo(channel)) continue;
+      final heroImage = _resolveHeroImage(program, channel);
+      if (heroImage == null || heroImage.isEmpty) continue;
+      candidates.add(_HeroCandidate(
+        channel: channel,
+        program: program,
+        heroImage: heroImage,
+      ));
+    }
+    return candidates;
+  }
+
+  String? _resolveHeroImage(Program? program, Channel channel) {
     // Prefer TMDB/OMDb program artwork first.
     if (program != null) {
       final cached = _programArtwork[program.id];
@@ -1037,6 +1120,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       // Fall back to EPG art while TMDB resolves.
       final direct = program.imageUrl;
       if (direct != null && direct.isNotEmpty && !_isLikelyPosterUrl(direct)) {
+        if (_isLikelyTitleLogoUrl(direct)) return null;
+        if (channel.logoUrl != null && channel.logoUrl == direct) return null;
         return direct;
       }
     }
@@ -1159,17 +1244,30 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Widget _buildChannelSection(
       BuildContext context, String title, List<Channel> channels,
-      {bool isFirstRow = false}) {
+      {bool isFirstRow = false, bool allowCategoryPaging = true}) {
     if (channels.isEmpty) return const SizedBox.shrink();
     final epgService = context.watch<IncrementalEpgService>();
-    final filteredChannels = channels.where((channel) {
+    final filteredChannels = <Channel>[];
+    for (var i = 0; i < channels.length; i++) {
+      final channel = channels[i];
+      final channelId = channel.tvgId ?? channel.id;
       final program = epgService.getCurrentProgram(
-        channel.tvgId ?? channel.id,
+        channelId,
         channelName: channel.name,
       );
-      final image = _getChannelCardImage(program, channel, false);
-      return image != null && image.isNotEmpty;
-    }).toList();
+      if (program == null) {
+        unawaited(epgService.ensureChannelLoaded(
+          channelId,
+          channelName: channel.name,
+        ));
+        continue;
+      }
+      if (program.title.isEmpty) continue;
+      if (!_hasChannelLogo(channel)) continue;
+      final image = _getChannelCardImage(program, channel, i < 8);
+      if (image == null || image.isEmpty) continue;
+      filteredChannels.add(channel);
+    }
     if (filteredChannels.isEmpty) return const SizedBox.shrink();
 
     final screenWidth = MediaQuery.of(context).size.width;
@@ -1194,9 +1292,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final sectionKey = title;
     final visibleCount =
         _rowVisibleCountFor(context, sectionKey, cardWidth, rowInset);
-    if (filteredChannels.length <= visibleCount &&
-        (_categoryHasMore[sectionKey] ?? true)) {
-      _requestMoreCategoryChannels(sectionKey);
+    if (allowCategoryPaging) {
+      if (filteredChannels.length <= visibleCount &&
+          (_categoryHasMore[sectionKey] ?? true)) {
+        _requestMoreCategoryChannels(sectionKey);
+      }
     }
     final rowController = _rowScrollControllers.putIfAbsent(
       sectionKey,
@@ -1266,8 +1366,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       right: context.spacingLg(),
                     ),
                     clipBehavior: Clip.none,
-                    itemCount:
-                        math.min(filteredChannels.length, visibleCount),
+                    itemCount: math.min(filteredChannels.length, visibleCount),
                     itemBuilder: (context, index) {
                       final focusNode =
                           isFirstRow && index == 0 ? _firstChannelFocus : null;
@@ -1308,8 +1407,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   Widget _buildCategoryRowWidget(
     BuildContext context,
     String category,
-    int index,
-  ) {
+    int index, {
+    bool isFirstRow = false,
+  }) {
     final notifier = _categoryRowNotifierFor(category);
     return ValueListenableBuilder<int>(
       valueListenable: notifier,
@@ -1326,7 +1426,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             context,
             category,
             channels,
-            isFirstRow: index == 0,
+            isFirstRow: isFirstRow,
           ),
         );
       },
@@ -1382,7 +1482,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       int index,
       int totalCount,
       bool allowPrefetch,
-      {FocusNode? focusNode, VoidCallback? onItemFocus}) {
+      {FocusNode? focusNode,
+      VoidCallback? onItemFocus}) {
     return SizedBox(
       width: cardWidth,
       child: Focus(
@@ -1565,17 +1666,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                                         fit: BoxFit.contain,
                                         memCacheWidth: logoCacheWidth,
                                         memCacheHeight: logoCacheHeight,
-                                        errorWidget: (_, __, ___) => const Icon(
-                                          Icons.tv,
-                                          color: AppTheme.primaryBlue,
-                                          size: 16,
-                                        ),
+                                        errorWidget: (_, __, ___) =>
+                                            const SizedBox.shrink(),
                                       )
-                                    : const Icon(
-                                        Icons.tv,
-                                        color: AppTheme.primaryBlue,
-                                        size: 16,
-                                      ),
+                                    : const SizedBox.shrink(),
                               ),
                             ),
                             if (currentProgram == null)
@@ -1649,7 +1743,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     );
   }
 
-  Widget _buildDefaultHeroBackground() {
+  Widget _buildHeroFallback() {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -1662,13 +1756,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           ],
         ),
       ),
-      child: Center(
-        child: Icon(
-          Icons.tv,
-          size: 80,
-          color: AppTheme.primaryBlue.withAlpha((0.3 * 255).round()),
-        ),
-      ),
+      child: const SizedBox.shrink(),
     );
   }
 
@@ -1700,11 +1788,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               height: double.infinity,
               memCacheWidth: heroCacheWidth,
               memCacheHeight: heroCacheHeight,
-              placeholder: (_, __) => _buildDefaultHeroBackground(),
-              errorWidget: (_, __, ___) => _buildDefaultHeroBackground(),
+              placeholder: (_, __) => _buildHeroFallback(),
+              errorWidget: (_, __, ___) => _buildHeroFallback(),
             ),
           )
-        : _buildDefaultHeroBackground();
+        : _buildHeroFallback();
   }
 
   Widget _buildSkeletonLoader() {
@@ -1713,6 +1801,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final contentTop = (heroHeight - cardPeek).clamp(0.0, heroHeight);
     final contentInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
     final rightInset = context.spacingLg();
+    final skeletonCardWidth = context.cardWidth();
+    final skeletonCardHeight = context.cardHeight() * 0.6;
     return Stack(
       children: [
         Positioned.fill(
@@ -1809,23 +1899,24 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                       ),
                       SizedBox(height: context.spacingSm()),
                       SizedBox(
-                        height: 70,
-                        child: Row(
-                          children: List.generate(5, (index) {
-                            return Expanded(
-                              child: Container(
-                                margin: EdgeInsets.only(
-                                  right: index == 4 ? 0 : context.spacingSm(),
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.08),
-                                  borderRadius: BorderRadius.circular(
-                                    AppSpacing.radiusMd,
-                                  ),
+                        height: skeletonCardHeight,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: 6,
+                          separatorBuilder: (context, index) =>
+                              SizedBox(width: context.cardGap()),
+                          itemBuilder: (context, index) {
+                            return Container(
+                              width: skeletonCardWidth,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(
+                                  AppSpacing.radiusMd,
                                 ),
                               ),
                             );
-                          }),
+                          },
                         ),
                       ),
                       SizedBox(height: context.spacingLg()),

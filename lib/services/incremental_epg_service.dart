@@ -1791,7 +1791,7 @@ class IncrementalEpgService extends ChangeNotifier {
         ' ');
     clean = clean.replaceAll(
         RegExp(
-            r'(\bh264\b|\bh265\b|\bhevc\b|\bac3\b|\baac\b|\b4k\b|\buhd\b|\bfhd\b|\bhd\b|\bsd\b|\b720p\b|\b1080p\b)',
+            r'(\bh264\b|\bh265\b|\bhevc\b|\bhdr10\b|\bhdr\b|\bdolbyvision\b|\bdv\b|\bdolby\b|\batmos\b|\b5\.1\b|\b7\.1\b|\b2\.0\b|\bac3\b|\beac3\b|\baac\b|\bddp\b|\bdd\b|\bstereo\b|\bsurround\b|\b4k\b|\buhd\b|\b8k\b|\bfhd\b|\bhd\b|\bsd\b|\b720p\b|\b1080p\b|\b1080i\b|\b576p\b|\bhb\b|\blb\b)',
             caseSensitive: false),
         ' ');
 

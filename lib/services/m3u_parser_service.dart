@@ -370,13 +370,19 @@ class M3UParserService {
             final channelName = _extractChannelName(currentInfo!);
             final groupTitle =
                 currentAttributes['group-title']?.toLowerCase() ?? '';
-            final looksSeries = _looksLikeSeries(
+            final resolvedType = _resolveVodType(
               channelName,
+              currentAttributes,
               groupTitle,
               inlineUrl,
             );
-            final looksMovie =
-                !looksSeries && _looksLikeMovie(groupTitle, inlineUrl);
+            final looksSeries = resolvedType == 'series' ||
+                (resolvedType == null &&
+                    _looksLikeSeries(channelName, groupTitle, inlineUrl));
+            final looksMovie = resolvedType == 'movie' ||
+                (resolvedType == null &&
+                    !looksSeries &&
+                    _looksLikeMovie(groupTitle, inlineUrl));
 
             if (looksSeries) {
               series.add(
@@ -444,10 +450,19 @@ class M3UParserService {
 
         final groupTitle =
             currentAttributes['group-title']?.toLowerCase() ?? '';
-        final looksSeries =
-            _looksLikeSeries(channelName, groupTitle, channelUrl);
-        final looksMovie =
-            !looksSeries && _looksLikeMovie(groupTitle, channelUrl);
+        final resolvedType = _resolveVodType(
+          channelName,
+          currentAttributes,
+          groupTitle,
+          channelUrl,
+        );
+        final looksSeries = resolvedType == 'series' ||
+            (resolvedType == null &&
+                _looksLikeSeries(channelName, groupTitle, channelUrl));
+        final looksMovie = resolvedType == 'movie' ||
+            (resolvedType == null &&
+                !looksSeries &&
+                _looksLikeMovie(groupTitle, channelUrl));
 
         if (looksSeries) {
           series.add(
@@ -611,10 +626,19 @@ class M3UParserService {
               }
               final channelName = _extractChannelName(currentInfo!);
               final groupTitle = currentAttributes['group-title'] ?? '';
-              final isVod = _isVodUrl(inlineUrl, groupTitle);
-              final isSeries =
-                  isVod && _looksLikeSeriesFast(channelName, groupTitle);
-              final isMovie = isVod && !isSeries;
+              final resolvedType = _resolveVodType(
+                channelName,
+                currentAttributes,
+                groupTitle,
+                inlineUrl,
+              );
+              final isVod = resolvedType != null || _isVodUrl(inlineUrl, groupTitle);
+              final isSeries = resolvedType == 'series' ||
+                  (resolvedType == null &&
+                      isVod &&
+                      _looksLikeSeriesFast(channelName, groupTitle));
+              final isMovie = resolvedType == 'movie' ||
+                  (resolvedType == null && isVod && !isSeries);
 
               if (isSeries) {
                 final map = {
@@ -693,9 +717,19 @@ class M3UParserService {
 
           final channelName = _extractChannelName(currentInfo!);
           final groupTitle = currentAttributes['group-title'] ?? '';
-          final isVod = _isVodUrl(channelUrl, groupTitle);
-          final isSeries = isVod && _looksLikeSeriesFast(channelName, groupTitle);
-          final isMovie = isVod && !isSeries;
+          final resolvedType = _resolveVodType(
+            channelName,
+            currentAttributes,
+            groupTitle,
+            channelUrl,
+          );
+          final isVod = resolvedType != null || _isVodUrl(channelUrl, groupTitle);
+          final isSeries = resolvedType == 'series' ||
+              (resolvedType == null &&
+                  isVod &&
+                  _looksLikeSeriesFast(channelName, groupTitle));
+          final isMovie = resolvedType == 'movie' ||
+              (resolvedType == null && isVod && !isSeries);
 
           if (isSeries) {
             final map = {
@@ -852,10 +886,20 @@ class M3UParserService {
             }
             final channelName = _extractChannelName(currentInfo!);
             final groupTitle = currentAttributes['group-title'] ?? '';
-            final isVod = _isVodUrl(inlineUrl, groupTitle);
-            final isSeries =
-                isVod && _looksLikeSeriesFast(channelName, groupTitle);
-            final isMovie = isVod && !isSeries;
+            final resolvedType = _resolveVodType(
+              channelName,
+              currentAttributes,
+              groupTitle,
+              inlineUrl,
+            );
+            final isVod =
+                resolvedType != null || _isVodUrl(inlineUrl, groupTitle);
+            final isSeries = resolvedType == 'series' ||
+                (resolvedType == null &&
+                    isVod &&
+                    _looksLikeSeriesFast(channelName, groupTitle));
+            final isMovie = resolvedType == 'movie' ||
+                (resolvedType == null && isVod && !isSeries);
 
             if (isSeries) {
               seriesMaps.add({
@@ -934,10 +978,20 @@ class M3UParserService {
         final channelName = _extractChannelName(currentInfo!);
         final groupTitle = currentAttributes['group-title'] ?? '';
 
-        // Fast classification - check URL patterns first (most reliable)
-        final isVod = _isVodUrl(channelUrl, groupTitle);
-        final isSeries = isVod && _looksLikeSeriesFast(channelName, groupTitle);
-        final isMovie = isVod && !isSeries;
+        final resolvedType = _resolveVodType(
+          channelName,
+          currentAttributes,
+          groupTitle,
+          channelUrl,
+        );
+        final isVod =
+            resolvedType != null || _isVodUrl(channelUrl, groupTitle);
+        final isSeries = resolvedType == 'series' ||
+            (resolvedType == null &&
+                isVod &&
+                _looksLikeSeriesFast(channelName, groupTitle));
+        final isMovie = resolvedType == 'movie' ||
+            (resolvedType == null && isVod && !isSeries);
 
         if (isSeries) {
           seriesMaps.add({
@@ -1142,8 +1196,19 @@ class M3UParserService {
         final groupTitle =
             currentAttributes['group-title']?.toLowerCase() ?? '';
         final title = _extractChannelName(currentInfo);
-        final looksSeries = _looksLikeSeries(title, groupTitle, line);
-        final looksMovie = !looksSeries && _looksLikeMovie(groupTitle, line);
+        final resolvedType = _resolveVodType(
+          title,
+          currentAttributes,
+          groupTitle,
+          line,
+        );
+        final looksSeries = resolvedType == 'series' ||
+            (resolvedType == null &&
+                _looksLikeSeries(title, groupTitle, line));
+        final looksMovie = resolvedType == 'movie' ||
+            (resolvedType == null &&
+                !looksSeries &&
+                _looksLikeMovie(groupTitle, line));
 
         if (looksSeries) {
           series.add(_createSeriesContent(title, line, currentAttributes, i));
@@ -1424,6 +1489,67 @@ class M3UParserService {
     }
 
     return false;
+  }
+
+  String? _resolveVodType(
+    String title,
+    Map<String, String> attributes,
+    String groupTitle,
+    String url,
+  ) {
+    String? rawType = attributes['tvg-type'] ??
+        attributes['type'] ??
+        attributes['content-type'] ??
+        attributes['category'];
+    rawType = rawType?.toLowerCase().trim();
+    final lowerGroup = groupTitle.toLowerCase();
+    if (rawType != null && rawType.isNotEmpty) {
+      if (rawType.contains('live')) return null;
+      if (rawType.contains('series') ||
+          rawType.contains('show') ||
+          rawType.contains('tv') ||
+          rawType.contains('episode')) {
+        return 'series';
+      }
+      if (rawType.contains('movie') || rawType.contains('film')) {
+        return 'movie';
+      }
+      if (rawType.contains('vod')) {
+        if (_seriesEpisodeRegex.hasMatch(title) ||
+            lowerGroup.contains('series') ||
+            lowerGroup.contains('tv shows') ||
+            lowerGroup.contains('episodes')) {
+          return 'series';
+        }
+        return 'movie';
+      }
+    }
+
+    // If URL explicitly hints series/movie, honor it even when group is missing.
+    final lowerUrl = url.toLowerCase();
+    if (_hasVodFileExtension(lowerUrl)) {
+      if (_seriesEpisodeRegex.hasMatch(title) ||
+          lowerGroup.contains('series') ||
+          lowerGroup.contains('tv shows') ||
+          lowerGroup.contains('episodes')) {
+        return 'series';
+      }
+      return 'movie';
+    }
+    if (_hasSeriesPathKeyword(lowerUrl)) return 'series';
+    if (_hasMoviePathKeyword(lowerUrl)) return 'movie';
+
+    // Avoid treating live channels as VOD solely due to group-title keywords.
+    if (lowerGroup.contains('movie') ||
+        lowerGroup.contains('series') ||
+        lowerGroup.contains('vod') ||
+        lowerGroup.contains('film') ||
+        lowerGroup.contains('cinema') ||
+        lowerGroup.contains('tv show')) {
+      return null;
+    }
+
+    return null;
   }
 
   /// Fast series detection

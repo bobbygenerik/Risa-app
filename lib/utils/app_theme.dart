@@ -49,11 +49,11 @@ class AppTheme {
   // UI Element Colors
   static const Color divider = Color(0xFF2A2A2A);
   static const Color highlight = Color(0xFF2D2D2D);
-  static const Color focusBorder = Color(0xFF00A8E8);
+  static const Color focusBorder = Color(0xFFFFFFFF);
 
   // Android TV Focus Colors
-  static const Color tvFocusHighlight = Color(0xFF2E3192);
-  static const Color tvFocusGlow = Color(0x402E3192);
+  static const Color tvFocusHighlight = Color(0xFFFFFFFF);
+  static const Color tvFocusGlow = Color(0x40FFFFFF);
   // Performance toggles
 
   // Backdrop filter behaviour mode: auto = use heuristic, on = always enabled, off = always disabled
