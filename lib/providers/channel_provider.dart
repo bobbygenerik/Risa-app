@@ -884,7 +884,6 @@ class ChannelProvider with ChangeNotifier {
         _seriesJsonlPath != null;
     final url = _lastPlaylistUrl;
     final prefs = await SharedPreferences.getInstance();
-    final playlistType = prefs.getString('playlist_type') ?? 'm3u';
 
     if (_vodLoadRequested && !force) {
       if (!hasContent && contentProvider != null) {
@@ -925,69 +924,9 @@ class ChannelProvider with ChangeNotifier {
       }
     }
 
-    if (playlistType == 'm3u' && !hasCache && !hasContent) {
-      final m3uUrl = prefs.getString('m3u_url') ?? url;
-      if (m3uUrl.isNotEmpty) {
-        await _loadM3uVodFromUrl(m3uUrl);
-      } else if (contentProvider != null) {
-        contentProvider.setLoading(false);
-      }
-      return;
-    }
-
     _vodLoading = true;
     try {
       await _loadXtreamVOD(url);
-    } finally {
-      _vodLoading = false;
-      if (contentProvider != null) {
-        contentProvider.setLoading(false);
-      }
-    }
-  }
-
-  Future<void> _loadM3uVodFromUrl(String url) async {
-    if (_vodLoading) return;
-    _vodLoading = true;
-    final contentProvider = _contentProvider;
-    try {
-      if (contentProvider != null) {
-        contentProvider.setLoading(true);
-      }
-      final loader = PlaylistLoader();
-      final parsed = await loader.loadFromUrl(url);
-      final moviesFile = parsed['moviesFile'] as String?;
-      final seriesFile = parsed['seriesFile'] as String?;
-      final movieCount = parsed['movieCount'] as int? ?? 0;
-      final seriesCount = parsed['seriesCount'] as int? ?? 0;
-
-      if ((moviesFile == null || moviesFile.isEmpty) &&
-          (seriesFile == null || seriesFile.isEmpty)) {
-        _moviesCount = 0;
-        _seriesCount = 0;
-        return;
-      }
-
-      if (movieCount == 0 && seriesCount == 0) {
-        _moviesCount = 0;
-        _seriesCount = 0;
-        if (contentProvider != null) {
-          contentProvider.loadMovies(const []);
-          contentProvider.loadSeries(const []);
-        }
-        return;
-      }
-
-      await _stageVodJsonl(
-        moviesFile: moviesFile,
-        seriesFile: seriesFile,
-        movieCount: movieCount,
-        seriesCount: seriesCount,
-      );
-      unawaited(_hydrateContentProviderFromCache(
-          maxItems: _vodInitialPageSize));
-    } catch (e) {
-      debugLog('ChannelProvider: Error loading M3U VOD: $e');
     } finally {
       _vodLoading = false;
       if (contentProvider != null) {
