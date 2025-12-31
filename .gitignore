@@ -63,5 +63,6 @@ shared-resources/generated/
 
 # APK files (too large for GitHub)
 apk_downloads/
+cmdline-tools.zip
 Modelfile
 ollama-*.service
