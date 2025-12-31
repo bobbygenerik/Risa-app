@@ -596,12 +596,11 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         screenSize.width < 800 ? screenSize.width / 2.8 : screenSize.width / 5.5;
     final cardWidth = math.min(context.cardWidth(), maxCardWidth);
     final cardHeight = cardWidth * 0.6;
-    final cardPeek =
-        math.max(context.spacingXl(), cardHeight * 0.55);
+    final cardPeek = math.max(context.spacingXl(), cardHeight * 0.85);
     final contentTop = (heroHeight - cardPeek).clamp(0.0, heroHeight);
     final contentInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
     final rightInset = context.spacingLg();
-    final infoBoxOffset = heroHeight * 0.22;
+    final infoBoxOffset = heroHeight * 0.35;
     final infoBoxBottom = (screenSize.height - heroHeight + infoBoxOffset)
         .clamp(context.spacingLg(), screenSize.height - context.spacingLg());
 
@@ -1277,22 +1276,20 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           channelId,
           channelName: channel.name,
         ));
+        filteredChannels.add(channel);
         continue;
       }
       if (isFirstRow) {
-        final normalizedTitle =
-            normalizeForFilter(program.title);
-        final programKey =
-            '${normalizedTitle}_${program.startTime.millisecondsSinceEpoch}_${program.endTime.millisecondsSinceEpoch}';
-        if (seenProgramKeys.contains(programKey)) {
-          continue;
+        if (program.title.isNotEmpty) {
+          final normalizedTitle = normalizeForFilter(program.title);
+          final programKey =
+              '${normalizedTitle}_${program.startTime.millisecondsSinceEpoch}_${program.endTime.millisecondsSinceEpoch}';
+          if (seenProgramKeys.contains(programKey)) {
+            continue;
+          }
+          seenProgramKeys.add(programKey);
         }
-        seenProgramKeys.add(programKey);
       }
-      if (program.title.isEmpty) continue;
-      if (!_hasChannelLogo(channel)) continue;
-      final image = _getChannelCardImage(program, channel, i < 8);
-      if (image == null || image.isEmpty) continue;
       filteredChannels.add(channel);
     }
     if (filteredChannels.isEmpty) return const SizedBox.shrink();
@@ -1793,6 +1790,17 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     return '${hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} $period';
   }
 
+  String normalizeForFilter(String title) {
+    // Normalize titles for de-duplication/filtering: lowercase, remove leading articles,
+    // strip non-alphanumeric characters, collapse whitespace.
+    if (title.isEmpty) return title;
+    var s = title.toLowerCase().trim();
+    s = s.replaceAll(RegExp(r'^(the|a|an)\s+'), '');
+    s = s.replaceAll(RegExp(r'[^a-z0-9\s]'), ' ');
+    s = s.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return s;
+  }
+
   Widget _buildHeroContent(
     Channel featuredChannel,
     Program? currentProgram,
@@ -1832,14 +1840,14 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         screenWidth < 800 ? screenWidth / 2.8 : screenWidth / 5.5;
     final skeletonCardWidth = math.min(context.cardWidth(), maxCardWidth);
     final skeletonCardHeight = skeletonCardWidth * 0.6;
-    final cardPeek = math.max(context.spacingXl(), skeletonCardHeight * 0.55);
+    final cardPeek = math.max(context.spacingXl(), skeletonCardHeight * 0.85);
     final contentTop = (heroHeight - cardPeek).clamp(0.0, heroHeight);
     final rowInset = contentInset;
     final perRow =
         _initialRowVisibleCount(context, skeletonCardWidth, rowInset);
     final logoSlotHeight = context.tvSpacing(36);
     final heroInfoWidth = context.heroInfoWidth();
-    final infoBoxOffset = heroHeight * 0.22;
+    final infoBoxOffset = heroHeight * 0.35;
     final infoBoxBottom =
         (screenSize.height - heroHeight + infoBoxOffset)
             .clamp(context.spacingLg(), screenSize.height - context.spacingLg());
@@ -1851,15 +1859,18 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           ),
         ),
         Positioned(
-          top: AppSizes.md,
-          right: AppSizes.md,
-          child: Shimmer(
-            child: Container(
-              height: context.tvSpacing(24),
-              width: context.tvSpacing(64),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(8),
+          top: 0,
+          right: rightInset,
+          child: SafeArea(
+            bottom: false,
+            child: Shimmer(
+              child: Container(
+                height: context.tvSpacing(24),
+                width: context.tvSpacing(64),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
           ),

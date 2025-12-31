@@ -5,8 +5,8 @@ class Shimmer extends StatefulWidget {
   const Shimmer({
     super.key,
     required this.child,
-    this.baseColor = const Color(0x33FFFFFF),
-    this.highlightColor = const Color(0x4DFFFFFF),
+    this.baseColor = const Color(0x22FFFFFF),
+    this.highlightColor = const Color(0x88FFFFFF),
     this.duration = const Duration(milliseconds: 1500),
   });
 
@@ -40,22 +40,23 @@ class _ShimmerState extends State<Shimmer> with SingleTickerProviderStateMixin {
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
+        final shimmer = _controller.value;
+        final start = (shimmer - 0.3).clamp(0.0, 1.0);
+        final mid = shimmer.clamp(0.0, 1.0);
+        final end = (shimmer + 0.3).clamp(0.0, 1.0);
         return ShaderMask(
-          blendMode: BlendMode.srcATop,
+          blendMode: BlendMode.srcIn,
           shaderCallback: (bounds) {
             return LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              stops: [
-                _controller.value - 0.3,
-                _controller.value,
-                _controller.value + 0.3,
-              ],
+              begin: const Alignment(-1.0, -0.2),
+              end: const Alignment(1.0, 0.2),
+              stops: [start, mid, end],
               colors: [
                 widget.baseColor,
                 widget.highlightColor,
                 widget.baseColor,
               ],
+              tileMode: TileMode.clamp,
             ).createShader(bounds);
           },
           child: child,
