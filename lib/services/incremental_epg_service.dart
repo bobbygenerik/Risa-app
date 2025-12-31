@@ -25,6 +25,7 @@ class IncrementalEpgService extends ChangeNotifier {
   final Map<String, String> _internalToEpgIdMapping = {};
   Map<String, String>?
       _normalizedAvailableChannels; // normalizedId -> originalId
+  final Map<String, String> _normalizeCache = {};
   bool _isLoading = false;
   bool _isDownloading = false;
   bool _isParsing = false;
@@ -850,21 +851,44 @@ class IncrementalEpgService extends ChangeNotifier {
           }
         }
 
-        _programsByChannel.clear();
-
         final programFilePath = parseResult['programFilePath'] as String?;
         final parsedProgramCount = parseResult['programCount'] as int? ?? 0;
         final channelIds =
             (parseResult['channelIds'] as List<dynamic>).cast<String>();
+        if (programFilePath == null ||
+            programFilePath.isEmpty ||
+            parsedProgramCount == 0) {
+          _isParsing = false;
+          _error = noMatchingIdsForPlaylist
+              ? 'No matching EPG IDs for this playlist. Check tvg-id or mapping.'
+              : 'No EPG data available.';
+          debugLog(
+              'EPG: Parse produced no programs; keeping last-known-good data.');
+          if (programFilePath != null && programFilePath.isNotEmpty) {
+            try {
+              final tempFile = File(programFilePath);
+              if (await tempFile.exists()) {
+                await tempFile.delete();
+              }
+            } catch (_) {}
+          }
+          break;
+        }
 
-        _availableChannels.clear();
-        _availableChannels.addAll(channelIds);
-
-        _normalizedAvailableChannels = Map<String, String>.from(
+        final normalizedChannels = Map<String, String>.from(
             parseResult['normalizedChannels'] as Map<String, String>);
+        final stagedPrograms = <String, List<Program>>{};
 
         // Stream programs from the temp file into memory (capped) and DB in batches
-        await _ingestProgramsFromFile(programFilePath);
+        await _ingestProgramsFromFile(programFilePath, target: stagedPrograms);
+
+        _programsByChannel
+          ..clear()
+          ..addAll(stagedPrograms);
+        _availableChannels
+          ..clear()
+          ..addAll(channelIds);
+        _normalizedAvailableChannels = normalizedChannels;
 
         _hasParsed = true;
         _isParsing = false;
@@ -941,8 +965,9 @@ class IncrementalEpgService extends ChangeNotifier {
     Map<String, int> catchupHoursByChannel,
     int nowMs,
     int futureEndMs,
+    String? normalizedChannelId,
   ) {
-    final normalized = normalizeForFilter(channelId);
+    final normalized = normalizedChannelId ?? normalizeForFilter(channelId);
     if (allowedNormalized.isNotEmpty &&
         (normalized.isEmpty || !allowedNormalized.contains(normalized))) {
       return false;
@@ -976,6 +1001,18 @@ class IncrementalEpgService extends ChangeNotifier {
     final file = File(filePath);
     if (!await file.exists()) {
       throw Exception('EPG cache file not found in isolate');
+    }
+
+    final normalizeCache = <String, String>{};
+    String normalizeCached(String input) {
+      final cached = normalizeCache[input];
+      if (cached != null) return cached;
+      if (normalizeCache.length > 50000) {
+        normalizeCache.clear();
+      }
+      final normalized = normalizeForFilter(input);
+      normalizeCache[input] = normalized;
+      return normalized;
     }
 
     final channelIds = <String>{};
@@ -1108,10 +1145,11 @@ class IncrementalEpgService extends ChangeNotifier {
             catchupHoursByChannel,
             nowMs,
             futureEndMs,
+            normalizeCached,
           );
         } else if (startEvent.name.endsWith('channel')) {
           _processChannel(subtreeEvents, channelIds, normalizedChannels,
-              allowedNormalized: allowedList);
+              allowedNormalized: allowedList, normalize: normalizeCached);
         }
       }
 
@@ -1139,26 +1177,20 @@ class IncrementalEpgService extends ChangeNotifier {
         buffer = drainBlocks(buffer, channelStart, channelEnd, (block) {
           final id = extractAttribute(block, 'id')?.trim() ?? '';
           if (id.isEmpty) return;
-          final normalizedId = normalizeForFilter(id);
+          final normalizedId = normalizeCached(id);
           if (allowedList.isNotEmpty &&
-              !allowedList.contains(normalizedId)) {
+              (normalizedId.isEmpty || !allowedList.contains(normalizedId))) {
             return;
           }
           if (id.isNotEmpty) {
             channelIds.add(id);
-            final normalized =
-                id.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-            if (normalized.isNotEmpty &&
-                !normalizedChannels.containsKey(normalized)) {
-              normalizedChannels[normalized] = id;
+            if (normalizedId.isNotEmpty &&
+                !normalizedChannels.containsKey(normalizedId)) {
+              normalizedChannels[normalizedId] = id;
             }
             final display = extractTagText(block, 'display-name');
             if (display != null && display.isNotEmpty) {
-              final stripped = _stripSuffixes(display);
-              var normalizedDisplay = stripped
-                  .toLowerCase()
-                  .replaceAll(RegExp(r'[^a-z0-9]'), '');
-              normalizedDisplay = _convertNumberWords(normalizedDisplay);
+              final normalizedDisplay = normalizeCached(display);
               if (normalizedDisplay.isNotEmpty &&
                   !normalizedChannels.containsKey(normalizedDisplay)) {
                 normalizedChannels[normalizedDisplay] = id;
@@ -1176,16 +1208,15 @@ class IncrementalEpgService extends ChangeNotifier {
           }
           final start = _staticParseTime(startStr).millisecondsSinceEpoch;
           final end = _staticParseTime(stopStr).millisecondsSinceEpoch;
+          final normalizedChannelId = normalizeCached(channelId);
           if (!_shouldIncludeProgramme(channelId, start, end, allowedList,
-              catchupHoursByChannel, nowMs, futureEndMs)) {
+              catchupHoursByChannel, nowMs, futureEndMs, normalizedChannelId)) {
             return;
           }
           channelIds.add(channelId);
-          final normalized =
-              channelId.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-          if (normalized.isNotEmpty &&
-              !normalizedChannels.containsKey(normalized)) {
-            normalizedChannels[normalized] = channelId;
+          if (normalizedChannelId.isNotEmpty &&
+              !normalizedChannels.containsKey(normalizedChannelId)) {
+            normalizedChannels[normalizedChannelId] = channelId;
           }
           final title = extractTagText(block, 'title') ?? 'Unknown';
           final description = extractTagText(block, 'desc');
@@ -1266,6 +1297,17 @@ class IncrementalEpgService extends ChangeNotifier {
         (args['allowedNormalized'] as List<dynamic>? ?? const [])
             .map((e) => e.toString())
             .toSet();
+    final normalizeCache = <String, String>{};
+    String normalizeCached(String input) {
+      final cached = normalizeCache[input];
+      if (cached != null) return cached;
+      if (normalizeCache.length > 50000) {
+        normalizeCache.clear();
+      }
+      final normalized = normalizeForFilter(input);
+      normalizeCache[input] = normalized;
+      return normalized;
+    }
 
     try {
       final stream =
@@ -1285,7 +1327,7 @@ class IncrementalEpgService extends ChangeNotifier {
             .value;
         if (id.isEmpty) continue;
         channelIds.add(id);
-        final normalizedId = normalizeForFilter(id);
+        final normalizedId = normalizeCached(id);
         if (normalizedId.isNotEmpty) {
           normalizedIds.add(normalizedId);
           if (allowedNormalized.contains(normalizedId)) {
@@ -1335,6 +1377,7 @@ class IncrementalEpgService extends ChangeNotifier {
     Set<String> channelIds,
     Map<String, String> normalizedChannels, {
     Set<String> allowedNormalized = const {},
+    required String Function(String input) normalize,
   }) {
     // Basic parsing of channel tag to get ID and display-name
     // <channel id="BBC1"> <display-name>BBC One</display-name> </channel>
@@ -1346,15 +1389,14 @@ class IncrementalEpgService extends ChangeNotifier {
         .value;
 
     if (id.isNotEmpty) {
-      final normalizedId = normalizeForFilter(id);
+      final normalizedId = normalize(id);
       if (allowedNormalized.isNotEmpty &&
           !allowedNormalized.contains(normalizedId)) {
         return;
       }
       channelIds.add(id);
-      final normalized = id.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-      if (normalized.isNotEmpty) {
-        normalizedChannels[normalized] = id;
+      if (normalizedId.isNotEmpty) {
+        normalizedChannels[normalizedId] = id;
       }
 
       // Parse <display-name> elements to improve name->id matching
@@ -1373,10 +1415,7 @@ class IncrementalEpgService extends ChangeNotifier {
       }
 
       if (displayName != null && displayName.isNotEmpty) {
-        final stripped = _stripSuffixes(displayName);
-        String normalizedDisplay =
-            stripped.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-        normalizedDisplay = _convertNumberWords(normalizedDisplay);
+        final normalizedDisplay = normalize(displayName);
         if (normalizedDisplay.isNotEmpty &&
             !normalizedChannels.containsKey(normalizedDisplay)) {
           normalizedChannels[normalizedDisplay] = id;
@@ -1395,6 +1434,7 @@ class IncrementalEpgService extends ChangeNotifier {
     Map<String, int> catchupHoursByChannel,
     int nowMs,
     int futureEndMs,
+    String Function(String input) normalize,
   ) {
     // Parse programme subtree
     // <programme start="..." stop="..." channel="..."> ... </programme>
@@ -1420,8 +1460,9 @@ class IncrementalEpgService extends ChangeNotifier {
 
     final start = _staticParseTime(startStr).millisecondsSinceEpoch;
     final end = _staticParseTime(stopStr).millisecondsSinceEpoch;
+    final normalizedChannelId = normalize(channelId);
     if (!_shouldIncludeProgramme(channelId, start, end, allowedNormalized,
-        catchupHoursByChannel, nowMs, futureEndMs)) {
+        catchupHoursByChannel, nowMs, futureEndMs, normalizedChannelId)) {
       return;
     }
 
@@ -1477,10 +1518,9 @@ class IncrementalEpgService extends ChangeNotifier {
     channelIds.add(channelId);
 
     // Also track in normalized map for loose matching
-    final normalized =
-        channelId.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-    if (normalized.isNotEmpty && !normalizedChannels.containsKey(normalized)) {
-      normalizedChannels[normalized] = channelId;
+    if (normalizedChannelId.isNotEmpty &&
+        !normalizedChannels.containsKey(normalizedChannelId)) {
+      normalizedChannels[normalizedChannelId] = channelId;
     }
 
     final payload = {
@@ -1582,7 +1622,14 @@ class IncrementalEpgService extends ChangeNotifier {
   }
 
   String _normalize(String text) {
-    return _normalizeForMatch(text);
+    final cached = _normalizeCache[text];
+    if (cached != null) return cached;
+    if (_normalizeCache.length > 50000) {
+      _normalizeCache.clear();
+    }
+    final normalized = _normalizeForMatch(text);
+    _normalizeCache[text] = normalized;
+    return normalized;
   }
 
   void _ensureNormalizedMap() {
@@ -2317,7 +2364,8 @@ class IncrementalEpgService extends ChangeNotifier {
     }
   }
 
-  Future<void> _ingestProgramsFromFile(String? path) async {
+  Future<void> _ingestProgramsFromFile(String? path,
+      {Map<String, List<Program>>? target}) async {
     if (path == null || path.isEmpty) {
       debugLog('EPG: No program temp file path provided');
       return;
@@ -2332,6 +2380,7 @@ class IncrementalEpgService extends ChangeNotifier {
     final Map<String, List<Map<String, dynamic>>> buffer = {};
     final Map<String, bool> cleared = {};
 
+    final programsByChannel = target ?? _programsByChannel;
     try {
       int processed = 0;
       final yieldClock = Stopwatch()..start();
@@ -2372,7 +2421,7 @@ class IncrementalEpgService extends ChangeNotifier {
           catchupUrl: catchupUrl,
         );
 
-        final list = _programsByChannel.putIfAbsent(epgId, () => []);
+        final list = programsByChannel.putIfAbsent(epgId, () => []);
         if (list.length < 80) {
           list.add(program);
         }

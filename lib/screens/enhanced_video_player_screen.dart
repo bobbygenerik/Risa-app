@@ -279,14 +279,19 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                     ],
                     const Spacer(),
                     if (widget.isLive) ...[
-                      const BrandBadge.live(),
+                      IconButton(
+                        onPressed: _toggleGuide,
+                        icon: const Icon(Icons.dvr,
+                            color: Colors.white, size: 24),
+                      ),
                       const SizedBox(width: 16),
-                    ],
-                    IconButton(
-                      onPressed: _toggleGuide,
-                      icon:
-                          const Icon(Icons.dvr, color: Colors.white, size: 24),
-                    ),
+                      const BrandBadge.live(),
+                    ] else
+                      IconButton(
+                        onPressed: _toggleGuide,
+                        icon: const Icon(Icons.dvr,
+                            color: Colors.white, size: 24),
+                      ),
                   ],
                 ),
               ),

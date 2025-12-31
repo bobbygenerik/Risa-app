@@ -136,7 +136,7 @@ class EPGChannelItem extends StatelessWidget {
             onLongPress: onLongPress,
             child: Container(
               height: 64,
-              margin: const EdgeInsets.only(bottom: 4, right: 4),
+              margin: const EdgeInsets.only(bottom: 4, right: 2),
               decoration: BoxDecoration(
                 color: const Color(0xFF2a2a3e).withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(8),

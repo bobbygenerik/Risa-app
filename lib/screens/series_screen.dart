@@ -24,6 +24,7 @@ import 'package:iptv_player/widgets/vod_card_image.dart';
 import 'package:iptv_player/utils/app_spacing.dart';
 import 'package:iptv_player/utils/app_icons.dart';
 import 'package:iptv_player/utils/app_typography.dart';
+import 'package:iptv_player/widgets/shimmer.dart';
 
 List<Map<String, dynamic>> _buildSeriesGenreBucketsIsolate(
     List<Map<String, dynamic>> items) {
@@ -1436,16 +1437,24 @@ class _SeriesScreenState extends State<SeriesScreen>
       screenSize.width * AppSpacing.heroInfoWidth,
       screenSize.width >= 1920 ? 480.0 : 420.0,
     );
-    final cardWidth = screenSize.width / 6.5;
-    final cardHeight = cardWidth * 1.5;
-    final rowHeight = cardWidth * 1.8;
+    const cardFocusScale = 1.02;
+    final cardWidth = context.cardWidth();
+    final cardHeight = context.cardHeight();
+    final rowHeight = context.rowHeight() + (cardHeight * (cardFocusScale - 1));
+    final inset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
+    final available =
+        screenSize.width - inset - context.spacingLg();
+    final perRow = (available / (cardWidth + context.cardGap())).floor();
+    final skeletonItemCount =
+        (perRow + _rowVisibleBuffer).clamp(6, 12);
 
     return Container(
       decoration: const BoxDecoration(
         color: AppTheme.darkBackground,
       ),
-      child: Stack(
-        children: [
+      child: Shimmer(
+        child: Stack(
+          children: [
           // Hero skeleton
           Positioned(
             top: 0,
@@ -1558,12 +1567,12 @@ class _SeriesScreenState extends State<SeriesScreen>
                                 ),
                                 const SizedBox(height: 8),
                                 // Series cards row skeleton
-                                SizedBox(
-                                  height: rowHeight,
-                                  child: ListView.separated(
-                                    scrollDirection: Axis.horizontal,
-                                    padding: EdgeInsets.zero,
-                                    itemCount: 5,
+                                  SizedBox(
+                                    height: rowHeight,
+                                    child: ListView.separated(
+                                      scrollDirection: Axis.horizontal,
+                                      padding: EdgeInsets.zero,
+                                      itemCount: skeletonItemCount,
                                     itemBuilder: (context, cardIndex) => Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
@@ -1675,7 +1684,8 @@ class _SeriesScreenState extends State<SeriesScreen>
               ),
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

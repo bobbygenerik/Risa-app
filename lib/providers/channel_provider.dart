@@ -165,7 +165,8 @@ class ChannelProvider with ChangeNotifier {
   // Loading progress for UI feedback
   double _loadingProgress = 0.0;
   String _loadingStatus = '';
-  bool _vodHydrated = false; // Tracks if full VOD lists were pushed to ContentProvider
+  bool _vodHydrated =
+      false; // Tracks if full VOD lists were pushed to ContentProvider
   final bool _vodLazyStartup = true;
   bool _vodLoadRequested = false;
   bool _vodLoading = false;
@@ -224,6 +225,7 @@ class ChannelProvider with ChangeNotifier {
         .map((m) => Map<String, dynamic>.from(m))
         .toList();
   }
+
   List<Map<String, dynamic>> getChannelSampleMapsByStride(int limit) {
     if (_channelMaps.isEmpty || limit <= 0) return const [];
     final total = _channelMaps.length;
@@ -309,7 +311,8 @@ class ChannelProvider with ChangeNotifier {
     }
     _dbReadOnlyRecoveryInFlight = true;
     _dbReady = false;
-    debugLog('ChannelProvider: Detected read-only DB, disabling DB for session');
+    debugLog(
+        'ChannelProvider: Detected read-only DB, disabling DB for session');
     unawaited(() async {
       _dbDisabled = true;
       _dbReady = false;
@@ -383,7 +386,8 @@ class ChannelProvider with ChangeNotifier {
         service.setAllowedChannelIds(allowed, triggerRefresh: true);
       }
     } catch (e) {
-      debugLog('ChannelProvider: Failed to load EPG allowed channels from DB: $e');
+      debugLog(
+          'ChannelProvider: Failed to load EPG allowed channels from DB: $e');
     } finally {
       _epgAllowedChannelsFromDbInFlight = false;
     }
@@ -403,10 +407,10 @@ class ChannelProvider with ChangeNotifier {
         return const {'byStreamId': {}, 'byName': {}};
       }
       final decoded = json.decode(jsonStr) as Map<String, dynamic>;
-      final byStreamId = Map<String, String>.from(
-          (decoded['byStreamId'] as Map? ?? const {}));
-      final byName = Map<String, String>.from(
-          (decoded['byName'] as Map? ?? const {}));
+      final byStreamId =
+          Map<String, String>.from((decoded['byStreamId'] as Map? ?? const {}));
+      final byName =
+          Map<String, String>.from((decoded['byName'] as Map? ?? const {}));
       return {'byStreamId': byStreamId, 'byName': byName};
     } catch (_) {
       return const {'byStreamId': {}, 'byName': {}};
@@ -441,14 +445,12 @@ class ChannelProvider with ChangeNotifier {
       final name = (map['name'] as String?) ?? '';
 
       final streamIdFromUrl = _extractStreamIdFromUrl(url);
-      final normalizedName =
-          IncrementalEpgService.normalizeForFilter(name);
+      final normalizedName = IncrementalEpgService.normalizeForFilter(name);
 
-      final epgId = (streamIdFromUrl != null
-              ? byStreamId[streamIdFromUrl]
-              : null) ??
-          (normalizedName.isNotEmpty ? byName[normalizedName] : null) ??
-          byName[name];
+      final epgId =
+          (streamIdFromUrl != null ? byStreamId[streamIdFromUrl] : null) ??
+              (normalizedName.isNotEmpty ? byName[normalizedName] : null) ??
+              byName[name];
       if (epgId != null) {
         map['tvgId'] = epgId;
         mapped++;
@@ -463,13 +465,13 @@ class ChannelProvider with ChangeNotifier {
   }
 
   String _buildXtreamServerUrl(Uri uri) {
-    final portSegment =
-        (uri.hasPort && uri.port != 80 && uri.port != 443) ? ':${uri.port}' : '';
+    final portSegment = (uri.hasPort && uri.port != 80 && uri.port != 443)
+        ? ':${uri.port}'
+        : '';
     return '${uri.scheme}://${uri.host}$portSegment';
   }
 
-  Future<Map<String, String>?> _resolveXtreamCredentials(
-      String m3uUrl) async {
+  Future<Map<String, String>?> _resolveXtreamCredentials(String m3uUrl) async {
     String? serverUrl;
     String? username;
     String? password;
@@ -595,8 +597,7 @@ class ChannelProvider with ChangeNotifier {
           if (streamId.isEmpty) continue;
           final name = (s['name'] ?? '').toString();
           final categoryId = (s['category_id'] ?? '').toString();
-          final groupTitle =
-              categoryNameById[categoryId] ?? 'Live';
+          final groupTitle = categoryNameById[categoryId] ?? 'Live';
           final logoUrl = (s['stream_icon'] ?? '').toString();
           final epgId = (s['epg_channel_id'] ?? s['epg_id'])?.toString();
 
@@ -660,11 +661,9 @@ class ChannelProvider with ChangeNotifier {
                     streamId: streamId, durationHours: durationHours));
           }
         }
-        final epgCandidate = (s['epg'] ??
-                s['stream_epg'] ??
-                s['epg_channel_id'] ??
-                s['epg_url'])
-            ?.toString();
+        final epgCandidate =
+            (s['epg'] ?? s['stream_epg'] ?? s['epg_channel_id'] ?? s['epg_url'])
+                ?.toString();
         if (epgCandidate != null && epgCandidate.isNotEmpty) {
           if (epgCandidate.startsWith('http')) {
             epgUrls.add(epgCandidate);
@@ -700,7 +699,7 @@ class ChannelProvider with ChangeNotifier {
         _epgService!.setCatchupConfig(catchupConfig, triggerRefresh: true);
       }
 
-      final prefs = await SharedPreferences.getInstance();
+      final sharedPrefs = await SharedPreferences.getInstance();
 
       // If we found a URL candidate, probe it (short GET) and auto-save it.
       String? accepted;
@@ -800,14 +799,14 @@ class ChannelProvider with ChangeNotifier {
       if (accepted != null) {
         debugLog(
             'ChannelProvider: Found EPG URL via Xtream API: $accepted (auto-saving)');
-        await prefs.setString('custom_epg_url', accepted);
+        await sharedPrefs.setString('custom_epg_url', accepted);
         try {
-          await prefs.setString('epg_url', accepted);
+          await sharedPrefs.setString('epg_url', accepted);
         } catch (_) {}
         try {
           final enc = base64Url.encode(utf8.encode(m3uUrl));
-          await prefs.setString('xtream_epg_url_$enc', accepted);
-          await prefs.setString('xtream_epg_url_$serverUrl', accepted);
+          await sharedPrefs.setString('xtream_epg_url_$enc', accepted);
+          await sharedPrefs.setString('xtream_epg_url_$serverUrl', accepted);
         } catch (_) {}
         try {
           await _epgService?.initialize(forceRefresh: true);
@@ -829,8 +828,7 @@ class ChannelProvider with ChangeNotifier {
           final name = (map['name'] as String?) ?? '';
 
           final streamIdFromUrl = _extractStreamIdFromUrl(url);
-          final normalizedName =
-              IncrementalEpgService.normalizeForFilter(name);
+          final normalizedName = IncrementalEpgService.normalizeForFilter(name);
 
           final epgId = (streamIdFromUrl != null
                   ? streamIdToEpgId[streamIdFromUrl]
@@ -852,7 +850,9 @@ class ChannelProvider with ChangeNotifier {
           _scheduleEpgRefresh(forceRefresh: true);
           final service = _epgService;
           if (service != null &&
-              (service.isLoading || service.isDownloading || service.isParsing)) {
+              (service.isLoading ||
+                  service.isDownloading ||
+                  service.isParsing)) {
             if (!_epgRefreshPending) {
               _epgRefreshPending = true;
               Future.delayed(const Duration(seconds: 3), () {
@@ -877,19 +877,19 @@ class ChannelProvider with ChangeNotifier {
     if (_vodLoading) return;
     final contentProvider = _contentProvider;
     final hasContent = contentProvider != null &&
-        (contentProvider.movies.isNotEmpty || contentProvider.series.isNotEmpty);
+        (contentProvider.movies.isNotEmpty ||
+            contentProvider.series.isNotEmpty);
     final hasCache = _moviesCachePath != null ||
         _seriesCachePath != null ||
         _moviesJsonlPath != null ||
         _seriesJsonlPath != null;
     final url = _lastPlaylistUrl;
-    final prefs = await SharedPreferences.getInstance();
 
     if (_vodLoadRequested && !force) {
       if (!hasContent && contentProvider != null) {
         contentProvider.setLoading(true);
-        unawaited(_hydrateContentProviderFromCache(
-            maxItems: _vodInitialPageSize));
+        unawaited(
+            _hydrateContentProviderFromCache(maxItems: _vodInitialPageSize));
       }
       if (hasContent || hasCache || _vodHydrated) {
         return;
@@ -907,8 +907,8 @@ class ChannelProvider with ChangeNotifier {
         if (!hasContent) {
           contentProvider.setLoading(true);
         }
-        unawaited(_hydrateContentProviderFromCache(
-            maxItems: _vodInitialPageSize));
+        unawaited(
+            _hydrateContentProviderFromCache(maxItems: _vodInitialPageSize));
       }
       if (hasCache || _vodHydrated) {
         if (contentProvider != null && hasContent) {
@@ -985,8 +985,7 @@ class ChannelProvider with ChangeNotifier {
 
         offset = 0;
         while (true) {
-          final page =
-              await _db.getSeriesPage(offset: offset, limit: pageSize);
+          final page = await _db.getSeriesPage(offset: offset, limit: pageSize);
           if (page.isEmpty) break;
           final remaining = maxItems - series.length;
           if (remaining <= 0) break;
@@ -1013,7 +1012,8 @@ class ChannelProvider with ChangeNotifier {
         int offset = 0;
         while (true) {
           if (_moviesJsonlPath == null) break;
-          final page = await _loadJsonlPage(_moviesJsonlPath!, offset, pageSize);
+          final page =
+              await _loadJsonlPage(_moviesJsonlPath!, offset, pageSize);
           if (page.isEmpty) break;
           final remaining = maxItems - movies.length;
           if (remaining <= 0) break;
@@ -1025,7 +1025,8 @@ class ChannelProvider with ChangeNotifier {
         offset = 0;
         while (true) {
           if (_seriesJsonlPath == null) break;
-          final page = await _loadJsonlPage(_seriesJsonlPath!, offset, pageSize);
+          final page =
+              await _loadJsonlPage(_seriesJsonlPath!, offset, pageSize);
           if (page.isEmpty) break;
           final remaining = maxItems - series.length;
           if (remaining <= 0) break;
@@ -1056,10 +1057,8 @@ class ChannelProvider with ChangeNotifier {
       if (_disposed) return;
       _contentProvider!.loadMovies(movies);
       _contentProvider!.loadSeries(series);
-      final moviesComplete =
-          _moviesCount > 0 && movies.length >= _moviesCount;
-      final seriesComplete =
-          _seriesCount > 0 && series.length >= _seriesCount;
+      final moviesComplete = _moviesCount > 0 && movies.length >= _moviesCount;
+      final seriesComplete = _seriesCount > 0 && series.length >= _seriesCount;
       _vodHydrated = moviesComplete && seriesComplete;
       debugLog(
           'ChannelProvider: Hydrated ContentProvider with ${movies.length}/$_moviesCount movies and ${series.length}/$_seriesCount series (capped for performance)');
@@ -1134,7 +1133,8 @@ class ChannelProvider with ChangeNotifier {
       try {
         await _db.upsertEpgMapping(batch);
       } catch (e) {
-        debugLog('ChannelProvider: Failed to persist final EPG mapping batch: $e');
+        debugLog(
+            'ChannelProvider: Failed to persist final EPG mapping batch: $e');
       }
     }
 
@@ -1143,7 +1143,8 @@ class ChannelProvider with ChangeNotifier {
       try {
         await _epgService?.loadMappingsFromDb();
       } catch (e) {
-        debugLog('ChannelProvider: Failed to load mappings into EPG service: $e');
+        debugLog(
+            'ChannelProvider: Failed to load mappings into EPG service: $e');
       }
     }
 
@@ -1152,8 +1153,7 @@ class ChannelProvider with ChangeNotifier {
 
   Future<bool> _tryReuseEpgMapping() async {
     if (!_dbReady) return false;
-    if (_currentEpgMapSignature == null ||
-        _currentEpgMapSignatureKey == null) {
+    if (_currentEpgMapSignature == null || _currentEpgMapSignatureKey == null) {
       return false;
     }
     try {
@@ -1164,9 +1164,8 @@ class ChannelProvider with ChangeNotifier {
       }
       final count = await _db.mappingCount();
       if (count <= 0) return false;
-      _currentEpgMapCountKey ??=
-          _currentEpgMapSignatureKey!.replaceFirst(
-              _epgMapSignaturePrefix, _epgMapCountPrefix);
+      _currentEpgMapCountKey ??= _currentEpgMapSignatureKey!
+          .replaceFirst(_epgMapSignaturePrefix, _epgMapCountPrefix);
       debugLog(
           'ChannelProvider: Reusing persisted EPG mapping ($count entries)');
       await _epgService?.loadMappingsFromDb();
@@ -1186,9 +1185,8 @@ class ChannelProvider with ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final count = await _db.mappingCount();
-      _currentEpgMapCountKey ??=
-          _currentEpgMapSignatureKey!.replaceFirst(
-              _epgMapSignaturePrefix, _epgMapCountPrefix);
+      _currentEpgMapCountKey ??= _currentEpgMapSignatureKey!
+          .replaceFirst(_epgMapSignaturePrefix, _epgMapCountPrefix);
       await prefs.setString(
           _currentEpgMapSignatureKey!, _currentEpgMapSignature!);
       await prefs.setInt(_currentEpgMapCountKey!, count);
@@ -1325,18 +1323,19 @@ class ChannelProvider with ChangeNotifier {
   }
 
   /// Quick check if there are any channels (no conversion needed)
-  bool get hasChannels =>
-      _dbReady ? (_channelCountDb > 0 || _channelMaps.isNotEmpty) : _channelMaps.isNotEmpty;
+  bool get hasChannels => _dbReady
+      ? (_channelCountDb > 0 || _channelMaps.isNotEmpty)
+      : _channelMaps.isNotEmpty;
 
   /// Public accessor for virtualized lists
   Channel getChannelAt(int index) => _getChannelAt(index);
 
   /// Async paged channels for UI (DB-backed when available)
-  Future<List<Channel>> getChannelsPage({int offset = 0, int limit = 50}) async {
+  Future<List<Channel>> getChannelsPage(
+      {int offset = 0, int limit = 50}) async {
     if (_dbReady) {
       try {
-        final rows =
-            await _db.getChannelsPage(offset: offset, limit: limit);
+        final rows = await _db.getChannelsPage(offset: offset, limit: limit);
         if (rows.isNotEmpty) {
           return rows.map((m) => Channel.fromMap(m)).toList();
         }
@@ -1497,8 +1496,11 @@ class ChannelProvider with ChangeNotifier {
 
     // Use category paging or general paging
     if (category != null) {
-      return getChannelsForCategoryAsync(category,
-          offset: offset, limit: limit,);
+      return getChannelsForCategoryAsync(
+        category,
+        offset: offset,
+        limit: limit,
+      );
     }
 
     try {
@@ -1698,12 +1700,12 @@ class ChannelProvider with ChangeNotifier {
           try {
             final List<dynamic> decoded = jsonDecode(savedJson);
             final saved = decoded
-                .map((j) => SavedPlaylist.fromJson(Map<String, dynamic>.from(j)))
+                .map(
+                    (j) => SavedPlaylist.fromJson(Map<String, dynamic>.from(j)))
                 .toList();
             if (saved.isNotEmpty) {
               final activeId = prefs.getString('active_playlist_id');
-              final chosen = saved.firstWhere(
-                  (p) => p.id == activeId,
+              final chosen = saved.firstWhere((p) => p.id == activeId,
                   orElse: () => saved.first);
               playlistType = chosen.type;
               await prefs.setString('playlist_type', chosen.type);
@@ -1738,7 +1740,8 @@ class ChannelProvider with ChangeNotifier {
       if (playlistType == null) {
         _isLoading = false;
         notifyListeners();
-        StartupProbe.mark('ChannelProvider.autoLoadPlaylist: no saved playlist');
+        StartupProbe.mark(
+            'ChannelProvider.autoLoadPlaylist: no saved playlist');
         debugLog('ChannelProvider: No saved playlist found');
         if (_channelMaps.isNotEmpty || _moviesCount > 0 || _seriesCount > 0) {
           _channelMaps = [];
@@ -1757,8 +1760,7 @@ class ChannelProvider with ChangeNotifier {
       }
 
       // Load from file-based cache (handles large playlists via streaming)
-      final cacheVersion =
-          prefs.getInt('playlist_cache_version') ?? 0;
+      final cacheVersion = prefs.getInt('playlist_cache_version') ?? 0;
       if (cacheVersion != _playlistCacheVersion) {
         debugLog(
             'ChannelProvider: Cache version changed ($cacheVersion -> $_playlistCacheVersion), clearing caches');
@@ -1795,7 +1797,8 @@ class ChannelProvider with ChangeNotifier {
                   'ChannelProvider: JSON cache contains metadata only; falling back to M3U cache');
               throw const FormatException('JSON cache metadata only');
             }
-            final totalChannels = parsed['channelCount'] as int? ?? cachedChannels.length;
+            final totalChannels =
+                parsed['channelCount'] as int? ?? cachedChannels.length;
             final channelsFile = parsed['channelsFile'] as String?;
             if (totalChannels > cachedChannels.length) {
               if (channelsFile == null ||
@@ -1918,7 +1921,8 @@ class ChannelProvider with ChangeNotifier {
 
             // Parse from file in isolate to avoid blocking main thread and OOM
             final parseStart = DateTime.now();
-            final parsed = await parsePlaylistCancelable(filePath: cacheFilePath);
+            final parsed =
+                await parsePlaylistCancelable(filePath: cacheFilePath);
             final parseDuration = DateTime.now().difference(parseStart);
             debugLog(
                 'ChannelProvider: Cache isolate parsing took ${parseDuration.inMilliseconds}ms');
@@ -1950,7 +1954,8 @@ class ChannelProvider with ChangeNotifier {
               prefs: prefs,
               playlistUrl: _lastPlaylistUrl,
               epgUrl: parsed['epgUrl'] as String?,
-              channelCount: parsed['channelCount'] as int? ?? _channelMaps.length,
+              channelCount:
+                  parsed['channelCount'] as int? ?? _channelMaps.length,
               channelsFile: parsed['channelsFile'] as String?,
             );
             if (_dbReady) {
@@ -1960,7 +1965,8 @@ class ChannelProvider with ChangeNotifier {
                 debugLog(
                     'ChannelProvider: Persisted ${_channelMaps.length} channels to DB (cache load)');
               } catch (e) {
-                debugLog('ChannelProvider: Failed to persist channels to DB: $e');
+                debugLog(
+                    'ChannelProvider: Failed to persist channels to DB: $e');
               }
             }
 
@@ -1974,10 +1980,8 @@ class ChannelProvider with ChangeNotifier {
             if (_dbReady) {
               try {
                 await _db.clearVod();
-                await _db.insertMovies(
-                    movies.map((m) => m.toMap()).toList());
-                await _db.insertSeries(
-                    series.map((s) => s.toMap()).toList());
+                await _db.insertMovies(movies.map((m) => m.toMap()).toList());
+                await _db.insertSeries(series.map((s) => s.toMap()).toList());
                 debugLog(
                     'ChannelProvider: Persisted ${movies.length} movies and ${series.length} series to DB (cache load)');
               } catch (e) {
@@ -2242,8 +2246,10 @@ class ChannelProvider with ChangeNotifier {
       if (channelsFile != null && channelsFile.isNotEmpty) {
         final file = File(channelsFile);
         if (await file.exists()) {
-          final stream =
-              file.openRead().transform(utf8.decoder).transform(const LineSplitter());
+          final stream = file
+              .openRead()
+              .transform(utf8.decoder)
+              .transform(const LineSplitter());
           final List<Map<String, dynamic>> batch = [];
           int processed = 0;
           await for (final line in stream) {
@@ -2258,7 +2264,8 @@ class ChannelProvider with ChangeNotifier {
                   await _db.insertChannels(
                       batch.map((e) => Map<String, dynamic>.from(e)).toList());
                 } catch (e) {
-                  debugLog('ChannelProvider: DB channel batch insert failed: $e');
+                  debugLog(
+                      'ChannelProvider: DB channel batch insert failed: $e');
                 }
               }
               batch.clear();
@@ -2887,8 +2894,10 @@ class ChannelProvider with ChangeNotifier {
         'ChannelProvider: Hydrating full channel list from cache file ($totalChannels)');
     final List<Map<String, dynamic>> hydrated = [];
     try {
-      final stream =
-          file.openRead().transform(utf8.decoder).transform(const LineSplitter());
+      final stream = file
+          .openRead()
+          .transform(utf8.decoder)
+          .transform(const LineSplitter());
       await for (final line in stream) {
         if (line.trim().isEmpty) continue;
         hydrated.add(Map<String, dynamic>.from(json.decode(line)));
@@ -2948,8 +2957,8 @@ class ChannelProvider with ChangeNotifier {
       }
     }
 
-    Future<void> moveJsonl(String? source, String name,
-        void Function(String path) assign) async {
+    Future<void> moveJsonl(
+        String? source, String name, void Function(String path) assign) async {
       if (source == null || source.isEmpty) return;
       final target = File('${dir.path}/$name');
       final sourceFile = File(source);
@@ -3039,19 +3048,22 @@ class ChannelProvider with ChangeNotifier {
         server = prefs.getString('xtream_server') ?? '';
         username = prefs.getString('xtream_username') ?? '';
         password = prefs.getString('xtream_password') ?? '';
-        name = server.isNotEmpty ? (Uri.tryParse(server)?.host ?? server) : 'Xtream';
+        name = server.isNotEmpty
+            ? (Uri.tryParse(server)?.host ?? server)
+            : 'Xtream';
       } else {
         name = Uri.tryParse(sourceUrl)?.host ?? 'M3U Playlist';
       }
 
-      final primaryEpg =
-          epgUrl ?? prefs.getString('custom_epg_url') ?? prefs.getString('epg_url');
+      final primaryEpg = epgUrl ??
+          prefs.getString('custom_epg_url') ??
+          prefs.getString('epg_url');
       final secondaryEpg = prefs.getString('secondary_epg_url');
 
       int existingIndex = -1;
       if (type == 'm3u') {
-        existingIndex = list.indexWhere(
-            (p) => p.type == 'm3u' && p.url.trim() == url.trim());
+        existingIndex = list
+            .indexWhere((p) => p.type == 'm3u' && p.url.trim() == url.trim());
       } else {
         existingIndex = list.indexWhere((p) =>
             p.type == 'xtream' &&
@@ -3126,8 +3138,7 @@ class ChannelProvider with ChangeNotifier {
     }
 
     _isGroupingChannels = false;
-    if (_categoriesCompleter != null &&
-        !_categoriesCompleter!.isCompleted) {
+    if (_categoriesCompleter != null && !_categoriesCompleter!.isCompleted) {
       _categoriesCompleter!.complete(_cachedCategories ?? []);
     }
     _notifyListenersSafe();
@@ -3297,10 +3308,10 @@ class ChannelProvider with ChangeNotifier {
         final dir = await getApplicationDocumentsDirectory();
         _moviesCachePath = '${dir.path}/movies_cache.json';
         _seriesCachePath = '${dir.path}/series_cache.json';
-        await File(_moviesCachePath!)
-            .writeAsString(json.encode(moviesPreview.map((m) => m.toMap()).toList()));
-        await File(_seriesCachePath!)
-            .writeAsString(json.encode(seriesPreview.map((s) => s.toMap()).toList()));
+        await File(_moviesCachePath!).writeAsString(
+            json.encode(moviesPreview.map((m) => m.toMap()).toList()));
+        await File(_seriesCachePath!).writeAsString(
+            json.encode(seriesPreview.map((s) => s.toMap()).toList()));
       } catch (_) {
         // best-effort
       }
@@ -3340,7 +3351,8 @@ class ChannelProvider with ChangeNotifier {
 
     if (_dbReady) {
       // Use async API for DB search; fallback to sync if needed
-      debugLog('ChannelProvider: searchChannels called while DB ready; consider using searchChannelsAsync');
+      debugLog(
+          'ChannelProvider: searchChannels called while DB ready; consider using searchChannelsAsync');
     }
 
     final lowerQuery = query.toLowerCase();
@@ -3354,7 +3366,8 @@ class ChannelProvider with ChangeNotifier {
     return result;
   }
 
-  Future<List<Channel>> searchChannelsAsync(String query, {int limit = 100}) async {
+  Future<List<Channel>> searchChannelsAsync(String query,
+      {int limit = 100}) async {
     if (query.isEmpty) return channels;
     if (_dbReady) {
       try {
@@ -3456,8 +3469,7 @@ class ChannelProvider with ChangeNotifier {
   /// Runs asynchronously without blocking UI
   Future<void> _startBackgroundEnrichment() async {
     if (_vodLazyStartup && !_vodLoadRequested) {
-      debugLog(
-          'ChannelProvider: Skipping TMDB enrichment (VOD not requested)');
+      debugLog('ChannelProvider: Skipping TMDB enrichment (VOD not requested)');
       return;
     }
     if (_moviesJsonlPath != null || _seriesJsonlPath != null) {

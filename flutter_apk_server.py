@@ -9,9 +9,11 @@ import urllib.parse
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 
+APK_DIR = (Path(__file__).resolve().parent / "build/app/outputs/flutter-apk")
+
 class FlutterAPKServerHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, directory="/home/devuser/repos/Risa-app/build/app/outputs/flutter-apk", **kwargs)
+        super().__init__(*args, directory=str(APK_DIR), **kwargs)
     
     def end_headers(self):
         # Add CORS headers to allow cross-origin requests
@@ -35,8 +37,7 @@ class FlutterAPKServerHandler(SimpleHTTPRequestHandler):
             self.end_headers()
             
             # List available APK files
-            apk_dir = Path("/home/devuser/repos/Risa-app/build/app/outputs/flutter-apk")
-            apk_files = list(apk_dir.glob("*.apk"))
+            apk_files = list(APK_DIR.glob("*.apk"))
             
             html_content = f"""
             <!DOCTYPE html>
@@ -67,7 +68,7 @@ class FlutterAPKServerHandler(SimpleHTTPRequestHandler):
                     <div class="status">Server running on port 7575</div>
                     
                     <div class="build-info">
-                        <strong>Build Directory:</strong> build/app/outputs/flutter-apk/<br>
+                        <strong>Build Directory:</strong> {APK_DIR}<br>
                         <strong>Release Build Available</strong>
                     </div>
                     
@@ -131,24 +132,23 @@ def main():
     port = 7575
     
     # Check if APK directory exists
-    apk_dir = Path("/home/devuser/repos/Risa-app/build/app/outputs/flutter-apk")
-    if not apk_dir.exists():
-        print(f"❌ Error: APK directory {apk_dir} does not exist!")
+    if not APK_DIR.exists():
+        print(f"❌ Error: APK directory {APK_DIR} does not exist!")
         print("💡 Make sure you've built the APK first using: flutter build apk")
         sys.exit(1)
     
-    apk_files = list(apk_dir.glob("*.apk"))
+    apk_files = list(APK_DIR.glob("*.apk"))
     if not apk_files:
-        print(f"⚠️  Warning: No APK files found in {apk_dir}")
+        print(f"⚠️  Warning: No APK files found in {APK_DIR}")
         print("💡 Run 'flutter build apk' to generate the APK files")
     else:
-        print(f"✅ Found {len(apk_files)} APK file(s) in {apk_dir}")
+        print(f"✅ Found {len(apk_files)} APK file(s) in {APK_DIR}")
         for apk_file in apk_files:
             file_size = apk_file.stat().st_size / (1024 * 1024)
             print(f"   📱 {apk_file.name} ({file_size:.2f} MB)")
     
     print(f"\n🚀 Starting Flutter APK download server on port {port}...")
-    print(f"📁 APK directory: {apk_dir}")
+    print(f"📁 APK directory: {APK_DIR}")
     print(f"🌐 Access the server at: http://localhost:{port}")
     print("⏹️  Press Ctrl+C to stop the server")
     print("=" * 60)

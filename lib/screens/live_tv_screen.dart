@@ -471,9 +471,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       ),
       child: Consumer<ChannelProvider>(
         builder: (context, channelProvider, _) {
+          final epgService = context.watch<IncrementalEpgService>();
           final hasChannels = channelProvider.hasChannels;
+          final epgBusy = epgService.hasEpgUrl &&
+              (epgService.isDownloading ||
+                  epgService.isParsing ||
+                  epgService.isLoading) &&
+              epgService.loadedChannelCount == 0;
 
           if (!hasChannels && channelProvider.isLoading) {
+            return _buildSkeletonLoader();
+          }
+
+          if (epgBusy) {
             return _buildSkeletonLoader();
           }
 
@@ -582,12 +592,18 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   ) {
     final screenSize = MediaQuery.of(context).size;
     final heroHeight = context.heroHeight();
-    final cardPeek = context.spacingXl();
+    final maxCardWidth =
+        screenSize.width < 800 ? screenSize.width / 2.8 : screenSize.width / 5.5;
+    final cardWidth = math.min(context.cardWidth(), maxCardWidth);
+    final cardHeight = cardWidth * 0.6;
+    final cardPeek =
+        math.max(context.spacingXl(), cardHeight * 0.55);
     final contentTop = (heroHeight - cardPeek).clamp(0.0, heroHeight);
     final contentInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
     final rightInset = context.spacingLg();
-    final infoBoxBottom = (screenSize.height - contentTop + context.spacingSm())
-        .clamp(context.spacingSm(), heroHeight);
+    final infoBoxOffset = heroHeight * 0.22;
+    final infoBoxBottom = (screenSize.height - heroHeight + infoBoxOffset)
+        .clamp(context.spacingLg(), screenSize.height - context.spacingLg());
 
     // Calculate available width for content
     final availableWidth = screenSize.width - contentInset - rightInset;
@@ -1248,6 +1264,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     if (channels.isEmpty) return const SizedBox.shrink();
     final epgService = context.watch<IncrementalEpgService>();
     final filteredChannels = <Channel>[];
+    final seenProgramKeys = <String>{};
     for (var i = 0; i < channels.length; i++) {
       final channel = channels[i];
       final channelId = channel.tvgId ?? channel.id;
@@ -1261,6 +1278,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           channelName: channel.name,
         ));
         continue;
+      }
+      if (isFirstRow) {
+        final normalizedTitle =
+            normalizeForFilter(program.title);
+        final programKey =
+            '${normalizedTitle}_${program.startTime.millisecondsSinceEpoch}_${program.endTime.millisecondsSinceEpoch}';
+        if (seenProgramKeys.contains(programKey)) {
+          continue;
+        }
+        seenProgramKeys.add(programKey);
       }
       if (program.title.isEmpty) continue;
       if (!_hasChannelLogo(channel)) continue;
@@ -1797,12 +1824,25 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Widget _buildSkeletonLoader() {
     final heroHeight = context.heroHeight();
-    final cardPeek = context.spacingXl();
-    final contentTop = (heroHeight - cardPeek).clamp(0.0, heroHeight);
     final contentInset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
     final rightInset = context.spacingLg();
-    final skeletonCardWidth = context.cardWidth();
-    final skeletonCardHeight = context.cardHeight() * 0.6;
+    final screenSize = MediaQuery.of(context).size;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final maxCardWidth =
+        screenWidth < 800 ? screenWidth / 2.8 : screenWidth / 5.5;
+    final skeletonCardWidth = math.min(context.cardWidth(), maxCardWidth);
+    final skeletonCardHeight = skeletonCardWidth * 0.6;
+    final cardPeek = math.max(context.spacingXl(), skeletonCardHeight * 0.55);
+    final contentTop = (heroHeight - cardPeek).clamp(0.0, heroHeight);
+    final rowInset = contentInset;
+    final perRow =
+        _initialRowVisibleCount(context, skeletonCardWidth, rowInset);
+    final logoSlotHeight = context.tvSpacing(36);
+    final heroInfoWidth = context.heroInfoWidth();
+    final infoBoxOffset = heroHeight * 0.22;
+    final infoBoxBottom =
+        (screenSize.height - heroHeight + infoBoxOffset)
+            .clamp(context.spacingLg(), screenSize.height - context.spacingLg());
     return Stack(
       children: [
         Positioned.fill(
@@ -1811,40 +1851,49 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           ),
         ),
         Positioned(
-          left: contentInset,
-          bottom: heroHeight * 0.15,
-          width: math.min(420, MediaQuery.of(context).size.width * 0.55),
+          top: AppSizes.md,
+          right: AppSizes.md,
           child: Shimmer(
             child: Container(
-              padding: EdgeInsets.all(context.spacingMd()),
+              height: context.tvSpacing(24),
+              width: context.tvSpacing(64),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                borderRadius: BorderRadius.circular(8),
               ),
+            ),
+          ),
+        ),
+        Positioned(
+          left: contentInset,
+          bottom: infoBoxBottom,
+          width: heroInfoWidth,
+          child: Shimmer(
+            child: Container(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    width: 240,
-                    height: 20,
+                    width: heroInfoWidth * 0.6,
+                    height: logoSlotHeight,
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                     ),
                   ),
-                  SizedBox(height: context.spacingSm()),
+                  SizedBox(height: context.tvSpacing(8)),
                   Container(
-                    width: 180,
-                    height: 12,
+                    width: heroInfoWidth * 0.8,
+                    height: context.tvTextSize(18),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                     ),
                   ),
-                  SizedBox(height: context.spacingMd()),
+                  SizedBox(height: context.tvSpacing(8)),
                   Container(
                     width: double.infinity,
-                    height: 10,
+                    height: context.tvTextSize(14),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
@@ -1853,16 +1902,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   SizedBox(height: context.spacingXs()),
                   Container(
                     width: double.infinity,
-                    height: 10,
+                    height: context.tvTextSize(14),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                     ),
                   ),
-                  SizedBox(height: context.spacingMd()),
+                  SizedBox(height: context.tvSpacing(8)),
                   Container(
-                    width: 120,
-                    height: 24,
+                    width: heroInfoWidth * 0.35,
+                    height: context.tvSpacing(20),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
@@ -1903,7 +1952,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           physics: const NeverScrollableScrollPhysics(),
-                          itemCount: 6,
+                          itemCount: perRow,
                           separatorBuilder: (context, index) =>
                               SizedBox(width: context.cardGap()),
                           itemBuilder: (context, index) {

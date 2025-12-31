@@ -1,6 +1,7 @@
 import 'package:iptv_player/utils/debug_helper.dart';
 // ignore_for_file: sized_box_for_whitespace
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -406,7 +407,7 @@ class _EPGScreenState extends State<EPGScreen>
                                     width: context.channelSidebarWidth(),
                                     child: _buildChannelColumn(filteredChannels),
                                   ),
-                                  const SizedBox(width: 12),
+                                  const SizedBox(width: 4),
                                   Expanded(
                                     child: _buildProgramGrid(filteredChannels,
                                         epgService, allFilteredChannels),
@@ -758,6 +759,12 @@ class _EPGScreenState extends State<EPGScreen>
 
     // Show loading overlay but still display the grid structure
     final bool isLoading = epgService.isLoading;
+    final preloadCount = math.min(12, channels.length);
+    for (var i = 0; i < preloadCount; i++) {
+      final channel = channels[i];
+      final channelKey = channel.tvgId ?? channel.id;
+      epgService.ensureChannelLoaded(channelKey, channelName: channel.name);
+    }
 
     // Show loading indicator when EPG is loading
     return Stack(

@@ -23,6 +23,7 @@ import 'package:iptv_player/utils/app_icons.dart';
 import 'package:iptv_player/utils/app_typography.dart';
 import 'package:iptv_player/widgets/hero_info_box.dart';
 import 'package:iptv_player/widgets/brand_badge.dart';
+import 'package:iptv_player/widgets/shimmer.dart';
 
 List<Map<String, dynamic>> _buildMovieGenreBucketsIsolate(
     List<Map<String, dynamic>> items) {
@@ -1316,117 +1317,127 @@ class _MoviesScreenState extends State<MoviesScreen>
       screenSize.width * AppSpacing.heroInfoWidth,
       screenSize.width >= 1920 ? 480.0 : 420.0,
     );
-    final cardWidth = screenSize.width / 6.5;
-    final cardHeight = cardWidth * 1.5;
-    final rowHeight = cardWidth * 1.8;
+    const cardFocusScale = 1.02;
+    final cardWidth = context.cardWidth();
+    final cardHeight = context.cardHeight();
+    final rowHeight = context.rowHeight() + (cardHeight * (cardFocusScale - 1));
+    final inset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
+    final available =
+        screenSize.width - inset - context.spacingLg();
+    final perRow = (available / (cardWidth + context.cardGap())).floor();
+    final skeletonItemCount =
+        (perRow + _rowVisibleBuffer).clamp(6, 12);
 
     return Container(
       decoration: const BoxDecoration(
         color: AppTheme.darkBackground,
       ),
-      child: Stack(
-        children: [
-          // Hero skeleton
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: heroHeight,
-            child: Container(
-              color: AppTheme.cardBackground,
-            ),
-          ),
-          // Featured info skeleton
-          Positioned(
-            bottom: heroHeight * 0.35,
-            left: contentInset,
-            width: heroInfoWidth,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  height: 28,
-                  width: screenSize.width * 0.24,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withAlpha((0.15 * 255).round()),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                const SizedBox(height: AppSizes.sm),
-                Container(
-                  height: 42,
-                  width: screenSize.width * 0.28,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withAlpha((0.1 * 255).round()),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Content skeleton
-          Positioned(
-            top: heroHeight,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              color: AppTheme.darkBackground,
-              padding: EdgeInsets.only(
-                left: contentInset,
-                right: context.spacingXxl(),
-                top: context.spacingXxl(),
-                bottom: context.spacingXxl(),
+      child: Shimmer(
+        child: Stack(
+          children: [
+            // Hero skeleton
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: heroHeight,
+              child: Container(
+                color: AppTheme.cardBackground,
               ),
+            ),
+            // Featured info skeleton
+            Positioned(
+              bottom: heroHeight * 0.35,
+              left: contentInset,
+              width: heroInfoWidth,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  SizedBox(height: context.sectionSpacing()),
-                  ...List.generate(
-                      3,
-                      (rowIndex) => Padding(
-                            padding: EdgeInsets.only(
-                                bottom: context.sectionSpacing()),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  height: 20,
-                                  width: 180.0,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white
-                                        .withAlpha((0.15 * 255).round()),
-                                    borderRadius: BorderRadius.circular(4),
+                  Container(
+                    height: 28,
+                    width: screenSize.width * 0.24,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha((0.15 * 255).round()),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.sm),
+                  Container(
+                    height: 42,
+                    width: screenSize.width * 0.28,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha((0.1 * 255).round()),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Content skeleton
+            Positioned(
+              top: heroHeight,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                color: AppTheme.darkBackground,
+                padding: EdgeInsets.only(
+                  left: contentInset,
+                  right: context.spacingXxl(),
+                  top: context.spacingXxl(),
+                  bottom: context.spacingXxl(),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: context.sectionSpacing()),
+                    ...List.generate(
+                        3,
+                        (rowIndex) => Padding(
+                              padding: EdgeInsets.only(
+                                  bottom: context.sectionSpacing()),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    height: 20,
+                                    width: 180.0,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white
+                                          .withAlpha((0.15 * 255).round()),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 8),
+                                  const SizedBox(height: 8),
                                 SizedBox(
                                   height: rowHeight,
                                   child: ListView.separated(
                                     scrollDirection: Axis.horizontal,
-                                    itemCount: 5,
-                                    itemBuilder: (context, cardIndex) =>
-                                        Container(
-                                      width: cardWidth,
-                                      height: cardHeight,
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.cardBackground,
-                                        borderRadius: BorderRadius.circular(12),
+                                    itemCount: skeletonItemCount,
+                                      itemBuilder: (context, cardIndex) =>
+                                          Container(
+                                        width: cardWidth,
+                                        height: cardHeight,
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.cardBackground,
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
                                       ),
+                                      separatorBuilder: (context, index) =>
+                                          SizedBox(width: context.cardGap()),
                                     ),
-                                    separatorBuilder: (context, index) =>
-                                        SizedBox(width: context.cardGap()),
                                   ),
-                                ),
-                              ],
-                            ),
-                          )),
-                ],
+                                ],
+                              ),
+                            )),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
