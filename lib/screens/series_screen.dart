@@ -1423,25 +1423,10 @@ class _SeriesScreenState extends State<SeriesScreen>
     return HeroInfoPanel(width: width, child: child);
   }
 
-  Widget _buildHeroInfoSkeleton(
-    BuildContext context,
-    double width,
-    Size screenSize,
-  ) {
-    return HeroInfoSkeleton(width: width);
-  }
-
   Widget _buildBannerPlaceholder() {
     return Container(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF080808), // Rich Black
-            AppTheme.darkBackground, // True Black
-          ],
-        ),
+        color: AppTheme.darkBackground,
       ),
     );
   }

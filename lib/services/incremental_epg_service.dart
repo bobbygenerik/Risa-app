@@ -1363,6 +1363,7 @@ class IncrementalEpgService extends ChangeNotifier {
     Future<void> runParseWithDecoder(
         StreamTransformer<List<int>, String> decoder) async {
       final sink = tempFile.openWrite();
+      final channelIcons = <String, String>{};
       final charStream =
           rawStreamProvider().transform(decoder).transform(sanitizeXmlStream());
       final events = charStream.toXmlEvents().withParentEvents();
@@ -1388,10 +1389,13 @@ class IncrementalEpgService extends ChangeNotifier {
             nowMs,
             futureEndMs,
             normalizeCached,
+            channelIcons: channelIcons,
           );
         } else if (startEvent.name.endsWith('channel')) {
           _processChannel(subtreeEvents, channelIds, normalizedChannels,
-              allowedNormalized: allowedList, normalize: normalizeCached);
+              allowedNormalized: allowedList,
+              normalize: normalizeCached,
+              channelIcons: channelIcons);
         }
       }
 
@@ -1408,6 +1412,7 @@ class IncrementalEpgService extends ChangeNotifier {
       final programmeEnd = _programmeEndRe;
       final channelStart = _channelStartRe;
       final channelEnd = _channelEndRe;
+      final channelIcons = <String, String>{};
 
       await for (final chunk in stream) {
         buffer += sanitizeXmlChunk(chunk);
@@ -1431,6 +1436,10 @@ class IncrementalEpgService extends ChangeNotifier {
               if (normalizedDisplay.isNotEmpty) {
                 normalizedChannels.putIfAbsent(normalizedDisplay, () => []).add(id);
               }
+            }
+            final icon = extractAttribute(block, 'src');
+            if (icon != null && icon.isNotEmpty) {
+              channelIcons[id] = icon;
             }
           }
         });
@@ -1458,7 +1467,10 @@ class IncrementalEpgService extends ChangeNotifier {
           final title = extractTagText(block, 'title') ?? 'Unknown';
           final description = extractTagText(block, 'desc');
           final category = extractTagText(block, 'category');
-          final icon = extractAttribute(block, 'src');
+          var icon = extractAttribute(block, 'src');
+          if ((icon == null || icon.isEmpty) && channelIcons.containsKey(channelId)) {
+            icon = channelIcons[channelId];
+          }
 
           final payload = {
             'epgId': channelId,
@@ -1564,13 +1576,10 @@ class IncrementalEpgService extends ChangeNotifier {
             .value;
         if (id.isEmpty) continue;
         channelIds.add(id);
-        final normalizedId = normalizeCached(id);
-        if (normalizedId.isNotEmpty) {
-          normalizedIds.add(normalizedId);
+          final normalizedId = normalizeCached(id);
           if (allowedNormalized.contains(normalizedId)) {
             matchedChannelIds.add(id);
           }
-        }
 
         String? displayName;
         for (final event in subtree) {
@@ -1586,10 +1595,7 @@ class IncrementalEpgService extends ChangeNotifier {
           }
         }
         if (displayName != null && displayName.isNotEmpty) {
-          final stripped = _stripSuffixes(displayName);
-          String normalizedDisplay =
-              stripped.toLowerCase().replaceAll(_nonAlphaNumRe, '');
-          normalizedDisplay = _convertNumberWords(normalizedDisplay);
+          String normalizedDisplay = normalizeForFilter(displayName);
           if (normalizedDisplay.isNotEmpty) {
             normalizedIds.add(normalizedDisplay);
             if (allowedNormalized.contains(normalizedDisplay)) {
@@ -1615,6 +1621,7 @@ class IncrementalEpgService extends ChangeNotifier {
     Map<String, List<String>> normalizedChannels, {
     Set<String> allowedNormalized = const {},
     required String Function(String input) normalize,
+    Map<String, String>? channelIcons,
   }) {
     // Basic parsing of channel tag to get ID and display-name
     // <channel id="BBC1"> <display-name>BBC One</display-name> </channel>
@@ -1636,16 +1643,27 @@ class IncrementalEpgService extends ChangeNotifier {
         normalizedChannels.putIfAbsent(normalizedId, () => []).add(id);
       }
 
-      // Parse <display-name> elements to improve name->id matching
+      // Parse <icon> and <display-name> elements
       String? displayName;
+      String? channelIcon;
       for (final event in events) {
-        if (event is XmlStartElementEvent && event.name == 'display-name') {
-          final idx = events.indexOf(event);
-          if (idx + 1 < events.length) {
-            final next = events[idx + 1];
-            if (next is XmlTextEvent) {
-              displayName = next.value.trim();
-              if (displayName.isNotEmpty) break;
+        if (event is XmlStartElementEvent) {
+          if (event.name == 'display-name') {
+            final idx = events.indexOf(event);
+            if (idx + 1 < events.length) {
+              final next = events[idx + 1];
+              if (next is XmlTextEvent) {
+                displayName = next.value.trim();
+              }
+            }
+          } else if (event.name == 'icon') {
+            channelIcon = event.attributes
+                .firstWhere((a) => a.name == 'src',
+                    orElse: () => XmlEventAttribute(
+                        'src', '', XmlAttributeType.DOUBLE_QUOTE))
+                .value;
+            if (channelIcon.isNotEmpty) {
+              channelIcons?[id] = channelIcon;
             }
           }
         }
@@ -1670,8 +1688,9 @@ class IncrementalEpgService extends ChangeNotifier {
     Map<String, int> catchupHoursByChannel,
     int nowMs,
     int futureEndMs,
-    String Function(String input) normalize,
-  ) {
+    String Function(String input) normalize, {
+    Map<String, String>? channelIcons,
+  }) {
     // Parse programme subtree
     // <programme start="..." stop="..." channel="..."> ... </programme>
     final startEvent = events.first as XmlStartElementEvent;
@@ -1747,6 +1766,10 @@ class IncrementalEpgService extends ChangeNotifier {
               .value;
         }
       }
+    }
+
+    if ((icon == null || icon.isEmpty) && channelIcons != null && channelIcons.containsKey(channelId)) {
+      icon = channelIcons[channelId];
     }
 
     // Ensure we track this channel ID even if no <channel> tag exists for it in the XMLTV
@@ -2368,6 +2391,8 @@ class IncrementalEpgService extends ChangeNotifier {
         if (bestMatch != null && (countryCode == null || bestScore > 0)) {
            return _cacheResolvedMapping(channelId, bestMatch);
         }
+        
+        // If we found a match but it had a bad score, don't return it but don't stop searching
 
         // 4. Loose matching (starts with / contains)
         // Collect all potential matches first

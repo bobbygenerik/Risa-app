@@ -1505,9 +1505,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final maxCardWidth =
         screenWidth < 800 ? screenWidth / 2.8 : screenWidth / 5.5;
     final cardWidth = math.min(context.cardWidth(), maxCardWidth);
-    const cardFocusScale = 1.1;
+    const cardFocusScale = 1.05;
     final cardHeight = cardWidth * 0.6;
-    final focusExtra = cardHeight * (cardFocusScale - 1);
+    final isMobile = screenWidth < 800;
+    final focusExtra = isMobile ? 0.0 : cardHeight * (cardFocusScale - 1);
     final titleStyle = AppTypography.programTitle(context);
     final timeStyle = AppTypography.programTime(context);
     final titleHeight = (titleStyle.fontSize ?? context.tvTextSize(16)) *
@@ -1557,7 +1558,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           ),
         ),
         Padding(
-          padding: EdgeInsets.only(left: rowInset, bottom: 0),
+          padding: EdgeInsets.only(left: rowInset, bottom: 8), // Added bottom spacing
           child: Container(
             height: 3,
             width: context.spacingXl(),
@@ -1632,7 +1633,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             },
           ),
         ),
-        const SizedBox(height: 0),
+        SizedBox(height: context.spacingMd()), // Increased from 0
       ],
     );
   }
@@ -1682,9 +1683,16 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     // Match the tighter spacing used in _buildChannelSection
     final infoSpacing = 2.0;
     final infoHeight = titleHeight + timeHeight + infoSpacing;
-    // Minimal vertical padding, just enough for focus scaling
-    final rowHeight = cardHeight + infoHeight + focusExtra * 0.5;
-    return rowHeight;
+    // Account for category header + underline + spacers
+    final captionStyle = AppTypography.caption(context);
+    final captionHeight = (captionStyle.fontSize ?? 13.0) * (captionStyle.height ?? 1.2);
+    // Header spacing structure: title bottom(2) + underline height(3) + underline bottom(8)
+    const headerSpacing = 2 + 3 + 8;
+    final rowBottomSpacing = context.spacingMd();
+
+    // Total calculated height of one full row block in the list
+    final cardRowHeight = cardHeight + infoHeight + focusExtra * 0.5;
+    return cardRowHeight + captionHeight + headerSpacing + rowBottomSpacing;
   }
 
   void _prefetchEpgForRow(String category, List<Channel> channels) {
