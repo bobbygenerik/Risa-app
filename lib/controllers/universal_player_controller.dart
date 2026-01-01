@@ -179,7 +179,7 @@ class NativeExoPlayerController extends UniversalPlayerController {
     switch (call.method) {
       case 'onPlaybackStateChanged':
         final state = call.arguments['state'];
-        final isPlaying = state == 'ready'; // Simplification, handled by onPlayingChanged usually
+
         final isBuffering = state == 'buffering';
         _value = _value.copyWith(
           isBuffering: isBuffering,

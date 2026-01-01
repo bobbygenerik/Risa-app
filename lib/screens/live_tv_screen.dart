@@ -787,6 +787,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             },
           ),
         ),
+        // Content Background Gradient (behind channel rows)
         Positioned(
           top: contentTop,
           left: 0,
@@ -802,7 +803,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                   AppTheme.darkBackground,
                   AppTheme.darkBackground,
                 ],
-                stops: [0.0, 0.2, 1.0],
+                stops: [0.0, 0.5, 1.0], // More gradual fade (was 0.2)
               ),
             ),
           ),
@@ -812,7 +813,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           top: 0,
           left: contentInset,
           right: rightInset,
-          height: heroHeight,
+          height: contentTop, // Limit height to visible area above channels
           child: AnimatedBuilder(
             animation: _scrollController,
             child: Builder(builder: (context) {
@@ -948,6 +949,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             // Lock text block heights so the info box doesn't resize on updates.
             SizedBox(
@@ -1083,18 +1085,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final dpr = MediaQuery.of(context).devicePixelRatio;
     final logoCacheWidth = (40 * dpr).round();
     final logoCacheHeight = (24 * dpr).round();
-    return Container(
+    return SizedBox(
       height: 64,
       width: 96,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.black.withAlpha((0.7 * 255).round()),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: Colors.white.withAlpha((0.1 * 255).round()),
-          width: 1,
-        ),
-      ),
       child: Center(
         child: Builder(builder: (context) {
           final url = channel.logoUrl!;
@@ -1102,8 +1095,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           if (isSvg) {
             return SvgPicture.network(
               url,
-              width: 56,
-              height: 36,
+              // Removed fixed width/height to let it fill available space
               fit: BoxFit.contain,
               placeholderBuilder: (_) => const SizedBox.shrink(),
               // onPictureError handler to avoid crashing on bad svg
@@ -1121,8 +1113,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               image: imageProvider,
               fit: BoxFit.contain,
               filterQuality: FilterQuality.high,
-              width: 56,
-              height: 36,
+              // Removed fixed width/height to let it fill available space
             ),
           );
         }),
@@ -1475,7 +1466,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.only(left: rowInset, bottom: context.spacingXs()),
+          padding: EdgeInsets.only(left: rowInset, bottom: 4),
           child: Text(
             title,
             style: AppTypography.caption(context).copyWith(
@@ -1485,7 +1476,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
           ),
         ),
         Padding(
-          padding: EdgeInsets.only(left: rowInset, bottom: context.spacingSm()),
+          padding: EdgeInsets.only(left: rowInset, bottom: 4),
           child: Container(
             height: 3,
             width: context.spacingXl(),
@@ -1560,7 +1551,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             },
           ),
         ),
-        SizedBox(height: context.spacingXs()),
+        const SizedBox(height: 8),
       ],
     );
   }
@@ -1596,7 +1587,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final maxCardWidth =
         screenWidth < 800 ? screenWidth / 2.8 : screenWidth / 5.5;
     final cardWidth = math.min(context.cardWidth(), maxCardWidth);
-    const cardFocusScale = 1.1;
+    const cardFocusScale = 1.05;
     final cardHeight = cardWidth * 0.6;
     final focusExtra = cardHeight * (cardFocusScale - 1);
     final titleStyle = AppTypography.programTitle(context);
@@ -1608,7 +1599,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final infoSpacing = context.spacingXs();
     final infoHeight = titleHeight + timeHeight + (infoSpacing * 2);
     final rowHeight = cardHeight + infoSpacing + infoHeight + focusExtra;
-    return rowHeight + infoSpacing;
+    return rowHeight + 8;
   }
 
   void _prefetchEpgForRow(String category, List<Channel> channels) {
@@ -1651,17 +1642,10 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         onFocusChange: (hasFocus) {
           if (hasFocus) {
             // Update focused index without triggering full screen rebuild if possible
-            final changed = _focusedIndexBySection[sectionKey] != index;
+
             _focusedIndexBySection[sectionKey] = index;
             
-            if (changed) {
-              // Only call setState if we really need to update something that depends on this globally
-              // For now, many things like _shouldPrefetchArt still use this map
-              // We'll use a minor delay or microtask to avoid frame drops during navigation
-              Future.microtask(() {
-                if (mounted) setState(() {});
-              });
-            }
+
             
             _scrollToHeroPeekOnFocus();
             onItemFocus?.call();
@@ -1714,8 +1698,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
             final logoCacheWidth = (56 * dpr).round();
             final logoCacheHeight = (32 * dpr).round();
 
-            const cardFocusScale = 1.1;
-            final infoSpacing = context.spacingXs();
+            const cardFocusScale = 1.05;
 
             // ENHANCEMENT: Ensure we have sufficient data to display a quality card
             final hasMinimumData = currentProgram != null &&
@@ -1728,11 +1711,7 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                 scale: isFocused ? cardFocusScale : 1.0,
                 duration: TVFocusStyle.animationDuration,
                 curve: TVFocusStyle.animationCurve,
-                alignment: index == 0
-                    ? Alignment.topLeft
-                    : index == totalCount - 1
-                        ? Alignment.topRight
-                        : Alignment.topCenter,
+                alignment: Alignment.topCenter,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -1831,25 +1810,9 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                             Positioned(
                               top: 8,
                               left: 8,
-                              child: Container(
+                              child: SizedBox(
                                 width: 56,
                                 height: 32,
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withAlpha((0.7 * 255).round()),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    color: Colors.white.withAlpha((0.1 * 255).round()),
-                                    width: 0.5,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withAlpha((0.5 * 255).round()),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
                                 child: _buildChannelLogoWidget(
                                   channel,
                                   logoCacheWidth,
@@ -1926,42 +1889,60 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     // Program info with quality check
                     if (currentProgram != null &&
                         currentProgram.title.isNotEmpty) ...[
-                      SizedBox(height: infoSpacing),
+                      const SizedBox(height: 4), // Tighter spacing (was context.spacingXs())
                       SizedBox(
                         width: cardWidth,
                         child: Text(
                           currentProgram.title,
-                          style: AppTypography.programTitle(context),
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            fontSize: 11, // Smaller title
+                            fontWeight: FontWeight.w500,
+                            height: 1.1, // Tighter line height
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      SizedBox(height: infoSpacing),
+                      const SizedBox(height: 2), // Very tight spacing
                       SizedBox(
                         width: cardWidth,
                         child: Text(
                           '${_formatTime(currentProgram.startTime)} - ${_formatTime(currentProgram.endTime)}',
-                          style: AppTypography.programTime(context),
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.6),
+                            fontSize: 10, // Smaller time
+                            height: 1.1,
+                          ),
                         ),
                       ),
                     ] else if (channel.name.isNotEmpty) ...[
                       // Fallback to channel name if no program data
-                      SizedBox(height: infoSpacing),
+                      const SizedBox(height: 4),
                       SizedBox(
                         width: cardWidth,
                         child: Text(
                           channel.name,
-                          style: AppTypography.programTitle(context),
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            height: 1.1,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      SizedBox(height: infoSpacing),
+                      const SizedBox(height: 2),
                       SizedBox(
                         width: cardWidth,
                         child: Text(
                           'No program data',
-                          style: AppTypography.programTime(context),
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.6),
+                            fontSize: 10,
+                            height: 1.1,
+                          ),
                         ),
                       ),
                     ],

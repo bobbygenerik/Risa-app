@@ -565,7 +565,7 @@ class _MoviesScreenState extends State<MoviesScreen>
   Widget _buildSectionHeader(BuildContext context, String title) {
     final inset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
     return Padding(
-      padding: EdgeInsets.only(left: inset),
+      padding: EdgeInsets.only(left: inset, bottom: 4),
       child: Text(
         title,
         style: AppTypography.caption(context).copyWith(
@@ -634,7 +634,7 @@ class _MoviesScreenState extends State<MoviesScreen>
   }) {
     if (movies.isEmpty) return const SizedBox.shrink();
 
-    const cardFocusScale = 1.1;
+    const cardFocusScale = 1.05;
     final inset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
     final cardHeight = context.cardHeight();
     final rowHeight = context.rowHeight() + (cardHeight * (cardFocusScale - 1));
@@ -732,7 +732,7 @@ class _MoviesScreenState extends State<MoviesScreen>
         child: Builder(
           builder: (context) {
             final isFocused = Focus.of(context).hasFocus;
-            const cardFocusScale = 1.1;
+            const cardFocusScale = 1.05;
             return GestureDetector(
               onTap: () {
                 final encodedId = Uri.encodeComponent(movie.id);
@@ -806,7 +806,7 @@ class _MoviesScreenState extends State<MoviesScreen>
                       movie.title,
                       style: const TextStyle(
                         color: AppTheme.textPrimary,
-                        fontSize: 14,
+                        fontSize: 11,
                         fontWeight: FontWeight.w600,
                       ),
                       maxLines: 1,
@@ -817,7 +817,7 @@ class _MoviesScreenState extends State<MoviesScreen>
                         '${movie.year ?? ''} ${movie.rating != null ? '★${movie.ratingDisplay}' : ''}',
                         style: const TextStyle(
                           color: AppTheme.textSecondary,
-                          fontSize: 11,
+                          fontSize: 10,
                         ),
                       ),
                   ],
@@ -1205,7 +1205,7 @@ class _MoviesScreenState extends State<MoviesScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionHeader(context, section.title),
-        SizedBox(height: context.spacingXs()),
+        const SizedBox(height: 8),
         _buildMoviesRow(
           context,
           section.items,

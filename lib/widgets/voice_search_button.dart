@@ -223,13 +223,10 @@ class _VoiceSearchButtonState extends State<VoiceSearchButton>
         child: Builder(
           builder: (context) {
             final isFocused = Focus.of(context).hasFocus;
-            return Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(999),
-                border: isFocused
-                    ? Border.all(color: AppTheme.focusBorder, width: 3)
-                    : null,
-              ),
+            return AnimatedScale(
+              scale: isFocused ? 1.05 : 1.0,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
               child: buttonWidget,
             );
           },

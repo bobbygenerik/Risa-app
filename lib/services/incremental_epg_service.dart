@@ -119,8 +119,7 @@ class IncrementalEpgService extends ChangeNotifier {
       RegExp(r'<(?:\w+:)?channel\b', caseSensitive: false);
   static final RegExp _channelEndRe =
       RegExp(r'</(?:\w+:)?channel\s*>', caseSensitive: false);
-  static final RegExp _latin1FallbackRe =
-      RegExp(r'charset\s*=\s*(?:latin1|iso-8859-1)', caseSensitive: false);
+
 
   // legacy prefs keys removed: do not store large EPG data in SharedPreferences
   static const String _epgCacheTimeKey = 'epg_cache_time';
@@ -868,6 +867,28 @@ class IncrementalEpgService extends ChangeNotifier {
 
         if (!deferRefresh) {
           await _downloadEpgIfNeeded(forceRefresh: forceRefresh);
+        }
+
+        // OPTIMIZATION: If we have mappings in DB/Prefs and aren't forcing refresh, skip parsing!
+        if (!forceRefresh &&
+            _normalizedAvailableChannels != null &&
+            _normalizedAvailableChannels!.isNotEmpty) {
+          final mappingCount = await _db.mappingCount();
+          if (mappingCount > 0) {
+            debugLog(
+                'EPG: Skipping XML parse - using ${_normalizedAvailableChannels!.length} cached channels and $mappingCount DB mappings.');
+            
+            // Ensure availableChannels is populated from the normalized map
+            _availableChannels.clear();
+            _availableChannels.addAll(_normalizedAvailableChannels!.values);
+            
+            _hasParsed = true;
+            _isLoading = false;
+            _isParsing = false;
+            _error = null;
+            notifyListeners();
+            return;
+          }
         }
 
         final file = await _getCacheFile();

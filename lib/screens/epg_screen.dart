@@ -715,7 +715,7 @@ class _EPGScreenState extends State<EPGScreen>
         }
         return KeyEventResult.ignored;
       },
-      onFocusChange: (_) => setState(() {}),
+
       child: Builder(builder: (context) {
         final bool isFocused = Focus.of(context).hasFocus;
         return GestureDetector(

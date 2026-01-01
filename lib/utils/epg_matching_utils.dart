@@ -311,13 +311,32 @@ class EPGMatchingUtils {
       }
     }
 
-    // Try partial match
+    // Try smarter partial match
+    // We want to avoid "TNT" matching "TNT Sports" if "TNT" exists elsewhere or if it's too different.
+    // Score candidates based on length difference and word boundary presence.
+    String? bestPartialMatch;
+    int minLengthDiff = 999;
+
     for (final key in allEpgKeys) {
-      if (key.toLowerCase().contains(lowerChannelId) ||
-          lowerChannelId.contains(key.toLowerCase())) {
-        _channelIdCache[cacheKey] = key;
-        return key;
+      final lowerKey = key.toLowerCase();
+      // Check if one contains the other
+      if (lowerKey.contains(lowerChannelId)) {
+        // Calculate "junk" remaining
+        final diff = lowerKey.length - lowerChannelId.length;
+        
+        // Strict check: if the difference is too big, it's likely a different channel
+        // e.g. "TNT" (3) vs "TNT Sports 4K" (13) -> diff 10. Too big.
+        // e.g. "BBC One" (7) vs "BBC One HD" (10) -> diff 3. Acceptable.
+        if (diff < minLengthDiff && diff < 8) {
+             minLengthDiff = diff;
+             bestPartialMatch = key;
+        }
       }
+    }
+
+    if (bestPartialMatch != null) {
+      _channelIdCache[cacheKey] = bestPartialMatch;
+      return bestPartialMatch;
     }
 
     // No match found - cache the miss

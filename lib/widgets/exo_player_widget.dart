@@ -27,7 +27,7 @@ class ExoPlayerWidget extends StatefulWidget {
 
 class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
   late UniversalPlayerController _controller;
-  Future<void>? _initializeFuture;
+
   bool _isInitialized = false;
 
   @override
@@ -59,7 +59,7 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
       });
     }
 
-    _initializeFuture = _controller.initialize().then((_) {
+    _controller.initialize().then((_) {
       if (mounted) {
         setState(() {
           _isInitialized = true;
@@ -86,41 +86,63 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget> {
 
   @override
   Widget build(BuildContext context) {
-    // If native Android, render the Custom Platform View
-    if (_controller is NativeExoPlayerController) {
-      return ExoPlayerVideoView(
-        controller: _controller as NativeExoPlayerController,
-        fit: widget.fit,
-      );
-    }
-
-    // Otherwise render standard Texture VideoPlayer
     if (!_isInitialized) {
-       return const Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator());
     }
 
-    final stockCtrl = _controller as StockPlayerController;
-    if (!stockCtrl.rawController.value.isInitialized) {
-       return const Center(child: CircularProgressIndicator());
-    }
-
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        SizedBox.expand(
-          child: FittedBox(
-            fit: widget.fit,
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        // If native Android, render the Custom Platform View
+        if (_controller is NativeExoPlayerController) {
+          return Stack(
             alignment: Alignment.center,
-            child: SizedBox(
-               width: stockCtrl.rawController.value.size.width,
-               height: stockCtrl.rawController.value.size.height,
-               child: VideoPlayer(stockCtrl.rawController),
+            children: [
+              ExoPlayerVideoView(
+                controller: _controller as NativeExoPlayerController,
+                fit: widget.fit,
+              ),
+              if (_controller.value.isBuffering || !_controller.value.isInitialized)
+                const Center(child: CircularProgressIndicator(color: Colors.white)),
+              if (_controller.value.errorDescription != null)
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    color: Colors.black54,
+                    child: Text(
+                      _controller.value.errorDescription!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        }
+
+        final stockCtrl = _controller as StockPlayerController;
+        if (!stockCtrl.rawController.value.isInitialized) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            SizedBox.expand(
+              child: FittedBox(
+                fit: widget.fit,
+                alignment: Alignment.center,
+                child: SizedBox(
+                  width: stockCtrl.rawController.value.size.width,
+                  height: stockCtrl.rawController.value.size.height,
+                  child: VideoPlayer(stockCtrl.rawController),
+                ),
+              ),
             ),
-          ),
-        ),
-        if (stockCtrl.value.isBuffering)
-          const Center(child: CircularProgressIndicator()),
-      ],
+            if (stockCtrl.value.isBuffering)
+              const Center(child: CircularProgressIndicator()),
+          ],
+        );
+      },
     );
   }
 }

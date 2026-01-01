@@ -112,7 +112,7 @@ class _BrandPrimaryButtonState extends State<BrandPrimaryButton> {
       duration: AppDurations.fast,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(widget.borderRadius),
-        border: _focused ? Border.all(color: AppTheme.focusBorder, width: 3) : null,
+        border: null,
         boxShadow: _focused ? TVFocusStyle.focusedShadow : TVFocusStyle.defaultShadow,
       ),
       child: innerButton,
@@ -223,8 +223,8 @@ class _BrandSecondaryButtonState extends State<BrandSecondaryButton> {
         ),
         borderRadius: BorderRadius.circular(widget.borderRadius),
         border: Border.all(
-          color: _focused ? AppTheme.focusBorder : Colors.transparent,
-          width: _focused ? 3 : 3,
+          color: Colors.transparent,
+          width: 3,
         ),
       ),
       child: Padding(

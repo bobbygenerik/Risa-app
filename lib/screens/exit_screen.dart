@@ -120,21 +120,21 @@ class _ExitScreenState extends State<ExitScreen> {
                 // App logo or icon
                 Image.asset(
                   'assets/images/croppedlogo2.png',
-                  height: 80,
+                  height: 60,
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
 
                 // Exit message
                 Text(
                   _selectedMessage,
                   style: const TextStyle(
                     color: AppTheme.textPrimary,
-                    fontSize: 24,
+                    fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 48),
+                const SizedBox(height: 32),
 
                 // Buttons
                 Row(
@@ -144,18 +144,18 @@ class _ExitScreenState extends State<ExitScreen> {
                       focusNode: _backButtonFocus,
                       onPressed: () => context.go('/home'),
                       label: 'Go Back',
-                      minHeight: 52,
+                      minHeight: 40,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 32, vertical: 14),
+                          horizontal: 24, vertical: 10),
                     ),
-                    const SizedBox(width: 24),
+                    const SizedBox(width: 16),
                     BrandPrimaryButton(
                       focusNode: _exitButtonFocus,
                       onPressed: () => SystemNavigator.pop(),
                       label: 'Exit App',
-                      minHeight: 52,
+                      minHeight: 40,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 32, vertical: 14),
+                          horizontal: 24, vertical: 10),
                     ),
                   ],
                 ),

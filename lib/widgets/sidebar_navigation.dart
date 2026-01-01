@@ -277,7 +277,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
       child: Builder(
         builder: (context) {
           final isFocused = Focus.of(context).hasFocus;
-          final lift = isFocused ? -2.0 : 0.0;
+
           return GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () {
@@ -299,8 +299,6 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
                   color: Colors.transparent,
-                  border: isFocused ? Border.all(color: AppTheme.focusBorder, width: 3) : null,
-                  boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
                 ),
                 child: _isExpanded
                     ? Row(
@@ -405,7 +403,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
       child: Builder(
         builder: (context) {
           final isFocused = Focus.of(context).hasFocus;
-          final lift = isFocused ? -2.0 : 0.0;
+
           return GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () {
@@ -428,8 +426,6 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
                   color: Colors.transparent,
-                  border: isFocused ? Border.all(color: AppTheme.focusBorder, width: 3) : null,
-                  boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
                 ),
                 child: _isExpanded
                     ? Row(
@@ -592,7 +588,7 @@ class SidebarNavigationState extends State<SidebarNavigation> {
       child: Builder(
         builder: (context) {
           final isFocused = Focus.of(context).hasFocus;
-          final lift = isFocused ? -2.0 : 0.0;
+
           return GestureDetector(
             onTap: () {
               if (!_isExpanded) {
@@ -614,8 +610,6 @@ class SidebarNavigationState extends State<SidebarNavigation> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
                   color: Colors.transparent,
-                  border: isFocused ? Border.all(color: AppTheme.focusBorder, width: 3) : null,
-                  boxShadow: isFocused ? TVFocusStyle.focusedShadow : null,
                 ),
                 child: _isExpanded
                     ? Row(

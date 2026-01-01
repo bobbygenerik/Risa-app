@@ -3,7 +3,7 @@ import 'package:iptv_player/utils/app_theme.dart';
 
 /// Modern Netflix-style focus effect constants
 class TVFocusStyle {
-  static const double focusScale = 1.1;
+  static const double focusScale = 1.05;
   static const Duration animationDuration = Duration(milliseconds: 150);
   static const Curve animationCurve = Curves.easeOutCubic;
   static const Color glowColor = Color(0x60FFFFFF); // Increased opacity
