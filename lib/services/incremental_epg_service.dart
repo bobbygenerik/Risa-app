@@ -242,8 +242,11 @@ class IncrementalEpgService extends ChangeNotifier {
 
   void setAllowedChannelIds(Set<String> channelIds,
       {bool triggerRefresh = false}) {
-    _allowedChannelIdsNormalized = channelIds;
+    // Standardize IDs for filtering - helps with targeted EPG parsing
+    _allowedChannelIdsNormalized =
+        channelIds.map((id) => normalizeForFilter(id)).toSet();
     _allowedChannelCount = channelIds.length;
+    _internalToEpgIdMapping.clear(); // Clear cache when selection changes
     if (triggerRefresh) {
       if (_isLoading || _isDownloading || _isParsing || _initInFlight) {
         _pendingAllowedRefresh = true;
@@ -909,9 +912,10 @@ class IncrementalEpgService extends ChangeNotifier {
                 _availableChannels.clear();
                 _availableChannels.addAll(_programsByChannel.keys);
                 if (_normalizedAvailableChannels != null) {
-            _availableChannels.addAll(
-                _normalizedAvailableChannels!.values.expand((list) => list));
-          }
+                  _availableChannels.addAll(
+                      _normalizedAvailableChannels!.values.expand((list) => list));
+                }
+                _internalToEpgIdMapping.clear();
                 
                 debugLog('EPG: Loaded ${_programsByChannel.length} channels from DB cache (${dbPrograms.values.fold<int>(0, (sum, list) => sum + list.length)} programs)');
                 _hasParsed = true;
@@ -1107,6 +1111,9 @@ class IncrementalEpgService extends ChangeNotifier {
         if (_epgUrl != null && _epgUrl!.isNotEmpty) {
           await prefs.setString(_epgCacheUrlKey, _epgUrl!);
         }
+        // Clear mapping cache on successful fresh parse to allow re-matching with new data
+        _internalToEpgIdMapping.clear();
+        
         // Persist normalized mapping to file for faster startup
         await _saveNormalizedMappingToPrefs(_normalizedAvailableChannels);
 
@@ -2419,8 +2426,11 @@ class IncrementalEpgService extends ChangeNotifier {
       }
     }
 
-    // No match found - cache the negative result to avoid re-running expensive fuzzy matches
-    return _cacheResolvedMapping(channelId, null);
+    // No match found - only cache the negative result if we are confident data is complete
+    if (_hasParsed && !_isLoading && !_isParsing) {
+      return _cacheResolvedMapping(channelId, null);
+    }
+    return null;
   }
 
   List<Program> getProgramsForChannel(String channelId, {String? channelName, String? groupTitle}) {

@@ -338,37 +338,43 @@ class _LiveTVScreenState extends State<LiveTVScreen>
 
   Future<void> _loadCategoryRowInternal(String category,
       {bool append = false}) async {
-    _categoryChannelLoading.add(category);
-    final channelProvider =
-        Provider.of<ChannelProvider>(context, listen: false);
-    final offset = append ? (_categoryOffsets[category] ?? 0) : 0;
-    final limit = append ? _rowFetchStep : _rowInitialFetch;
-    final channels = await channelProvider.getChannelsForCategoryAsync(
-      category,
-      offset: offset,
-      limit: limit,
-    );
-    if (!mounted) return;
-    if (channels.isNotEmpty) {
-      if (append && _categoryChannelCache.containsKey(category)) {
-        _categoryChannelCache[category] = [
-          ..._categoryChannelCache[category]!,
-          ...channels
-        ];
-      } else {
-        _categoryChannelCache[category] = channels;
+    try {
+      final channelProvider =
+          Provider.of<ChannelProvider>(context, listen: false);
+      final offset = append ? (_categoryOffsets[category] ?? 0) : 0;
+      final limit = append ? _rowFetchStep : _rowInitialFetch;
+      final channels = await channelProvider.getChannelsForCategoryAsync(
+        category,
+        offset: offset,
+        limit: limit,
+      );
+      if (!mounted) return;
+      if (channels.isNotEmpty) {
+        if (append && _categoryChannelCache.containsKey(category)) {
+          _categoryChannelCache[category] = [
+            ..._categoryChannelCache[category]!,
+            ...channels
+          ];
+        } else {
+          _categoryChannelCache[category] = channels;
+        }
+        _categoryOffsets[category] = offset + channels.length;
       }
-      _categoryOffsets[category] = offset + channels.length;
+      if (channels.length < limit) {
+        _categoryHasMore[category] = false;
+      } else {
+        _categoryHasMore[category] = true;
+      }
+    } catch (e) {
+      debugLog('LiveTV: Failed to load category "$category": $e');
+    } finally {
+      if (mounted) {
+        _categoryChannelLoading.remove(category);
+        _activeCategoryLoads = (_activeCategoryLoads - 1).clamp(0, 9999);
+        _drainCategoryLoadQueue();
+        _notifyCategoryRow(category);
+      }
     }
-    if (channels.length < limit) {
-      _categoryHasMore[category] = false;
-    } else {
-      _categoryHasMore[category] = true;
-    }
-    _categoryChannelLoading.remove(category);
-    _activeCategoryLoads = (_activeCategoryLoads - 1).clamp(0, 9999);
-    _drainCategoryLoadQueue();
-    _notifyCategoryRow(category);
   }
 
   void _notifyCategoryRow(String category) {
@@ -1203,16 +1209,22 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   bool _isLikelyPosterUrl(String url) {
+    // Relaxed check: Only filter out very obvious portrait poster formats
+    // from TMDB, but allow images that might be legitimate program art.
     final lower = url.toLowerCase();
-    if (lower.contains('/w500') ||
-        lower.contains('/w342') ||
-        lower.contains('/w300') ||
-        lower.contains('/w185') ||
-        lower.contains('poster') ||
-        lower.contains('portrait') ||
-        lower.contains('cover')) {
+    
+    // Explicit portrait orientations
+    if (lower.contains('poster') ||
+        lower.contains('portrait')) {
       return true;
     }
+    
+    // TMDB specific portrait patterns (common poster sizes)
+    if (lower.contains('tmdb.org') && 
+       (lower.contains('/w342') || lower.contains('/w185'))) {
+      return true;
+    }
+    
     return false;
   }
 
@@ -1767,23 +1779,21 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               ));
             }
             
-            return RepaintBoundary(
-              child: GestureDetector(
-                onTap: () => context.push('/player', extra: channel),
-                child: AnimatedScale(
-                  scale: isFocused ? 1.05 : 1.0,
-                  duration: TVFocusStyle.animationDuration,
-                  curve: TVFocusStyle.animationCurve,
-                  alignment: Alignment.topCenter,
-                  child: _buildCardContent(
-                    context, 
-                    channel, 
-                    program, 
-                    isFocused, 
-                    cardWidth, 
-                    cardHeight, 
-                    allowPrefetch
-                  ),
+            return GestureDetector(
+              onTap: () => context.push('/player', extra: channel),
+              child: AnimatedScale(
+                scale: isFocused ? 1.05 : 1.0,
+                duration: TVFocusStyle.animationDuration,
+                curve: TVFocusStyle.animationCurve,
+                alignment: Alignment.topCenter,
+                child: _buildCardContent(
+                  context, 
+                  channel, 
+                  program, 
+                  isFocused, 
+                  cardWidth, 
+                  cardHeight, 
+                  allowPrefetch
                 ),
               ),
             );
