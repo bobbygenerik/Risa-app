@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -1165,14 +1166,36 @@ class _LiveTVScreenState extends State<LiveTVScreen>
         borderRadius: BorderRadius.circular(8),
       ),
       child: Center(
-        child: CachedNetworkImage(
-          imageUrl: channel.logoUrl!,
-          fit: BoxFit.contain,
-          memCacheWidth: logoCacheWidth,
-          memCacheHeight: logoCacheHeight,
-          placeholder: (_, __) => const SizedBox.shrink(),
-          errorWidget: (_, __, ___) => const SizedBox.shrink(),
-        ),
+        child: Builder(builder: (context) {
+          final url = channel.logoUrl!;
+          final isSvg = url.toLowerCase().endsWith('.svg') || url.toLowerCase().contains('.svg?');
+          if (isSvg) {
+            return SvgPicture.network(
+              url,
+              width: 56,
+              height: 36,
+              fit: BoxFit.contain,
+              placeholderBuilder: (_) => const SizedBox.shrink(),
+              // onPictureError handler to avoid crashing on bad svg
+              clipBehavior: Clip.hardEdge,
+            );
+          }
+
+          return CachedNetworkImage(
+            imageUrl: url,
+            memCacheWidth: logoCacheWidth,
+            memCacheHeight: logoCacheHeight,
+            placeholder: (_, __) => const SizedBox.shrink(),
+            errorWidget: (_, __, ___) => const SizedBox.shrink(),
+            imageBuilder: (context, imageProvider) => Image(
+              image: imageProvider,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.high,
+              width: 56,
+              height: 36,
+            ),
+          );
+        }),
       ),
     );
   }
