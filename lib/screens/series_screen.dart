@@ -709,7 +709,7 @@ class _SeriesScreenState extends State<SeriesScreen>
   Widget _buildSectionHeader(BuildContext context, String title) {
     final inset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
     return Padding(
-      padding: EdgeInsets.only(left: inset, bottom: 4),
+      padding: EdgeInsets.only(left: inset),
       child: Text(
         title,
         style: AppTypography.caption(context).copyWith(
@@ -735,7 +735,7 @@ class _SeriesScreenState extends State<SeriesScreen>
 
     if (seriesMap.isEmpty) return const SizedBox.shrink();
 
-    const cardFocusScale = 1.05;
+    const cardFocusScale = 1.1;
     final inset = context.spacingSm() + AppSpacing.sidebarCollapsedWidth;
     final cardHeight = context.cardHeight();
     final rowHeight = context.rowHeight() + (cardHeight * (cardFocusScale - 1));
@@ -837,7 +837,7 @@ class _SeriesScreenState extends State<SeriesScreen>
         child: Builder(
           builder: (context) {
             final isFocused = Focus.of(context).hasFocus;
-            const cardFocusScale = 1.05;
+            const cardFocusScale = 1.1;
             return GestureDetector(
               onTap: () {
                 final encodedId = Uri.encodeComponent(firstEpisode.id);
@@ -924,7 +924,7 @@ class _SeriesScreenState extends State<SeriesScreen>
                       title,
                       style: TextStyle(
                         color: AppTheme.textPrimary,
-                        fontSize: context.tvTextSize(11),
+                        fontSize: context.tvTextSize(14),
                         fontWeight: FontWeight.w600,
                       ),
                       maxLines: 1,
@@ -936,7 +936,7 @@ class _SeriesScreenState extends State<SeriesScreen>
                         '${firstEpisode.year ?? ''} ${firstEpisode.rating != null ? '★${firstEpisode.ratingDisplay}' : ''}',
                         style: TextStyle(
                           color: AppTheme.textSecondary,
-                          fontSize: context.tvTextSize(10),
+                          fontSize: context.tvTextSize(11),
                         ),
                       ),
                   ],
@@ -1304,7 +1304,7 @@ class _SeriesScreenState extends State<SeriesScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionHeader(context, section.title),
-        const SizedBox(height: 8),
+        SizedBox(height: context.spacingXs()),
         _buildSeriesRow(
           context,
           section.items,
@@ -1313,7 +1313,7 @@ class _SeriesScreenState extends State<SeriesScreen>
           onItemFocus: section.onItemFocus,
           onNearEnd: section.onNearEnd,
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: context.spacingSm()),
       ],
     );
   }
@@ -1423,7 +1423,13 @@ class _SeriesScreenState extends State<SeriesScreen>
     return HeroInfoPanel(width: width, child: child);
   }
 
-
+  Widget _buildHeroInfoSkeleton(
+    BuildContext context,
+    double width,
+    Size screenSize,
+  ) {
+    return HeroInfoSkeleton(width: width);
+  }
 
   Widget _buildBannerPlaceholder() {
     return Container(

@@ -8,7 +8,7 @@ import '../utils/debug_helper.dart';
 import '../utils/app_theme.dart';
 import '../utils/snackbar_helper.dart';
 import '../widgets/brand_badge.dart';
-
+import '../widgets/cached_image.dart';
 import '../widgets/live_subtitle_overlay.dart';
 import '../services/integrated_transcription_service.dart';
 import 'epg_screen.dart';
@@ -183,69 +183,62 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
       body: Focus(
         autofocus: true,
         onKeyEvent: (node, event) {
-          // Show controls on any key event
+          // Show controls on any key event (avoid referencing undefined KeyDownEvent)
           _showControlsAndAutoHide();
           return KeyEventResult.ignored;
         },
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : Stack(
-                children: [
-                  // Player fills the available area
-                  Positioned.fill(
-                    child: ExoPlayerWidget(
-                      url: widget.videoUrl ??
-                          widget.content?.videoUrl ??
-                          widget.streamUrl ??
-                          widget.channel?.url ??
-                          '',
-                      isLive: widget.isLive,
-                      transcriptionService:
-                          Provider.of<IntegratedTranscriptionService>(context,
-                              listen: false),
-                      controllerNotifier: _playerControllerNotifier,
-                      fit: _videoFit,
-                    ),
-                  ),
-
-                  // Transparent overlay to capture taps for showing controls
-                  // This sits ABOVE the player but BELOW the controls
-                  Positioned.fill(
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: _toggleControls,
-                    ),
-                  ),
-
-                  // Live subtitle overlay positioned at bottom center
-                  if (_subtitleMode == EnhancedSubtitleMode.liveTranslation)
-                    Positioned(
-                      left: 16,
-                      right: 16,
-                      bottom: 80,
-                      child: LiveSubtitleOverlay(
-                        showSubtitles: true,
+        child: GestureDetector(
+          onTap: _toggleControls,
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Stack(
+                  children: [
+                    // Player fills the available area
+                    Positioned.fill(
+                      child: ExoPlayerWidget(
+                        url: widget.videoUrl ??
+                            widget.content?.videoUrl ??
+                            widget.streamUrl ??
+                            widget.channel?.url ??
+                            '',
+                        isLive: widget.isLive,
+                        transcriptionService:
+                            Provider.of<IntegratedTranscriptionService>(context,
+                                listen: false),
+                        controllerNotifier: _playerControllerNotifier,
+                        fit: _videoFit,
                       ),
                     ),
-                  if (_subtitleMode == EnhancedSubtitleMode.regular)
-                    Positioned(
-                      left: 16,
-                      right: 16,
-                      bottom: 80,
-                      child: _buildRegularSubtitleOverlay(),
-                    ),
-                  // Modern streaming controls
-                  if (_showControls && !_isLoading) _buildModernControls(),
-                  // Guide overlay
-                  if (_showGuide) _buildGuideOverlay(),
-                ],
-              ),
+                    // Live subtitle overlay positioned at bottom center
+                    if (_subtitleMode == EnhancedSubtitleMode.liveTranslation)
+                      Positioned(
+                        left: 16,
+                        right: 16,
+                        bottom: 80,
+                        child: LiveSubtitleOverlay(
+                          showSubtitles: true,
+                        ),
+                      ),
+                    if (_subtitleMode == EnhancedSubtitleMode.regular)
+                      Positioned(
+                        left: 16,
+                        right: 16,
+                        bottom: 80,
+                        child: _buildRegularSubtitleOverlay(),
+                      ),
+                    // Modern streaming controls
+                    if (_showControls && !_isLoading) _buildModernControls(),
+                    // Guide overlay
+                    if (_showGuide) _buildGuideOverlay(),
+                  ],
+                ),
+        ),
       ),
     );
   }
 
   Widget _buildModernControls() {
-
+    final logoUrl = widget.channel?.logoUrl ?? widget.content?.imageUrl;
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -267,13 +260,9 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
             left: 0,
             right: 0,
             child: SafeArea(
-              top: true,
-              bottom: false,
-              left: false,
-              right: false,
               child: Padding(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 child: Row(
                   children: [
                     _buildControlButton(
@@ -281,6 +270,14 @@ class _EnhancedVideoPlayerScreenState extends State<EnhancedVideoPlayerScreen> {
                       onPressed: () => Navigator.pop(context),
                       size: 24,
                     ),
+                    if (logoUrl != null && logoUrl.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      CachedChannelLogo(
+                        logoUrl: logoUrl,
+                        size: 32,
+                        fallbackIcon: Icons.tv,
+                      ),
+                    ],
                     const Spacer(),
                     if (widget.isLive) ...[
                       IconButton(
