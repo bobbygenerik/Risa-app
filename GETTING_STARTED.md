@@ -127,6 +127,25 @@ http://stream.example.com/cnn.m3u8
 flutter doctor
 ```
 
+### Flutter SDK for agents/CI
+
+If `flutter` is not already on `PATH` in automation or other agents, source the repo helper which sets `FLUTTER_ROOT` and ensures `flutter/bin` is on the path:
+
+```bash
+source scripts/export_flutter_env.sh
+flutter --version
+```
+
+For CI, run a step to source the script before other Flutter commands (example for bash-like runners):
+
+```yaml
+- name: Setup Flutter env
+   run: |
+      source scripts/export_flutter_env.sh
+      flutter --version
+```
+
+
 ### Dependencies issues
 ```bash
 flutter pub get
