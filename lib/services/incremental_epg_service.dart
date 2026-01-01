@@ -127,7 +127,8 @@ class IncrementalEpgService extends ChangeNotifier {
   static const String _normalizedMapFileName = 'epg_normalized.json';
   static const int _channelsPerBatch = 50;
   static const int _maxRetries = 3;
-  static const Duration _cacheDuration = Duration(hours: 6);
+  static const int _defaultCacheHours = 6;
+  Duration _cacheDuration = const Duration(hours: _defaultCacheHours);
 
   bool get isLoading => _isLoading;
   bool get isDownloading => _isDownloading;
@@ -303,6 +304,11 @@ class IncrementalEpgService extends ChangeNotifier {
       }
 
       final prefs = await SharedPreferences.getInstance();
+      
+      // Load user's EPG cache duration preference (defaults to 6 hours)
+      final userCacheHours = prefs.getInt('epg_cache_duration') ?? _defaultCacheHours;
+      _cacheDuration = Duration(hours: userCacheHours);
+      debugLog('EPG: Using cache duration of $userCacheHours hours');
       // Try both keys - custom_epg_url (set by user) and epg_url (auto-found in M3U)
       // custom_epg_url takes precedence
       final customEpgUrl = prefs.getString('custom_epg_url');
@@ -869,12 +875,66 @@ class IncrementalEpgService extends ChangeNotifier {
           await _downloadEpgIfNeeded(forceRefresh: forceRefresh);
         }
 
-        // OPTIMIZATION: If we have mappings in DB/Prefs and aren't forcing refresh, skip parsing!
+        // OPTIMIZATION: Try loading programs from DB before parsing XML
+        if (!forceRefresh && !_dbDisabled) {
+          final programCount = await _db.programCount();
+          if (programCount > 0) {
+            debugLog('EPG: Found $programCount programs in DB, loading...');
+            try {
+              final dbPrograms = await _db.getAllProgramsByChannel(
+                pastHours: 12,
+                futureHours: _epgFutureHours,
+              );
+              if (dbPrograms.isNotEmpty) {
+                // Populate in-memory cache from DB
+                _programsByChannel.clear();
+                for (final entry in dbPrograms.entries) {
+                  final epgId = entry.key;
+                  final programs = entry.value.map((row) => Program(
+                    id: '${epgId}_${row['startTs']}',
+                    channelId: epgId,
+                    title: row['title'] as String? ?? '',
+                    description: row['description'] as String?,
+                    startTime: DateTime.fromMillisecondsSinceEpoch(row['startTs'] as int),
+                    endTime: DateTime.fromMillisecondsSinceEpoch(row['endTs'] as int),
+                    imageUrl: row['imageUrl'] as String?,
+                  )).toList();
+                  _programsByChannel[epgId] = programs;
+                }
+                
+                // Also ensure availableChannels is populated
+                _availableChannels.clear();
+                _availableChannels.addAll(_programsByChannel.keys);
+                if (_normalizedAvailableChannels != null) {
+                  _availableChannels.addAll(_normalizedAvailableChannels!.values);
+                }
+                
+                debugLog('EPG: Loaded ${_programsByChannel.length} channels from DB cache (${dbPrograms.values.fold<int>(0, (sum, list) => sum + list.length)} programs)');
+                _hasParsed = true;
+                _isLoading = false;
+                _isParsing = false;
+                _error = null;
+                notifyListeners();
+                
+                // Schedule background refresh if cache is stale
+                if (deferRefresh) {
+                  unawaited(_refreshFromNetwork());
+                }
+                return;
+              }
+            } catch (e) {
+              debugLog('EPG: Failed to load programs from DB: $e');
+              // Fall through to XML parsing
+            }
+          }
+        }
+
+        // Legacy optimization for mappings only (fallback)
         if (!forceRefresh &&
             _normalizedAvailableChannels != null &&
             _normalizedAvailableChannels!.isNotEmpty) {
           final mappingCount = await _db.mappingCount();
-          if (mappingCount > 0) {
+          if (mappingCount > 0 && _programsByChannel.isNotEmpty) {
             debugLog(
                 'EPG: Skipping XML parse - using ${_normalizedAvailableChannels!.length} cached channels and $mappingCount DB mappings.');
             
@@ -1047,6 +1107,30 @@ class IncrementalEpgService extends ChangeNotifier {
 
         debugLog(
             'EPG: Successfully parsed ${_programsByChannel.length} channels and ${_availableChannels.length} IDs with ~$parsedProgramCount programs');
+        
+        // PERSIST: Save parsed programs to DB for fast future loads
+        if (!_dbDisabled && _programsByChannel.isNotEmpty) {
+          try {
+            debugLog('EPG: Persisting programs to DB...');
+            final dbPayload = <String, List<Map<String, dynamic>>>{};
+            for (final entry in _programsByChannel.entries) {
+              dbPayload[entry.key] = entry.value.map((p) => {
+                'startTs': p.startTime.millisecondsSinceEpoch,
+                'endTs': p.endTime.millisecondsSinceEpoch,
+                'title': p.title,
+                'description': p.description,
+                'imageUrl': p.imageUrl,
+              }).toList();
+            }
+            await _db.clearPrograms();
+            await _db.insertAllPrograms(dbPayload);
+            debugLog('EPG: Persisted ${_programsByChannel.length} channels to DB.');
+          } catch (e) {
+            debugLog('EPG: Failed to persist programs to DB: $e');
+            // Non-fatal, continue
+          }
+        }
+        
         if (deferRefresh && !fromBackgroundRefresh) {
           unawaited(_refreshFromNetwork());
         }

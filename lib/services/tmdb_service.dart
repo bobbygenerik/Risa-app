@@ -520,6 +520,94 @@ class TMDBService {
     }
   }
 
+  /// Returns the title logo (clearart) URL for a given title from TMDB.
+  /// Prefers TV results first, falling back to movie matches.
+  static Future<String?> getTitleLogo(String title, {int? year}) async {
+    await init();
+    final normalizedTitle = _normalizeTitle(title);
+    final cacheKey = _cacheKey('logo:title', normalizedTitle, year: year);
+    final cached = _getFromCache(cacheKey);
+    if (cached != null && cached.containsKey('logo')) {
+      return (cached['logo'] as String?)?.isNotEmpty == true
+          ? cached['logo'] as String
+          : null;
+    }
+
+    try {
+      String? logoUrl;
+
+      // Try TV first
+      final tvSearchUrl =
+          '$_baseUrl/search/tv?api_key=$_apiKey&language=en-US&query=${Uri.encodeComponent(normalizedTitle)}${year != null ? '&first_air_date_year=$year' : ''}';
+      final tvResponse = await http.get(Uri.parse(tvSearchUrl));
+      if (tvResponse.statusCode == 200) {
+        final tvData = json.decode(tvResponse.body);
+        final tvResults = tvData['results'] as List;
+        if (tvResults.isNotEmpty) {
+          final tvId = tvResults.first['id'];
+          final imagesUrl =
+              '$_baseUrl/tv/$tvId/images?api_key=$_apiKey&include_image_language=en,null';
+          final imagesResponse = await http.get(Uri.parse(imagesUrl));
+          if (imagesResponse.statusCode == 200) {
+            final imagesData = json.decode(imagesResponse.body);
+            final logos = imagesData['logos'] as List? ?? [];
+            if (logos.isNotEmpty) {
+              final logoPath = logos.first['file_path'] as String?;
+              if (logoPath != null) {
+                logoUrl = 'https://image.tmdb.org/t/p/w500$logoPath';
+              }
+            }
+          }
+        }
+      }
+
+      // Try Movie if TV didn't find a logo
+      if (logoUrl == null) {
+        final movieSearchUrl =
+            '$_baseUrl/search/movie?api_key=$_apiKey&language=en-US&query=${Uri.encodeComponent(normalizedTitle)}${year != null ? '&year=$year' : ''}';
+        final movieResponse = await http.get(Uri.parse(movieSearchUrl));
+        if (movieResponse.statusCode == 200) {
+          final movieData = json.decode(movieResponse.body);
+          final movieResults = movieData['results'] as List;
+          if (movieResults.isNotEmpty) {
+            final movieId = movieResults.first['id'];
+            final imagesUrl =
+                '$_baseUrl/movie/$movieId/images?api_key=$_apiKey&include_image_language=en,null';
+            final imagesResponse = await http.get(Uri.parse(imagesUrl));
+            if (imagesResponse.statusCode == 200) {
+              final imagesData = json.decode(imagesResponse.body);
+              final logos = imagesData['logos'] as List? ?? [];
+              if (logos.isNotEmpty) {
+                final logoPath = logos.first['file_path'] as String?;
+                if (logoPath != null) {
+                  logoUrl = 'https://image.tmdb.org/t/p/w500$logoPath';
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Cache the result (shorter TTL for misses)
+      _setCache(
+        cacheKey,
+        {'logo': logoUrl ?? ''},
+        ttl: logoUrl == null ? const Duration(hours: 1) : null,
+      );
+
+      if (logoUrl != null) {
+        debugLog('TMDB found title logo for "$normalizedTitle": $logoUrl');
+      } else {
+        debugLog('No title logo found for "$normalizedTitle"');
+      }
+
+      return logoUrl;
+    } catch (e) {
+      debugLog('TMDB getTitleLogo error for "$title": $e');
+      return null;
+    }
+  }
+
   /// Batch fetch artwork for multiple titles at once.
   /// Returns a map of title -> image URL (or null if not found).
   /// This reduces API rate limiting issues.

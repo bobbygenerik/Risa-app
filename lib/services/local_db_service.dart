@@ -559,6 +559,76 @@ class LocalDbService {
     return rows.first;
   }
 
+  /// Load all programs from DB, grouped by epgId.
+  /// Only loads programs within a time window (past catchup hours to future hours).
+  Future<Map<String, List<Map<String, dynamic>>>> getAllProgramsByChannel({
+    int pastHours = 24,
+    int futureHours = 24,
+  }) async {
+    final now = DateTime.now();
+    final startMs = now.subtract(Duration(hours: pastHours)).millisecondsSinceEpoch;
+    final endMs = now.add(Duration(hours: futureHours)).millisecondsSinceEpoch;
+    
+    final rows = await _withDbRead((db) {
+      return db.query(
+        'epg_programs',
+        where: 'endTs >= ? AND startTs <= ?',
+        whereArgs: [startMs, endMs],
+        orderBy: 'epgId, startTs',
+      );
+    });
+    
+    final Map<String, List<Map<String, dynamic>>> result = {};
+    for (final row in rows) {
+      final epgId = row['epgId'] as String;
+      result.putIfAbsent(epgId, () => []).add(row);
+    }
+    return result;
+  }
+
+  /// Check how many programs are in the DB.
+  Future<int> programCount() async {
+    final rows = await _withDbRead((db) {
+      return db.rawQuery('SELECT COUNT(*) as cnt FROM epg_programs');
+    });
+    return rows.isEmpty ? 0 : (rows.first['cnt'] as int? ?? 0);
+  }
+
+  /// Clear all programs from DB.
+  Future<void> clearPrograms() async {
+    await _queueWrite((db) async {
+      await db.delete('epg_programs');
+    });
+  }
+
+  /// Bulk insert programs for multiple channels.
+  Future<void> insertAllPrograms(Map<String, List<Map<String, dynamic>>> programsByChannel) async {
+    if (programsByChannel.isEmpty) return;
+    await _queueWrite((db) async {
+      await db.transaction((txn) async {
+        final batch = txn.batch();
+        for (final entry in programsByChannel.entries) {
+          final epgId = entry.key;
+          for (final p in entry.value) {
+            batch.insert(
+              'epg_programs',
+              {
+                'epgId': epgId,
+                'startTs': p['startTs'],
+                'endTs': p['endTs'],
+                'title': p['title'],
+                'description': p['description'],
+                'imageUrl': p['imageUrl'],
+              },
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+          }
+        }
+        await batch.commit(noResult: true);
+      });
+    });
+  }
+
   Map<String, dynamic> _hydrateAttrs(Map<String, dynamic> row) {
     if (row['attrs'] != null) {
       try {

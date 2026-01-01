@@ -143,17 +143,17 @@ class TVFocusHelper {
 
   /// Get appropriate text size for TV (larger than mobile)
   static double getTVTextSize(double baseSize) {
-    return baseSize * 1.2;
+    return isAndroidTV ? baseSize * 1.2 : baseSize;
   }
 
   /// Get appropriate icon size for TV
   static double getTVIconSize(double baseSize) {
-    return baseSize * 1.2; // 50% larger for TV
+    return isAndroidTV ? baseSize * 1.2 : baseSize;
   }
 
   /// Get appropriate spacing for TV
   static double getTVSpacing(double baseSpacing) {
-    return baseSpacing * 1.2; // 50% more spacing for TV
+    return isAndroidTV ? baseSpacing * 1.2 : baseSpacing;
   }
 }
 

@@ -75,6 +75,8 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   bool _initialFocusRequested = false;
   final Map<String, int> _focusedIndexBySection = {};
   final Map<String, DateTime> _artworkRetryAfter = {};
+  final Map<String, String?> _programTitleLogos = {};
+  final Set<String> _titleLogoRequests = {};
   final Map<String, List<Channel>> _categoryChannelCache = {};
   final Set<String> _categoryChannelLoading = {};
   List<String> _categoryNames = [];
@@ -832,12 +834,15 @@ class _LiveTVScreenState extends State<LiveTVScreen>
               return Opacity(
                 opacity: opacity,
                 child: Align(
-                  alignment: const Alignment(-1.0, -0.6),
-                  child: _buildHeroInfoPanel(
-                    context,
-                    heroInfoWidth,
-                    _buildFeaturedInfoWithFocus(
-                        context, activeChannel, currentProgram),
+                  alignment: Alignment.bottomLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 48.0),
+                    child: _buildHeroInfoPanel(
+                      context,
+                      heroInfoWidth,
+                      _buildFeaturedInfoWithFocus(
+                          context, activeChannel, currentProgram),
+                    ),
                   ),
                 ),
               );
@@ -930,11 +935,6 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final titleLogoUrl = _resolveProgramTitleLogo(program, channel);
     final titleStyle = AppTypography.heroTitle(context);
     final descriptionStyle = AppTypography.heroDescription(context);
-    final titleLineHeight = (titleStyle.fontSize ?? context.tvTextSize(28)) *
-        (titleStyle.height ?? 1.2);
-    final descriptionLineHeight =
-        (descriptionStyle.fontSize ?? context.tvTextSize(16)) *
-            (descriptionStyle.height ?? 1.4);
     final logoSlotHeight = context.tvSpacing(36);
 
     final maxBoxHeight = MediaQuery.of(context).size.height * 0.4;
@@ -966,24 +966,18 @@ class _LiveTVScreenState extends State<LiveTVScreen>
                     ),
             ),
             SizedBox(height: context.tvSpacing(8)),
-            SizedBox(
-              height: titleLineHeight * 3,
-              child: Text(
-                title,
-                style: titleStyle,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
+            Text(
+              title,
+              style: titleStyle,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
             SizedBox(height: context.tvSpacing(8)),
-            SizedBox(
-              height: descriptionLineHeight * 2,
-              child: Text(
-                description,
-                style: descriptionStyle,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
+            Text(
+              description,
+              style: descriptionStyle,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
             SizedBox(height: context.tvSpacing(8)),
             SizedBox(
@@ -1201,12 +1195,50 @@ class _LiveTVScreenState extends State<LiveTVScreen>
   }
 
   String? _resolveProgramTitleLogo(Program? program, Channel channel) {
-    final url = program?.imageUrl;
-    if (url == null || url.isEmpty) return null;
-    if (_isLikelyPosterUrl(url)) return null;
-    if (channel.logoUrl != null && channel.logoUrl == url) return null;
-    if (_isLikelyTitleLogoUrl(url)) return url;
+    if (program == null) return null;
+    
+    // Check TMDB title logo cache first
+    final cacheKey = program.id;
+    if (_programTitleLogos.containsKey(cacheKey)) {
+      final cached = _programTitleLogos[cacheKey];
+      return cached?.isNotEmpty == true ? cached : null;
+    }
+    
+    // If not cached, try EPG-provided logo
+    final url = program.imageUrl;
+    if (url != null && url.isNotEmpty) {
+      if (!_isLikelyPosterUrl(url) &&
+          channel.logoUrl != url &&
+          _isLikelyTitleLogoUrl(url)) {
+        return url;
+      }
+    }
+    
+    // Trigger async TMDB fetch if not already requested
+    if (_tmdbEnabled && !_titleLogoRequests.contains(cacheKey)) {
+      _titleLogoRequests.add(cacheKey);
+      _fetchTitleLogo(program);
+    }
+    
     return null;
+  }
+  
+  Future<void> _fetchTitleLogo(Program program) async {
+    try {
+      final logo = await TMDBService.getTitleLogo(program.title);
+      if (mounted) {
+        setState(() {
+          _programTitleLogos[program.id] = logo ?? '';
+        });
+      }
+    } catch (e) {
+      debugLog('Error fetching title logo for "${program.title}": $e');
+      if (mounted) {
+        setState(() {
+          _programTitleLogos[program.id] = '';
+        });
+      }
+    }
   }
 
   List<_HeroCandidate> _buildHeroCandidates(
@@ -1590,16 +1622,19 @@ class _LiveTVScreenState extends State<LiveTVScreen>
     final cardWidth = math.min(context.cardWidth(), maxCardWidth);
     const cardFocusScale = 1.05;
     final cardHeight = cardWidth * 0.6;
-    final focusExtra = cardHeight * (cardFocusScale - 1);
+    // On mobile, focus scale is minimal/transient, so don't reserve huge space
+    final isMobile = screenWidth < 800; 
+    final focusExtra = isMobile ? 0.0 : cardHeight * (cardFocusScale - 1);
     final titleStyle = AppTypography.programTitle(context);
     final timeStyle = AppTypography.programTime(context);
     final titleHeight = (titleStyle.fontSize ?? context.tvTextSize(16)) *
         (titleStyle.height ?? 1.2);
     final timeHeight = (timeStyle.fontSize ?? context.tvTextSize(13)) *
         (timeStyle.height ?? 1.2);
-    final infoSpacing = context.spacingXs();
-    final infoHeight = titleHeight + timeHeight + (infoSpacing * 2);
-    final rowHeight = cardHeight + infoSpacing + infoHeight + focusExtra;
+    // Reduce info spacing estimate
+    final infoSpacing = 4.0;
+    final infoHeight = titleHeight + timeHeight + infoSpacing;
+    final rowHeight = cardHeight + 4.0 + infoHeight + focusExtra;
     return rowHeight;
   }
 
